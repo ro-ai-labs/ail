@@ -1,0 +1,17 @@
+[package]
+name = "eigl"
+version = "0.1.0"
+edition = "2024"
+description = "Executable Intent Graph Language prototype compiler"
+license = "MIT"
+
+[dependencies]
+
+[lib]
+name = "eigl"
+path = "src/lib.rs"
+
+[[bin]]
+name = "eigl"
+path = "src/main.rs"
+

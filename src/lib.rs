@@ -1,0 +1,27 @@
+pub mod checker;
+pub mod collections;
+pub mod core_model;
+pub mod diagnostics;
+pub mod eig_ir;
+pub mod explanations;
+pub mod expression;
+pub mod graph_builder;
+pub mod imports;
+pub mod interpreter;
+pub mod llm_bridge;
+pub mod predicate;
+pub mod rif_model;
+pub mod rif_parser;
+pub mod rif_patch;
+pub mod rif_render;
+pub mod rsl_parser;
+pub mod views;
+
+pub use checker::check_document;
+pub use graph_builder::build_program;
+pub use interpreter::simulate;
+pub use llm_bridge::llm_round_trip;
+pub use rif_parser::{parse_rif_file, parse_rif_text};
+pub use rif_patch::{apply_rif_patch, parse_rif_patch};
+pub use rif_render::render_rif_document;
+pub use rsl_parser::{parse_rsl_file, parse_rsl_text};

@@ -1,0 +1,7 @@
+patch Add ticket description field
+
+target:
+  app TicketApi
+
+change:
+  add field Ticket.description: Text

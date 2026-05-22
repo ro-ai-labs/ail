@@ -1,0 +1,12 @@
+patch Add inventory failure handling
+
+target:
+  intent ConfirmOrder
+
+change:
+  when step "Reserve inventory" fails:
+    stop with InventoryUnavailable
+
+add guarantee:
+  if inventory reservation fails:
+    reservation is released
