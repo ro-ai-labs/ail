@@ -3477,6 +3477,62 @@ fn emit_linux_x86_64_elf_for_action(
                     success_trace_lines.push(format!("guarantee checked: {text}\n"));
                 }
             }
+            "TOOL_BEGIN" => {
+                if let Some(label) = instruction.operands.get("label") {
+                    success_trace_lines.push(format!("tool {label} started\n"));
+                }
+            }
+            "TOOL_REQUIREMENT" => {
+                if let Some(text) = instruction.operands.get("text") {
+                    success_trace_lines.push(format!("tool requirement {text}\n"));
+                }
+            }
+            "TOOL_INPUT" => {
+                if let (Some(name), Some(type_name)) = (
+                    instruction.operands.get("name"),
+                    instruction.operands.get("type"),
+                ) {
+                    success_trace_lines.push(format!("tool input {name}:{type_name}\n"));
+                }
+            }
+            "TOOL_OUTPUT" => {
+                if let (Some(name), Some(type_name)) = (
+                    instruction.operands.get("name"),
+                    instruction.operands.get("type"),
+                ) {
+                    success_trace_lines.push(format!("tool output {name}:{type_name}\n"));
+                }
+            }
+            "TOOL_READ" => {
+                if let Some(text) = instruction.operands.get("text") {
+                    success_trace_lines.push(format!("tool read {text}\n"));
+                }
+            }
+            "TOOL_CALL" => {
+                if let Some(target) = instruction.operands.get("target") {
+                    success_trace_lines.push(format!("tool call {target}\n"));
+                }
+            }
+            "TOOL_WRITE" => {
+                if let Some(text) = instruction.operands.get("text") {
+                    success_trace_lines.push(format!("tool write {text}\n"));
+                }
+            }
+            "TOOL_PERMISSION" => {
+                if let Some(text) = instruction.operands.get("text") {
+                    success_trace_lines.push(format!("tool permission {text}\n"));
+                }
+            }
+            "TOOL_APPROVAL" => {
+                if let Some(text) = instruction.operands.get("text") {
+                    success_trace_lines.push(format!("tool approval {text}\n"));
+                }
+            }
+            "TOOL_SECRET_PROTECTION" => {
+                if let Some(text) = instruction.operands.get("text") {
+                    success_trace_lines.push(format!("tool secret protection {text}\n"));
+                }
+            }
             "EMIT_TRACE" => {
                 if let Some(event) = instruction.operands.get("event") {
                     success_trace_lines.push(format!("trace {event}\n"));

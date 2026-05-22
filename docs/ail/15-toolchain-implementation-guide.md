@@ -382,9 +382,14 @@ from supported Application semantic opcodes writes success-path trace entries
 to stderr in VM trace order, including action start, rule-pass, write, effect,
 guarantee, and explicit trace-event entries. Supported requirement failure
 branches emit the VM-style action prefix, failure name, and any declared
-failure trace events to stderr before exiting `1`. Stdout remains reserved for
-parseable state changes. The first native backend rejects unsupported System,
-AgentTool, CompilerPass, future unknown VM opcodes, and unlowered
+failure trace events to stderr before exiting `1`. Native code generated from
+supported AgentTool opcodes writes the same audit trace entries as the VM,
+including tool start, requirements, typed inputs and outputs, reads, external
+calls, writes, permissions, approvals, secret-protection declarations,
+guarantees, and explicit trace events, while keeping secret runtime values out
+of stdout and stderr. Stdout remains reserved for parseable state changes. The
+first native backend rejects unsupported System, CompilerPass, future unknown
+VM opcodes, and unlowered
 `OBSERVE_RULE` requirements instead of silently emitting a partial executable.
 With `--artifact-dir`, `ail-lower` writes `checked.ail-core.txt`,
 `artifact.ailbc.json`, `artifact.fingerprint.txt`, `manifest.ail-lower.txt`,

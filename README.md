@@ -55,6 +55,10 @@ nested identity value such as `ticket.assignee.id=A-1`, so native stdout
 preserves assigned object identity when the caller supplies it.
 Supported Application semantic trace entries are emitted to stderr on
 successful native execution and on supported requirement failures.
+Supported AgentTool opcodes also emit VM-style audit trace entries to stderr,
+including requirements, typed inputs and outputs, external calls, approval and
+permission rules, secret-protection declarations, guarantees, and trace events,
+without exposing secret runtime values.
 The first native backend rejects unsupported VM opcodes and unlowered observed
 rules instead of silently dropping them.
 `ail-lower --artifact-dir
