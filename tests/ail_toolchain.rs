@@ -3540,6 +3540,117 @@ fn cli_ail_compile_accepts_saved_bytecode_artifact_for_native_elf() {
 
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+fn cli_ail_compile_writes_saved_bytecode_native_artifacts() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("support_ticket.ail");
+    let bytecode_path = std::env::temp_dir().join(format!(
+        "eigl-ail-compile-bytecode-artifacts-{}.ailbc.json",
+        std::process::id()
+    ));
+    let executable_path = std::env::temp_dir().join(format!(
+        "eigl-ail-compile-bytecode-artifacts-{}",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "eigl-ail-compile-bytecode-artifacts-dir-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_file(&bytecode_path);
+    let _ = fs::remove_file(&executable_path);
+    let _ = fs::remove_dir_all(&artifact_dir);
+
+    let lowered = Command::new(binary)
+        .args(["ail-lower", &package])
+        .output()
+        .unwrap();
+    assert!(
+        lowered.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&lowered.stdout),
+        String::from_utf8_lossy(&lowered.stderr)
+    );
+    let lowered_bytecode = String::from_utf8(lowered.stdout).unwrap();
+    fs::write(&bytecode_path, &lowered_bytecode).unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-compile",
+            bytecode_path.to_str().unwrap(),
+            "--action",
+            "CloseTicket",
+            "--target",
+            "linux-x86_64-elf",
+            "--out",
+            executable_path.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let bytecode_artifact = fs::read_to_string(artifact_dir.join("artifact.ailbc.json")).unwrap();
+    assert_eq!(bytecode_artifact, lowered_bytecode);
+    let bytecode_fingerprint =
+        fs::read_to_string(artifact_dir.join("artifact.fingerprint.txt")).unwrap();
+    assert_eq!(
+        bytecode_fingerprint.trim(),
+        fnv64_fingerprint(&bytecode_artifact)
+    );
+    let target_artifact = fs::read(artifact_dir.join("target.elf")).unwrap();
+    assert_eq!(&target_artifact[0..4], b"\x7fELF");
+    let target_fingerprint =
+        fs::read_to_string(artifact_dir.join("target.fingerprint.txt")).unwrap();
+    assert_eq!(
+        target_fingerprint.trim(),
+        fnv64_fingerprint_bytes(&target_artifact)
+    );
+    assert_eq!(target_artifact, fs::read(&executable_path).unwrap());
+
+    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-compile.txt")).unwrap();
+    assert!(manifest.contains("AIL-Compile-Manifest:"), "{manifest}");
+    assert!(manifest.contains("action CloseTicket"), "{manifest}");
+    assert!(
+        manifest.contains(&format!(
+            "bytecode artifact.ailbc.json {}",
+            fnv64_fingerprint(&bytecode_artifact)
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "target linux-x86_64-elf target.elf {}",
+            fnv64_fingerprint_bytes(&target_artifact)
+        )),
+        "{manifest}"
+    );
+    let manifest_fingerprint =
+        fs::read_to_string(artifact_dir.join("manifest.fingerprint.txt")).unwrap();
+    assert_eq!(manifest_fingerprint.trim(), fnv64_fingerprint(&manifest));
+
+    let native_run = Command::new(artifact_dir.join("target.elf"))
+        .args(["ticket.id=T-1", "ticket.status=Open"])
+        .output()
+        .unwrap();
+    assert!(native_run.status.success(), "artifact target.elf failed");
+    assert!(
+        String::from_utf8_lossy(&native_run.stdout).contains("ticket.status=Closed"),
+        "{}",
+        String::from_utf8_lossy(&native_run.stdout)
+    );
+
+    fs::remove_file(bytecode_path).unwrap();
+    fs::remove_file(executable_path).unwrap();
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_compile_accepts_saved_spec_file_artifact() {
     let binary = env!("CARGO_BIN_EXE_eigl");
     let package = fixture("support_ticket.ail");

@@ -400,6 +400,14 @@ struct AilBuildArtifactSet<'a> {
     agent_native_executables: &'a [AilNativeArtifact],
 }
 
+struct AilCompileArtifactSet<'a> {
+    core_text: Option<&'a str>,
+    bytecode_text: &'a str,
+    action_name: &'a str,
+    target_name: &'a str,
+    target_executable: &'a [u8],
+}
+
 struct AilNativeArtifact {
     target_name: String,
     file_name: String,
@@ -512,6 +520,70 @@ fn render_ail_build_manifest(artifacts: &AilBuildArtifactSet<'_>) -> String {
         ));
     }
     format!("{}\n", lines.join("\n"))
+}
+
+fn render_ail_compile_manifest(artifacts: &AilCompileArtifactSet<'_>) -> String {
+    let mut lines = vec!["AIL-Compile-Manifest:".to_string()];
+    if artifacts.core_text.is_some() {
+        lines.push("artifact checked.ail-core.txt".to_string());
+    }
+    lines.push(format!(
+        "bytecode artifact.ailbc.json {}",
+        ail_artifact_fingerprint(artifacts.bytecode_text)
+    ));
+    lines.push(format!("action {}", artifacts.action_name));
+    lines.push(format!(
+        "target {} target.elf {}",
+        artifacts.target_name,
+        ail_artifact_fingerprint_bytes(artifacts.target_executable)
+    ));
+    format!("{}\n", lines.join("\n"))
+}
+
+fn write_ail_compile_artifacts(
+    artifact_dir: &str,
+    artifacts: AilCompileArtifactSet<'_>,
+) -> Result<(), String> {
+    let root = std::path::Path::new(artifact_dir);
+    fs::create_dir_all(root).map_err(|error| {
+        format!("failed to create ail-compile artifact dir {artifact_dir}: {error}")
+    })?;
+    if let Some(core_text) = artifacts.core_text {
+        fs::write(root.join("checked.ail-core.txt"), core_text)
+            .map_err(|error| format!("failed to write ail-compile core artifact: {error}"))?;
+    }
+    fs::write(root.join("artifact.ailbc.json"), artifacts.bytecode_text)
+        .map_err(|error| format!("failed to write ail-compile bytecode artifact: {error}"))?;
+    fs::write(
+        root.join("artifact.fingerprint.txt"),
+        format!("{}\n", ail_artifact_fingerprint(artifacts.bytecode_text)),
+    )
+    .map_err(|error| {
+        format!("failed to write ail-compile bytecode fingerprint artifact: {error}")
+    })?;
+    let target_path = root.join("target.elf");
+    fs::write(&target_path, artifacts.target_executable)
+        .map_err(|error| format!("failed to write ail-compile target artifact: {error}"))?;
+    set_native_executable_permissions(&target_path.to_string_lossy())?;
+    fs::write(
+        root.join("target.fingerprint.txt"),
+        format!(
+            "{}\n",
+            ail_artifact_fingerprint_bytes(artifacts.target_executable)
+        ),
+    )
+    .map_err(|error| format!("failed to write ail-compile target fingerprint artifact: {error}"))?;
+    let manifest_text = render_ail_compile_manifest(&artifacts);
+    fs::write(root.join("manifest.ail-compile.txt"), &manifest_text)
+        .map_err(|error| format!("failed to write ail-compile manifest artifact: {error}"))?;
+    fs::write(
+        root.join("manifest.fingerprint.txt"),
+        format!("{}\n", ail_artifact_fingerprint(&manifest_text)),
+    )
+    .map_err(|error| {
+        format!("failed to write ail-compile manifest fingerprint artifact: {error}")
+    })?;
+    Ok(())
 }
 
 fn write_ail_build_artifacts(
@@ -2262,6 +2334,21 @@ fn run_ail_compile_from_core(
         .ok_or_else(|| "ail-compile requires --out <path>".to_string())?;
     let executable = compile_ail_core_native_elf(core, action, target)?;
     write_native_executable(out, &executable)?;
+    if let Some(artifact_dir) = &cli_options.artifact_dir {
+        let bytecode = compile_ail_core_bytecode(core)?;
+        let bytecode_text = format!("{}\n", render_ail_bytecode(&bytecode));
+        let core_text = format!("{}\n", render_ail_core(core));
+        write_ail_compile_artifacts(
+            artifact_dir,
+            AilCompileArtifactSet {
+                core_text: Some(&core_text),
+                bytecode_text: &bytecode_text,
+                action_name: action,
+                target_name: target,
+                target_executable: &executable,
+            },
+        )?;
+    }
     println!("ail-compile wrote {target} executable {out}");
     Ok(0)
 }
@@ -2292,6 +2379,18 @@ fn run_ail_compile_from_bytecode_file(path: &str, cli_options: &CliOptions) -> R
     }
     let executable = compile_ail_bytecode_native_elf(&bytecode, action, target)?;
     write_native_executable(out, &executable)?;
+    if let Some(artifact_dir) = &cli_options.artifact_dir {
+        write_ail_compile_artifacts(
+            artifact_dir,
+            AilCompileArtifactSet {
+                core_text: None,
+                bytecode_text: &bytecode_text,
+                action_name: action,
+                target_name: target,
+                target_executable: &executable,
+            },
+        )?;
+    }
     println!("ail-compile wrote {target} executable {out}");
     Ok(0)
 }
@@ -3321,7 +3420,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         if arg == "--artifact-dir" {
             if !matches!(
                 command,
-                "ail-build" | "ail-pass" | "ail-lower" | "ail-conformance"
+                "ail-build" | "ail-pass" | "ail-lower" | "ail-compile" | "ail-conformance"
             ) {
                 return Err(usage());
             }

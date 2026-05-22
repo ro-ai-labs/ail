@@ -443,6 +443,12 @@ missing required operands before executing saved bytecode.
 linux-x86_64-elf --out <path>` reads the same saved AIL-Bytecode artifact,
 verifies it, and emits a native ELF executable from that artifact boundary
 without loading the source package or generating host-language backend source.
+With `--artifact-dir`, direct `ail-compile` writes `artifact.ailbc.json`,
+`artifact.fingerprint.txt`, `target.elf`, `target.fingerprint.txt`,
+`manifest.ail-compile.txt`, and `manifest.fingerprint.txt`; compiles from
+checked AIL-Core also include `checked.ail-core.txt`. The compile manifest ties
+the selected action, verified bytecode artifact, and native target executable
+fingerprint into a reviewable artifact boundary.
 `ail-requirements` runs the first developer-facing agent capture stage by asking
 the package base LLM for an AIL-Requirements artifact, checking profile-specific
 coverage, and sending diagnostics back for one repair pass when the artifact is
