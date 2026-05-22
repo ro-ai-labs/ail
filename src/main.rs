@@ -61,6 +61,7 @@ struct CliOptions {
     ail_core_file: Option<String>,
     ail_compile_target: Option<String>,
     ail_compile_out: Option<String>,
+    ail_compile_all_actions: bool,
 }
 
 struct EndpointExecutionResult {
@@ -379,7 +380,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
 }
 
 fn usage() -> String {
-    "usage: eigl <check|graph|views|simulate|lower|run|dispatch|emit|schedule|dequeue|serve|normalize|patch|llm-roundtrip|view-model|ail-check|ail-core|ail-flow|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-patch> <path> [patch|target-package] [--intent name] [--action name] [--prompt text] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--target-model name] [--out path] [--artifact-dir path] [--state-in path] [--state-out path] [--data-in path] [--data-out path] [--operation-output name=value] [--listen addr] [--llm-endpoint url] [method path|trigger] [key=value ...]\nail-pass usage: eigl ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR eigl ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]"
+    "usage: eigl <check|graph|views|simulate|lower|run|dispatch|emit|schedule|dequeue|serve|normalize|patch|llm-roundtrip|view-model|ail-check|ail-core|ail-flow|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-patch> <path> [patch|target-package] [--intent name] [--action name] [--prompt text] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--target-model name] [--out path] [--all-actions] [--artifact-dir path] [--state-in path] [--state-out path] [--data-in path] [--data-out path] [--operation-output name=value] [--listen addr] [--llm-endpoint url] [method path|trigger] [key=value ...]\nail-pass usage: eigl ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR eigl ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]"
         .to_string()
 }
 
@@ -410,6 +411,13 @@ struct AilCompileArtifactSet<'a> {
     agent_bytecode_text: Option<&'a str>,
     agent_trace: Option<&'a [String]>,
     agent_native_executables: &'a [AilNativeArtifact],
+}
+
+struct AilCompileBundleArtifactSet<'a> {
+    core_text: Option<&'a str>,
+    bytecode_text: &'a str,
+    target_name: &'a str,
+    target_executables: &'a [AilNativeArtifact],
 }
 
 struct AilNativeArtifact {
@@ -593,6 +601,27 @@ fn render_ail_compile_manifest(artifacts: &AilCompileArtifactSet<'_>) -> String 
     format!("{}\n", lines.join("\n"))
 }
 
+fn render_ail_compile_bundle_manifest(artifacts: &AilCompileBundleArtifactSet<'_>) -> String {
+    let mut lines = vec!["AIL-Compile-Manifest:".to_string()];
+    if artifacts.core_text.is_some() {
+        lines.push("artifact checked.ail-core.txt".to_string());
+    }
+    lines.push(format!(
+        "bytecode artifact.ailbc.json {}",
+        ail_artifact_fingerprint(artifacts.bytecode_text)
+    ));
+    lines.push("bundle all-actions".to_string());
+    for executable in artifacts.target_executables {
+        lines.push(format!(
+            "target {} {} {}",
+            artifacts.target_name,
+            executable.file_name,
+            ail_artifact_fingerprint_bytes(&executable.bytes)
+        ));
+    }
+    format!("{}\n", lines.join("\n"))
+}
+
 fn write_ail_compile_artifacts(
     artifact_dir: &str,
     artifacts: AilCompileArtifactSet<'_>,
@@ -656,6 +685,50 @@ fn write_ail_compile_artifacts(
         set_native_executable_permissions(&artifact_path.to_string_lossy())?;
     }
     let manifest_text = render_ail_compile_manifest(&artifacts);
+    fs::write(root.join("manifest.ail-compile.txt"), &manifest_text)
+        .map_err(|error| format!("failed to write ail-compile manifest artifact: {error}"))?;
+    fs::write(
+        root.join("manifest.fingerprint.txt"),
+        format!("{}\n", ail_artifact_fingerprint(&manifest_text)),
+    )
+    .map_err(|error| {
+        format!("failed to write ail-compile manifest fingerprint artifact: {error}")
+    })?;
+    Ok(())
+}
+
+fn write_ail_compile_bundle_artifacts(
+    artifact_dir: &str,
+    artifacts: AilCompileBundleArtifactSet<'_>,
+) -> Result<(), String> {
+    let root = std::path::Path::new(artifact_dir);
+    fs::create_dir_all(root).map_err(|error| {
+        format!("failed to create ail-compile artifact dir {artifact_dir}: {error}")
+    })?;
+    if let Some(core_text) = artifacts.core_text {
+        fs::write(root.join("checked.ail-core.txt"), core_text)
+            .map_err(|error| format!("failed to write ail-compile core artifact: {error}"))?;
+    }
+    fs::write(root.join("artifact.ailbc.json"), artifacts.bytecode_text)
+        .map_err(|error| format!("failed to write ail-compile bytecode artifact: {error}"))?;
+    fs::write(
+        root.join("artifact.fingerprint.txt"),
+        format!("{}\n", ail_artifact_fingerprint(artifacts.bytecode_text)),
+    )
+    .map_err(|error| {
+        format!("failed to write ail-compile bytecode fingerprint artifact: {error}")
+    })?;
+    for executable in artifacts.target_executables {
+        let artifact_path = root.join(&executable.file_name);
+        fs::write(&artifact_path, &executable.bytes).map_err(|error| {
+            format!(
+                "failed to write ail-compile native target artifact {}: {error}",
+                executable.file_name
+            )
+        })?;
+        set_native_executable_permissions(&artifact_path.to_string_lossy())?;
+    }
+    let manifest_text = render_ail_compile_bundle_manifest(&artifacts);
     fs::write(root.join("manifest.ail-compile.txt"), &manifest_text)
         .map_err(|error| format!("failed to write ail-compile manifest artifact: {error}"))?;
     fs::write(
@@ -2513,6 +2586,9 @@ fn run_ail_compile_from_core(
         }
         return Ok(1);
     }
+    if cli_options.ail_compile_all_actions {
+        return run_ail_compile_bundle_from_core(core, cli_options);
+    }
     let action = cli_options
         .ail_action
         .as_deref()
@@ -2581,19 +2657,40 @@ fn run_ail_compile_from_core(
     Ok(0)
 }
 
-fn run_ail_compile_from_bytecode_file(path: &str, cli_options: &CliOptions) -> Result<u8, String> {
-    let action = cli_options
-        .ail_action
+fn run_ail_compile_bundle_from_core(
+    core: &eigl::ail::AilCore,
+    cli_options: &CliOptions,
+) -> Result<u8, String> {
+    let target = cli_options
+        .ail_compile_target
         .as_deref()
-        .ok_or_else(|| "ail-compile requires --action <name>".to_string())?;
+        .ok_or_else(|| "ail-compile --all-actions requires --target <target>".to_string())?;
+    let artifact_dir = cli_options
+        .artifact_dir
+        .as_deref()
+        .ok_or_else(|| "ail-compile --all-actions requires --artifact-dir <dir>".to_string())?;
+    let bytecode = compile_ail_core_bytecode(core)?;
+    let bytecode_text = format!("{}\n", render_ail_bytecode(&bytecode));
+    let core_text = format!("{}\n", render_ail_core(core));
+    let target_executables = compile_ail_native_artifacts(&bytecode, target, "target")?;
+    write_ail_compile_bundle_artifacts(
+        artifact_dir,
+        AilCompileBundleArtifactSet {
+            core_text: Some(&core_text),
+            bytecode_text: &bytecode_text,
+            target_name: target,
+            target_executables: target_executables.as_slice(),
+        },
+    )?;
+    println!("ail-compile wrote {target} native bundle {artifact_dir}");
+    Ok(0)
+}
+
+fn run_ail_compile_from_bytecode_file(path: &str, cli_options: &CliOptions) -> Result<u8, String> {
     let target = cli_options
         .ail_compile_target
         .as_deref()
         .ok_or_else(|| "ail-compile requires --target <target>".to_string())?;
-    let out = cli_options
-        .ail_compile_out
-        .as_deref()
-        .ok_or_else(|| "ail-compile requires --out <path>".to_string())?;
     let bytecode_text =
         fs::read_to_string(path).map_err(|error| format!("failed to read {path}: {error}"))?;
     let bytecode = parse_ail_bytecode(&bytecode_text)?;
@@ -2605,6 +2702,32 @@ fn run_ail_compile_from_bytecode_file(path: &str, cli_options: &CliOptions) -> R
         }
         return Ok(1);
     }
+    if cli_options.ail_compile_all_actions {
+        let artifact_dir = cli_options
+            .artifact_dir
+            .as_deref()
+            .ok_or_else(|| "ail-compile --all-actions requires --artifact-dir <dir>".to_string())?;
+        let target_executables = compile_ail_native_artifacts(&bytecode, target, "target")?;
+        write_ail_compile_bundle_artifacts(
+            artifact_dir,
+            AilCompileBundleArtifactSet {
+                core_text: None,
+                bytecode_text: &bytecode_text,
+                target_name: target,
+                target_executables: target_executables.as_slice(),
+            },
+        )?;
+        println!("ail-compile wrote {target} native bundle {artifact_dir}");
+        return Ok(0);
+    }
+    let action = cli_options
+        .ail_action
+        .as_deref()
+        .ok_or_else(|| "ail-compile requires --action <name>".to_string())?;
+    let out = cli_options
+        .ail_compile_out
+        .as_deref()
+        .ok_or_else(|| "ail-compile requires --out <path>".to_string())?;
     let executable = compile_ail_bytecode_native_elf(&bytecode, action, target)?;
     write_native_executable(out, &executable)?;
     if let Some(artifact_dir) = &cli_options.artifact_dir {
@@ -3424,6 +3547,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
     let mut ail_core_file = None;
     let mut ail_compile_target = None;
     let mut ail_compile_out = None;
+    let mut ail_compile_all_actions = false;
     let mut index = 0;
     if command == "patch" || command == "ail-patch" {
         let Some(path) = args.get(index) else {
@@ -3601,6 +3725,14 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
             index += 2;
             continue;
         }
+        if arg == "--all-actions" {
+            if command != "ail-compile" {
+                return Err(usage());
+            }
+            ail_compile_all_actions = true;
+            index += 1;
+            continue;
+        }
         if arg == "--state-in" {
             if !matches!(
                 command,
@@ -3759,6 +3891,23 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
     if command == "ail-compile" && ail_build_agent.is_some() && artifact_dir.is_none() {
         return Err("ail-compile --agent requires --artifact-dir <dir>".to_string());
     }
+    if command == "ail-compile" && ail_compile_all_actions {
+        if ail_compile_target.is_none() {
+            return Err("ail-compile --all-actions requires --target <target>".to_string());
+        }
+        if artifact_dir.is_none() {
+            return Err("ail-compile --all-actions requires --artifact-dir <dir>".to_string());
+        }
+        if ail_action.is_some() {
+            return Err("ail-compile --all-actions cannot be combined with --action".to_string());
+        }
+        if ail_compile_out.is_some() {
+            return Err("ail-compile --all-actions cannot be combined with --out".to_string());
+        }
+        if ail_build_agent.is_some() {
+            return Err("ail-compile --all-actions cannot be combined with --agent".to_string());
+        }
+    }
     if command == "ail-build" {
         let native_requested = ail_compile_target.is_some() || ail_compile_out.is_some();
         if native_requested && ail_compile_target.is_none() {
@@ -3826,6 +3975,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         ail_core_file,
         ail_compile_target,
         ail_compile_out,
+        ail_compile_all_actions,
     })
 }
 

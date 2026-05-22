@@ -3826,6 +3826,104 @@ fn cli_ail_compile_agent_verifies_manifest_artifacts() {
 
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+fn cli_ail_compile_writes_all_action_native_bundle() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("ail_toolchain_agent.ail");
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "eigl-ail-compile-all-actions-dir-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-compile",
+            &package,
+            "--all-actions",
+            "--target",
+            "linux-x86_64-elf",
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stdout)
+            .contains("ail-compile wrote linux-x86_64-elf native bundle"),
+        "{}",
+        String::from_utf8_lossy(&output.stdout)
+    );
+
+    let bytecode_artifact = fs::read_to_string(artifact_dir.join("artifact.ailbc.json")).unwrap();
+    assert!(bytecode_artifact.contains(r#""package":"ail-toolchain-agent""#));
+    assert!(bytecode_artifact.contains(r#""action":"CompileApplication""#));
+    assert!(bytecode_artifact.contains(r#""action":"VerifyBuildManifest""#));
+    let bytecode_fingerprint =
+        fs::read_to_string(artifact_dir.join("artifact.fingerprint.txt")).unwrap();
+    assert_eq!(
+        bytecode_fingerprint.trim(),
+        fnv64_fingerprint(&bytecode_artifact)
+    );
+
+    let compile_application = fs::read(artifact_dir.join("target-CompileApplication.elf")).unwrap();
+    assert_eq!(&compile_application[0..4], b"\x7fELF");
+    let verify_manifest = fs::read(artifact_dir.join("target-VerifyBuildManifest.elf")).unwrap();
+    assert_eq!(&verify_manifest[0..4], b"\x7fELF");
+    let expected_manifest_fingerprint = fnv64_fingerprint_bytes(&verify_manifest);
+
+    let native_run = Command::new(artifact_dir.join("target-VerifyBuildManifest.elf"))
+        .args([
+            "buildrequest.id=BR-1",
+            "buildrequest.status=BytecodeReady",
+            "buildrequest.bytecode fingerprint=fnv64:bytecode",
+            "buildrequest.target artifact fingerprint=fnv64:target",
+            "buildrequest.compiler pass target artifact fingerprint=fnv64:pass-target",
+            "buildrequest.prompt portability report fingerprint=fnv64:prompt-portability",
+            "buildrequest.artifact manifest=ok",
+            "buildrequest.artifact manifest fingerprint=fnv64:manifest",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        native_run.status.success(),
+        "native bundle manifest verifier failed"
+    );
+    assert!(
+        String::from_utf8_lossy(&native_run.stderr).contains("trace BuildManifestVerified"),
+        "{}",
+        String::from_utf8_lossy(&native_run.stderr)
+    );
+
+    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-compile.txt")).unwrap();
+    assert!(manifest.contains("AIL-Compile-Manifest:"), "{manifest}");
+    assert!(
+        manifest.contains(&format!(
+            "bytecode artifact.ailbc.json {}",
+            fnv64_fingerprint(&bytecode_artifact)
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "target linux-x86_64-elf target-VerifyBuildManifest.elf {expected_manifest_fingerprint}"
+        )),
+        "{manifest}"
+    );
+    let manifest_fingerprint =
+        fs::read_to_string(artifact_dir.join("manifest.fingerprint.txt")).unwrap();
+    assert_eq!(manifest_fingerprint.trim(), fnv64_fingerprint(&manifest));
+
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_compile_accepts_saved_spec_file_artifact() {
     let binary = env!("CARGO_BIN_EXE_eigl");
     let package = fixture("support_ticket.ail");

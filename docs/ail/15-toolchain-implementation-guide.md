@@ -454,6 +454,15 @@ the AIL-authored `VerifyCompileManifest` action over that manifest and writes
 `agent.ailbc.json`, `agent.fingerprint.txt`, `agent-trace.txt`, and native
 `agent-<ActionName>.elf` verifier executables recorded as `agent-target`
 entries.
+With `--all-actions --target linux-x86_64-elf --artifact-dir <dir>`,
+`ail-compile` compiles every action in the package or saved bytecode artifact
+into native `target-<ActionName>.elf` executables. This exposes the same
+multi-action native packaging used internally for AIL-authored agents and
+compiler passes as a direct bootstrap command, so an AIL-authored toolchain
+package can be reviewed as bytecode plus per-action machine-code ELF artifacts
+without generating Rust or another host-language backend. The compile manifest
+records `bundle all-actions` and one fingerprinted `target` entry per emitted
+executable.
 `ail-requirements` runs the first developer-facing agent capture stage by asking
 the package base LLM for an AIL-Requirements artifact, checking profile-specific
 coverage, and sending diagnostics back for one repair pass when the artifact is

@@ -102,6 +102,11 @@ without loading the source package. Adding `--artifact-dir <dir>` to
 `VerifyCompileManifest` action, writes `agent.ailbc.json`,
 `agent.fingerprint.txt`, `agent-trace.txt`, and `agent-<ActionName>.elf`, and
 records each native agent executable as an `agent-target` manifest entry.
+Use `ail-compile <package-or-bytecode> --all-actions --target
+linux-x86_64-elf --artifact-dir <dir>` to compile every action in an
+AIL-authored package or saved bytecode artifact into native `target-<Action>.elf`
+executables and record each executable as a fingerprinted `target` entry in
+`manifest.ail-compile.txt`.
 `ail-pass <compiler-pass-package-or-bytecode>
 <target-package> --action <PassName>` compiles an AIL-Meta compiler pass
 package, or reads a saved Compiler-profile AIL-Bytecode artifact, and applies
@@ -231,6 +236,7 @@ cargo run -- ail-compile /tmp/support-ticket.ailbc.json --action CloseTicket --t
 /tmp/close-ticket-from-bytecode ticket.id=T-1 ticket.status=Open
 cargo run -- ail-compile /tmp/support-ticket.ailbc.json --action CloseTicket --target linux-x86_64-elf --out /tmp/close-ticket-from-bytecode --artifact-dir /tmp/support-ticket-ail-compile
 cargo run -- ail-compile /tmp/support-ticket.ailbc.json --action CloseTicket --target linux-x86_64-elf --out /tmp/close-ticket-from-bytecode --agent examples/ail_toolchain_agent.ail --artifact-dir /tmp/support-ticket-ail-compile-agent
+cargo run -- ail-compile examples/ail_toolchain_agent.ail --all-actions --target linux-x86_64-elf --artifact-dir /tmp/toolchain-agent-native-bundle
 cargo run -- ail-lower examples/refund_tool.ail
 cargo run -- ail-lower examples/compiler_pass.ail
 cargo run -- ail-lower examples/network_driver.ail
