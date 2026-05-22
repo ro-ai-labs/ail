@@ -2372,6 +2372,62 @@ fn cli_ail_check_and_core_use_package_loader() {
 }
 
 #[test]
+fn cli_ail_core_and_lower_accept_saved_spec_file_artifact() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("support_ticket.ail");
+    let spec_path = std::env::temp_dir().join(format!(
+        "eigl-support-ticket-generated-{}.ail-spec.md",
+        std::process::id()
+    ));
+    fs::write(
+        &spec_path,
+        fs::read_to_string(format!("{package}/spec.ail-spec.md")).unwrap(),
+    )
+    .unwrap();
+
+    let core_output = Command::new(binary)
+        .args([
+            "ail-core",
+            &package,
+            "--spec-file",
+            spec_path.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        core_output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&core_output.stdout),
+        String::from_utf8_lossy(&core_output.stderr)
+    );
+    let core_stdout = String::from_utf8_lossy(&core_output.stdout);
+    assert!(core_stdout.contains("package: support-ticket"));
+    assert!(core_stdout.contains("node Action CloseTicket"));
+
+    let lower_output = Command::new(binary)
+        .args([
+            "ail-lower",
+            &package,
+            "--spec-file",
+            spec_path.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        lower_output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&lower_output.stdout),
+        String::from_utf8_lossy(&lower_output.stderr)
+    );
+    let bytecode = parse_ail_bytecode(&String::from_utf8_lossy(&lower_output.stdout)).unwrap();
+    assert_eq!(bytecode.profile, "Application");
+    assert!(bytecode.actions.contains_key("CloseTicket"));
+    assert_eq!(verify_ail_bytecode(&bytecode), Vec::<String>::new());
+
+    fs::remove_file(spec_path).unwrap();
+}
+
+#[test]
 fn cli_ail_run_executes_close_ticket_with_trace() {
     let binary = env!("CARGO_BIN_EXE_eigl");
     let package = fixture("support_ticket.ail");

@@ -330,6 +330,10 @@ loading, parsing, elaboration, and checker gate as `ail-core` and `ail-flow`;
 the bytecode compiler receives the checked AIL-Core IR, not the parsed
 AIL-Spec document. `ail-run` uses the same checked AIL-Core-to-bytecode path and
 then executes through the AIL bytecode VM for supported Application packages.
+`ail-check`, `ail-core`, `ail-flow`, `ail-lower`, and `ail-run` can use
+`--spec-file <path>` to read a saved generated AIL-Spec artifact instead of the
+package entry spec, preserving the package metadata while making accepted
+AIL-Spec files reusable inputs to IR rendering and bytecode lowering.
 `ail-vm` reads a saved AIL-Bytecode artifact and executes it directly without
 reparsing the source AIL package, making bytecode a real artifact boundary
 instead of only a display format. The VM verifier rejects unknown opcodes and

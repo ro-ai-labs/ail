@@ -3476,6 +3476,57 @@ requirements-grounded spec prompt, sends one repair prompt when the first
 candidate is rejected, and prints accepted AIL-Spec that reparses and checks
 cleanly.
 
+### Task 85: Saved AIL-Spec Artifact Input For IR And Bytecode
+
+**Files:**
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing `--spec-file` CLI test**
+
+Add a CLI test that writes a valid generated AIL-Spec artifact to a temp file
+and requires:
+
+```bash
+eigl ail-core examples/support_ticket.ail --spec-file <spec-file>
+eigl ail-lower examples/support_ticket.ail --spec-file <spec-file>
+```
+
+to render checked AIL-Core and verified AIL-Bytecode from that saved spec file
+without modifying the package entry spec.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_core_and_lower_accept_saved_spec_file_artifact -- --nocapture
+```
+
+Expected: usage failure because `--spec-file` is not accepted by AIL package
+commands.
+
+- [x] **Step 3: Implement saved spec-file input**
+
+Parse `--spec-file` for `ail-check`, `ail-core`, `ail-flow`, `ail-lower`, and
+`ail-run`. When supplied, read and parse that AIL-Spec text against the package
+metadata; otherwise keep using the package entry spec. Leave `ail-patch`,
+`ail-build`, conformance, and compiler-pass package loading on their existing
+entry-spec paths.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_core_and_lower_accept_saved_spec_file_artifact -- --nocapture
+```
+
+Expected: saved AIL-Spec artifacts render AIL-Core and lower to verified
+AIL-Bytecode while preserving package metadata.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

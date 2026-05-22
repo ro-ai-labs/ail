@@ -55,6 +55,7 @@ struct CliOptions {
     ail_pass_target: Option<String>,
     ail_build_pass: Option<String>,
     ail_requirements_file: Option<String>,
+    ail_spec_file: Option<String>,
 }
 
 struct EndpointExecutionResult {
@@ -372,7 +373,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
 }
 
 fn usage() -> String {
-    "usage: eigl <check|graph|views|simulate|lower|run|dispatch|emit|schedule|dequeue|serve|normalize|patch|llm-roundtrip|view-model|ail-check|ail-core|ail-flow|ail-lower|ail-run|ail-vm|ail-conformance|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-patch> <path> [patch|target-package] [--intent name] [--action name] [--prompt text] [--requirements-file path] [--pass path] [--artifact-dir path] [--state-in path] [--state-out path] [--data-in path] [--data-out path] [--operation-output name=value] [--listen addr] [--llm-endpoint url] [method path|trigger] [key=value ...]"
+    "usage: eigl <check|graph|views|simulate|lower|run|dispatch|emit|schedule|dequeue|serve|normalize|patch|llm-roundtrip|view-model|ail-check|ail-core|ail-flow|ail-lower|ail-run|ail-vm|ail-conformance|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-patch> <path> [patch|target-package] [--intent name] [--action name] [--prompt text] [--requirements-file path] [--spec-file path] [--pass path] [--artifact-dir path] [--state-in path] [--state-out path] [--data-in path] [--data-out path] [--operation-output name=value] [--listen addr] [--llm-endpoint url] [method path|trigger] [key=value ...]"
         .to_string()
 }
 
@@ -602,6 +603,18 @@ fn draft_checked_ail_spec_for_requirements(
     Ok(draft)
 }
 
+fn parse_cli_ail_document(
+    package: &eigl::ail::AilPackage,
+    cli_options: &CliOptions,
+) -> Result<eigl::ail::AilDocument, String> {
+    if let Some(spec_file) = &cli_options.ail_spec_file {
+        let spec_text = fs::read_to_string(spec_file)
+            .map_err(|error| format!("failed to read {spec_file}: {error}"))?;
+        return parse_ail_package_spec_text(package, &spec_text);
+    }
+    parse_ail_package_document(package)
+}
+
 fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Result<u8, String> {
     if command == "ail-pass" {
         return run_ail_pass_command(path, cli_options);
@@ -813,7 +826,7 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
         print!("{bytecode_text}");
         return Ok(0);
     }
-    let document = parse_ail_package_document(&package)?;
+    let document = parse_cli_ail_document(&package, cli_options)?;
     if command == "ail-patch" {
         let Some(patch_path) = cli_options.patch_path.as_ref() else {
             return Err("ail-patch requires a patch file".to_string());
@@ -985,6 +998,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
     let mut ail_pass_target = None;
     let mut ail_build_pass = None;
     let mut ail_requirements_file = None;
+    let mut ail_spec_file = None;
     let mut index = 0;
     if command == "patch" || command == "ail-patch" {
         let Some(path) = args.get(index) else {
@@ -1061,6 +1075,20 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
                 return Err("missing value for --requirements-file".to_string());
             };
             ail_requirements_file = Some(path.clone());
+            index += 2;
+            continue;
+        }
+        if arg == "--spec-file" {
+            if !matches!(
+                command,
+                "ail-check" | "ail-core" | "ail-flow" | "ail-lower" | "ail-run"
+            ) {
+                return Err(usage());
+            }
+            let Some(path) = args.get(index + 1) else {
+                return Err("missing value for --spec-file".to_string());
+            };
+            ail_spec_file = Some(path.clone());
             index += 2;
             continue;
         }
@@ -1236,6 +1264,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         ail_pass_target,
         ail_build_pass,
         ail_requirements_file,
+        ail_spec_file,
     })
 }
 
