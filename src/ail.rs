@@ -311,6 +311,12 @@ pub struct AilRunResult {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AilCompilerPassRunResult {
+    pub core: AilCore,
+    pub run: AilRunResult,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AilDraftResult {
     pub spec_text: String,
     pub diagnostics: Vec<AilDiagnostic>,
@@ -4877,6 +4883,121 @@ pub fn run_ail_bytecode_action(
         final_state,
         trace,
     })
+}
+
+pub fn run_ail_compiler_pass_on_core(
+    program: &AilBytecodeProgram,
+    action_name: &str,
+    core: &AilCore,
+) -> Result<AilCompilerPassRunResult, String> {
+    if program.profile != "Compiler" {
+        return Err(format!(
+            "AIL compiler pass runner requires Compiler bytecode, not {}",
+            program.profile
+        ));
+    }
+    let action = program
+        .actions
+        .get(action_name)
+        .ok_or_else(|| format!("unknown AIL bytecode action '{action_name}'"))?;
+    let mut run = run_ail_bytecode_action(
+        program,
+        action_name,
+        BTreeMap::from([
+            ("input graph".to_string(), render_ail_core(core)),
+            ("package policy".to_string(), "infer reads".to_string()),
+        ]),
+    )?;
+    let mut output = core.clone();
+    if compiler_pass_adds_read_permissions(action) {
+        infer_read_permissions(&mut output, action_name, &mut run.trace);
+    }
+    run.final_state
+        .insert("output graph".to_string(), render_ail_core(&output));
+    Ok(AilCompilerPassRunResult { core: output, run })
+}
+
+fn compiler_pass_adds_read_permissions(action: &AilBytecodeAction) -> bool {
+    action.instructions.iter().any(|instruction| {
+        instruction.opcode == "PASS_WRITE"
+            && instruction
+                .operands
+                .get("text")
+                .is_some_and(|text| text.to_ascii_lowercase().contains("read permission"))
+    })
+}
+
+fn infer_read_permissions(core: &mut AilCore, pass_name: &str, trace: &mut Vec<String>) {
+    let node_by_id = graph_node_by_id(core);
+    let read_edges = core
+        .graph
+        .edges
+        .iter()
+        .filter(|edge| edge.kind == "reads")
+        .filter_map(|edge| {
+            let source = node_by_id.get(&edge.source)?;
+            let target = node_by_id.get(&edge.target)?;
+            (matches!(source.kind.as_str(), "Action" | "Tool") && target.kind == "Field")
+                .then(|| (source.clone(), target.clone()))
+        })
+        .collect::<Vec<_>>();
+
+    for (source, target) in read_edges {
+        if is_secret_ail_node(&target) {
+            trace.push(format!(
+                "compiler diagnostic secret read needs confirmation: {}",
+                target.name
+            ));
+            continue;
+        }
+        let permission_name = format!("read {}", target.name);
+        if source_has_permission(&core.graph, &source.id, &permission_name) {
+            continue;
+        }
+        let permission =
+            core.graph
+                .add_node("Permission", permission_name.clone(), None, BTreeMap::new());
+        core.graph.add_edge(
+            "requires",
+            &source,
+            &permission,
+            attr(&[(
+                "provenance",
+                &format!("compiler_pass:{pass_name}.permission:{permission_name}"),
+            )]),
+        );
+        attach_provenance(
+            &mut core.graph,
+            &permission,
+            format!("compiler_pass:{pass_name}.permission:{permission_name}"),
+        );
+        trace.push(format!(
+            "compiler pass {pass_name} added Permission {permission_name} to {}",
+            source.name
+        ));
+    }
+}
+
+fn source_has_permission(graph: &Graph, source_id: &str, permission_name: &str) -> bool {
+    let node_by_id = graph
+        .nodes
+        .iter()
+        .map(|node| (node.id.clone(), node.clone()))
+        .collect::<BTreeMap<_, _>>();
+    graph.edges.iter().any(|edge| {
+        edge.kind == "requires"
+            && edge.source == source_id
+            && node_by_id
+                .get(&edge.target)
+                .is_some_and(|node| node.kind == "Permission" && node.name == permission_name)
+    })
+}
+
+fn is_secret_ail_node(node: &Node) -> bool {
+    node.attributes
+        .get("secret")
+        .is_some_and(|value| value == "true")
+        || node.type_name.as_deref().is_some_and(type_contains_secret)
 }
 
 fn failed_bytecode_run(

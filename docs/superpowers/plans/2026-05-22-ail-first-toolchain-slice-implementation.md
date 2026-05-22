@@ -3037,6 +3037,54 @@ build flows still emit verified bytecode, and requirements fixtures include
 explicit data, behavior, failure, guarantee, trace, and profile-specific
 coverage.
 
+### Task 76: Compiler-Pass Bytecode Transforms Checked AIL-Core
+
+**Files:**
+- Modify: `src/ail.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing compiler-pass transform test**
+
+Add a library test that compiles `examples/compiler_pass.ail` to
+AIL-Bytecode, parses Support Ticket into checked AIL-Core, runs
+`InferReadPermissions` bytecode over that AIL-Core, and requires the result to
+contain a candidate read `Permission` node attached to the action that reads
+`Ticket.status`.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain ail_compiler_pass_bytecode_transforms_checked_core_ir -- --nocapture
+```
+
+Expected: compile failure because `run_ail_compiler_pass_on_core` does not
+exist.
+
+- [x] **Step 3: Implement compiler-pass core runner**
+
+Add `run_ail_compiler_pass_on_core` for Compiler-profile bytecode. Execute the
+pass through the existing bytecode VM, detect AIL-authored passes that add
+candidate read permissions, and transform checked AIL-Core by adding
+`Permission` nodes, `requires` edges, and compiler-pass provenance for
+non-secret read edges.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain ail_compiler_pass_bytecode_transforms_checked_core_ir -- --nocapture
+cargo test --test ail_toolchain ail_compiler_profile_lowers_to_verified_bytecode -- --nocapture
+cargo test --test ail_toolchain ail_compiler_profile_parses_renders_and_checks_compiler_pass -- --nocapture
+```
+
+Expected: the AIL-authored `InferReadPermissions` pass now transforms checked
+AIL-Core while preserving existing Compiler-profile parse, render, bytecode,
+and VM trace behavior.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

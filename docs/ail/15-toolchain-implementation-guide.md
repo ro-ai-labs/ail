@@ -65,7 +65,9 @@ The following implemented profile expansion is the AIL-Meta Compiler Pass
 example. It proves that compiler passes can be authored as structured English,
 lowered into AIL-Core as compiler-pass actions with typed values, steps,
 effects, failures, guarantees, traces, and provenance, rendered back to
-AIL-Spec, and taught to the LLM draft loop through a profile-specific prompt.
+AIL-Spec, taught to the LLM draft loop through a profile-specific prompt, and
+executed as bytecode against checked AIL-Core for the first concrete
+IR-transforming pass.
 
 The next implemented profile expansion is the Network Driver `System` example.
 It proves that AIL-System can describe a low-level component with typed
@@ -303,7 +305,9 @@ For compiler packages it emits one bytecode action per checked compiler pass,
 including pass metadata, input and output declarations, read, step, write,
 guarantee, trace, and return opcodes. This keeps AIL-Meta compiler work on the
 same bytecode path as applications instead of generating Rust or another host
-backend.
+backend. The bootstrap runner can execute the AIL-authored
+`InferReadPermissions` compiler-pass bytecode against checked AIL-Core and add
+candidate read `Permission` nodes with compiler-pass provenance.
 
 For agent-tool packages it emits one bytecode action per checked tool,
 including tool metadata, requirements, typed inputs and outputs with secret

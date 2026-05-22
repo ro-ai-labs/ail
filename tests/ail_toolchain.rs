@@ -11,7 +11,7 @@ use eigl::ail::{
     compile_ail_bytecode, compile_ail_core_bytecode, elaborate_ail_core, load_ail_package_dir,
     parse_ail_bytecode, parse_ail_package_document, parse_ail_patch_text, parse_ail_spec_text,
     render_ail_bytecode, render_ail_core, render_ail_flow_view, render_ail_spec, run_ail_action,
-    run_ail_bytecode_action, verify_ail_bytecode,
+    run_ail_bytecode_action, run_ail_compiler_pass_on_core, verify_ail_bytecode,
 };
 use eigl::core_model::json_string;
 
@@ -403,6 +403,46 @@ fn ail_compiler_profile_lowers_to_verified_bytecode() {
             .contains(&"compiler pass Infer read permissions started".to_string())
     );
     assert!(run.trace.contains(&"trace ReadPermissionAdded".to_string()));
+}
+
+#[test]
+fn ail_compiler_pass_bytecode_transforms_checked_core_ir() {
+    let pass_package = load_ail_package_dir(fixture("compiler_pass.ail")).unwrap();
+    let pass_document = parse_ail_package_document(&pass_package).unwrap();
+    let pass_bytecode = compile_ail_bytecode(&pass_package, &pass_document).unwrap();
+
+    let app_package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
+    let app_document = parse_ail_package_document(&app_package).unwrap();
+    let app_core = elaborate_ail_core(&app_package, &app_document);
+    assert_eq!(check_ail_core(&app_core), Vec::<String>::new());
+
+    let result =
+        run_ail_compiler_pass_on_core(&pass_bytecode, "InferReadPermissions", &app_core).unwrap();
+    let rendered = render_ail_core(&result.core);
+
+    assert_eq!(result.run.status, "succeeded");
+    assert!(
+        result
+            .run
+            .trace
+            .contains(&"trace ReadPermissionAdded".to_string())
+    );
+    assert!(
+        rendered.contains("node Permission read Ticket.status"),
+        "{rendered}"
+    );
+    assert!(
+        rendered
+            .contains("edge requires Action:MarksOverdueTickets -> Permission:read Ticket.status"),
+        "{rendered}"
+    );
+    assert!(
+        rendered.contains(
+            "node Provenance compiler_pass:InferReadPermissions.permission:read Ticket.status"
+        ),
+        "{rendered}"
+    );
+    assert_eq!(check_ail_core(&result.core), Vec::<String>::new());
 }
 
 #[test]
