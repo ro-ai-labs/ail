@@ -387,6 +387,7 @@ struct AilBuildArtifactSet<'a> {
     bytecode_text: &'a str,
     bytecode_fingerprint: &'a str,
     pass_bytecode_text: Option<&'a str>,
+    pass_bytecode_fingerprint: Option<&'a str>,
     pass_trace: Option<&'a [String]>,
     agent_bytecode_text: Option<&'a str>,
     agent_trace: Option<&'a [String]>,
@@ -402,6 +403,15 @@ struct AilBuildAgentRun {
     bytecode_text: String,
     state: BTreeMap<String, String>,
     trace: Vec<String>,
+}
+
+struct AilBuildPassAcceptance<'a> {
+    requirements_artifact: Option<&'a str>,
+    spec_text: Option<&'a str>,
+    core_text: &'a str,
+    pass_bytecode_text: &'a str,
+    pass_bytecode_fingerprint: &'a str,
+    pass_trace: &'a [String],
 }
 
 fn write_ail_build_artifacts(
@@ -432,6 +442,15 @@ fn write_ail_build_artifacts(
     if let Some(pass_bytecode_text) = artifacts.pass_bytecode_text {
         fs::write(root.join("pass.ailbc.json"), pass_bytecode_text).map_err(|error| {
             format!("failed to write ail-build pass bytecode artifact: {error}")
+        })?;
+    }
+    if let Some(pass_bytecode_fingerprint) = artifacts.pass_bytecode_fingerprint {
+        fs::write(
+            root.join("pass.fingerprint.txt"),
+            format!("{pass_bytecode_fingerprint}\n"),
+        )
+        .map_err(|error| {
+            format!("failed to write ail-build pass bytecode fingerprint artifact: {error}")
         })?;
     }
     if let Some(pass_trace) = artifacts.pass_trace {
@@ -833,11 +852,7 @@ fn start_ail_build_agent_from_saved_spec(
 fn run_ail_build_agent_accept_pass_output(
     agent_path: &str,
     mut agent_start: AilBuildAgentStart,
-    requirements_artifact: Option<&str>,
-    spec_text: Option<&str>,
-    core_text: &str,
-    pass_bytecode_text: &str,
-    pass_trace: &[String],
+    acceptance: AilBuildPassAcceptance<'_>,
 ) -> Result<AilBuildAgentStart, String> {
     let (agent_bytecode, _) = load_verified_ail_build_agent(agent_path)?;
     if !agent_bytecode
@@ -848,30 +863,35 @@ fn run_ail_build_agent_accept_pass_output(
             "ail-build --agent --pass requires an AcceptCompilerPassOutput action".to_string(),
         );
     }
-    if let Some(requirements_artifact) = requirements_artifact {
+    if let Some(requirements_artifact) = acceptance.requirements_artifact {
         agent_start.state.insert(
             "buildrequest.requirements".to_string(),
             requirements_artifact.to_string(),
         );
     }
-    if let Some(spec_text) = spec_text {
+    if let Some(spec_text) = acceptance.spec_text {
         agent_start
             .state
             .insert("buildrequest.spec".to_string(), spec_text.to_string());
     }
-    agent_start
-        .state
-        .insert("buildrequest.core ir".to_string(), core_text.to_string());
+    agent_start.state.insert(
+        "buildrequest.core ir".to_string(),
+        acceptance.core_text.to_string(),
+    );
     agent_start.state.insert(
         "buildrequest.compiler pass artifact".to_string(),
         format!(
             "Verified AIL compiler pass bytecode ({} bytes)",
-            pass_bytecode_text.len()
+            acceptance.pass_bytecode_text.len()
         ),
     );
     agent_start.state.insert(
+        "buildrequest.compiler pass fingerprint".to_string(),
+        acceptance.pass_bytecode_fingerprint.to_string(),
+    );
+    agent_start.state.insert(
         "buildrequest.compiler pass trace".to_string(),
-        pass_trace.join("\n"),
+        acceptance.pass_trace.join("\n"),
     );
     let pass_run = run_ail_bytecode_action(
         &agent_bytecode,
@@ -1280,6 +1300,7 @@ fn run_ail_build_from_core(
         return Ok(1);
     }
     let mut pass_bytecode_artifact = None;
+    let mut pass_bytecode_fingerprint_artifact = None;
     let mut pass_trace_artifact = None;
     if let Some(pass_path) = &cli_options.ail_build_pass {
         let (pass_bytecode, pass_bytecode_text) =
@@ -1295,6 +1316,7 @@ fn run_ail_build_from_core(
         let pass_action = select_single_ail_pass_action(&pass_bytecode)?;
         let pass_result = run_ail_compiler_pass_on_core(&pass_bytecode, &pass_action, &core)?;
         core = pass_result.core;
+        pass_bytecode_fingerprint_artifact = Some(ail_artifact_fingerprint(&pass_bytecode_text));
         pass_bytecode_artifact = Some(pass_bytecode_text);
         pass_trace_artifact = Some(pass_result.run.trace);
         let core_diagnostics = check_ail_core(&core);
@@ -1320,14 +1342,20 @@ fn run_ail_build_from_core(
             pass_bytecode_artifact.as_deref(),
             pass_trace_artifact.as_deref(),
         ) {
+            let pass_bytecode_fingerprint = pass_bytecode_fingerprint_artifact
+                .as_deref()
+                .ok_or_else(|| "missing compiler pass bytecode fingerprint".to_string())?;
             agent_start = run_ail_build_agent_accept_pass_output(
                 agent_path,
                 agent_start,
-                requirements_artifact,
-                spec_text,
-                &core_text,
-                pass_bytecode_text,
-                pass_trace,
+                AilBuildPassAcceptance {
+                    requirements_artifact,
+                    spec_text,
+                    core_text: &core_text,
+                    pass_bytecode_text,
+                    pass_bytecode_fingerprint,
+                    pass_trace,
+                },
             )?;
         }
         Some(run_ail_build_agent_accept_core(
@@ -1378,6 +1406,7 @@ fn run_ail_build_from_core(
                 bytecode_text: &bytecode_text,
                 bytecode_fingerprint: &bytecode_fingerprint,
                 pass_bytecode_text: pass_bytecode_artifact.as_deref(),
+                pass_bytecode_fingerprint: pass_bytecode_fingerprint_artifact.as_deref(),
                 pass_trace: pass_trace_artifact.as_deref(),
                 agent_bytecode_text: agent_run.as_ref().map(|run| run.bytecode_text.as_str()),
                 agent_trace: agent_run.as_ref().map(|run| run.trace.as_slice()),

@@ -429,9 +429,10 @@ the same command writes
 when the build captured or loaded requirements, and it writes
 `accepted.ail-spec.md` only when an AIL-Spec stage was present. When a build
 pass is present, `checked.ail-core.txt` is the post-pass IR that was actually
-lowered, and the artifact directory also includes `pass.ailbc.json` plus
-`pass-trace.txt` for the compiler-pass bytecode and execution trace. When a
-build agent is present, the artifact directory also includes
+lowered, and the artifact directory also includes `pass.ailbc.json`,
+`pass.fingerprint.txt`, and `pass-trace.txt` for the compiler-pass bytecode,
+deterministic pass fingerprint, and execution trace. When a build agent is
+present, the artifact directory also includes
 `agent.ailbc.json` plus `agent-trace.txt` for the agent bytecode and its
 requirements-capture, prompt-portability, application-compile, and
 bytecode-verification trace. This lets the developer audit the

@@ -15,6 +15,7 @@ A BuildRequest has:
 - core ir: Text
 - core review report: Text
 - compiler pass artifact: Text
+- compiler pass fingerprint: Text
 - compiler pass trace: Text
 - compiler pass review report: Text
 - bytecode artifact: Text
@@ -75,6 +76,7 @@ When the toolchain agent accepts an AIL compiler pass output:
 - the system reads the BuildRequest spec
 - the system reads the BuildRequest core ir
 - the system reads the BuildRequest compiler pass artifact
+- the system reads the BuildRequest compiler pass fingerprint
 - the system reads the BuildRequest compiler pass trace
 - the system changes the BuildRequest compiler pass review report to Accepted
 - the system changes the BuildRequest status to PassApplied

@@ -4475,6 +4475,53 @@ Expected: the agent trace reads `buildrequest.bytecode fingerprint`, the final
 verification trace still records `BytecodeArtifactVerified`, and the fingerprint
 artifact matches stdout bytecode.
 
+### Task 106: AIL Build Agent Accepts Compiler-Pass Fingerprints
+
+**Files:**
+- Modify: `examples/ail_toolchain_agent.ail/spec.ail-spec.md`
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing compiler-pass fingerprint test**
+
+Extend the `ail-build --pass --agent --artifact-dir` test to require
+`pass.fingerprint.txt` beside `pass.ailbc.json`, with the same deterministic
+FNV-1a fingerprint format as final bytecode, and require the AIL-authored build
+agent trace to read `BuildRequest.compiler pass fingerprint`.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_agent_accepts_compiler_pass_output_before_core -- --nocapture
+```
+
+Expected: failure because `ail-build --pass --artifact-dir` writes the pass
+bytecode and trace but no pass fingerprint, and `AcceptCompilerPassOutput` does
+not read one.
+
+- [x] **Step 3: Implement compiler-pass fingerprint propagation**
+
+Compute a stable fingerprint over the compiler-pass bytecode text, write
+`pass.fingerprint.txt` when pass artifacts are emitted, add
+`BuildRequest.compiler pass fingerprint` to the AIL-authored toolchain agent,
+and pass the fingerprint into `AcceptCompilerPassOutput` before `AcceptCoreIR`.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_agent_accepts_compiler_pass_output_before_core -- --nocapture
+```
+
+Expected: the pass fingerprint artifact matches `pass.ailbc.json`, the agent
+trace reads `buildrequest.compiler pass fingerprint`, and compiler-pass output
+acceptance still precedes `AcceptCoreIR`.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

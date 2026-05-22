@@ -6222,6 +6222,10 @@ fn cli_ail_build_agent_accepts_compiler_pass_output_before_core() {
 
     let pass_trace = fs::read_to_string(artifact_dir.join("pass-trace.txt")).unwrap();
     assert!(pass_trace.contains("core transform infer read permissions"));
+    let pass_bytecode_artifact = fs::read_to_string(artifact_dir.join("pass.ailbc.json")).unwrap();
+    let expected_pass_fingerprint = fnv64_fingerprint(&pass_bytecode_artifact);
+    let pass_fingerprint = fs::read_to_string(artifact_dir.join("pass.fingerprint.txt")).unwrap();
+    assert_eq!(pass_fingerprint.trim(), expected_pass_fingerprint);
 
     let agent_trace = fs::read_to_string(artifact_dir.join("agent-trace.txt")).unwrap();
     let accept_spec_index = agent_trace
@@ -6240,6 +6244,7 @@ fn cli_ail_build_agent_accepts_compiler_pass_output_before_core() {
     assert!(accept_pass_index < accept_core_index, "{agent_trace}");
     assert!(accept_core_index < compile_index, "{agent_trace}");
     assert!(agent_trace.contains("read buildrequest.compiler pass artifact"));
+    assert!(agent_trace.contains("read buildrequest.compiler pass fingerprint"));
     assert!(agent_trace.contains("read buildrequest.compiler pass trace"));
     assert!(agent_trace.contains("write buildrequest.compiler pass review report=Accepted"));
     assert!(agent_trace.contains("write buildrequest.status=PassApplied"));
