@@ -8,6 +8,7 @@ A BuildRequest has:
 - id: Text
 - developer prompt: Text
 - requirements: Text
+- requirements coverage checklist: Text
 - spec: Text
 - core ir: Text
 - bytecode artifact: Text
@@ -28,6 +29,7 @@ When the toolchain agent interviews an application developer:
 
 - the system requires the BuildRequest to exist
 - the system reads the BuildRequest developer prompt
+- the system changes the BuildRequest requirements coverage checklist to Prepared
 - the system changes the BuildRequest status to RequirementsCaptured
 - the system guarantees requirements mention domain objects, actions, failures, guarantees, traces, secrets, and runtime inputs before compilation
 - the system records a trace event named RequirementsCaptured

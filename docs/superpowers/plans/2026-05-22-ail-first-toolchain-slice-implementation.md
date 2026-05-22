@@ -4053,6 +4053,54 @@ cargo test --test ail_toolchain cli_ail_build_agent_verifies_bytecode_artifact_a
 Expected: the agent trace records `VerifyBytecodeArtifact` after
 `CompileApplication` and includes `BytecodeArtifactVerified`.
 
+### Task 97: AIL Build Agent Requirements Prompt Context
+
+**Files:**
+- Modify: `examples/ail_toolchain_agent.ail/spec.ail-spec.md`
+- Modify: `src/ail.rs`
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing prompt-context test**
+
+Add a prompt-driven `ail-build --agent` CLI test that requires the first base
+LLM requirements request to include an `AGENT REQUIREMENTS CONTEXT` section and
+the AIL agent's `buildrequest.requirements coverage checklist=Prepared` state.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_agent_threads_capture_checklist_into_requirements_prompt -- --nocapture
+```
+
+Expected: failure because the current command runs `CaptureRequirements` before
+the LLM call but does not include the resulting agent state in the requirements
+prompt.
+
+- [x] **Step 3: Implement prompt context threading**
+
+Extend the AIL-authored toolchain agent with a requirements coverage checklist
+field written by `CaptureRequirements`. Render the preflight agent state as a
+small requirements context block and pass that grounded prompt to both the
+initial requirements draft and the requirements repair pass. Tighten the
+requirements prompts to require the exact `AIL-Requirements:` header and `- `
+bullet shape expected by the checker.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_agent_threads_capture_checklist_into_requirements_prompt -- --nocapture
+```
+
+Expected: the first base LLM requirements request includes the agent context and
+the agent trace records the checklist state write before compilation.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

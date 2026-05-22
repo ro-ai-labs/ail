@@ -672,6 +672,21 @@ fn run_ail_build_agent_capture(
     })
 }
 
+fn render_ail_build_agent_requirements_context(agent_start: &AilBuildAgentStart) -> String {
+    let mut lines = vec![
+        "AIL agent CaptureRequirements bytecode completed before this base LLM request."
+            .to_string(),
+    ];
+    lines.extend(
+        agent_start
+            .state
+            .iter()
+            .filter(|(key, _)| key.starts_with("buildrequest."))
+            .map(|(key, value)| format!("{key}={value}")),
+    );
+    lines.join("\n")
+}
+
 fn run_ail_build_agent(
     agent_path: &str,
     core: &eigl::ail::AilCore,
@@ -851,13 +866,30 @@ fn draft_checked_ail_requirements_for_package(
     package: &eigl::ail::AilPackage,
     prompt: &str,
     endpoint: &str,
+    agent_requirements_context: Option<&str>,
 ) -> Result<(String, Vec<eigl::ail::AilDiagnostic>), String> {
-    let mut requirements = draft_ail_requirements(package, prompt, endpoint)?;
+    let grounded_prompt = if let Some(agent_requirements_context) =
+        agent_requirements_context.filter(|context| !context.trim().is_empty())
+    {
+        format!(
+            concat!(
+                "{}\n\n",
+                "Use this AIL agent preflight state as a requirements coverage checklist. ",
+                "Do not restate it by itself; produce a full AIL-Requirements artifact with bullets for domain objects, required fields, action inputs or preconditions, failure cases, guarantees, trace events, secrets, permissions, and runtime inputs.\n\n",
+                "AGENT REQUIREMENTS CONTEXT:\n",
+                "{}"
+            ),
+            prompt, agent_requirements_context
+        )
+    } else {
+        prompt.to_string()
+    };
+    let mut requirements = draft_ail_requirements(package, &grounded_prompt, endpoint)?;
     let mut diagnostics = check_ail_requirements(package, &requirements);
     if !diagnostics.is_empty() {
         requirements = repair_ail_requirements_from_diagnostics(
             package,
-            prompt,
+            &grounded_prompt,
             &requirements,
             &diagnostics,
             endpoint,
@@ -1117,7 +1149,7 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
             .as_deref()
             .unwrap_or(&package.metadata.base_llm_endpoint);
         let (requirements, diagnostics) =
-            draft_checked_ail_requirements_for_package(&package, prompt, endpoint)?;
+            draft_checked_ail_requirements_for_package(&package, prompt, endpoint, None)?;
         if !diagnostics.is_empty() {
             println!("ail-requirements diagnostics:");
             for diagnostic in diagnostics {
@@ -1191,11 +1223,19 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
                     .llm_endpoint
                     .as_deref()
                     .unwrap_or(&package.metadata.base_llm_endpoint);
+                let agent_requirements_context = agent_start
+                    .as_ref()
+                    .map(render_ail_build_agent_requirements_context);
                 let (requirements, requirements_diagnostics) =
                     if let Some(requirements_file) = cli_options.ail_requirements_file.as_deref() {
                         read_checked_ail_requirements_file(&package, requirements_file)?
                     } else {
-                        draft_checked_ail_requirements_for_package(&package, prompt, endpoint)?
+                        draft_checked_ail_requirements_for_package(
+                            &package,
+                            prompt,
+                            endpoint,
+                            agent_requirements_context.as_deref(),
+                        )?
                     };
                 let capture_prompt = cli_options
                     .ail_requirements_file
