@@ -734,6 +734,42 @@ fn render_ail_build_agent_spec_context(agent_start: &AilBuildAgentStart) -> Stri
     lines.join("\n")
 }
 
+fn run_ail_build_agent_accept_spec(
+    agent_path: &str,
+    mut agent_start: AilBuildAgentStart,
+    requirements_artifact: &str,
+    spec_text: &str,
+) -> Result<AilBuildAgentStart, String> {
+    let (agent_bytecode, _) = load_verified_ail_build_agent(agent_path)?;
+    if !agent_bytecode.actions.contains_key("AcceptSpecDraft") {
+        return Err(
+            "ail-build --agent requires an AcceptSpecDraft action for prompt builds".to_string(),
+        );
+    }
+    agent_start.state.insert(
+        "buildrequest.requirements".to_string(),
+        requirements_artifact.to_string(),
+    );
+    agent_start
+        .state
+        .insert("buildrequest.spec".to_string(), spec_text.to_string());
+    let accept_run =
+        run_ail_bytecode_action(&agent_bytecode, "AcceptSpecDraft", agent_start.state)?;
+    if accept_run.status != "succeeded" {
+        let mut message = "ail-build agent AcceptSpecDraft failed".to_string();
+        if let Some(failure) = accept_run.failure {
+            message.push_str(&format!(": {failure}"));
+        }
+        if !accept_run.trace.is_empty() {
+            message.push_str(&format!("\n{}", accept_run.trace.join("\n")));
+        }
+        return Err(message);
+    }
+    agent_start.trace.extend(accept_run.trace);
+    agent_start.state = accept_run.final_state;
+    Ok(agent_start)
+}
+
 fn run_ail_build_agent(
     agent_path: &str,
     core: &eigl::ail::AilCore,
@@ -1346,6 +1382,16 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
                         println!("{}", diagnostic.detailed_message());
                     }
                     return Ok(1);
+                }
+                if let (Some(agent_path), Some(previous_agent_start)) =
+                    (cli_options.ail_build_agent.as_deref(), agent_start.take())
+                {
+                    agent_start = Some(run_ail_build_agent_accept_spec(
+                        agent_path,
+                        previous_agent_start,
+                        &requirements,
+                        &draft.spec_text,
+                    )?);
                 }
                 let document = parse_ail_package_spec_text(&package, &draft.spec_text)?;
                 let core = elaborate_ail_core(&package, &document);

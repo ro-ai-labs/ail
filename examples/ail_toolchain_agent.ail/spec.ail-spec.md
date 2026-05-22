@@ -11,6 +11,7 @@ A BuildRequest has:
 - requirements coverage checklist: Text
 - spec coverage checklist: Text
 - spec: Text
+- spec review report: Text
 - core ir: Text
 - bytecode artifact: Text
 - bytecode verification report: Text
@@ -45,6 +46,19 @@ When the toolchain agent prepares a checked AIL spec prompt:
 - the system changes the BuildRequest spec coverage checklist to Prepared
 - the system guarantees the spec prompt preserves requirements, domain model, actions, failures, guarantees, traces, secrets, runtime inputs, and bytecode compilation path
 - the system records a trace event named SpecDraftPrepared
+
+Action: Accept spec draft.
+
+When the toolchain agent accepts a checked AIL spec draft:
+
+- the system requires the BuildRequest to exist
+- the system requires the BuildRequest status to be RequirementsCaptured
+- the system reads the BuildRequest requirements
+- the system reads the BuildRequest spec
+- the system changes the BuildRequest spec review report to Accepted
+- the system changes the BuildRequest status to SpecCaptured
+- the system guarantees the accepted spec preserves the checked requirements and remains eligible for AIL-Core lowering and AIL-Bytecode compilation
+- the system records a trace event named SpecDraftAccepted
 
 Action: Compile application.
 

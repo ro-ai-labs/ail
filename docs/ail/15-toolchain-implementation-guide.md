@@ -397,14 +397,17 @@ its bytecode, and for prompt-driven builds runs its `CaptureRequirements`
 action before the base LLM requirements request, then includes the
 agent-produced requirements checklist state in that first prompt. After
 requirements capture and checking, it runs `PrepareSpecDraft` and includes the
-agent-produced spec checklist state in the AIL-Spec prompt. It optionally runs
-`CompareAgentPromptPortability` when `--target-model <name>` is supplied, and
-runs its `CompileApplication` action against the completed build state before
-target bytecode emission. After the Rust bootstrap compiler emits and verifies
-the target artifact, the agent runs `VerifyBytecodeArtifact` so the final
-artifact boundary is also represented in AIL bytecode. This keeps the
-developer-facing build coordinator in AIL bytecode instead of adding a
-host-language orchestration layer. With `--artifact-dir`, the same command writes
+agent-produced spec checklist state in the AIL-Spec prompt. Once the checked
+AIL-Spec draft is accepted, it runs `AcceptSpecDraft` before AIL-Core
+elaboration so the `SpecCaptured` transition is also represented in AIL
+bytecode. It optionally runs `CompareAgentPromptPortability` when
+`--target-model <name>` is supplied, and runs its `CompileApplication` action
+against the completed build state before target bytecode emission. After the
+Rust bootstrap compiler emits and verifies the target artifact, the agent runs
+`VerifyBytecodeArtifact` so the final artifact boundary is also represented in
+AIL bytecode. This keeps the developer-facing build coordinator in AIL bytecode
+instead of adding a host-language orchestration layer. With `--artifact-dir`,
+the same command writes
 `accepted.ail-spec.md`, `checked.ail-core.txt`, and `artifact.ailbc.json`; it
 also writes `requirements.ail-requirements.md` when the build captured or loaded
 requirements, and it writes `accepted.ail-spec.md` only when an AIL-Spec stage

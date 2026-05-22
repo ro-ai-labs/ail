@@ -4148,6 +4148,52 @@ cargo test --test ail_toolchain cli_ail_build_agent_threads_spec_checklist_into_
 Expected: the AIL-Spec prompt includes `AGENT SPEC CONTEXT`, and the agent trace
 records `PrepareSpecDraft` before `CompileApplication`.
 
+### Task 99: AIL Build Agent Accepts Checked Spec Drafts
+
+**Files:**
+- Modify: `examples/ail_toolchain_agent.ail/spec.ail-spec.md`
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing accepted-spec agent test**
+
+Add a prompt-driven `ail-build --agent` CLI test that requires the agent trace
+to record `AcceptSpecDraft` before `CompileApplication`, read the checked
+`BuildRequest` spec, write `buildrequest.spec review report=Accepted`, change
+status to `SpecCaptured`, and record `SpecDraftAccepted`.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_agent_accepts_spec_draft_before_compile -- --nocapture
+```
+
+Expected: failure because the command currently jumps from `PrepareSpecDraft` to
+`CompileApplication`; the host accepts the checked spec without an AIL-authored
+state transition.
+
+- [x] **Step 3: Implement accepted-spec bytecode checkpoint**
+
+Extend the AIL-authored toolchain agent with a `spec review report` field and
+`AcceptSpecDraft` action. After AIL-Spec drafting succeeds, run that action with
+the checked requirements and accepted spec before parsing and elaborating to
+AIL-Core, then pass the resulting agent state into `CompileApplication`.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_agent_accepts_spec_draft_before_compile -- --nocapture
+```
+
+Expected: the agent trace records `AcceptSpecDraft`, `SpecCaptured`, and
+`SpecDraftAccepted` before `CompileApplication`.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**
