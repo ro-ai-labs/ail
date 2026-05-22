@@ -2802,6 +2802,51 @@ cargo test --test ail_toolchain ail_system_profile_lowers_to_verified_bytecode -
 Expected: the System package lowers to verified bytecode and the VM executes
 `NetworkPacketReceiver` successfully with system and trace events.
 
+### Task 71: Profile-Aware `ail-build` Requirements Prompt
+
+**Files:**
+- Modify: `src/ail.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing AgentTool `ail-build` prompt test**
+
+Add an `ail-build` test for `examples/refund_tool.ail` with a two-response mock
+LLM. Require the first AIL-Requirements prompt to name actions, tools, compiler
+passes, and system components as possible profile surfaces; require the second
+prompt to use the AgentTool AIL-Spec surface and the final output to parse as
+verified AgentTool AIL-Bytecode.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_for_agent_tool_profile_prompts_tool_requirements_and_outputs_bytecode -- --nocapture
+```
+
+Expected: failure because the requirements prompt still says `actions or
+compiler surfaces`, which under-specifies AgentTool and System packages.
+
+- [x] **Step 3: Implement profile-aware requirements wording**
+
+Update the AIL-Requirements prompt to name actions, tools, compiler passes, and
+system components directly while preserving the two-stage
+requirements-to-AIL-Spec-to-AIL-Core-to-AIL-Bytecode build flow.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_for_agent_tool_profile_prompts_tool_requirements_and_outputs_bytecode -- --nocapture
+```
+
+Expected: `ail-build` sends a profile-aware requirements prompt, sends an
+AgentTool-shaped AIL-Spec prompt grounded in those requirements, and prints
+verified AgentTool AIL-Bytecode.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

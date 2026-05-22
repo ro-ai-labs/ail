@@ -3912,6 +3912,69 @@ fn cli_ail_build_uses_llm_candidate_and_outputs_verified_bytecode() {
 }
 
 #[test]
+fn cli_ail_build_for_agent_tool_profile_prompts_tool_requirements_and_outputs_bytecode() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("refund_tool.ail");
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let requirements = concat!(
+        "AIL-Requirements:\n",
+        "- The tool refunds captured payments.\n",
+        "- The tool needs order id, refund amount, reason, and secret payment token.\n",
+        "- The tool calls PaymentProvider.refund and records RefundCustomerPaymentRequested.\n"
+    );
+    let requirements_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(requirements)
+    );
+    let response_spec = fs::read_to_string(format!("{package}/spec.ail-spec.md")).unwrap();
+    let spec_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(&format!(
+            "<think>ignore this</think>\n```ail\n{response_spec}\n```"
+        ))
+    );
+    let server = serve_chat_responses(listener, vec![requirements_body, spec_body]);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-build",
+            &package,
+            "--prompt",
+            "Build an AIL refund tool bytecode artifact",
+            "--llm-endpoint",
+            &format!("http://127.0.0.1:{}/v1/chat/completions", addr.port()),
+        ])
+        .output()
+        .unwrap();
+
+    let request_bodies = server.join().unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(request_bodies.len(), 2);
+    assert!(request_bodies[0].contains("Use the AgentTool profile"));
+    assert!(
+        request_bodies[0].contains("actions, tools, compiler passes, system components"),
+        "{}",
+        request_bodies[0]
+    );
+    assert!(request_bodies[0].contains("permissions"));
+    assert!(request_bodies[1].contains("Use this exact AgentTool surface shape"));
+    assert!(request_bodies[1].contains("DRAFT REQUIREMENTS:"));
+    assert!(request_bodies[1].contains("PaymentProvider.refund"));
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let bytecode = parse_ail_bytecode(&stdout).unwrap();
+    assert_eq!(bytecode.profile, "AgentTool");
+    assert_eq!(verify_ail_bytecode(&bytecode), Vec::<String>::new());
+    assert!(bytecode.actions.contains_key("RefundCustomerPayment"));
+}
+
+#[test]
 fn cli_ail_draft_for_agent_tool_profile_prompts_tool_surface() {
     let binary = env!("CARGO_BIN_EXE_eigl");
     let package = fixture("refund_tool.ail");

@@ -329,9 +329,9 @@ boundary instead of only a display format. The VM verifier rejects unknown
 opcodes and missing required operands before executing saved bytecode.
 `ail-build` composes the LLM draft loop with the same checked bytecode lowering:
 the base LLM first drafts an AIL-Requirements artifact from a user prompt, then
-drafts an Application AIL-Spec candidate grounded in those requirements. The
-checker accepts or rejects the candidate, and successful candidates render as
-verified AIL-Bytecode rather than host-language source.
+drafts an AIL-Spec candidate for the package profile grounded in those
+requirements. The checker accepts or rejects the candidate, and successful
+candidates render as verified AIL-Bytecode rather than host-language source.
 
 ### Diagnostics
 

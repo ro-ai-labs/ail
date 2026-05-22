@@ -39,7 +39,8 @@ artifact directly, `ail-conformance` checks accepted and rejected fixtures,
 `ail-draft --prompt <text>` asks the package base LLM endpoint for an AIL-Spec
 candidate before parsing and checking it, and `ail-build --prompt <text>` asks
 the base LLM for requirements, asks it to turn those requirements into an
-Application AIL-Spec candidate, and prints verified AIL-Bytecode on success.
+AIL-Spec candidate for the package profile, and prints verified AIL-Bytecode on
+success.
 The default AIL base LLM endpoint is
 `http://inteligentia-pro-1:8080/v1/chat/completions`.
 
@@ -70,6 +71,7 @@ cargo run -- ail-conformance examples/compiler_pass.ail
 cargo run -- ail-conformance examples/network_driver.ail
 cargo run -- ail-draft examples/support_ticket.ail --prompt "Draft a support ticket app with private internal notes" --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
 cargo run -- ail-build examples/support_ticket.ail --prompt "Build a support ticket bytecode artifact" --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
+cargo run -- ail-build examples/refund_tool.ail --prompt "Build a refund tool bytecode artifact" --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
 cargo run -- check examples/confirm_order.rif.md
 cargo run -- graph examples/confirm_order.rif.md
 cargo run -- views examples/confirm_order.rif.md

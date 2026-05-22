@@ -5008,7 +5008,7 @@ fn build_ail_requirements_prompt(package: &AilPackage, user_prompt: &str) -> Str
             "Use the {} profile and conformance level {}.\n",
             "Package features: {}.\n",
             "Output only an AIL-Requirements artifact with concise bullet points. Do not include code fences, AIL-Spec, implementation code, backend source, or reasoning.\n",
-            "Requirements must name domain objects, required fields, actions or compiler surfaces, failure cases, guarantees, traces, secrets, permissions, and runtime inputs that the final checked AIL program must preserve.\n",
+            "Requirements must name domain objects, required fields, actions, tools, compiler passes, system components, failure cases, guarantees, traces, secrets, permissions, and runtime inputs that the final checked AIL program must preserve.\n",
             "These requirements are an intermediate artifact. The next compiler step will transform them into AIL-Spec, then AIL-Core, then AIL-Bytecode.\n\n",
             "HUMAN REQUEST:\n",
             "{}\n"
