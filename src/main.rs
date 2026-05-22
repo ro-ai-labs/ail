@@ -1703,6 +1703,7 @@ fn run_ail_build_agent_verify_manifest(
     agent_run: &mut AilBuildAgentRun,
     manifest_text: &str,
     manifest_fingerprint: &str,
+    compiler_pass_target_fingerprint: Option<&str>,
 ) -> Result<(), String> {
     if !agent_run
         .bytecode
@@ -1722,6 +1723,12 @@ fn run_ail_build_agent_verify_manifest(
         "buildrequest.artifact manifest fingerprint".to_string(),
         manifest_fingerprint.to_string(),
     );
+    if let Some(compiler_pass_target_fingerprint) = compiler_pass_target_fingerprint {
+        verify_state.insert(
+            "buildrequest.compiler pass target artifact fingerprint".to_string(),
+            compiler_pass_target_fingerprint.to_string(),
+        );
+    }
     let verify_run =
         run_ail_bytecode_action(&agent_run.bytecode, "VerifyBuildManifest", verify_state)?;
     if verify_run.status != "succeeded" {
@@ -1737,6 +1744,19 @@ fn run_ail_build_agent_verify_manifest(
     agent_run.trace.extend(verify_run.trace);
     agent_run.state = verify_run.final_state;
     Ok(())
+}
+
+fn native_artifact_fingerprint_text(artifacts: &[AilNativeArtifact]) -> Option<String> {
+    if artifacts.is_empty() {
+        return None;
+    }
+    Some(
+        artifacts
+            .iter()
+            .map(|artifact| ail_artifact_fingerprint_bytes(&artifact.bytes))
+            .collect::<Vec<_>>()
+            .join("\n"),
+    )
 }
 
 fn draft_checked_ail_requirements_for_package(
@@ -2048,7 +2068,14 @@ fn run_ail_build_from_core(
                 agent_native_executables: agent_native_artifacts.as_slice(),
             });
             let manifest_fingerprint = ail_artifact_fingerprint(&manifest_text);
-            run_ail_build_agent_verify_manifest(agent_run, &manifest_text, &manifest_fingerprint)?;
+            let pass_target_fingerprint =
+                native_artifact_fingerprint_text(pass_native_artifacts.as_slice());
+            run_ail_build_agent_verify_manifest(
+                agent_run,
+                &manifest_text,
+                &manifest_fingerprint,
+                pass_target_fingerprint.as_deref(),
+            )?;
         }
         write_ail_build_artifacts(
             artifact_dir,

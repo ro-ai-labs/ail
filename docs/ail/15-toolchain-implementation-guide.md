@@ -522,9 +522,10 @@ ELF, the agent also runs `VerifyTargetArtifact` with the native target artifact
 summary and deterministic fingerprint so the final machine-code boundary is
 represented in AIL bytecode. When `--artifact-dir` is present, the agent also runs
 `VerifyBuildManifest` with the rendered build manifest, deterministic manifest
-fingerprint, and native target fingerprint when a native target is present, so
-the whole requirements/spec/core/pass/agent/artifact boundary is represented in
-AIL bytecode. This keeps the
+fingerprint, native target fingerprint when a native target is present, and the
+native compiler-pass executable fingerprint when a native build pass is
+present, so the whole requirements/spec/core/pass/agent/artifact boundary is
+represented in AIL bytecode. This keeps the
 developer-facing build coordinator in AIL bytecode
 instead of adding a host-language orchestration layer. With `--artifact-dir`,
 the same command writes

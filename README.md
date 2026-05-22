@@ -153,7 +153,8 @@ and its deterministic fingerprint, `VerifyTargetArtifact` reads the native
 target artifact summary and deterministic fingerprint when a native target is
 selected, and `VerifyBuildManifest` reads the artifact manifest and its
 deterministic fingerprint, plus the native target fingerprint when a native
-target is selected. When `ail-build --target linux-x86_64-elf` is used with
+target is selected and the native compiler-pass executable fingerprint when a
+native build pass is present. When `ail-build --target linux-x86_64-elf` is used with
 `--artifact-dir`, it also writes `target.elf`, `target.fingerprint.txt`, and a
 manifest target entry for the native executable bytes. When the same native
 target build also uses `--agent`, it writes `agent-<ActionName>.elf` for each

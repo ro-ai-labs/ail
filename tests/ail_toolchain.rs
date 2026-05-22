@@ -6832,6 +6832,74 @@ fn cli_ail_build_with_pass_writes_native_pass_artifact() {
 
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+fn cli_ail_build_agent_reads_native_pass_fingerprint() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("support_ticket.ail");
+    let pass_package = fixture("compiler_pass.ail");
+    let agent_package = fixture("ail_toolchain_agent.ail");
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "eigl-ail-build-agent-native-pass-fingerprint-{}",
+        std::process::id()
+    ));
+    let executable_path = std::env::temp_dir().join(format!(
+        "eigl-ail-build-agent-native-pass-out-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+    let _ = fs::remove_file(&executable_path);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-build",
+            &package,
+            "--spec-file",
+            &format!("{package}/spec.ail-spec.md"),
+            "--pass",
+            &pass_package,
+            "--agent",
+            &agent_package,
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+            "--action",
+            "AssignTicket",
+            "--target",
+            "linux-x86_64-elf",
+            "--out",
+            executable_path.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let pass_native = fs::read(artifact_dir.join("pass-InferReadPermissions.elf")).unwrap();
+    let expected_pass_native_fingerprint = fnv64_fingerprint_bytes(&pass_native);
+    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-build.txt")).unwrap();
+    assert!(
+        manifest.contains(&format!(
+            "compiler-pass-target linux-x86_64-elf pass-InferReadPermissions.elf {expected_pass_native_fingerprint}"
+        )),
+        "{manifest}"
+    );
+
+    let agent_trace = fs::read_to_string(artifact_dir.join("agent-trace.txt")).unwrap();
+    assert!(
+        agent_trace.contains("read buildrequest.compiler pass target artifact fingerprint"),
+        "{agent_trace}"
+    );
+    assert!(agent_trace.contains("trace BuildManifestVerified"));
+
+    fs::remove_dir_all(artifact_dir).unwrap();
+    fs::remove_file(executable_path).unwrap();
+}
+
+#[test]
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_build_agent_verifies_native_target_artifact() {
     let binary = env!("CARGO_BIN_EXE_eigl");
     let package = fixture("support_ticket.ail");
