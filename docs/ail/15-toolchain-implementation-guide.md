@@ -321,20 +321,23 @@ verified bytecode artifact family as applications, agent tools, and compiler
 passes.
 
 `ail-lower` renders the deterministic bytecode artifact after the same package
-loading, parsing, elaboration, and checker gate as `ail-core` and `ail-flow`.
-`ail-run` executes through the AIL bytecode VM for supported Application
-packages. `ail-vm` reads a saved AIL-Bytecode artifact and executes it directly
-without reparsing the source AIL package, making bytecode a real artifact
-boundary instead of only a display format. The VM verifier rejects unknown
-opcodes and missing required operands before executing saved bytecode.
+loading, parsing, elaboration, and checker gate as `ail-core` and `ail-flow`;
+the bytecode compiler receives the checked AIL-Core IR, not the parsed
+AIL-Spec document. `ail-run` uses the same checked AIL-Core-to-bytecode path and
+then executes through the AIL bytecode VM for supported Application packages.
+`ail-vm` reads a saved AIL-Bytecode artifact and executes it directly without
+reparsing the source AIL package, making bytecode a real artifact boundary
+instead of only a display format. The VM verifier rejects unknown opcodes and
+missing required operands before executing saved bytecode.
 `ail-build` composes the LLM draft loop with the same checked bytecode lowering:
 the base LLM first drafts an AIL-Requirements artifact from a user prompt, then
 drafts an AIL-Spec candidate for the package profile grounded in those
 requirements. If the checker rejects the first candidate, `ail-build` sends the
 candidate plus detailed diagnostics and repair suggestions back to the base LLM
-for one repair pass. Only a checked candidate is lowered to AIL-Core and
-verified AIL-Bytecode, so the build path still emits bytecode rather than
-host-language source. With `--artifact-dir`, the same command writes
+for one repair pass. Only a checked candidate is lowered to AIL-Core, and the
+bytecode compiler consumes that checked IR to emit verified AIL-Bytecode, so
+the build path still emits bytecode rather than host-language source. With
+`--artifact-dir`, the same command writes
 `requirements.ail-requirements.md`, `accepted.ail-spec.md`, and
 `artifact.ailbc.json` so the developer can audit the requirements-to-spec-to-
 bytecode chain while stdout remains the parseable bytecode artifact.

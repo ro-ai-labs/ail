@@ -8,9 +8,9 @@ use std::time::{Duration, Instant};
 
 use eigl::ail::{
     DEFAULT_BASE_LLM_ENDPOINT, apply_ail_patch, check_ail_core, check_ail_core_diagnostics,
-    compile_ail_bytecode, elaborate_ail_core, load_ail_package_dir, parse_ail_bytecode,
-    parse_ail_package_document, parse_ail_patch_text, parse_ail_spec_text, render_ail_bytecode,
-    render_ail_core, render_ail_flow_view, render_ail_spec, run_ail_action,
+    compile_ail_bytecode, compile_ail_core_bytecode, elaborate_ail_core, load_ail_package_dir,
+    parse_ail_bytecode, parse_ail_package_document, parse_ail_patch_text, parse_ail_spec_text,
+    render_ail_bytecode, render_ail_core, render_ail_flow_view, render_ail_spec, run_ail_action,
     run_ail_bytecode_action, verify_ail_bytecode,
 };
 use eigl::core_model::json_string;
@@ -1558,6 +1558,44 @@ fn ail_compiler_lowers_checked_application_to_bytecode() {
         rendered.contains(r#""traces":["TicketNotFound"]"#),
         "{rendered}"
     );
+}
+
+#[test]
+fn ail_compiler_lowers_checked_core_ir_to_bytecode() {
+    let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
+    let document = parse_ail_package_document(&package).unwrap();
+    let core = elaborate_ail_core(&package, &document);
+    assert_eq!(check_ail_core(&core), Vec::<String>::new());
+
+    let bytecode = compile_ail_core_bytecode(&core).unwrap();
+    let rendered = render_ail_bytecode(&bytecode);
+
+    assert!(rendered.contains(r#""kind":"AIL-Bytecode""#), "{rendered}");
+    assert!(
+        rendered.contains(r#""package":"support-ticket""#),
+        "{rendered}"
+    );
+    assert!(rendered.contains(r#""action":"CloseTicket""#), "{rendered}");
+    assert!(
+        rendered.contains(r#""opcode":"REQUIRE_EXISTS""#),
+        "{rendered}"
+    );
+    assert!(rendered.contains(r#""key":"ticket.id""#), "{rendered}");
+    assert_eq!(verify_ail_bytecode(&bytecode), Vec::<String>::new());
+
+    let run = run_ail_bytecode_action(
+        &bytecode,
+        "CloseTicket",
+        BTreeMap::from([
+            ("ticket.id".to_string(), "T-1".to_string()),
+            ("ticket.status".to_string(), "Open".to_string()),
+        ]),
+    )
+    .unwrap();
+
+    assert_eq!(run.status, "succeeded");
+    assert_eq!(run.final_state["ticket.status"], "Closed");
+    assert!(run.trace.contains(&"trace TicketClosed".to_string()));
 }
 
 #[test]

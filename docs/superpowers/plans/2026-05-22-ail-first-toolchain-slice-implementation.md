@@ -2937,6 +2937,57 @@ cargo test --test ail_toolchain cli_ail_build_writes_requirements_spec_and_bytec
 Expected: the command emits verified bytecode on stdout and writes the three
 reviewable intermediate artifacts.
 
+### Task 74: AIL-Core IR To Bytecode Entry Point
+
+**Files:**
+- Modify: `src/ail.rs`
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing AIL-Core bytecode test**
+
+Add a library test that parses the Support Ticket package, elaborates and
+checks AIL-Core, then calls `compile_ail_core_bytecode` directly. Require the
+rendered bytecode to include the package, action, requirement opcodes, and to
+execute `CloseTicket` through the bytecode VM.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain ail_compiler_lowers_checked_core_ir_to_bytecode -- --nocapture
+```
+
+Expected: compile failure because `compile_ail_core_bytecode` does not exist.
+
+- [x] **Step 3: Implement checked IR bytecode lowering**
+
+Add `compile_ail_core_bytecode` as the bytecode compiler entrypoint, reconstruct
+the bytecode lowering view from checked AIL-Core graph nodes and edges, keep
+`compile_ail_bytecode` as a source-document compatibility wrapper through
+AIL-Core elaboration, and route `ail-lower`, `ail-run`, and `ail-build` through
+the checked AIL-Core entrypoint.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain ail_compiler_lowers_checked_core_ir_to_bytecode -- --nocapture
+cargo test --test ail_toolchain ail_compiler_lowers_checked_application_to_bytecode -- --nocapture
+cargo test --test ail_toolchain ail_bytecode_vm_executes_close_ticket_success_and_failure -- --nocapture
+cargo test --test ail_toolchain ail_agent_tool_profile_lowers_to_verified_bytecode -- --nocapture
+cargo test --test ail_toolchain ail_compiler_profile_lowers_to_verified_bytecode -- --nocapture
+cargo test --test ail_toolchain ail_system_profile_lowers_to_verified_bytecode -- --nocapture
+```
+
+Expected: checked AIL-Core lowers to verified AIL-Bytecode for Application,
+AgentTool, Compiler, and System profiles, and the bytecode VM execution path
+stays unchanged.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

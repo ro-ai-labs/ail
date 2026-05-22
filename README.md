@@ -31,19 +31,19 @@ AIL package commands operate on package directories such as
 `examples/support_ticket.ail`. `ail-check` loads the package entry spec and
 runs AIL-Core diagnostics, `ail-core` prints deterministic AIL-Core,
 `ail-flow` prints a deterministic AIL-Flow JSON projection for no-code
-inspection, `ail-lower` prints deterministic AIL-Bytecode, `ail-patch
-<patch-file>` applies a checked AIL patch and prints canonical AIL-Spec,
-`ail-run --action <ActionName>` executes through the current AIL bytecode VM,
-`ail-vm --action <ActionName>` verifies and executes a saved AIL-Bytecode
-artifact directly, `ail-conformance` checks accepted and rejected fixtures,
-`ail-draft --prompt <text>` asks the package base LLM endpoint for an AIL-Spec
-candidate before parsing and checking it, and `ail-build --prompt <text>` asks
-the base LLM for requirements, asks it to turn those requirements into an
-AIL-Spec candidate for the package profile, gives the base LLM one
-diagnostics-guided repair pass if the checker rejects the candidate, and prints
-verified AIL-Bytecode on success. Add `--artifact-dir <dir>` to also write the
-captured requirements, accepted AIL-Spec, and final AIL-Bytecode artifact for
-review.
+inspection, `ail-lower` compiles checked AIL-Core IR into deterministic
+AIL-Bytecode, `ail-patch <patch-file>` applies a checked AIL patch and prints
+canonical AIL-Spec, `ail-run --action <ActionName>` executes through the
+current AIL bytecode VM, `ail-vm --action <ActionName>` verifies and executes a
+saved AIL-Bytecode artifact directly, `ail-conformance` checks accepted and
+rejected fixtures, `ail-draft --prompt <text>` asks the package base LLM
+endpoint for an AIL-Spec candidate before parsing and checking it, and
+`ail-build --prompt <text>` asks the base LLM for requirements, asks it to turn
+those requirements into an AIL-Spec candidate for the package profile, gives
+the base LLM one diagnostics-guided repair pass if the checker rejects the
+candidate, then compiles the checked AIL-Core IR into verified AIL-Bytecode on
+success. Add `--artifact-dir <dir>` to also write the captured requirements,
+accepted AIL-Spec, and final AIL-Bytecode artifact for review.
 The default AIL base LLM endpoint is
 `http://inteligentia-pro-1:8080/v1/chat/completions`.
 

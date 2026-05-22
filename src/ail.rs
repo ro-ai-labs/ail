@@ -2957,6 +2957,26 @@ pub fn compile_ail_bytecode(
     package: &AilPackage,
     document: &AilDocument,
 ) -> Result<AilBytecodeProgram, String> {
+    let core = elaborate_ail_core(package, document);
+    compile_ail_core_bytecode(&core)
+}
+
+pub fn compile_ail_core_bytecode(core: &AilCore) -> Result<AilBytecodeProgram, String> {
+    let package = AilPackage {
+        metadata: core.package.clone(),
+        root: PathBuf::new(),
+        spec_path: PathBuf::new(),
+        spec_text: String::new(),
+        imports: Vec::new(),
+    };
+    let document = ail_document_from_core(core);
+    compile_ail_document_bytecode(&package, &document)
+}
+
+fn compile_ail_document_bytecode(
+    package: &AilPackage,
+    document: &AilDocument,
+) -> Result<AilBytecodeProgram, String> {
     let actions = match package.metadata.profile.as_str() {
         "Application" => document
             .actions
@@ -3004,6 +3024,724 @@ pub fn compile_ail_bytecode(
         actions,
         failures,
     })
+}
+
+fn ail_document_from_core(core: &AilCore) -> AilDocument {
+    let node_by_id = graph_node_by_id(core);
+    let mut document = AilDocument {
+        application: AilApplication::default(),
+        things: BTreeMap::new(),
+        tools: BTreeMap::new(),
+        compiler_passes: BTreeMap::new(),
+        system_components: BTreeMap::new(),
+        actions: BTreeMap::new(),
+        failures: BTreeMap::new(),
+    };
+
+    if let Some(application) = core
+        .graph
+        .nodes
+        .iter()
+        .find(|node| node.kind == "Application")
+    {
+        document.application = AilApplication {
+            name: application.name.clone(),
+            purpose: application
+                .attributes
+                .get("purpose")
+                .cloned()
+                .unwrap_or_default(),
+            users: Vec::new(),
+            views: outgoing_nodes(core, &node_by_id, application, "contains")
+                .into_iter()
+                .filter(|node| node.kind == "View")
+                .map(|node| node.name)
+                .collect(),
+        };
+    }
+
+    for thing_node in core.graph.nodes.iter().filter(|node| node.kind == "Thing") {
+        let mut thing = AilThing {
+            name: thing_node.name.clone(),
+            fields: BTreeMap::new(),
+            provenance: node_provenance(core, &thing_node.id).unwrap_or_default(),
+        };
+        for field_node in outgoing_nodes(core, &node_by_id, thing_node, "has_field")
+            .into_iter()
+            .filter(|node| node.kind == "Field")
+        {
+            let field_name = local_core_name(&field_node.name, &thing.name);
+            thing.fields.insert(
+                field_name.clone(),
+                AilField {
+                    name: field_name,
+                    type_name: field_node.type_name.clone().unwrap_or_default(),
+                    is_secret: field_node
+                        .attributes
+                        .get("secret")
+                        .is_some_and(|value| value == "true"),
+                    provenance: node_provenance(core, &field_node.id).unwrap_or_default(),
+                },
+            );
+        }
+        document.things.insert(thing.name.clone(), thing);
+    }
+
+    for failure_node in core
+        .graph
+        .nodes
+        .iter()
+        .filter(|node| node.kind == "Failure")
+        .filter(|node| {
+            node.attributes
+                .get("declared")
+                .is_some_and(|value| value == "true")
+        })
+    {
+        let mut failure = AilFailure {
+            name: failure_node.name.clone(),
+            condition: failure_node
+                .attributes
+                .get("condition")
+                .cloned()
+                .unwrap_or_default(),
+            provenance: node_provenance(core, &failure_node.id).unwrap_or_default(),
+            ..AilFailure::default()
+        };
+        failure.handling = outgoing_nodes(core, &node_by_id, failure_node, "handles_failure")
+            .into_iter()
+            .filter(|node| node.kind == "Effect")
+            .map(|node| {
+                core_node_provenance_payload(
+                    core,
+                    &node,
+                    &format!("failure:{}.handling:", failure.name),
+                )
+                .unwrap_or(node.name)
+            })
+            .collect();
+        failure.traces = outgoing_nodes(core, &node_by_id, failure_node, "records_trace")
+            .into_iter()
+            .filter(|node| node.kind == "Trace")
+            .map(|node| node.name)
+            .collect();
+        document.failures.insert(failure.name.clone(), failure);
+    }
+
+    for action_node in core
+        .graph
+        .nodes
+        .iter()
+        .filter(|node| node.kind == "Action")
+        .filter(|node| {
+            node.attributes
+                .get("kind")
+                .is_none_or(|kind| kind != "CompilerPass")
+        })
+    {
+        let action = AilAction {
+            name: action_node.name.clone(),
+            label: action_node
+                .attributes
+                .get("label")
+                .cloned()
+                .unwrap_or_else(|| action_node.name.clone()),
+            trigger: action_node
+                .attributes
+                .get("trigger")
+                .cloned()
+                .unwrap_or_default(),
+            requirements: outgoing_nodes(core, &node_by_id, action_node, "requires")
+                .into_iter()
+                .filter(|node| node.kind == "Rule")
+                .map(|node| node.name)
+                .collect(),
+            reads: outgoing_edge_payloads(core, &node_by_id, action_node, "reads", "read"),
+            writes: outgoing_edge_payloads(core, &node_by_id, action_node, "writes", "write"),
+            failures: outgoing_nodes(core, &node_by_id, action_node, "may_fail_with")
+                .into_iter()
+                .filter(|node| node.kind == "Failure")
+                .map(|node| node.name)
+                .collect(),
+            guarantees: outgoing_nodes(core, &node_by_id, action_node, "guarantees")
+                .into_iter()
+                .filter(|node| node.kind == "Guarantee")
+                .map(|node| node.name)
+                .collect(),
+            traces: outgoing_nodes(core, &node_by_id, action_node, "records_trace")
+                .into_iter()
+                .filter(|node| node.kind == "Trace")
+                .map(|node| node.name)
+                .collect(),
+            secret_protections: outgoing_nodes(core, &node_by_id, action_node, "protects_secret")
+                .into_iter()
+                .map(|node| node.name)
+                .collect(),
+            provenance: node_provenance(core, &action_node.id).unwrap_or_default(),
+        };
+        document.actions.insert(action.name.clone(), action);
+    }
+
+    for tool_node in core.graph.nodes.iter().filter(|node| node.kind == "Tool") {
+        let mut tool = AilTool {
+            name: tool_node.name.clone(),
+            label: tool_node
+                .attributes
+                .get("label")
+                .cloned()
+                .unwrap_or_else(|| tool_node.name.clone()),
+            provenance: node_provenance(core, &tool_node.id).unwrap_or_default(),
+            ..AilTool::default()
+        };
+        for input_node in outgoing_nodes(core, &node_by_id, tool_node, "has_input")
+            .into_iter()
+            .filter(|node| node.kind == "Input")
+        {
+            let input_name = local_core_name(&input_node.name, &tool.name);
+            tool.inputs.insert(
+                input_name.clone(),
+                AilToolSlot {
+                    name: input_name,
+                    type_name: input_node.type_name.clone().unwrap_or_default(),
+                    is_secret: input_node
+                        .attributes
+                        .get("secret")
+                        .is_some_and(|value| value == "true"),
+                    provenance: node_provenance(core, &input_node.id).unwrap_or_default(),
+                },
+            );
+        }
+        for output_node in outgoing_nodes(core, &node_by_id, tool_node, "has_output")
+            .into_iter()
+            .filter(|node| node.kind == "Output")
+        {
+            let output_name = local_core_name(&output_node.name, &tool.name);
+            tool.outputs.insert(
+                output_name.clone(),
+                AilToolSlot {
+                    name: output_name,
+                    type_name: output_node.type_name.clone().unwrap_or_default(),
+                    is_secret: output_node
+                        .attributes
+                        .get("secret")
+                        .is_some_and(|value| value == "true"),
+                    provenance: node_provenance(core, &output_node.id).unwrap_or_default(),
+                },
+            );
+        }
+        tool.requirements = outgoing_nodes(core, &node_by_id, tool_node, "requires")
+            .into_iter()
+            .filter(|node| node.kind == "Rule")
+            .map(|node| node.name)
+            .collect();
+        tool.permissions = outgoing_nodes(core, &node_by_id, tool_node, "requires")
+            .into_iter()
+            .filter(|node| node.kind == "Permission")
+            .map(|node| node.name)
+            .collect();
+        tool.approvals = outgoing_nodes(core, &node_by_id, tool_node, "requires_approval")
+            .into_iter()
+            .filter(|node| node.kind == "Approval")
+            .map(|node| node.name)
+            .collect();
+        tool.reads = outgoing_edge_payloads(core, &node_by_id, tool_node, "reads", "read");
+        tool.writes = outgoing_edge_payloads(core, &node_by_id, tool_node, "writes", "write");
+        tool.calls = outgoing_edge_payloads(core, &node_by_id, tool_node, "calls", "call");
+        tool.failures = outgoing_nodes(core, &node_by_id, tool_node, "may_fail_with")
+            .into_iter()
+            .filter(|node| node.kind == "Failure")
+            .map(|node| node.name)
+            .collect();
+        tool.guarantees = outgoing_nodes(core, &node_by_id, tool_node, "guarantees")
+            .into_iter()
+            .filter(|node| node.kind == "Guarantee")
+            .map(|node| node.name)
+            .collect();
+        tool.traces = outgoing_nodes(core, &node_by_id, tool_node, "records_trace")
+            .into_iter()
+            .filter(|node| node.kind == "Trace")
+            .map(|node| node.name)
+            .collect();
+        tool.secret_protections = outgoing_nodes(core, &node_by_id, tool_node, "protects_secret")
+            .into_iter()
+            .map(|node| local_core_name(&node.name, &tool.name))
+            .collect();
+        document.tools.insert(tool.name.clone(), tool);
+    }
+
+    for pass_node in core
+        .graph
+        .nodes
+        .iter()
+        .filter(|node| node.kind == "Action")
+        .filter(|node| {
+            node.attributes
+                .get("kind")
+                .is_some_and(|kind| kind == "CompilerPass")
+        })
+    {
+        let mut pass = AilCompilerPass {
+            name: pass_node.name.clone(),
+            label: pass_node
+                .attributes
+                .get("label")
+                .cloned()
+                .unwrap_or_else(|| pass_node.name.clone()),
+            purpose: pass_node
+                .attributes
+                .get("purpose")
+                .cloned()
+                .unwrap_or_default(),
+            provenance: node_provenance(core, &pass_node.id).unwrap_or_default(),
+            ..AilCompilerPass::default()
+        };
+        for value_node in outgoing_nodes(core, &node_by_id, pass_node, "reads")
+            .into_iter()
+            .filter(|node| node.kind == "Value")
+        {
+            let value_name = local_core_name(&value_node.name, &pass.name);
+            pass.inputs.insert(
+                value_name.clone(),
+                AilPassValue {
+                    name: value_name,
+                    type_name: value_node.type_name.clone().unwrap_or_default(),
+                    provenance: node_provenance(core, &value_node.id).unwrap_or_default(),
+                },
+            );
+        }
+        for value_node in outgoing_nodes(core, &node_by_id, pass_node, "writes")
+            .into_iter()
+            .filter(|node| node.kind == "Value")
+        {
+            let value_name = local_core_name(&value_node.name, &pass.name);
+            pass.outputs.insert(
+                value_name.clone(),
+                AilPassValue {
+                    name: value_name,
+                    type_name: value_node.type_name.clone().unwrap_or_default(),
+                    provenance: node_provenance(core, &value_node.id).unwrap_or_default(),
+                },
+            );
+        }
+        pass.reads = outgoing_edge_payloads(core, &node_by_id, pass_node, "reads", "read")
+            .into_iter()
+            .filter(|text| !pass.inputs.contains_key(text))
+            .collect();
+        pass.writes = outgoing_edge_payloads(core, &node_by_id, pass_node, "writes", "write")
+            .into_iter()
+            .filter(|text| !pass.outputs.contains_key(text))
+            .collect();
+        pass.steps = outgoing_nodes(core, &node_by_id, pass_node, "contains")
+            .into_iter()
+            .filter(|node| node.kind == "Step")
+            .map(|node| node.name)
+            .collect();
+        pass.failures = outgoing_nodes(core, &node_by_id, pass_node, "may_fail_with")
+            .into_iter()
+            .filter(|node| node.kind == "Failure")
+            .map(|node| node.name)
+            .collect();
+        pass.guarantees = outgoing_nodes(core, &node_by_id, pass_node, "guarantees")
+            .into_iter()
+            .filter(|node| node.kind == "Guarantee")
+            .map(|node| node.name)
+            .collect();
+        pass.traces = outgoing_nodes(core, &node_by_id, pass_node, "records_trace")
+            .into_iter()
+            .filter(|node| node.kind == "Trace")
+            .map(|node| node.name)
+            .collect();
+        document.compiler_passes.insert(pass.name.clone(), pass);
+    }
+
+    for component_node in core
+        .graph
+        .nodes
+        .iter()
+        .filter(|node| node.kind == "SystemComponent")
+    {
+        let mut component = AilSystemComponent {
+            name: component_node.name.clone(),
+            label: component_node
+                .attributes
+                .get("label")
+                .cloned()
+                .unwrap_or_else(|| component_node.name.clone()),
+            provenance: node_provenance(core, &component_node.id).unwrap_or_default(),
+            ..AilSystemComponent::default()
+        };
+        for resource_node in outgoing_nodes(core, &node_by_id, component_node, "uses_resource")
+            .into_iter()
+            .filter(|node| node.kind == "Resource")
+        {
+            let resource_name = local_core_name(&resource_node.name, &component.name);
+            component.resources.insert(
+                resource_name.clone(),
+                AilSystemResource {
+                    name: resource_name,
+                    type_name: resource_node.type_name.clone().unwrap_or_default(),
+                    provenance: node_provenance(core, &resource_node.id).unwrap_or_default(),
+                },
+            );
+        }
+        component.owned_resources = local_target_names(
+            core,
+            &node_by_id,
+            component_node,
+            "owns_resource",
+            &component.name,
+        );
+        component.borrowed_resources = local_target_names(
+            core,
+            &node_by_id,
+            component_node,
+            "borrows_resource",
+            &component.name,
+        );
+        component.mutably_borrowed_resources = local_target_names(
+            core,
+            &node_by_id,
+            component_node,
+            "mutably_borrows_resource",
+            &component.name,
+        );
+        component.resource_regions = system_regions_from_core(core, &node_by_id, &component.name);
+        component.resource_layouts = system_resource_attrs(
+            core,
+            &node_by_id,
+            component_node,
+            "uses_layout",
+            &component.name,
+        )
+        .into_iter()
+        .map(
+            |(resource_name, value, provenance)| AilSystemResourceLayout {
+                resource_name,
+                layout: value,
+                provenance,
+            },
+        )
+        .collect();
+        component.resource_allocations = system_resource_attrs(
+            core,
+            &node_by_id,
+            component_node,
+            "uses_allocation",
+            &component.name,
+        )
+        .into_iter()
+        .map(
+            |(resource_name, value, provenance)| AilSystemResourceAllocation {
+                resource_name,
+                placement: value,
+                provenance,
+            },
+        )
+        .collect();
+        component.lock_guards =
+            outgoing_nodes(core, &node_by_id, component_node, "uses_lock_guard")
+                .into_iter()
+                .filter(|node| node.kind == "LockGuard")
+                .map(|node| AilSystemLockGuard {
+                    resource_name: node
+                        .attributes
+                        .get("resource")
+                        .cloned()
+                        .unwrap_or_else(|| local_core_name(&node.name, &component.name)),
+                    lock_name: node.attributes.get("lock").cloned().unwrap_or_default(),
+                    provenance: node_provenance(core, &node.id).unwrap_or_default(),
+                })
+                .collect();
+        component.execution_contexts =
+            outgoing_nodes(core, &node_by_id, component_node, "runs_in_context")
+                .into_iter()
+                .filter(|node| node.kind == "ExecutionContext")
+                .map(|node| AilSystemExecutionContext {
+                    name: node
+                        .attributes
+                        .get("context")
+                        .cloned()
+                        .unwrap_or_else(|| local_core_name(&node.name, &component.name)),
+                    provenance: node_provenance(core, &node.id).unwrap_or_default(),
+                })
+                .collect();
+        component.interrupt_priorities = system_context_attrs(
+            core,
+            &node_by_id,
+            component_node,
+            "uses_interrupt_priority",
+            &component.name,
+        )
+        .into_iter()
+        .map(
+            |(context_name, value, provenance)| AilSystemInterruptPriority {
+                context_name,
+                priority: value,
+                provenance,
+            },
+        )
+        .collect();
+        component.interrupt_masks = system_context_attrs(
+            core,
+            &node_by_id,
+            component_node,
+            "uses_interrupt_mask",
+            &component.name,
+        )
+        .into_iter()
+        .map(|(context_name, value, provenance)| AilSystemInterruptMask {
+            context_name,
+            mask: value,
+            provenance,
+        })
+        .collect();
+        component.scheduler_tasks =
+            outgoing_nodes(core, &node_by_id, component_node, "schedules_task")
+                .into_iter()
+                .filter(|node| node.kind == "SchedulerTask")
+                .map(|node| AilSystemSchedulerTask {
+                    task_name: local_core_name(&node.name, &component.name),
+                    context_name: node.attributes.get("context").cloned().unwrap_or_default(),
+                    provenance: node_provenance(core, &node.id).unwrap_or_default(),
+                })
+                .collect();
+        component.scheduler_task_priorities = system_task_attrs(
+            core,
+            &node_by_id,
+            component_node,
+            "uses_task_priority",
+            &component.name,
+        )
+        .into_iter()
+        .map(
+            |(task_name, value, provenance)| AilSystemSchedulerTaskPriority {
+                task_name,
+                priority: value,
+                provenance,
+            },
+        )
+        .collect();
+        component.scheduler_task_timings =
+            outgoing_nodes(core, &node_by_id, component_node, "uses_task_timing")
+                .into_iter()
+                .filter(|node| node.kind == "SchedulerTaskTiming")
+                .map(|node| AilSystemSchedulerTaskTiming {
+                    task_name: node
+                        .attributes
+                        .get("task")
+                        .cloned()
+                        .unwrap_or_else(|| local_core_name(&node.name, &component.name)),
+                    deadline: node.attributes.get("deadline").cloned().unwrap_or_default(),
+                    budget: node.attributes.get("budget").cloned().unwrap_or_default(),
+                    provenance: node_provenance(core, &node.id).unwrap_or_default(),
+                })
+                .collect();
+        component.capabilities = outgoing_nodes(core, &node_by_id, component_node, "requires")
+            .into_iter()
+            .filter(|node| node.kind == "Capability")
+            .map(|node| node.name)
+            .collect();
+        component.effects = outgoing_nodes(core, &node_by_id, component_node, "performs")
+            .into_iter()
+            .filter(|node| node.kind == "Effect")
+            .map(|node| node.name)
+            .collect();
+        component.guarantees = outgoing_nodes(core, &node_by_id, component_node, "guarantees")
+            .into_iter()
+            .filter(|node| node.kind == "Guarantee")
+            .map(|node| node.name)
+            .collect();
+        component.traces = outgoing_nodes(core, &node_by_id, component_node, "records_trace")
+            .into_iter()
+            .filter(|node| node.kind == "Trace")
+            .map(|node| node.name)
+            .collect();
+        document
+            .system_components
+            .insert(component.name.clone(), component);
+    }
+
+    document
+}
+
+fn outgoing_nodes(
+    core: &AilCore,
+    node_by_id: &BTreeMap<String, Node>,
+    source: &Node,
+    edge_kind: &str,
+) -> Vec<Node> {
+    core.graph
+        .edges
+        .iter()
+        .filter(|edge| edge.kind == edge_kind && edge.source == source.id)
+        .filter_map(|edge| node_by_id.get(&edge.target).cloned())
+        .collect()
+}
+
+fn outgoing_edge_payloads(
+    core: &AilCore,
+    node_by_id: &BTreeMap<String, Node>,
+    source: &Node,
+    edge_kind: &str,
+    provenance_kind: &str,
+) -> Vec<String> {
+    core.graph
+        .edges
+        .iter()
+        .filter(|edge| edge.kind == edge_kind && edge.source == source.id)
+        .filter_map(|edge| {
+            let target = node_by_id.get(&edge.target)?;
+            let prefix = format!(
+                "{}:{}.{}:",
+                core_provenance_source_kind(source),
+                source.name,
+                provenance_kind
+            );
+            Some(
+                edge.attributes
+                    .get("provenance")
+                    .and_then(|provenance| provenance.strip_prefix(&prefix))
+                    .map(str::to_string)
+                    .or_else(|| core_node_provenance_payload(core, target, &prefix))
+                    .unwrap_or_else(|| target.name.clone()),
+            )
+        })
+        .collect()
+}
+
+fn core_provenance_source_kind(source: &Node) -> &'static str {
+    match source.kind.as_str() {
+        "Tool" => "tool",
+        "SystemComponent" => "system_component",
+        "Action"
+            if source
+                .attributes
+                .get("kind")
+                .is_some_and(|kind| kind == "CompilerPass") =>
+        {
+            "compiler_pass"
+        }
+        "Action" => "action",
+        _ => "node",
+    }
+}
+
+fn core_node_provenance_payload(core: &AilCore, node: &Node, prefix: &str) -> Option<String> {
+    node_provenance(core, &node.id)
+        .and_then(|provenance| provenance.strip_prefix(prefix).map(str::to_string))
+}
+
+fn local_core_name(name: &str, owner: &str) -> String {
+    name.strip_prefix(&format!("{owner}."))
+        .unwrap_or(name)
+        .to_string()
+}
+
+fn local_target_names(
+    core: &AilCore,
+    node_by_id: &BTreeMap<String, Node>,
+    source: &Node,
+    edge_kind: &str,
+    owner: &str,
+) -> Vec<String> {
+    outgoing_nodes(core, node_by_id, source, edge_kind)
+        .into_iter()
+        .map(|node| local_core_name(&node.name, owner))
+        .collect()
+}
+
+fn system_regions_from_core(
+    core: &AilCore,
+    node_by_id: &BTreeMap<String, Node>,
+    component_name: &str,
+) -> Vec<AilSystemResourceRegion> {
+    core.graph
+        .edges
+        .iter()
+        .filter(|edge| edge.kind == "in_region")
+        .filter_map(|edge| {
+            let resource = node_by_id.get(&edge.source)?;
+            let region = node_by_id.get(&edge.target)?;
+            if resource.kind != "Resource"
+                || region.kind != "Region"
+                || !resource.name.starts_with(&format!("{component_name}."))
+                || !region.name.starts_with(&format!("{component_name}."))
+            {
+                return None;
+            }
+            Some(AilSystemResourceRegion {
+                resource_name: local_core_name(&resource.name, component_name),
+                region_name: local_core_name(&region.name, component_name),
+                provenance: node_provenance(core, &region.id).unwrap_or_default(),
+            })
+        })
+        .collect()
+}
+
+fn system_resource_attrs(
+    core: &AilCore,
+    node_by_id: &BTreeMap<String, Node>,
+    source: &Node,
+    edge_kind: &str,
+    owner: &str,
+) -> Vec<(String, String, String)> {
+    outgoing_nodes(core, node_by_id, source, edge_kind)
+        .into_iter()
+        .map(|node| {
+            (
+                node.attributes
+                    .get("resource")
+                    .cloned()
+                    .unwrap_or_else(|| local_core_name(&node.name, owner)),
+                node.type_name.clone().unwrap_or_default(),
+                node_provenance(core, &node.id).unwrap_or_default(),
+            )
+        })
+        .collect()
+}
+
+fn system_context_attrs(
+    core: &AilCore,
+    node_by_id: &BTreeMap<String, Node>,
+    source: &Node,
+    edge_kind: &str,
+    owner: &str,
+) -> Vec<(String, String, String)> {
+    outgoing_nodes(core, node_by_id, source, edge_kind)
+        .into_iter()
+        .map(|node| {
+            (
+                node.attributes
+                    .get("context")
+                    .cloned()
+                    .unwrap_or_else(|| local_core_name(&node.name, owner)),
+                node.type_name.clone().unwrap_or_default(),
+                node_provenance(core, &node.id).unwrap_or_default(),
+            )
+        })
+        .collect()
+}
+
+fn system_task_attrs(
+    core: &AilCore,
+    node_by_id: &BTreeMap<String, Node>,
+    source: &Node,
+    edge_kind: &str,
+    owner: &str,
+) -> Vec<(String, String, String)> {
+    outgoing_nodes(core, node_by_id, source, edge_kind)
+        .into_iter()
+        .map(|node| {
+            (
+                node.attributes
+                    .get("task")
+                    .cloned()
+                    .unwrap_or_else(|| local_core_name(&node.name, owner)),
+                node.type_name.clone().unwrap_or_default(),
+                node_provenance(core, &node.id).unwrap_or_default(),
+            )
+        })
+        .collect()
 }
 
 fn compile_ail_compiler_pass_bytecode(pass: &AilCompilerPass) -> AilBytecodeAction {

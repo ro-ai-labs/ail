@@ -6,12 +6,12 @@ use std::net::TcpListener;
 use std::process::ExitCode;
 
 use eigl::ail::{
-    apply_ail_patch, check_ail_core, compile_ail_bytecode, draft_ail_requirements, draft_ail_spec,
-    draft_ail_spec_from_requirements, elaborate_ail_core, load_ail_package_dir, parse_ail_bytecode,
-    parse_ail_package_document, parse_ail_package_spec_text, parse_ail_patch_text,
-    render_ail_bytecode, render_ail_core, render_ail_flow_view, render_ail_runtime_state_lines,
-    render_ail_spec, repair_ail_spec_from_diagnostics, run_ail_bytecode_action,
-    run_ail_conformance, verify_ail_bytecode,
+    apply_ail_patch, check_ail_core, compile_ail_core_bytecode, draft_ail_requirements,
+    draft_ail_spec, draft_ail_spec_from_requirements, elaborate_ail_core, load_ail_package_dir,
+    parse_ail_bytecode, parse_ail_package_document, parse_ail_package_spec_text,
+    parse_ail_patch_text, render_ail_bytecode, render_ail_core, render_ail_flow_view,
+    render_ail_runtime_state_lines, render_ail_spec, repair_ail_spec_from_diagnostics,
+    run_ail_bytecode_action, run_ail_conformance, verify_ail_bytecode,
 };
 use eigl::apply_rif_patch;
 use eigl::checker::check_document;
@@ -518,7 +518,8 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
             return Ok(1);
         }
         let document = parse_ail_package_spec_text(&package, &draft.spec_text)?;
-        let bytecode = compile_ail_bytecode(&package, &document)?;
+        let core = elaborate_ail_core(&package, &document);
+        let bytecode = compile_ail_core_bytecode(&core)?;
         let diagnostics = verify_ail_bytecode(&bytecode);
         if !diagnostics.is_empty() {
             println!("ail-build diagnostics:");
@@ -604,16 +605,22 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
                 }
                 return Ok(1);
             }
-            let bytecode = compile_ail_bytecode(&package, &document)?;
+            let bytecode = compile_ail_core_bytecode(&core)?;
             println!("{}", render_ail_bytecode(&bytecode));
             Ok(0)
         }
         "ail-run" => {
+            if !diagnostics.is_empty() {
+                for diagnostic in diagnostics {
+                    println!("{diagnostic}");
+                }
+                return Ok(1);
+            }
             let action = cli_options
                 .ail_action
                 .as_deref()
                 .ok_or_else(|| "ail-run requires --action <name>".to_string())?;
-            let bytecode = compile_ail_bytecode(&package, &document)?;
+            let bytecode = compile_ail_core_bytecode(&core)?;
             let result =
                 run_ail_bytecode_action(&bytecode, action, cli_options.runtime_state.clone())?;
             println!("ail-run {}", result.status);
