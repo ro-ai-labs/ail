@@ -5224,6 +5224,61 @@ fn cli_ail_build_agent_capture_failure_happens_before_llm_request() {
 }
 
 #[test]
+fn cli_ail_build_agent_compile_failure_happens_before_bytecode_lowering() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("support_ticket.ail");
+    let core_path = std::env::temp_dir().join(format!(
+        "eigl-support-ticket-agent-prelower-core-{}.ail-core.txt",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "eigl-ail-build-agent-prelower-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+    let package_model = load_ail_package_dir(&package).unwrap();
+    let document = parse_ail_package_document(&package_model).unwrap();
+    let core = elaborate_ail_core(&package_model, &document);
+    assert_eq!(check_ail_core(&core), Vec::<String>::new());
+    let unsupported_profile_core =
+        render_ail_core(&core).replace("profile: Application", "profile: Experimental");
+    fs::write(&core_path, unsupported_profile_core).unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-build",
+            &package,
+            "--core-file",
+            core_path.to_str().unwrap(),
+            "--agent",
+            &package,
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    assert!(
+        !output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("ail-build --agent requires a CompileApplication action"),
+        "{stderr}"
+    );
+    assert!(
+        !stderr.contains("ail-lower currently supports"),
+        "agent should fail before target bytecode lowering:\n{stderr}"
+    );
+    assert!(!artifact_dir.exists());
+
+    fs::remove_file(core_path).unwrap();
+}
+
+#[test]
 fn cli_ail_build_writes_requirements_spec_core_and_bytecode_artifacts() {
     let binary = env!("CARGO_BIN_EXE_eigl");
     let package = fixture("support_ticket.ail");

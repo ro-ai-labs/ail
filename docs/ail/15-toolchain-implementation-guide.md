@@ -397,9 +397,9 @@ its bytecode, and for prompt-driven builds runs its `CaptureRequirements`
 action before the base LLM requirements request. After requirements capture it
 optionally runs `CompareAgentPromptPortability` when `--target-model <name>` is
 supplied, and runs its `CompileApplication` action against the completed build
-state. This keeps the developer-facing build coordinator in AIL bytecode
-instead of adding a host-language orchestration layer. With `--artifact-dir`,
-the same command writes
+state before target bytecode emission. This keeps the developer-facing build
+coordinator in AIL bytecode instead of adding a host-language orchestration
+layer. With `--artifact-dir`, the same command writes
 `accepted.ail-spec.md`, `checked.ail-core.txt`, and `artifact.ailbc.json`; it
 also writes `requirements.ail-requirements.md` when the build captured or loaded
 requirements, and it writes `accepted.ail-spec.md` only when an AIL-Spec stage

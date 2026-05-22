@@ -915,16 +915,6 @@ fn run_ail_build_from_core(
             return Ok(1);
         }
     }
-    let bytecode = compile_ail_core_bytecode(&core)?;
-    let diagnostics = verify_ail_bytecode(&bytecode);
-    if !diagnostics.is_empty() {
-        println!("ail-build diagnostics:");
-        for diagnostic in diagnostics {
-            println!("{diagnostic}");
-        }
-        return Ok(1);
-    }
-    let bytecode_text = format!("{}\n", render_ail_bytecode(&bytecode));
     let (agent_bytecode_artifact, agent_trace_artifact) =
         if let Some(agent_path) = &cli_options.ail_build_agent {
             let (agent_bytecode_text, agent_trace) = run_ail_build_agent(
@@ -940,6 +930,16 @@ fn run_ail_build_from_core(
         } else {
             (None, None)
         };
+    let bytecode = compile_ail_core_bytecode(&core)?;
+    let diagnostics = verify_ail_bytecode(&bytecode);
+    if !diagnostics.is_empty() {
+        println!("ail-build diagnostics:");
+        for diagnostic in diagnostics {
+            println!("{diagnostic}");
+        }
+        return Ok(1);
+    }
+    let bytecode_text = format!("{}\n", render_ail_bytecode(&bytecode));
     if let Some(artifact_dir) = &cli_options.artifact_dir {
         let core_text = format!("{}\n", render_ail_core(&core));
         write_ail_build_artifacts(

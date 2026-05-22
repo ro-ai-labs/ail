@@ -3964,6 +3964,50 @@ cargo test --test ail_toolchain cli_ail_build_agent_capture_failure_happens_befo
 Expected: the command fails before any LLM request when the agent cannot run
 `CaptureRequirements`.
 
+### Task 95: AIL Build Agent Compile Preflight
+
+**Files:**
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing compile-preflight test**
+
+Add an `ail-build --core-file --agent` CLI test with a target core that would
+fail bytecode lowering and an Application-profile agent that lacks
+`CompileApplication`. Require the command to fail with the missing-agent-action
+diagnostic before the target lowering error appears.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_agent_compile_failure_happens_before_bytecode_lowering -- --nocapture
+```
+
+Expected: failure because target bytecode lowering currently runs before the
+AIL-authored build agent's `CompileApplication` action is validated.
+
+- [x] **Step 3: Implement compile preflight**
+
+After core checking and any AIL compiler pass, run the build agent's
+`CompileApplication` action before target bytecode lowering. Keep stdout as the
+target bytecode artifact after the Rust bootstrap compiler emits verified
+AIL-Bytecode.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_agent_compile_failure_happens_before_bytecode_lowering -- --nocapture
+```
+
+Expected: the invalid agent fails before the unsupported target profile reaches
+bytecode lowering.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**
