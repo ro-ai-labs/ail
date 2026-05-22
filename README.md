@@ -31,9 +31,9 @@ AIL package commands operate on package directories such as
 `examples/support_ticket.ail`. `ail-check` loads the package entry spec and
 runs AIL-Core diagnostics, `ail-core` prints deterministic AIL-Core,
 `ail-flow` prints a deterministic AIL-Flow JSON projection for no-code
-inspection, `ail-lower` compiles checked AIL-Core IR into deterministic
-AIL-Bytecode, and `ail-check`, `ail-core`, `ail-flow`, `ail-lower`, and
-`ail-run` can use `--spec-file <path>` to read a saved generated AIL-Spec
+inspection, and `ail-lower` compiles checked AIL-Core IR into deterministic
+AIL-Bytecode. `ail-check`, `ail-core`, `ail-flow`, `ail-lower`, `ail-run`, and
+`ail-build` can use `--spec-file <path>` to read a saved generated AIL-Spec
 artifact instead of the package entry spec. `ail-lower --core-file <path>`
 reads a saved checked AIL-Core artifact and compiles it directly to bytecode,
 without loading the source package spec, including the serialized edge payloads
@@ -63,11 +63,14 @@ checked spec is incomplete, optionally runs `--pass
 compiles the resulting IR into verified AIL-Bytecode on success.
 `ail-build --requirements-file <path> --prompt <text>` skips requirements
 capture and resumes the build from a saved checked AIL-Requirements artifact
-before spec drafting. Add `--artifact-dir <dir>` to also write the captured or
-loaded requirements, accepted AIL-Spec, checked AIL-Core IR after any build
-pass, and final AIL-Bytecode artifact for review. When `ail-build --pass` is
-used with `--artifact-dir`, it also writes `pass.ailbc.json` and
-`pass-trace.txt`. On `ail-pass`, `--artifact-dir <dir>` writes
+before spec drafting. `ail-build --spec-file <path>` skips all LLM calls and
+resumes from an accepted AIL-Spec artifact before AIL-Core checking and
+bytecode lowering. Add `--artifact-dir <dir>` to also write the captured or
+loaded requirements when present, accepted AIL-Spec, checked AIL-Core IR after
+any build pass, and final AIL-Bytecode artifact for review. When
+`ail-build --pass` is used with `--artifact-dir`, it also writes
+`pass.ailbc.json` and `pass-trace.txt`. On `ail-pass`,
+`--artifact-dir <dir>` writes
 `pass.ailbc.json`, `input.ail-core.txt`, `output.ail-core.txt`, and
 `trace.txt` while stdout remains the transformed AIL-Core artifact.
 The default AIL base LLM endpoint is
@@ -109,6 +112,7 @@ cargo run -- ail-lower examples/support_ticket.ail --core-file /tmp/support-tick
 cargo run -- ail-draft examples/support_ticket.ail --prompt "Draft a support ticket app with private internal notes" --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
 cargo run -- ail-build examples/support_ticket.ail --prompt "Build a support ticket bytecode artifact" --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
 cargo run -- ail-build examples/support_ticket.ail --prompt "Build a support ticket bytecode artifact from saved requirements" --requirements-file /tmp/support-ticket.ail-requirements.md --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
+cargo run -- ail-build examples/support_ticket.ail --spec-file /tmp/support-ticket.ail-spec.md --artifact-dir /tmp/support-ticket-ail-build-spec
 cargo run -- ail-build examples/support_ticket.ail --prompt "Build a support ticket bytecode artifact" --artifact-dir /tmp/support-ticket-ail-build --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
 cargo run -- ail-build examples/support_ticket.ail --prompt "Build a support ticket bytecode artifact" --pass examples/compiler_pass.ail --artifact-dir /tmp/support-ticket-ail-build-pass --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
 cargo run -- ail-build examples/refund_tool.ail --prompt "Build a refund tool bytecode artifact" --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions

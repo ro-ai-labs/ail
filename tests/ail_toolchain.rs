@@ -4778,6 +4778,62 @@ fn cli_ail_build_accepts_saved_requirements_file_artifact() {
 }
 
 #[test]
+fn cli_ail_build_accepts_saved_spec_file_artifact() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("support_ticket.ail");
+    let spec_path = std::env::temp_dir().join(format!(
+        "eigl-support-ticket-build-spec-{}.ail-spec.md",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "eigl-ail-build-spec-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+    let spec_text = fs::read_to_string(format!("{package}/spec.ail-spec.md")).unwrap();
+    fs::write(&spec_path, &spec_text).unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-build",
+            &package,
+            "--spec-file",
+            spec_path.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let bytecode = parse_ail_bytecode(&stdout).unwrap();
+    assert_eq!(verify_ail_bytecode(&bytecode), Vec::<String>::new());
+    assert!(bytecode.actions.contains_key("CloseTicket"));
+
+    assert!(
+        !artifact_dir
+            .join("requirements.ail-requirements.md")
+            .exists()
+    );
+    let spec_artifact = fs::read_to_string(artifact_dir.join("accepted.ail-spec.md")).unwrap();
+    assert_eq!(spec_artifact, spec_text.trim());
+    let core_artifact = fs::read_to_string(artifact_dir.join("checked.ail-core.txt")).unwrap();
+    assert!(core_artifact.contains("package: support-ticket"));
+    assert!(core_artifact.contains("node Action CloseTicket"));
+    let bytecode_artifact = fs::read_to_string(artifact_dir.join("artifact.ailbc.json")).unwrap();
+    assert_eq!(bytecode_artifact, stdout);
+
+    fs::remove_file(spec_path).unwrap();
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
 fn cli_ail_build_writes_requirements_spec_core_and_bytecode_artifacts() {
     let binary = env!("CARGO_BIN_EXE_eigl");
     let package = fixture("support_ticket.ail");

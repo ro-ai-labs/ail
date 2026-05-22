@@ -380,7 +380,7 @@ fn usage() -> String {
 
 fn write_ail_build_artifacts(
     artifact_dir: &str,
-    requirements: &str,
+    requirements: Option<&str>,
     spec_text: &str,
     core_text: &str,
     bytecode_text: &str,
@@ -391,8 +391,10 @@ fn write_ail_build_artifacts(
     fs::create_dir_all(root).map_err(|error| {
         format!("failed to create ail-build artifact dir {artifact_dir}: {error}")
     })?;
-    fs::write(root.join("requirements.ail-requirements.md"), requirements)
-        .map_err(|error| format!("failed to write ail-build requirements artifact: {error}"))?;
+    if let Some(requirements) = requirements {
+        fs::write(root.join("requirements.ail-requirements.md"), requirements)
+            .map_err(|error| format!("failed to write ail-build requirements artifact: {error}"))?;
+    }
     fs::write(root.join("accepted.ail-spec.md"), spec_text)
         .map_err(|error| format!("failed to write ail-build spec artifact: {error}"))?;
     fs::write(root.join("checked.ail-core.txt"), core_text)
@@ -794,38 +796,58 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
         return Ok(0);
     }
     if command == "ail-build" {
-        let prompt = cli_options
-            .ail_prompt
-            .as_deref()
-            .ok_or_else(|| "ail-build requires --prompt <text>".to_string())?;
-        let endpoint = cli_options
-            .llm_endpoint
-            .as_deref()
-            .unwrap_or(&package.metadata.base_llm_endpoint);
-        let (requirements, requirements_diagnostics) =
-            if let Some(requirements_file) = cli_options.ail_requirements_file.as_deref() {
-                read_checked_ail_requirements_file(&package, requirements_file)?
-            } else {
-                draft_checked_ail_requirements_for_package(&package, prompt, endpoint)?
-            };
-        if !requirements_diagnostics.is_empty() {
-            println!("ail-build requirements diagnostics:");
-            for diagnostic in requirements_diagnostics {
-                println!("{}", diagnostic.detailed_message());
+        let (requirements_artifact, spec_text, mut core) = if let Some(spec_file) =
+            cli_options.ail_spec_file.as_deref()
+        {
+            let spec_text = fs::read_to_string(spec_file)
+                .map_err(|error| format!("failed to read {spec_file}: {error}"))?;
+            let spec_text = spec_text.trim().to_string();
+            let document = parse_ail_package_spec_text(&package, &spec_text)?;
+            let core = elaborate_ail_core(&package, &document);
+            (None, spec_text, core)
+        } else {
+            let prompt = cli_options
+                .ail_prompt
+                .as_deref()
+                .ok_or_else(|| "ail-build requires --prompt <text>".to_string())?;
+            let endpoint = cli_options
+                .llm_endpoint
+                .as_deref()
+                .unwrap_or(&package.metadata.base_llm_endpoint);
+            let (requirements, requirements_diagnostics) =
+                if let Some(requirements_file) = cli_options.ail_requirements_file.as_deref() {
+                    read_checked_ail_requirements_file(&package, requirements_file)?
+                } else {
+                    draft_checked_ail_requirements_for_package(&package, prompt, endpoint)?
+                };
+            if !requirements_diagnostics.is_empty() {
+                println!("ail-build requirements diagnostics:");
+                for diagnostic in requirements_diagnostics {
+                    println!("{}", diagnostic.detailed_message());
+                }
+                return Ok(1);
             }
-            return Ok(1);
-        }
-        let draft =
-            draft_checked_ail_spec_for_requirements(&package, prompt, &requirements, endpoint)?;
-        if !draft.success() {
+            let draft =
+                draft_checked_ail_spec_for_requirements(&package, prompt, &requirements, endpoint)?;
+            if !draft.success() {
+                println!("ail-build diagnostics:");
+                for diagnostic in draft.diagnostics {
+                    println!("{}", diagnostic.detailed_message());
+                }
+                return Ok(1);
+            }
+            let document = parse_ail_package_spec_text(&package, &draft.spec_text)?;
+            let core = elaborate_ail_core(&package, &document);
+            (Some(requirements), draft.spec_text, core)
+        };
+        let core_diagnostics = check_ail_core(&core);
+        if !core_diagnostics.is_empty() {
             println!("ail-build diagnostics:");
-            for diagnostic in draft.diagnostics {
-                println!("{}", diagnostic.detailed_message());
+            for diagnostic in core_diagnostics {
+                println!("{diagnostic}");
             }
             return Ok(1);
         }
-        let document = parse_ail_package_spec_text(&package, &draft.spec_text)?;
-        let mut core = elaborate_ail_core(&package, &document);
         let mut pass_bytecode_artifact = None;
         let mut pass_trace_artifact = None;
         if let Some(pass_path) = &cli_options.ail_build_pass {
@@ -867,8 +889,8 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
             let core_text = format!("{}\n", render_ail_core(&core));
             write_ail_build_artifacts(
                 artifact_dir,
-                &requirements,
-                &draft.spec_text,
+                requirements_artifact.as_deref(),
+                &spec_text,
                 &core_text,
                 &bytecode_text,
                 pass_bytecode_artifact.as_deref(),
@@ -1134,7 +1156,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         if arg == "--spec-file" {
             if !matches!(
                 command,
-                "ail-check" | "ail-core" | "ail-flow" | "ail-lower" | "ail-run"
+                "ail-check" | "ail-core" | "ail-flow" | "ail-lower" | "ail-run" | "ail-build"
             ) {
                 return Err(usage());
             }
@@ -1309,6 +1331,9 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
 
     if ail_core_file.is_some() && ail_spec_file.is_some() {
         return Err("--core-file cannot be combined with --spec-file".to_string());
+    }
+    if command == "ail-build" && ail_requirements_file.is_some() && ail_spec_file.is_some() {
+        return Err("--requirements-file cannot be combined with --spec-file".to_string());
     }
     if command == "ail-pass" && ail_core_file.is_none() && ail_pass_target.is_none() {
         return Err("ail-pass requires a target package or --core-file <path>".to_string());
