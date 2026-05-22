@@ -1685,6 +1685,10 @@ fn ail_runtime_enforces_create_ticket_input_requirements() {
 
     assert_eq!(success.status, "succeeded");
     assert_eq!(success.failure, None);
+    assert_eq!(
+        success.final_state.get("ticket.status").map(String::as_str),
+        Some("New")
+    );
     assert!(
         success
             .trace
@@ -1756,6 +1760,7 @@ fn ail_compiler_lowers_checked_application_to_bytecode() {
     );
     assert!(rendered.contains(r#""opcode":"SET_FIELD""#), "{rendered}");
     assert!(rendered.contains(r#""value":"Closed""#), "{rendered}");
+    assert!(rendered.contains(r#""value":"New""#), "{rendered}");
     assert!(rendered.contains(r#""opcode":"EMIT_TRACE""#), "{rendered}");
     assert!(rendered.contains(r#""failure":"NotFound""#), "{rendered}");
     assert!(
@@ -3166,7 +3171,10 @@ fn cli_ail_compile_native_executable_enforces_create_ticket_inputs() {
         success.status.success(),
         "CreateTicket should accept customer id and title"
     );
-    assert_eq!(String::from_utf8_lossy(&success.stdout), "");
+    assert_eq!(
+        String::from_utf8_lossy(&success.stdout),
+        "ticket.status=New\n"
+    );
     assert!(
         String::from_utf8_lossy(&success.stderr).contains("rule passed: the customer id and title"),
         "{}",

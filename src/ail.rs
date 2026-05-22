@@ -7234,15 +7234,62 @@ fn positive_field_requirement(
 }
 
 fn field_write_assignment(document: &AilDocument, write: &str) -> Option<(String, String)> {
+    field_write_to_assignment(document, write)
+        .or_else(|| field_write_with_assignment(document, write))
+}
+
+fn field_write_to_assignment(document: &AilDocument, write: &str) -> Option<(String, String)> {
     let marker = " to ";
     let (field_text, value) = write.rsplit_once(marker)?;
     let key = referenced_runtime_field_key(document, field_text)?;
-    let value = value
+    write_assignment_value(value).map(|value| (key, value))
+}
+
+fn field_write_with_assignment(document: &AilDocument, write: &str) -> Option<(String, String)> {
+    let normalized = normalized_field_reference_text(write);
+    let (subject_text, rest_text) = normalized.split_once(" with ")?;
+    let subject_text = subject_text.to_ascii_lowercase();
+    let rest_text = normalized_field_reference_text(rest_text);
+    let rest_lower = rest_text.to_ascii_lowercase();
+    let thing = document.things.values().find(|thing| {
+        let thing_name = thing.name.to_ascii_lowercase();
+        let local_name = thing.name.rsplit('.').next().unwrap_or(&thing.name);
+        let local_name = local_name.to_ascii_lowercase();
+        subject_text == thing_name
+            || subject_text == local_name
+            || subject_text.ends_with(&format!(" {thing_name}"))
+            || subject_text.ends_with(&format!(" {local_name}"))
+    })?;
+
+    let mut matches = Vec::new();
+    for field in thing.fields.values() {
+        let field_text = field.name.to_ascii_lowercase();
+        let prefix = format!("{field_text} ");
+        let Some(_) = rest_lower.strip_prefix(&prefix) else {
+            continue;
+        };
+        let value_text = rest_text.get(field.name.len()..)?.trim();
+        let value = write_assignment_value(value_text)?;
+        matches.push((
+            field_text.len(),
+            runtime_field_key(&thing.name, &field.name),
+            value,
+        ));
+    }
+    matches.sort_by_key(|(len, _, _)| std::cmp::Reverse(*len));
+    matches
+        .into_iter()
+        .next()
+        .map(|(_, key, value)| (key, value))
+}
+
+fn write_assignment_value(text: &str) -> Option<String> {
+    let value = text
         .split(|ch: char| !ch.is_ascii_alphanumeric() && ch != '_' && ch != '.')
         .next()
         .unwrap_or("")
         .trim();
-    (!value.is_empty()).then(|| (key, value.to_string()))
+    (!value.is_empty()).then(|| value.to_string())
 }
 
 fn failed_requirement_name(document: &AilDocument, requirement: &str, key: &str) -> String {

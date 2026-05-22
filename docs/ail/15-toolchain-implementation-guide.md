@@ -358,7 +358,10 @@ resolution can follow typed object fields, so `assignee role` on a `Ticket`
 with `assignee: Option<User>` lowers to `ticket.assignee.role`. Compound input
 requirements such as `the customer id and title` lower to `REQUIRE_EXISTS`
 checks for `customer.id` and `ticket.title` after application users are
-preserved in checked AIL-Core. Native code generated from supported
+preserved in checked AIL-Core. Creation writes such as
+`a Ticket with status New` lower to `SET_FIELD ticket.status=New`, so the
+interpreter, VM, and native executable all materialize the initialized field.
+Native code generated from supported
 `REQUIRE_FIELD_NOT_EQUALS` instructions checks that the forbidden `key=value`
 argument is absent. The executable exits `0` when those compiled requirements
 pass and exits `1` when they fail. Native code generated from supported

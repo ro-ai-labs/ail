@@ -42,8 +42,9 @@ as `<field> is <value>`; typed nested field phrases such as `assignee role`
 lower to explicit runtime keys such as `ticket.assignee.role`. Compound input
 requirements such as `the customer id and title` lower to executable
 `REQUIRE_EXISTS` checks for `customer.id` and `ticket.title`, so native
-`CreateTicket` exits nonzero when either argv entry is missing. Supported
-`SET_FIELD` writes are emitted as
+`CreateTicket` exits nonzero when either argv entry is missing. Creation writes
+such as `a Ticket with status New` lower to `SET_FIELD ticket.status=New`.
+Supported `SET_FIELD` writes are emitted as
 `key=value` stdout lines on successful execution, and supported Application
 semantic trace entries are emitted to stderr on successful native execution and
 on supported requirement failures. The first native backend rejects unsupported
