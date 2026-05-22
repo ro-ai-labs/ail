@@ -5790,6 +5790,64 @@ Expected: `CreateTicket` writes both `ticket.status=New` and
 `ticket.customer.id=C-1` through runtime state, VM state, bytecode, and native
 ELF stdout while missing input still fails before state output.
 
+### Task 134: Overdue Time Requirements Compile
+
+**Files:**
+- Modify: `src/ail.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing overdue-time tests**
+
+Extend `MarksOverdueTickets` runtime, VM, bytecode, and native ELF coverage so
+`the current time to be later than due_at` lowers from deterministic runtime
+input `current.time` to `ticket.due_at`, succeeds only when the current time is
+later, and writes `ticket.status=Overdue` on success. Move the native
+observed-rule rejection guard to a synthetic unsupported approval rule so
+still-unlowered requirements remain rejected.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain ail_runtime_enforces_overdue_time_requirement -- --nocapture
+cargo test --test ail_toolchain ail_bytecode_vm_enforces_overdue_time_requirement -- --nocapture
+cargo test --test ail_toolchain ail_compiler_lowers_checked_application_to_bytecode -- --nocapture
+cargo test --test ail_toolchain cli_ail_compile_native_executable_enforces_overdue_time_requirement -- --nocapture
+cargo test --test ail_toolchain cli_ail_compile_native_rejects_unlowered_observed_requirements -- --nocapture
+```
+
+Expected: the overdue rule still lowers to `OBSERVE_RULE`, VM execution accepts
+not-overdue input, native compilation rejects `MarksOverdueTickets`, and the
+synthetic observed-rule guard still rejects unsupported rules after using the
+correct saved-spec build path.
+
+- [x] **Step 3: Add time-after requirement lowering**
+
+Add `REQUIRE_FIELD_AFTER` bytecode with `source`, `key`, `rule`, and `failure`
+operands. Resolve `current time` to `current.time`, resolve `due_at` to
+`ticket.due_at`, execute the comparison in the interpreter and VM, and teach
+the native ELF backend to find both argv values and compare their UTC timestamp
+tokens before emitting state writes.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain ail_runtime_enforces_overdue_time_requirement -- --nocapture
+cargo test --test ail_toolchain ail_bytecode_vm_enforces_overdue_time_requirement -- --nocapture
+cargo test --test ail_toolchain ail_compiler_lowers_checked_application_to_bytecode -- --nocapture
+cargo test --test ail_toolchain cli_ail_compile_native_executable_enforces_overdue_time_requirement -- --nocapture
+cargo test --test ail_toolchain cli_ail_compile_native_rejects_unlowered_observed_requirements -- --nocapture
+```
+
+Expected: `MarksOverdueTickets` compiles to native ELF, succeeds only for
+`current.time > ticket.due_at`, writes `ticket.status=Overdue`, and unsupported
+observed rules remain rejected before target emission.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

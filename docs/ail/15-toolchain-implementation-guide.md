@@ -358,7 +358,11 @@ resolution can follow typed object fields, so `assignee role` on a `Ticket`
 with `assignee: Option<User>` lowers to `ticket.assignee.role`. Compound input
 requirements such as `the customer id and title` lower to `REQUIRE_EXISTS`
 checks for `customer.id` and `ticket.title` after application users are
-preserved in checked AIL-Core. Creation writes such as
+preserved in checked AIL-Core. Time comparison requirements such as
+`the current time to be later than due_at` lower to `REQUIRE_FIELD_AFTER` from
+deterministic runtime input `current.time` to `ticket.due_at`; the interpreter,
+VM, and native executable all require the left value to sort later than the
+right UTC timestamp token. Creation writes such as
 `a Ticket with status New` lower to `SET_FIELD ticket.status=New`, so the
 interpreter, VM, and native executable all materialize the initialized field.
 Copy writes such as `the customer as the ticket customer` lower to

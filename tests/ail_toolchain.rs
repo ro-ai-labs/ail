@@ -1723,6 +1723,63 @@ fn ail_runtime_enforces_create_ticket_input_requirements() {
 }
 
 #[test]
+fn ail_runtime_enforces_overdue_time_requirement() {
+    let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
+    let document = parse_ail_spec_text(&package.spec_text).unwrap();
+    let success = run_ail_action(
+        &document,
+        "MarksOverdueTickets",
+        BTreeMap::from([
+            (
+                "current.time".to_string(),
+                "2026-05-23T10:00:00Z".to_string(),
+            ),
+            (
+                "ticket.due_at".to_string(),
+                "2026-05-23T09:00:00Z".to_string(),
+            ),
+            ("ticket.status".to_string(), "Open".to_string()),
+        ]),
+    )
+    .unwrap();
+
+    assert_eq!(success.status, "succeeded");
+    assert_eq!(
+        success.final_state.get("ticket.status").map(String::as_str),
+        Some("Overdue")
+    );
+    assert!(
+        success
+            .trace
+            .contains(&"rule passed: the current time to be later than due_at".to_string())
+    );
+
+    let not_due = run_ail_action(
+        &document,
+        "MarksOverdueTickets",
+        BTreeMap::from([
+            (
+                "current.time".to_string(),
+                "2026-05-23T08:00:00Z".to_string(),
+            ),
+            (
+                "ticket.due_at".to_string(),
+                "2026-05-23T09:00:00Z".to_string(),
+            ),
+            ("ticket.status".to_string(), "Open".to_string()),
+        ]),
+    )
+    .unwrap();
+
+    assert_eq!(not_due.status, "failed");
+    assert_eq!(not_due.failure.as_deref(), Some("RequirementFailed"));
+    assert_eq!(
+        not_due.final_state.get("ticket.status").map(String::as_str),
+        Some("Open")
+    );
+}
+
+#[test]
 fn ail_compiler_lowers_checked_application_to_bytecode() {
     let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
     let document = parse_ail_package_document(&package).unwrap();
@@ -1774,6 +1831,15 @@ fn ail_compiler_lowers_checked_application_to_bytecode() {
         rendered.contains(r#""key":"ticket.customer.id""#),
         "{rendered}"
     );
+    assert!(
+        rendered.contains(r#""opcode":"REQUIRE_FIELD_AFTER""#),
+        "{rendered}"
+    );
+    assert!(
+        rendered.contains(r#""source":"current.time""#),
+        "{rendered}"
+    );
+    assert!(rendered.contains(r#""key":"ticket.due_at""#), "{rendered}");
     assert!(rendered.contains(r#""opcode":"EMIT_TRACE""#), "{rendered}");
     assert!(rendered.contains(r#""failure":"NotFound""#), "{rendered}");
     assert!(
@@ -1901,6 +1967,60 @@ fn ail_bytecode_vm_executes_create_ticket_state_writes() {
         success
             .trace
             .contains(&"write ticket.customer.id".to_string())
+    );
+}
+
+#[test]
+fn ail_bytecode_vm_enforces_overdue_time_requirement() {
+    let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
+    let document = parse_ail_package_document(&package).unwrap();
+    let bytecode = compile_ail_bytecode(&package, &document).unwrap();
+
+    let success = run_ail_bytecode_action(
+        &bytecode,
+        "MarksOverdueTickets",
+        BTreeMap::from([
+            (
+                "current.time".to_string(),
+                "2026-05-23T10:00:00Z".to_string(),
+            ),
+            (
+                "ticket.due_at".to_string(),
+                "2026-05-23T09:00:00Z".to_string(),
+            ),
+            ("ticket.status".to_string(), "Open".to_string()),
+        ]),
+    )
+    .unwrap();
+
+    assert_eq!(success.status, "succeeded");
+    assert_eq!(
+        success.final_state.get("ticket.status").map(String::as_str),
+        Some("Overdue")
+    );
+
+    let not_due = run_ail_bytecode_action(
+        &bytecode,
+        "MarksOverdueTickets",
+        BTreeMap::from([
+            (
+                "current.time".to_string(),
+                "2026-05-23T08:00:00Z".to_string(),
+            ),
+            (
+                "ticket.due_at".to_string(),
+                "2026-05-23T09:00:00Z".to_string(),
+            ),
+            ("ticket.status".to_string(), "Open".to_string()),
+        ]),
+    )
+    .unwrap();
+
+    assert_eq!(not_due.status, "failed");
+    assert_eq!(not_due.failure.as_deref(), Some("RequirementFailed"));
+    assert_eq!(
+        not_due.final_state.get("ticket.status").map(String::as_str),
+        Some("Open")
     );
 }
 
@@ -3145,8 +3265,62 @@ fn cli_ail_compile_native_rejects_unsupported_system_opcodes() {
 fn cli_ail_compile_native_rejects_unlowered_observed_requirements() {
     let binary = env!("CARGO_BIN_EXE_eigl");
     let package = fixture("support_ticket.ail");
+    let spec_path = std::env::temp_dir().join(format!(
+        "eigl-manual-approval-native-unlowered-{}.ail-spec.md",
+        std::process::id()
+    ));
     let executable_path = std::env::temp_dir().join(format!(
-        "eigl-overdue-ticket-native-unlowered-{}",
+        "eigl-manual-approval-native-unlowered-{}",
+        std::process::id()
+    ));
+    let spec_text = fs::read_to_string(format!("{package}/spec.ail-spec.md"))
+        .unwrap()
+        .replace(
+            "the system requires the ticket to exist",
+            "the system requires manual override approval",
+        );
+    fs::write(&spec_path, spec_text).unwrap();
+    let _ = fs::remove_file(&executable_path);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-build",
+            &package,
+            "--spec-file",
+            spec_path.to_str().unwrap(),
+            "--action",
+            "CloseTicket",
+            "--target",
+            "linux-x86_64-elf",
+            "--out",
+            executable_path.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    let status = output.status;
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let _ = fs::remove_file(&spec_path);
+    let _ = fs::remove_file(&executable_path);
+    assert!(
+        !status.success(),
+        "native compile should reject unlowered observed requirements\nstdout:\n{stdout}\nstderr:\n{stderr}"
+    );
+    assert!(
+        stderr.contains(
+            "unsupported native linux-x86_64-elf observed rule 'manual override approval' in action 'CloseTicket'"
+        ),
+        "{stderr}"
+    );
+}
+
+#[test]
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+fn cli_ail_compile_native_executable_enforces_overdue_time_requirement() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("support_ticket.ail");
+    let executable_path = std::env::temp_dir().join(format!(
+        "eigl-overdue-ticket-native-time-{}",
         std::process::id()
     ));
     let _ = fs::remove_file(&executable_path);
@@ -3164,20 +3338,60 @@ fn cli_ail_compile_native_rejects_unlowered_observed_requirements() {
         ])
         .output()
         .unwrap();
-    let status = output.status;
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    let _ = fs::remove_file(&executable_path);
     assert!(
-        !status.success(),
-        "native compile should reject unlowered observed requirements\nstdout:\n{stdout}\nstderr:\n{stderr}"
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let success = Command::new(&executable_path)
+        .args([
+            "current.time=2026-05-23T10:00:00Z",
+            "ticket.due_at=2026-05-23T09:00:00Z",
+            "ticket.status=Open",
+        ])
+        .output()
+        .unwrap();
+    assert!(success.status.success(), "overdue ticket should pass");
+    assert_eq!(
+        String::from_utf8_lossy(&success.stdout),
+        "ticket.status=Overdue\n"
     );
     assert!(
-        stderr.contains(
-            "unsupported native linux-x86_64-elf observed rule 'the current time to be later than due_at' in action 'MarksOverdueTickets'"
-        ),
-        "{stderr}"
+        String::from_utf8_lossy(&success.stderr)
+            .contains("rule passed: the current time to be later than due_at"),
+        "{}",
+        String::from_utf8_lossy(&success.stderr)
     );
+
+    let not_due = Command::new(&executable_path)
+        .args([
+            "current.time=2026-05-23T08:00:00Z",
+            "ticket.due_at=2026-05-23T09:00:00Z",
+            "ticket.status=Open",
+        ])
+        .output()
+        .unwrap();
+    assert!(!not_due.status.success(), "not-overdue ticket should fail");
+    assert_eq!(String::from_utf8_lossy(&not_due.stdout), "");
+    assert!(
+        String::from_utf8_lossy(&not_due.stderr).contains("failure RequirementFailed"),
+        "{}",
+        String::from_utf8_lossy(&not_due.stderr)
+    );
+
+    let missing_clock = Command::new(&executable_path)
+        .args(["ticket.due_at=2026-05-23T09:00:00Z", "ticket.status=Open"])
+        .output()
+        .unwrap();
+    assert!(
+        !missing_clock.status.success(),
+        "missing current.time should fail"
+    );
+    assert_eq!(String::from_utf8_lossy(&missing_clock.stdout), "");
+
+    fs::remove_file(executable_path).unwrap();
 }
 
 #[test]

@@ -42,8 +42,11 @@ as `<field> is <value>`; typed nested field phrases such as `assignee role`
 lower to explicit runtime keys such as `ticket.assignee.role`. Compound input
 requirements such as `the customer id and title` lower to executable
 `REQUIRE_EXISTS` checks for `customer.id` and `ticket.title`, so native
-`CreateTicket` exits nonzero when either argv entry is missing. Creation writes
-such as `a Ticket with status New` lower to `SET_FIELD ticket.status=New`.
+`CreateTicket` exits nonzero when either argv entry is missing. Time comparison
+requirements such as `the current time to be later than due_at` lower to
+`REQUIRE_FIELD_AFTER` from deterministic runtime input `current.time` to
+`ticket.due_at`. Creation writes such as `a Ticket with status New` lower to
+`SET_FIELD ticket.status=New`.
 Copy writes such as `the customer as the ticket customer` lower to `COPY_FIELD`
 from `customer.id` to `ticket.customer.id`. Supported `SET_FIELD` and
 `COPY_FIELD` writes are emitted as `key=value` stdout lines on successful

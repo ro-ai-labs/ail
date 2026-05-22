@@ -3153,6 +3153,22 @@ pub fn run_ail_action(
             trace.push(format!("rule passed: {requirement}"));
             continue;
         }
+        if let Some((source, key)) = field_after_requirement(document, requirement) {
+            if final_state
+                .get(&source)
+                .zip(final_state.get(&key))
+                .is_none_or(|(left, right)| left <= right)
+            {
+                return Ok(failed_run(
+                    document,
+                    final_state,
+                    trace,
+                    "RequirementFailed",
+                ));
+            }
+            trace.push(format!("rule passed: {requirement}"));
+            continue;
+        }
         if let Some((key, forbidden)) = negative_field_requirement(document, requirement) {
             if final_state
                 .get(&key)
@@ -3301,6 +3317,7 @@ fn emit_linux_x86_64_elf_for_action(
     let mut exists_prefixes = Vec::new();
     let mut forbidden_exact_args = Vec::new();
     let mut required_any_exact_args = Vec::new();
+    let mut required_after_args = Vec::new();
     let mut failure_branches = Vec::new();
     let mut state_writes = Vec::new();
     let mut success_trace_lines = Vec::new();
@@ -3370,6 +3387,30 @@ fn emit_linux_x86_64_elf_for_action(
                             ),
                         });
                     }
+                }
+                if let Some(rule) = instruction.operands.get("rule") {
+                    success_trace_lines.push(format!("rule passed: {rule}\n"));
+                }
+            }
+            "REQUIRE_FIELD_AFTER" => {
+                if let (Some(source), Some(key)) = (
+                    instruction.operands.get("source"),
+                    instruction.operands.get("key"),
+                ) {
+                    let fail_label = format!("fail_requirement_{}", failure_branches.len());
+                    required_after_args.push((
+                        format!("{source}="),
+                        format!("{key}="),
+                        fail_label.clone(),
+                    ));
+                    failure_branches.push(NativeFailureBranch {
+                        label: fail_label,
+                        trace_lines: native_failure_trace_lines(
+                            &success_trace_lines,
+                            instruction.operands.get("failure"),
+                            failures,
+                        ),
+                    });
                 }
                 if let Some(rule) = instruction.operands.get("rule") {
                     success_trace_lines.push(format!("rule passed: {rule}\n"));
@@ -3483,6 +3524,27 @@ fn emit_linux_x86_64_elf_for_action(
         code.emit_jmp_label(fail_label);
         code.label(matched_label)?;
     }
+    for (index, (_, _, fail_label)) in required_after_args.iter().enumerate() {
+        let source_label = format!("field_after_source_{index}");
+        let key_label = format!("field_after_key_{index}");
+        code.emit_lea_rsi_label(&source_label);
+        code.emit_mov_edx_imm32(required_after_args[index].0.len() as u32);
+        code.emit_call_label("find_prefix");
+        code.emit_test_rax_rax();
+        code.emit_jcc_label(&[0x0f, 0x84], fail_label); // jz fail
+        code.emit_mov_r14_rax();
+        code.emit_lea_rsi_label(&key_label);
+        code.emit_mov_edx_imm32(required_after_args[index].1.len() as u32);
+        code.emit_call_label("find_prefix");
+        code.emit_test_rax_rax();
+        code.emit_jcc_label(&[0x0f, 0x84], fail_label); // jz fail
+        code.emit_mov_r15_rax();
+        code.emit_mov_rdi_r14();
+        code.emit_mov_rsi_r15();
+        code.emit_call_label("cstring_gt");
+        code.emit(&[0x85, 0xc0]); // test eax, eax
+        code.emit_jcc_label(&[0x0f, 0x84], fail_label); // jz fail
+    }
     for (index, write) in state_writes.iter().enumerate() {
         match write {
             NativeStateWrite::Static(line) => {
@@ -3529,6 +3591,7 @@ fn emit_linux_x86_64_elf_for_action(
     emit_has_exact(&mut code)?;
     emit_find_prefix(&mut code)?;
     emit_cstring_len(&mut code)?;
+    emit_cstring_gt(&mut code)?;
     for (index, (prefix, _)) in exists_prefixes.iter().enumerate() {
         code.label(format!("exists_prefix_{index}"))?;
         code.emit(prefix.as_bytes());
@@ -3542,6 +3605,12 @@ fn emit_linux_x86_64_elf_for_action(
             code.label(format!("field_in_arg_{group_index}_{value_index}"))?;
             code.emit(exact.as_bytes());
         }
+    }
+    for (index, (source, key, _)) in required_after_args.iter().enumerate() {
+        code.label(format!("field_after_source_{index}"))?;
+        code.emit(source.as_bytes());
+        code.label(format!("field_after_key_{index}"))?;
+        code.emit(key.as_bytes());
     }
     let has_state_copies = state_writes
         .iter()
@@ -3705,6 +3774,28 @@ fn emit_cstring_len(code: &mut X64Code) -> Result<(), String> {
     Ok(())
 }
 
+fn emit_cstring_gt(code: &mut X64Code) -> Result<(), String> {
+    code.label("cstring_gt")?;
+    code.emit(&[0x31, 0xc9]); // xor ecx, ecx
+    code.label("cstring_gt_loop")?;
+    code.emit(&[
+        0x8a, 0x04, 0x0f, // mov al, [rdi+rcx]
+        0x44, 0x8a, 0x04, 0x0e, // mov r8b, [rsi+rcx]
+        0x44, 0x38, 0xc0, // cmp al, r8b
+    ]);
+    code.emit_jcc_label(&[0x0f, 0x87], "cstring_gt_yes"); // ja yes
+    code.emit_jcc_label(&[0x0f, 0x82], "cstring_gt_no"); // jb no
+    code.emit(&[0x84, 0xc0]); // test al, al
+    code.emit_jcc_label(&[0x0f, 0x84], "cstring_gt_no"); // je no
+    code.emit(&[0x48, 0xff, 0xc1]); // inc rcx
+    code.emit_jmp_label("cstring_gt_loop");
+    code.label("cstring_gt_yes")?;
+    code.emit(&[0xb8, 0x01, 0x00, 0x00, 0x00, 0xc3]); // mov eax, 1; ret
+    code.label("cstring_gt_no")?;
+    code.emit(&[0x31, 0xc0, 0xc3]); // xor eax, eax; ret
+    Ok(())
+}
+
 #[derive(Default)]
 struct X64Code {
     bytes: Vec<u8>,
@@ -3743,8 +3834,16 @@ impl X64Code {
         self.emit(&[0x49, 0x89, 0xc6]);
     }
 
+    fn emit_mov_r15_rax(&mut self) {
+        self.emit(&[0x49, 0x89, 0xc7]);
+    }
+
     fn emit_mov_rdi_r14(&mut self) {
         self.emit(&[0x4c, 0x89, 0xf7]);
+    }
+
+    fn emit_mov_rsi_r15(&mut self) {
+        self.emit(&[0x4c, 0x89, 0xfe]);
     }
 
     fn emit_write_label(&mut self, fd: u32, label: &str, len: u32) {
@@ -5006,6 +5105,18 @@ fn compile_ail_action_bytecode(document: &AilDocument, action: &AilAction) -> Ai
             }
             continue;
         }
+        if let Some((source, key)) = field_after_requirement(document, requirement) {
+            instructions.push(AilBytecodeInstruction::new(
+                "REQUIRE_FIELD_AFTER",
+                &[
+                    ("source", source),
+                    ("key", key),
+                    ("rule", requirement.clone()),
+                    ("failure", "RequirementFailed".to_string()),
+                ],
+            ));
+            continue;
+        }
         if let Some((key, forbidden)) = negative_field_requirement(document, requirement) {
             instructions.push(AilBytecodeInstruction::new(
                 "REQUIRE_FIELD_NOT_EQUALS",
@@ -5249,6 +5360,7 @@ fn ail_bytecode_required_operands(opcode: &str) -> Option<&'static [&'static str
         "REQUIRE_EXISTS" => Some(&["key", "rule", "failure"]),
         "REQUIRE_FIELD_NOT_EQUALS" => Some(&["key", "value", "rule", "failure"]),
         "REQUIRE_FIELD_IN" => Some(&["key", "values", "rule", "failure"]),
+        "REQUIRE_FIELD_AFTER" => Some(&["source", "key", "rule", "failure"]),
         "OBSERVE_RULE" => Some(&["rule"]),
         "READ_FIELD" => Some(&["key", "text"]),
         "READ_EFFECT" => Some(&["text"]),
@@ -5542,6 +5654,24 @@ pub fn run_ail_bytecode_action(
                 if !final_state
                     .get(key)
                     .is_some_and(|current| values.iter().any(|value| current == value))
+                {
+                    return Ok(failed_bytecode_run(
+                        program,
+                        final_state,
+                        trace,
+                        ail_bytecode_operand(instruction, "failure"),
+                    ));
+                }
+                trace.push(format!("rule passed: {rule}"));
+            }
+            "REQUIRE_FIELD_AFTER" => {
+                let source = ail_bytecode_operand(instruction, "source");
+                let key = ail_bytecode_operand(instruction, "key");
+                let rule = ail_bytecode_operand(instruction, "rule");
+                if final_state
+                    .get(source)
+                    .zip(final_state.get(key))
+                    .is_none_or(|(left, right)| left <= right)
                 {
                     return Ok(failed_bytecode_run(
                         program,
@@ -7384,6 +7514,20 @@ fn positive_field_requirement(
     let key = referenced_runtime_field_key(document, field_text)?;
     let allowed_values = split_allowed_requirement_values(allowed_text);
     (!allowed_values.is_empty()).then_some((key, allowed_values))
+}
+
+fn field_after_requirement(document: &AilDocument, requirement: &str) -> Option<(String, String)> {
+    let marker = " to be later than ";
+    let (source_text, key_text) = requirement.split_once(marker)?;
+    let source = current_time_runtime_key(source_text)
+        .or_else(|| referenced_runtime_field_key(document, source_text))?;
+    let key = referenced_runtime_field_key(document, key_text)?;
+    Some((source, key))
+}
+
+fn current_time_runtime_key(text: &str) -> Option<String> {
+    let normalized = normalized_field_reference_text(text).to_ascii_lowercase();
+    (normalized == "current time").then(|| "current.time".to_string())
 }
 
 fn field_copy_assignment(document: &AilDocument, write: &str) -> Option<(String, String)> {
