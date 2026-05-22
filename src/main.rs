@@ -381,7 +381,7 @@ fn usage() -> String {
 fn write_ail_build_artifacts(
     artifact_dir: &str,
     requirements: Option<&str>,
-    spec_text: &str,
+    spec_text: Option<&str>,
     core_text: &str,
     bytecode_text: &str,
     pass_bytecode_text: Option<&str>,
@@ -395,8 +395,10 @@ fn write_ail_build_artifacts(
         fs::write(root.join("requirements.ail-requirements.md"), requirements)
             .map_err(|error| format!("failed to write ail-build requirements artifact: {error}"))?;
     }
-    fs::write(root.join("accepted.ail-spec.md"), spec_text)
-        .map_err(|error| format!("failed to write ail-build spec artifact: {error}"))?;
+    if let Some(spec_text) = spec_text {
+        fs::write(root.join("accepted.ail-spec.md"), spec_text)
+            .map_err(|error| format!("failed to write ail-build spec artifact: {error}"))?;
+    }
     fs::write(root.join("checked.ail-core.txt"), core_text)
         .map_err(|error| format!("failed to write ail-build core artifact: {error}"))?;
     fs::write(root.join("artifact.ailbc.json"), bytecode_text)
@@ -646,9 +648,80 @@ fn parse_cli_ail_core(cli_options: &CliOptions) -> Result<eigl::ail::AilCore, St
     parse_ail_core_text(&core_text)
 }
 
+fn run_ail_build_from_core(
+    mut core: eigl::ail::AilCore,
+    cli_options: &CliOptions,
+    requirements_artifact: Option<&str>,
+    spec_text: Option<&str>,
+) -> Result<u8, String> {
+    let core_diagnostics = check_ail_core(&core);
+    if !core_diagnostics.is_empty() {
+        println!("ail-build diagnostics:");
+        for diagnostic in core_diagnostics {
+            println!("{diagnostic}");
+        }
+        return Ok(1);
+    }
+    let mut pass_bytecode_artifact = None;
+    let mut pass_trace_artifact = None;
+    if let Some(pass_path) = &cli_options.ail_build_pass {
+        let (pass_bytecode, pass_bytecode_text) =
+            load_ail_pass_bytecode_or_compile_package(pass_path)?;
+        let pass_diagnostics = verify_ail_bytecode(&pass_bytecode);
+        if !pass_diagnostics.is_empty() {
+            println!("ail-build diagnostics:");
+            for diagnostic in pass_diagnostics {
+                println!("{diagnostic}");
+            }
+            return Ok(1);
+        }
+        let pass_action = select_single_ail_pass_action(&pass_bytecode)?;
+        let pass_result = run_ail_compiler_pass_on_core(&pass_bytecode, &pass_action, &core)?;
+        core = pass_result.core;
+        pass_bytecode_artifact = Some(pass_bytecode_text);
+        pass_trace_artifact = Some(pass_result.run.trace);
+        let core_diagnostics = check_ail_core(&core);
+        if !core_diagnostics.is_empty() {
+            println!("ail-build diagnostics:");
+            for diagnostic in core_diagnostics {
+                println!("{diagnostic}");
+            }
+            return Ok(1);
+        }
+    }
+    let bytecode = compile_ail_core_bytecode(&core)?;
+    let diagnostics = verify_ail_bytecode(&bytecode);
+    if !diagnostics.is_empty() {
+        println!("ail-build diagnostics:");
+        for diagnostic in diagnostics {
+            println!("{diagnostic}");
+        }
+        return Ok(1);
+    }
+    let bytecode_text = format!("{}\n", render_ail_bytecode(&bytecode));
+    if let Some(artifact_dir) = &cli_options.artifact_dir {
+        let core_text = format!("{}\n", render_ail_core(&core));
+        write_ail_build_artifacts(
+            artifact_dir,
+            requirements_artifact,
+            spec_text,
+            &core_text,
+            &bytecode_text,
+            pass_bytecode_artifact.as_deref(),
+            pass_trace_artifact.as_deref(),
+        )?;
+    }
+    print!("{bytecode_text}");
+    Ok(0)
+}
+
 fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Result<u8, String> {
     if command == "ail-pass" {
         return run_ail_pass_command(path, cli_options);
+    }
+    if command == "ail-build" && cli_options.ail_core_file.is_some() {
+        let core = parse_cli_ail_core(cli_options)?;
+        return run_ail_build_from_core(core, cli_options, None, None);
     }
     if command == "ail-lower" && cli_options.ail_core_file.is_some() {
         let core = parse_cli_ail_core(cli_options)?;
@@ -796,7 +869,7 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
         return Ok(0);
     }
     if command == "ail-build" {
-        let (requirements_artifact, spec_text, mut core) = if let Some(spec_file) =
+        let (requirements_artifact, spec_text, core) = if let Some(spec_file) =
             cli_options.ail_spec_file.as_deref()
         {
             let spec_text = fs::read_to_string(spec_file)
@@ -840,65 +913,12 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
             let core = elaborate_ail_core(&package, &document);
             (Some(requirements), draft.spec_text, core)
         };
-        let core_diagnostics = check_ail_core(&core);
-        if !core_diagnostics.is_empty() {
-            println!("ail-build diagnostics:");
-            for diagnostic in core_diagnostics {
-                println!("{diagnostic}");
-            }
-            return Ok(1);
-        }
-        let mut pass_bytecode_artifact = None;
-        let mut pass_trace_artifact = None;
-        if let Some(pass_path) = &cli_options.ail_build_pass {
-            let (pass_bytecode, pass_bytecode_text) =
-                load_ail_pass_bytecode_or_compile_package(pass_path)?;
-            let pass_diagnostics = verify_ail_bytecode(&pass_bytecode);
-            if !pass_diagnostics.is_empty() {
-                println!("ail-build diagnostics:");
-                for diagnostic in pass_diagnostics {
-                    println!("{diagnostic}");
-                }
-                return Ok(1);
-            }
-            let pass_action = select_single_ail_pass_action(&pass_bytecode)?;
-            let pass_result = run_ail_compiler_pass_on_core(&pass_bytecode, &pass_action, &core)?;
-            core = pass_result.core;
-            pass_bytecode_artifact = Some(pass_bytecode_text);
-            pass_trace_artifact = Some(pass_result.run.trace);
-            let core_diagnostics = check_ail_core(&core);
-            if !core_diagnostics.is_empty() {
-                println!("ail-build diagnostics:");
-                for diagnostic in core_diagnostics {
-                    println!("{diagnostic}");
-                }
-                return Ok(1);
-            }
-        }
-        let bytecode = compile_ail_core_bytecode(&core)?;
-        let diagnostics = verify_ail_bytecode(&bytecode);
-        if !diagnostics.is_empty() {
-            println!("ail-build diagnostics:");
-            for diagnostic in diagnostics {
-                println!("{diagnostic}");
-            }
-            return Ok(1);
-        }
-        let bytecode_text = format!("{}\n", render_ail_bytecode(&bytecode));
-        if let Some(artifact_dir) = &cli_options.artifact_dir {
-            let core_text = format!("{}\n", render_ail_core(&core));
-            write_ail_build_artifacts(
-                artifact_dir,
-                requirements_artifact.as_deref(),
-                &spec_text,
-                &core_text,
-                &bytecode_text,
-                pass_bytecode_artifact.as_deref(),
-                pass_trace_artifact.as_deref(),
-            )?;
-        }
-        print!("{bytecode_text}");
-        return Ok(0);
+        return run_ail_build_from_core(
+            core,
+            cli_options,
+            requirements_artifact.as_deref(),
+            Some(&spec_text),
+        );
     }
     let document = parse_cli_ail_document(&package, cli_options)?;
     if command == "ail-patch" {
@@ -1168,7 +1188,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
             continue;
         }
         if arg == "--core-file" {
-            if !matches!(command, "ail-lower" | "ail-pass") {
+            if !matches!(command, "ail-lower" | "ail-pass" | "ail-build") {
                 return Err(usage());
             }
             let Some(path) = args.get(index + 1) else {
@@ -1334,6 +1354,9 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
     }
     if command == "ail-build" && ail_requirements_file.is_some() && ail_spec_file.is_some() {
         return Err("--requirements-file cannot be combined with --spec-file".to_string());
+    }
+    if command == "ail-build" && ail_requirements_file.is_some() && ail_core_file.is_some() {
+        return Err("--requirements-file cannot be combined with --core-file".to_string());
     }
     if command == "ail-pass" && ail_core_file.is_none() && ail_pass_target.is_none() {
         return Err("ail-pass requires a target package or --core-file <path>".to_string());

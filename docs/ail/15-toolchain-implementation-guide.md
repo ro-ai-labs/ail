@@ -335,12 +335,13 @@ can use `--spec-file <path>` to read a saved generated AIL-Spec artifact
 instead of the package entry spec, preserving the package metadata while making
 accepted AIL-Spec files reusable inputs to IR rendering, bytecode lowering, and
 auditable build artifacts.
-`ail-lower --core-file <path>` reads a saved checked AIL-Core artifact,
-reconstructs the graph from the serialized nodes, edges, and edge attributes,
-runs the core checker, and compiles that IR directly to AIL-Bytecode without
-loading the source package spec. This keeps AIL-Core as a real compiler input
-boundary rather than only a display format, and it preserves lowering payloads
-such as read/write provenance text that affect emitted bytecode instructions.
+`ail-lower --core-file <path>` and `ail-build --core-file <path>` read a saved
+checked AIL-Core artifact, reconstruct the graph from the serialized nodes,
+edges, and edge attributes, run the core checker, and compile that IR directly
+to AIL-Bytecode without loading the source package spec. This keeps AIL-Core as
+a real compiler input boundary rather than only a display format, and it
+preserves lowering payloads such as read/write provenance text that affect
+emitted bytecode instructions.
 `ail-vm` reads a saved AIL-Bytecode artifact and executes it directly without
 reparsing the source AIL package, making bytecode a real artifact boundary
 instead of only a display format. The VM verifier rejects unknown opcodes and
@@ -381,8 +382,10 @@ spec-drafting stage. If the checker rejects the first candidate, `ail-build`
 sends the candidate plus detailed diagnostics and repair suggestions back to the
 base LLM for one repair pass. With `--spec-file <path>`, `ail-build` skips all
 LLM calls, parses the saved accepted AIL-Spec artifact against the package
-metadata, and resumes at checked AIL-Core elaboration. Only a checked candidate
-or saved spec is lowered to AIL-Core. If `--pass
+metadata, and resumes at checked AIL-Core elaboration. With
+`--core-file <path>`, `ail-build` skips both LLM and AIL-Spec parsing stages
+and resumes from the saved checked AIL-Core IR artifact. Only a checked
+candidate, saved spec, or saved core is lowered to AIL-Bytecode. If `--pass
 <compiler-pass-package-or-bytecode>` is supplied, `ail-build` loads that
 AIL-authored Compiler-profile bytecode, requires exactly one pass action, runs
 it over the checked candidate AIL-Core, and re-checks the transformed IR before
@@ -391,13 +394,14 @@ verified AIL-Bytecode, so the build path still emits bytecode rather than
 host-language source. With `--artifact-dir`, the same command writes
 `accepted.ail-spec.md`, `checked.ail-core.txt`, and `artifact.ailbc.json`; it
 also writes `requirements.ail-requirements.md` when the build captured or loaded
-requirements. When a build pass is present, `checked.ail-core.txt` is the
+requirements, and it writes `accepted.ail-spec.md` only when an AIL-Spec stage
+was present. When a build pass is present, `checked.ail-core.txt` is the
 post-pass IR that was actually lowered, and the artifact directory also includes
 `pass.ailbc.json` plus `pass-trace.txt` for the compiler-pass bytecode and
 execution trace. This lets the developer audit the
-requirements-to-spec-to-IR-to-pass-to-bytecode chain, or a
-saved-spec-to-IR-to-bytecode chain, while stdout remains the parseable bytecode
-artifact.
+requirements-to-spec-to-IR-to-pass-to-bytecode chain, a
+saved-spec-to-IR-to-bytecode chain, or a saved-core-to-bytecode chain while
+stdout remains the parseable bytecode artifact.
 
 ### Diagnostics
 

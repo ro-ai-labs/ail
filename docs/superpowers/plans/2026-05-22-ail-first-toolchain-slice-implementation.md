@@ -3731,6 +3731,56 @@ Expected: `ail-build --spec-file` emits verified bytecode, writes
 does not write `requirements.ail-requirements.md` for a skipped requirements
 stage.
 
+### Task 90: Saved AIL-Core Artifact Input For Build
+
+**Files:**
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing saved-core build test**
+
+Add a CLI test that writes a checked AIL-Core artifact to a temp file and
+requires:
+
+```bash
+eigl ail-build examples/support_ticket.ail --core-file <core-file> --artifact-dir <dir>
+```
+
+to skip requirements capture and spec drafting, emit verified AIL-Bytecode, and
+write checked core plus bytecode artifacts without writing requirements or
+accepted-spec artifacts.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_accepts_saved_core_file_artifact -- --nocapture
+```
+
+Expected: usage failure because `--core-file` is accepted by `ail-lower` and
+`ail-pass` but not by `ail-build`.
+
+- [x] **Step 3: Implement saved core input**
+
+Allow `--core-file` for `ail-build`, parse and check the saved AIL-Core
+artifact before loading the source package, skip all LLM and AIL-Spec stages,
+and continue through optional compiler-pass execution and bytecode lowering.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_accepts_saved_core_file_artifact -- --nocapture
+```
+
+Expected: `ail-build --core-file` emits verified bytecode, writes
+`checked.ail-core.txt` and `artifact.ailbc.json`, and does not write
+`requirements.ail-requirements.md` or `accepted.ail-spec.md` for skipped stages.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**
