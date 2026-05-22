@@ -379,7 +379,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
 }
 
 fn usage() -> String {
-    "usage: eigl <check|graph|views|simulate|lower|run|dispatch|emit|schedule|dequeue|serve|normalize|patch|llm-roundtrip|view-model|ail-check|ail-core|ail-flow|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-patch> <path> [patch|target-package] [--intent name] [--action name] [--prompt text] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--target-model name] [--out path] [--artifact-dir path] [--state-in path] [--state-out path] [--data-in path] [--data-out path] [--operation-output name=value] [--listen addr] [--llm-endpoint url] [method path|trigger] [key=value ...]\nail-pass usage: eigl ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] OR eigl ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>]"
+    "usage: eigl <check|graph|views|simulate|lower|run|dispatch|emit|schedule|dequeue|serve|normalize|patch|llm-roundtrip|view-model|ail-check|ail-core|ail-flow|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-patch> <path> [patch|target-package] [--intent name] [--action name] [--prompt text] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--target-model name] [--out path] [--artifact-dir path] [--state-in path] [--state-out path] [--data-in path] [--data-out path] [--operation-output name=value] [--listen addr] [--llm-endpoint url] [method path|trigger] [key=value ...]\nail-pass usage: eigl ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR eigl ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]"
         .to_string()
 }
 
@@ -403,6 +403,17 @@ struct AilNativeArtifact {
     target_name: String,
     file_name: String,
     bytes: Vec<u8>,
+}
+
+struct AilPassArtifactSet<'a> {
+    pass_bytecode_text: &'a str,
+    input_core_text: &'a str,
+    output_core_text: &'a str,
+    trace: &'a [String],
+    pass_native_executables: &'a [AilNativeArtifact],
+    agent_bytecode_text: Option<&'a str>,
+    agent_trace: Option<&'a [String]>,
+    agent_native_executables: &'a [AilNativeArtifact],
 }
 
 struct AilBuildAgentStart {
@@ -650,58 +661,81 @@ fn ail_artifact_fingerprint_bytes(bytes: &[u8]) -> String {
     format!("fnv64:{hash:016x}")
 }
 
-fn render_ail_pass_manifest(
-    pass_bytecode_text: &str,
-    agent_bytecode_text: Option<&str>,
-    agent_trace: Option<&[String]>,
-) -> String {
-    let pass_fingerprint = ail_artifact_fingerprint(pass_bytecode_text);
+fn render_ail_pass_manifest(artifacts: &AilPassArtifactSet<'_>) -> String {
+    let pass_fingerprint = ail_artifact_fingerprint(artifacts.pass_bytecode_text);
     let mut lines = vec![
         "AIL-Pass-Manifest:".to_string(),
         format!("compiler-pass pass.ailbc.json {pass_fingerprint}"),
-        "core-input input.ail-core.txt".to_string(),
-        "core-output output.ail-core.txt".to_string(),
-        "trace trace.txt".to_string(),
     ];
-    if let Some(agent_bytecode_text) = agent_bytecode_text {
+    for native_pass in artifacts.pass_native_executables {
+        lines.push(format!(
+            "compiler-pass-target {} {} {}",
+            native_pass.target_name,
+            native_pass.file_name,
+            ail_artifact_fingerprint_bytes(&native_pass.bytes)
+        ));
+    }
+    lines.push("core-input input.ail-core.txt".to_string());
+    lines.push("core-output output.ail-core.txt".to_string());
+    lines.push("trace trace.txt".to_string());
+    if let Some(agent_bytecode_text) = artifacts.agent_bytecode_text {
         lines.push(format!(
             "agent agent.ailbc.json {}",
             ail_artifact_fingerprint(agent_bytecode_text)
         ));
     }
-    if agent_trace.is_some() {
+    if artifacts.agent_trace.is_some() {
         lines.push("trace agent-trace.txt".to_string());
+    }
+    for native_agent in artifacts.agent_native_executables {
+        lines.push(format!(
+            "agent-target {} {} {}",
+            native_agent.target_name,
+            native_agent.file_name,
+            ail_artifact_fingerprint_bytes(&native_agent.bytes)
+        ));
     }
     format!("{}\n", lines.join("\n"))
 }
 
 fn write_ail_pass_artifacts(
     artifact_dir: &str,
-    pass_bytecode_text: &str,
-    input_core_text: &str,
-    output_core_text: &str,
-    trace: &[String],
-    agent_bytecode_text: Option<&str>,
-    agent_trace: Option<&[String]>,
+    artifacts: AilPassArtifactSet<'_>,
 ) -> Result<(), String> {
     let root = std::path::Path::new(artifact_dir);
     fs::create_dir_all(root).map_err(|error| {
         format!("failed to create ail-pass artifact dir {artifact_dir}: {error}")
     })?;
-    fs::write(root.join("pass.ailbc.json"), pass_bytecode_text)
+    fs::write(root.join("pass.ailbc.json"), artifacts.pass_bytecode_text)
         .map_err(|error| format!("failed to write ail-pass bytecode artifact: {error}"))?;
     fs::write(
         root.join("pass.fingerprint.txt"),
-        format!("{}\n", ail_artifact_fingerprint(pass_bytecode_text)),
+        format!(
+            "{}\n",
+            ail_artifact_fingerprint(artifacts.pass_bytecode_text)
+        ),
     )
     .map_err(|error| format!("failed to write ail-pass bytecode fingerprint artifact: {error}"))?;
-    fs::write(root.join("input.ail-core.txt"), input_core_text)
+    fs::write(root.join("input.ail-core.txt"), artifacts.input_core_text)
         .map_err(|error| format!("failed to write ail-pass input core artifact: {error}"))?;
-    fs::write(root.join("output.ail-core.txt"), output_core_text)
+    fs::write(root.join("output.ail-core.txt"), artifacts.output_core_text)
         .map_err(|error| format!("failed to write ail-pass output core artifact: {error}"))?;
-    fs::write(root.join("trace.txt"), format!("{}\n", trace.join("\n")))
-        .map_err(|error| format!("failed to write ail-pass trace artifact: {error}"))?;
-    if let Some(agent_bytecode_text) = agent_bytecode_text {
+    fs::write(
+        root.join("trace.txt"),
+        format!("{}\n", artifacts.trace.join("\n")),
+    )
+    .map_err(|error| format!("failed to write ail-pass trace artifact: {error}"))?;
+    for native_pass in artifacts.pass_native_executables {
+        let artifact_path = root.join(&native_pass.file_name);
+        fs::write(&artifact_path, &native_pass.bytes).map_err(|error| {
+            format!(
+                "failed to write ail-pass native compiler-pass artifact {}: {error}",
+                native_pass.file_name
+            )
+        })?;
+        set_native_executable_permissions(&artifact_path.to_string_lossy())?;
+    }
+    if let Some(agent_bytecode_text) = artifacts.agent_bytecode_text {
         fs::write(root.join("agent.ailbc.json"), agent_bytecode_text).map_err(|error| {
             format!("failed to write ail-pass agent bytecode artifact: {error}")
         })?;
@@ -713,15 +747,24 @@ fn write_ail_pass_artifacts(
             format!("failed to write ail-pass agent bytecode fingerprint artifact: {error}")
         })?;
     }
-    if let Some(agent_trace) = agent_trace {
+    if let Some(agent_trace) = artifacts.agent_trace {
         fs::write(
             root.join("agent-trace.txt"),
             format!("{}\n", agent_trace.join("\n")),
         )
         .map_err(|error| format!("failed to write ail-pass agent trace artifact: {error}"))?;
     }
-    let manifest_text =
-        render_ail_pass_manifest(pass_bytecode_text, agent_bytecode_text, agent_trace);
+    for native_agent in artifacts.agent_native_executables {
+        let artifact_path = root.join(&native_agent.file_name);
+        fs::write(&artifact_path, &native_agent.bytes).map_err(|error| {
+            format!(
+                "failed to write ail-pass native agent artifact {}: {error}",
+                native_agent.file_name
+            )
+        })?;
+        set_native_executable_permissions(&artifact_path.to_string_lossy())?;
+    }
+    let manifest_text = render_ail_pass_manifest(&artifacts);
     fs::write(root.join("manifest.ail-pass.txt"), &manifest_text)
         .map_err(|error| format!("failed to write ail-pass manifest artifact: {error}"))?;
     fs::write(
@@ -799,6 +842,11 @@ fn run_ail_pass_command(pass_path: &str, cli_options: &CliOptions) -> Result<u8,
     }
     let input_core_text = format!("{}\n", render_ail_core(&target_core));
     let output_core_text = format!("{}\n", render_ail_core(&result.core));
+    let pass_native_artifacts = if let Some(target) = &cli_options.ail_compile_target {
+        compile_ail_pass_native_artifacts(&pass_bytecode, target)?
+    } else {
+        Vec::new()
+    };
     let mut agent_run = if let Some(agent_path) = &cli_options.ail_build_agent {
         Some(run_ail_pass_agent_accept_pass_output(
             agent_path,
@@ -810,26 +858,42 @@ fn run_ail_pass_command(pass_path: &str, cli_options: &CliOptions) -> Result<u8,
     } else {
         None
     };
+    let agent_native_artifacts = if let (Some(target), Some(agent_run)) =
+        (&cli_options.ail_compile_target, agent_run.as_ref())
+    {
+        compile_ail_build_agent_native_artifacts(&agent_run.bytecode, target)?
+    } else {
+        Vec::new()
+    };
     if let (Some(agent_run), Some(_artifact_dir)) =
         (agent_run.as_mut(), cli_options.artifact_dir.as_ref())
     {
-        let manifest_text = render_ail_pass_manifest(
-            &pass_bytecode_text,
-            Some(agent_run.bytecode_text.as_str()),
-            Some(agent_run.trace.as_slice()),
-        );
+        let manifest_text = render_ail_pass_manifest(&AilPassArtifactSet {
+            pass_bytecode_text: &pass_bytecode_text,
+            input_core_text: &input_core_text,
+            output_core_text: &output_core_text,
+            trace: &result.run.trace,
+            pass_native_executables: pass_native_artifacts.as_slice(),
+            agent_bytecode_text: Some(agent_run.bytecode_text.as_str()),
+            agent_trace: Some(agent_run.trace.as_slice()),
+            agent_native_executables: agent_native_artifacts.as_slice(),
+        });
         let manifest_fingerprint = ail_artifact_fingerprint(&manifest_text);
         run_ail_pass_agent_verify_manifest(agent_run, &manifest_text, &manifest_fingerprint)?;
     }
     if let Some(artifact_dir) = &cli_options.artifact_dir {
         write_ail_pass_artifacts(
             artifact_dir,
-            &pass_bytecode_text,
-            &input_core_text,
-            &output_core_text,
-            &result.run.trace,
-            agent_run.as_ref().map(|run| run.bytecode_text.as_str()),
-            agent_run.as_ref().map(|run| run.trace.as_slice()),
+            AilPassArtifactSet {
+                pass_bytecode_text: &pass_bytecode_text,
+                input_core_text: &input_core_text,
+                output_core_text: &output_core_text,
+                trace: &result.run.trace,
+                pass_native_executables: pass_native_artifacts.as_slice(),
+                agent_bytecode_text: agent_run.as_ref().map(|run| run.bytecode_text.as_str()),
+                agent_trace: agent_run.as_ref().map(|run| run.trace.as_slice()),
+                agent_native_executables: agent_native_artifacts.as_slice(),
+            },
         )?;
     }
     print!("{output_core_text}");
@@ -1023,19 +1087,34 @@ fn compile_ail_build_agent_native_artifacts(
     agent_bytecode: &eigl::ail::AilBytecodeProgram,
     target: &str,
 ) -> Result<Vec<AilNativeArtifact>, String> {
+    compile_ail_native_artifacts(agent_bytecode, target, "agent")
+}
+
+fn compile_ail_pass_native_artifacts(
+    pass_bytecode: &eigl::ail::AilBytecodeProgram,
+    target: &str,
+) -> Result<Vec<AilNativeArtifact>, String> {
+    compile_ail_native_artifacts(pass_bytecode, target, "pass")
+}
+
+fn compile_ail_native_artifacts(
+    bytecode: &eigl::ail::AilBytecodeProgram,
+    target: &str,
+    file_prefix: &str,
+) -> Result<Vec<AilNativeArtifact>, String> {
     let mut artifacts = Vec::new();
-    for action_name in agent_bytecode.actions.keys() {
-        let bytes = compile_ail_bytecode_native_elf(agent_bytecode, action_name, target)?;
+    for action_name in bytecode.actions.keys() {
+        let bytes = compile_ail_bytecode_native_elf(bytecode, action_name, target)?;
         artifacts.push(AilNativeArtifact {
             target_name: target.to_string(),
-            file_name: native_agent_action_file_name(action_name),
+            file_name: native_action_file_name(file_prefix, action_name),
             bytes,
         });
     }
     Ok(artifacts)
 }
 
-fn native_agent_action_file_name(action_name: &str) -> String {
+fn native_action_file_name(file_prefix: &str, action_name: &str) -> String {
     let safe_action = action_name
         .chars()
         .map(|ch| {
@@ -1046,7 +1125,7 @@ fn native_agent_action_file_name(action_name: &str) -> String {
             }
         })
         .collect::<String>();
-    format!("agent-{safe_action}.elf")
+    format!("{file_prefix}-{safe_action}.elf")
 }
 
 fn run_ail_build_agent_capture(
@@ -2598,7 +2677,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
             continue;
         }
         if arg == "--target" {
-            if !matches!(command, "ail-compile" | "ail-build") {
+            if !matches!(command, "ail-compile" | "ail-build" | "ail-pass") {
                 return Err(usage());
             }
             let Some(target) = args.get(index + 1) else {
@@ -2799,6 +2878,9 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
     }
     if command == "ail-pass" && ail_core_file.is_none() && ail_pass_target.is_none() {
         return Err("ail-pass requires a target package or --core-file <path>".to_string());
+    }
+    if command == "ail-pass" && ail_compile_target.is_some() && artifact_dir.is_none() {
+        return Err("ail-pass --target requires --artifact-dir <dir>".to_string());
     }
 
     Ok(CliOptions {

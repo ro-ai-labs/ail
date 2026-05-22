@@ -166,7 +166,11 @@ manifest entry with its deterministic byte fingerprint. When
 `output.ail-core.txt`, `trace.txt`, `manifest.ail-pass.txt`, and
 `manifest.fingerprint.txt`; with `--agent`, it also writes
 `agent.ailbc.json`, `agent.fingerprint.txt`, and `agent-trace.txt` while stdout
-remains the transformed AIL-Core artifact.
+remains the transformed AIL-Core artifact. With
+`--target linux-x86_64-elf`, `ail-pass --artifact-dir` also writes
+`pass-<ActionName>.elf` for each AIL-authored compiler-pass action, records each
+as a `compiler-pass-target` manifest entry, and, when `--agent` is present,
+writes `agent-<ActionName>.elf` entries for the AIL-authored pass agent.
 The default AIL base LLM endpoint is
 `http://inteligentia-pro-1:8080/v1/chat/completions`.
 

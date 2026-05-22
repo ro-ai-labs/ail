@@ -455,7 +455,13 @@ bytecode fingerprint to the input core, output core, and execution trace. It
 also writes `manifest.fingerprint.txt` for that manifest's deterministic
 fingerprint. When `--agent` is present, the artifact directory also includes
 `agent.ailbc.json`, `agent.fingerprint.txt`, and `agent-trace.txt`, and the
-manifest indexes the agent bytecode and trace. This keeps pass execution
+manifest indexes the agent bytecode and trace. With
+`--target linux-x86_64-elf`, `ail-pass --artifact-dir` also writes
+`pass-<ActionName>.elf` for each AIL-authored compiler-pass action and records
+each executable as a `compiler-pass-target` manifest entry. When that native
+pass run also uses `--agent`, the artifact directory includes
+`agent-<ActionName>.elf` for each AIL-authored pass-agent action and records
+each executable as an `agent-target` manifest entry. This keeps pass execution
 auditable while stdout remains the transformed AIL-Core artifact.
 `ail-build` composes the LLM draft loop with the same checked IR-to-artifact
 lowering: the base LLM first drafts an AIL-Requirements artifact from a user
