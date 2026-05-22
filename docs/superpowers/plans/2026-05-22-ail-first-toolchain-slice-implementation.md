@@ -4787,6 +4787,56 @@ cargo test --test ail_toolchain cli_ail_pass_writes_auditable_intermediate_artif
 Expected: `manifest.fingerprint.txt` matches `manifest.ail-pass.txt` while
 stdout remains the transformed AIL-Core artifact.
 
+### Task 113: Standalone AIL Pass Runs AIL Agent Acceptance
+
+**Files:**
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing `ail-pass --agent` test**
+
+Add a CLI test that runs `ail-pass` with `--agent
+examples/ail_toolchain_agent.ail` and `--artifact-dir <dir>`. Require stdout to
+remain transformed AIL-Core, require `agent.ailbc.json`,
+`agent.fingerprint.txt`, and `agent-trace.txt`, require the agent trace to run
+`AcceptCompilerPassOutput`, and require `manifest.ail-pass.txt` to index the
+agent bytecode and trace.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_pass_agent_accepts_pass_artifacts -- --nocapture
+```
+
+Expected: failure because `--agent` is accepted only by `ail-build`, so
+standalone `ail-pass` cannot yet route pass artifacts through an AIL bytecode
+agent.
+
+- [x] **Step 3: Implement standalone pass agent acceptance**
+
+Allow `--agent` for `ail-pass`, load and verify the AIL-authored Application
+agent, require `AcceptCompilerPassOutput`, run that bytecode action against the
+transformed core, pass bytecode fingerprint, and pass VM trace, and write the
+agent bytecode, fingerprint, and trace artifacts when `--artifact-dir` is
+present. Extend the standalone pass manifest to include agent bytecode and
+trace entries.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_pass_agent_accepts_pass_artifacts -- --nocapture
+```
+
+Expected: `ail-pass --agent` succeeds, stdout remains transformed AIL-Core, the
+agent trace records `AcceptCompilerPassOutput`, and the manifest fingerprints
+the pass-plus-agent artifact set.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

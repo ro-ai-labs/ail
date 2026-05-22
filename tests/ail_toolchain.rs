@@ -2210,6 +2210,73 @@ fn cli_ail_pass_writes_auditable_intermediate_artifacts() {
 }
 
 #[test]
+fn cli_ail_pass_agent_accepts_pass_artifacts() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let pass_package = fixture("compiler_pass.ail");
+    let target_package = fixture("support_ticket.ail");
+    let agent_package = fixture("ail_toolchain_agent.ail");
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "eigl-ail-pass-agent-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-pass",
+            &pass_package,
+            &target_package,
+            "--action",
+            "InferReadPermissions",
+            "--agent",
+            &agent_package,
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("node Permission read Ticket.status"),
+        "{stdout}"
+    );
+
+    let agent_bytecode = fs::read_to_string(artifact_dir.join("agent.ailbc.json")).unwrap();
+    assert!(agent_bytecode.contains(r#""package":"ail-toolchain-agent""#));
+    assert!(agent_bytecode.contains(r#""action":"AcceptCompilerPassOutput""#));
+    let agent_fingerprint = fs::read_to_string(artifact_dir.join("agent.fingerprint.txt")).unwrap();
+    assert_eq!(agent_fingerprint.trim(), fnv64_fingerprint(&agent_bytecode));
+    let parsed_agent = parse_ail_bytecode(&agent_bytecode).unwrap();
+    assert_eq!(verify_ail_bytecode(&parsed_agent), Vec::<String>::new());
+
+    let agent_trace = fs::read_to_string(artifact_dir.join("agent-trace.txt")).unwrap();
+    assert!(agent_trace.contains("action AcceptCompilerPassOutput started"));
+    assert!(agent_trace.contains("read buildrequest.core ir"));
+    assert!(agent_trace.contains("read buildrequest.compiler pass artifact"));
+    assert!(agent_trace.contains("read buildrequest.compiler pass fingerprint"));
+    assert!(agent_trace.contains("read buildrequest.compiler pass trace"));
+    assert!(agent_trace.contains("write buildrequest.compiler pass review report=Accepted"));
+    assert!(agent_trace.contains("write buildrequest.status=PassApplied"));
+    assert!(agent_trace.contains("trace CompilerPassOutputAccepted"));
+
+    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-pass.txt")).unwrap();
+    assert!(manifest.contains("agent agent.ailbc.json"), "{manifest}");
+    assert!(manifest.contains("trace agent-trace.txt"), "{manifest}");
+    let manifest_fingerprint =
+        fs::read_to_string(artifact_dir.join("manifest.fingerprint.txt")).unwrap();
+    assert_eq!(manifest_fingerprint.trim(), fnv64_fingerprint(&manifest));
+
+    fs::remove_dir_all(&artifact_dir).unwrap();
+}
+
+#[test]
 fn cli_ail_pass_accepts_saved_compiler_pass_bytecode_artifact() {
     let binary = env!("CARGO_BIN_EXE_eigl");
     let pass_package = fixture("compiler_pass.ail");

@@ -47,7 +47,10 @@ package, or reads a saved Compiler-profile AIL-Bytecode artifact, and applies
 it to a checked target package's AIL-Core. `ail-pass
 <compiler-pass-package-or-bytecode> --core-file <path> --action <PassName>`
 applies the pass to a saved checked AIL-Core artifact without loading the target
-source package. `ail-conformance` checks accepted and rejected fixtures,
+source package. `ail-pass --agent <agent-package-or-bytecode>` compiles or
+loads an AIL-authored Application agent and runs its
+`AcceptCompilerPassOutput` bytecode action over the standalone pass artifact
+boundary. `ail-conformance` checks accepted and rejected fixtures,
 `ail-requirements --prompt <text>` asks the package base
 LLM endpoint for a checked AIL-Requirements artifact and gives the base LLM one
 diagnostics-guided repair pass if required coverage is missing, `ail-spec
@@ -107,8 +110,9 @@ with `--artifact-dir`, it also writes `pass.ailbc.json`,
 `--artifact-dir <dir>` writes
 `pass.ailbc.json`, `pass.fingerprint.txt`, `input.ail-core.txt`,
 `output.ail-core.txt`, `trace.txt`, `manifest.ail-pass.txt`, and
-`manifest.fingerprint.txt` while stdout remains the transformed AIL-Core
-artifact.
+`manifest.fingerprint.txt`; with `--agent`, it also writes
+`agent.ailbc.json`, `agent.fingerprint.txt`, and `agent-trace.txt` while stdout
+remains the transformed AIL-Core artifact.
 The default AIL base LLM endpoint is
 `http://inteligentia-pro-1:8080/v1/chat/completions`.
 

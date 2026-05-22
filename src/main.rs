@@ -376,7 +376,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
 }
 
 fn usage() -> String {
-    "usage: eigl <check|graph|views|simulate|lower|run|dispatch|emit|schedule|dequeue|serve|normalize|patch|llm-roundtrip|view-model|ail-check|ail-core|ail-flow|ail-lower|ail-run|ail-vm|ail-conformance|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-patch> <path> [patch|target-package] [--intent name] [--action name] [--prompt text] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target-model name] [--artifact-dir path] [--state-in path] [--state-out path] [--data-in path] [--data-out path] [--operation-output name=value] [--listen addr] [--llm-endpoint url] [method path|trigger] [key=value ...]\nail-pass usage: eigl ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> OR eigl ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName>"
+    "usage: eigl <check|graph|views|simulate|lower|run|dispatch|emit|schedule|dequeue|serve|normalize|patch|llm-roundtrip|view-model|ail-check|ail-core|ail-flow|ail-lower|ail-run|ail-vm|ail-conformance|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-patch> <path> [patch|target-package] [--intent name] [--action name] [--prompt text] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target-model name] [--artifact-dir path] [--state-in path] [--state-out path] [--data-in path] [--data-out path] [--operation-output name=value] [--listen addr] [--llm-endpoint url] [method path|trigger] [key=value ...]\nail-pass usage: eigl ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] OR eigl ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>]"
         .to_string()
 }
 
@@ -536,11 +536,29 @@ fn ail_artifact_fingerprint(text: &str) -> String {
     format!("fnv64:{hash:016x}")
 }
 
-fn render_ail_pass_manifest(pass_bytecode_text: &str) -> String {
+fn render_ail_pass_manifest(
+    pass_bytecode_text: &str,
+    agent_bytecode_text: Option<&str>,
+    agent_trace: Option<&[String]>,
+) -> String {
     let pass_fingerprint = ail_artifact_fingerprint(pass_bytecode_text);
-    format!(
-        "AIL-Pass-Manifest:\ncompiler-pass pass.ailbc.json {pass_fingerprint}\ncore-input input.ail-core.txt\ncore-output output.ail-core.txt\ntrace trace.txt\n"
-    )
+    let mut lines = vec![
+        "AIL-Pass-Manifest:".to_string(),
+        format!("compiler-pass pass.ailbc.json {pass_fingerprint}"),
+        "core-input input.ail-core.txt".to_string(),
+        "core-output output.ail-core.txt".to_string(),
+        "trace trace.txt".to_string(),
+    ];
+    if let Some(agent_bytecode_text) = agent_bytecode_text {
+        lines.push(format!(
+            "agent agent.ailbc.json {}",
+            ail_artifact_fingerprint(agent_bytecode_text)
+        ));
+    }
+    if agent_trace.is_some() {
+        lines.push("trace agent-trace.txt".to_string());
+    }
+    format!("{}\n", lines.join("\n"))
 }
 
 fn write_ail_pass_artifacts(
@@ -549,6 +567,8 @@ fn write_ail_pass_artifacts(
     input_core_text: &str,
     output_core_text: &str,
     trace: &[String],
+    agent_bytecode_text: Option<&str>,
+    agent_trace: Option<&[String]>,
 ) -> Result<(), String> {
     let root = std::path::Path::new(artifact_dir);
     fs::create_dir_all(root).map_err(|error| {
@@ -567,7 +587,27 @@ fn write_ail_pass_artifacts(
         .map_err(|error| format!("failed to write ail-pass output core artifact: {error}"))?;
     fs::write(root.join("trace.txt"), format!("{}\n", trace.join("\n")))
         .map_err(|error| format!("failed to write ail-pass trace artifact: {error}"))?;
-    let manifest_text = render_ail_pass_manifest(pass_bytecode_text);
+    if let Some(agent_bytecode_text) = agent_bytecode_text {
+        fs::write(root.join("agent.ailbc.json"), agent_bytecode_text).map_err(|error| {
+            format!("failed to write ail-pass agent bytecode artifact: {error}")
+        })?;
+        fs::write(
+            root.join("agent.fingerprint.txt"),
+            format!("{}\n", ail_artifact_fingerprint(agent_bytecode_text)),
+        )
+        .map_err(|error| {
+            format!("failed to write ail-pass agent bytecode fingerprint artifact: {error}")
+        })?;
+    }
+    if let Some(agent_trace) = agent_trace {
+        fs::write(
+            root.join("agent-trace.txt"),
+            format!("{}\n", agent_trace.join("\n")),
+        )
+        .map_err(|error| format!("failed to write ail-pass agent trace artifact: {error}"))?;
+    }
+    let manifest_text =
+        render_ail_pass_manifest(pass_bytecode_text, agent_bytecode_text, agent_trace);
     fs::write(root.join("manifest.ail-pass.txt"), &manifest_text)
         .map_err(|error| format!("failed to write ail-pass manifest artifact: {error}"))?;
     fs::write(
@@ -645,6 +685,17 @@ fn run_ail_pass_command(pass_path: &str, cli_options: &CliOptions) -> Result<u8,
     }
     let input_core_text = format!("{}\n", render_ail_core(&target_core));
     let output_core_text = format!("{}\n", render_ail_core(&result.core));
+    let agent_run = if let Some(agent_path) = &cli_options.ail_build_agent {
+        Some(run_ail_pass_agent_accept_pass_output(
+            agent_path,
+            &output_core_text,
+            &pass_bytecode_text,
+            &ail_artifact_fingerprint(&pass_bytecode_text),
+            &result.run.trace,
+        )?)
+    } else {
+        None
+    };
     if let Some(artifact_dir) = &cli_options.artifact_dir {
         write_ail_pass_artifacts(
             artifact_dir,
@@ -652,10 +703,77 @@ fn run_ail_pass_command(pass_path: &str, cli_options: &CliOptions) -> Result<u8,
             &input_core_text,
             &output_core_text,
             &result.run.trace,
+            agent_run.as_ref().map(|run| run.bytecode_text.as_str()),
+            agent_run.as_ref().map(|run| run.trace.as_slice()),
         )?;
     }
     print!("{output_core_text}");
     Ok(0)
+}
+
+fn run_ail_pass_agent_accept_pass_output(
+    agent_path: &str,
+    output_core_text: &str,
+    pass_bytecode_text: &str,
+    pass_bytecode_fingerprint: &str,
+    pass_trace: &[String],
+) -> Result<AilBuildAgentRun, String> {
+    let (agent_bytecode, agent_bytecode_text) = load_verified_ail_build_agent(agent_path)?;
+    if !agent_bytecode
+        .actions
+        .contains_key("AcceptCompilerPassOutput")
+    {
+        return Err("ail-pass --agent requires an AcceptCompilerPassOutput action".to_string());
+    }
+    let state = BTreeMap::from([
+        ("buildrequest.id".to_string(), "ail-pass".to_string()),
+        (
+            "buildrequest.developer prompt".to_string(),
+            "skipped".to_string(),
+        ),
+        (
+            "buildrequest.requirements".to_string(),
+            "skipped".to_string(),
+        ),
+        ("buildrequest.spec".to_string(), "skipped".to_string()),
+        (
+            "buildrequest.core ir".to_string(),
+            output_core_text.to_string(),
+        ),
+        (
+            "buildrequest.compiler pass artifact".to_string(),
+            format!(
+                "Verified AIL compiler pass bytecode ({} bytes)",
+                pass_bytecode_text.len()
+            ),
+        ),
+        (
+            "buildrequest.compiler pass fingerprint".to_string(),
+            pass_bytecode_fingerprint.to_string(),
+        ),
+        (
+            "buildrequest.compiler pass trace".to_string(),
+            pass_trace.join("\n"),
+        ),
+        ("buildrequest.status".to_string(), "CoreLoaded".to_string()),
+    ]);
+    let run = run_ail_bytecode_action(&agent_bytecode, "AcceptCompilerPassOutput", state)?;
+    if run.status != "succeeded" {
+        let mut message = "ail-pass agent AcceptCompilerPassOutput failed".to_string();
+        if let Some(failure) = run.failure {
+            message.push_str(&format!(": {failure}"));
+        }
+        if !run.trace.is_empty() {
+            message.push_str(&format!("\n{}", run.trace.join("\n")));
+        }
+        return Err(message);
+    }
+    Ok(AilBuildAgentRun {
+        bytecode: agent_bytecode,
+        bytecode_text: agent_bytecode_text,
+        state: run.final_state,
+        trace: run.trace,
+    })
 }
 
 fn load_ail_pass_target_core(cli_options: &CliOptions) -> Result<eigl::ail::AilCore, String> {
@@ -2128,7 +2246,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
             continue;
         }
         if arg == "--agent" {
-            if command != "ail-build" {
+            if !matches!(command, "ail-build" | "ail-pass") {
                 return Err(usage());
             }
             let Some(path) = args.get(index + 1) else {

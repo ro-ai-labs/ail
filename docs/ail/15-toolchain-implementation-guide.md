@@ -366,14 +366,21 @@ bytecode artifacts without generating Rust or other host-language source. With
 `--core-file <path>`, `ail-pass` reads the checked target AIL-Core artifact
 directly instead of loading the target source package, so a saved
 Compiler-profile bytecode artifact can transform a saved IR artifact as a
-standalone compiler stage. With
+standalone compiler stage. With `--agent <agent-package-or-bytecode>`,
+`ail-pass` compiles or loads an AIL-authored Application agent and runs its
+`AcceptCompilerPassOutput` bytecode action against the transformed core,
+compiler-pass bytecode fingerprint, and pass execution trace. This gives the
+standalone compiler-pass stage an AIL-bytecode acceptance checkpoint instead of
+leaving it as host orchestration. With
 `--artifact-dir`, the same command writes `pass.ailbc.json`,
 `pass.fingerprint.txt`, `input.ail-core.txt`, `output.ail-core.txt`, and
 `trace.txt` plus `manifest.ail-pass.txt`, a deterministic index tying the pass
 bytecode fingerprint to the input core, output core, and execution trace. It
 also writes `manifest.fingerprint.txt` for that manifest's deterministic
-fingerprint. This keeps pass execution auditable while stdout remains the
-transformed AIL-Core artifact.
+fingerprint. When `--agent` is present, the artifact directory also includes
+`agent.ailbc.json`, `agent.fingerprint.txt`, and `agent-trace.txt`, and the
+manifest indexes the agent bytecode and trace. This keeps pass execution
+auditable while stdout remains the transformed AIL-Core artifact.
 `ail-build` composes the LLM draft loop with the same checked bytecode lowering:
 the base LLM first drafts an AIL-Requirements artifact from a user prompt.
 `ail-build` checks that artifact for profile-specific coverage before spec
