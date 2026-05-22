@@ -1040,6 +1040,14 @@ pub fn elaborate_ail_core(package: &AilPackage, document: &AilDocument) -> AilCo
         Some(application)
     };
 
+    for user in &document.application.users {
+        let user_node = graph.add_node("User", user, None, BTreeMap::new());
+        if let Some(application) = &application {
+            graph.add_edge("contains", application, &user_node, BTreeMap::new());
+        }
+        attach_provenance(&mut graph, &user_node, format!("application.user:{user}"));
+    }
+
     for thing in document.things.values() {
         let thing_node = graph.add_node("Thing", &thing.name, None, BTreeMap::new());
         if let Some(application) = &application {
@@ -3133,6 +3141,18 @@ pub fn run_ail_action(
             trace.push(format!("rule passed: {requirement}"));
             continue;
         }
+        if let Some(keys) = input_requirement_keys(document, requirement) {
+            if keys.iter().any(|key| !final_state.contains_key(key)) {
+                return Ok(failed_run(
+                    document,
+                    final_state,
+                    trace,
+                    "RequirementFailed",
+                ));
+            }
+            trace.push(format!("rule passed: {requirement}"));
+            continue;
+        }
         if let Some((key, forbidden)) = negative_field_requirement(document, requirement) {
             if final_state
                 .get(&key)
@@ -3786,6 +3806,7 @@ fn ail_document_from_core(core: &AilCore) -> AilDocument {
         .iter()
         .find(|node| node.kind == "Application")
     {
+        let application_children = outgoing_nodes(core, &node_by_id, application, "contains");
         document.application = AilApplication {
             name: application.name.clone(),
             purpose: application
@@ -3793,8 +3814,12 @@ fn ail_document_from_core(core: &AilCore) -> AilDocument {
                 .get("purpose")
                 .cloned()
                 .unwrap_or_default(),
-            users: Vec::new(),
-            views: outgoing_nodes(core, &node_by_id, application, "contains")
+            users: application_children
+                .iter()
+                .filter(|node| node.kind == "User")
+                .map(|node| node.name.clone())
+                .collect(),
+            views: application_children
                 .into_iter()
                 .filter(|node| node.kind == "View")
                 .map(|node| node.name)
@@ -4827,6 +4852,19 @@ fn compile_ail_action_bytecode(document: &AilDocument, action: &AilAction) -> Ai
                     ("failure", "NotFound".to_string()),
                 ],
             ));
+            continue;
+        }
+        if let Some(keys) = input_requirement_keys(document, requirement) {
+            for key in keys {
+                instructions.push(AilBytecodeInstruction::new(
+                    "REQUIRE_EXISTS",
+                    &[
+                        ("key", key),
+                        ("rule", requirement.clone()),
+                        ("failure", "RequirementFailed".to_string()),
+                    ],
+                ));
+            }
             continue;
         }
         if let Some((key, forbidden)) = negative_field_requirement(document, requirement) {
@@ -7104,6 +7142,65 @@ fn failed_run(
         final_state,
         trace,
     }
+}
+
+fn input_requirement_keys(document: &AilDocument, requirement: &str) -> Option<Vec<String>> {
+    let text = normalized_field_reference_text(requirement);
+    let normalized = text.to_ascii_lowercase();
+    if normalized.contains(" to ") || normalized.contains(" is ") {
+        return None;
+    }
+
+    let parts = normalized
+        .split(" and ")
+        .map(str::trim)
+        .filter(|part| !part.is_empty())
+        .collect::<Vec<_>>();
+    if parts.is_empty() {
+        return None;
+    }
+
+    let mut keys = Vec::new();
+    for part in parts {
+        let key = application_user_field_key(document, part)
+            .or_else(|| referenced_runtime_field_key(document, part))?;
+        keys.push(key);
+    }
+    keys.sort();
+    keys.dedup();
+    (!keys.is_empty()).then_some(keys)
+}
+
+fn application_user_field_key(document: &AilDocument, text: &str) -> Option<String> {
+    let normalized = normalized_field_reference_text(text).to_ascii_lowercase();
+    for user in &document.application.users {
+        let user_key = runtime_subject_key(user);
+        let Some(field_text) = normalized.strip_prefix(&format!("{user_key} ")) else {
+            continue;
+        };
+        let field_name = user_field_name(document, field_text.trim())?;
+        return Some(format!("{user_key}.{field_name}"));
+    }
+    None
+}
+
+fn user_field_name(document: &AilDocument, text: &str) -> Option<String> {
+    let normalized = text.trim().to_ascii_lowercase();
+    if normalized.is_empty() {
+        return None;
+    }
+    document
+        .things
+        .values()
+        .filter(|thing| {
+            thing.name.eq_ignore_ascii_case("User") || thing.name.rsplit('.').next() == Some("User")
+        })
+        .flat_map(|thing| thing.fields.values())
+        .find(|field| {
+            field.name.to_ascii_lowercase() == normalized
+                || runtime_subject_key(&field.name) == normalized
+        })
+        .map(|field| field.name.clone())
 }
 
 fn negative_field_requirement(

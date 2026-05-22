@@ -5636,6 +5636,61 @@ cargo test --test ail_toolchain cli_ail_compile_native_executable_enforces_field
 Expected: native `CreateTicket` is rejected until its requirement is lowered,
 while fully lowered native `AssignTicket` still compiles and runs.
 
+### Task 131: CreateTicket Input Requirements Compile
+
+**Files:**
+- Modify: `src/ail.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing input-requirement tests**
+
+Require the Support Ticket bytecode for `CreateTicket` to lower
+`the customer id and title` into executable `REQUIRE_EXISTS` checks for
+`customer.id` and `ticket.title`. Add runtime and native ELF coverage so
+`CreateTicket` succeeds with both argv entries and exits nonzero when either
+input is missing. Retarget the observed-rule native rejection test to
+`MarksOverdueTickets`, whose time comparison is still intentionally unlowered.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain ail_compiler_lowers_checked_application_to_bytecode -- --nocapture
+cargo test --test ail_toolchain cli_ail_compile_native_executable_enforces_create_ticket_inputs -- --nocapture
+cargo test --test ail_toolchain cli_ail_compile_native_rejects_unlowered_observed_requirements -- --nocapture
+```
+
+Expected: bytecode still contains `OBSERVE_RULE` for `CreateTicket`, native
+`CreateTicket` compilation is rejected as an unlowered observed rule, and the
+retargeted overdue-time rejection remains green.
+
+- [x] **Step 3: Preserve users in AIL-Core and lower input fields**
+
+Represent application users as `User` nodes in checked AIL-Core, reconstruct
+them when compiling from core, and resolve compound input requirements only
+when every conjunct maps to an application user field or unique runtime field.
+Emit one `REQUIRE_EXISTS` check per resolved input key with
+`RequirementFailed` for missing input.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain ail_runtime_enforces_create_ticket_input_requirements -- --nocapture
+cargo test --test ail_toolchain ail_core_elaboration_serializes_support_ticket_graph -- --nocapture
+cargo test --test ail_toolchain ail_compiler_lowers_checked_application_to_bytecode -- --nocapture
+cargo test --test ail_toolchain cli_ail_compile_native_executable_enforces_create_ticket_inputs -- --nocapture
+cargo test --test ail_toolchain cli_ail_compile_native_rejects_unlowered_observed_requirements -- --nocapture
+```
+
+Expected: `CreateTicket` compiles to executable input checks, native ELF
+execution enforces `customer.id` and `ticket.title`, and still-unlowered
+observed rules are rejected before ELF emission.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

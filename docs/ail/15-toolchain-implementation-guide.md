@@ -35,6 +35,7 @@ The first implementation slice should support the Support Ticket example:
 
 - package metadata
 - one application
+- application users
 - things and fields
 - scalar types, `State`, `Option<T>`, `List<T>`, and `Secret<T>`
 - actions with requirements, reads, writes, failures, guarantees, and trace
@@ -114,6 +115,7 @@ broader English variation.
 Minimum parser responsibilities:
 
 - application purpose
+- application users
 - tool declarations
 - tool inputs and outputs
 - compiler pass declarations
@@ -353,8 +355,10 @@ matching `key=` argument, native code generated from supported
 argument is present, including LLM-style field requirements phrased as
 `<field> is <value>` as well as `<field> to be <value>`. Field-reference
 resolution can follow typed object fields, so `assignee role` on a `Ticket`
-with `assignee: Option<User>` lowers to `ticket.assignee.role`. Native code
-generated from supported
+with `assignee: Option<User>` lowers to `ticket.assignee.role`. Compound input
+requirements such as `the customer id and title` lower to `REQUIRE_EXISTS`
+checks for `customer.id` and `ticket.title` after application users are
+preserved in checked AIL-Core. Native code generated from supported
 `REQUIRE_FIELD_NOT_EQUALS` instructions checks that the forbidden `key=value`
 argument is absent. The executable exits `0` when those compiled requirements
 pass and exits `1` when they fail. Native code generated from supported

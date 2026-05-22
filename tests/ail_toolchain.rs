@@ -1268,6 +1268,7 @@ fn ail_core_elaboration_serializes_support_ticket_graph() {
             .is_some()
     );
     assert!(core.graph.find_node("Thing", "Ticket").is_some());
+    assert!(core.graph.find_node("User", "Customer").is_some());
     assert!(core.graph.find_node("Action", "CloseTicket").is_some());
     assert!(
         core.graph
@@ -1283,6 +1284,7 @@ fn ail_core_elaboration_serializes_support_ticket_graph() {
 
     let rendered = render_ail_core(&core);
     assert!(rendered.contains("package: support-ticket"));
+    assert!(rendered.contains("node User Customer"));
     assert!(rendered.contains("node Action CloseTicket"));
     assert!(rendered.contains("node Field Ticket.internal notes : Secret<List<Text>>"));
     assert!(rendered.contains("node Failure PermissionDenied"));
@@ -1668,6 +1670,48 @@ fn ail_runtime_executes_close_ticket_success_and_not_found_failure() {
 }
 
 #[test]
+fn ail_runtime_enforces_create_ticket_input_requirements() {
+    let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
+    let document = parse_ail_spec_text(&package.spec_text).unwrap();
+    let success = run_ail_action(
+        &document,
+        "CreateTicket",
+        BTreeMap::from([
+            ("customer.id".to_string(), "C-1".to_string()),
+            ("ticket.title".to_string(), "Printer".to_string()),
+        ]),
+    )
+    .unwrap();
+
+    assert_eq!(success.status, "succeeded");
+    assert_eq!(success.failure, None);
+    assert!(
+        success
+            .trace
+            .contains(&"rule passed: the customer id and title".to_string())
+    );
+
+    let missing = run_ail_action(
+        &document,
+        "CreateTicket",
+        BTreeMap::from([("customer.id".to_string(), "C-1".to_string())]),
+    )
+    .unwrap();
+
+    assert_eq!(missing.status, "failed");
+    assert_eq!(missing.failure.as_deref(), Some("RequirementFailed"));
+    assert_eq!(
+        missing.final_state.get("customer.id").map(String::as_str),
+        Some("C-1")
+    );
+    assert!(
+        !missing
+            .trace
+            .contains(&"rule passed: the customer id and title".to_string())
+    );
+}
+
+#[test]
 fn ail_compiler_lowers_checked_application_to_bytecode() {
     let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
     let document = parse_ail_package_document(&package).unwrap();
@@ -1698,6 +1742,12 @@ fn ail_compiler_lowers_checked_application_to_bytecode() {
     );
     assert!(
         rendered.contains(r#""key":"ticket.assignee.role""#),
+        "{rendered}"
+    );
+    assert!(rendered.contains(r#""key":"customer.id""#), "{rendered}");
+    assert!(rendered.contains(r#""key":"ticket.title""#), "{rendered}");
+    assert!(
+        rendered.contains(r#""rule":"the customer id and title""#),
         "{rendered}"
     );
     assert!(
@@ -3043,7 +3093,7 @@ fn cli_ail_compile_native_rejects_unlowered_observed_requirements() {
     let binary = env!("CARGO_BIN_EXE_eigl");
     let package = fixture("support_ticket.ail");
     let executable_path = std::env::temp_dir().join(format!(
-        "eigl-create-ticket-native-unlowered-{}",
+        "eigl-overdue-ticket-native-unlowered-{}",
         std::process::id()
     ));
     let _ = fs::remove_file(&executable_path);
@@ -3053,7 +3103,7 @@ fn cli_ail_compile_native_rejects_unlowered_observed_requirements() {
             "ail-compile",
             &package,
             "--action",
-            "CreateTicket",
+            "MarksOverdueTickets",
             "--target",
             "linux-x86_64-elf",
             "--out",
@@ -3071,10 +3121,79 @@ fn cli_ail_compile_native_rejects_unlowered_observed_requirements() {
     );
     assert!(
         stderr.contains(
-            "unsupported native linux-x86_64-elf observed rule 'the customer id and title' in action 'CreateTicket'"
+            "unsupported native linux-x86_64-elf observed rule 'the current time to be later than due_at' in action 'MarksOverdueTickets'"
         ),
         "{stderr}"
     );
+}
+
+#[test]
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+fn cli_ail_compile_native_executable_enforces_create_ticket_inputs() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("support_ticket.ail");
+    let executable_path = std::env::temp_dir().join(format!(
+        "eigl-create-ticket-native-inputs-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_file(&executable_path);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-compile",
+            &package,
+            "--action",
+            "CreateTicket",
+            "--target",
+            "linux-x86_64-elf",
+            "--out",
+            executable_path.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let success = Command::new(&executable_path)
+        .args(["customer.id=C-1", "ticket.title=Printer"])
+        .output()
+        .unwrap();
+    assert!(
+        success.status.success(),
+        "CreateTicket should accept customer id and title"
+    );
+    assert_eq!(String::from_utf8_lossy(&success.stdout), "");
+    assert!(
+        String::from_utf8_lossy(&success.stderr).contains("rule passed: the customer id and title"),
+        "{}",
+        String::from_utf8_lossy(&success.stderr)
+    );
+
+    let missing_title = Command::new(&executable_path)
+        .arg("customer.id=C-1")
+        .output()
+        .unwrap();
+    assert!(
+        !missing_title.status.success(),
+        "missing ticket.title should fail"
+    );
+    assert_eq!(String::from_utf8_lossy(&missing_title.stdout), "");
+
+    let missing_customer = Command::new(&executable_path)
+        .arg("ticket.title=Printer")
+        .output()
+        .unwrap();
+    assert!(
+        !missing_customer.status.success(),
+        "missing customer.id should fail"
+    );
+    assert_eq!(String::from_utf8_lossy(&missing_customer.stdout), "");
+
+    fs::remove_file(executable_path).unwrap();
 }
 
 #[test]

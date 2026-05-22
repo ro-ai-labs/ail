@@ -39,8 +39,11 @@ directly from checked AIL. The first native ABI accepts runtime state as
 compiled existence, allow-list, or forbidden-value requirements fail. Allow-list
 requirements can come from `<field> to be <value>` or common LLM wording such
 as `<field> is <value>`; typed nested field phrases such as `assignee role`
-lower to explicit runtime keys such as `ticket.assignee.role`.
-supported `SET_FIELD` writes are emitted as
+lower to explicit runtime keys such as `ticket.assignee.role`. Compound input
+requirements such as `the customer id and title` lower to executable
+`REQUIRE_EXISTS` checks for `customer.id` and `ticket.title`, so native
+`CreateTicket` exits nonzero when either argv entry is missing. Supported
+`SET_FIELD` writes are emitted as
 `key=value` stdout lines on successful execution, and supported Application
 semantic trace entries are emitted to stderr on successful native execution and
 on supported requirement failures. The first native backend rejects unsupported
