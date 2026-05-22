@@ -357,7 +357,10 @@ generated from supported
 argument is absent. The executable exits `0` when those compiled requirements
 pass and exits `1` when they fail. Native code generated from supported
 `SET_FIELD` instructions writes the changed state as `key=value` lines to
-stdout after requirements pass and before process exit.
+stdout after requirements pass and before process exit. Native code generated
+from supported `EMIT_TRACE` instructions writes `trace <EventName>` lines to
+stderr on the same successful native path, keeping stdout reserved for
+parseable state changes.
 With `--artifact-dir`, `ail-lower` writes `checked.ail-core.txt`,
 `artifact.ailbc.json`, `artifact.fingerprint.txt`, `manifest.ail-lower.txt`,
 and `manifest.fingerprint.txt`, keeping direct IR-to-VM-instruction lowering

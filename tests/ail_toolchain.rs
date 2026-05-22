@@ -3109,6 +3109,66 @@ fn cli_ail_compile_native_executable_emits_close_ticket_state_write() {
 
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+fn cli_ail_compile_native_executable_emits_trace_to_stderr() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("support_ticket.ail");
+    let executable_path = std::env::temp_dir().join(format!(
+        "eigl-close-ticket-native-trace-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_file(&executable_path);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-compile",
+            &package,
+            "--action",
+            "CloseTicket",
+            "--target",
+            "linux-x86_64-elf",
+            "--out",
+            executable_path.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let success = Command::new(&executable_path)
+        .args(["ticket.id=T-1", "ticket.status=Open"])
+        .output()
+        .unwrap();
+    assert!(
+        success.status.success(),
+        "native executable failed: {}",
+        success.status
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&success.stdout),
+        "ticket.status=Closed\n"
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&success.stderr),
+        "trace TicketClosed\n"
+    );
+
+    let failed = Command::new(&executable_path)
+        .args(["ticket.id=T-1", "ticket.status=Closed"])
+        .output()
+        .unwrap();
+    assert!(!failed.status.success(), "closed ticket should fail");
+    assert_eq!(String::from_utf8_lossy(&failed.stdout), "");
+    assert_eq!(String::from_utf8_lossy(&failed.stderr), "");
+
+    fs::remove_file(executable_path).unwrap();
+}
+
+#[test]
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_build_native_executable_enforces_llm_style_is_field_requirement() {
     let binary = env!("CARGO_BIN_EXE_eigl");
     let package = fixture("support_ticket.ail");

@@ -5360,6 +5360,52 @@ Expected: native build-agent traces show manifest verification reads the native
 target fingerprint, and the updated AIL-authored agent still lowers to verified
 bytecode.
 
+### Task 125: Native ELF Emits AIL Trace Events
+
+**Files:**
+- Modify: `src/ail.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing native trace test**
+
+Add native ELF coverage so successful `CloseTicket` execution with
+`ticket.id=T-1 ticket.status=Open` must keep state writes on stdout and emit
+`trace TicketClosed` to stderr, while failed requirement execution must emit no
+stdout or stderr.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_compile_native_executable_emits_trace_to_stderr -- --nocapture
+```
+
+Expected: failure because the native executable emits `SET_FIELD` stdout but
+does not yet emit compiled `EMIT_TRACE` events.
+
+- [x] **Step 3: Generate native stderr traces**
+
+Translate supported `EMIT_TRACE` instructions into embedded
+`trace <EventName>\n` strings and direct Linux x86_64 `write(2, ...)`
+syscalls on the success path. Keep stdout reserved for parseable `SET_FIELD`
+state writes and keep failure paths silent.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_compile_native_executable_emits_trace_to_stderr -- --nocapture
+cargo test --test ail_toolchain cli_ail_compile_native_executable_emits_close_ticket_state_write -- --nocapture
+```
+
+Expected: native `CloseTicket` emits `ticket.status=Closed` on stdout and
+`trace TicketClosed` on stderr only after requirements pass, while existing
+state-write behavior remains unchanged.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**
