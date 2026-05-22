@@ -54,6 +54,7 @@ struct CliOptions {
     ail_prompt: Option<String>,
     ail_pass_target: Option<String>,
     ail_build_pass: Option<String>,
+    ail_requirements_file: Option<String>,
 }
 
 struct EndpointExecutionResult {
@@ -93,6 +94,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
             | "ail-run"
             | "ail-conformance"
             | "ail-requirements"
+            | "ail-spec"
             | "ail-draft"
             | "ail-build"
             | "ail-pass"
@@ -370,7 +372,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
 }
 
 fn usage() -> String {
-    "usage: eigl <check|graph|views|simulate|lower|run|dispatch|emit|schedule|dequeue|serve|normalize|patch|llm-roundtrip|view-model|ail-check|ail-core|ail-flow|ail-lower|ail-run|ail-vm|ail-conformance|ail-requirements|ail-draft|ail-build|ail-pass|ail-patch> <path> [patch|target-package] [--intent name] [--action name] [--prompt text] [--pass path] [--artifact-dir path] [--state-in path] [--state-out path] [--data-in path] [--data-out path] [--operation-output name=value] [--listen addr] [--llm-endpoint url] [method path|trigger] [key=value ...]"
+    "usage: eigl <check|graph|views|simulate|lower|run|dispatch|emit|schedule|dequeue|serve|normalize|patch|llm-roundtrip|view-model|ail-check|ail-core|ail-flow|ail-lower|ail-run|ail-vm|ail-conformance|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-patch> <path> [patch|target-package] [--intent name] [--action name] [--prompt text] [--requirements-file path] [--pass path] [--artifact-dir path] [--state-in path] [--state-out path] [--data-in path] [--data-out path] [--operation-output name=value] [--listen addr] [--llm-endpoint url] [method path|trigger] [key=value ...]"
         .to_string()
 }
 
@@ -580,6 +582,26 @@ fn draft_checked_ail_requirements_for_package(
     Ok((requirements, diagnostics))
 }
 
+fn draft_checked_ail_spec_for_requirements(
+    package: &eigl::ail::AilPackage,
+    prompt: &str,
+    requirements: &str,
+    endpoint: &str,
+) -> Result<eigl::ail::AilDraftResult, String> {
+    let mut draft = draft_ail_spec_from_requirements(package, prompt, requirements, endpoint)?;
+    if !draft.success() {
+        draft = repair_ail_spec_from_diagnostics(
+            package,
+            prompt,
+            requirements,
+            &draft.spec_text,
+            &draft.diagnostics,
+            endpoint,
+        )?;
+    }
+    Ok(draft)
+}
+
 fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Result<u8, String> {
     if command == "ail-pass" {
         return run_ail_pass_command(path, cli_options);
@@ -675,6 +697,41 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
         println!("{requirements}");
         return Ok(0);
     }
+    if command == "ail-spec" {
+        let prompt = cli_options
+            .ail_prompt
+            .as_deref()
+            .ok_or_else(|| "ail-spec requires --prompt <text>".to_string())?;
+        let requirements_file = cli_options
+            .ail_requirements_file
+            .as_deref()
+            .ok_or_else(|| "ail-spec requires --requirements-file <path>".to_string())?;
+        let requirements = fs::read_to_string(requirements_file)
+            .map_err(|error| format!("failed to read {requirements_file}: {error}"))?;
+        let requirements_diagnostics = check_ail_requirements(&package, &requirements);
+        if !requirements_diagnostics.is_empty() {
+            println!("ail-spec requirements diagnostics:");
+            for diagnostic in requirements_diagnostics {
+                println!("{}", diagnostic.detailed_message());
+            }
+            return Ok(1);
+        }
+        let endpoint = cli_options
+            .llm_endpoint
+            .as_deref()
+            .unwrap_or(&package.metadata.base_llm_endpoint);
+        let draft =
+            draft_checked_ail_spec_for_requirements(&package, prompt, &requirements, endpoint)?;
+        if !draft.success() {
+            println!("ail-spec diagnostics:");
+            for diagnostic in draft.diagnostics {
+                println!("{}", diagnostic.detailed_message());
+            }
+            return Ok(1);
+        }
+        println!("{}", draft.spec_text);
+        return Ok(0);
+    }
     if command == "ail-build" {
         let prompt = cli_options
             .ail_prompt
@@ -693,18 +750,8 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
             }
             return Ok(1);
         }
-        let mut draft =
-            draft_ail_spec_from_requirements(&package, prompt, &requirements, endpoint)?;
-        if !draft.success() {
-            draft = repair_ail_spec_from_diagnostics(
-                &package,
-                prompt,
-                &requirements,
-                &draft.spec_text,
-                &draft.diagnostics,
-                endpoint,
-            )?;
-        }
+        let draft =
+            draft_checked_ail_spec_for_requirements(&package, prompt, &requirements, endpoint)?;
         if !draft.success() {
             println!("ail-build diagnostics:");
             for diagnostic in draft.diagnostics {
@@ -937,6 +984,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
     let mut ail_prompt = None;
     let mut ail_pass_target = None;
     let mut ail_build_pass = None;
+    let mut ail_requirements_file = None;
     let mut index = 0;
     if command == "patch" || command == "ail-patch" {
         let Some(path) = args.get(index) else {
@@ -992,13 +1040,27 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
             continue;
         }
         if arg == "--prompt" {
-            if !matches!(command, "ail-requirements" | "ail-draft" | "ail-build") {
+            if !matches!(
+                command,
+                "ail-requirements" | "ail-spec" | "ail-draft" | "ail-build"
+            ) {
                 return Err(usage());
             }
             let Some(prompt) = args.get(index + 1) else {
                 return Err("missing value for --prompt".to_string());
             };
             ail_prompt = Some(prompt.clone());
+            index += 2;
+            continue;
+        }
+        if arg == "--requirements-file" {
+            if command != "ail-spec" {
+                return Err(usage());
+            }
+            let Some(path) = args.get(index + 1) else {
+                return Err("missing value for --requirements-file".to_string());
+            };
+            ail_requirements_file = Some(path.clone());
             index += 2;
             continue;
         }
@@ -1098,7 +1160,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         if arg == "--llm-endpoint" {
             if !matches!(
                 command,
-                "llm-roundtrip" | "ail-requirements" | "ail-draft" | "ail-build"
+                "llm-roundtrip" | "ail-requirements" | "ail-spec" | "ail-draft" | "ail-build"
             ) {
                 return Err(usage());
             }
@@ -1173,6 +1235,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         ail_prompt,
         ail_pass_target,
         ail_build_pass,
+        ail_requirements_file,
     })
 }
 

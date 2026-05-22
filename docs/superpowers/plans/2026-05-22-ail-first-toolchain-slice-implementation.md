@@ -3423,6 +3423,59 @@ Expected: the command sends a draft requirements prompt, sends one repair prompt
 when coverage is incomplete, prints the repaired AIL-Requirements artifact, and
 does not proceed to AIL-Spec drafting.
 
+### Task 84: Requirements-To-Spec CLI Stage
+
+**Files:**
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing `ail-spec` CLI test**
+
+Add a CLI test that writes a checked AIL-Requirements artifact to a temp file
+and runs:
+
+```bash
+eigl ail-spec examples/support_ticket.ail --prompt "Draft a support ticket app from captured requirements" --requirements-file <requirements-file> --llm-endpoint <mock>
+```
+
+The mock base LLM first returns a rejected AIL-Spec and then a repaired
+candidate. Require stdout to be only accepted AIL-Spec, not bytecode or command
+diagnostics.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_spec_drafts_and_repairs_from_checked_requirements_file -- --nocapture
+```
+
+Expected: failure before any mock LLM request because `ail-spec` is not a
+recognized AIL command.
+
+- [x] **Step 3: Implement requirements-to-spec command**
+
+Route `ail-spec` through package loading, `--prompt`,
+`--requirements-file`, optional `--llm-endpoint`, requirements-file validation,
+requirements-grounded AIL-Spec drafting, one diagnostics-guided repair pass,
+and checked AIL-Spec stdout. Refactor `ail-build` to reuse the same
+requirements-to-spec helper before AIL-Core and bytecode lowering.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_spec_drafts_and_repairs_from_checked_requirements_file -- --nocapture
+```
+
+Expected: the command validates the checked requirements file, sends a
+requirements-grounded spec prompt, sends one repair prompt when the first
+candidate is rejected, and prints accepted AIL-Spec that reparses and checks
+cleanly.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

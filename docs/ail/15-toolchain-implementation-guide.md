@@ -340,6 +340,11 @@ coverage, and sending diagnostics back for one repair pass when the artifact is
 too thin. It prints only the checked requirements artifact, so developers can
 review or compare model-specific capture behavior before committing to AIL-Spec
 and bytecode generation.
+`ail-spec` runs the next stage from a saved checked AIL-Requirements artifact:
+it validates the requirements file, asks the package base LLM for an AIL-Spec
+candidate grounded in that artifact, repairs once on checker diagnostics, and
+prints only the accepted AIL-Spec. This makes requirements-to-spec conversion a
+reviewable artifact boundary instead of an internal `ail-build` detail.
 `ail-pass` compiles an AIL-Meta compiler pass package into verified
 AIL-Bytecode, or reads a saved Compiler-profile AIL-Bytecode artifact, checks a
 target package into AIL-Core, executes the selected pass bytecode over that
