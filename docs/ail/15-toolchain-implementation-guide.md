@@ -360,7 +360,9 @@ pass and exits `1` when they fail. Native code generated from supported
 stdout after requirements pass and before process exit. Native code generated
 from supported Application semantic opcodes writes success-path trace entries
 to stderr in VM trace order, including action start, rule-pass, write, effect,
-guarantee, and explicit trace-event entries. Stdout remains reserved for
+guarantee, and explicit trace-event entries. Supported requirement failure
+branches emit the VM-style action prefix, failure name, and any declared
+failure trace events to stderr before exiting `1`. Stdout remains reserved for
 parseable state changes. The first native backend rejects unsupported System,
 AgentTool, CompilerPass, or future unknown VM opcodes instead of silently
 emitting a partial executable.

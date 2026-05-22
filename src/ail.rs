@@ -3253,13 +3253,22 @@ pub fn compile_ail_core_native_elf(
         .actions
         .get(action_name)
         .ok_or_else(|| format!("unknown AIL action '{action_name}'"))?;
-    emit_linux_x86_64_elf_for_action(action)
+    emit_linux_x86_64_elf_for_action(action, &program.failures)
 }
 
-fn emit_linux_x86_64_elf_for_action(action: &AilBytecodeAction) -> Result<Vec<u8>, String> {
+struct NativeFailureBranch {
+    label: String,
+    trace_lines: Vec<String>,
+}
+
+fn emit_linux_x86_64_elf_for_action(
+    action: &AilBytecodeAction,
+    failures: &BTreeMap<String, AilBytecodeFailure>,
+) -> Result<Vec<u8>, String> {
     let mut exists_prefixes = Vec::new();
     let mut forbidden_exact_args = Vec::new();
     let mut required_any_exact_args = Vec::new();
+    let mut failure_branches = Vec::new();
     let mut state_write_lines = Vec::new();
     let mut success_trace_lines = Vec::new();
     for instruction in &action.instructions {
@@ -3271,7 +3280,16 @@ fn emit_linux_x86_64_elf_for_action(action: &AilBytecodeAction) -> Result<Vec<u8
             }
             "REQUIRE_EXISTS" => {
                 if let Some(key) = instruction.operands.get("key") {
-                    exists_prefixes.push(format!("{key}="));
+                    let fail_label = format!("fail_requirement_{}", failure_branches.len());
+                    exists_prefixes.push((format!("{key}="), fail_label.clone()));
+                    failure_branches.push(NativeFailureBranch {
+                        label: fail_label,
+                        trace_lines: native_failure_trace_lines(
+                            &success_trace_lines,
+                            instruction.operands.get("failure"),
+                            failures,
+                        ),
+                    });
                 }
                 if let Some(rule) = instruction.operands.get("rule") {
                     success_trace_lines.push(format!("rule passed: {rule}\n"));
@@ -3282,7 +3300,16 @@ fn emit_linux_x86_64_elf_for_action(action: &AilBytecodeAction) -> Result<Vec<u8
                     instruction.operands.get("key"),
                     instruction.operands.get("value"),
                 ) {
-                    forbidden_exact_args.push(format!("{key}={value}"));
+                    let fail_label = format!("fail_requirement_{}", failure_branches.len());
+                    forbidden_exact_args.push((format!("{key}={value}"), fail_label.clone()));
+                    failure_branches.push(NativeFailureBranch {
+                        label: fail_label,
+                        trace_lines: native_failure_trace_lines(
+                            &success_trace_lines,
+                            instruction.operands.get("failure"),
+                            failures,
+                        ),
+                    });
                 }
                 if let Some(rule) = instruction.operands.get("rule") {
                     success_trace_lines.push(format!("rule passed: {rule}\n"));
@@ -3299,7 +3326,16 @@ fn emit_linux_x86_64_elf_for_action(action: &AilBytecodeAction) -> Result<Vec<u8
                         .map(|value| format!("{key}={value}"))
                         .collect::<Vec<_>>();
                     if !allowed_args.is_empty() {
-                        required_any_exact_args.push(allowed_args);
+                        let fail_label = format!("fail_requirement_{}", failure_branches.len());
+                        required_any_exact_args.push((allowed_args, fail_label.clone()));
+                        failure_branches.push(NativeFailureBranch {
+                            label: fail_label,
+                            trace_lines: native_failure_trace_lines(
+                                &success_trace_lines,
+                                instruction.operands.get("failure"),
+                                failures,
+                            ),
+                        });
                     }
                 }
                 if let Some(rule) = instruction.operands.get("rule") {
@@ -3367,23 +3403,23 @@ fn emit_linux_x86_64_elf_for_action(action: &AilBytecodeAction) -> Result<Vec<u8
         0x49, 0x89, 0xdd, // mov r13, rbx
         0x49, 0xff, 0xcd, // dec r13
     ]);
-    for (index, prefix) in exists_prefixes.iter().enumerate() {
+    for (index, (prefix, fail_label)) in exists_prefixes.iter().enumerate() {
         let label = format!("exists_prefix_{index}");
         code.emit_lea_rsi_label(&label);
         code.emit_mov_edx_imm32(prefix.len() as u32);
         code.emit_call_label("has_prefix");
         code.emit(&[0x85, 0xc0]); // test eax, eax
-        code.emit_jcc_label(&[0x0f, 0x84], "fail"); // jz fail
+        code.emit_jcc_label(&[0x0f, 0x84], fail_label); // jz fail
     }
-    for (index, exact) in forbidden_exact_args.iter().enumerate() {
+    for (index, (exact, fail_label)) in forbidden_exact_args.iter().enumerate() {
         let label = format!("forbidden_arg_{index}");
         code.emit_lea_rsi_label(&label);
         code.emit_mov_edx_imm32(exact.len() as u32);
         code.emit_call_label("has_exact");
         code.emit(&[0x85, 0xc0]); // test eax, eax
-        code.emit_jcc_label(&[0x0f, 0x85], "fail"); // jnz fail
+        code.emit_jcc_label(&[0x0f, 0x85], fail_label); // jnz fail
     }
-    for (group_index, allowed_args) in required_any_exact_args.iter().enumerate() {
+    for (group_index, (allowed_args, fail_label)) in required_any_exact_args.iter().enumerate() {
         let matched_label = format!("field_in_matched_{group_index}");
         for (value_index, exact) in allowed_args.iter().enumerate() {
             let label = format!("field_in_arg_{group_index}_{value_index}");
@@ -3393,7 +3429,7 @@ fn emit_linux_x86_64_elf_for_action(action: &AilBytecodeAction) -> Result<Vec<u8
             code.emit(&[0x85, 0xc0]); // test eax, eax
             code.emit_jcc_label(&[0x0f, 0x85], &matched_label); // jnz matched
         }
-        code.emit_jmp_label("fail");
+        code.emit_jmp_label(fail_label);
         code.label(matched_label)?;
     }
     for (index, line) in state_write_lines.iter().enumerate() {
@@ -3406,19 +3442,25 @@ fn emit_linux_x86_64_elf_for_action(action: &AilBytecodeAction) -> Result<Vec<u8
     }
     code.label("success")?;
     code.emit_exit(0);
-    code.label("fail")?;
-    code.emit_exit(1);
+    for branch in &failure_branches {
+        code.label(&branch.label)?;
+        for (index, line) in branch.trace_lines.iter().enumerate() {
+            let label = format!("{}_trace_{index}", branch.label);
+            code.emit_write_label(2, &label, line.len() as u32);
+        }
+        code.emit_exit(1);
+    }
     emit_has_prefix(&mut code)?;
     emit_has_exact(&mut code)?;
-    for (index, prefix) in exists_prefixes.iter().enumerate() {
+    for (index, (prefix, _)) in exists_prefixes.iter().enumerate() {
         code.label(format!("exists_prefix_{index}"))?;
         code.emit(prefix.as_bytes());
     }
-    for (index, exact) in forbidden_exact_args.iter().enumerate() {
+    for (index, (exact, _)) in forbidden_exact_args.iter().enumerate() {
         code.label(format!("forbidden_arg_{index}"))?;
         code.emit(exact.as_bytes());
     }
-    for (group_index, allowed_args) in required_any_exact_args.iter().enumerate() {
+    for (group_index, (allowed_args, _)) in required_any_exact_args.iter().enumerate() {
         for (value_index, exact) in allowed_args.iter().enumerate() {
             code.label(format!("field_in_arg_{group_index}_{value_index}"))?;
             code.emit(exact.as_bytes());
@@ -3432,8 +3474,32 @@ fn emit_linux_x86_64_elf_for_action(action: &AilBytecodeAction) -> Result<Vec<u8
         code.label(format!("trace_write_{index}"))?;
         code.emit(line.as_bytes());
     }
+    for branch in &failure_branches {
+        for (index, line) in branch.trace_lines.iter().enumerate() {
+            code.label(format!("{}_trace_{index}", branch.label))?;
+            code.emit(line.as_bytes());
+        }
+    }
     let code = code.finish()?;
     Ok(wrap_linux_x86_64_elf(&code))
+}
+
+fn native_failure_trace_lines(
+    prefix: &[String],
+    failure_name: Option<&String>,
+    failures: &BTreeMap<String, AilBytecodeFailure>,
+) -> Vec<String> {
+    let failure_name = failure_name
+        .map(String::as_str)
+        .unwrap_or("RequirementFailed");
+    let mut trace_lines = prefix.to_vec();
+    trace_lines.push(format!("failure {failure_name}\n"));
+    if let Some(failure) = failures.get(failure_name) {
+        for event in &failure.traces {
+            trace_lines.push(format!("trace {event}\n"));
+        }
+    }
+    trace_lines
 }
 
 fn emit_has_prefix(code: &mut X64Code) -> Result<(), String> {

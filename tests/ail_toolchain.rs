@@ -3208,7 +3208,32 @@ fn cli_ail_compile_native_executable_emits_trace_to_stderr() {
         .unwrap();
     assert!(!failed.status.success(), "closed ticket should fail");
     assert_eq!(String::from_utf8_lossy(&failed.stdout), "");
-    assert_eq!(String::from_utf8_lossy(&failed.stderr), "");
+    assert_eq!(
+        String::from_utf8_lossy(&failed.stderr),
+        concat!(
+            "action CloseTicket started\n",
+            "rule passed: the ticket to exist\n",
+            "failure RequirementFailed\n"
+        )
+    );
+
+    let missing_ticket = Command::new(&executable_path)
+        .arg("ticket.status=Open")
+        .output()
+        .unwrap();
+    assert!(
+        !missing_ticket.status.success(),
+        "missing ticket should fail"
+    );
+    assert_eq!(String::from_utf8_lossy(&missing_ticket.stdout), "");
+    assert_eq!(
+        String::from_utf8_lossy(&missing_ticket.stderr),
+        concat!(
+            "action CloseTicket started\n",
+            "failure NotFound\n",
+            "trace TicketNotFound\n"
+        )
+    );
 
     fs::remove_file(executable_path).unwrap();
 }

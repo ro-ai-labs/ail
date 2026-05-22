@@ -5499,6 +5499,52 @@ Expected: native `CloseTicket` stderr mirrors supported VM success trace
 entries while unsupported non-Application native opcodes still fail at compile
 time.
 
+### Task 128: Native ELF Emits Requirement Failure Traces
+
+**Files:**
+- Modify: `src/ail.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing native failure trace test**
+
+Extend native `CloseTicket` coverage so closed-ticket execution emits
+`action CloseTicket started`, the passed ticket-exists rule, and
+`failure RequirementFailed` to stderr, and missing-ticket execution emits
+`action CloseTicket started`, `failure NotFound`, and `trace TicketNotFound`.
+Stdout must remain empty on both failure paths.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_compile_native_executable_emits_trace_to_stderr -- --nocapture
+```
+
+Expected: failure because native requirement failures exit nonzero with empty
+stderr.
+
+- [x] **Step 3: Generate per-requirement failure branches**
+
+Pass the bytecode failure table into native lowering. For each supported
+requirement check, generate a distinct failure label that writes the VM-style
+trace prefix, failure name, and declared failure trace events to stderr before
+exiting `1`.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_compile_native_executable_emits_trace_to_stderr -- --nocapture
+```
+
+Expected: native `CloseTicket` now emits VM-style semantic traces for both
+success and supported requirement failure paths while keeping failure stdout
+empty.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**
