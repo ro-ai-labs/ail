@@ -382,6 +382,10 @@ fn ail_compiler_profile_lowers_to_verified_bytecode() {
     assert!(rendered.contains(r#""opcode":"PASS_READ""#), "{rendered}");
     assert!(rendered.contains(r#""opcode":"PASS_STEP""#), "{rendered}");
     assert!(rendered.contains(r#""opcode":"PASS_WRITE""#), "{rendered}");
+    assert!(
+        rendered.contains(r#""opcode":"CORE_INFER_READ_PERMISSIONS""#),
+        "{rendered}"
+    );
     assert!(rendered.contains("ReadPermissionAdded"), "{rendered}");
 
     let parsed = parse_ail_bytecode(&rendered).unwrap();
@@ -428,6 +432,12 @@ fn ail_compiler_pass_bytecode_transforms_checked_core_ir() {
             .contains(&"trace ReadPermissionAdded".to_string())
     );
     assert!(
+        result
+            .run
+            .trace
+            .contains(&"core transform infer read permissions".to_string())
+    );
+    assert!(
         rendered.contains("node Permission read Ticket.status"),
         "{rendered}"
     );
@@ -443,6 +453,42 @@ fn ail_compiler_pass_bytecode_transforms_checked_core_ir() {
         "{rendered}"
     );
     assert_eq!(check_ail_core(&result.core), Vec::<String>::new());
+}
+
+#[test]
+fn ail_compiler_pass_transform_requires_explicit_bytecode_opcode() {
+    let pass_package = load_ail_package_dir(fixture("compiler_pass.ail")).unwrap();
+    let pass_document = parse_ail_package_document(&pass_package).unwrap();
+    let mut pass_bytecode = compile_ail_bytecode(&pass_package, &pass_document).unwrap();
+    let action = pass_bytecode
+        .actions
+        .get_mut("InferReadPermissions")
+        .unwrap();
+    action
+        .instructions
+        .retain(|instruction| instruction.opcode != "CORE_INFER_READ_PERMISSIONS");
+
+    let app_package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
+    let app_document = parse_ail_package_document(&app_package).unwrap();
+    let app_core = elaborate_ail_core(&app_package, &app_document);
+    assert_eq!(check_ail_core(&app_core), Vec::<String>::new());
+
+    let result =
+        run_ail_compiler_pass_on_core(&pass_bytecode, "InferReadPermissions", &app_core).unwrap();
+    let rendered = render_ail_core(&result.core);
+
+    assert!(
+        !rendered.contains("node Permission read Ticket.status"),
+        "{rendered}"
+    );
+    assert!(
+        !result
+            .run
+            .trace
+            .contains(&"core transform infer read permissions".to_string()),
+        "{:?}",
+        result.run.trace
+    );
 }
 
 #[test]

@@ -3085,6 +3085,51 @@ Expected: the AIL-authored `InferReadPermissions` pass now transforms checked
 AIL-Core while preserving existing Compiler-profile parse, render, bytecode,
 and VM trace behavior.
 
+### Task 77: Compiler-Pass IR Transform Bytecode Primitive
+
+**Files:**
+- Modify: `src/ail.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing transform-opcode tests**
+
+Extend Compiler-profile bytecode tests to require
+`CORE_INFER_READ_PERMISSIONS` in the rendered bytecode and require
+`run_ail_compiler_pass_on_core` to leave AIL-Core unchanged when that opcode is
+removed from a pass that still has prose `PASS_WRITE` text.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain ail_compiler_pass -- --nocapture
+```
+
+Expected: failure because compiler-pass bytecode has no explicit IR-transform
+opcode and the runner still triggers read-permission inference from prose.
+
+- [x] **Step 3: Lower and execute explicit transform opcodes**
+
+Emit `CORE_INFER_READ_PERMISSIONS` for the AIL-Meta read-permission inference
+pass, add verifier operand coverage for the opcode, trace it in the bytecode
+VM, and route `run_ail_compiler_pass_on_core` through that opcode instead of
+matching prose in `PASS_WRITE`.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain ail_compiler_pass -- --nocapture
+cargo test --test ail_toolchain ail_compiler_profile_lowers_to_verified_bytecode -- --nocapture
+```
+
+Expected: compiler-pass bytecode exposes an explicit IR-transform primitive,
+the runner transforms only when that primitive is present, and existing
+Compiler-profile bytecode verification still passes.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

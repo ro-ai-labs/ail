@@ -3796,6 +3796,18 @@ fn compile_ail_compiler_pass_bytecode(pass: &AilCompilerPass) -> AilBytecodeActi
             &[("text", write.clone())],
         ));
     }
+    if compiler_pass_declares_read_permission_inference(pass) {
+        instructions.push(AilBytecodeInstruction::new(
+            "CORE_INFER_READ_PERMISSIONS",
+            &[
+                ("edge", "reads".to_string()),
+                ("actor_kinds", "Action,Tool".to_string()),
+                ("target_kind", "Field".to_string()),
+                ("permission_kind", "Permission".to_string()),
+                ("secret_policy", "diagnostic".to_string()),
+            ],
+        ));
+    }
     for guarantee in &pass.guarantees {
         instructions.push(AilBytecodeInstruction::new(
             "ASSERT_GUARANTEE",
@@ -3813,6 +3825,12 @@ fn compile_ail_compiler_pass_bytecode(pass: &AilCompilerPass) -> AilBytecodeActi
         name: pass.name.clone(),
         instructions,
     }
+}
+
+fn compiler_pass_declares_read_permission_inference(pass: &AilCompilerPass) -> bool {
+    pass.writes
+        .iter()
+        .any(|write| write.to_ascii_lowercase().contains("read permission"))
 }
 
 fn compile_ail_system_bytecode(component: &AilSystemComponent) -> AilBytecodeAction {
@@ -4352,6 +4370,13 @@ fn ail_bytecode_required_operands(opcode: &str) -> Option<&'static [&'static str
         "PASS_READ" => Some(&["text"]),
         "PASS_STEP" => Some(&["text"]),
         "PASS_WRITE" => Some(&["text"]),
+        "CORE_INFER_READ_PERMISSIONS" => Some(&[
+            "edge",
+            "actor_kinds",
+            "target_kind",
+            "permission_kind",
+            "secret_policy",
+        ]),
         "ASSERT_GUARANTEE" => Some(&["text"]),
         "EMIT_TRACE" => Some(&["event"]),
         "RETURN_SUCCESS" => Some(&[]),
@@ -4854,6 +4879,9 @@ pub fn run_ail_bytecode_action(
                     ail_bytecode_operand(instruction, "text")
                 ));
             }
+            "CORE_INFER_READ_PERMISSIONS" => {
+                trace.push("core transform infer read permissions".to_string());
+            }
             "ASSERT_GUARANTEE" => {
                 trace.push(format!(
                     "guarantee checked: {}",
@@ -4909,22 +4937,14 @@ pub fn run_ail_compiler_pass_on_core(
         ]),
     )?;
     let mut output = core.clone();
-    if compiler_pass_adds_read_permissions(action) {
-        infer_read_permissions(&mut output, action_name, &mut run.trace);
+    for instruction in &action.instructions {
+        if instruction.opcode == "CORE_INFER_READ_PERMISSIONS" {
+            infer_read_permissions(&mut output, action_name, &mut run.trace);
+        }
     }
     run.final_state
         .insert("output graph".to_string(), render_ail_core(&output));
     Ok(AilCompilerPassRunResult { core: output, run })
-}
-
-fn compiler_pass_adds_read_permissions(action: &AilBytecodeAction) -> bool {
-    action.instructions.iter().any(|instruction| {
-        instruction.opcode == "PASS_WRITE"
-            && instruction
-                .operands
-                .get("text")
-                .is_some_and(|text| text.to_ascii_lowercase().contains("read permission"))
-    })
 }
 
 fn infer_read_permissions(core: &mut AilCore, pass_name: &str, trace: &mut Vec<String>) {

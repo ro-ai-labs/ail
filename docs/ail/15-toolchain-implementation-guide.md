@@ -303,11 +303,12 @@ System-profile components. For applications it emits:
 
 For compiler packages it emits one bytecode action per checked compiler pass,
 including pass metadata, input and output declarations, read, step, write,
-guarantee, trace, and return opcodes. This keeps AIL-Meta compiler work on the
-same bytecode path as applications instead of generating Rust or another host
-backend. The bootstrap runner can execute the AIL-authored
-`InferReadPermissions` compiler-pass bytecode against checked AIL-Core and add
-candidate read `Permission` nodes with compiler-pass provenance.
+explicit IR-transform, guarantee, trace, and return opcodes. This keeps
+AIL-Meta compiler work on the same bytecode path as applications instead of
+generating Rust or another host backend. The bootstrap runner executes
+`InferReadPermissions` only through the AIL-authored
+`CORE_INFER_READ_PERMISSIONS` bytecode primitive, adding candidate read
+`Permission` nodes with compiler-pass provenance when that opcode is present.
 
 For agent-tool packages it emits one bytecode action per checked tool,
 including tool metadata, requirements, typed inputs and outputs with secret
