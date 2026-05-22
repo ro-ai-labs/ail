@@ -418,7 +418,10 @@ auditable while stdout remains the parseable VM instruction artifact. With
 or load an AIL-authored Application agent and run its `VerifyLowerManifest`
 bytecode action against the checked core, bytecode artifact, bytecode
 fingerprint, lower manifest, and manifest fingerprint before writing
-`agent.ailbc.json`, `agent.fingerprint.txt`, and `agent-trace.txt`.
+`agent.ailbc.json`, `agent.fingerprint.txt`, and `agent-trace.txt`. With
+`--target linux-x86_64-elf`, it also emits `agent-<ActionName>.elf`
+machine-code ELF executables for the lower verifier and records them as
+`agent-target` entries in `manifest.ail-lower.txt`.
 `ail-check`, `ail-core`, `ail-flow`, `ail-lower`, `ail-compile`, `ail-run`,
 and `ail-build` can use `--spec-file <path>` to read a saved generated
 AIL-Spec artifact instead of the package entry spec, preserving the package

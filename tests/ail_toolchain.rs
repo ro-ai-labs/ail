@@ -3343,6 +3343,74 @@ fn cli_ail_lower_agent_verifies_manifest_artifacts() {
 
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+fn cli_ail_lower_writes_native_agent_artifacts() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("support_ticket.ail");
+    let agent_package = fixture("ail_toolchain_agent.ail");
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "eigl-ail-lower-native-agent-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-lower",
+            &package,
+            "--agent",
+            &agent_package,
+            "--target",
+            "linux-x86_64-elf",
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let agent_native = fs::read(artifact_dir.join("agent-VerifyLowerManifest.elf")).unwrap();
+    assert_eq!(&agent_native[0..4], b"\x7fELF");
+    let expected_agent_native_fingerprint = fnv64_fingerprint_bytes(&agent_native);
+    let native_run = Command::new(artifact_dir.join("agent-VerifyLowerManifest.elf"))
+        .args([
+            "buildrequest.id=support-ticket-lower",
+            "buildrequest.status=BytecodeReady",
+            "buildrequest.core ir=ok",
+            "buildrequest.bytecode artifact=ok",
+            "buildrequest.bytecode fingerprint=fnv64:bytecode",
+            "buildrequest.artifact manifest=ok",
+            "buildrequest.artifact manifest fingerprint=fnv64:manifest",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        native_run.status.success(),
+        "native lower manifest verifier failed"
+    );
+    assert!(
+        String::from_utf8_lossy(&native_run.stderr).contains("trace LowerManifestVerified"),
+        "{}",
+        String::from_utf8_lossy(&native_run.stderr)
+    );
+
+    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-lower.txt")).unwrap();
+    assert!(
+        manifest.contains(&format!(
+            "agent-target linux-x86_64-elf agent-VerifyLowerManifest.elf {expected_agent_native_fingerprint}"
+        )),
+        "{manifest}"
+    );
+
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_compile_emits_runnable_linux_x86_64_elf_executable() {
     use std::os::unix::fs::PermissionsExt;
 

@@ -75,6 +75,9 @@ compiles or loads an AIL-authored Application agent, runs its
 `VerifyLowerManifest` bytecode action against the checked core, bytecode
 artifact, bytecode fingerprint, lower manifest, and manifest fingerprint, then
 writes `agent.ailbc.json`, `agent.fingerprint.txt`, and `agent-trace.txt`.
+Adding `--target linux-x86_64-elf` emits `agent-<ActionName>.elf` native
+machine-code executables for that lower verifier and records each one as an
+`agent-target` line in the lower manifest.
 `ail-check`, `ail-core`,
 `ail-flow`, `ail-lower`, `ail-compile`, `ail-run`, and `ail-build` can use
 `--spec-file <path>` to read a saved generated AIL-Spec artifact instead of
@@ -205,6 +208,7 @@ cargo run -- ail-core examples/support_ticket.ail
 cargo run -- ail-flow examples/support_ticket.ail
 cargo run -- ail-lower examples/support_ticket.ail
 cargo run -- ail-lower examples/support_ticket.ail --agent examples/ail_toolchain_agent.ail --artifact-dir /tmp/support-ticket-ail-lower-agent
+cargo run -- ail-lower examples/support_ticket.ail --agent examples/ail_toolchain_agent.ail --target linux-x86_64-elf --artifact-dir /tmp/support-ticket-ail-lower-native-agent
 cargo run -- ail-compile examples/support_ticket.ail --action CloseTicket --target linux-x86_64-elf --out /tmp/close-ticket
 /tmp/close-ticket ticket.id=T-1 ticket.status=Open
 cargo run -- ail-lower examples/refund_tool.ail
