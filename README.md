@@ -95,7 +95,11 @@ boundary; with `--artifact-dir`, it also runs `VerifyPassManifest` against the
 pass manifest and manifest fingerprint. `ail-conformance` checks accepted and
 rejected fixtures; with `--artifact-dir`, it writes a deterministic conformance
 report, report fingerprint, conformance manifest, and manifest fingerprint for
-audit.
+audit. `ail-conformance --agent <agent-package-or-bytecode> --artifact-dir
+<dir>` also compiles or loads an AIL-authored Application agent, runs its
+`VerifyConformanceManifest` bytecode action over the conformance report and
+manifest fingerprints, and writes `agent.ailbc.json`, `agent.fingerprint.txt`,
+and `agent-trace.txt`.
 `ail-requirements --prompt <text>` asks the package base
 LLM endpoint for a checked AIL-Requirements artifact and gives the base LLM one
 diagnostics-guided repair pass if required coverage is missing, `ail-spec
@@ -208,6 +212,7 @@ cargo run -- ail-pass /tmp/compiler-pass.ailbc.json examples/support_ticket.ail 
 cargo run -- ail-pass /tmp/compiler-pass.ailbc.json --core-file /tmp/support-ticket.ail-core.txt --action InferReadPermissions
 cargo run -- ail-conformance examples/support_ticket.ail
 cargo run -- ail-conformance examples/support_ticket.ail --artifact-dir /tmp/support-ticket-ail-conformance
+cargo run -- ail-conformance examples/support_ticket.ail --agent examples/ail_toolchain_agent.ail --artifact-dir /tmp/support-ticket-ail-conformance-agent
 cargo run -- ail-conformance examples/ail_toolchain_agent.ail
 cargo run -- ail-conformance examples/refund_tool.ail
 cargo run -- ail-conformance examples/compiler_pass.ail

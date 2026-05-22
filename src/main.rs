@@ -417,6 +417,12 @@ struct AilPassArtifactSet<'a> {
     agent_native_executables: &'a [AilNativeArtifact],
 }
 
+struct AilConformanceArtifactSet<'a> {
+    report_text: &'a str,
+    agent_bytecode_text: Option<&'a str>,
+    agent_trace: Option<&'a [String]>,
+}
+
 struct AilBuildAgentStart {
     state: BTreeMap<String, String>,
     trace: Vec<String>,
@@ -732,14 +738,14 @@ fn render_ail_conformance_report(result: &eigl::ail::AilConformanceResult) -> St
 
 fn render_ail_conformance_manifest(
     result: &eigl::ail::AilConformanceResult,
-    report_text: &str,
+    artifacts: &AilConformanceArtifactSet<'_>,
 ) -> String {
     let mut lines = vec![
         "AIL-Conformance-Manifest:".to_string(),
         format!("package {}", result.package_name),
         format!(
             "report conformance-report.txt {}",
-            ail_artifact_fingerprint(report_text)
+            ail_artifact_fingerprint(artifacts.report_text)
         ),
         format!("valid {}", result.accepted_fixture),
     ];
@@ -749,28 +755,58 @@ fn render_ail_conformance_manifest(
     for fixture in &result.rejected {
         lines.push(format!("rejected {}", fixture.fixture));
     }
+    if let Some(agent_bytecode_text) = artifacts.agent_bytecode_text {
+        lines.push(format!(
+            "agent agent.ailbc.json {}",
+            ail_artifact_fingerprint(agent_bytecode_text)
+        ));
+    }
+    if artifacts.agent_trace.is_some() {
+        lines.push("trace agent-trace.txt".to_string());
+    }
     format!("{}\n", lines.join("\n"))
 }
 
 fn write_ail_conformance_artifacts(
     artifact_dir: &str,
     result: &eigl::ail::AilConformanceResult,
-    report_text: &str,
+    artifacts: AilConformanceArtifactSet<'_>,
 ) -> Result<(), String> {
     let root = std::path::Path::new(artifact_dir);
     fs::create_dir_all(root).map_err(|error| {
         format!("failed to create ail-conformance artifact dir {artifact_dir}: {error}")
     })?;
-    fs::write(root.join("conformance-report.txt"), report_text)
+    fs::write(root.join("conformance-report.txt"), artifacts.report_text)
         .map_err(|error| format!("failed to write ail-conformance report artifact: {error}"))?;
     fs::write(
         root.join("conformance-report.fingerprint.txt"),
-        format!("{}\n", ail_artifact_fingerprint(report_text)),
+        format!("{}\n", ail_artifact_fingerprint(artifacts.report_text)),
     )
     .map_err(|error| {
         format!("failed to write ail-conformance report fingerprint artifact: {error}")
     })?;
-    let manifest_text = render_ail_conformance_manifest(result, report_text);
+    if let Some(agent_bytecode_text) = artifacts.agent_bytecode_text {
+        fs::write(root.join("agent.ailbc.json"), agent_bytecode_text).map_err(|error| {
+            format!("failed to write ail-conformance agent bytecode artifact: {error}")
+        })?;
+        fs::write(
+            root.join("agent.fingerprint.txt"),
+            format!("{}\n", ail_artifact_fingerprint(agent_bytecode_text)),
+        )
+        .map_err(|error| {
+            format!("failed to write ail-conformance agent bytecode fingerprint artifact: {error}")
+        })?;
+    }
+    if let Some(agent_trace) = artifacts.agent_trace {
+        fs::write(
+            root.join("agent-trace.txt"),
+            format!("{}\n", agent_trace.join("\n")),
+        )
+        .map_err(|error| {
+            format!("failed to write ail-conformance agent trace artifact: {error}")
+        })?;
+    }
+    let manifest_text = render_ail_conformance_manifest(result, &artifacts);
     fs::write(root.join("manifest.ail-conformance.txt"), &manifest_text)
         .map_err(|error| format!("failed to write ail-conformance manifest artifact: {error}"))?;
     fs::write(
@@ -1125,6 +1161,76 @@ fn run_ail_pass_agent_verify_manifest(
     agent_run.trace.extend(verify_run.trace);
     agent_run.state = verify_run.final_state;
     Ok(())
+}
+
+fn run_ail_conformance_agent_verify_manifest(
+    agent_path: &str,
+    package_name: &str,
+    report_text: &str,
+    manifest_text: &str,
+    manifest_fingerprint: &str,
+) -> Result<AilBuildAgentRun, String> {
+    let (agent_bytecode, agent_bytecode_text) = load_verified_ail_build_agent(agent_path)?;
+    if !agent_bytecode
+        .actions
+        .contains_key("VerifyConformanceManifest")
+    {
+        return Err(
+            "ail-conformance --agent requires a VerifyConformanceManifest action".to_string(),
+        );
+    }
+    let state = BTreeMap::from([
+        (
+            "buildrequest.id".to_string(),
+            format!("{package_name}-conformance"),
+        ),
+        (
+            "buildrequest.developer prompt".to_string(),
+            "skipped".to_string(),
+        ),
+        (
+            "buildrequest.requirements".to_string(),
+            "skipped".to_string(),
+        ),
+        ("buildrequest.spec".to_string(), "skipped".to_string()),
+        (
+            "buildrequest.conformance report".to_string(),
+            report_text.to_string(),
+        ),
+        (
+            "buildrequest.conformance report fingerprint".to_string(),
+            ail_artifact_fingerprint(report_text),
+        ),
+        (
+            "buildrequest.artifact manifest".to_string(),
+            manifest_text.to_string(),
+        ),
+        (
+            "buildrequest.artifact manifest fingerprint".to_string(),
+            manifest_fingerprint.to_string(),
+        ),
+        (
+            "buildrequest.status".to_string(),
+            "BytecodeReady".to_string(),
+        ),
+    ]);
+    let run = run_ail_bytecode_action(&agent_bytecode, "VerifyConformanceManifest", state)?;
+    if run.status != "succeeded" {
+        let mut message = "ail-conformance agent VerifyConformanceManifest failed".to_string();
+        if let Some(failure) = run.failure {
+            message.push_str(&format!(": {failure}"));
+        }
+        if !run.trace.is_empty() {
+            message.push_str(&format!("\n{}", run.trace.join("\n")));
+        }
+        return Err(message);
+    }
+    Ok(AilBuildAgentRun {
+        bytecode: agent_bytecode,
+        bytecode_text: agent_bytecode_text,
+        state: run.final_state,
+        trace: run.trace,
+    })
 }
 
 fn load_ail_pass_target_core(cli_options: &CliOptions) -> Result<eigl::ail::AilCore, String> {
@@ -2252,8 +2358,36 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
     if command == "ail-conformance" {
         let result = run_ail_conformance(&package)?;
         let report_text = render_ail_conformance_report(&result);
+        let agent_run = if let Some(agent_path) = &cli_options.ail_build_agent {
+            let manifest_text = render_ail_conformance_manifest(
+                &result,
+                &AilConformanceArtifactSet {
+                    report_text: &report_text,
+                    agent_bytecode_text: None,
+                    agent_trace: None,
+                },
+            );
+            let manifest_fingerprint = ail_artifact_fingerprint(&manifest_text);
+            Some(run_ail_conformance_agent_verify_manifest(
+                agent_path,
+                &result.package_name,
+                &report_text,
+                &manifest_text,
+                &manifest_fingerprint,
+            )?)
+        } else {
+            None
+        };
         if let Some(artifact_dir) = &cli_options.artifact_dir {
-            write_ail_conformance_artifacts(artifact_dir, &result, &report_text)?;
+            write_ail_conformance_artifacts(
+                artifact_dir,
+                &result,
+                AilConformanceArtifactSet {
+                    report_text: &report_text,
+                    agent_bytecode_text: agent_run.as_ref().map(|run| run.bytecode_text.as_str()),
+                    agent_trace: agent_run.as_ref().map(|run| run.trace.as_slice()),
+                },
+            )?;
         }
         print!("{report_text}");
         if result.success() {
@@ -2788,7 +2922,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
             continue;
         }
         if arg == "--agent" {
-            if !matches!(command, "ail-build" | "ail-pass") {
+            if !matches!(command, "ail-build" | "ail-pass" | "ail-conformance") {
                 return Err(usage());
             }
             let Some(path) = args.get(index + 1) else {
@@ -3006,6 +3140,9 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
     }
     if command == "ail-pass" && ail_compile_target.is_some() && artifact_dir.is_none() {
         return Err("ail-pass --target requires --artifact-dir <dir>".to_string());
+    }
+    if command == "ail-conformance" && ail_build_agent.is_some() && artifact_dir.is_none() {
+        return Err("ail-conformance --agent requires --artifact-dir <dir>".to_string());
     }
 
     Ok(CliOptions {

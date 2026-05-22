@@ -108,7 +108,11 @@ diagnostic. With `--artifact-dir`, `ail-conformance` writes
 `conformance-report.txt`, `conformance-report.fingerprint.txt`,
 `manifest.ail-conformance.txt`, and `manifest.fingerprint.txt`, so the
 conformance gate produces deterministic audit artifacts instead of only
-host-side stdout.
+host-side stdout. With `--agent <agent-package-or-bytecode> --artifact-dir`,
+the gate must compile or load an AIL-authored Application agent and run its
+`VerifyConformanceManifest` bytecode action against the conformance report,
+report fingerprint, manifest, and manifest fingerprint before writing
+`agent.ailbc.json`, `agent.fingerprint.txt`, and `agent-trace.txt`.
 
 ### AIL-Spec Parser
 

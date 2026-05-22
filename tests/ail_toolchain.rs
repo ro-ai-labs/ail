@@ -5712,6 +5712,78 @@ fn cli_ail_conformance_writes_auditable_artifacts() {
 }
 
 #[test]
+fn cli_ail_conformance_agent_verifies_manifest_artifacts() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("support_ticket.ail");
+    let agent_package = fixture("ail_toolchain_agent.ail");
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "eigl-ail-conformance-agent-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-conformance",
+            &package,
+            "--agent",
+            &agent_package,
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let agent_bytecode = fs::read_to_string(artifact_dir.join("agent.ailbc.json")).unwrap();
+    assert!(agent_bytecode.contains(r#""package":"ail-toolchain-agent""#));
+    assert!(agent_bytecode.contains(r#""action":"VerifyConformanceManifest""#));
+    let agent_fingerprint = fs::read_to_string(artifact_dir.join("agent.fingerprint.txt")).unwrap();
+    assert_eq!(agent_fingerprint.trim(), fnv64_fingerprint(&agent_bytecode));
+    let parsed_agent = parse_ail_bytecode(&agent_bytecode).unwrap();
+    assert_eq!(verify_ail_bytecode(&parsed_agent), Vec::<String>::new());
+
+    let agent_trace = fs::read_to_string(artifact_dir.join("agent-trace.txt")).unwrap();
+    assert!(agent_trace.contains("action VerifyConformanceManifest started"));
+    assert!(agent_trace.contains("read buildrequest.artifact manifest"));
+    assert!(agent_trace.contains("read buildrequest.artifact manifest fingerprint"));
+    assert!(agent_trace.contains("read buildrequest.conformance report"));
+    assert!(agent_trace.contains("read buildrequest.conformance report fingerprint"));
+    assert!(
+        agent_trace.contains("write buildrequest.artifact manifest verification report=Verified")
+    );
+    assert!(agent_trace.contains("trace ConformanceManifestVerified"));
+
+    let report = fs::read_to_string(artifact_dir.join("conformance-report.txt")).unwrap();
+    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-conformance.txt")).unwrap();
+    assert!(
+        manifest.contains(&format!(
+            "report conformance-report.txt {}",
+            fnv64_fingerprint(&report)
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "agent agent.ailbc.json {}",
+            fnv64_fingerprint(&agent_bytecode)
+        )),
+        "{manifest}"
+    );
+    assert!(manifest.contains("trace agent-trace.txt"), "{manifest}");
+    let manifest_fingerprint =
+        fs::read_to_string(artifact_dir.join("manifest.fingerprint.txt")).unwrap();
+    assert_eq!(manifest_fingerprint.trim(), fnv64_fingerprint(&manifest));
+
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
 fn cli_ail_conformance_checks_agent_tool_fixtures() {
     let binary = env!("CARGO_BIN_EXE_eigl");
     let package = fixture("refund_tool.ail");

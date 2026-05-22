@@ -20,6 +20,8 @@ A BuildRequest has:
 - compiler pass target artifact fingerprint: Text
 - compiler pass trace: Text
 - compiler pass review report: Text
+- conformance report: Text
+- conformance report fingerprint: Text
 - bytecode artifact: Text
 - bytecode fingerprint: Text
 - bytecode verification report: Text
@@ -170,6 +172,20 @@ When the toolchain agent verifies the standalone compiler pass manifest:
 - the system changes the BuildRequest artifact manifest verification report to Verified
 - the system guarantees the pass manifest ties compiler-pass bytecode, transformed AIL-Core, pass trace, and agent artifacts with deterministic fingerprints and no Rust or host-language backend source
 - the system records a trace event named PassManifestVerified
+
+Action: Verify conformance manifest.
+
+When the toolchain agent verifies conformance artifacts:
+
+- the system requires the BuildRequest to exist
+- the system requires the BuildRequest status to be BytecodeReady
+- the system reads the BuildRequest conformance report
+- the system reads the BuildRequest conformance report fingerprint
+- the system reads the BuildRequest artifact manifest
+- the system reads the BuildRequest artifact manifest fingerprint
+- the system changes the BuildRequest artifact manifest verification report to Verified
+- the system guarantees the conformance manifest ties the conformance report, accepted fixtures, rejected fixtures, and fingerprints with no Rust or host-language backend source
+- the system records a trace event named ConformanceManifestVerified
 
 Action: Compare agent prompt portability.
 
