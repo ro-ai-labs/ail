@@ -3249,18 +3249,218 @@ pub fn compile_ail_core_native_elf(
             diagnostics.join("\n")
         ));
     }
-    if !program.actions.contains_key(action_name) {
-        return Err(format!("unknown AIL action '{action_name}'"));
-    }
-    Ok(emit_minimal_linux_x86_64_elf())
+    let action = program
+        .actions
+        .get(action_name)
+        .ok_or_else(|| format!("unknown AIL action '{action_name}'"))?;
+    emit_linux_x86_64_elf_for_action(action)
 }
 
-fn emit_minimal_linux_x86_64_elf() -> Vec<u8> {
-    let code = [
-        0xb8, 0x3c, 0x00, 0x00, 0x00, // mov eax, 60
-        0x31, 0xff, // xor edi, edi
-        0x0f, 0x05, // syscall
-    ];
+fn emit_linux_x86_64_elf_for_action(action: &AilBytecodeAction) -> Result<Vec<u8>, String> {
+    let mut exists_prefixes = Vec::new();
+    let mut forbidden_exact_args = Vec::new();
+    for instruction in &action.instructions {
+        match instruction.opcode.as_str() {
+            "REQUIRE_EXISTS" => {
+                if let Some(key) = instruction.operands.get("key") {
+                    exists_prefixes.push(format!("{key}="));
+                }
+            }
+            "REQUIRE_FIELD_NOT_EQUALS" => {
+                if let (Some(key), Some(value)) = (
+                    instruction.operands.get("key"),
+                    instruction.operands.get("value"),
+                ) {
+                    forbidden_exact_args.push(format!("{key}={value}"));
+                }
+            }
+            _ => {}
+        }
+    }
+
+    let mut code = X64Code::default();
+    code.emit(&[
+        0x48, 0x8b, 0x1c, 0x24, // mov rbx, [rsp]
+        0x4c, 0x8d, 0x64, 0x24, 0x10, // lea r12, [rsp+16]
+        0x49, 0x89, 0xdd, // mov r13, rbx
+        0x49, 0xff, 0xcd, // dec r13
+    ]);
+    for (index, prefix) in exists_prefixes.iter().enumerate() {
+        let label = format!("exists_prefix_{index}");
+        code.emit_lea_rsi_label(&label);
+        code.emit_mov_edx_imm32(prefix.len() as u32);
+        code.emit_call_label("has_prefix");
+        code.emit(&[0x85, 0xc0]); // test eax, eax
+        code.emit_jcc_label(&[0x0f, 0x84], "fail"); // jz fail
+    }
+    for (index, exact) in forbidden_exact_args.iter().enumerate() {
+        let label = format!("forbidden_arg_{index}");
+        code.emit_lea_rsi_label(&label);
+        code.emit_mov_edx_imm32(exact.len() as u32);
+        code.emit_call_label("has_exact");
+        code.emit(&[0x85, 0xc0]); // test eax, eax
+        code.emit_jcc_label(&[0x0f, 0x85], "fail"); // jnz fail
+    }
+    code.label("success")?;
+    code.emit_exit(0);
+    code.label("fail")?;
+    code.emit_exit(1);
+    emit_has_prefix(&mut code)?;
+    emit_has_exact(&mut code)?;
+    for (index, prefix) in exists_prefixes.iter().enumerate() {
+        code.label(format!("exists_prefix_{index}"))?;
+        code.emit(prefix.as_bytes());
+    }
+    for (index, exact) in forbidden_exact_args.iter().enumerate() {
+        code.label(format!("forbidden_arg_{index}"))?;
+        code.emit(exact.as_bytes());
+    }
+    let code = code.finish()?;
+    Ok(wrap_linux_x86_64_elf(&code))
+}
+
+fn emit_has_prefix(code: &mut X64Code) -> Result<(), String> {
+    code.label("has_prefix")?;
+    code.emit(&[0x45, 0x31, 0xc0]); // xor r8d, r8d
+    code.label("prefix_loop")?;
+    code.emit(&[0x4d, 0x39, 0xe8]); // cmp r8, r13
+    code.emit_jcc_label(&[0x0f, 0x83], "prefix_no"); // jae prefix_no
+    code.emit(&[
+        0x4b, 0x8b, 0x3c, 0xc4, // mov rdi, [r12+r8*8]
+        0x31, 0xc9, // xor ecx, ecx
+    ]);
+    code.label("prefix_cmp")?;
+    code.emit(&[0x39, 0xd1]); // cmp ecx, edx
+    code.emit_jcc_label(&[0x0f, 0x83], "prefix_yes"); // jae prefix_yes
+    code.emit(&[
+        0x8a, 0x04, 0x0f, // mov al, [rdi+rcx]
+        0x3a, 0x04, 0x0e, // cmp al, [rsi+rcx]
+    ]);
+    code.emit_jcc_label(&[0x0f, 0x85], "prefix_next"); // jne prefix_next
+    code.emit(&[0x48, 0xff, 0xc1]); // inc rcx
+    code.emit_jmp_label("prefix_cmp");
+    code.label("prefix_next")?;
+    code.emit(&[0x49, 0xff, 0xc0]); // inc r8
+    code.emit_jmp_label("prefix_loop");
+    code.label("prefix_yes")?;
+    code.emit(&[0xb8, 0x01, 0x00, 0x00, 0x00, 0xc3]); // mov eax, 1; ret
+    code.label("prefix_no")?;
+    code.emit(&[0x31, 0xc0, 0xc3]); // xor eax, eax; ret
+    Ok(())
+}
+
+fn emit_has_exact(code: &mut X64Code) -> Result<(), String> {
+    code.label("has_exact")?;
+    code.emit(&[0x45, 0x31, 0xc0]); // xor r8d, r8d
+    code.label("exact_loop")?;
+    code.emit(&[0x4d, 0x39, 0xe8]); // cmp r8, r13
+    code.emit_jcc_label(&[0x0f, 0x83], "exact_no"); // jae exact_no
+    code.emit(&[
+        0x4b, 0x8b, 0x3c, 0xc4, // mov rdi, [r12+r8*8]
+        0x31, 0xc9, // xor ecx, ecx
+    ]);
+    code.label("exact_cmp")?;
+    code.emit(&[0x39, 0xd1]); // cmp ecx, edx
+    code.emit_jcc_label(&[0x0f, 0x83], "exact_end_check"); // jae exact_end_check
+    code.emit(&[
+        0x8a, 0x04, 0x0f, // mov al, [rdi+rcx]
+        0x3a, 0x04, 0x0e, // cmp al, [rsi+rcx]
+    ]);
+    code.emit_jcc_label(&[0x0f, 0x85], "exact_next"); // jne exact_next
+    code.emit(&[0x48, 0xff, 0xc1]); // inc rcx
+    code.emit_jmp_label("exact_cmp");
+    code.label("exact_end_check")?;
+    code.emit(&[0x80, 0x3c, 0x0f, 0x00]); // cmp byte [rdi+rcx], 0
+    code.emit_jcc_label(&[0x0f, 0x84], "exact_yes"); // je exact_yes
+    code.label("exact_next")?;
+    code.emit(&[0x49, 0xff, 0xc0]); // inc r8
+    code.emit_jmp_label("exact_loop");
+    code.label("exact_yes")?;
+    code.emit(&[0xb8, 0x01, 0x00, 0x00, 0x00, 0xc3]); // mov eax, 1; ret
+    code.label("exact_no")?;
+    code.emit(&[0x31, 0xc0, 0xc3]); // xor eax, eax; ret
+    Ok(())
+}
+
+#[derive(Default)]
+struct X64Code {
+    bytes: Vec<u8>,
+    labels: BTreeMap<String, usize>,
+    rel32_patches: Vec<(usize, String)>,
+}
+
+impl X64Code {
+    fn emit(&mut self, bytes: &[u8]) {
+        self.bytes.extend_from_slice(bytes);
+    }
+
+    fn label(&mut self, name: impl Into<String>) -> Result<(), String> {
+        let name = name.into();
+        if self.labels.insert(name.clone(), self.bytes.len()).is_some() {
+            return Err(format!("duplicate x86_64 code label '{name}'"));
+        }
+        Ok(())
+    }
+
+    fn emit_lea_rsi_label(&mut self, label: &str) {
+        self.emit(&[0x48, 0x8d, 0x35]);
+        self.emit_rel32(label);
+    }
+
+    fn emit_mov_edx_imm32(&mut self, value: u32) {
+        self.emit(&[0xba]);
+        self.emit(&value.to_le_bytes());
+    }
+
+    fn emit_call_label(&mut self, label: &str) {
+        self.emit(&[0xe8]);
+        self.emit_rel32(label);
+    }
+
+    fn emit_jmp_label(&mut self, label: &str) {
+        self.emit(&[0xe9]);
+        self.emit_rel32(label);
+    }
+
+    fn emit_jcc_label(&mut self, opcode: &[u8], label: &str) {
+        self.emit(opcode);
+        self.emit_rel32(label);
+    }
+
+    fn emit_exit(&mut self, status: u8) {
+        self.emit(&[0xb8, 0x3c, 0x00, 0x00, 0x00]);
+        if status == 0 {
+            self.emit(&[0x31, 0xff]);
+        } else {
+            self.emit(&[0xbf]);
+            self.emit(&(u32::from(status)).to_le_bytes());
+        }
+        self.emit(&[0x0f, 0x05]);
+    }
+
+    fn emit_rel32(&mut self, label: &str) {
+        let position = self.bytes.len();
+        self.bytes.extend_from_slice(&[0; 4]);
+        self.rel32_patches.push((position, label.to_string()));
+    }
+
+    fn finish(mut self) -> Result<Vec<u8>, String> {
+        for (position, label) in &self.rel32_patches {
+            let target = *self
+                .labels
+                .get(label)
+                .ok_or_else(|| format!("unknown x86_64 code label '{label}'"))?;
+            let next = position + 4;
+            let offset = target as isize - next as isize;
+            let offset = i32::try_from(offset)
+                .map_err(|_| format!("x86_64 rel32 patch to '{label}' is out of range"))?;
+            self.bytes[*position..*position + 4].copy_from_slice(&offset.to_le_bytes());
+        }
+        Ok(self.bytes)
+    }
+}
+
+fn wrap_linux_x86_64_elf(code: &[u8]) -> Vec<u8> {
     let elf_header_size = 64u16;
     let program_header_size = 56u16;
     let code_offset = u64::from(elf_header_size + program_header_size);
@@ -3299,7 +3499,7 @@ fn emit_minimal_linux_x86_64_elf() -> Vec<u8> {
     push_u64_le(&mut out, 0x1000);
 
     debug_assert_eq!(out.len(), code_offset as usize);
-    out.extend_from_slice(&code);
+    out.extend_from_slice(code);
     out
 }
 

@@ -34,7 +34,9 @@ runs AIL-Core diagnostics, `ail-core` prints deterministic AIL-Core,
 inspection, `ail-lower` compiles checked AIL-Core IR into the current
 deterministic AIL VM instruction artifact, and `ail-compile --target
 linux-x86_64-elf --out <path>` emits a native Linux x86_64 ELF executable
-directly from checked AIL. `ail-lower --artifact-dir <dir>` also writes the
+directly from checked AIL. The first native ABI accepts runtime state as
+`key=value` argv entries and returns a nonzero process status when supported
+compiled requirements fail. `ail-lower --artifact-dir <dir>` also writes the
 checked core, VM instruction artifact, deterministic fingerprints, and a lower
 manifest while keeping stdout as the VM artifact. `ail-check`, `ail-core`,
 `ail-flow`, `ail-lower`, `ail-run`, and `ail-build` can use `--spec-file
@@ -138,6 +140,7 @@ cargo run -- ail-core examples/support_ticket.ail
 cargo run -- ail-flow examples/support_ticket.ail
 cargo run -- ail-lower examples/support_ticket.ail
 cargo run -- ail-compile examples/support_ticket.ail --action CloseTicket --target linux-x86_64-elf --out /tmp/close-ticket
+/tmp/close-ticket ticket.id=T-1 ticket.status=Open
 cargo run -- ail-lower examples/refund_tool.ail
 cargo run -- ail-lower examples/compiler_pass.ail
 cargo run -- ail-lower examples/network_driver.ail

@@ -341,7 +341,12 @@ packages.
 `ail-compile --target linux-x86_64-elf --out <path>` uses the same checked
 AIL-Core gate, validates the selected action, and writes a native executable
 ELF file with direct Linux x86_64 syscall code as the first native compiler
-slice.
+slice. The first native runtime ABI receives state as `key=value` argv entries.
+Native code generated from supported `REQUIRE_EXISTS` instructions checks for a
+matching `key=` argument, and native code generated from supported
+`REQUIRE_FIELD_NOT_EQUALS` instructions checks that the forbidden `key=value`
+argument is absent. The executable exits `0` when those compiled requirements
+pass and exits `1` when they fail.
 With `--artifact-dir`, `ail-lower` writes `checked.ail-core.txt`,
 `artifact.ailbc.json`, `artifact.fingerprint.txt`, `manifest.ail-lower.txt`,
 and `manifest.fingerprint.txt`, keeping direct IR-to-VM-instruction lowering

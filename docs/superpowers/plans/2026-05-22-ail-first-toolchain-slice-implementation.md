@@ -4978,6 +4978,52 @@ cargo test --test ail_toolchain cli_ail_compile_emits_runnable_linux_x86_64_elf_
 Expected: the native output is a runnable Linux x86_64 ELF executable and exits
 successfully.
 
+### Task 117: Native ELF Enforces First AIL Requirements
+
+**Files:**
+- Modify: `src/ail.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing native requirement test**
+
+Extend native ELF coverage with a `CloseTicket` executable run under three
+argv states: `ticket.id=T-1 ticket.status=Open` must exit successfully,
+missing `ticket.id` must fail, and `ticket.status=Closed` must fail.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_compile_native_executable_enforces_close_ticket_requirements -- --nocapture
+```
+
+Expected: failure because the first ELF slice exits `0` without inspecting
+runtime state.
+
+- [x] **Step 3: Generate native argv requirement checks**
+
+Translate supported `REQUIRE_EXISTS` instructions into native argv prefix
+searches for `key=`, and supported `REQUIRE_FIELD_NOT_EQUALS` instructions
+into native argv exact-match rejection for the forbidden `key=value`. Keep the
+ELF writer direct and dependency-free: no generated Rust, no libc, no linker,
+no LLVM, and no assembler.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_compile_native_executable_enforces_close_ticket_requirements -- --nocapture
+cargo test --test ail_toolchain cli_ail_compile_emits_runnable_linux_x86_64_elf_executable -- --nocapture
+```
+
+Expected: native `CloseTicket` exits `0` for an open ticket, exits nonzero for
+missing `ticket.id`, exits nonzero for a closed ticket, and remains a valid
+runnable Linux x86_64 ELF executable.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**
