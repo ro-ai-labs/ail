@@ -62,6 +62,9 @@ without exposing secret runtime values.
 Supported CompilerPass opcodes emit VM-style compiler-pass audit traces,
 including declared inputs and outputs, reads, steps, writes, guarantees, trace
 events, and the explicit `CORE_INFER_READ_PERMISSIONS` transform marker.
+Supported System opcodes emit VM-style low-level component trace entries,
+including resources, ownership and borrowing, region placement, capabilities,
+effects, guarantees, and explicit trace events.
 The first native backend rejects unsupported VM opcodes and unlowered observed
 rules instead of silently dropping them.
 `ail-lower --artifact-dir

@@ -391,8 +391,12 @@ of stdout and stderr. Native code generated from supported CompilerPass opcodes
 writes the same compiler-pass trace entries as the VM, including pass start,
 declared inputs and outputs, reads, steps, writes, guarantees, explicit trace
 events, and the auditable `CORE_INFER_READ_PERMISSIONS` transform marker.
-Stdout remains reserved for parseable state changes. The first native backend
-rejects unsupported System, future unknown VM opcodes, and unlowered
+Native code generated from supported System opcodes writes the same low-level
+component trace entries as the VM, including resources, ownership, borrowing,
+region placement, layout, allocation, lock guards, execution context,
+interrupts, scheduler tasks, capabilities, effects, guarantees, and explicit
+trace events. Stdout remains reserved for parseable state changes. The first
+native backend rejects future unknown VM opcodes and unlowered
 `OBSERVE_RULE` requirements instead of silently emitting a partial executable.
 With `--artifact-dir`, `ail-lower` writes `checked.ail-core.txt`,
 `artifact.ailbc.json`, `artifact.fingerprint.txt`, `manifest.ail-lower.txt`,

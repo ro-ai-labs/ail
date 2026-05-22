@@ -3533,6 +3533,126 @@ fn emit_linux_x86_64_elf_for_action(
                     success_trace_lines.push(format!("tool secret protection {text}\n"));
                 }
             }
+            "SYSTEM_BEGIN" => {
+                if let Some(label) = instruction.operands.get("label") {
+                    success_trace_lines.push(format!("system component {label} started\n"));
+                }
+            }
+            "SYSTEM_RESOURCE" => {
+                if let (Some(name), Some(type_name)) = (
+                    instruction.operands.get("name"),
+                    instruction.operands.get("type"),
+                ) {
+                    success_trace_lines.push(format!("system resource {name}:{type_name}\n"));
+                }
+            }
+            "SYSTEM_OWNS" => {
+                if let Some(resource) = instruction.operands.get("resource") {
+                    success_trace_lines.push(format!("system owns {resource}\n"));
+                }
+            }
+            "SYSTEM_BORROWS" => {
+                if let Some(resource) = instruction.operands.get("resource") {
+                    success_trace_lines.push(format!("system borrows {resource}\n"));
+                }
+            }
+            "SYSTEM_MUTABLY_BORROWS" => {
+                if let Some(resource) = instruction.operands.get("resource") {
+                    success_trace_lines.push(format!("system mutably borrows {resource}\n"));
+                }
+            }
+            "SYSTEM_REGION" => {
+                if let (Some(resource), Some(region)) = (
+                    instruction.operands.get("resource"),
+                    instruction.operands.get("region"),
+                ) {
+                    success_trace_lines.push(format!("system places {resource} in {region}\n"));
+                }
+            }
+            "SYSTEM_LAYOUT" => {
+                if let (Some(resource), Some(layout)) = (
+                    instruction.operands.get("resource"),
+                    instruction.operands.get("layout"),
+                ) {
+                    success_trace_lines.push(format!("system layout {resource} {layout}\n"));
+                }
+            }
+            "SYSTEM_ALLOCATION" => {
+                if let (Some(resource), Some(placement)) = (
+                    instruction.operands.get("resource"),
+                    instruction.operands.get("placement"),
+                ) {
+                    success_trace_lines.push(format!("system allocation {resource} {placement}\n"));
+                }
+            }
+            "SYSTEM_LOCK_GUARD" => {
+                if let (Some(resource), Some(lock)) = (
+                    instruction.operands.get("resource"),
+                    instruction.operands.get("lock"),
+                ) {
+                    success_trace_lines.push(format!("system lock guard {resource} with {lock}\n"));
+                }
+            }
+            "SYSTEM_CONTEXT" => {
+                if let Some(name) = instruction.operands.get("name") {
+                    success_trace_lines.push(format!("system context {name}\n"));
+                }
+            }
+            "SYSTEM_INTERRUPT_PRIORITY" => {
+                if let (Some(context), Some(priority)) = (
+                    instruction.operands.get("context"),
+                    instruction.operands.get("priority"),
+                ) {
+                    success_trace_lines
+                        .push(format!("system interrupt priority {context} {priority}\n"));
+                }
+            }
+            "SYSTEM_INTERRUPT_MASK" => {
+                if let (Some(context), Some(mask)) = (
+                    instruction.operands.get("context"),
+                    instruction.operands.get("mask"),
+                ) {
+                    success_trace_lines.push(format!("system interrupt mask {context} {mask}\n"));
+                }
+            }
+            "SYSTEM_SCHEDULER_TASK" => {
+                if let (Some(task), Some(context)) = (
+                    instruction.operands.get("task"),
+                    instruction.operands.get("context"),
+                ) {
+                    success_trace_lines
+                        .push(format!("system scheduler task {task} in {context}\n"));
+                }
+            }
+            "SYSTEM_TASK_PRIORITY" => {
+                if let (Some(task), Some(priority)) = (
+                    instruction.operands.get("task"),
+                    instruction.operands.get("priority"),
+                ) {
+                    success_trace_lines.push(format!("system task priority {task} {priority}\n"));
+                }
+            }
+            "SYSTEM_TASK_TIMING" => {
+                if let (Some(task), Some(deadline), Some(budget)) = (
+                    instruction.operands.get("task"),
+                    instruction.operands.get("deadline"),
+                    instruction.operands.get("budget"),
+                ) {
+                    success_trace_lines.push(format!(
+                        "system task timing {task} deadline {deadline} budget {budget}\n"
+                    ));
+                }
+            }
+            "SYSTEM_CAPABILITY" => {
+                if let Some(text) = instruction.operands.get("text") {
+                    success_trace_lines.push(format!("system capability {text}\n"));
+                }
+            }
+            "SYSTEM_EFFECT" => {
+                if let Some(text) = instruction.operands.get("text") {
+                    success_trace_lines.push(format!("system effect {text}\n"));
+                }
+            }
             "PASS_BEGIN" => {
                 if let Some(label) = instruction.operands.get("label") {
                     success_trace_lines.push(format!("compiler pass {label} started\n"));

@@ -3334,13 +3334,11 @@ fn cli_ail_compile_accepts_saved_core_file_artifact() {
 
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
-fn cli_ail_compile_native_rejects_unsupported_system_opcodes() {
+fn cli_ail_compile_native_system_component_emits_resource_trace() {
     let binary = env!("CARGO_BIN_EXE_eigl");
     let package = fixture("network_driver.ail");
-    let executable_path = std::env::temp_dir().join(format!(
-        "eigl-network-driver-native-unsupported-{}",
-        std::process::id()
-    ));
+    let executable_path =
+        std::env::temp_dir().join(format!("eigl-network-driver-native-{}", std::process::id()));
     let _ = fs::remove_file(&executable_path);
 
     let output = Command::new(binary)
@@ -3356,18 +3354,40 @@ fn cli_ail_compile_native_rejects_unsupported_system_opcodes() {
         ])
         .output()
         .unwrap();
-    let status = output.status;
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    let _ = fs::remove_file(&executable_path);
     assert!(
-        !status.success(),
-        "native compile should reject unsupported system opcodes\nstdout:\n{stdout}\nstderr:\n{stderr}"
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
     );
+
+    let run = Command::new(&executable_path).output().unwrap();
     assert!(
-        stderr.contains("unsupported native linux-x86_64-elf opcode 'SYSTEM_BEGIN'"),
+        run.status.success(),
+        "system component native executable failed"
+    );
+    assert_eq!(String::from_utf8_lossy(&run.stdout), "");
+    let stderr = String::from_utf8_lossy(&run.stderr);
+    assert!(
+        stderr.contains("system component Network packet receiver started"),
         "{stderr}"
     );
+    assert!(
+        stderr.contains("system resource rx buffer:Buffer"),
+        "{stderr}"
+    );
+    assert!(stderr.contains("system owns rx buffer"), "{stderr}");
+    assert!(
+        stderr.contains("system places rx buffer in packet processing region"),
+        "{stderr}"
+    );
+    assert!(
+        stderr.contains("system effect read network device"),
+        "{stderr}"
+    );
+    assert!(stderr.contains("trace PacketReceived"), "{stderr}");
+
+    fs::remove_file(executable_path).unwrap();
 }
 
 #[test]
