@@ -5784,6 +5784,73 @@ fn cli_ail_conformance_agent_verifies_manifest_artifacts() {
 }
 
 #[test]
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+fn cli_ail_conformance_writes_native_agent_artifacts() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("support_ticket.ail");
+    let agent_package = fixture("ail_toolchain_agent.ail");
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "eigl-ail-conformance-native-agent-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-conformance",
+            &package,
+            "--agent",
+            &agent_package,
+            "--target",
+            "linux-x86_64-elf",
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let agent_native = fs::read(artifact_dir.join("agent-VerifyConformanceManifest.elf")).unwrap();
+    assert_eq!(&agent_native[0..4], b"\x7fELF");
+    let expected_agent_native_fingerprint = fnv64_fingerprint_bytes(&agent_native);
+    let native_run = Command::new(artifact_dir.join("agent-VerifyConformanceManifest.elf"))
+        .args([
+            "buildrequest.id=support-ticket-conformance",
+            "buildrequest.status=BytecodeReady",
+            "buildrequest.conformance report=ok",
+            "buildrequest.conformance report fingerprint=fnv64:report",
+            "buildrequest.artifact manifest=ok",
+            "buildrequest.artifact manifest fingerprint=fnv64:manifest",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        native_run.status.success(),
+        "native conformance agent verifier failed"
+    );
+    assert!(
+        String::from_utf8_lossy(&native_run.stderr).contains("trace ConformanceManifestVerified"),
+        "{}",
+        String::from_utf8_lossy(&native_run.stderr)
+    );
+
+    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-conformance.txt")).unwrap();
+    assert!(
+        manifest.contains(&format!(
+            "agent-target linux-x86_64-elf agent-VerifyConformanceManifest.elf {expected_agent_native_fingerprint}"
+        )),
+        "{manifest}"
+    );
+
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
 fn cli_ail_conformance_checks_agent_tool_fixtures() {
     let binary = env!("CARGO_BIN_EXE_eigl");
     let package = fixture("refund_tool.ail");

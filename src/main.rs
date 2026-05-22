@@ -421,6 +421,7 @@ struct AilConformanceArtifactSet<'a> {
     report_text: &'a str,
     agent_bytecode_text: Option<&'a str>,
     agent_trace: Option<&'a [String]>,
+    agent_native_executables: &'a [AilNativeArtifact],
 }
 
 struct AilBuildAgentStart {
@@ -764,6 +765,14 @@ fn render_ail_conformance_manifest(
     if artifacts.agent_trace.is_some() {
         lines.push("trace agent-trace.txt".to_string());
     }
+    for native_agent in artifacts.agent_native_executables {
+        lines.push(format!(
+            "agent-target {} {} {}",
+            native_agent.target_name,
+            native_agent.file_name,
+            ail_artifact_fingerprint_bytes(&native_agent.bytes)
+        ));
+    }
     format!("{}\n", lines.join("\n"))
 }
 
@@ -805,6 +814,16 @@ fn write_ail_conformance_artifacts(
         .map_err(|error| {
             format!("failed to write ail-conformance agent trace artifact: {error}")
         })?;
+    }
+    for native_agent in artifacts.agent_native_executables {
+        let artifact_path = root.join(&native_agent.file_name);
+        fs::write(&artifact_path, &native_agent.bytes).map_err(|error| {
+            format!(
+                "failed to write ail-conformance native agent artifact {}: {error}",
+                native_agent.file_name
+            )
+        })?;
+        set_native_executable_permissions(&artifact_path.to_string_lossy())?;
     }
     let manifest_text = render_ail_conformance_manifest(result, &artifacts);
     fs::write(root.join("manifest.ail-conformance.txt"), &manifest_text)
@@ -1164,13 +1183,13 @@ fn run_ail_pass_agent_verify_manifest(
 }
 
 fn run_ail_conformance_agent_verify_manifest(
-    agent_path: &str,
+    agent_bytecode: eigl::ail::AilBytecodeProgram,
+    agent_bytecode_text: String,
     package_name: &str,
     report_text: &str,
     manifest_text: &str,
     manifest_fingerprint: &str,
 ) -> Result<AilBuildAgentRun, String> {
-    let (agent_bytecode, agent_bytecode_text) = load_verified_ail_build_agent(agent_path)?;
     if !agent_bytecode
         .actions
         .contains_key("VerifyConformanceManifest")
@@ -2358,18 +2377,27 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
     if command == "ail-conformance" {
         let result = run_ail_conformance(&package)?;
         let report_text = render_ail_conformance_report(&result);
+        let mut agent_native_artifacts = Vec::new();
         let agent_run = if let Some(agent_path) = &cli_options.ail_build_agent {
+            let (agent_bytecode, agent_bytecode_text) = load_verified_ail_build_agent(agent_path)?;
+            if let Some(target) = &cli_options.ail_compile_target {
+                agent_native_artifacts =
+                    compile_ail_build_agent_native_artifacts(&agent_bytecode, target)?;
+            }
+            let empty_agent_trace: &[String] = &[];
             let manifest_text = render_ail_conformance_manifest(
                 &result,
                 &AilConformanceArtifactSet {
                     report_text: &report_text,
-                    agent_bytecode_text: None,
-                    agent_trace: None,
+                    agent_bytecode_text: Some(agent_bytecode_text.as_str()),
+                    agent_trace: Some(empty_agent_trace),
+                    agent_native_executables: agent_native_artifacts.as_slice(),
                 },
             );
             let manifest_fingerprint = ail_artifact_fingerprint(&manifest_text);
             Some(run_ail_conformance_agent_verify_manifest(
-                agent_path,
+                agent_bytecode,
+                agent_bytecode_text,
                 &result.package_name,
                 &report_text,
                 &manifest_text,
@@ -2386,6 +2414,7 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
                     report_text: &report_text,
                     agent_bytecode_text: agent_run.as_ref().map(|run| run.bytecode_text.as_str()),
                     agent_trace: agent_run.as_ref().map(|run| run.trace.as_slice()),
+                    agent_native_executables: agent_native_artifacts.as_slice(),
                 },
             )?;
         }
@@ -2933,7 +2962,10 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
             continue;
         }
         if arg == "--target" {
-            if !matches!(command, "ail-compile" | "ail-build" | "ail-pass") {
+            if !matches!(
+                command,
+                "ail-compile" | "ail-build" | "ail-pass" | "ail-conformance"
+            ) {
                 return Err(usage());
             }
             let Some(target) = args.get(index + 1) else {
@@ -3143,6 +3175,12 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
     }
     if command == "ail-conformance" && ail_build_agent.is_some() && artifact_dir.is_none() {
         return Err("ail-conformance --agent requires --artifact-dir <dir>".to_string());
+    }
+    if command == "ail-conformance" && ail_compile_target.is_some() && ail_build_agent.is_none() {
+        return Err("ail-conformance --target requires --agent <path>".to_string());
+    }
+    if command == "ail-conformance" && ail_compile_target.is_some() && artifact_dir.is_none() {
+        return Err("ail-conformance --target requires --artifact-dir <dir>".to_string());
     }
 
     Ok(CliOptions {

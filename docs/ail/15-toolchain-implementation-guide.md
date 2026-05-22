@@ -112,7 +112,11 @@ host-side stdout. With `--agent <agent-package-or-bytecode> --artifact-dir`,
 the gate must compile or load an AIL-authored Application agent and run its
 `VerifyConformanceManifest` bytecode action against the conformance report,
 report fingerprint, manifest, and manifest fingerprint before writing
-`agent.ailbc.json`, `agent.fingerprint.txt`, and `agent-trace.txt`.
+`agent.ailbc.json`, `agent.fingerprint.txt`, and `agent-trace.txt`. With
+`--target linux-x86_64-elf`, the conformance gate must also emit
+`agent-<ActionName>.elf` for each AIL-authored agent action and record every
+native verifier executable as an `agent-target` entry in
+`manifest.ail-conformance.txt`.
 
 ### AIL-Spec Parser
 
