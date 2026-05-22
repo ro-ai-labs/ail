@@ -6,11 +6,12 @@ use std::net::TcpListener;
 use std::process::ExitCode;
 
 use eigl::ail::{
-    apply_ail_patch, check_ail_core, compile_ail_core_bytecode, draft_ail_requirements,
-    draft_ail_spec, draft_ail_spec_from_requirements, elaborate_ail_core, load_ail_package_dir,
-    parse_ail_bytecode, parse_ail_package_document, parse_ail_package_spec_text,
-    parse_ail_patch_text, render_ail_bytecode, render_ail_core, render_ail_flow_view,
-    render_ail_runtime_state_lines, render_ail_spec, repair_ail_spec_from_diagnostics,
+    apply_ail_patch, check_ail_core, check_ail_requirements, compile_ail_core_bytecode,
+    draft_ail_requirements, draft_ail_spec, draft_ail_spec_from_requirements, elaborate_ail_core,
+    load_ail_package_dir, parse_ail_bytecode, parse_ail_package_document,
+    parse_ail_package_spec_text, parse_ail_patch_text, render_ail_bytecode, render_ail_core,
+    render_ail_flow_view, render_ail_runtime_state_lines, render_ail_spec,
+    repair_ail_requirements_from_diagnostics, repair_ail_spec_from_diagnostics,
     run_ail_bytecode_action, run_ail_conformance, verify_ail_bytecode,
 };
 use eigl::apply_rif_patch;
@@ -500,7 +501,25 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
             .llm_endpoint
             .as_deref()
             .unwrap_or(&package.metadata.base_llm_endpoint);
-        let requirements = draft_ail_requirements(&package, prompt, endpoint)?;
+        let mut requirements = draft_ail_requirements(&package, prompt, endpoint)?;
+        let mut requirements_diagnostics = check_ail_requirements(&package, &requirements);
+        if !requirements_diagnostics.is_empty() {
+            requirements = repair_ail_requirements_from_diagnostics(
+                &package,
+                prompt,
+                &requirements,
+                &requirements_diagnostics,
+                endpoint,
+            )?;
+            requirements_diagnostics = check_ail_requirements(&package, &requirements);
+        }
+        if !requirements_diagnostics.is_empty() {
+            println!("ail-build requirements diagnostics:");
+            for diagnostic in requirements_diagnostics {
+                println!("{}", diagnostic.detailed_message());
+            }
+            return Ok(1);
+        }
         let mut draft =
             draft_ail_spec_from_requirements(&package, prompt, &requirements, endpoint)?;
         if !draft.success() {

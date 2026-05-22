@@ -3887,9 +3887,12 @@ fn cli_ail_build_uses_llm_candidate_and_outputs_verified_bytecode() {
     let requirements = concat!(
         "AIL-Requirements:\n",
         "- The application manages support tickets.\n",
-        "- A ticket has an id, title, status, and secret internal notes.\n",
-        "- Closing a ticket requires the ticket to exist and not already be Closed.\n",
-        "- Closing a ticket changes ticket status to Closed and records TicketClosed.\n"
+        "- A ticket has fields id, title, status, and secret internal notes.\n",
+        "- The CloseTicket action requires ticket id input and ticket status not to be Closed.\n",
+        "- Closing a ticket changes ticket status to Closed.\n",
+        "- Failure NotFound happens when ticket id is missing and records TicketNotFound.\n",
+        "- The action guarantees closed tickets do not appear in the open queue.\n",
+        "- The action records trace event TicketClosed.\n"
     );
     let requirements_body = format!(
         r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
@@ -3958,8 +3961,11 @@ fn cli_ail_build_repairs_rejected_candidate_before_lowering() {
     let requirements = concat!(
         "AIL-Requirements:\n",
         "- The application manages support tickets.\n",
-        "- Closing a ticket must refer to declared ticket fields only.\n",
-        "- Closing a ticket changes ticket status to Closed and records TicketClosed.\n"
+        "- Ticket fields include id, title, status, and secret internal notes.\n",
+        "- The CloseTicket action requires declared ticket fields only.\n",
+        "- Failure NotFound happens when ticket id is missing and records TicketNotFound.\n",
+        "- The action guarantees closed tickets do not appear in the open queue.\n",
+        "- The action records trace event TicketClosed.\n"
     );
     let requirements_body = format!(
         r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
@@ -4028,6 +4034,74 @@ fn cli_ail_build_repairs_rejected_candidate_before_lowering() {
 }
 
 #[test]
+fn cli_ail_build_repairs_incomplete_requirements_before_spec_drafting() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("support_ticket.ail");
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let incomplete_requirements = "AIL-Requirements:\n- Build support tickets.\n";
+    let incomplete_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(incomplete_requirements)
+    );
+    let repaired_requirements = concat!(
+        "AIL-Requirements:\n",
+        "- The application manages support tickets with Ticket fields id, title, status, and secret internal notes.\n",
+        "- The CloseTicket action requires ticket id input and ticket status not to be Closed.\n",
+        "- Failure NotFound happens when ticket id is missing and records TicketNotFound.\n",
+        "- The action guarantees closed tickets do not appear in the open queue.\n",
+        "- The action records trace event TicketClosed.\n"
+    );
+    let repaired_requirements_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(repaired_requirements)
+    );
+    let response_spec = fs::read_to_string(format!("{package}/spec.ail-spec.md")).unwrap();
+    let spec_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(&format!(
+            "<think>ignore this</think>\n```ail\n{response_spec}\n```"
+        ))
+    );
+    let server = serve_chat_responses(
+        listener,
+        vec![incomplete_body, repaired_requirements_body, spec_body],
+    );
+
+    let output = Command::new(binary)
+        .args([
+            "ail-build",
+            &package,
+            "--prompt",
+            "Build an AIL support ticket bytecode artifact",
+            "--llm-endpoint",
+            &format!("http://127.0.0.1:{}/v1/chat/completions", addr.port()),
+        ])
+        .output()
+        .unwrap();
+
+    let request_bodies = server.join().unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(request_bodies.len(), 3);
+    assert!(request_bodies[0].contains("Draft AIL requirements"));
+    assert!(request_bodies[1].contains("Repair AIL requirements"));
+    assert!(request_bodies[1].contains("AILR003 requirements are missing failure coverage"));
+    assert!(!request_bodies[1].contains("Draft an AIL-Spec candidate"));
+    assert!(request_bodies[2].contains("Draft an AIL-Spec candidate"));
+    assert!(request_bodies[2].contains("Failure NotFound happens when ticket id is missing"));
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let bytecode = parse_ail_bytecode(&stdout).unwrap();
+    assert_eq!(verify_ail_bytecode(&bytecode), Vec::<String>::new());
+    assert!(bytecode.actions.contains_key("CloseTicket"));
+}
+
+#[test]
 fn cli_ail_build_writes_requirements_spec_core_and_bytecode_artifacts() {
     let binary = env!("CARGO_BIN_EXE_eigl");
     let package = fixture("support_ticket.ail");
@@ -4039,7 +4113,11 @@ fn cli_ail_build_writes_requirements_spec_core_and_bytecode_artifacts() {
     let requirements = concat!(
         "AIL-Requirements:\n",
         "- The application manages support tickets.\n",
-        "- Closing a ticket changes ticket status to Closed and records TicketClosed.\n"
+        "- Ticket fields include id, title, status, and secret internal notes.\n",
+        "- The CloseTicket action requires ticket id input and ticket status not to be Closed.\n",
+        "- Failure NotFound happens when ticket id is missing and records TicketNotFound.\n",
+        "- The action guarantees closed tickets do not appear in the open queue.\n",
+        "- The action records trace event TicketClosed.\n"
     );
     let requirements_body = format!(
         r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
@@ -4105,8 +4183,13 @@ fn cli_ail_build_for_agent_tool_profile_prompts_tool_requirements_and_outputs_by
     let requirements = concat!(
         "AIL-Requirements:\n",
         "- The tool refunds captured payments.\n",
-        "- The tool needs order id, refund amount, reason, and secret payment token.\n",
-        "- The tool calls PaymentProvider.refund and records RefundCustomerPaymentRequested.\n"
+        "- The tool needs input order id, refund amount, reason, and secret payment token.\n",
+        "- The tool produces output refund id.\n",
+        "- The tool calls PaymentProvider.refund.\n",
+        "- The tool requires permission to create refunds and approval for high-value refunds.\n",
+        "- Failure ProviderRejected happens when PaymentProvider rejects the refund.\n",
+        "- The tool guarantees payment token redaction.\n",
+        "- The tool records trace RefundCustomerPaymentRequested.\n"
     );
     let requirements_body = format!(
         r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,

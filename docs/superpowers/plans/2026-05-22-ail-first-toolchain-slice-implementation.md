@@ -2989,6 +2989,54 @@ Expected: checked AIL-Core lowers to verified AIL-Bytecode for Application,
 AgentTool, Compiler, and System profiles, and the bytecode VM execution path
 stays unchanged.
 
+### Task 75: `ail-build` Requirements Coverage Repair Gate
+
+**Files:**
+- Modify: `src/ail.rs`
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing requirements-repair test**
+
+Add an `ail-build` test where the first base LLM response is an
+AIL-Requirements artifact with too little coverage. Require the command to send
+a requirements-repair prompt with stable diagnostics before asking for
+AIL-Spec, then continue to verified AIL-Bytecode after repaired requirements.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_repairs_incomplete_requirements_before_spec_drafting -- --nocapture
+```
+
+Expected: failure because request 2 is still AIL-Spec drafting instead of
+requirements repair.
+
+- [x] **Step 3: Implement requirements coverage diagnostics**
+
+Add `check_ail_requirements` with profile-specific coverage diagnostics for
+application, agent-tool, compiler, and system requirements. Add
+`repair_ail_requirements_from_diagnostics` and route `ail-build` through one
+requirements repair pass before spec drafting. If requirements still fail,
+print `ail-build requirements diagnostics:` and exit nonzero.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build -- --nocapture
+```
+
+Expected: incomplete requirements are repaired before spec drafting, existing
+build flows still emit verified bytecode, and requirements fixtures include
+explicit data, behavior, failure, guarantee, trace, and profile-specific
+coverage.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

@@ -4938,6 +4938,65 @@ pub fn draft_ail_requirements(
     crate::llm_bridge::invoke_llm_text(endpoint, &prompt)
 }
 
+pub fn repair_ail_requirements_from_diagnostics(
+    package: &AilPackage,
+    user_prompt: &str,
+    previous_requirements_text: &str,
+    diagnostics: &[AilDiagnostic],
+    endpoint: &str,
+) -> Result<String, String> {
+    let prompt = build_ail_requirements_repair_prompt(
+        package,
+        user_prompt,
+        previous_requirements_text,
+        diagnostics,
+    );
+    crate::llm_bridge::invoke_llm_text(endpoint, &prompt)
+}
+
+pub fn check_ail_requirements(package: &AilPackage, requirements_text: &str) -> Vec<AilDiagnostic> {
+    let mut diagnostics = Vec::new();
+    let trimmed = requirements_text.trim();
+    let lowered = trimmed.to_ascii_lowercase();
+    let bullets = trimmed
+        .lines()
+        .filter(|line| line.trim_start().starts_with("- "))
+        .collect::<Vec<_>>();
+
+    if !lowered.starts_with("ail-requirements:") {
+        diagnostics.push(
+            AilDiagnostic::error(
+                "AILR001",
+                "requirements artifact must start with AIL-Requirements:",
+            )
+            .with_repair_suggestion("Return only an AIL-Requirements artifact with that header."),
+        );
+    }
+
+    if bullets.len() < 3 {
+        diagnostics.push(
+            AilDiagnostic::error(
+                "AILR002",
+                "requirements artifact needs at least three requirement bullets",
+            )
+            .with_repair_suggestion(
+                "Add concise bullets that cover the package surface, behavior, and audit expectations.",
+            ),
+        );
+    }
+
+    for topic in required_requirements_topics(package.metadata.profile.as_str()) {
+        if !requirements_mentions_any(&lowered, topic.terms) {
+            diagnostics.push(
+                AilDiagnostic::error(topic.code, topic.message)
+                    .with_repair_suggestion(topic.repair),
+            );
+        }
+    }
+
+    diagnostics
+}
+
 pub fn draft_ail_spec_from_requirements(
     package: &AilPackage,
     user_prompt: &str,
@@ -5776,6 +5835,195 @@ fn build_ail_requirements_prompt(package: &AilPackage, user_prompt: &str) -> Str
         package.metadata.features.join(", "),
         user_prompt
     )
+}
+
+fn build_ail_requirements_repair_prompt(
+    package: &AilPackage,
+    user_prompt: &str,
+    previous_requirements_text: &str,
+    diagnostics: &[AilDiagnostic],
+) -> String {
+    let diagnostics_text = diagnostics
+        .iter()
+        .map(AilDiagnostic::detailed_message)
+        .collect::<Vec<_>>()
+        .join("\n");
+    format!(
+        concat!(
+            "Repair AIL requirements for package {}.\n",
+            "Use the {} profile and conformance level {}.\n",
+            "Return only an AIL-Requirements artifact with concise bullet points. Do not include code fences, AIL-Spec, implementation code, backend source, or reasoning.\n",
+            "The repaired requirements must be sufficient for the next toolchain step to draft checked AIL-Spec, lower it to AIL-Core, and compile AIL-Bytecode.\n\n",
+            "ORIGINAL HUMAN REQUEST:\n",
+            "{}\n\n",
+            "PREVIOUS AIL-REQUIREMENTS:\n",
+            "{}\n\n",
+            "REQUIREMENTS DIAGNOSTICS:\n",
+            "{}\n"
+        ),
+        package.metadata.name,
+        package.metadata.profile,
+        package.metadata.conformance,
+        user_prompt,
+        previous_requirements_text,
+        diagnostics_text
+    )
+}
+
+struct AilRequirementsTopic {
+    code: &'static str,
+    message: &'static str,
+    terms: &'static [&'static str],
+    repair: &'static str,
+}
+
+fn required_requirements_topics(profile: &str) -> Vec<AilRequirementsTopic> {
+    match profile {
+        "AgentTool" => vec![
+            AilRequirementsTopic {
+                code: "AILR006",
+                message: "requirements are missing tool surface coverage",
+                terms: &["tool", "agent may request"],
+                repair: "Name the tool capability the AI Agent may request.",
+            },
+            AilRequirementsTopic {
+                code: "AILR008",
+                message: "requirements are missing input coverage",
+                terms: &["input", "needs", "requires"],
+                repair: "Name the inputs the tool needs before execution.",
+            },
+            AilRequirementsTopic {
+                code: "AILR009",
+                message: "requirements are missing output coverage",
+                terms: &["output", "outputs", "produces", "returns"],
+                repair: "Name the outputs the tool produces.",
+            },
+            AilRequirementsTopic {
+                code: "AILR010",
+                message: "requirements are missing permission or approval coverage",
+                terms: &["permission", "approval", "approver", "may request"],
+                repair: "Name the permission or approval rules required to run the tool.",
+            },
+            requirement_failure_topic(),
+            requirement_guarantee_topic(),
+            requirement_trace_topic(),
+        ],
+        "Compiler" => vec![
+            AilRequirementsTopic {
+                code: "AILR006",
+                message: "requirements are missing compiler pass coverage",
+                terms: &["compiler pass", "pass"],
+                repair: "Name the compiler pass and the graph transformation it performs.",
+            },
+            AilRequirementsTopic {
+                code: "AILR008",
+                message: "requirements are missing compiler input coverage",
+                terms: &["input", "needs", "reads"],
+                repair: "Name the values or graph inputs the compiler pass reads.",
+            },
+            AilRequirementsTopic {
+                code: "AILR009",
+                message: "requirements are missing compiler output coverage",
+                terms: &["output", "produces", "adds", "writes"],
+                repair: "Name the values or graph outputs the compiler pass writes.",
+            },
+            requirement_failure_topic(),
+            requirement_guarantee_topic(),
+            requirement_trace_topic(),
+        ],
+        "System" => vec![
+            AilRequirementsTopic {
+                code: "AILR006",
+                message: "requirements are missing system component coverage",
+                terms: &["system component", "component"],
+                repair: "Name the system component being compiled.",
+            },
+            AilRequirementsTopic {
+                code: "AILR008",
+                message: "requirements are missing resource coverage",
+                terms: &["resource", "buffer", "device", "lock", "region"],
+                repair: "Name the resources, locks, regions, or devices the component uses.",
+            },
+            AilRequirementsTopic {
+                code: "AILR009",
+                message: "requirements are missing capability or effect coverage",
+                terms: &["capability", "effect", "performs", "read", "write"],
+                repair: "Name the capabilities and effects the system component requires.",
+            },
+            requirement_failure_topic(),
+            requirement_guarantee_topic(),
+            requirement_trace_topic(),
+        ],
+        _ => vec![
+            AilRequirementsTopic {
+                code: "AILR006",
+                message: "requirements are missing domain data coverage",
+                terms: &[
+                    "field", "fields", "data", "object", "objects", "thing", "record",
+                ],
+                repair: "Name the domain objects and important fields the application stores.",
+            },
+            AilRequirementsTopic {
+                code: "AILR007",
+                message: "requirements are missing action coverage",
+                terms: &["action", "behavior", "when", "create", "close", "update"],
+                repair: "Name the application actions or behaviors that must compile.",
+            },
+            AilRequirementsTopic {
+                code: "AILR008",
+                message: "requirements are missing runtime input or precondition coverage",
+                terms: &["input", "requires", "precondition", "must", "needs"],
+                repair: "Name the runtime inputs or preconditions required by each action.",
+            },
+            requirement_failure_topic(),
+            requirement_guarantee_topic(),
+            requirement_trace_topic(),
+        ],
+    }
+}
+
+fn requirement_failure_topic() -> AilRequirementsTopic {
+    AilRequirementsTopic {
+        code: "AILR003",
+        message: "requirements are missing failure coverage",
+        terms: &[
+            "failure",
+            "fails",
+            "error",
+            "denied",
+            "not found",
+            "missing",
+        ],
+        repair: "Name at least one expected failure case or explicitly state what cannot fail.",
+    }
+}
+
+fn requirement_trace_topic() -> AilRequirementsTopic {
+    AilRequirementsTopic {
+        code: "AILR004",
+        message: "requirements are missing trace coverage",
+        terms: &["trace", "traces", "records", "audit"],
+        repair: "Name trace or audit events the compiled bytecode must emit.",
+    }
+}
+
+fn requirement_guarantee_topic() -> AilRequirementsTopic {
+    AilRequirementsTopic {
+        code: "AILR005",
+        message: "requirements are missing guarantee coverage",
+        terms: &[
+            "guarantee",
+            "guarantees",
+            "always",
+            "must preserve",
+            "does not",
+        ],
+        repair: "Name guarantees that must hold after execution.",
+    }
+}
+
+fn requirements_mentions_any(text: &str, terms: &[&str]) -> bool {
+    terms.iter().any(|term| text.contains(term))
 }
 
 fn build_ail_repair_prompt(
