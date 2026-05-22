@@ -403,8 +403,11 @@ elaboration so the `SpecCaptured` transition is also represented in AIL
 bytecode. It optionally runs `CompareAgentPromptPortability` when
 `--target-model <name>` is supplied, runs `AcceptCoreIR` after AIL-Core checking
 and any compiler pass, and then runs its `CompileApplication` action against the
-completed build state before target bytecode emission. After the Rust bootstrap
-compiler emits and verifies the target artifact, the agent runs
+completed build state before target bytecode emission. For saved
+`--core-file` builds, the agent starts from an explicit `CoreLoaded` state,
+loads the checked core into the `BuildRequest`, and still runs `AcceptCoreIR`
+before `CompileApplication`. After the Rust bootstrap compiler emits and
+verifies the target artifact, the agent runs
 `VerifyBytecodeArtifact` so the final artifact boundary is also represented in
 AIL bytecode. This keeps the developer-facing build coordinator in AIL bytecode
 instead of adding a host-language orchestration layer. With `--artifact-dir`,

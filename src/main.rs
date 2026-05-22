@@ -811,6 +811,42 @@ fn run_ail_build_agent_accept_core(
     Ok(agent_start)
 }
 
+fn start_ail_build_agent_from_checked_core(
+    core: &eigl::ail::AilCore,
+    requirements_artifact: Option<&str>,
+    spec_text: Option<&str>,
+    capture_prompt: Option<&str>,
+) -> AilBuildAgentStart {
+    let mut state = BTreeMap::from([
+        ("buildrequest.id".to_string(), core.package.name.clone()),
+        (
+            "buildrequest.developer prompt".to_string(),
+            capture_prompt.unwrap_or("skipped").to_string(),
+        ),
+        (
+            "buildrequest.requirements".to_string(),
+            requirements_artifact.unwrap_or("skipped").to_string(),
+        ),
+        (
+            "buildrequest.spec".to_string(),
+            spec_text.unwrap_or("skipped").to_string(),
+        ),
+        (
+            "buildrequest.status".to_string(),
+            if spec_text.is_some() {
+                "SpecCaptured".to_string()
+            } else {
+                "CoreLoaded".to_string()
+            },
+        ),
+    ]);
+    state.insert("buildrequest.core ir".to_string(), "Pending".to_string());
+    AilBuildAgentStart {
+        state,
+        trace: Vec::new(),
+    }
+}
+
 fn run_ail_build_agent(
     agent_path: &str,
     core: &eigl::ail::AilCore,
@@ -915,7 +951,12 @@ fn run_ail_build_agent(
         trace.extend(compare_run.trace);
         compile_state = compare_run.final_state;
     }
-    let build_status = if spec_text.is_some() {
+    let build_status = if compile_state
+        .get("buildrequest.status")
+        .is_some_and(|status| status == "CoreChecked")
+    {
+        "CoreChecked"
+    } else if spec_text.is_some() {
         "SpecCaptured"
     } else {
         "CoreChecked"
@@ -1137,22 +1178,25 @@ fn run_ail_build_from_core(
             return Ok(1);
         }
     }
-    let agent_start = match agent_start {
-        Some(agent_start) => {
-            if let Some(agent_path) = &cli_options.ail_build_agent {
-                let core_text = render_ail_core(&core);
-                Some(run_ail_build_agent_accept_core(
-                    agent_path,
-                    agent_start,
-                    requirements_artifact,
-                    spec_text,
-                    &core_text,
-                )?)
-            } else {
-                Some(agent_start)
-            }
-        }
-        None => None,
+    let agent_start = if let Some(agent_path) = &cli_options.ail_build_agent {
+        let core_text = render_ail_core(&core);
+        let agent_start = agent_start.unwrap_or_else(|| {
+            start_ail_build_agent_from_checked_core(
+                &core,
+                requirements_artifact,
+                spec_text,
+                capture_prompt,
+            )
+        });
+        Some(run_ail_build_agent_accept_core(
+            agent_path,
+            agent_start,
+            requirements_artifact,
+            spec_text,
+            &core_text,
+        )?)
+    } else {
+        agent_start
     };
     let mut agent_run = if let Some(agent_path) = &cli_options.ail_build_agent {
         Some(run_ail_build_agent(

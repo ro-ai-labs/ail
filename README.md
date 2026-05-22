@@ -82,8 +82,10 @@ runs `AcceptCoreIR` after AIL-Core is checked and before compilation,
 runs `CompileApplication` over the completed build state before target bytecode
 emission, runs `VerifyBytecodeArtifact` after the emitted bytecode verifies, and,
 with `--artifact-dir`, writes `agent.ailbc.json` and `agent-trace.txt`. When
-`ail-build --pass` is used with `--artifact-dir`, it
-also writes `pass.ailbc.json` and `pass-trace.txt`. On `ail-pass`,
+`ail-build --core-file` is used with `--agent`, the saved checked core is loaded
+as an agent-visible `CoreLoaded` artifact and accepted through `AcceptCoreIR`
+before `CompileApplication`. When `ail-build --pass` is used with
+`--artifact-dir`, it also writes `pass.ailbc.json` and `pass-trace.txt`. On `ail-pass`,
 `--artifact-dir <dir>` writes
 `pass.ailbc.json`, `input.ail-core.txt`, `output.ail-core.txt`, and
 `trace.txt` while stdout remains the transformed AIL-Core artifact.

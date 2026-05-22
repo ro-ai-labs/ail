@@ -4240,6 +4240,51 @@ cargo test --test ail_toolchain cli_ail_build_agent_accepts_checked_core_before_
 Expected: the agent trace records `AcceptCoreIR`, `CoreChecked`, and
 `CoreIrAccepted` before `CompileApplication`.
 
+### Task 101: AIL Build Agent Accepts Saved AIL-Core Artifacts
+
+**Files:**
+- Modify: `examples/ail_toolchain_agent.ail/spec.ail-spec.md`
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing saved-core agent test**
+
+Add an `ail-build --core-file --agent` CLI test that requires the agent trace to
+record `AcceptCoreIR` before `CompileApplication`, read the loaded
+`BuildRequest` core ir, write `buildrequest.core review report=Accepted`,
+change status to `CoreChecked`, and record `CoreIrAccepted`.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_agent_accepts_saved_core_before_compile -- --nocapture
+```
+
+Expected: failure because saved-core agent builds currently jump directly from
+the host-loaded AIL-Core artifact to `CompileApplication`.
+
+- [x] **Step 3: Implement saved-core agent acceptance**
+
+Add a `CoreLoaded` status for loaded checked-core artifacts, allow
+`AcceptCoreIR` to accept `SpecCaptured` or `CoreLoaded`, synthesize an agent
+`BuildRequest` state for saved-core builds, and run `AcceptCoreIR` before
+`CompileApplication`.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_agent_accepts_saved_core_before_compile -- --nocapture
+```
+
+Expected: saved-core builds record `AcceptCoreIR`, `CoreChecked`, and
+`CoreIrAccepted` before `CompileApplication`.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

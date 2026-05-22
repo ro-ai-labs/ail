@@ -5041,6 +5041,67 @@ fn cli_ail_build_runs_toolchain_agent_bytecode() {
 }
 
 #[test]
+fn cli_ail_build_agent_accepts_saved_core_before_compile() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("support_ticket.ail");
+    let agent_package = fixture("ail_toolchain_agent.ail");
+    let core_path = std::env::temp_dir().join(format!(
+        "eigl-support-ticket-agent-accept-core-file-{}.ail-core.txt",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "eigl-ail-build-agent-core-file-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+    let package_model = load_ail_package_dir(&package).unwrap();
+    let document = parse_ail_package_document(&package_model).unwrap();
+    let core = elaborate_ail_core(&package_model, &document);
+    assert_eq!(check_ail_core(&core), Vec::<String>::new());
+    fs::write(&core_path, render_ail_core(&core)).unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-build",
+            &package,
+            "--core-file",
+            core_path.to_str().unwrap(),
+            "--agent",
+            &agent_package,
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let bytecode = parse_ail_bytecode(&stdout).unwrap();
+    assert_eq!(verify_ail_bytecode(&bytecode), Vec::<String>::new());
+
+    let agent_trace = fs::read_to_string(artifact_dir.join("agent-trace.txt")).unwrap();
+    let accept_core_index = agent_trace
+        .find("action AcceptCoreIR started")
+        .unwrap_or_else(|| panic!("{agent_trace}"));
+    let compile_index = agent_trace
+        .find("action CompileApplication started")
+        .unwrap_or_else(|| panic!("{agent_trace}"));
+    assert!(accept_core_index < compile_index, "{agent_trace}");
+    assert!(agent_trace.contains("read buildrequest.core ir"));
+    assert!(agent_trace.contains("write buildrequest.core review report=Accepted"));
+    assert!(agent_trace.contains("write buildrequest.status=CoreChecked"));
+    assert!(agent_trace.contains("trace CoreIrAccepted"));
+
+    fs::remove_file(core_path).unwrap();
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
 fn cli_ail_build_agent_records_requirements_capture_before_compile() {
     let binary = env!("CARGO_BIN_EXE_eigl");
     let package = fixture("support_ticket.ail");
@@ -5671,8 +5732,13 @@ fn cli_ail_build_agent_capture_failure_happens_before_llm_request() {
 fn cli_ail_build_agent_compile_failure_happens_before_bytecode_lowering() {
     let binary = env!("CARGO_BIN_EXE_eigl");
     let package = fixture("support_ticket.ail");
+    let agent_package = fixture("ail_toolchain_agent.ail");
     let core_path = std::env::temp_dir().join(format!(
         "eigl-support-ticket-agent-prelower-core-{}.ail-core.txt",
+        std::process::id()
+    ));
+    let agent_bytecode_path = std::env::temp_dir().join(format!(
+        "eigl-toolchain-agent-missing-compile-{}.ailbc.json",
         std::process::id()
     ));
     let artifact_dir = std::env::temp_dir().join(format!(
@@ -5687,6 +5753,24 @@ fn cli_ail_build_agent_compile_failure_happens_before_bytecode_lowering() {
     let unsupported_profile_core =
         render_ail_core(&core).replace("profile: Application", "profile: Experimental");
     fs::write(&core_path, unsupported_profile_core).unwrap();
+    let agent_package_model = load_ail_package_dir(&agent_package).unwrap();
+    let agent_document = parse_ail_package_document(&agent_package_model).unwrap();
+    let agent_core = elaborate_ail_core(&agent_package_model, &agent_document);
+    assert_eq!(check_ail_core(&agent_core), Vec::<String>::new());
+    let mut agent_bytecode = compile_ail_core_bytecode(&agent_core).unwrap();
+    assert!(agent_bytecode.actions.contains_key("AcceptCoreIR"));
+    assert!(
+        agent_bytecode
+            .actions
+            .remove("CompileApplication")
+            .is_some()
+    );
+    assert_eq!(verify_ail_bytecode(&agent_bytecode), Vec::<String>::new());
+    fs::write(
+        &agent_bytecode_path,
+        format!("{}\n", render_ail_bytecode(&agent_bytecode)),
+    )
+    .unwrap();
 
     let output = Command::new(binary)
         .args([
@@ -5695,7 +5779,7 @@ fn cli_ail_build_agent_compile_failure_happens_before_bytecode_lowering() {
             "--core-file",
             core_path.to_str().unwrap(),
             "--agent",
-            &package,
+            agent_bytecode_path.to_str().unwrap(),
             "--artifact-dir",
             artifact_dir.to_str().unwrap(),
         ])
@@ -5720,6 +5804,7 @@ fn cli_ail_build_agent_compile_failure_happens_before_bytecode_lowering() {
     assert!(!artifact_dir.exists());
 
     fs::remove_file(core_path).unwrap();
+    fs::remove_file(agent_bytecode_path).unwrap();
 }
 
 #[test]

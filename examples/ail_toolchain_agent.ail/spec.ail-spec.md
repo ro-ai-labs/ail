@@ -17,7 +17,7 @@ A BuildRequest has:
 - bytecode artifact: Text
 - bytecode verification report: Text
 - prompt portability report: Text
-- status: State<PromptReceived, RequirementsCaptured, SpecCaptured, CoreChecked, BytecodeReady, NeedsClarification>
+- status: State<PromptReceived, RequirementsCaptured, SpecCaptured, CoreLoaded, CoreChecked, BytecodeReady, NeedsClarification>
 - target model: Text
 
 The application shows:
@@ -66,13 +66,13 @@ Action: Accept core IR.
 When the toolchain agent accepts checked AIL-Core IR:
 
 - the system requires the BuildRequest to exist
-- the system requires the BuildRequest status to be SpecCaptured
+- the system requires the BuildRequest status to be SpecCaptured or CoreLoaded
 - the system reads the BuildRequest requirements
 - the system reads the BuildRequest spec
 - the system reads the BuildRequest core ir
 - the system changes the BuildRequest core review report to Accepted
 - the system changes the BuildRequest status to CoreChecked
-- the system guarantees the checked AIL-Core IR preserves the accepted spec and remains eligible for AIL-Bytecode compilation
+- the system guarantees the checked AIL-Core IR preserves the accepted spec or saved core artifact boundary and remains eligible for AIL-Bytecode compilation
 - the system records a trace event named CoreIrAccepted
 
 Action: Compile application.
