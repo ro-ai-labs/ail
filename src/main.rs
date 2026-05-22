@@ -533,6 +533,13 @@ fn ail_artifact_fingerprint(text: &str) -> String {
     format!("fnv64:{hash:016x}")
 }
 
+fn render_ail_pass_manifest(pass_bytecode_text: &str) -> String {
+    let pass_fingerprint = ail_artifact_fingerprint(pass_bytecode_text);
+    format!(
+        "AIL-Pass-Manifest:\ncompiler-pass pass.ailbc.json {pass_fingerprint}\ncore-input input.ail-core.txt\ncore-output output.ail-core.txt\ntrace trace.txt\n"
+    )
+}
+
 fn write_ail_pass_artifacts(
     artifact_dir: &str,
     pass_bytecode_text: &str,
@@ -557,6 +564,11 @@ fn write_ail_pass_artifacts(
         .map_err(|error| format!("failed to write ail-pass output core artifact: {error}"))?;
     fs::write(root.join("trace.txt"), format!("{}\n", trace.join("\n")))
         .map_err(|error| format!("failed to write ail-pass trace artifact: {error}"))?;
+    fs::write(
+        root.join("manifest.ail-pass.txt"),
+        render_ail_pass_manifest(pass_bytecode_text),
+    )
+    .map_err(|error| format!("failed to write ail-pass manifest artifact: {error}"))?;
     Ok(())
 }
 

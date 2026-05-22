@@ -2132,9 +2132,10 @@ fn cli_ail_pass_writes_auditable_intermediate_artifacts() {
     let input_core = fs::read_to_string(artifact_dir.join("input.ail-core.txt")).unwrap();
     let output_core = fs::read_to_string(artifact_dir.join("output.ail-core.txt")).unwrap();
     let trace = fs::read_to_string(artifact_dir.join("trace.txt")).unwrap();
+    let expected_pass_fingerprint = fnv64_fingerprint(&pass_bytecode);
 
     assert_eq!(output_core, stdout);
-    assert_eq!(pass_fingerprint.trim(), fnv64_fingerprint(&pass_bytecode));
+    assert_eq!(pass_fingerprint.trim(), expected_pass_fingerprint);
     assert!(pass_bytecode.contains(r#""package":"ail-meta-permissions""#));
     assert!(pass_bytecode.contains(r#""opcode":"CORE_INFER_READ_PERMISSIONS""#));
     assert!(!input_core.contains("node Permission read Ticket.status"));
@@ -2147,6 +2148,24 @@ fn cli_ail_pass_writes_auditable_intermediate_artifacts() {
 
     let parsed_bytecode = parse_ail_bytecode(&pass_bytecode).unwrap();
     assert_eq!(verify_ail_bytecode(&parsed_bytecode), Vec::<String>::new());
+
+    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-pass.txt")).unwrap();
+    assert!(manifest.contains("AIL-Pass-Manifest:"), "{manifest}");
+    assert!(
+        manifest.contains(&format!(
+            "compiler-pass pass.ailbc.json {expected_pass_fingerprint}"
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains("core-input input.ail-core.txt"),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains("core-output output.ail-core.txt"),
+        "{manifest}"
+    );
+    assert!(manifest.contains("trace trace.txt"), "{manifest}");
 
     fs::remove_dir_all(&artifact_dir).unwrap();
 }

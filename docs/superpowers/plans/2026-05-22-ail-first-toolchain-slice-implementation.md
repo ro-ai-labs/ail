@@ -4650,6 +4650,48 @@ cargo test --test ail_toolchain cli_ail_build_agent_accepts_compiler_pass_output
 Expected: the manifest lists the review artifacts, traces, and bytecode
 fingerprints while the existing pass and agent acceptance flow still verifies.
 
+### Task 110: Standalone AIL Pass Writes Artifact Manifest
+
+**Files:**
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing pass manifest test**
+
+Extend the `ail-pass --artifact-dir` test to require
+`manifest.ail-pass.txt`. The manifest must list the pass bytecode fingerprint,
+input core artifact, output core artifact, and pass execution trace.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_pass_writes_auditable_intermediate_artifacts -- --nocapture
+```
+
+Expected: failure because standalone `ail-pass --artifact-dir` writes the
+individual artifacts and pass fingerprint but no manifest tying them together.
+
+- [x] **Step 3: Implement pass manifest output**
+
+Add a deterministic `manifest.ail-pass.txt` renderer to the standalone pass
+artifact writer. Keep stdout unchanged and write the manifest after the pass
+bytecode, pass fingerprint, input core, output core, and trace artifacts.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_pass_writes_auditable_intermediate_artifacts -- --nocapture
+```
+
+Expected: the manifest lists the pass bytecode fingerprint, core artifacts, and
+execution trace while stdout remains the transformed AIL-Core artifact.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**
