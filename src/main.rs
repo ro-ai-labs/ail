@@ -92,6 +92,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
             | "ail-lower"
             | "ail-run"
             | "ail-conformance"
+            | "ail-requirements"
             | "ail-draft"
             | "ail-build"
             | "ail-pass"
@@ -369,7 +370,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
 }
 
 fn usage() -> String {
-    "usage: eigl <check|graph|views|simulate|lower|run|dispatch|emit|schedule|dequeue|serve|normalize|patch|llm-roundtrip|view-model|ail-check|ail-core|ail-flow|ail-lower|ail-run|ail-vm|ail-conformance|ail-draft|ail-build|ail-pass|ail-patch> <path> [patch|target-package] [--intent name] [--action name] [--prompt text] [--pass path] [--artifact-dir path] [--state-in path] [--state-out path] [--data-in path] [--data-out path] [--operation-output name=value] [--listen addr] [--llm-endpoint url] [method path|trigger] [key=value ...]"
+    "usage: eigl <check|graph|views|simulate|lower|run|dispatch|emit|schedule|dequeue|serve|normalize|patch|llm-roundtrip|view-model|ail-check|ail-core|ail-flow|ail-lower|ail-run|ail-vm|ail-conformance|ail-requirements|ail-draft|ail-build|ail-pass|ail-patch> <path> [patch|target-package] [--intent name] [--action name] [--prompt text] [--pass path] [--artifact-dir path] [--state-in path] [--state-out path] [--data-in path] [--data-out path] [--operation-output name=value] [--listen addr] [--llm-endpoint url] [method path|trigger] [key=value ...]"
         .to_string()
 }
 
@@ -559,6 +560,26 @@ fn select_single_ail_pass_action(
     ))
 }
 
+fn draft_checked_ail_requirements_for_package(
+    package: &eigl::ail::AilPackage,
+    prompt: &str,
+    endpoint: &str,
+) -> Result<(String, Vec<eigl::ail::AilDiagnostic>), String> {
+    let mut requirements = draft_ail_requirements(package, prompt, endpoint)?;
+    let mut diagnostics = check_ail_requirements(package, &requirements);
+    if !diagnostics.is_empty() {
+        requirements = repair_ail_requirements_from_diagnostics(
+            package,
+            prompt,
+            &requirements,
+            &diagnostics,
+            endpoint,
+        )?;
+        diagnostics = check_ail_requirements(package, &requirements);
+    }
+    Ok((requirements, diagnostics))
+}
+
 fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Result<u8, String> {
     if command == "ail-pass" {
         return run_ail_pass_command(path, cli_options);
@@ -633,6 +654,27 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
         }
         return Ok(1);
     }
+    if command == "ail-requirements" {
+        let prompt = cli_options
+            .ail_prompt
+            .as_deref()
+            .ok_or_else(|| "ail-requirements requires --prompt <text>".to_string())?;
+        let endpoint = cli_options
+            .llm_endpoint
+            .as_deref()
+            .unwrap_or(&package.metadata.base_llm_endpoint);
+        let (requirements, diagnostics) =
+            draft_checked_ail_requirements_for_package(&package, prompt, endpoint)?;
+        if !diagnostics.is_empty() {
+            println!("ail-requirements diagnostics:");
+            for diagnostic in diagnostics {
+                println!("{}", diagnostic.detailed_message());
+            }
+            return Ok(1);
+        }
+        println!("{requirements}");
+        return Ok(0);
+    }
     if command == "ail-build" {
         let prompt = cli_options
             .ail_prompt
@@ -642,18 +684,8 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
             .llm_endpoint
             .as_deref()
             .unwrap_or(&package.metadata.base_llm_endpoint);
-        let mut requirements = draft_ail_requirements(&package, prompt, endpoint)?;
-        let mut requirements_diagnostics = check_ail_requirements(&package, &requirements);
-        if !requirements_diagnostics.is_empty() {
-            requirements = repair_ail_requirements_from_diagnostics(
-                &package,
-                prompt,
-                &requirements,
-                &requirements_diagnostics,
-                endpoint,
-            )?;
-            requirements_diagnostics = check_ail_requirements(&package, &requirements);
-        }
+        let (requirements, requirements_diagnostics) =
+            draft_checked_ail_requirements_for_package(&package, prompt, endpoint)?;
         if !requirements_diagnostics.is_empty() {
             println!("ail-build requirements diagnostics:");
             for diagnostic in requirements_diagnostics {
@@ -960,7 +992,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
             continue;
         }
         if arg == "--prompt" {
-            if !matches!(command, "ail-draft" | "ail-build") {
+            if !matches!(command, "ail-requirements" | "ail-draft" | "ail-build") {
                 return Err(usage());
             }
             let Some(prompt) = args.get(index + 1) else {
@@ -1064,7 +1096,10 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         }
 
         if arg == "--llm-endpoint" {
-            if !matches!(command, "llm-roundtrip" | "ail-draft" | "ail-build") {
+            if !matches!(
+                command,
+                "llm-roundtrip" | "ail-requirements" | "ail-draft" | "ail-build"
+            ) {
                 return Err(usage());
             }
             let Some(url) = args.get(index + 1) else {

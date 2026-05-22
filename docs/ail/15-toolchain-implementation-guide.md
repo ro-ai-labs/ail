@@ -334,6 +334,12 @@ then executes through the AIL bytecode VM for supported Application packages.
 reparsing the source AIL package, making bytecode a real artifact boundary
 instead of only a display format. The VM verifier rejects unknown opcodes and
 missing required operands before executing saved bytecode.
+`ail-requirements` runs the first developer-facing agent capture stage by asking
+the package base LLM for an AIL-Requirements artifact, checking profile-specific
+coverage, and sending diagnostics back for one repair pass when the artifact is
+too thin. It prints only the checked requirements artifact, so developers can
+review or compare model-specific capture behavior before committing to AIL-Spec
+and bytecode generation.
 `ail-pass` compiles an AIL-Meta compiler pass package into verified
 AIL-Bytecode, or reads a saved Compiler-profile AIL-Bytecode artifact, checks a
 target package into AIL-Core, executes the selected pass bytecode over that

@@ -4336,6 +4336,65 @@ fn cli_ail_build_repairs_incomplete_requirements_before_spec_drafting() {
 }
 
 #[test]
+fn cli_ail_requirements_repairs_incomplete_capture_before_printing() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("support_ticket.ail");
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let incomplete_requirements = "AIL-Requirements:\n- Build support tickets.\n";
+    let incomplete_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(incomplete_requirements)
+    );
+    let repaired_requirements = concat!(
+        "AIL-Requirements:\n",
+        "- The application manages support tickets with Ticket fields id, title, status, and secret internal notes.\n",
+        "- The CloseTicket action requires ticket id input and ticket status not to be Closed.\n",
+        "- Failure NotFound happens when ticket id is missing and records TicketNotFound.\n",
+        "- The action guarantees closed tickets do not appear in the open queue.\n",
+        "- The action records trace event TicketClosed.\n"
+    );
+    let repaired_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(repaired_requirements)
+    );
+    let server = serve_chat_responses(listener, vec![incomplete_body, repaired_body]);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-requirements",
+            &package,
+            "--prompt",
+            "Capture requirements for a support ticket app",
+            "--llm-endpoint",
+            &format!("http://127.0.0.1:{}/v1/chat/completions", addr.port()),
+        ])
+        .output()
+        .unwrap();
+
+    let request_bodies = server.join().unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(request_bodies.len(), 2);
+    assert!(request_bodies[0].contains("Draft AIL requirements"));
+    assert!(request_bodies[0].contains("Capture requirements for a support ticket app"));
+    assert!(request_bodies[1].contains("Repair AIL requirements"));
+    assert!(request_bodies[1].contains("AILR003 requirements are missing failure coverage"));
+    assert!(!request_bodies[1].contains("Draft an AIL-Spec candidate"));
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.starts_with("AIL-Requirements:\n"), "{stdout}");
+    assert!(stdout.contains("Ticket fields id, title, status, and secret internal notes"));
+    assert!(stdout.contains("Failure NotFound happens when ticket id is missing"));
+    assert!(stdout.contains("trace event TicketClosed"));
+    assert!(!stdout.contains("Action: Close ticket."), "{stdout}");
+}
+
+#[test]
 fn cli_ail_build_writes_requirements_spec_core_and_bytecode_artifacts() {
     let binary = env!("CARGO_BIN_EXE_eigl");
     let package = fixture("support_ticket.ail");

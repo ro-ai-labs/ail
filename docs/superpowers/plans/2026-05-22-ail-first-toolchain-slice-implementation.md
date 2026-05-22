@@ -3373,6 +3373,56 @@ Expected: `ail-build --pass --artifact-dir` writes the pass bytecode and trace,
 the pass bytecode verifies, and the trace records pass start, transform opcode,
 and permission insertion.
 
+### Task 83: Requirements Capture CLI Stage
+
+**Files:**
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing `ail-requirements` CLI test**
+
+Add a CLI test that runs:
+
+```bash
+eigl ail-requirements examples/support_ticket.ail --prompt "Capture requirements for a support ticket app" --llm-endpoint <mock>
+```
+
+The mock base LLM first returns incomplete requirements, then repaired
+requirements. Require the command to print only the checked AIL-Requirements
+artifact and never ask for an AIL-Spec candidate.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_requirements_repairs_incomplete_capture_before_printing -- --nocapture
+```
+
+Expected: failure before any mock LLM request because `ail-requirements` is not
+a recognized AIL command.
+
+- [x] **Step 3: Implement checked requirements capture**
+
+Route `ail-requirements` through package loading, `--prompt`, optional
+`--llm-endpoint`, AIL-Requirements drafting, profile-specific requirements
+coverage checking, and one diagnostics-guided repair pass. Refactor `ail-build`
+to reuse the same checked requirements helper before spec drafting.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_requirements_repairs_incomplete_capture_before_printing -- --nocapture
+```
+
+Expected: the command sends a draft requirements prompt, sends one repair prompt
+when coverage is incomplete, prints the repaired AIL-Requirements artifact, and
+does not proceed to AIL-Spec drafting.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

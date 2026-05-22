@@ -40,8 +40,11 @@ saved AIL-Bytecode artifact directly,
 <PassName>` compiles an AIL-Meta compiler pass package, or reads a saved
 Compiler-profile AIL-Bytecode artifact, and applies it to a checked target
 package's AIL-Core, `ail-conformance` checks accepted and rejected fixtures,
-`ail-draft --prompt <text>` asks the package base LLM endpoint for an AIL-Spec
-candidate before parsing and checking it, and
+`ail-requirements --prompt <text>` asks the package base LLM endpoint for a
+checked AIL-Requirements artifact and gives the base LLM one diagnostics-guided
+repair pass if required coverage is missing, `ail-draft --prompt <text>` asks
+the package base LLM endpoint for an AIL-Spec candidate before parsing and
+checking it, and
 `ail-build --prompt <text>` asks the base LLM for requirements, asks it to turn
 those requirements into an AIL-Spec candidate for the package profile, gives
 the base LLM one diagnostics-guided repair pass if requirements coverage or the
@@ -86,6 +89,7 @@ cargo run -- ail-conformance examples/ail_toolchain_agent.ail
 cargo run -- ail-conformance examples/refund_tool.ail
 cargo run -- ail-conformance examples/compiler_pass.ail
 cargo run -- ail-conformance examples/network_driver.ail
+cargo run -- ail-requirements examples/support_ticket.ail --prompt "Capture requirements for a support ticket app" --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
 cargo run -- ail-draft examples/support_ticket.ail --prompt "Draft a support ticket app with private internal notes" --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
 cargo run -- ail-build examples/support_ticket.ail --prompt "Build a support ticket bytecode artifact" --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
 cargo run -- ail-build examples/support_ticket.ail --prompt "Build a support ticket bytecode artifact" --artifact-dir /tmp/support-ticket-ail-build --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
