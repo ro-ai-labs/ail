@@ -413,7 +413,12 @@ native backend rejects future unknown VM opcodes and unlowered
 With `--artifact-dir`, `ail-lower` writes `checked.ail-core.txt`,
 `artifact.ailbc.json`, `artifact.fingerprint.txt`, `manifest.ail-lower.txt`,
 and `manifest.fingerprint.txt`, keeping direct IR-to-VM-instruction lowering
-auditable while stdout remains the parseable VM instruction artifact.
+auditable while stdout remains the parseable VM instruction artifact. With
+`--agent <agent-package-or-bytecode> --artifact-dir`, `ail-lower` must compile
+or load an AIL-authored Application agent and run its `VerifyLowerManifest`
+bytecode action against the checked core, bytecode artifact, bytecode
+fingerprint, lower manifest, and manifest fingerprint before writing
+`agent.ailbc.json`, `agent.fingerprint.txt`, and `agent-trace.txt`.
 `ail-check`, `ail-core`, `ail-flow`, `ail-lower`, `ail-compile`, `ail-run`,
 and `ail-build` can use `--spec-file <path>` to read a saved generated
 AIL-Spec artifact instead of the package entry spec, preserving the package

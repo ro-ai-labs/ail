@@ -2128,6 +2128,10 @@ fn ail_toolchain_agent_package_lowers_to_verified_bytecode() {
         "{rendered}"
     );
     assert!(
+        rendered.contains(r#""action":"VerifyLowerManifest""#),
+        "{rendered}"
+    );
+    assert!(
         rendered.contains(r#""action":"VerifyTargetArtifact""#),
         "{rendered}"
     );
@@ -3260,6 +3264,80 @@ fn cli_ail_lower_accepts_saved_core_file_artifact() {
     assert_eq!(manifest_fingerprint.trim(), fnv64_fingerprint(&manifest));
 
     fs::remove_file(core_path).unwrap();
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
+fn cli_ail_lower_agent_verifies_manifest_artifacts() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("support_ticket.ail");
+    let agent_package = fixture("ail_toolchain_agent.ail");
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "eigl-ail-lower-agent-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-lower",
+            &package,
+            "--agent",
+            &agent_package,
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let agent_bytecode = fs::read_to_string(artifact_dir.join("agent.ailbc.json")).unwrap();
+    assert!(agent_bytecode.contains(r#""package":"ail-toolchain-agent""#));
+    assert!(agent_bytecode.contains(r#""action":"VerifyLowerManifest""#));
+    let agent_fingerprint = fs::read_to_string(artifact_dir.join("agent.fingerprint.txt")).unwrap();
+    assert_eq!(agent_fingerprint.trim(), fnv64_fingerprint(&agent_bytecode));
+    let parsed_agent = parse_ail_bytecode(&agent_bytecode).unwrap();
+    assert_eq!(verify_ail_bytecode(&parsed_agent), Vec::<String>::new());
+
+    let agent_trace = fs::read_to_string(artifact_dir.join("agent-trace.txt")).unwrap();
+    assert!(agent_trace.contains("action VerifyLowerManifest started"));
+    assert!(agent_trace.contains("read buildrequest.core ir"));
+    assert!(agent_trace.contains("read buildrequest.bytecode artifact"));
+    assert!(agent_trace.contains("read buildrequest.bytecode fingerprint"));
+    assert!(agent_trace.contains("read buildrequest.artifact manifest"));
+    assert!(agent_trace.contains("read buildrequest.artifact manifest fingerprint"));
+    assert!(
+        agent_trace.contains("write buildrequest.artifact manifest verification report=Verified")
+    );
+    assert!(agent_trace.contains("trace LowerManifestVerified"));
+
+    let bytecode_artifact = fs::read_to_string(artifact_dir.join("artifact.ailbc.json")).unwrap();
+    assert_eq!(bytecode_artifact, String::from_utf8_lossy(&output.stdout));
+    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-lower.txt")).unwrap();
+    assert!(
+        manifest.contains(&format!(
+            "bytecode artifact.ailbc.json {}",
+            fnv64_fingerprint(&bytecode_artifact)
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "agent agent.ailbc.json {}",
+            fnv64_fingerprint(&agent_bytecode)
+        )),
+        "{manifest}"
+    );
+    assert!(manifest.contains("trace agent-trace.txt"), "{manifest}");
+    let manifest_fingerprint =
+        fs::read_to_string(artifact_dir.join("manifest.fingerprint.txt")).unwrap();
+    assert_eq!(manifest_fingerprint.trim(), fnv64_fingerprint(&manifest));
+
     fs::remove_dir_all(artifact_dir).unwrap();
 }
 

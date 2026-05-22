@@ -417,6 +417,13 @@ struct AilPassArtifactSet<'a> {
     agent_native_executables: &'a [AilNativeArtifact],
 }
 
+struct AilLowerArtifactSet<'a> {
+    core_text: &'a str,
+    bytecode_text: &'a str,
+    agent_bytecode_text: Option<&'a str>,
+    agent_trace: Option<&'a [String]>,
+}
+
 struct AilConformanceArtifactSet<'a> {
     report_text: &'a str,
     agent_bytecode_text: Option<&'a str>,
@@ -615,32 +622,65 @@ fn write_ail_build_artifacts(
     Ok(())
 }
 
-fn render_ail_lower_manifest(bytecode_fingerprint: &str) -> String {
-    format!(
-        "AIL-Lower-Manifest:\nartifact checked.ail-core.txt\nbytecode artifact.ailbc.json {bytecode_fingerprint}\n"
-    )
+fn render_ail_lower_manifest(artifacts: &AilLowerArtifactSet<'_>) -> String {
+    let mut lines = vec![
+        "AIL-Lower-Manifest:".to_string(),
+        "artifact checked.ail-core.txt".to_string(),
+        format!(
+            "bytecode artifact.ailbc.json {}",
+            ail_artifact_fingerprint(artifacts.bytecode_text)
+        ),
+    ];
+    if let Some(agent_bytecode_text) = artifacts.agent_bytecode_text {
+        lines.push(format!(
+            "agent agent.ailbc.json {}",
+            ail_artifact_fingerprint(agent_bytecode_text)
+        ));
+    }
+    if artifacts.agent_trace.is_some() {
+        lines.push("trace agent-trace.txt".to_string());
+    }
+    format!("{}\n", lines.join("\n"))
 }
 
 fn write_ail_lower_artifacts(
     artifact_dir: &str,
-    core_text: &str,
-    bytecode_text: &str,
+    artifacts: AilLowerArtifactSet<'_>,
 ) -> Result<(), String> {
     let root = std::path::Path::new(artifact_dir);
     fs::create_dir_all(root).map_err(|error| {
         format!("failed to create ail-lower artifact dir {artifact_dir}: {error}")
     })?;
-    fs::write(root.join("checked.ail-core.txt"), core_text)
+    fs::write(root.join("checked.ail-core.txt"), artifacts.core_text)
         .map_err(|error| format!("failed to write ail-lower core artifact: {error}"))?;
-    fs::write(root.join("artifact.ailbc.json"), bytecode_text)
+    fs::write(root.join("artifact.ailbc.json"), artifacts.bytecode_text)
         .map_err(|error| format!("failed to write ail-lower bytecode artifact: {error}"))?;
-    let bytecode_fingerprint = ail_artifact_fingerprint(bytecode_text);
+    let bytecode_fingerprint = ail_artifact_fingerprint(artifacts.bytecode_text);
     fs::write(
         root.join("artifact.fingerprint.txt"),
         format!("{bytecode_fingerprint}\n"),
     )
     .map_err(|error| format!("failed to write ail-lower bytecode fingerprint artifact: {error}"))?;
-    let manifest_text = render_ail_lower_manifest(&bytecode_fingerprint);
+    if let Some(agent_bytecode_text) = artifacts.agent_bytecode_text {
+        fs::write(root.join("agent.ailbc.json"), agent_bytecode_text).map_err(|error| {
+            format!("failed to write ail-lower agent bytecode artifact: {error}")
+        })?;
+        fs::write(
+            root.join("agent.fingerprint.txt"),
+            format!("{}\n", ail_artifact_fingerprint(agent_bytecode_text)),
+        )
+        .map_err(|error| {
+            format!("failed to write ail-lower agent bytecode fingerprint artifact: {error}")
+        })?;
+    }
+    if let Some(agent_trace) = artifacts.agent_trace {
+        fs::write(
+            root.join("agent-trace.txt"),
+            format!("{}\n", agent_trace.join("\n")),
+        )
+        .map_err(|error| format!("failed to write ail-lower agent trace artifact: {error}"))?;
+    }
+    let manifest_text = render_ail_lower_manifest(&artifacts);
     fs::write(root.join("manifest.ail-lower.txt"), &manifest_text)
         .map_err(|error| format!("failed to write ail-lower manifest artifact: {error}"))?;
     fs::write(
@@ -1236,6 +1276,79 @@ fn run_ail_conformance_agent_verify_manifest(
     let run = run_ail_bytecode_action(&agent_bytecode, "VerifyConformanceManifest", state)?;
     if run.status != "succeeded" {
         let mut message = "ail-conformance agent VerifyConformanceManifest failed".to_string();
+        if let Some(failure) = run.failure {
+            message.push_str(&format!(": {failure}"));
+        }
+        if !run.trace.is_empty() {
+            message.push_str(&format!("\n{}", run.trace.join("\n")));
+        }
+        return Err(message);
+    }
+    Ok(AilBuildAgentRun {
+        bytecode: agent_bytecode,
+        bytecode_text: agent_bytecode_text,
+        state: run.final_state,
+        trace: run.trace,
+    })
+}
+
+fn run_ail_lower_agent_verify_manifest(
+    agent_path: &str,
+    core: &eigl::ail::AilCore,
+    core_text: &str,
+    bytecode_text: &str,
+) -> Result<AilBuildAgentRun, String> {
+    let (agent_bytecode, agent_bytecode_text) = load_verified_ail_build_agent(agent_path)?;
+    if !agent_bytecode.actions.contains_key("VerifyLowerManifest") {
+        return Err("ail-lower --agent requires a VerifyLowerManifest action".to_string());
+    }
+    let empty_agent_trace: &[String] = &[];
+    let manifest_text = render_ail_lower_manifest(&AilLowerArtifactSet {
+        core_text,
+        bytecode_text,
+        agent_bytecode_text: Some(agent_bytecode_text.as_str()),
+        agent_trace: Some(empty_agent_trace),
+    });
+    let manifest_fingerprint = ail_artifact_fingerprint(&manifest_text);
+    let run = run_ail_bytecode_action(
+        &agent_bytecode,
+        "VerifyLowerManifest",
+        BTreeMap::from([
+            (
+                "buildrequest.id".to_string(),
+                format!("{}-lower", core.package.name),
+            ),
+            (
+                "buildrequest.developer prompt".to_string(),
+                "skipped".to_string(),
+            ),
+            (
+                "buildrequest.requirements".to_string(),
+                "skipped".to_string(),
+            ),
+            ("buildrequest.spec".to_string(), "skipped".to_string()),
+            ("buildrequest.core ir".to_string(), core_text.to_string()),
+            (
+                "buildrequest.bytecode artifact".to_string(),
+                format!("Verified AIL-Bytecode ({} bytes)", bytecode_text.len()),
+            ),
+            (
+                "buildrequest.bytecode fingerprint".to_string(),
+                ail_artifact_fingerprint(bytecode_text),
+            ),
+            ("buildrequest.artifact manifest".to_string(), manifest_text),
+            (
+                "buildrequest.artifact manifest fingerprint".to_string(),
+                manifest_fingerprint,
+            ),
+            (
+                "buildrequest.status".to_string(),
+                "BytecodeReady".to_string(),
+            ),
+        ]),
+    )?;
+    if run.status != "succeeded" {
+        let mut message = "ail-lower agent VerifyLowerManifest failed".to_string();
         if let Some(failure) = run.failure {
             message.push_str(&format!(": {failure}"));
         }
@@ -2366,9 +2479,27 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
             return Ok(1);
         }
         let bytecode_text = format!("{}\n", render_ail_bytecode(&bytecode));
+        let core_text = format!("{}\n", render_ail_core(&core));
+        let agent_run = if let Some(agent_path) = &cli_options.ail_build_agent {
+            Some(run_ail_lower_agent_verify_manifest(
+                agent_path,
+                &core,
+                &core_text,
+                &bytecode_text,
+            )?)
+        } else {
+            None
+        };
         if let Some(artifact_dir) = &cli_options.artifact_dir {
-            let core_text = format!("{}\n", render_ail_core(&core));
-            write_ail_lower_artifacts(artifact_dir, &core_text, &bytecode_text)?;
+            write_ail_lower_artifacts(
+                artifact_dir,
+                AilLowerArtifactSet {
+                    core_text: &core_text,
+                    bytecode_text: &bytecode_text,
+                    agent_bytecode_text: agent_run.as_ref().map(|run| run.bytecode_text.as_str()),
+                    agent_trace: agent_run.as_ref().map(|run| run.trace.as_slice()),
+                },
+            )?;
         }
         print!("{bytecode_text}");
         return Ok(0);
@@ -2706,9 +2837,29 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
             }
             let bytecode = compile_ail_core_bytecode(&core)?;
             let bytecode_text = format!("{}\n", render_ail_bytecode(&bytecode));
+            let core_text = format!("{}\n", render_ail_core(&core));
+            let agent_run = if let Some(agent_path) = &cli_options.ail_build_agent {
+                Some(run_ail_lower_agent_verify_manifest(
+                    agent_path,
+                    &core,
+                    &core_text,
+                    &bytecode_text,
+                )?)
+            } else {
+                None
+            };
             if let Some(artifact_dir) = &cli_options.artifact_dir {
-                let core_text = format!("{}\n", render_ail_core(&core));
-                write_ail_lower_artifacts(artifact_dir, &core_text, &bytecode_text)?;
+                write_ail_lower_artifacts(
+                    artifact_dir,
+                    AilLowerArtifactSet {
+                        core_text: &core_text,
+                        bytecode_text: &bytecode_text,
+                        agent_bytecode_text: agent_run
+                            .as_ref()
+                            .map(|run| run.bytecode_text.as_str()),
+                        agent_trace: agent_run.as_ref().map(|run| run.trace.as_slice()),
+                    },
+                )?;
             }
             print!("{bytecode_text}");
             Ok(0)
@@ -2951,7 +3102,10 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
             continue;
         }
         if arg == "--agent" {
-            if !matches!(command, "ail-build" | "ail-pass" | "ail-conformance") {
+            if !matches!(
+                command,
+                "ail-build" | "ail-pass" | "ail-lower" | "ail-conformance"
+            ) {
                 return Err(usage());
             }
             let Some(path) = args.get(index + 1) else {
@@ -3172,6 +3326,9 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
     }
     if command == "ail-pass" && ail_compile_target.is_some() && artifact_dir.is_none() {
         return Err("ail-pass --target requires --artifact-dir <dir>".to_string());
+    }
+    if command == "ail-lower" && ail_build_agent.is_some() && artifact_dir.is_none() {
+        return Err("ail-lower --agent requires --artifact-dir <dir>".to_string());
     }
     if command == "ail-conformance" && ail_build_agent.is_some() && artifact_dir.is_none() {
         return Err("ail-conformance --agent requires --artifact-dir <dir>".to_string());

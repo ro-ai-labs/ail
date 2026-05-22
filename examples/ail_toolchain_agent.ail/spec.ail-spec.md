@@ -133,6 +133,21 @@ When the toolchain agent verifies emitted bytecode:
 - the system guarantees the bytecode artifact is AIL-Bytecode with a deterministic fingerprint and not Rust or host-language backend source
 - the system records a trace event named BytecodeArtifactVerified
 
+Action: Verify lower manifest.
+
+When the toolchain agent verifies AIL-Core lowering artifacts:
+
+- the system requires the BuildRequest to exist
+- the system requires the BuildRequest status to be BytecodeReady
+- the system reads the BuildRequest core ir
+- the system reads the BuildRequest bytecode artifact
+- the system reads the BuildRequest bytecode fingerprint
+- the system reads the BuildRequest artifact manifest
+- the system reads the BuildRequest artifact manifest fingerprint
+- the system changes the BuildRequest artifact manifest verification report to Verified
+- the system guarantees the lower manifest ties checked AIL-Core and AIL-Bytecode with deterministic fingerprints and no Rust or host-language backend source
+- the system records a trace event named LowerManifestVerified
+
 Action: Verify target artifact.
 
 When the toolchain agent verifies the emitted target artifact:

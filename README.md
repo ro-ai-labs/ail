@@ -70,6 +70,11 @@ rules instead of silently dropping them.
 `ail-lower --artifact-dir
 <dir>` also writes the checked core, VM instruction artifact, deterministic
 fingerprints, and a lower manifest while keeping stdout as the VM artifact.
+`ail-lower --agent <agent-package-or-bytecode> --artifact-dir <dir>` also
+compiles or loads an AIL-authored Application agent, runs its
+`VerifyLowerManifest` bytecode action against the checked core, bytecode
+artifact, bytecode fingerprint, lower manifest, and manifest fingerprint, then
+writes `agent.ailbc.json`, `agent.fingerprint.txt`, and `agent-trace.txt`.
 `ail-check`, `ail-core`,
 `ail-flow`, `ail-lower`, `ail-compile`, `ail-run`, and `ail-build` can use
 `--spec-file <path>` to read a saved generated AIL-Spec artifact instead of
@@ -199,6 +204,7 @@ cargo run -- ail-check examples/support_ticket.ail
 cargo run -- ail-core examples/support_ticket.ail
 cargo run -- ail-flow examples/support_ticket.ail
 cargo run -- ail-lower examples/support_ticket.ail
+cargo run -- ail-lower examples/support_ticket.ail --agent examples/ail_toolchain_agent.ail --artifact-dir /tmp/support-ticket-ail-lower-agent
 cargo run -- ail-compile examples/support_ticket.ail --action CloseTicket --target linux-x86_64-elf --out /tmp/close-ticket
 /tmp/close-ticket ticket.id=T-1 ticket.status=Open
 cargo run -- ail-lower examples/refund_tool.ail
