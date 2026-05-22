@@ -5798,13 +5798,22 @@ fn cli_ail_build_agent_verifies_native_target_artifact() {
     let target_verify_index = agent_trace
         .find("action VerifyTargetArtifact started")
         .unwrap_or_else(|| panic!("{agent_trace}"));
+    let manifest_verify_index = agent_trace
+        .find("action VerifyBuildManifest started")
+        .unwrap_or_else(|| panic!("{agent_trace}"));
     assert!(compile_index < target_verify_index, "{agent_trace}");
+    assert!(target_verify_index < manifest_verify_index, "{agent_trace}");
     assert!(agent_trace.contains("read buildrequest.target artifact"));
     assert!(agent_trace.contains("read buildrequest.target artifact fingerprint"));
     assert!(
         agent_trace.contains("write buildrequest.target artifact verification report=Verified")
     );
     assert!(agent_trace.contains("trace TargetArtifactVerified"));
+    assert!(
+        agent_trace[manifest_verify_index..]
+            .contains("read buildrequest.target artifact fingerprint"),
+        "{agent_trace}"
+    );
 
     fs::remove_dir_all(artifact_dir).unwrap();
     fs::remove_file(executable_path).unwrap();

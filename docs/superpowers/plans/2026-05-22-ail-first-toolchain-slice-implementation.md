@@ -5314,6 +5314,52 @@ Expected: LLM-style `is` requirements compile into enforceable
 `REQUIRE_FIELD_IN` bytecode/native checks while existing `to be` and
 `not to be` requirement behavior remains unchanged.
 
+### Task 124: Agent Manifest Verification Reads Native Target Fingerprints
+
+**Files:**
+- Modify: `examples/ail_toolchain_agent.ail/spec.ail-spec.md`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing native manifest-agent trace test**
+
+Extend the native `ail-build --spec-file --agent --target linux-x86_64-elf`
+test so `VerifyBuildManifest` must run after `VerifyTargetArtifact` and must
+read `buildrequest.target artifact fingerprint` during the manifest
+verification action, not only during target artifact verification.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_agent_verifies_native_target_artifact -- --nocapture
+```
+
+Expected: failure because the AIL-authored agent's `VerifyBuildManifest` action
+reads only the build manifest, manifest fingerprint, and bytecode fingerprint.
+
+- [x] **Step 3: Extend the AIL-authored manifest verifier**
+
+Update `examples/ail_toolchain_agent.ail` so `VerifyBuildManifest` reads
+`BuildRequest.target artifact fingerprint` and its guarantee names native target
+artifacts alongside requirements, spec, AIL-Core, compiler-pass, agent, and
+bytecode artifacts.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_agent_verifies_native_target_artifact -- --nocapture
+cargo test --test ail_toolchain ail_toolchain_agent_package_lowers_to_verified_bytecode -- --nocapture
+```
+
+Expected: native build-agent traces show manifest verification reads the native
+target fingerprint, and the updated AIL-authored agent still lowers to verified
+bytecode.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**
