@@ -32,6 +32,7 @@ A BuildRequest has:
 - artifact manifest fingerprint: Text
 - artifact manifest verification report: Text
 - prompt portability report: Text
+- prompt portability report fingerprint: Text
 - status: State<PromptReceived, RequirementsLoaded, RequirementsCaptured, SpecLoaded, SpecCaptured, CoreLoaded, PassApplied, CoreChecked, BytecodeReady, NeedsClarification>
 - target model: Text
 
@@ -171,8 +172,9 @@ When the toolchain agent verifies the build artifact manifest:
 - the system reads the BuildRequest bytecode fingerprint
 - the system reads the BuildRequest target artifact fingerprint
 - the system reads the BuildRequest compiler pass target artifact fingerprint
+- the system reads the BuildRequest prompt portability report fingerprint
 - the system changes the BuildRequest artifact manifest verification report to Verified
-- the system guarantees the build manifest ties requirements, spec, AIL-Core, compiler-pass, agent, bytecode, and native target artifacts with deterministic fingerprints and no Rust or host-language backend source
+- the system guarantees the build manifest ties requirements, spec, AIL-Core, compiler-pass, agent, prompt-portability, bytecode, and native target artifacts with deterministic fingerprints and no Rust or host-language backend source
 - the system records a trace event named BuildManifestVerified
 
 Action: Verify compile manifest.

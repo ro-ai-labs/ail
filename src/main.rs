@@ -389,6 +389,7 @@ struct AilBuildArtifactSet<'a> {
     core_text: &'a str,
     bytecode_text: &'a str,
     bytecode_fingerprint: &'a str,
+    prompt_portability_report: Option<&'a str>,
     target_name: Option<&'a str>,
     target_executable: Option<&'a [u8]>,
     pass_bytecode_text: Option<&'a str>,
@@ -464,6 +465,32 @@ struct AilBuildPassAcceptance<'a> {
     pass_trace: &'a [String],
 }
 
+fn render_ail_prompt_portability_report(
+    target_model: &str,
+    requirements_artifact: Option<&str>,
+    agent_run: &AilBuildAgentRun,
+) -> String {
+    let status = agent_run
+        .state
+        .get("buildrequest.prompt portability report")
+        .map(String::as_str)
+        .unwrap_or("NotCompared");
+    let mut lines = vec![
+        "AIL-Prompt-Portability-Report:".to_string(),
+        format!("target-model {target_model}"),
+        "agent-action CompareAgentPromptPortability".to_string(),
+        format!("status {status}"),
+    ];
+    if let Some(requirements_artifact) = requirements_artifact {
+        lines.push(format!(
+            "requirements-fingerprint {}",
+            ail_artifact_fingerprint(requirements_artifact)
+        ));
+    }
+    lines.push("trace AgentPromptPortabilityCompared".to_string());
+    format!("{}\n", lines.join("\n"))
+}
+
 fn render_ail_build_manifest(artifacts: &AilBuildArtifactSet<'_>) -> String {
     let mut lines = vec!["AIL-Build-Manifest:".to_string()];
     if artifacts.requirements.is_some() {
@@ -477,6 +504,12 @@ fn render_ail_build_manifest(artifacts: &AilBuildArtifactSet<'_>) -> String {
         "bytecode artifact.ailbc.json {}",
         artifacts.bytecode_fingerprint
     ));
+    if let Some(prompt_portability_report) = artifacts.prompt_portability_report {
+        lines.push(format!(
+            "prompt-portability prompt-portability.txt {}",
+            ail_artifact_fingerprint(prompt_portability_report)
+        ));
+    }
     if let (Some(target_name), Some(target_executable)) =
         (artifacts.target_name, artifacts.target_executable)
     {
@@ -660,6 +693,22 @@ fn write_ail_build_artifacts(
         format!("{}\n", artifacts.bytecode_fingerprint),
     )
     .map_err(|error| format!("failed to write ail-build bytecode fingerprint artifact: {error}"))?;
+    if let Some(prompt_portability_report) = artifacts.prompt_portability_report {
+        fs::write(
+            root.join("prompt-portability.txt"),
+            prompt_portability_report,
+        )
+        .map_err(|error| {
+            format!("failed to write ail-build prompt portability artifact: {error}")
+        })?;
+        fs::write(
+            root.join("prompt-portability.fingerprint.txt"),
+            format!("{}\n", ail_artifact_fingerprint(prompt_portability_report)),
+        )
+        .map_err(|error| {
+            format!("failed to write ail-build prompt portability fingerprint artifact: {error}")
+        })?;
+    }
     if let Some(target_executable) = artifacts.target_executable {
         let target_path = root.join("target.elf");
         fs::write(&target_path, target_executable)
@@ -2195,6 +2244,7 @@ fn run_ail_build_agent_verify_manifest(
     manifest_text: &str,
     manifest_fingerprint: &str,
     compiler_pass_target_fingerprint: Option<&str>,
+    prompt_portability_fingerprint: Option<&str>,
 ) -> Result<(), String> {
     if !agent_run
         .bytecode
@@ -2218,6 +2268,12 @@ fn run_ail_build_agent_verify_manifest(
         verify_state.insert(
             "buildrequest.compiler pass target artifact fingerprint".to_string(),
             compiler_pass_target_fingerprint.to_string(),
+        );
+    }
+    if let Some(prompt_portability_fingerprint) = prompt_portability_fingerprint {
+        verify_state.insert(
+            "buildrequest.prompt portability report fingerprint".to_string(),
+            prompt_portability_fingerprint.to_string(),
         );
     }
     let verify_run =
@@ -2745,6 +2801,18 @@ fn run_ail_build_from_core(
             )?;
         }
     }
+    let prompt_portability_report = if let (Some(target_model), Some(agent_run)) = (
+        cli_options.ail_build_target_model.as_deref(),
+        agent_run.as_ref(),
+    ) {
+        Some(render_ail_prompt_portability_report(
+            target_model,
+            requirements_artifact,
+            agent_run,
+        ))
+    } else {
+        None
+    };
     if let Some(artifact_dir) = &cli_options.artifact_dir {
         let core_text = format!("{}\n", render_ail_core(&core));
         let agent_native_artifacts = if let (Some((target, _, _)), Some(agent_run)) =
@@ -2761,6 +2829,7 @@ fn run_ail_build_from_core(
                 core_text: &core_text,
                 bytecode_text: &bytecode_text,
                 bytecode_fingerprint: &bytecode_fingerprint,
+                prompt_portability_report: prompt_portability_report.as_deref(),
                 target_name: native_build.as_ref().map(|(target, _, _)| target.as_str()),
                 target_executable: native_build
                     .as_ref()
@@ -2776,11 +2845,15 @@ fn run_ail_build_from_core(
             let manifest_fingerprint = ail_artifact_fingerprint(&manifest_text);
             let pass_target_fingerprint =
                 native_artifact_fingerprint_text(pass_native_artifacts.as_slice());
+            let prompt_portability_fingerprint = prompt_portability_report
+                .as_deref()
+                .map(ail_artifact_fingerprint);
             run_ail_build_agent_verify_manifest(
                 agent_run,
                 &manifest_text,
                 &manifest_fingerprint,
                 pass_target_fingerprint.as_deref(),
+                prompt_portability_fingerprint.as_deref(),
             )?;
         }
         write_ail_build_artifacts(
@@ -2791,6 +2864,7 @@ fn run_ail_build_from_core(
                 core_text: &core_text,
                 bytecode_text: &bytecode_text,
                 bytecode_fingerprint: &bytecode_fingerprint,
+                prompt_portability_report: prompt_portability_report.as_deref(),
                 target_name: native_build.as_ref().map(|(target, _, _)| target.as_str()),
                 target_executable: native_build
                     .as_ref()

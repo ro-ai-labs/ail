@@ -540,7 +540,12 @@ starts from an explicit `SpecLoaded` state, loads the checked spec into the
 `BuildRequest`, and still runs `AcceptSpecDraft` before AIL-Core elaboration.
 It optionally runs
 `CompareAgentPromptPortability` when
-`--target-model <name>` is supplied. When `--pass` is supplied, it runs
+`--target-model <name>` is supplied. With `--artifact-dir`, that comparison is
+persisted as `prompt-portability.txt` with
+`prompt-portability.fingerprint.txt`; `manifest.ail-build.txt` records a
+`prompt-portability` entry, and the AIL-authored `VerifyBuildManifest` action
+reads the prompt-portability fingerprint before accepting the manifest. When
+`--pass` is supplied, it runs
 `AcceptCompilerPassOutput` after the AIL-authored compiler pass bytecode
 transforms the checked AIL-Core, passing the pass bytecode boundary and VM trace
 through the agent state before accepting the post-pass IR. It then runs

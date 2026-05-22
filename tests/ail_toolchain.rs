@@ -8465,6 +8465,40 @@ fn cli_ail_build_agent_compares_prompt_portability_before_compile() {
     assert!(agent_trace.contains("write buildrequest.prompt portability report=Compared"));
     assert!(agent_trace.contains("trace AgentPromptPortabilityCompared"));
     assert!(agent_trace.contains("trace ApplicationBytecodeCompiled"));
+    assert!(agent_trace.contains("read buildrequest.prompt portability report fingerprint"));
+
+    let portability_report =
+        fs::read_to_string(artifact_dir.join("prompt-portability.txt")).unwrap();
+    assert!(
+        portability_report.contains("AIL-Prompt-Portability-Report:"),
+        "{portability_report}"
+    );
+    assert!(
+        portability_report.contains("target-model unsloth/Qwen3.6-35B-A3B-GGUF:UD-Q4_K_XL"),
+        "{portability_report}"
+    );
+    assert!(
+        portability_report.contains("agent-action CompareAgentPromptPortability"),
+        "{portability_report}"
+    );
+    assert!(
+        portability_report.contains("status Compared"),
+        "{portability_report}"
+    );
+    let portability_fingerprint =
+        fs::read_to_string(artifact_dir.join("prompt-portability.fingerprint.txt")).unwrap();
+    assert_eq!(
+        portability_fingerprint.trim(),
+        fnv64_fingerprint(&portability_report)
+    );
+    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-build.txt")).unwrap();
+    assert!(
+        manifest.contains(&format!(
+            "prompt-portability prompt-portability.txt {}",
+            fnv64_fingerprint(&portability_report)
+        )),
+        "{manifest}"
+    );
 
     fs::remove_dir_all(artifact_dir).unwrap();
 }

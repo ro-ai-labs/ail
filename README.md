@@ -164,6 +164,10 @@ emission, runs `VerifyBytecodeArtifact` after the VM artifact verifies, runs
 manifest fingerprint, then writes `artifact.fingerprint.txt`,
 `agent.ailbc.json`, `agent.fingerprint.txt`, `agent-trace.txt`,
 `manifest.ail-build.txt`, and `manifest.fingerprint.txt`. When
+`--target-model` is present with `--artifact-dir`, the artifact set also writes
+`prompt-portability.txt` and `prompt-portability.fingerprint.txt`, and the
+build manifest records a `prompt-portability` fingerprint entry that is read by
+the AIL-authored manifest verifier.
 `ail-build --requirements-file` is used with `--agent`, the saved checked
 requirements are loaded as an agent-visible `RequirementsLoaded` artifact,
 prepared through `PrepareSpecDraft`, and accepted through `AcceptSpecDraft`
