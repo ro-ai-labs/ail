@@ -1893,6 +1893,10 @@ fn ail_toolchain_agent_package_lowers_to_verified_bytecode() {
         "{rendered}"
     );
     assert!(
+        rendered.contains(r#""action":"VerifyTargetArtifact""#),
+        "{rendered}"
+    );
+    assert!(
         rendered.contains(r#""action":"VerifyBuildManifest""#),
         "{rendered}"
     );
@@ -1959,6 +1963,38 @@ fn ail_toolchain_agent_package_lowers_to_verified_bytecode() {
         verify_run
             .trace
             .contains(&"trace BytecodeArtifactVerified".to_string())
+    );
+
+    let target_verify_run = run_ail_bytecode_action(
+        &bytecode,
+        "VerifyTargetArtifact",
+        BTreeMap::from([
+            ("buildrequest.id".to_string(), "BR-1".to_string()),
+            (
+                "buildrequest.status".to_string(),
+                "BytecodeReady".to_string(),
+            ),
+            (
+                "buildrequest.target artifact".to_string(),
+                "linux-x86_64-elf executable 512 bytes".to_string(),
+            ),
+            (
+                "buildrequest.target artifact fingerprint".to_string(),
+                "fnv64:target".to_string(),
+            ),
+        ]),
+    )
+    .unwrap();
+
+    assert_eq!(target_verify_run.status, "succeeded");
+    assert_eq!(
+        target_verify_run.final_state["buildrequest.target artifact verification report"],
+        "Verified"
+    );
+    assert!(
+        target_verify_run
+            .trace
+            .contains(&"trace TargetArtifactVerified".to_string())
     );
 
     let manifest_run = run_ail_bytecode_action(
@@ -5537,6 +5573,80 @@ fn cli_ail_build_saved_spec_can_emit_native_linux_x86_64_elf() {
     );
 
     fs::remove_file(spec_path).unwrap();
+    fs::remove_file(executable_path).unwrap();
+}
+
+#[test]
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+fn cli_ail_build_agent_verifies_native_target_artifact() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("support_ticket.ail");
+    let agent_package = fixture("ail_toolchain_agent.ail");
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "eigl-ail-build-agent-native-artifacts-{}",
+        std::process::id()
+    ));
+    let executable_path = std::env::temp_dir().join(format!(
+        "eigl-ail-build-agent-native-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+    let _ = fs::remove_file(&executable_path);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-build",
+            &package,
+            "--spec-file",
+            &format!("{package}/spec.ail-spec.md"),
+            "--agent",
+            &agent_package,
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+            "--action",
+            "AssignTicket",
+            "--target",
+            "linux-x86_64-elf",
+            "--out",
+            executable_path.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("ail-build wrote linux-x86_64-elf executable"));
+
+    let native_run = Command::new(&executable_path)
+        .args(["ticket.id=T-1", "ticket.status=Open"])
+        .output()
+        .unwrap();
+    assert_eq!(
+        String::from_utf8_lossy(&native_run.stdout),
+        "ticket.status=Assigned\n"
+    );
+
+    let agent_trace = fs::read_to_string(artifact_dir.join("agent-trace.txt")).unwrap();
+    let compile_index = agent_trace
+        .find("action CompileApplication started")
+        .unwrap_or_else(|| panic!("{agent_trace}"));
+    let target_verify_index = agent_trace
+        .find("action VerifyTargetArtifact started")
+        .unwrap_or_else(|| panic!("{agent_trace}"));
+    assert!(compile_index < target_verify_index, "{agent_trace}");
+    assert!(agent_trace.contains("read buildrequest.target artifact"));
+    assert!(agent_trace.contains("read buildrequest.target artifact fingerprint"));
+    assert!(
+        agent_trace.contains("write buildrequest.target artifact verification report=Verified")
+    );
+    assert!(agent_trace.contains("trace TargetArtifactVerified"));
+
+    fs::remove_dir_all(artifact_dir).unwrap();
     fs::remove_file(executable_path).unwrap();
 }
 

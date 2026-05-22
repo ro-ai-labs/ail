@@ -1,7 +1,8 @@
 # AIL Toolchain Agent AIL-Spec Example
 
 The application AIL Toolchain Agent manages developer interviews, requirements
-capture, checked AIL specs, AIL-Core IR lowering, and AIL-Bytecode compilation.
+capture, checked AIL specs, AIL-Core IR lowering, and VM or native target
+artifact compilation.
 
 A BuildRequest has:
 
@@ -21,6 +22,9 @@ A BuildRequest has:
 - bytecode artifact: Text
 - bytecode fingerprint: Text
 - bytecode verification report: Text
+- target artifact: Text
+- target artifact fingerprint: Text
+- target artifact verification report: Text
 - artifact manifest: Text
 - artifact manifest fingerprint: Text
 - artifact manifest verification report: Text
@@ -32,7 +36,7 @@ The application shows:
 
 - a developer interview queue
 - a requirements coverage view
-- a bytecode artifact review view
+- a target artifact review view
 
 Action: Capture requirements.
 
@@ -66,7 +70,7 @@ When the toolchain agent accepts a checked AIL spec draft:
 - the system reads the BuildRequest spec
 - the system changes the BuildRequest spec review report to Accepted
 - the system changes the BuildRequest status to SpecCaptured
-- the system guarantees the accepted spec preserves the checked requirements or saved spec artifact boundary and remains eligible for AIL-Core lowering and AIL-Bytecode compilation
+- the system guarantees the accepted spec preserves the checked requirements or saved spec artifact boundary and remains eligible for AIL-Core lowering and VM or native target compilation
 - the system records a trace event named SpecDraftAccepted
 
 Action: Accept compiler pass output.
@@ -97,7 +101,7 @@ When the toolchain agent accepts checked AIL-Core IR:
 - the system reads the BuildRequest core ir
 - the system changes the BuildRequest core review report to Accepted
 - the system changes the BuildRequest status to CoreChecked
-- the system guarantees the checked AIL-Core IR preserves the accepted spec or saved core artifact boundary and remains eligible for AIL-Bytecode compilation
+- the system guarantees the checked AIL-Core IR preserves the accepted spec or saved core artifact boundary and remains eligible for VM or native target compilation
 - the system records a trace event named CoreIrAccepted
 
 Action: Compile application.
@@ -111,7 +115,7 @@ When the toolchain agent compiles a captured application:
 - the system changes the BuildRequest core ir to Checked
 - the system changes the BuildRequest bytecode artifact to Emitted
 - the system changes the BuildRequest status to BytecodeReady
-- the system guarantees the compiler emits AIL-Bytecode and no Rust or host-language backend source
+- the system guarantees the compiler emits a verified toolchain artifact and no Rust or host-language backend source
 - the system records a trace event named ApplicationBytecodeCompiled
 
 Action: Verify bytecode artifact.
@@ -125,6 +129,18 @@ When the toolchain agent verifies emitted bytecode:
 - the system changes the BuildRequest bytecode verification report to Verified
 - the system guarantees the bytecode artifact is AIL-Bytecode with a deterministic fingerprint and not Rust or host-language backend source
 - the system records a trace event named BytecodeArtifactVerified
+
+Action: Verify target artifact.
+
+When the toolchain agent verifies the emitted target artifact:
+
+- the system requires the BuildRequest to exist
+- the system requires the BuildRequest status to be BytecodeReady
+- the system reads the BuildRequest target artifact
+- the system reads the BuildRequest target artifact fingerprint
+- the system changes the BuildRequest target artifact verification report to Verified
+- the system guarantees the target artifact is a selected VM or native executable artifact with a deterministic fingerprint and not Rust or host-language backend source
+- the system records a trace event named TargetArtifactVerified
 
 Action: Verify build manifest.
 

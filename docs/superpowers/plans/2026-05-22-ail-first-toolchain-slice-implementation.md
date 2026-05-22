@@ -5164,6 +5164,54 @@ Expected: saved-spec `ail-build` can emit a native Linux x86_64 ELF executable
 for `AssignTicket` while the default saved-spec build still emits the verified
 VM artifact and existing native requirement enforcement remains unchanged.
 
+### Task 121: Toolchain Agent Verifies Native Target Artifacts
+
+**Files:**
+- Modify: `src/main.rs`
+- Modify: `examples/ail_toolchain_agent.ail/spec.ail-spec.md`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing native-agent trace test**
+
+Add an `ail-build --spec-file --agent --target linux-x86_64-elf` test that
+writes a native executable and requires `agent-trace.txt` to record
+`VerifyTargetArtifact`, read the emitted target artifact summary and
+fingerprint, write a target artifact verification report, and trace
+`TargetArtifactVerified`.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_agent_verifies_native_target_artifact -- --nocapture
+```
+
+Expected: failure because the agent trace stops at `VerifyBytecodeArtifact` and
+`VerifyBuildManifest`; no native target artifact verification action exists.
+
+- [x] **Step 3: Add target artifact verification**
+
+Extend the AIL-authored toolchain agent with `VerifyTargetArtifact` and target
+artifact fields. Compute a deterministic fingerprint over emitted ELF bytes,
+run the new agent action for native builds, and only then write the executable
+to disk.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_agent_verifies_native_target_artifact -- --nocapture
+cargo test --test ail_toolchain ail_toolchain_agent_package_lowers_to_verified_bytecode -- --nocapture
+```
+
+Expected: native `ail-build --agent` records target artifact verification after
+`CompileApplication`, and the AIL-authored agent still lowers to verified
+bytecode with the new action.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

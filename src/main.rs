@@ -590,8 +590,12 @@ fn set_native_executable_permissions(_path: &str) -> Result<(), String> {
 }
 
 fn ail_artifact_fingerprint(text: &str) -> String {
+    ail_artifact_fingerprint_bytes(text.as_bytes())
+}
+
+fn ail_artifact_fingerprint_bytes(bytes: &[u8]) -> String {
     let mut hash = 0xcbf29ce484222325u64;
-    for byte in text.as_bytes() {
+    for byte in bytes {
         hash ^= u64::from(*byte);
         hash = hash.wrapping_mul(0x100000001b3);
     }
@@ -1478,6 +1482,47 @@ fn run_ail_build_agent_verify_bytecode(
     Ok(())
 }
 
+fn run_ail_build_agent_verify_target_artifact(
+    agent_run: &mut AilBuildAgentRun,
+    artifact_summary: &str,
+    artifact_fingerprint: &str,
+) -> Result<(), String> {
+    if !agent_run
+        .bytecode
+        .actions
+        .contains_key("VerifyTargetArtifact")
+    {
+        return Err(
+            "ail-build --agent requires a VerifyTargetArtifact action after target artifact emission"
+                .to_string(),
+        );
+    }
+    let mut verify_state = agent_run.state.clone();
+    verify_state.insert(
+        "buildrequest.target artifact".to_string(),
+        artifact_summary.to_string(),
+    );
+    verify_state.insert(
+        "buildrequest.target artifact fingerprint".to_string(),
+        artifact_fingerprint.to_string(),
+    );
+    let verify_run =
+        run_ail_bytecode_action(&agent_run.bytecode, "VerifyTargetArtifact", verify_state)?;
+    if verify_run.status != "succeeded" {
+        let mut message = "ail-build agent VerifyTargetArtifact failed".to_string();
+        if let Some(failure) = verify_run.failure {
+            message.push_str(&format!(": {failure}"));
+        }
+        if !verify_run.trace.is_empty() {
+            message.push_str(&format!("\n{}", verify_run.trace.join("\n")));
+        }
+        return Err(message);
+    }
+    agent_run.trace.extend(verify_run.trace);
+    agent_run.state = verify_run.final_state;
+    Ok(())
+}
+
 fn run_ail_build_agent_verify_manifest(
     agent_run: &mut AilBuildAgentRun,
     manifest_text: &str,
@@ -1735,8 +1780,33 @@ fn run_ail_build_from_core(
     }
     let bytecode_text = format!("{}\n", render_ail_bytecode(&bytecode));
     let bytecode_fingerprint = ail_artifact_fingerprint(&bytecode_text);
+    let native_build = if let Some(target) = &cli_options.ail_compile_target {
+        let action = cli_options
+            .ail_action
+            .as_deref()
+            .ok_or_else(|| "ail-build native output requires --action <name>".to_string())?;
+        let out = cli_options
+            .ail_compile_out
+            .as_deref()
+            .ok_or_else(|| "ail-build native output requires --out <path>".to_string())?;
+        Some((
+            target.to_string(),
+            out.to_string(),
+            compile_ail_core_native_elf(&core, action, target)?,
+        ))
+    } else {
+        None
+    };
     if let Some(agent_run) = agent_run.as_mut() {
         run_ail_build_agent_verify_bytecode(agent_run, &bytecode_text, &bytecode_fingerprint)?;
+        if let Some((target, out, executable)) = native_build.as_ref() {
+            let target_fingerprint = ail_artifact_fingerprint_bytes(executable);
+            run_ail_build_agent_verify_target_artifact(
+                agent_run,
+                &format!("{target} executable {} bytes at {out}", executable.len()),
+                &target_fingerprint,
+            )?;
+        }
     }
     if let Some(artifact_dir) = &cli_options.artifact_dir {
         let core_text = format!("{}\n", render_ail_core(&core));
@@ -1772,17 +1842,8 @@ fn run_ail_build_from_core(
             },
         )?;
     }
-    if let Some(target) = &cli_options.ail_compile_target {
-        let action = cli_options
-            .ail_action
-            .as_deref()
-            .ok_or_else(|| "ail-build native output requires --action <name>".to_string())?;
-        let out = cli_options
-            .ail_compile_out
-            .as_deref()
-            .ok_or_else(|| "ail-build native output requires --out <path>".to_string())?;
-        let executable = compile_ail_core_native_elf(&core, action, target)?;
-        write_native_executable(out, &executable)?;
+    if let Some((target, out, executable)) = native_build {
+        write_native_executable(&out, &executable)?;
         println!("ail-build wrote {target} executable {out}");
         return Ok(0);
     }

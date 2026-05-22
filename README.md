@@ -99,9 +99,10 @@ checked AIL-Spec draft is accepted and before AIL-Core elaboration, optionally
 runs `CompareAgentPromptPortability` when `--target-model <name>` is supplied,
 runs `AcceptCompilerPassOutput` after an AIL-authored compiler pass is applied,
 runs `AcceptCoreIR` after AIL-Core is checked and before compilation, runs
-`CompileApplication` over the completed build state before target bytecode
-emission, runs `VerifyBytecodeArtifact` after the emitted bytecode verifies, and,
-with `--artifact-dir`, runs `VerifyBuildManifest` against the build manifest and
+`CompileApplication` over the completed build state before target artifact
+emission, runs `VerifyBytecodeArtifact` after the VM artifact verifies, runs
+`VerifyTargetArtifact` after a native target artifact is emitted, and, with
+`--artifact-dir`, runs `VerifyBuildManifest` against the build manifest and
 manifest fingerprint, then writes `artifact.fingerprint.txt`,
 `agent.ailbc.json`, `agent.fingerprint.txt`, `agent-trace.txt`,
 `manifest.ail-build.txt`, and `manifest.fingerprint.txt`. When
@@ -118,9 +119,11 @@ before `CompileApplication`. When `ail-build --pass` is used with `--agent`,
 the pass bytecode, pass fingerprint, and VM trace are accepted through
 `AcceptCompilerPassOutput` before `AcceptCoreIR`. The final
 `VerifyBytecodeArtifact` action reads both the emitted bytecode artifact summary
-and its deterministic fingerprint, and `VerifyBuildManifest` reads the artifact
-manifest and its deterministic fingerprint. When `ail-build --pass` is used
-with `--artifact-dir`, it also writes `pass.ailbc.json`,
+and its deterministic fingerprint, `VerifyTargetArtifact` reads the native
+target artifact summary and deterministic fingerprint when a native target is
+selected, and `VerifyBuildManifest` reads the artifact manifest and its
+deterministic fingerprint. When `ail-build --pass` is used with
+`--artifact-dir`, it also writes `pass.ailbc.json`,
 `pass.fingerprint.txt`, and `pass-trace.txt`. On `ail-pass`,
 `--artifact-dir <dir>` writes
 `pass.ailbc.json`, `pass.fingerprint.txt`, `input.ail-core.txt`,
