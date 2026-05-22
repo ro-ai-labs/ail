@@ -3876,6 +3876,50 @@ cargo test --test ail_toolchain cli_ail_build_agent_records_requirements_capture
 Expected: the agent trace records `CaptureRequirements`, status
 `RequirementsCaptured`, then `CompileApplication` and status `BytecodeReady`.
 
+### Task 93: AIL Build Agent Prompt-Portability Stage
+
+**Files:**
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing build-agent portability test**
+
+Add a prompt-driven `ail-build --agent --target-model <name>` CLI test where
+the base LLM returns requirements and a valid spec. Require `agent-trace.txt`
+to record the AIL-authored agent's `CompareAgentPromptPortability` action after
+requirements capture and before `CompileApplication`.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_agent_compares_prompt_portability_before_compile -- --nocapture
+```
+
+Expected: failure because `--target-model` is not accepted by `ail-build`.
+
+- [x] **Step 3: Implement target-model agent execution**
+
+Parse `--target-model` for `ail-build`, require `--agent` when it is supplied,
+thread the target model into the build-agent runner, require
+`CompareAgentPromptPortability`, execute it over the requirements-aware build
+state, and append its trace before `CompileApplication`.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_agent_compares_prompt_portability_before_compile -- --nocapture
+```
+
+Expected: the agent trace records `CaptureRequirements`,
+`CompareAgentPromptPortability`, `AgentPromptPortabilityCompared`, and then
+`ApplicationBytecodeCompiled`.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

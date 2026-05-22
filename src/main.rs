@@ -55,6 +55,7 @@ struct CliOptions {
     ail_pass_target: Option<String>,
     ail_build_pass: Option<String>,
     ail_build_agent: Option<String>,
+    ail_build_target_model: Option<String>,
     ail_requirements_file: Option<String>,
     ail_spec_file: Option<String>,
     ail_core_file: Option<String>,
@@ -375,7 +376,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
 }
 
 fn usage() -> String {
-    "usage: eigl <check|graph|views|simulate|lower|run|dispatch|emit|schedule|dequeue|serve|normalize|patch|llm-roundtrip|view-model|ail-check|ail-core|ail-flow|ail-lower|ail-run|ail-vm|ail-conformance|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-patch> <path> [patch|target-package] [--intent name] [--action name] [--prompt text] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--artifact-dir path] [--state-in path] [--state-out path] [--data-in path] [--data-out path] [--operation-output name=value] [--listen addr] [--llm-endpoint url] [method path|trigger] [key=value ...]\nail-pass usage: eigl ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> OR eigl ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName>"
+    "usage: eigl <check|graph|views|simulate|lower|run|dispatch|emit|schedule|dequeue|serve|normalize|patch|llm-roundtrip|view-model|ail-check|ail-core|ail-flow|ail-lower|ail-run|ail-vm|ail-conformance|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-patch> <path> [patch|target-package] [--intent name] [--action name] [--prompt text] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target-model name] [--artifact-dir path] [--state-in path] [--state-out path] [--data-in path] [--data-out path] [--operation-output name=value] [--listen addr] [--llm-endpoint url] [method path|trigger] [key=value ...]\nail-pass usage: eigl ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> OR eigl ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName>"
         .to_string()
 }
 
@@ -602,6 +603,7 @@ fn run_ail_build_agent(
     requirements_artifact: Option<&str>,
     spec_text: Option<&str>,
     capture_prompt: Option<&str>,
+    target_model: Option<&str>,
 ) -> Result<(String, Vec<String>), String> {
     let (agent_bytecode, agent_bytecode_text) =
         load_ail_bytecode_or_compile_package(agent_path, "ail-build agent")?;
@@ -668,15 +670,47 @@ fn run_ail_build_agent(
         trace.extend(capture_run.trace);
         compile_state = capture_run.final_state;
     }
+    compile_state.insert(
+        "buildrequest.requirements".to_string(),
+        requirements_artifact.unwrap_or("skipped").to_string(),
+    );
+    if let Some(target_model) = target_model {
+        if !agent_bytecode
+            .actions
+            .contains_key("CompareAgentPromptPortability")
+        {
+            return Err(
+                "ail-build --agent --target-model requires a CompareAgentPromptPortability action"
+                    .to_string(),
+            );
+        }
+        compile_state.insert(
+            "buildrequest.target model".to_string(),
+            target_model.to_string(),
+        );
+        let compare_run = run_ail_bytecode_action(
+            &agent_bytecode,
+            "CompareAgentPromptPortability",
+            compile_state,
+        )?;
+        if compare_run.status != "succeeded" {
+            let mut message = "ail-build agent CompareAgentPromptPortability failed".to_string();
+            if let Some(failure) = compare_run.failure {
+                message.push_str(&format!(": {failure}"));
+            }
+            if !compare_run.trace.is_empty() {
+                message.push_str(&format!("\n{}", compare_run.trace.join("\n")));
+            }
+            return Err(message);
+        }
+        trace.extend(compare_run.trace);
+        compile_state = compare_run.final_state;
+    }
     let build_status = if spec_text.is_some() {
         "SpecCaptured"
     } else {
         "CoreChecked"
     };
-    compile_state.insert(
-        "buildrequest.requirements".to_string(),
-        requirements_artifact.unwrap_or("skipped").to_string(),
-    );
     compile_state.insert(
         "buildrequest.spec".to_string(),
         spec_text.unwrap_or("skipped").to_string(),
@@ -835,6 +869,7 @@ fn run_ail_build_from_core(
                 requirements_artifact,
                 spec_text,
                 capture_prompt,
+                cli_options.ail_build_target_model.as_deref(),
             )?;
             (Some(agent_bytecode_text), Some(agent_trace))
         } else {
@@ -1242,6 +1277,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
     let mut ail_pass_target = None;
     let mut ail_build_pass = None;
     let mut ail_build_agent = None;
+    let mut ail_build_target_model = None;
     let mut ail_requirements_file = None;
     let mut ail_spec_file = None;
     let mut ail_core_file = None;
@@ -1368,6 +1404,17 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
                 return Err("missing value for --agent".to_string());
             };
             ail_build_agent = Some(path.clone());
+            index += 2;
+            continue;
+        }
+        if arg == "--target-model" {
+            if command != "ail-build" {
+                return Err(usage());
+            }
+            let Some(model) = args.get(index + 1) else {
+                return Err("missing value for --target-model".to_string());
+            };
+            ail_build_target_model = Some(model.clone());
             index += 2;
             continue;
         }
@@ -1520,6 +1567,9 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
     if command == "ail-build" && ail_requirements_file.is_some() && ail_core_file.is_some() {
         return Err("--requirements-file cannot be combined with --core-file".to_string());
     }
+    if command == "ail-build" && ail_build_target_model.is_some() && ail_build_agent.is_none() {
+        return Err("--target-model requires --agent".to_string());
+    }
     if command == "ail-pass" && ail_core_file.is_none() && ail_pass_target.is_none() {
         return Err("ail-pass requires a target package or --core-file <path>".to_string());
     }
@@ -1545,6 +1595,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         ail_pass_target,
         ail_build_pass,
         ail_build_agent,
+        ail_build_target_model,
         ail_requirements_file,
         ail_spec_file,
         ail_core_file,
