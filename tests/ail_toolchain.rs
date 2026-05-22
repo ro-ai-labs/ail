@@ -2140,6 +2140,10 @@ fn ail_toolchain_agent_package_lowers_to_verified_bytecode() {
         "{rendered}"
     );
     assert!(
+        rendered.contains(r#""action":"VerifyCompileManifest""#),
+        "{rendered}"
+    );
+    assert!(
         rendered.contains(r#""action":"VerifyPassManifest""#),
         "{rendered}"
     );
@@ -2266,6 +2270,50 @@ fn ail_toolchain_agent_package_lowers_to_verified_bytecode() {
         manifest_run
             .trace
             .contains(&"trace BuildManifestVerified".to_string())
+    );
+
+    let compile_manifest_run = run_ail_bytecode_action(
+        &bytecode,
+        "VerifyCompileManifest",
+        BTreeMap::from([
+            ("buildrequest.id".to_string(), "BR-1".to_string()),
+            (
+                "buildrequest.status".to_string(),
+                "BytecodeReady".to_string(),
+            ),
+            (
+                "buildrequest.bytecode fingerprint".to_string(),
+                "fnv64:bytecode".to_string(),
+            ),
+            (
+                "buildrequest.target artifact".to_string(),
+                "linux-x86_64-elf executable 512 bytes".to_string(),
+            ),
+            (
+                "buildrequest.target artifact fingerprint".to_string(),
+                "fnv64:target".to_string(),
+            ),
+            (
+                "buildrequest.artifact manifest".to_string(),
+                "AIL-Compile-Manifest:\nbytecode artifact.ailbc.json fnv64:bytecode".to_string(),
+            ),
+            (
+                "buildrequest.artifact manifest fingerprint".to_string(),
+                "fnv64:manifest".to_string(),
+            ),
+        ]),
+    )
+    .unwrap();
+
+    assert_eq!(compile_manifest_run.status, "succeeded");
+    assert_eq!(
+        compile_manifest_run.final_state["buildrequest.artifact manifest verification report"],
+        "Verified"
+    );
+    assert!(
+        compile_manifest_run
+            .trace
+            .contains(&"trace CompileManifestVerified".to_string())
     );
 
     let pass_manifest_run = run_ail_bytecode_action(
@@ -3643,6 +3691,133 @@ fn cli_ail_compile_writes_saved_bytecode_native_artifacts() {
         "{}",
         String::from_utf8_lossy(&native_run.stdout)
     );
+
+    fs::remove_file(bytecode_path).unwrap();
+    fs::remove_file(executable_path).unwrap();
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+fn cli_ail_compile_agent_verifies_manifest_artifacts() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("support_ticket.ail");
+    let agent_package = fixture("ail_toolchain_agent.ail");
+    let bytecode_path = std::env::temp_dir().join(format!(
+        "eigl-ail-compile-agent-manifest-{}.ailbc.json",
+        std::process::id()
+    ));
+    let executable_path = std::env::temp_dir().join(format!(
+        "eigl-ail-compile-agent-manifest-{}",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "eigl-ail-compile-agent-manifest-dir-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_file(&bytecode_path);
+    let _ = fs::remove_file(&executable_path);
+    let _ = fs::remove_dir_all(&artifact_dir);
+
+    let lowered = Command::new(binary)
+        .args(["ail-lower", &package])
+        .output()
+        .unwrap();
+    assert!(
+        lowered.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&lowered.stdout),
+        String::from_utf8_lossy(&lowered.stderr)
+    );
+    fs::write(&bytecode_path, lowered.stdout).unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-compile",
+            bytecode_path.to_str().unwrap(),
+            "--action",
+            "CloseTicket",
+            "--target",
+            "linux-x86_64-elf",
+            "--out",
+            executable_path.to_str().unwrap(),
+            "--agent",
+            &agent_package,
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let agent_bytecode = fs::read_to_string(artifact_dir.join("agent.ailbc.json")).unwrap();
+    assert!(agent_bytecode.contains(r#""package":"ail-toolchain-agent""#));
+    assert!(agent_bytecode.contains(r#""action":"VerifyCompileManifest""#));
+    let agent_fingerprint = fs::read_to_string(artifact_dir.join("agent.fingerprint.txt")).unwrap();
+    assert_eq!(agent_fingerprint.trim(), fnv64_fingerprint(&agent_bytecode));
+    let parsed_agent = parse_ail_bytecode(&agent_bytecode).unwrap();
+    assert_eq!(verify_ail_bytecode(&parsed_agent), Vec::<String>::new());
+
+    let agent_trace = fs::read_to_string(artifact_dir.join("agent-trace.txt")).unwrap();
+    assert!(agent_trace.contains("action VerifyCompileManifest started"));
+    assert!(agent_trace.contains("read buildrequest.bytecode fingerprint"));
+    assert!(agent_trace.contains("read buildrequest.target artifact"));
+    assert!(agent_trace.contains("read buildrequest.target artifact fingerprint"));
+    assert!(agent_trace.contains("read buildrequest.artifact manifest"));
+    assert!(agent_trace.contains("read buildrequest.artifact manifest fingerprint"));
+    assert!(
+        agent_trace.contains("write buildrequest.artifact manifest verification report=Verified")
+    );
+    assert!(agent_trace.contains("trace CompileManifestVerified"));
+
+    let agent_native = fs::read(artifact_dir.join("agent-VerifyCompileManifest.elf")).unwrap();
+    assert_eq!(&agent_native[0..4], b"\x7fELF");
+    let expected_agent_native_fingerprint = fnv64_fingerprint_bytes(&agent_native);
+    let native_agent_run = Command::new(artifact_dir.join("agent-VerifyCompileManifest.elf"))
+        .args([
+            "buildrequest.id=support-ticket-compile",
+            "buildrequest.status=BytecodeReady",
+            "buildrequest.bytecode fingerprint=fnv64:bytecode",
+            "buildrequest.target artifact=ok",
+            "buildrequest.target artifact fingerprint=fnv64:target",
+            "buildrequest.artifact manifest=ok",
+            "buildrequest.artifact manifest fingerprint=fnv64:manifest",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        native_agent_run.status.success(),
+        "native compile manifest verifier failed"
+    );
+    assert!(
+        String::from_utf8_lossy(&native_agent_run.stderr).contains("trace CompileManifestVerified"),
+        "{}",
+        String::from_utf8_lossy(&native_agent_run.stderr)
+    );
+
+    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-compile.txt")).unwrap();
+    assert!(
+        manifest.contains(&format!(
+            "agent agent.ailbc.json {}",
+            fnv64_fingerprint(&agent_bytecode)
+        )),
+        "{manifest}"
+    );
+    assert!(manifest.contains("trace agent-trace.txt"), "{manifest}");
+    assert!(
+        manifest.contains(&format!(
+            "agent-target linux-x86_64-elf agent-VerifyCompileManifest.elf {expected_agent_native_fingerprint}"
+        )),
+        "{manifest}"
+    );
+    let manifest_fingerprint =
+        fs::read_to_string(artifact_dir.join("manifest.fingerprint.txt")).unwrap();
+    assert_eq!(manifest_fingerprint.trim(), fnv64_fingerprint(&manifest));
 
     fs::remove_file(bytecode_path).unwrap();
     fs::remove_file(executable_path).unwrap();

@@ -406,6 +406,9 @@ struct AilCompileArtifactSet<'a> {
     action_name: &'a str,
     target_name: &'a str,
     target_executable: &'a [u8],
+    agent_bytecode_text: Option<&'a str>,
+    agent_trace: Option<&'a [String]>,
+    agent_native_executables: &'a [AilNativeArtifact],
 }
 
 struct AilNativeArtifact {
@@ -537,6 +540,23 @@ fn render_ail_compile_manifest(artifacts: &AilCompileArtifactSet<'_>) -> String 
         artifacts.target_name,
         ail_artifact_fingerprint_bytes(artifacts.target_executable)
     ));
+    if let Some(agent_bytecode_text) = artifacts.agent_bytecode_text {
+        lines.push(format!(
+            "agent agent.ailbc.json {}",
+            ail_artifact_fingerprint(agent_bytecode_text)
+        ));
+    }
+    if artifacts.agent_trace.is_some() {
+        lines.push("trace agent-trace.txt".to_string());
+    }
+    for native_agent in artifacts.agent_native_executables {
+        lines.push(format!(
+            "agent-target {} {} {}",
+            native_agent.target_name,
+            native_agent.file_name,
+            ail_artifact_fingerprint_bytes(&native_agent.bytes)
+        ));
+    }
     format!("{}\n", lines.join("\n"))
 }
 
@@ -573,6 +593,35 @@ fn write_ail_compile_artifacts(
         ),
     )
     .map_err(|error| format!("failed to write ail-compile target fingerprint artifact: {error}"))?;
+    if let Some(agent_bytecode_text) = artifacts.agent_bytecode_text {
+        fs::write(root.join("agent.ailbc.json"), agent_bytecode_text).map_err(|error| {
+            format!("failed to write ail-compile agent bytecode artifact: {error}")
+        })?;
+        fs::write(
+            root.join("agent.fingerprint.txt"),
+            format!("{}\n", ail_artifact_fingerprint(agent_bytecode_text)),
+        )
+        .map_err(|error| {
+            format!("failed to write ail-compile agent bytecode fingerprint artifact: {error}")
+        })?;
+    }
+    if let Some(agent_trace) = artifacts.agent_trace {
+        fs::write(
+            root.join("agent-trace.txt"),
+            format!("{}\n", agent_trace.join("\n")),
+        )
+        .map_err(|error| format!("failed to write ail-compile agent trace artifact: {error}"))?;
+    }
+    for native_agent in artifacts.agent_native_executables {
+        let artifact_path = root.join(&native_agent.file_name);
+        fs::write(&artifact_path, &native_agent.bytes).map_err(|error| {
+            format!(
+                "failed to write ail-compile native agent artifact {}: {error}",
+                native_agent.file_name
+            )
+        })?;
+        set_native_executable_permissions(&artifact_path.to_string_lossy())?;
+    }
     let manifest_text = render_ail_compile_manifest(&artifacts);
     fs::write(root.join("manifest.ail-compile.txt"), &manifest_text)
         .map_err(|error| format!("failed to write ail-compile manifest artifact: {error}"))?;
@@ -2188,6 +2237,94 @@ fn run_ail_build_agent_verify_manifest(
     Ok(())
 }
 
+struct AilCompileAgentManifestRequest<'a> {
+    agent_bytecode: eigl::ail::AilBytecodeProgram,
+    agent_bytecode_text: String,
+    package_name: &'a str,
+    bytecode_text: &'a str,
+    target_executable: &'a [u8],
+    manifest_text: &'a str,
+    manifest_fingerprint: &'a str,
+    target: &'a str,
+}
+
+fn run_ail_compile_agent_verify_manifest(
+    request: AilCompileAgentManifestRequest<'_>,
+) -> Result<AilBuildAgentRun, String> {
+    let AilCompileAgentManifestRequest {
+        agent_bytecode,
+        agent_bytecode_text,
+        package_name,
+        bytecode_text,
+        target_executable,
+        manifest_text,
+        manifest_fingerprint,
+        target,
+    } = request;
+    if !agent_bytecode.actions.contains_key("VerifyCompileManifest") {
+        return Err(
+            "ail-compile --agent --artifact-dir requires a VerifyCompileManifest action"
+                .to_string(),
+        );
+    }
+    let state = BTreeMap::from([
+        (
+            "buildrequest.id".to_string(),
+            format!("{package_name}-compile"),
+        ),
+        (
+            "buildrequest.developer prompt".to_string(),
+            "skipped".to_string(),
+        ),
+        (
+            "buildrequest.requirements".to_string(),
+            "skipped".to_string(),
+        ),
+        ("buildrequest.spec".to_string(), "skipped".to_string()),
+        (
+            "buildrequest.bytecode fingerprint".to_string(),
+            ail_artifact_fingerprint(bytecode_text),
+        ),
+        (
+            "buildrequest.target artifact".to_string(),
+            format!("{target} executable {} bytes", target_executable.len()),
+        ),
+        (
+            "buildrequest.target artifact fingerprint".to_string(),
+            ail_artifact_fingerprint_bytes(target_executable),
+        ),
+        (
+            "buildrequest.artifact manifest".to_string(),
+            manifest_text.to_string(),
+        ),
+        (
+            "buildrequest.artifact manifest fingerprint".to_string(),
+            manifest_fingerprint.to_string(),
+        ),
+        (
+            "buildrequest.status".to_string(),
+            "BytecodeReady".to_string(),
+        ),
+    ]);
+    let run = run_ail_bytecode_action(&agent_bytecode, "VerifyCompileManifest", state)?;
+    if run.status != "succeeded" {
+        let mut message = "ail-compile agent VerifyCompileManifest failed".to_string();
+        if let Some(failure) = run.failure {
+            message.push_str(&format!(": {failure}"));
+        }
+        if !run.trace.is_empty() {
+            message.push_str(&format!("\n{}", run.trace.join("\n")));
+        }
+        return Err(message);
+    }
+    Ok(AilBuildAgentRun {
+        bytecode: agent_bytecode,
+        bytecode_text: agent_bytecode_text,
+        state: run.final_state,
+        trace: run.trace,
+    })
+}
+
 fn native_artifact_fingerprint_text(artifacts: &[AilNativeArtifact]) -> Option<String> {
     if artifacts.is_empty() {
         return None;
@@ -2338,6 +2475,38 @@ fn run_ail_compile_from_core(
         let bytecode = compile_ail_core_bytecode(core)?;
         let bytecode_text = format!("{}\n", render_ail_bytecode(&bytecode));
         let core_text = format!("{}\n", render_ail_core(core));
+        let (agent_run, agent_native_artifacts) = if let Some(agent_path) =
+            &cli_options.ail_build_agent
+        {
+            let (agent_bytecode, agent_bytecode_text) = load_verified_ail_build_agent(agent_path)?;
+            let agent_native_artifacts =
+                compile_ail_build_agent_native_artifacts(&agent_bytecode, target)?;
+            let empty_agent_trace: &[String] = &[];
+            let manifest_text = render_ail_compile_manifest(&AilCompileArtifactSet {
+                core_text: Some(&core_text),
+                bytecode_text: &bytecode_text,
+                action_name: action,
+                target_name: target,
+                target_executable: &executable,
+                agent_bytecode_text: Some(agent_bytecode_text.as_str()),
+                agent_trace: Some(empty_agent_trace),
+                agent_native_executables: agent_native_artifacts.as_slice(),
+            });
+            let manifest_fingerprint = ail_artifact_fingerprint(&manifest_text);
+            let run = run_ail_compile_agent_verify_manifest(AilCompileAgentManifestRequest {
+                agent_bytecode,
+                agent_bytecode_text,
+                package_name: &core.package.name,
+                bytecode_text: &bytecode_text,
+                target_executable: &executable,
+                manifest_text: &manifest_text,
+                manifest_fingerprint: &manifest_fingerprint,
+                target,
+            })?;
+            (Some(run), agent_native_artifacts)
+        } else {
+            (None, Vec::new())
+        };
         write_ail_compile_artifacts(
             artifact_dir,
             AilCompileArtifactSet {
@@ -2346,6 +2515,9 @@ fn run_ail_compile_from_core(
                 action_name: action,
                 target_name: target,
                 target_executable: &executable,
+                agent_bytecode_text: agent_run.as_ref().map(|run| run.bytecode_text.as_str()),
+                agent_trace: agent_run.as_ref().map(|run| run.trace.as_slice()),
+                agent_native_executables: agent_native_artifacts.as_slice(),
             },
         )?;
     }
@@ -2380,6 +2552,38 @@ fn run_ail_compile_from_bytecode_file(path: &str, cli_options: &CliOptions) -> R
     let executable = compile_ail_bytecode_native_elf(&bytecode, action, target)?;
     write_native_executable(out, &executable)?;
     if let Some(artifact_dir) = &cli_options.artifact_dir {
+        let (agent_run, agent_native_artifacts) = if let Some(agent_path) =
+            &cli_options.ail_build_agent
+        {
+            let (agent_bytecode, agent_bytecode_text) = load_verified_ail_build_agent(agent_path)?;
+            let agent_native_artifacts =
+                compile_ail_build_agent_native_artifacts(&agent_bytecode, target)?;
+            let empty_agent_trace: &[String] = &[];
+            let manifest_text = render_ail_compile_manifest(&AilCompileArtifactSet {
+                core_text: None,
+                bytecode_text: &bytecode_text,
+                action_name: action,
+                target_name: target,
+                target_executable: &executable,
+                agent_bytecode_text: Some(agent_bytecode_text.as_str()),
+                agent_trace: Some(empty_agent_trace),
+                agent_native_executables: agent_native_artifacts.as_slice(),
+            });
+            let manifest_fingerprint = ail_artifact_fingerprint(&manifest_text);
+            let run = run_ail_compile_agent_verify_manifest(AilCompileAgentManifestRequest {
+                agent_bytecode,
+                agent_bytecode_text,
+                package_name: &bytecode.package_name,
+                bytecode_text: &bytecode_text,
+                target_executable: &executable,
+                manifest_text: &manifest_text,
+                manifest_fingerprint: &manifest_fingerprint,
+                target,
+            })?;
+            (Some(run), agent_native_artifacts)
+        } else {
+            (None, Vec::new())
+        };
         write_ail_compile_artifacts(
             artifact_dir,
             AilCompileArtifactSet {
@@ -2388,6 +2592,9 @@ fn run_ail_compile_from_bytecode_file(path: &str, cli_options: &CliOptions) -> R
                 action_name: action,
                 target_name: target,
                 target_executable: &executable,
+                agent_bytecode_text: agent_run.as_ref().map(|run| run.bytecode_text.as_str()),
+                agent_trace: agent_run.as_ref().map(|run| run.trace.as_slice()),
+                agent_native_executables: agent_native_artifacts.as_slice(),
             },
         )?;
     }
@@ -3273,7 +3480,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         if arg == "--agent" {
             if !matches!(
                 command,
-                "ail-build" | "ail-pass" | "ail-lower" | "ail-conformance"
+                "ail-build" | "ail-pass" | "ail-lower" | "ail-compile" | "ail-conformance"
             ) {
                 return Err(usage());
             }
@@ -3474,6 +3681,9 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
     }
     if command == "ail-build" && ail_build_target_model.is_some() && ail_build_agent.is_none() {
         return Err("--target-model requires --agent".to_string());
+    }
+    if command == "ail-compile" && ail_build_agent.is_some() && artifact_dir.is_none() {
+        return Err("ail-compile --agent requires --artifact-dir <dir>".to_string());
     }
     if command == "ail-build" {
         let native_requested = ail_compile_target.is_some() || ail_compile_out.is_some();

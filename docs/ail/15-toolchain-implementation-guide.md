@@ -448,7 +448,12 @@ With `--artifact-dir`, direct `ail-compile` writes `artifact.ailbc.json`,
 `manifest.ail-compile.txt`, and `manifest.fingerprint.txt`; compiles from
 checked AIL-Core also include `checked.ail-core.txt`. The compile manifest ties
 the selected action, verified bytecode artifact, and native target executable
-fingerprint into a reviewable artifact boundary.
+fingerprint into a reviewable artifact boundary. With
+`--agent <agent-package-or-bytecode>`, `ail-compile --artifact-dir` also runs
+the AIL-authored `VerifyCompileManifest` action over that manifest and writes
+`agent.ailbc.json`, `agent.fingerprint.txt`, `agent-trace.txt`, and native
+`agent-<ActionName>.elf` verifier executables recorded as `agent-target`
+entries.
 `ail-requirements` runs the first developer-facing agent capture stage by asking
 the package base LLM for an AIL-Requirements artifact, checking profile-specific
 coverage, and sending diagnostics back for one repair pass when the artifact is

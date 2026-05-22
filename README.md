@@ -97,7 +97,12 @@ without loading the source package. Adding `--artifact-dir <dir>` to
 `ail-compile` writes `artifact.ailbc.json`, `artifact.fingerprint.txt`,
 `target.elf`, `target.fingerprint.txt`, `manifest.ail-compile.txt`, and
 `manifest.fingerprint.txt`; compiles from checked AIL-Core also include
-`checked.ail-core.txt`. `ail-pass <compiler-pass-package-or-bytecode>
+`checked.ail-core.txt`. With `--agent <agent-package-or-bytecode>`,
+`ail-compile --artifact-dir` also runs the AIL-authored
+`VerifyCompileManifest` action, writes `agent.ailbc.json`,
+`agent.fingerprint.txt`, `agent-trace.txt`, and `agent-<ActionName>.elf`, and
+records each native agent executable as an `agent-target` manifest entry.
+`ail-pass <compiler-pass-package-or-bytecode>
 <target-package> --action <PassName>` compiles an AIL-Meta compiler pass
 package, or reads a saved Compiler-profile AIL-Bytecode artifact, and applies
 it to a checked target package's AIL-Core. `ail-pass
@@ -221,6 +226,7 @@ cargo run -- ail-compile examples/support_ticket.ail --action CloseTicket --targ
 cargo run -- ail-compile /tmp/support-ticket.ailbc.json --action CloseTicket --target linux-x86_64-elf --out /tmp/close-ticket-from-bytecode
 /tmp/close-ticket-from-bytecode ticket.id=T-1 ticket.status=Open
 cargo run -- ail-compile /tmp/support-ticket.ailbc.json --action CloseTicket --target linux-x86_64-elf --out /tmp/close-ticket-from-bytecode --artifact-dir /tmp/support-ticket-ail-compile
+cargo run -- ail-compile /tmp/support-ticket.ailbc.json --action CloseTicket --target linux-x86_64-elf --out /tmp/close-ticket-from-bytecode --agent examples/ail_toolchain_agent.ail --artifact-dir /tmp/support-ticket-ail-compile-agent
 cargo run -- ail-lower examples/refund_tool.ail
 cargo run -- ail-lower examples/compiler_pass.ail
 cargo run -- ail-lower examples/network_driver.ail
