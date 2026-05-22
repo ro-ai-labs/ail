@@ -361,6 +361,10 @@ target package into AIL-Core, executes the selected pass bytecode over that
 checked IR, and prints the transformed AIL-Core artifact. This exposes
 AIL-authored compiler passes as a command-line toolchain stage and as reusable
 bytecode artifacts without generating Rust or other host-language source. With
+`--core-file <path>`, `ail-pass` reads the checked target AIL-Core artifact
+directly instead of loading the target source package, so a saved
+Compiler-profile bytecode artifact can transform a saved IR artifact as a
+standalone compiler stage. With
 `--artifact-dir`, the same command writes `pass.ailbc.json`,
 `input.ail-core.txt`, `output.ail-core.txt`, and `trace.txt` so pass execution
 can be audited while stdout remains the transformed AIL-Core artifact.

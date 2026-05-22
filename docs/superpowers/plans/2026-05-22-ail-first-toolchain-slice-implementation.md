@@ -3578,6 +3578,57 @@ cargo test --test ail_toolchain cli_ail_lower_accepts_saved_core_file_artifact -
 Expected: saved AIL-Core artifacts parse cleanly, check cleanly, and lower to
 the same verified AIL-Bytecode as the source package.
 
+### Task 87: Saved AIL-Core Artifact Input For Compiler Passes
+
+**Files:**
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing saved-core pass test**
+
+Add a CLI test that compiles `examples/compiler_pass.ail` to a saved
+Compiler-profile AIL-Bytecode artifact, renders `examples/support_ticket.ail`
+to a saved checked AIL-Core artifact, and requires:
+
+```bash
+eigl ail-pass <saved-pass.ailbc.json> --core-file <core-file> --action InferReadPermissions
+```
+
+to run the pass over the saved IR artifact without requiring a target source
+package argument.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_pass_accepts_saved_core_file_artifact -- --nocapture
+```
+
+Expected: usage failure because `ail-pass` requires a positional target package
+and rejects `--core-file`.
+
+- [x] **Step 3: Implement saved target-core input**
+
+Allow `--core-file` for `ail-pass`, make the positional target package optional
+when that flag is present, parse and check the saved AIL-Core artifact, and run
+the selected Compiler-profile bytecode pass over that IR. Preserve existing
+source-package target behavior and `--artifact-dir` outputs.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_pass_accepts_saved_core_file_artifact -- --nocapture
+```
+
+Expected: saved compiler-pass bytecode transforms the saved target AIL-Core
+artifact, writes auditable pass artifacts when requested, and prints the
+transformed AIL-Core artifact on stdout.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

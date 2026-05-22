@@ -374,7 +374,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
 }
 
 fn usage() -> String {
-    "usage: eigl <check|graph|views|simulate|lower|run|dispatch|emit|schedule|dequeue|serve|normalize|patch|llm-roundtrip|view-model|ail-check|ail-core|ail-flow|ail-lower|ail-run|ail-vm|ail-conformance|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-patch> <path> [patch|target-package] [--intent name] [--action name] [--prompt text] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--artifact-dir path] [--state-in path] [--state-out path] [--data-in path] [--data-out path] [--operation-output name=value] [--listen addr] [--llm-endpoint url] [method path|trigger] [key=value ...]"
+    "usage: eigl <check|graph|views|simulate|lower|run|dispatch|emit|schedule|dequeue|serve|normalize|patch|llm-roundtrip|view-model|ail-check|ail-core|ail-flow|ail-lower|ail-run|ail-vm|ail-conformance|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-patch> <path> [patch|target-package] [--intent name] [--action name] [--prompt text] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--artifact-dir path] [--state-in path] [--state-out path] [--data-in path] [--data-out path] [--operation-output name=value] [--listen addr] [--llm-endpoint url] [method path|trigger] [key=value ...]\nail-pass usage: eigl ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> OR eigl ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName>"
         .to_string()
 }
 
@@ -471,10 +471,6 @@ fn run_ail_pass_command(pass_path: &str, cli_options: &CliOptions) -> Result<u8,
         .ail_action
         .as_deref()
         .ok_or_else(|| "ail-pass requires --action <name>".to_string())?;
-    let target_path = cli_options
-        .ail_pass_target
-        .as_deref()
-        .ok_or_else(|| "ail-pass requires a target package".to_string())?;
 
     let (pass_bytecode, pass_bytecode_text) = load_ail_pass_bytecode_or_compile_package(pass_path)?;
     let bytecode_diagnostics = verify_ail_bytecode(&pass_bytecode);
@@ -486,9 +482,7 @@ fn run_ail_pass_command(pass_path: &str, cli_options: &CliOptions) -> Result<u8,
         return Ok(1);
     }
 
-    let target_package = load_ail_package_dir(target_path)?;
-    let target_document = parse_ail_package_document(&target_package)?;
-    let target_core = elaborate_ail_core(&target_package, &target_document);
+    let target_core = load_ail_pass_target_core(cli_options)?;
     let target_diagnostics = check_ail_core(&target_core);
     if !target_diagnostics.is_empty() {
         for diagnostic in target_diagnostics {
@@ -519,6 +513,19 @@ fn run_ail_pass_command(pass_path: &str, cli_options: &CliOptions) -> Result<u8,
     }
     print!("{output_core_text}");
     Ok(0)
+}
+
+fn load_ail_pass_target_core(cli_options: &CliOptions) -> Result<eigl::ail::AilCore, String> {
+    if cli_options.ail_core_file.is_some() {
+        return parse_cli_ail_core(cli_options);
+    }
+    let target_path = cli_options
+        .ail_pass_target
+        .as_deref()
+        .ok_or_else(|| "ail-pass requires a target package or --core-file <path>".to_string())?;
+    let target_package = load_ail_package_dir(target_path)?;
+    let target_document = parse_ail_package_document(&target_package)?;
+    Ok(elaborate_ail_core(&target_package, &target_document))
 }
 
 fn load_ail_pass_bytecode_or_compile_package(
@@ -1057,9 +1064,9 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         trigger_name = Some(name.clone());
         index += 1;
     }
-    if command == "ail-pass" {
+    if command == "ail-pass" && args.get(index).is_none_or(|arg| arg != "--core-file") {
         let Some(target_package) = args.get(index) else {
-            return Err("ail-pass requires a target package".to_string());
+            return Err("ail-pass requires a target package or --core-file <path>".to_string());
         };
         ail_pass_target = Some(target_package.clone());
         index += 1;
@@ -1125,7 +1132,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
             continue;
         }
         if arg == "--core-file" {
-            if command != "ail-lower" {
+            if !matches!(command, "ail-lower" | "ail-pass") {
                 return Err(usage());
             }
             let Some(path) = args.get(index + 1) else {
@@ -1288,6 +1295,9 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
 
     if ail_core_file.is_some() && ail_spec_file.is_some() {
         return Err("--core-file cannot be combined with --spec-file".to_string());
+    }
+    if command == "ail-pass" && ail_core_file.is_none() && ail_pass_target.is_none() {
+        return Err("ail-pass requires a target package or --core-file <path>".to_string());
     }
 
     Ok(CliOptions {

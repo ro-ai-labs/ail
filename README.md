@@ -44,8 +44,11 @@ used by lowering. `ail-patch
 artifact directly, `ail-pass <compiler-pass-package-or-bytecode>
 <target-package> --action <PassName>` compiles an AIL-Meta compiler pass
 package, or reads a saved Compiler-profile AIL-Bytecode artifact, and applies
-it to a checked target package's AIL-Core, `ail-conformance` checks accepted
-and rejected fixtures, `ail-requirements --prompt <text>` asks the package base
+it to a checked target package's AIL-Core. `ail-pass
+<compiler-pass-package-or-bytecode> --core-file <path> --action <PassName>`
+applies the pass to a saved checked AIL-Core artifact without loading the target
+source package. `ail-conformance` checks accepted and rejected fixtures,
+`ail-requirements --prompt <text>` asks the package base
 LLM endpoint for a checked AIL-Requirements artifact and gives the base LLM one
 diagnostics-guided repair pass if required coverage is missing, `ail-spec
 --requirements-file <path> --prompt <text>` turns a checked AIL-Requirements
@@ -91,6 +94,7 @@ cargo run -- ail-vm /tmp/support-ticket.ailbc.json --action CloseTicket ticket.i
 cargo run -- ail-pass examples/compiler_pass.ail examples/support_ticket.ail --action InferReadPermissions
 cargo run -- ail-pass examples/compiler_pass.ail examples/support_ticket.ail --action InferReadPermissions --artifact-dir /tmp/support-ticket-ail-pass
 cargo run -- ail-pass /tmp/compiler-pass.ailbc.json examples/support_ticket.ail --action InferReadPermissions
+cargo run -- ail-pass /tmp/compiler-pass.ailbc.json --core-file /tmp/support-ticket.ail-core.txt --action InferReadPermissions
 cargo run -- ail-conformance examples/support_ticket.ail
 cargo run -- ail-conformance examples/ail_toolchain_agent.ail
 cargo run -- ail-conformance examples/refund_tool.ail
