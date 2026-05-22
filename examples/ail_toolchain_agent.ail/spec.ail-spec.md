@@ -14,10 +14,13 @@ A BuildRequest has:
 - spec review report: Text
 - core ir: Text
 - core review report: Text
+- compiler pass artifact: Text
+- compiler pass trace: Text
+- compiler pass review report: Text
 - bytecode artifact: Text
 - bytecode verification report: Text
 - prompt portability report: Text
-- status: State<PromptReceived, RequirementsLoaded, RequirementsCaptured, SpecLoaded, SpecCaptured, CoreLoaded, CoreChecked, BytecodeReady, NeedsClarification>
+- status: State<PromptReceived, RequirementsLoaded, RequirementsCaptured, SpecLoaded, SpecCaptured, CoreLoaded, PassApplied, CoreChecked, BytecodeReady, NeedsClarification>
 - target model: Text
 
 The application shows:
@@ -61,12 +64,28 @@ When the toolchain agent accepts a checked AIL spec draft:
 - the system guarantees the accepted spec preserves the checked requirements or saved spec artifact boundary and remains eligible for AIL-Core lowering and AIL-Bytecode compilation
 - the system records a trace event named SpecDraftAccepted
 
+Action: Accept compiler pass output.
+
+When the toolchain agent accepts an AIL compiler pass output:
+
+- the system requires the BuildRequest to exist
+- the system requires the BuildRequest status to be SpecCaptured or CoreLoaded
+- the system reads the BuildRequest requirements
+- the system reads the BuildRequest spec
+- the system reads the BuildRequest core ir
+- the system reads the BuildRequest compiler pass artifact
+- the system reads the BuildRequest compiler pass trace
+- the system changes the BuildRequest compiler pass review report to Accepted
+- the system changes the BuildRequest status to PassApplied
+- the system guarantees the AIL compiler pass bytecode transformed checked AIL-Core without host-language backend source
+- the system records a trace event named CompilerPassOutputAccepted
+
 Action: Accept core IR.
 
 When the toolchain agent accepts checked AIL-Core IR:
 
 - the system requires the BuildRequest to exist
-- the system requires the BuildRequest status to be SpecCaptured or CoreLoaded
+- the system requires the BuildRequest status to be SpecCaptured or CoreLoaded or PassApplied
 - the system reads the BuildRequest requirements
 - the system reads the BuildRequest spec
 - the system reads the BuildRequest core ir

@@ -4379,6 +4379,54 @@ Expected: saved-requirements builds record `PrepareSpecDraft`,
 `SpecDraftPrepared`, `AcceptSpecDraft`, and `SpecDraftAccepted` before
 `AcceptCoreIR` and `CompileApplication`.
 
+### Task 104: AIL Build Agent Accepts Compiler-Pass Output
+
+**Files:**
+- Modify: `examples/ail_toolchain_agent.ail/spec.ail-spec.md`
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing compiler-pass agent test**
+
+Add an `ail-build --pass --agent` CLI test that requires the AIL-authored
+compiler pass bytecode and trace to be written, then requires the build-agent
+trace to record `AcceptCompilerPassOutput` after `AcceptSpecDraft` and before
+`AcceptCoreIR` and `CompileApplication`.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_agent_accepts_compiler_pass_output_before_core -- --nocapture
+```
+
+Expected: failure because `ail-build --pass --agent` currently runs the pass
+bytecode but the build-agent trace jumps from `AcceptSpecDraft` to
+`AcceptCoreIR`.
+
+- [x] **Step 3: Implement compiler-pass output acceptance**
+
+Extend the AIL-authored toolchain agent with compiler-pass artifact, trace, and
+review-report fields plus an `AcceptCompilerPassOutput` action. After an
+AIL-authored compiler pass transforms checked AIL-Core and the transformed core
+re-checks, pass the compiler-pass bytecode boundary and VM trace into that
+agent action before `AcceptCoreIR`.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_agent_accepts_compiler_pass_output_before_core -- --nocapture
+```
+
+Expected: `AcceptCompilerPassOutput`, `PassApplied`, and
+`CompilerPassOutputAccepted` appear before `AcceptCoreIR` and
+`CompileApplication`.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

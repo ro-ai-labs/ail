@@ -815,6 +815,69 @@ fn start_ail_build_agent_from_saved_spec(
     }
 }
 
+fn run_ail_build_agent_accept_pass_output(
+    agent_path: &str,
+    mut agent_start: AilBuildAgentStart,
+    requirements_artifact: Option<&str>,
+    spec_text: Option<&str>,
+    core_text: &str,
+    pass_bytecode_text: &str,
+    pass_trace: &[String],
+) -> Result<AilBuildAgentStart, String> {
+    let (agent_bytecode, _) = load_verified_ail_build_agent(agent_path)?;
+    if !agent_bytecode
+        .actions
+        .contains_key("AcceptCompilerPassOutput")
+    {
+        return Err(
+            "ail-build --agent --pass requires an AcceptCompilerPassOutput action".to_string(),
+        );
+    }
+    if let Some(requirements_artifact) = requirements_artifact {
+        agent_start.state.insert(
+            "buildrequest.requirements".to_string(),
+            requirements_artifact.to_string(),
+        );
+    }
+    if let Some(spec_text) = spec_text {
+        agent_start
+            .state
+            .insert("buildrequest.spec".to_string(), spec_text.to_string());
+    }
+    agent_start
+        .state
+        .insert("buildrequest.core ir".to_string(), core_text.to_string());
+    agent_start.state.insert(
+        "buildrequest.compiler pass artifact".to_string(),
+        format!(
+            "Verified AIL compiler pass bytecode ({} bytes)",
+            pass_bytecode_text.len()
+        ),
+    );
+    agent_start.state.insert(
+        "buildrequest.compiler pass trace".to_string(),
+        pass_trace.join("\n"),
+    );
+    let pass_run = run_ail_bytecode_action(
+        &agent_bytecode,
+        "AcceptCompilerPassOutput",
+        agent_start.state,
+    )?;
+    if pass_run.status != "succeeded" {
+        let mut message = "ail-build agent AcceptCompilerPassOutput failed".to_string();
+        if let Some(failure) = pass_run.failure {
+            message.push_str(&format!(": {failure}"));
+        }
+        if !pass_run.trace.is_empty() {
+            message.push_str(&format!("\n{}", pass_run.trace.join("\n")));
+        }
+        return Err(message);
+    }
+    agent_start.trace.extend(pass_run.trace);
+    agent_start.state = pass_run.final_state;
+    Ok(agent_start)
+}
+
 fn run_ail_build_agent_accept_core(
     agent_path: &str,
     mut agent_start: AilBuildAgentStart,
@@ -1225,7 +1288,7 @@ fn run_ail_build_from_core(
     }
     let agent_start = if let Some(agent_path) = &cli_options.ail_build_agent {
         let core_text = render_ail_core(&core);
-        let agent_start = agent_start.unwrap_or_else(|| {
+        let mut agent_start = agent_start.unwrap_or_else(|| {
             start_ail_build_agent_from_checked_core(
                 &core,
                 requirements_artifact,
@@ -1233,6 +1296,20 @@ fn run_ail_build_from_core(
                 capture_prompt,
             )
         });
+        if let (Some(pass_bytecode_text), Some(pass_trace)) = (
+            pass_bytecode_artifact.as_deref(),
+            pass_trace_artifact.as_deref(),
+        ) {
+            agent_start = run_ail_build_agent_accept_pass_output(
+                agent_path,
+                agent_start,
+                requirements_artifact,
+                spec_text,
+                &core_text,
+                pass_bytecode_text,
+                pass_trace,
+            )?;
+        }
         Some(run_ail_build_agent_accept_core(
             agent_path,
             agent_start,
