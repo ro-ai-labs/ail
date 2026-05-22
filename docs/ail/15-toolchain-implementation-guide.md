@@ -434,9 +434,10 @@ lowered, and the artifact directory also includes `pass.ailbc.json`,
 `pass.fingerprint.txt`, and `pass-trace.txt` for the compiler-pass bytecode,
 deterministic pass fingerprint, and execution trace. When a build agent is
 present, the artifact directory also includes
-`agent.ailbc.json` plus `agent-trace.txt` for the agent bytecode and its
-requirements-capture, prompt-portability, application-compile, and
-bytecode-verification trace. This lets the developer audit the
+`agent.ailbc.json`, `agent.fingerprint.txt`, and `agent-trace.txt` for the
+agent bytecode, deterministic agent fingerprint, and its requirements-capture,
+prompt-portability, application-compile, and bytecode-verification trace. This
+lets the developer audit the
 requirements-to-spec-to-IR-to-pass-to-agent-to-bytecode chain, a
 saved-spec-to-IR-to-agent-to-bytecode chain, or a
 saved-core-to-agent-to-bytecode chain while stdout remains the parseable

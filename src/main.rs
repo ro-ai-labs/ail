@@ -464,6 +464,13 @@ fn write_ail_build_artifacts(
         fs::write(root.join("agent.ailbc.json"), agent_bytecode_text).map_err(|error| {
             format!("failed to write ail-build agent bytecode artifact: {error}")
         })?;
+        fs::write(
+            root.join("agent.fingerprint.txt"),
+            format!("{}\n", ail_artifact_fingerprint(agent_bytecode_text)),
+        )
+        .map_err(|error| {
+            format!("failed to write ail-build agent bytecode fingerprint artifact: {error}")
+        })?;
     }
     if let Some(agent_trace) = artifacts.agent_trace {
         fs::write(

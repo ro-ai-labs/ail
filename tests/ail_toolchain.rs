@@ -5188,6 +5188,8 @@ fn cli_ail_build_runs_toolchain_agent_bytecode() {
     let agent_bytecode = fs::read_to_string(artifact_dir.join("agent.ailbc.json")).unwrap();
     assert!(agent_bytecode.contains(r#""package":"ail-toolchain-agent""#));
     assert!(agent_bytecode.contains(r#""action":"CompileApplication""#));
+    let agent_fingerprint = fs::read_to_string(artifact_dir.join("agent.fingerprint.txt")).unwrap();
+    assert_eq!(agent_fingerprint.trim(), fnv64_fingerprint(&agent_bytecode));
     let parsed_agent = parse_ail_bytecode(&agent_bytecode).unwrap();
     assert_eq!(verify_ail_bytecode(&parsed_agent), Vec::<String>::new());
 

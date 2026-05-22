@@ -4564,6 +4564,48 @@ cargo test --test ail_toolchain cli_ail_pass_writes_auditable_intermediate_artif
 Expected: `pass.fingerprint.txt` matches `pass.ailbc.json` while stdout remains
 the transformed AIL-Core artifact.
 
+### Task 108: AIL Build Writes Agent Bytecode Fingerprint
+
+**Files:**
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing agent fingerprint test**
+
+Extend the `ail-build --agent --artifact-dir` test to require
+`agent.fingerprint.txt` beside `agent.ailbc.json`, using the same deterministic
+FNV-1a fingerprint format as final and compiler-pass bytecode artifacts.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_runs_toolchain_agent_bytecode -- --nocapture
+```
+
+Expected: failure because `ail-build --agent --artifact-dir` writes
+`agent.ailbc.json` and `agent-trace.txt` but no agent bytecode fingerprint.
+
+- [x] **Step 3: Implement agent fingerprint output**
+
+Reuse the dependency-free bytecode fingerprint helper in the `ail-build`
+artifact writer and write `agent.fingerprint.txt` whenever `agent.ailbc.json`
+is written.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_runs_toolchain_agent_bytecode -- --nocapture
+```
+
+Expected: `agent.fingerprint.txt` matches `agent.ailbc.json`, the agent
+bytecode still verifies, and the agent trace still records `CompileApplication`.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**
