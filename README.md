@@ -59,6 +59,9 @@ Supported AgentTool opcodes also emit VM-style audit trace entries to stderr,
 including requirements, typed inputs and outputs, external calls, approval and
 permission rules, secret-protection declarations, guarantees, and trace events,
 without exposing secret runtime values.
+Supported CompilerPass opcodes emit VM-style compiler-pass audit traces,
+including declared inputs and outputs, reads, steps, writes, guarantees, trace
+events, and the explicit `CORE_INFER_READ_PERMISSIONS` transform marker.
 The first native backend rejects unsupported VM opcodes and unlowered observed
 rules instead of silently dropping them.
 `ail-lower --artifact-dir

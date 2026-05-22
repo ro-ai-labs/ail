@@ -4120,6 +4120,63 @@ fn cli_ail_compile_native_agent_tool_emits_audit_trace() {
 }
 
 #[test]
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+fn cli_ail_compile_native_compiler_pass_emits_transform_trace() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("compiler_pass.ail");
+    let executable_path =
+        std::env::temp_dir().join(format!("eigl-compiler-pass-native-{}", std::process::id()));
+    let _ = fs::remove_file(&executable_path);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-compile",
+            &package,
+            "--action",
+            "InferReadPermissions",
+            "--target",
+            "linux-x86_64-elf",
+            "--out",
+            executable_path.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let run = Command::new(&executable_path)
+        .arg("input graph=checked")
+        .arg("package policy=default")
+        .output()
+        .unwrap();
+    assert!(
+        run.status.success(),
+        "compiler pass native executable failed"
+    );
+    assert_eq!(String::from_utf8_lossy(&run.stdout), "");
+    let stderr = String::from_utf8_lossy(&run.stderr);
+    assert!(
+        stderr.contains("compiler pass Infer read permissions started"),
+        "{stderr}"
+    );
+    assert!(
+        stderr.contains("pass read every edge whose kind is reads"),
+        "{stderr}"
+    );
+    assert!(
+        stderr.contains("core transform infer read permissions"),
+        "{stderr}"
+    );
+    assert!(stderr.contains("trace ReadPermissionAdded"), "{stderr}");
+
+    fs::remove_file(executable_path).unwrap();
+}
+
+#[test]
 fn cli_ail_run_executes_close_ticket_with_trace() {
     let binary = env!("CARGO_BIN_EXE_eigl");
     let package = fixture("support_ticket.ail");

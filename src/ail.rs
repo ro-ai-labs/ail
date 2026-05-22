@@ -3533,6 +3533,45 @@ fn emit_linux_x86_64_elf_for_action(
                     success_trace_lines.push(format!("tool secret protection {text}\n"));
                 }
             }
+            "PASS_BEGIN" => {
+                if let Some(label) = instruction.operands.get("label") {
+                    success_trace_lines.push(format!("compiler pass {label} started\n"));
+                }
+            }
+            "PASS_INPUT" => {
+                if let (Some(name), Some(type_name)) = (
+                    instruction.operands.get("name"),
+                    instruction.operands.get("type"),
+                ) {
+                    success_trace_lines.push(format!("input {name}:{type_name}\n"));
+                }
+            }
+            "PASS_OUTPUT" => {
+                if let (Some(name), Some(type_name)) = (
+                    instruction.operands.get("name"),
+                    instruction.operands.get("type"),
+                ) {
+                    success_trace_lines.push(format!("output {name}:{type_name}\n"));
+                }
+            }
+            "PASS_READ" => {
+                if let Some(text) = instruction.operands.get("text") {
+                    success_trace_lines.push(format!("pass read {text}\n"));
+                }
+            }
+            "PASS_STEP" => {
+                if let Some(text) = instruction.operands.get("text") {
+                    success_trace_lines.push(format!("pass step {text}\n"));
+                }
+            }
+            "PASS_WRITE" => {
+                if let Some(text) = instruction.operands.get("text") {
+                    success_trace_lines.push(format!("pass write {text}\n"));
+                }
+            }
+            "CORE_INFER_READ_PERMISSIONS" => {
+                success_trace_lines.push("core transform infer read permissions\n".to_string());
+            }
             "EMIT_TRACE" => {
                 if let Some(event) = instruction.operands.get("event") {
                     success_trace_lines.push(format!("trace {event}\n"));

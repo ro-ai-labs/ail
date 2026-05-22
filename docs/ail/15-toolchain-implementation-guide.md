@@ -387,9 +387,12 @@ supported AgentTool opcodes writes the same audit trace entries as the VM,
 including tool start, requirements, typed inputs and outputs, reads, external
 calls, writes, permissions, approvals, secret-protection declarations,
 guarantees, and explicit trace events, while keeping secret runtime values out
-of stdout and stderr. Stdout remains reserved for parseable state changes. The
-first native backend rejects unsupported System, CompilerPass, future unknown
-VM opcodes, and unlowered
+of stdout and stderr. Native code generated from supported CompilerPass opcodes
+writes the same compiler-pass trace entries as the VM, including pass start,
+declared inputs and outputs, reads, steps, writes, guarantees, explicit trace
+events, and the auditable `CORE_INFER_READ_PERMISSIONS` transform marker.
+Stdout remains reserved for parseable state changes. The first native backend
+rejects unsupported System, future unknown VM opcodes, and unlowered
 `OBSERVE_RULE` requirements instead of silently emitting a partial executable.
 With `--artifact-dir`, `ail-lower` writes `checked.ail-core.txt`,
 `artifact.ailbc.json`, `artifact.fingerprint.txt`, `manifest.ail-lower.txt`,
