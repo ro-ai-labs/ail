@@ -1968,6 +1968,49 @@ fn cli_ail_vm_rejects_invalid_bytecode_before_execution() {
 }
 
 #[test]
+fn cli_ail_pass_runs_compiler_pass_over_checked_package_core() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let pass_package = fixture("compiler_pass.ail");
+    let target_package = fixture("support_ticket.ail");
+
+    let output = Command::new(binary)
+        .args([
+            "ail-pass",
+            &pass_package,
+            &target_package,
+            "--action",
+            "InferReadPermissions",
+        ])
+        .output()
+        .unwrap();
+
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("package: support-ticket"), "{stdout}");
+    assert!(
+        stdout.contains("node Permission read Ticket.status"),
+        "{stdout}"
+    );
+    assert!(
+        stdout
+            .contains("edge requires Action:MarksOverdueTickets -> Permission:read Ticket.status"),
+        "{stdout}"
+    );
+    assert!(
+        stdout.contains(
+            "node Provenance compiler_pass:InferReadPermissions.permission:read Ticket.status"
+        ),
+        "{stdout}"
+    );
+    assert!(!stdout.contains("trace="), "{stdout}");
+}
+
+#[test]
 fn ail_runtime_executes_generic_field_writes_and_requirements() {
     let package = load_ail_package_dir(fixture("runtime_generic.ail")).unwrap();
     let document = parse_ail_package_document(&package).unwrap();

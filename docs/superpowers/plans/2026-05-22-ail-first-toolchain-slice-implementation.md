@@ -3130,6 +3130,55 @@ Expected: compiler-pass bytecode exposes an explicit IR-transform primitive,
 the runner transforms only when that primitive is present, and existing
 Compiler-profile bytecode verification still passes.
 
+### Task 78: Compiler-Pass CLI Toolchain Stage
+
+**Files:**
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing `ail-pass` CLI test**
+
+Add a CLI test that runs:
+
+```bash
+eigl ail-pass examples/compiler_pass.ail examples/support_ticket.ail --action InferReadPermissions
+```
+
+Require stdout to be transformed Support Ticket AIL-Core containing
+`Permission read Ticket.status`, the `requires` edge from
+`MarksOverdueTickets`, and compiler-pass provenance.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_pass_runs_compiler_pass_over_checked_package_core -- --nocapture
+```
+
+Expected: failure because `ail-pass` is not a recognized command.
+
+- [x] **Step 3: Implement `ail-pass`**
+
+Parse `ail-pass <compiler-pass-package> <target-package> --action <PassName>`.
+Load and check the compiler-pass package, compile it to verified AIL-Bytecode,
+load and check the target package as AIL-Core, run the selected pass bytecode
+over the checked target core, re-check the transformed core, and print the
+deterministic transformed AIL-Core artifact.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_pass_runs_compiler_pass_over_checked_package_core -- --nocapture
+```
+
+Expected: `ail-pass` succeeds and prints only the transformed checked AIL-Core,
+making AIL-authored compiler passes available as a CLI toolchain stage.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

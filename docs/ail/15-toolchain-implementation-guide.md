@@ -334,6 +334,11 @@ then executes through the AIL bytecode VM for supported Application packages.
 reparsing the source AIL package, making bytecode a real artifact boundary
 instead of only a display format. The VM verifier rejects unknown opcodes and
 missing required operands before executing saved bytecode.
+`ail-pass` compiles an AIL-Meta compiler pass package into verified
+AIL-Bytecode, checks a target package into AIL-Core, executes the selected pass
+bytecode over that checked IR, and prints the transformed AIL-Core artifact.
+This exposes AIL-authored compiler passes as a command-line toolchain stage
+without generating Rust or other host-language source.
 `ail-build` composes the LLM draft loop with the same checked bytecode lowering:
 the base LLM first drafts an AIL-Requirements artifact from a user prompt.
 `ail-build` checks that artifact for profile-specific coverage before spec

@@ -12,7 +12,8 @@ use eigl::ail::{
     parse_ail_package_spec_text, parse_ail_patch_text, render_ail_bytecode, render_ail_core,
     render_ail_flow_view, render_ail_runtime_state_lines, render_ail_spec,
     repair_ail_requirements_from_diagnostics, repair_ail_spec_from_diagnostics,
-    run_ail_bytecode_action, run_ail_conformance, verify_ail_bytecode,
+    run_ail_bytecode_action, run_ail_compiler_pass_on_core, run_ail_conformance,
+    verify_ail_bytecode,
 };
 use eigl::apply_rif_patch;
 use eigl::checker::check_document;
@@ -51,6 +52,7 @@ struct CliOptions {
     trigger_name: Option<String>,
     ail_action: Option<String>,
     ail_prompt: Option<String>,
+    ail_pass_target: Option<String>,
 }
 
 struct EndpointExecutionResult {
@@ -91,6 +93,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
             | "ail-conformance"
             | "ail-draft"
             | "ail-build"
+            | "ail-pass"
             | "ail-patch"
     ) {
         return run_ail_command(command, path, &cli_options);
@@ -365,7 +368,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
 }
 
 fn usage() -> String {
-    "usage: eigl <check|graph|views|simulate|lower|run|dispatch|emit|schedule|dequeue|serve|normalize|patch|llm-roundtrip|view-model|ail-check|ail-core|ail-flow|ail-lower|ail-run|ail-vm|ail-conformance|ail-draft|ail-build|ail-patch> <path> [patch] [--intent name] [--action name] [--prompt text] [--artifact-dir path] [--state-in path] [--state-out path] [--data-in path] [--data-out path] [--operation-output name=value] [--listen addr] [--llm-endpoint url] [method path|trigger] [key=value ...]"
+    "usage: eigl <check|graph|views|simulate|lower|run|dispatch|emit|schedule|dequeue|serve|normalize|patch|llm-roundtrip|view-model|ail-check|ail-core|ail-flow|ail-lower|ail-run|ail-vm|ail-conformance|ail-draft|ail-build|ail-pass|ail-patch> <path> [patch|target-package] [--intent name] [--action name] [--prompt text] [--artifact-dir path] [--state-in path] [--state-out path] [--data-in path] [--data-out path] [--operation-output name=value] [--listen addr] [--llm-endpoint url] [method path|trigger] [key=value ...]"
         .to_string()
 }
 
@@ -564,6 +567,58 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
         print!("{bytecode_text}");
         return Ok(0);
     }
+    if command == "ail-pass" {
+        let action = cli_options
+            .ail_action
+            .as_deref()
+            .ok_or_else(|| "ail-pass requires --action <name>".to_string())?;
+        let target_path = cli_options
+            .ail_pass_target
+            .as_deref()
+            .ok_or_else(|| "ail-pass requires a target package".to_string())?;
+
+        let pass_document = parse_ail_package_document(&package)?;
+        let pass_core = elaborate_ail_core(&package, &pass_document);
+        let pass_diagnostics = check_ail_core(&pass_core);
+        if !pass_diagnostics.is_empty() {
+            for diagnostic in pass_diagnostics {
+                println!("{diagnostic}");
+            }
+            return Ok(1);
+        }
+        let pass_bytecode = compile_ail_core_bytecode(&pass_core)?;
+        let bytecode_diagnostics = verify_ail_bytecode(&pass_bytecode);
+        if !bytecode_diagnostics.is_empty() {
+            println!("ail-pass diagnostics:");
+            for diagnostic in bytecode_diagnostics {
+                println!("{diagnostic}");
+            }
+            return Ok(1);
+        }
+
+        let target_package = load_ail_package_dir(target_path)?;
+        let target_document = parse_ail_package_document(&target_package)?;
+        let target_core = elaborate_ail_core(&target_package, &target_document);
+        let target_diagnostics = check_ail_core(&target_core);
+        if !target_diagnostics.is_empty() {
+            for diagnostic in target_diagnostics {
+                println!("{diagnostic}");
+            }
+            return Ok(1);
+        }
+
+        let result = run_ail_compiler_pass_on_core(&pass_bytecode, action, &target_core)?;
+        let result_diagnostics = check_ail_core(&result.core);
+        if !result_diagnostics.is_empty() {
+            println!("ail-pass diagnostics:");
+            for diagnostic in result_diagnostics {
+                println!("{diagnostic}");
+            }
+            return Ok(1);
+        }
+        println!("{}", render_ail_core(&result.core));
+        return Ok(0);
+    }
     let document = parse_ail_package_document(&package)?;
     if command == "ail-patch" {
         let Some(patch_path) = cli_options.patch_path.as_ref() else {
@@ -733,6 +788,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
     let mut trigger_name = None;
     let mut ail_action = None;
     let mut ail_prompt = None;
+    let mut ail_pass_target = None;
     let mut index = 0;
     if command == "patch" || command == "ail-patch" {
         let Some(path) = args.get(index) else {
@@ -759,6 +815,13 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         trigger_name = Some(name.clone());
         index += 1;
     }
+    if command == "ail-pass" {
+        let Some(target_package) = args.get(index) else {
+            return Err("ail-pass requires a target package".to_string());
+        };
+        ail_pass_target = Some(target_package.clone());
+        index += 1;
+    }
     while index < args.len() {
         let arg = &args[index];
         if arg == "--intent" {
@@ -770,7 +833,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
             continue;
         }
         if arg == "--action" {
-            if !matches!(command, "ail-run" | "ail-vm") {
+            if !matches!(command, "ail-run" | "ail-vm" | "ail-pass") {
                 return Err(usage());
             }
             let Some(action_name) = args.get(index + 1) else {
@@ -946,6 +1009,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         trigger_name,
         ail_action,
         ail_prompt,
+        ail_pass_target,
     })
 }
 
