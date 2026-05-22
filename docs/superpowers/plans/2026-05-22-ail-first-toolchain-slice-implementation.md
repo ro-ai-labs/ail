@@ -4692,6 +4692,59 @@ cargo test --test ail_toolchain cli_ail_pass_writes_auditable_intermediate_artif
 Expected: the manifest lists the pass bytecode fingerprint, core artifacts, and
 execution trace while stdout remains the transformed AIL-Core artifact.
 
+### Task 111: AIL Build Agent Verifies Build Manifest
+
+**Files:**
+- Modify: `examples/ail_toolchain_agent.ail/spec.ail-spec.md`
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing AIL-agent manifest verification tests**
+
+Extend the toolchain-agent bytecode test to require a `VerifyBuildManifest`
+action. Extend the `ail-build --agent --artifact-dir` test to require the agent
+trace to run `VerifyBuildManifest` after `VerifyBytecodeArtifact`, read the
+artifact manifest and manifest fingerprint, write an accepted manifest
+verification report, and emit `BuildManifestVerified`. Require
+`manifest.fingerprint.txt` to match `manifest.ail-build.txt`.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain ail_toolchain_agent_package_lowers_to_verified_bytecode -- --nocapture
+cargo test --test ail_toolchain cli_ail_build_agent_verifies_bytecode_artifact_after_compile -- --nocapture
+```
+
+Expected: the package test first fails because the AIL-authored toolchain agent
+has no `VerifyBuildManifest` action; after the agent spec is extended, the CLI
+test fails because the Rust bootstrap does not yet call that action or write a
+manifest fingerprint artifact.
+
+- [x] **Step 3: Implement build manifest verification**
+
+Add manifest fields and a `Verify build manifest` action to the AIL-authored
+toolchain agent. Render the build manifest before artifact writing, compute its
+deterministic fingerprint, run `VerifyBuildManifest` when `--agent` and
+`--artifact-dir` are both present, and write `manifest.fingerprint.txt` beside
+`manifest.ail-build.txt`.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain ail_toolchain_agent_package_lowers_to_verified_bytecode -- --nocapture
+cargo test --test ail_toolchain cli_ail_build_agent_verifies_bytecode_artifact_after_compile -- --nocapture
+```
+
+Expected: the agent bytecode includes and runs `VerifyBuildManifest`, the trace
+records manifest verification after bytecode verification, and the manifest
+fingerprint file matches the manifest artifact.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

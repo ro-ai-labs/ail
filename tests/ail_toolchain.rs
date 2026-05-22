@@ -1893,6 +1893,10 @@ fn ail_toolchain_agent_package_lowers_to_verified_bytecode() {
         "{rendered}"
     );
     assert!(
+        rendered.contains(r#""action":"VerifyBuildManifest""#),
+        "{rendered}"
+    );
+    assert!(
         rendered.contains(r#""value":"BytecodeReady""#),
         "{rendered}"
     );
@@ -1951,6 +1955,38 @@ fn ail_toolchain_agent_package_lowers_to_verified_bytecode() {
         verify_run
             .trace
             .contains(&"trace BytecodeArtifactVerified".to_string())
+    );
+
+    let manifest_run = run_ail_bytecode_action(
+        &bytecode,
+        "VerifyBuildManifest",
+        BTreeMap::from([
+            ("buildrequest.id".to_string(), "BR-1".to_string()),
+            (
+                "buildrequest.status".to_string(),
+                "BytecodeReady".to_string(),
+            ),
+            (
+                "buildrequest.artifact manifest".to_string(),
+                "AIL-Build-Manifest:\nbytecode artifact.ailbc.json fnv64:1234".to_string(),
+            ),
+            (
+                "buildrequest.artifact manifest fingerprint".to_string(),
+                "fnv64:manifest".to_string(),
+            ),
+        ]),
+    )
+    .unwrap();
+
+    assert_eq!(manifest_run.status, "succeeded");
+    assert_eq!(
+        manifest_run.final_state["buildrequest.artifact manifest verification report"],
+        "Verified"
+    );
+    assert!(
+        manifest_run
+            .trace
+            .contains(&"trace BuildManifestVerified".to_string())
     );
 }
 
@@ -5859,17 +5895,32 @@ fn cli_ail_build_agent_verifies_bytecode_artifact_after_compile() {
     let verify_index = agent_trace
         .find("action VerifyBytecodeArtifact started")
         .unwrap_or_else(|| panic!("{agent_trace}"));
+    let manifest_index = agent_trace
+        .find("action VerifyBuildManifest started")
+        .unwrap_or_else(|| panic!("{agent_trace}"));
     assert!(compile_index < verify_index, "{agent_trace}");
+    assert!(verify_index < manifest_index, "{agent_trace}");
     assert!(agent_trace.contains("read buildrequest.bytecode artifact"));
     assert!(agent_trace.contains("read buildrequest.bytecode fingerprint"));
     assert!(agent_trace.contains("write buildrequest.bytecode verification report=Verified"));
     assert!(agent_trace.contains("trace BytecodeArtifactVerified"));
+    assert!(agent_trace.contains("read buildrequest.artifact manifest"));
+    assert!(agent_trace.contains("read buildrequest.artifact manifest fingerprint"));
+    assert!(
+        agent_trace.contains("write buildrequest.artifact manifest verification report=Verified")
+    );
+    assert!(agent_trace.contains("trace BuildManifestVerified"));
 
     let fingerprint = fs::read_to_string(artifact_dir.join("artifact.fingerprint.txt")).unwrap();
     assert_eq!(fingerprint.trim(), expected_fingerprint);
+    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-build.txt")).unwrap();
+    let manifest_fingerprint =
+        fs::read_to_string(artifact_dir.join("manifest.fingerprint.txt")).unwrap();
+    assert_eq!(manifest_fingerprint.trim(), fnv64_fingerprint(&manifest));
 
     let agent_bytecode = fs::read_to_string(artifact_dir.join("agent.ailbc.json")).unwrap();
     assert!(agent_bytecode.contains(r#""action":"VerifyBytecodeArtifact""#));
+    assert!(agent_bytecode.contains(r#""action":"VerifyBuildManifest""#));
 
     fs::remove_dir_all(artifact_dir).unwrap();
 }

@@ -516,11 +516,14 @@ fn write_ail_build_artifacts(
         )
         .map_err(|error| format!("failed to write ail-build agent trace artifact: {error}"))?;
     }
+    let manifest_text = render_ail_build_manifest(&artifacts);
+    fs::write(root.join("manifest.ail-build.txt"), &manifest_text)
+        .map_err(|error| format!("failed to write ail-build manifest artifact: {error}"))?;
     fs::write(
-        root.join("manifest.ail-build.txt"),
-        render_ail_build_manifest(&artifacts),
+        root.join("manifest.fingerprint.txt"),
+        format!("{}\n", ail_artifact_fingerprint(&manifest_text)),
     )
-    .map_err(|error| format!("failed to write ail-build manifest artifact: {error}"))?;
+    .map_err(|error| format!("failed to write ail-build manifest fingerprint artifact: {error}"))?;
     Ok(())
 }
 
@@ -1241,6 +1244,46 @@ fn run_ail_build_agent_verify_bytecode(
     Ok(())
 }
 
+fn run_ail_build_agent_verify_manifest(
+    agent_run: &mut AilBuildAgentRun,
+    manifest_text: &str,
+    manifest_fingerprint: &str,
+) -> Result<(), String> {
+    if !agent_run
+        .bytecode
+        .actions
+        .contains_key("VerifyBuildManifest")
+    {
+        return Err(
+            "ail-build --agent --artifact-dir requires a VerifyBuildManifest action".to_string(),
+        );
+    }
+    let mut verify_state = agent_run.state.clone();
+    verify_state.insert(
+        "buildrequest.artifact manifest".to_string(),
+        manifest_text.to_string(),
+    );
+    verify_state.insert(
+        "buildrequest.artifact manifest fingerprint".to_string(),
+        manifest_fingerprint.to_string(),
+    );
+    let verify_run =
+        run_ail_bytecode_action(&agent_run.bytecode, "VerifyBuildManifest", verify_state)?;
+    if verify_run.status != "succeeded" {
+        let mut message = "ail-build agent VerifyBuildManifest failed".to_string();
+        if let Some(failure) = verify_run.failure {
+            message.push_str(&format!(": {failure}"));
+        }
+        if !verify_run.trace.is_empty() {
+            message.push_str(&format!("\n{}", verify_run.trace.join("\n")));
+        }
+        return Err(message);
+    }
+    agent_run.trace.extend(verify_run.trace);
+    agent_run.state = verify_run.final_state;
+    Ok(())
+}
+
 fn draft_checked_ail_requirements_for_package(
     package: &eigl::ail::AilPackage,
     prompt: &str,
@@ -1463,6 +1506,22 @@ fn run_ail_build_from_core(
     }
     if let Some(artifact_dir) = &cli_options.artifact_dir {
         let core_text = format!("{}\n", render_ail_core(&core));
+        if let Some(agent_run) = agent_run.as_mut() {
+            let manifest_text = render_ail_build_manifest(&AilBuildArtifactSet {
+                requirements: requirements_artifact,
+                spec_text,
+                core_text: &core_text,
+                bytecode_text: &bytecode_text,
+                bytecode_fingerprint: &bytecode_fingerprint,
+                pass_bytecode_text: pass_bytecode_artifact.as_deref(),
+                pass_bytecode_fingerprint: pass_bytecode_fingerprint_artifact.as_deref(),
+                pass_trace: pass_trace_artifact.as_deref(),
+                agent_bytecode_text: Some(agent_run.bytecode_text.as_str()),
+                agent_trace: Some(agent_run.trace.as_slice()),
+            });
+            let manifest_fingerprint = ail_artifact_fingerprint(&manifest_text);
+            run_ail_build_agent_verify_manifest(agent_run, &manifest_text, &manifest_fingerprint)?;
+        }
         write_ail_build_artifacts(
             artifact_dir,
             AilBuildArtifactSet {

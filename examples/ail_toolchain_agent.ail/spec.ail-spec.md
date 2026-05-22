@@ -21,6 +21,9 @@ A BuildRequest has:
 - bytecode artifact: Text
 - bytecode fingerprint: Text
 - bytecode verification report: Text
+- artifact manifest: Text
+- artifact manifest fingerprint: Text
+- artifact manifest verification report: Text
 - prompt portability report: Text
 - status: State<PromptReceived, RequirementsLoaded, RequirementsCaptured, SpecLoaded, SpecCaptured, CoreLoaded, PassApplied, CoreChecked, BytecodeReady, NeedsClarification>
 - target model: Text
@@ -122,6 +125,19 @@ When the toolchain agent verifies emitted bytecode:
 - the system changes the BuildRequest bytecode verification report to Verified
 - the system guarantees the bytecode artifact is AIL-Bytecode with a deterministic fingerprint and not Rust or host-language backend source
 - the system records a trace event named BytecodeArtifactVerified
+
+Action: Verify build manifest.
+
+When the toolchain agent verifies the build artifact manifest:
+
+- the system requires the BuildRequest to exist
+- the system requires the BuildRequest status to be BytecodeReady
+- the system reads the BuildRequest artifact manifest
+- the system reads the BuildRequest artifact manifest fingerprint
+- the system reads the BuildRequest bytecode fingerprint
+- the system changes the BuildRequest artifact manifest verification report to Verified
+- the system guarantees the build manifest ties requirements, spec, AIL-Core, compiler-pass, agent, and bytecode artifacts with deterministic fingerprints and no Rust or host-language backend source
+- the system records a trace event named BuildManifestVerified
 
 Action: Compare agent prompt portability.
 

@@ -424,7 +424,11 @@ before `CompileApplication`. After the Rust bootstrap compiler emits and
 verifies the target artifact, the agent runs
 `VerifyBytecodeArtifact` with the emitted artifact summary and deterministic
 bytecode fingerprint so the final artifact boundary is also represented in
-AIL bytecode. This keeps the developer-facing build coordinator in AIL bytecode
+AIL bytecode. When `--artifact-dir` is present, the agent also runs
+`VerifyBuildManifest` with the rendered build manifest and deterministic
+manifest fingerprint, so the whole requirements/spec/core/pass/agent/bytecode
+artifact boundary is represented in AIL bytecode. This keeps the
+developer-facing build coordinator in AIL bytecode
 instead of adding a host-language orchestration layer. With `--artifact-dir`,
 the same command writes
 `accepted.ail-spec.md`, `checked.ail-core.txt`, `artifact.ailbc.json`, and
@@ -442,7 +446,8 @@ prompt-portability, application-compile, and bytecode-verification trace. The
 artifact directory also includes `manifest.ail-build.txt`, a deterministic
 index tying the emitted requirements, accepted spec, checked core, compiler-pass
 bytecode and trace, agent bytecode and trace, and final bytecode fingerprint
-into one review artifact. This
+into one review artifact, plus `manifest.fingerprint.txt` for that manifest's
+deterministic fingerprint. This
 lets the developer audit the
 requirements-to-spec-to-IR-to-pass-to-agent-to-bytecode chain, a
 saved-spec-to-IR-to-agent-to-bytecode chain, or a
