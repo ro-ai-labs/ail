@@ -3278,6 +3278,58 @@ cargo test --test ail_toolchain cli_ail_pass_accepts_saved_compiler_pass_bytecod
 Expected: saved compiler-pass bytecode applies to the target package and emits
 the same transformed AIL-Core as source-package pass execution.
 
+### Task 81: `ail-build` Runs Compiler Pass Before Bytecode Lowering
+
+**Files:**
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing `ail-build --pass` pipeline test**
+
+Add an `ail-build` test that uses the mock llama.cpp chat endpoint to produce
+requirements and an accepted Support Ticket AIL-Spec, runs:
+
+```bash
+eigl ail-build examples/support_ticket.ail --prompt "Build an AIL support ticket bytecode artifact" --pass examples/compiler_pass.ail --artifact-dir <dir> --llm-endpoint <mock>
+```
+
+Require stdout to remain verified AIL-Bytecode while
+`checked.ail-core.txt` contains `Permission read Ticket.status`, the
+`requires` edge from `MarksOverdueTickets`, and compiler-pass provenance.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_runs_compiler_pass_before_bytecode_lowering -- --nocapture
+```
+
+Expected: failure before any mock LLM request because `--pass` is not accepted
+by `ail-build`.
+
+- [x] **Step 3: Implement build-pass integration**
+
+Parse `--pass` for `ail-build`, accept either a compiler-pass package directory
+or saved Compiler-profile AIL-Bytecode artifact, verify the pass bytecode,
+require exactly one compiler-pass action for automatic build integration, run
+that action over the checked candidate AIL-Core, re-check the transformed IR,
+and lower the post-pass IR into verified AIL-Bytecode.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_runs_compiler_pass_before_bytecode_lowering -- --nocapture
+```
+
+Expected: `ail-build --pass` writes the post-pass checked AIL-Core artifact,
+stdout remains parseable verified AIL-Bytecode, and final bytecode lowering
+uses the transformed IR instead of the pre-pass candidate.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

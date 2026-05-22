@@ -45,9 +45,11 @@ candidate before parsing and checking it, and
 `ail-build --prompt <text>` asks the base LLM for requirements, asks it to turn
 those requirements into an AIL-Spec candidate for the package profile, gives
 the base LLM one diagnostics-guided repair pass if requirements coverage or the
-checked spec is incomplete, then compiles the checked AIL-Core IR into verified
-AIL-Bytecode on success. Add `--artifact-dir <dir>` to also write the captured
-requirements, accepted AIL-Spec, checked AIL-Core IR, and final AIL-Bytecode
+checked spec is incomplete, optionally runs `--pass
+<compiler-pass-package-or-bytecode>` over the checked AIL-Core IR, then
+compiles the resulting IR into verified AIL-Bytecode on success. Add
+`--artifact-dir <dir>` to also write the captured requirements, accepted
+AIL-Spec, checked AIL-Core IR after any build pass, and final AIL-Bytecode
 artifact for review. On `ail-pass`, `--artifact-dir <dir>` writes
 `pass.ailbc.json`, `input.ail-core.txt`, `output.ail-core.txt`, and
 `trace.txt` while stdout remains the transformed AIL-Core artifact.
@@ -85,6 +87,7 @@ cargo run -- ail-conformance examples/network_driver.ail
 cargo run -- ail-draft examples/support_ticket.ail --prompt "Draft a support ticket app with private internal notes" --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
 cargo run -- ail-build examples/support_ticket.ail --prompt "Build a support ticket bytecode artifact" --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
 cargo run -- ail-build examples/support_ticket.ail --prompt "Build a support ticket bytecode artifact" --artifact-dir /tmp/support-ticket-ail-build --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
+cargo run -- ail-build examples/support_ticket.ail --prompt "Build a support ticket bytecode artifact" --pass examples/compiler_pass.ail --artifact-dir /tmp/support-ticket-ail-build-pass --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
 cargo run -- ail-build examples/refund_tool.ail --prompt "Build a refund tool bytecode artifact" --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
 cargo run -- check examples/confirm_order.rif.md
 cargo run -- graph examples/confirm_order.rif.md
