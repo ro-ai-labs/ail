@@ -6746,6 +6746,36 @@ fn cli_ail_build_agent_verifies_native_target_artifact() {
         "{agent_trace}"
     );
 
+    let agent_native = fs::read(artifact_dir.join("agent-CompileApplication.elf")).unwrap();
+    assert_eq!(&agent_native[0..4], b"\x7fELF");
+    let expected_agent_native_fingerprint = fnv64_fingerprint_bytes(&agent_native);
+    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-build.txt")).unwrap();
+    assert!(
+        manifest.contains(&format!(
+            "agent-target linux-x86_64-elf agent-CompileApplication.elf {expected_agent_native_fingerprint}"
+        )),
+        "{manifest}"
+    );
+    let native_agent_run = Command::new(artifact_dir.join("agent-CompileApplication.elf"))
+        .args([
+            "buildrequest.id=BR-1",
+            "buildrequest.status=SpecCaptured",
+            "buildrequest.requirements=ok",
+            "buildrequest.spec=ok",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        native_agent_run.status.success(),
+        "native agent CompileApplication failed"
+    );
+    assert!(
+        String::from_utf8_lossy(&native_agent_run.stderr)
+            .contains("trace ApplicationBytecodeCompiled"),
+        "{}",
+        String::from_utf8_lossy(&native_agent_run.stderr)
+    );
+
     fs::remove_dir_all(artifact_dir).unwrap();
     fs::remove_file(executable_path).unwrap();
 }

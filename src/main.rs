@@ -6,8 +6,8 @@ use std::net::TcpListener;
 use std::process::ExitCode;
 
 use eigl::ail::{
-    apply_ail_patch, check_ail_core, check_ail_requirements, compile_ail_core_bytecode,
-    compile_ail_core_native_elf, draft_ail_requirements, draft_ail_spec,
+    apply_ail_patch, check_ail_core, check_ail_requirements, compile_ail_bytecode_native_elf,
+    compile_ail_core_bytecode, compile_ail_core_native_elf, draft_ail_requirements, draft_ail_spec,
     draft_ail_spec_from_requirements, elaborate_ail_core, load_ail_package_dir, parse_ail_bytecode,
     parse_ail_core_text, parse_ail_package_document, parse_ail_package_spec_text,
     parse_ail_patch_text, render_ail_bytecode, render_ail_core, render_ail_flow_view,
@@ -396,6 +396,13 @@ struct AilBuildArtifactSet<'a> {
     pass_trace: Option<&'a [String]>,
     agent_bytecode_text: Option<&'a str>,
     agent_trace: Option<&'a [String]>,
+    agent_native_executables: &'a [AilNativeArtifact],
+}
+
+struct AilNativeArtifact {
+    target_name: String,
+    file_name: String,
+    bytes: Vec<u8>,
 }
 
 struct AilBuildAgentStart {
@@ -460,6 +467,14 @@ fn render_ail_build_manifest(artifacts: &AilBuildArtifactSet<'_>) -> String {
     }
     if artifacts.agent_trace.is_some() {
         lines.push("trace agent-trace.txt".to_string());
+    }
+    for native_agent in artifacts.agent_native_executables {
+        lines.push(format!(
+            "agent-target {} {} {}",
+            native_agent.target_name,
+            native_agent.file_name,
+            ail_artifact_fingerprint_bytes(&native_agent.bytes)
+        ));
     }
     format!("{}\n", lines.join("\n"))
 }
@@ -541,6 +556,16 @@ fn write_ail_build_artifacts(
             format!("{}\n", agent_trace.join("\n")),
         )
         .map_err(|error| format!("failed to write ail-build agent trace artifact: {error}"))?;
+    }
+    for native_agent in artifacts.agent_native_executables {
+        let artifact_path = root.join(&native_agent.file_name);
+        fs::write(&artifact_path, &native_agent.bytes).map_err(|error| {
+            format!(
+                "failed to write ail-build native agent artifact {}: {error}",
+                native_agent.file_name
+            )
+        })?;
+        set_native_executable_permissions(&artifact_path.to_string_lossy())?;
     }
     let manifest_text = render_ail_build_manifest(&artifacts);
     fs::write(root.join("manifest.ail-build.txt"), &manifest_text)
@@ -992,6 +1017,36 @@ fn load_verified_ail_build_agent(
         ));
     }
     Ok((agent_bytecode, agent_bytecode_text))
+}
+
+fn compile_ail_build_agent_native_artifacts(
+    agent_bytecode: &eigl::ail::AilBytecodeProgram,
+    target: &str,
+) -> Result<Vec<AilNativeArtifact>, String> {
+    let mut artifacts = Vec::new();
+    for action_name in agent_bytecode.actions.keys() {
+        let bytes = compile_ail_bytecode_native_elf(agent_bytecode, action_name, target)?;
+        artifacts.push(AilNativeArtifact {
+            target_name: target.to_string(),
+            file_name: native_agent_action_file_name(action_name),
+            bytes,
+        });
+    }
+    Ok(artifacts)
+}
+
+fn native_agent_action_file_name(action_name: &str) -> String {
+    let safe_action = action_name
+        .chars()
+        .map(|ch| {
+            if ch.is_ascii_alphanumeric() || ch == '_' || ch == '-' {
+                ch
+            } else {
+                '-'
+            }
+        })
+        .collect::<String>();
+    format!("agent-{safe_action}.elf")
 }
 
 fn run_ail_build_agent_capture(
@@ -1862,6 +1917,13 @@ fn run_ail_build_from_core(
     }
     if let Some(artifact_dir) = &cli_options.artifact_dir {
         let core_text = format!("{}\n", render_ail_core(&core));
+        let agent_native_artifacts = if let (Some((target, _, _)), Some(agent_run)) =
+            (native_build.as_ref(), agent_run.as_ref())
+        {
+            compile_ail_build_agent_native_artifacts(&agent_run.bytecode, target)?
+        } else {
+            Vec::new()
+        };
         if let Some(agent_run) = agent_run.as_mut() {
             let manifest_text = render_ail_build_manifest(&AilBuildArtifactSet {
                 requirements: requirements_artifact,
@@ -1878,6 +1940,7 @@ fn run_ail_build_from_core(
                 pass_trace: pass_trace_artifact.as_deref(),
                 agent_bytecode_text: Some(agent_run.bytecode_text.as_str()),
                 agent_trace: Some(agent_run.trace.as_slice()),
+                agent_native_executables: agent_native_artifacts.as_slice(),
             });
             let manifest_fingerprint = ail_artifact_fingerprint(&manifest_text);
             run_ail_build_agent_verify_manifest(agent_run, &manifest_text, &manifest_fingerprint)?;
@@ -1899,6 +1962,7 @@ fn run_ail_build_from_core(
                 pass_trace: pass_trace_artifact.as_deref(),
                 agent_bytecode_text: agent_run.as_ref().map(|run| run.bytecode_text.as_str()),
                 agent_trace: agent_run.as_ref().map(|run| run.trace.as_slice()),
+                agent_native_executables: agent_native_artifacts.as_slice(),
             },
         )?;
     }

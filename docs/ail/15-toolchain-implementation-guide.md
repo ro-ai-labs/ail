@@ -536,7 +536,11 @@ and fingerprint alongside the VM artifact. When a build agent is
 present, the artifact directory also includes
 `agent.ailbc.json`, `agent.fingerprint.txt`, and `agent-trace.txt` for the
 agent bytecode, deterministic agent fingerprint, and its requirements-capture,
-prompt-portability, application-compile, and bytecode-verification trace. The
+prompt-portability, application-compile, and bytecode-verification trace. When
+that agent build also selects the native `linux-x86_64-elf` target, the
+artifact directory includes one `agent-<ActionName>.elf` executable per
+AIL-authored agent action, and the manifest records each as an `agent-target`
+entry with the action executable fingerprint. The
 artifact directory also includes `manifest.ail-build.txt`, a deterministic
 index tying the emitted requirements, accepted spec, checked core, compiler-pass
 bytecode and trace, agent bytecode and trace, final bytecode fingerprint, and

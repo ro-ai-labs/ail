@@ -3297,6 +3297,30 @@ pub fn compile_ail_core_native_elf(
     emit_linux_x86_64_elf_for_action(action, &program.failures)
 }
 
+pub fn compile_ail_bytecode_native_elf(
+    program: &AilBytecodeProgram,
+    action_name: &str,
+    target: &str,
+) -> Result<Vec<u8>, String> {
+    if target != "linux-x86_64-elf" {
+        return Err(format!(
+            "unsupported native target '{target}'; expected linux-x86_64-elf"
+        ));
+    }
+    let diagnostics = verify_ail_bytecode(program);
+    if !diagnostics.is_empty() {
+        return Err(format!(
+            "cannot emit native executable from invalid AIL VM IR:\n{}",
+            diagnostics.join("\n")
+        ));
+    }
+    let action = program
+        .actions
+        .get(action_name)
+        .ok_or_else(|| format!("unknown AIL action '{action_name}'"))?;
+    emit_linux_x86_64_elf_for_action(action, &program.failures)
+}
+
 struct NativeFailureBranch {
     label: String,
     trace_lines: Vec<String>,
