@@ -3261,12 +3261,20 @@ fn emit_linux_x86_64_elf_for_action(action: &AilBytecodeAction) -> Result<Vec<u8
     let mut forbidden_exact_args = Vec::new();
     let mut required_any_exact_args = Vec::new();
     let mut state_write_lines = Vec::new();
-    let mut trace_lines = Vec::new();
+    let mut success_trace_lines = Vec::new();
     for instruction in &action.instructions {
         match instruction.opcode.as_str() {
+            "ACTION_BEGIN" => {
+                if let Some(action) = instruction.operands.get("action") {
+                    success_trace_lines.push(format!("action {action} started\n"));
+                }
+            }
             "REQUIRE_EXISTS" => {
                 if let Some(key) = instruction.operands.get("key") {
                     exists_prefixes.push(format!("{key}="));
+                }
+                if let Some(rule) = instruction.operands.get("rule") {
+                    success_trace_lines.push(format!("rule passed: {rule}\n"));
                 }
             }
             "REQUIRE_FIELD_NOT_EQUALS" => {
@@ -3275,6 +3283,9 @@ fn emit_linux_x86_64_elf_for_action(action: &AilBytecodeAction) -> Result<Vec<u8
                     instruction.operands.get("value"),
                 ) {
                     forbidden_exact_args.push(format!("{key}={value}"));
+                }
+                if let Some(rule) = instruction.operands.get("rule") {
+                    success_trace_lines.push(format!("rule passed: {rule}\n"));
                 }
             }
             "REQUIRE_FIELD_IN" => {
@@ -3291,6 +3302,24 @@ fn emit_linux_x86_64_elf_for_action(action: &AilBytecodeAction) -> Result<Vec<u8
                         required_any_exact_args.push(allowed_args);
                     }
                 }
+                if let Some(rule) = instruction.operands.get("rule") {
+                    success_trace_lines.push(format!("rule passed: {rule}\n"));
+                }
+            }
+            "OBSERVE_RULE" => {
+                if let Some(rule) = instruction.operands.get("rule") {
+                    success_trace_lines.push(format!("rule observed: {rule}\n"));
+                }
+            }
+            "READ_FIELD" => {
+                if let Some(key) = instruction.operands.get("key") {
+                    success_trace_lines.push(format!("read {key}\n"));
+                }
+            }
+            "READ_EFFECT" => {
+                if let Some(text) = instruction.operands.get("text") {
+                    success_trace_lines.push(format!("read {text}\n"));
+                }
             }
             "SET_FIELD" => {
                 if let (Some(key), Some(value)) = (
@@ -3298,15 +3327,30 @@ fn emit_linux_x86_64_elf_for_action(action: &AilBytecodeAction) -> Result<Vec<u8
                     instruction.operands.get("value"),
                 ) {
                     state_write_lines.push(format!("{key}={value}\n"));
+                    success_trace_lines.push(format!("write {key}={value}\n"));
+                }
+            }
+            "WRITE_FIELD" => {
+                if let Some(key) = instruction.operands.get("key") {
+                    success_trace_lines.push(format!("write {key}\n"));
+                }
+            }
+            "EFFECT" => {
+                if let Some(text) = instruction.operands.get("text") {
+                    success_trace_lines.push(format!("effect {text}\n"));
+                }
+            }
+            "ASSERT_GUARANTEE" => {
+                if let Some(text) = instruction.operands.get("text") {
+                    success_trace_lines.push(format!("guarantee checked: {text}\n"));
                 }
             }
             "EMIT_TRACE" => {
                 if let Some(event) = instruction.operands.get("event") {
-                    trace_lines.push(format!("trace {event}\n"));
+                    success_trace_lines.push(format!("trace {event}\n"));
                 }
             }
-            "ACTION_BEGIN" | "OBSERVE_RULE" | "READ_FIELD" | "READ_EFFECT" | "WRITE_FIELD"
-            | "EFFECT" | "ASSERT_GUARANTEE" | "RETURN_SUCCESS" => {}
+            "RETURN_SUCCESS" => {}
             opcode => {
                 return Err(format!(
                     "unsupported native linux-x86_64-elf opcode '{opcode}' in action '{}'",
@@ -3356,7 +3400,7 @@ fn emit_linux_x86_64_elf_for_action(action: &AilBytecodeAction) -> Result<Vec<u8
         let label = format!("state_write_{index}");
         code.emit_write_label(1, &label, line.len() as u32);
     }
-    for (index, line) in trace_lines.iter().enumerate() {
+    for (index, line) in success_trace_lines.iter().enumerate() {
         let label = format!("trace_write_{index}");
         code.emit_write_label(2, &label, line.len() as u32);
     }
@@ -3384,7 +3428,7 @@ fn emit_linux_x86_64_elf_for_action(action: &AilBytecodeAction) -> Result<Vec<u8
         code.label(format!("state_write_{index}"))?;
         code.emit(line.as_bytes());
     }
-    for (index, line) in trace_lines.iter().enumerate() {
+    for (index, line) in success_trace_lines.iter().enumerate() {
         code.label(format!("trace_write_{index}"))?;
         code.emit(line.as_bytes());
     }

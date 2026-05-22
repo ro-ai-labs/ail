@@ -3191,7 +3191,15 @@ fn cli_ail_compile_native_executable_emits_trace_to_stderr() {
     );
     assert_eq!(
         String::from_utf8_lossy(&success.stderr),
-        "trace TicketClosed\n"
+        concat!(
+            "action CloseTicket started\n",
+            "rule passed: the ticket to exist\n",
+            "rule passed: the ticket status not to be Closed\n",
+            "write ticket.status=Closed\n",
+            "effect a public update\n",
+            "guarantee checked: closed tickets do not appear in the open ticket queue\n",
+            "trace TicketClosed\n"
+        )
     );
 
     let failed = Command::new(&executable_path)

@@ -40,10 +40,10 @@ compiled existence, allow-list, or forbidden-value requirements fail. Allow-list
 requirements can come from `<field> to be <value>` or common LLM wording such
 as `<field> is <value>`;
 supported `SET_FIELD` writes are emitted as
-`key=value` stdout lines on successful execution, and supported `EMIT_TRACE`
-events are emitted as `trace <EventName>` stderr lines on successful native
-execution. The first native backend rejects unsupported non-application VM
-opcodes instead of silently dropping them. `ail-lower --artifact-dir
+`key=value` stdout lines on successful execution, and supported Application
+semantic trace entries are emitted to stderr on successful native execution.
+The first native backend rejects unsupported non-application VM opcodes instead
+of silently dropping them. `ail-lower --artifact-dir
 <dir>` also writes the checked core, VM instruction artifact, deterministic
 fingerprints, and a lower manifest while keeping stdout as the VM artifact.
 `ail-check`, `ail-core`,

@@ -358,12 +358,12 @@ argument is absent. The executable exits `0` when those compiled requirements
 pass and exits `1` when they fail. Native code generated from supported
 `SET_FIELD` instructions writes the changed state as `key=value` lines to
 stdout after requirements pass and before process exit. Native code generated
-from supported `EMIT_TRACE` instructions writes `trace <EventName>` lines to
-stderr on the same successful native path, keeping stdout reserved for
-parseable state changes. The first native backend treats known Application
-metadata opcodes as explicit no-ops when they have no machine-level effect in
-this slice, and rejects unsupported System, AgentTool, CompilerPass, or future
-unknown VM opcodes instead of silently emitting a partial executable.
+from supported Application semantic opcodes writes success-path trace entries
+to stderr in VM trace order, including action start, rule-pass, write, effect,
+guarantee, and explicit trace-event entries. Stdout remains reserved for
+parseable state changes. The first native backend rejects unsupported System,
+AgentTool, CompilerPass, or future unknown VM opcodes instead of silently
+emitting a partial executable.
 With `--artifact-dir`, `ail-lower` writes `checked.ail-core.txt`,
 `artifact.ailbc.json`, `artifact.fingerprint.txt`, `manifest.ail-lower.txt`,
 and `manifest.fingerprint.txt`, keeping direct IR-to-VM-instruction lowering

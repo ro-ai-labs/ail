@@ -5452,6 +5452,53 @@ Expected: native System compilation is rejected with an unsupported-opcode
 diagnostic while supported Application native actions continue to compile and
 run.
 
+### Task 127: Native ELF Emits Success Semantic Traces
+
+**Files:**
+- Modify: `src/ail.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing full semantic trace test**
+
+Extend native `CloseTicket` coverage so successful execution must write the VM
+success trace entries to stderr in order: action start, passed requirements,
+state write, effect, guarantee check, and explicit trace event. Keep stdout as
+`ticket.status=Closed` and keep failed requirement execution silent.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_compile_native_executable_emits_trace_to_stderr -- --nocapture
+```
+
+Expected: failure because the native backend emits only `trace TicketClosed`
+and drops the other supported Application semantic trace entries.
+
+- [x] **Step 3: Emit success-path semantic traces**
+
+During native lowering, collect supported Application trace entries from
+`ACTION_BEGIN`, requirement pass opcodes, `OBSERVE_RULE`, reads, writes,
+effects, guarantees, and `EMIT_TRACE`, then emit them with direct Linux x86_64
+`write(2, ...)` syscalls after requirements pass. Preserve silent failure paths
+for this slice.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_compile_native_executable_emits_trace_to_stderr -- --nocapture
+cargo test --test ail_toolchain cli_ail_compile_native_rejects_unsupported_system_opcodes -- --nocapture
+```
+
+Expected: native `CloseTicket` stderr mirrors supported VM success trace
+entries while unsupported non-Application native opcodes still fail at compile
+time.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**
