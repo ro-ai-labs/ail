@@ -372,6 +372,7 @@ fn write_ail_build_artifacts(
     artifact_dir: &str,
     requirements: &str,
     spec_text: &str,
+    core_text: &str,
     bytecode_text: &str,
 ) -> Result<(), String> {
     let root = std::path::Path::new(artifact_dir);
@@ -382,6 +383,8 @@ fn write_ail_build_artifacts(
         .map_err(|error| format!("failed to write ail-build requirements artifact: {error}"))?;
     fs::write(root.join("accepted.ail-spec.md"), spec_text)
         .map_err(|error| format!("failed to write ail-build spec artifact: {error}"))?;
+    fs::write(root.join("checked.ail-core.txt"), core_text)
+        .map_err(|error| format!("failed to write ail-build core artifact: {error}"))?;
     fs::write(root.join("artifact.ailbc.json"), bytecode_text)
         .map_err(|error| format!("failed to write ail-build bytecode artifact: {error}"))?;
     Ok(())
@@ -530,10 +533,12 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
         }
         let bytecode_text = format!("{}\n", render_ail_bytecode(&bytecode));
         if let Some(artifact_dir) = &cli_options.artifact_dir {
+            let core_text = format!("{}\n", render_ail_core(&core));
             write_ail_build_artifacts(
                 artifact_dir,
                 &requirements,
                 &draft.spec_text,
+                &core_text,
                 &bytecode_text,
             )?;
         }

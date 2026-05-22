@@ -2905,15 +2905,15 @@ then emits verified AIL-Bytecode from the repaired candidate.
 - [x] **Step 1: Write failing artifact-output test**
 
 Add an `ail-build --artifact-dir <dir>` test that keeps stdout as parseable
-AIL-Bytecode while writing the captured AIL-Requirements, accepted AIL-Spec, and
-final AIL-Bytecode artifact to deterministic files.
+AIL-Bytecode while writing the captured AIL-Requirements, accepted AIL-Spec,
+checked AIL-Core IR, and final AIL-Bytecode artifact to deterministic files.
 
 - [x] **Step 2: Verify RED**
 
 Run:
 
 ```bash
-cargo test --test ail_toolchain cli_ail_build_writes_requirements_spec_and_bytecode_artifacts -- --nocapture
+cargo test --test ail_toolchain cli_ail_build_writes_requirements_spec_core_and_bytecode_artifacts -- --nocapture
 ```
 
 Expected: failure because `--artifact-dir` is not accepted and the command
@@ -2922,19 +2922,20 @@ never reaches the mock base LLM.
 - [x] **Step 3: Implement artifact output**
 
 Parse `--artifact-dir` for `ail-build`, create the directory, write
-`requirements.ail-requirements.md`, `accepted.ail-spec.md`, and
-`artifact.ailbc.json` after the spec checks and bytecode verifies, and keep
-stdout as the same bytecode text for pipeline compatibility.
+`requirements.ail-requirements.md`, `accepted.ail-spec.md`,
+`checked.ail-core.txt`, and `artifact.ailbc.json` after the spec checks and
+bytecode verifies, and keep stdout as the same bytecode text for pipeline
+compatibility.
 
 - [x] **Step 4: Verify GREEN**
 
 Run:
 
 ```bash
-cargo test --test ail_toolchain cli_ail_build_writes_requirements_spec_and_bytecode_artifacts -- --nocapture
+cargo test --test ail_toolchain cli_ail_build_writes_requirements_spec_core_and_bytecode_artifacts -- --nocapture
 ```
 
-Expected: the command emits verified bytecode on stdout and writes the three
+Expected: the command emits verified bytecode on stdout and writes the four
 reviewable intermediate artifacts.
 
 ### Task 74: AIL-Core IR To Bytecode Entry Point

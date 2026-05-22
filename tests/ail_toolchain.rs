@@ -4028,7 +4028,7 @@ fn cli_ail_build_repairs_rejected_candidate_before_lowering() {
 }
 
 #[test]
-fn cli_ail_build_writes_requirements_spec_and_bytecode_artifacts() {
+fn cli_ail_build_writes_requirements_spec_core_and_bytecode_artifacts() {
     let binary = env!("CARGO_BIN_EXE_eigl");
     let package = fixture("support_ticket.ail");
     let artifact_dir =
@@ -4086,6 +4086,10 @@ fn cli_ail_build_writes_requirements_spec_and_bytecode_artifacts() {
     assert_eq!(requirements_artifact, requirements.trim());
     let spec_artifact = fs::read_to_string(artifact_dir.join("accepted.ail-spec.md")).unwrap();
     assert!(spec_artifact.contains("Action: Close ticket."));
+    let core_artifact = fs::read_to_string(artifact_dir.join("checked.ail-core.txt")).unwrap();
+    assert!(core_artifact.contains("package: support-ticket"));
+    assert!(core_artifact.contains("node Action CloseTicket"));
+    assert!(core_artifact.contains("edge writes Action:CloseTicket -> Field:Ticket.status"));
     let bytecode_artifact = fs::read_to_string(artifact_dir.join("artifact.ailbc.json")).unwrap();
     assert_eq!(bytecode_artifact, stdout);
     let artifact_bytecode = parse_ail_bytecode(&bytecode_artifact).unwrap();

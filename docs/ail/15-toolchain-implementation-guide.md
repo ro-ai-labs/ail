@@ -338,9 +338,10 @@ for one repair pass. Only a checked candidate is lowered to AIL-Core, and the
 bytecode compiler consumes that checked IR to emit verified AIL-Bytecode, so
 the build path still emits bytecode rather than host-language source. With
 `--artifact-dir`, the same command writes
-`requirements.ail-requirements.md`, `accepted.ail-spec.md`, and
-`artifact.ailbc.json` so the developer can audit the requirements-to-spec-to-
-bytecode chain while stdout remains the parseable bytecode artifact.
+`requirements.ail-requirements.md`, `accepted.ail-spec.md`,
+`checked.ail-core.txt`, and `artifact.ailbc.json` so the developer can audit
+the requirements-to-spec-to-IR-to-bytecode chain while stdout remains the
+parseable bytecode artifact.
 
 ### Diagnostics
 

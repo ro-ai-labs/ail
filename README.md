@@ -43,7 +43,8 @@ those requirements into an AIL-Spec candidate for the package profile, gives
 the base LLM one diagnostics-guided repair pass if the checker rejects the
 candidate, then compiles the checked AIL-Core IR into verified AIL-Bytecode on
 success. Add `--artifact-dir <dir>` to also write the captured requirements,
-accepted AIL-Spec, and final AIL-Bytecode artifact for review.
+accepted AIL-Spec, checked AIL-Core IR, and final AIL-Bytecode artifact for
+review.
 The default AIL base LLM endpoint is
 `http://inteligentia-pro-1:8080/v1/chat/completions`.
 
