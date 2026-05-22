@@ -373,10 +373,12 @@ the base LLM first drafts an AIL-Requirements artifact from a user prompt.
 `ail-build` checks that artifact for profile-specific coverage before spec
 drafting; if it is too thin, the command sends requirements diagnostics back to
 the base LLM for one repair pass. It then drafts an AIL-Spec candidate for the
-package profile grounded in those checked requirements. If the checker rejects
-the first candidate, `ail-build` sends the candidate plus detailed diagnostics
-and repair suggestions back to the base LLM for one repair pass. Only a checked
-candidate is lowered to AIL-Core. If `--pass
+package profile grounded in those checked requirements. With
+`--requirements-file <path>`, `ail-build` skips requirements capture, validates
+the saved AIL-Requirements artifact, and resumes at the requirements-grounded
+spec-drafting stage. If the checker rejects the first candidate, `ail-build`
+sends the candidate plus detailed diagnostics and repair suggestions back to the
+base LLM for one repair pass. Only a checked candidate is lowered to AIL-Core. If `--pass
 <compiler-pass-package-or-bytecode>` is supplied, `ail-build` loads that
 AIL-authored Compiler-profile bytecode, requires exactly one pass action, runs
 it over the checked candidate AIL-Core, and re-checks the transformed IR before

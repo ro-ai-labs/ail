@@ -3629,6 +3629,57 @@ Expected: saved compiler-pass bytecode transforms the saved target AIL-Core
 artifact, writes auditable pass artifacts when requested, and prints the
 transformed AIL-Core artifact on stdout.
 
+### Task 88: Saved AIL-Requirements Artifact Input For Build
+
+**Files:**
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing saved-requirements build test**
+
+Add a CLI test that writes a checked AIL-Requirements artifact to a temp file
+and requires:
+
+```bash
+eigl ail-build examples/support_ticket.ail --prompt "Build from saved requirements" --requirements-file <requirements-file> --artifact-dir <dir> --llm-endpoint <mock>
+```
+
+to skip requirements capture, send exactly one requirements-grounded AIL-Spec
+draft request, emit verified AIL-Bytecode, and write build artifacts containing
+the saved requirements.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_accepts_saved_requirements_file_artifact -- --nocapture
+```
+
+Expected: usage failure because `--requirements-file` is accepted for
+`ail-spec` but not `ail-build`.
+
+- [x] **Step 3: Implement saved requirements input**
+
+Allow `--requirements-file` for `ail-build`, share checked requirements-file
+loading with `ail-spec`, skip the requirements-capture LLM call when the file is
+present, and continue through spec drafting, AIL-Core checking, optional build
+pass execution, and bytecode lowering.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_accepts_saved_requirements_file_artifact -- --nocapture
+```
+
+Expected: `ail-build --requirements-file` emits verified bytecode, writes the
+saved requirements into `requirements.ail-requirements.md`, and makes no
+requirements-capture LLM request.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

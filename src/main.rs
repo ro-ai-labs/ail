@@ -611,6 +611,17 @@ fn draft_checked_ail_spec_for_requirements(
     Ok(draft)
 }
 
+fn read_checked_ail_requirements_file(
+    package: &eigl::ail::AilPackage,
+    requirements_file: &str,
+) -> Result<(String, Vec<eigl::ail::AilDiagnostic>), String> {
+    let requirements = fs::read_to_string(requirements_file)
+        .map_err(|error| format!("failed to read {requirements_file}: {error}"))?;
+    let requirements = requirements.trim().to_string();
+    let diagnostics = check_ail_requirements(package, &requirements);
+    Ok((requirements, diagnostics))
+}
+
 fn parse_cli_ail_document(
     package: &eigl::ail::AilPackage,
     cli_options: &CliOptions,
@@ -757,9 +768,8 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
             .ail_requirements_file
             .as_deref()
             .ok_or_else(|| "ail-spec requires --requirements-file <path>".to_string())?;
-        let requirements = fs::read_to_string(requirements_file)
-            .map_err(|error| format!("failed to read {requirements_file}: {error}"))?;
-        let requirements_diagnostics = check_ail_requirements(&package, &requirements);
+        let (requirements, requirements_diagnostics) =
+            read_checked_ail_requirements_file(&package, requirements_file)?;
         if !requirements_diagnostics.is_empty() {
             println!("ail-spec requirements diagnostics:");
             for diagnostic in requirements_diagnostics {
@@ -793,7 +803,11 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
             .as_deref()
             .unwrap_or(&package.metadata.base_llm_endpoint);
         let (requirements, requirements_diagnostics) =
-            draft_checked_ail_requirements_for_package(&package, prompt, endpoint)?;
+            if let Some(requirements_file) = cli_options.ail_requirements_file.as_deref() {
+                read_checked_ail_requirements_file(&package, requirements_file)?
+            } else {
+                draft_checked_ail_requirements_for_package(&package, prompt, endpoint)?
+            };
         if !requirements_diagnostics.is_empty() {
             println!("ail-build requirements diagnostics:");
             for diagnostic in requirements_diagnostics {
@@ -1107,7 +1121,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
             continue;
         }
         if arg == "--requirements-file" {
-            if command != "ail-spec" {
+            if !matches!(command, "ail-spec" | "ail-build") {
                 return Err(usage());
             }
             let Some(path) = args.get(index + 1) else {

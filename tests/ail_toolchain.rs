@@ -4376,13 +4376,13 @@ fn cli_ail_build_uses_llm_candidate_and_outputs_verified_bytecode() {
         .output()
         .unwrap();
 
-    let request_bodies = server.join().unwrap();
     assert!(
         output.status.success(),
         "stdout:\n{}\nstderr:\n{}",
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
+    let request_bodies = server.join().unwrap();
     assert_eq!(request_bodies.len(), 2);
     assert!(request_bodies[0].contains(r#""chat_template_kwargs":{"enable_thinking":false}"#));
     assert!(request_bodies[0].contains("Draft AIL requirements"));
@@ -4462,13 +4462,13 @@ fn cli_ail_build_repairs_rejected_candidate_before_lowering() {
         .output()
         .unwrap();
 
-    let request_bodies = server.join().unwrap();
     assert!(
         output.status.success(),
         "stdout:\n{}\nstderr:\n{}",
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
+    let request_bodies = server.join().unwrap();
     assert_eq!(request_bodies.len(), 3);
     assert!(request_bodies[1].contains("DRAFT REQUIREMENTS:"));
     assert!(request_bodies[2].contains("Repair an AIL-Spec candidate"));
@@ -4696,6 +4696,85 @@ fn cli_ail_spec_drafts_and_repairs_from_checked_requirements_file() {
     assert_eq!(check_ail_core(&core), Vec::<String>::new());
 
     fs::remove_file(requirements_path).unwrap();
+}
+
+#[test]
+fn cli_ail_build_accepts_saved_requirements_file_artifact() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("support_ticket.ail");
+    let requirements_path = std::env::temp_dir().join(format!(
+        "eigl-support-ticket-build-requirements-{}.ail-requirements.md",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "eigl-ail-build-requirements-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+    let requirements = concat!(
+        "AIL-Requirements:\n",
+        "- The application manages support tickets with Ticket fields id, title, status, and secret internal notes.\n",
+        "- The CloseTicket action requires ticket id input and ticket status not to be Closed.\n",
+        "- Failure NotFound happens when ticket id is missing and records TicketNotFound.\n",
+        "- The action guarantees closed tickets do not appear in the open queue.\n",
+        "- The action records trace event TicketClosed.\n"
+    );
+    fs::write(&requirements_path, requirements).unwrap();
+
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let response_spec = fs::read_to_string(format!("{package}/spec.ail-spec.md")).unwrap();
+    let spec_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(&format!(
+            "<think>ignore this</think>\n```ail\n{response_spec}\n```"
+        ))
+    );
+    let server = serve_chat_responses(listener, vec![spec_body]);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-build",
+            &package,
+            "--prompt",
+            "Build an AIL support ticket bytecode artifact from saved requirements",
+            "--requirements-file",
+            requirements_path.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+            "--llm-endpoint",
+            &format!("http://127.0.0.1:{}/v1/chat/completions", addr.port()),
+        ])
+        .output()
+        .unwrap();
+
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let request_bodies = server.join().unwrap();
+    assert_eq!(request_bodies.len(), 1);
+    assert!(request_bodies[0].contains("Draft an AIL-Spec candidate"));
+    assert!(request_bodies[0].contains("DRAFT REQUIREMENTS:"));
+    assert!(
+        request_bodies[0].contains("Ticket fields id, title, status, and secret internal notes")
+    );
+    assert!(!request_bodies[0].contains("Draft AIL requirements"));
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let bytecode = parse_ail_bytecode(&stdout).unwrap();
+    assert_eq!(verify_ail_bytecode(&bytecode), Vec::<String>::new());
+    assert!(bytecode.actions.contains_key("CloseTicket"));
+    let requirements_artifact =
+        fs::read_to_string(artifact_dir.join("requirements.ail-requirements.md")).unwrap();
+    assert_eq!(requirements_artifact, requirements.trim());
+    let bytecode_artifact = fs::read_to_string(artifact_dir.join("artifact.ailbc.json")).unwrap();
+    assert_eq!(bytecode_artifact, stdout);
+
+    fs::remove_file(requirements_path).unwrap();
+    fs::remove_dir_all(artifact_dir).unwrap();
 }
 
 #[test]
