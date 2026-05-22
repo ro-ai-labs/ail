@@ -1689,6 +1689,13 @@ fn ail_runtime_enforces_create_ticket_input_requirements() {
         success.final_state.get("ticket.status").map(String::as_str),
         Some("New")
     );
+    assert_eq!(
+        success
+            .final_state
+            .get("ticket.customer.id")
+            .map(String::as_str),
+        Some("C-1")
+    );
     assert!(
         success
             .trace
@@ -1761,6 +1768,12 @@ fn ail_compiler_lowers_checked_application_to_bytecode() {
     assert!(rendered.contains(r#""opcode":"SET_FIELD""#), "{rendered}");
     assert!(rendered.contains(r#""value":"Closed""#), "{rendered}");
     assert!(rendered.contains(r#""value":"New""#), "{rendered}");
+    assert!(rendered.contains(r#""opcode":"COPY_FIELD""#), "{rendered}");
+    assert!(rendered.contains(r#""source":"customer.id""#), "{rendered}");
+    assert!(
+        rendered.contains(r#""key":"ticket.customer.id""#),
+        "{rendered}"
+    );
     assert!(rendered.contains(r#""opcode":"EMIT_TRACE""#), "{rendered}");
     assert!(rendered.contains(r#""failure":"NotFound""#), "{rendered}");
     assert!(
@@ -1854,6 +1867,41 @@ fn ail_bytecode_vm_executes_close_ticket_success_and_failure() {
     assert_eq!(missing.failure.as_deref(), Some("NotFound"));
     assert!(missing.trace.contains(&"failure NotFound".to_string()));
     assert!(missing.trace.contains(&"trace TicketNotFound".to_string()));
+}
+
+#[test]
+fn ail_bytecode_vm_executes_create_ticket_state_writes() {
+    let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
+    let document = parse_ail_package_document(&package).unwrap();
+    let bytecode = compile_ail_bytecode(&package, &document).unwrap();
+
+    let success = run_ail_bytecode_action(
+        &bytecode,
+        "CreateTicket",
+        BTreeMap::from([
+            ("customer.id".to_string(), "C-1".to_string()),
+            ("ticket.title".to_string(), "Printer".to_string()),
+        ]),
+    )
+    .unwrap();
+
+    assert_eq!(success.status, "succeeded");
+    assert_eq!(
+        success.final_state.get("ticket.status").map(String::as_str),
+        Some("New")
+    );
+    assert_eq!(
+        success
+            .final_state
+            .get("ticket.customer.id")
+            .map(String::as_str),
+        Some("C-1")
+    );
+    assert!(
+        success
+            .trace
+            .contains(&"write ticket.customer.id".to_string())
+    );
 }
 
 #[test]
@@ -3173,7 +3221,7 @@ fn cli_ail_compile_native_executable_enforces_create_ticket_inputs() {
     );
     assert_eq!(
         String::from_utf8_lossy(&success.stdout),
-        "ticket.status=New\n"
+        "ticket.status=New\nticket.customer.id=C-1\n"
     );
     assert!(
         String::from_utf8_lossy(&success.stderr).contains("rule passed: the customer id and title"),

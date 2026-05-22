@@ -361,7 +361,10 @@ checks for `customer.id` and `ticket.title` after application users are
 preserved in checked AIL-Core. Creation writes such as
 `a Ticket with status New` lower to `SET_FIELD ticket.status=New`, so the
 interpreter, VM, and native executable all materialize the initialized field.
-Native code generated from supported
+Copy writes such as `the customer as the ticket customer` lower to
+`COPY_FIELD` from `customer.id` to `ticket.customer.id`; the native backend
+finds the source argv value and writes the copied destination state line without
+generating host-language code. Native code generated from supported
 `REQUIRE_FIELD_NOT_EQUALS` instructions checks that the forbidden `key=value`
 argument is absent. The executable exits `0` when those compiled requirements
 pass and exits `1` when they fail. Native code generated from supported

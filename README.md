@@ -44,11 +44,13 @@ requirements such as `the customer id and title` lower to executable
 `REQUIRE_EXISTS` checks for `customer.id` and `ticket.title`, so native
 `CreateTicket` exits nonzero when either argv entry is missing. Creation writes
 such as `a Ticket with status New` lower to `SET_FIELD ticket.status=New`.
-Supported `SET_FIELD` writes are emitted as
-`key=value` stdout lines on successful execution, and supported Application
-semantic trace entries are emitted to stderr on successful native execution and
-on supported requirement failures. The first native backend rejects unsupported
-VM opcodes and unlowered observed rules instead of silently dropping them.
+Copy writes such as `the customer as the ticket customer` lower to `COPY_FIELD`
+from `customer.id` to `ticket.customer.id`. Supported `SET_FIELD` and
+`COPY_FIELD` writes are emitted as `key=value` stdout lines on successful
+execution, and supported Application semantic trace entries are emitted to
+stderr on successful native execution and on supported requirement failures.
+The first native backend rejects unsupported VM opcodes and unlowered observed
+rules instead of silently dropping them.
 `ail-lower --artifact-dir
 <dir>` also writes the checked core, VM instruction artifact, deterministic
 fingerprints, and a lower manifest while keeping stdout as the VM artifact.

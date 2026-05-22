@@ -5738,6 +5738,58 @@ cargo test --test ail_toolchain cli_ail_compile_native_executable_enforces_creat
 Expected: `CreateTicket` produces `ticket.status=New` in runtime state,
 bytecode, and native stdout while preserving input requirement enforcement.
 
+### Task 133: CreateTicket Customer Copy Compiles
+
+**Files:**
+- Modify: `src/ail.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing customer-copy tests**
+
+Extend `CreateTicket` runtime, VM, bytecode, and native ELF coverage so
+`the system records the customer as the ticket customer` copies
+`customer.id=C-1` into `ticket.customer.id=C-1`.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain ail_runtime_enforces_create_ticket_input_requirements -- --nocapture
+cargo test --test ail_toolchain ail_bytecode_vm_executes_create_ticket_state_writes -- --nocapture
+cargo test --test ail_toolchain ail_compiler_lowers_checked_application_to_bytecode -- --nocapture
+cargo test --test ail_toolchain cli_ail_compile_native_executable_enforces_create_ticket_inputs -- --nocapture
+```
+
+Expected: the customer assignment is still a trace-only `WRITE_FIELD`,
+runtime and VM state do not contain `ticket.customer.id`, bytecode has no
+`COPY_FIELD`, and native stdout only contains `ticket.status=New`.
+
+- [x] **Step 3: Add dynamic copy lowering**
+
+Add `COPY_FIELD` bytecode with `source`, `key`, and `text` operands. Resolve
+application-user copies like `the customer as the ticket customer` from
+`customer.id` to `ticket.customer.id`, execute the copy in the interpreter and
+VM, and teach the native ELF backend to find the source `key=` argv value and
+write it under the destination key on stdout.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain ail_runtime_enforces_create_ticket_input_requirements -- --nocapture
+cargo test --test ail_toolchain ail_bytecode_vm_executes_create_ticket_state_writes -- --nocapture
+cargo test --test ail_toolchain ail_compiler_lowers_checked_application_to_bytecode -- --nocapture
+cargo test --test ail_toolchain cli_ail_compile_native_executable_enforces_create_ticket_inputs -- --nocapture
+```
+
+Expected: `CreateTicket` writes both `ticket.status=New` and
+`ticket.customer.id=C-1` through runtime state, VM state, bytecode, and native
+ELF stdout while missing input still fails before state output.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

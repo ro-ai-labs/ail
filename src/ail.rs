@@ -3194,6 +3194,11 @@ pub fn run_ail_action(
         if let Some((key, value)) = field_write_assignment(document, write) {
             final_state.insert(key.clone(), value.clone());
             trace.push(format!("write {key}={value}"));
+        } else if let Some((source, key)) = field_copy_assignment(document, write) {
+            if let Some(value) = final_state.get(&source).cloned() {
+                final_state.insert(key.clone(), value);
+            }
+            trace.push(format!("write {key}"));
         } else if let Some(key) = referenced_runtime_field_key(document, write) {
             trace.push(format!("write {key}"));
         } else {
@@ -3281,6 +3286,14 @@ struct NativeFailureBranch {
     trace_lines: Vec<String>,
 }
 
+enum NativeStateWrite {
+    Static(String),
+    Copy {
+        source_prefix: String,
+        destination_prefix: String,
+    },
+}
+
 fn emit_linux_x86_64_elf_for_action(
     action: &AilBytecodeAction,
     failures: &BTreeMap<String, AilBytecodeFailure>,
@@ -3289,7 +3302,7 @@ fn emit_linux_x86_64_elf_for_action(
     let mut forbidden_exact_args = Vec::new();
     let mut required_any_exact_args = Vec::new();
     let mut failure_branches = Vec::new();
-    let mut state_write_lines = Vec::new();
+    let mut state_writes = Vec::new();
     let mut success_trace_lines = Vec::new();
     for instruction in &action.instructions {
         match instruction.opcode.as_str() {
@@ -3388,8 +3401,20 @@ fn emit_linux_x86_64_elf_for_action(
                     instruction.operands.get("key"),
                     instruction.operands.get("value"),
                 ) {
-                    state_write_lines.push(format!("{key}={value}\n"));
+                    state_writes.push(NativeStateWrite::Static(format!("{key}={value}\n")));
                     success_trace_lines.push(format!("write {key}={value}\n"));
+                }
+            }
+            "COPY_FIELD" => {
+                if let (Some(source), Some(key)) = (
+                    instruction.operands.get("source"),
+                    instruction.operands.get("key"),
+                ) {
+                    state_writes.push(NativeStateWrite::Copy {
+                        source_prefix: format!("{source}="),
+                        destination_prefix: format!("{key}="),
+                    });
+                    success_trace_lines.push(format!("write {key}\n"));
                 }
             }
             "WRITE_FIELD" => {
@@ -3458,9 +3483,33 @@ fn emit_linux_x86_64_elf_for_action(
         code.emit_jmp_label(fail_label);
         code.label(matched_label)?;
     }
-    for (index, line) in state_write_lines.iter().enumerate() {
-        let label = format!("state_write_{index}");
-        code.emit_write_label(1, &label, line.len() as u32);
+    for (index, write) in state_writes.iter().enumerate() {
+        match write {
+            NativeStateWrite::Static(line) => {
+                let label = format!("state_write_{index}");
+                code.emit_write_label(1, &label, line.len() as u32);
+            }
+            NativeStateWrite::Copy {
+                source_prefix,
+                destination_prefix,
+            } => {
+                let source_label = format!("state_copy_source_{index}");
+                let destination_label = format!("state_copy_destination_{index}");
+                let done_label = format!("state_copy_done_{index}");
+                code.emit_lea_rsi_label(&source_label);
+                code.emit_mov_edx_imm32(source_prefix.len() as u32);
+                code.emit_call_label("find_prefix");
+                code.emit_test_rax_rax();
+                code.emit_jcc_label(&[0x0f, 0x84], &done_label); // jz done
+                code.emit_mov_r14_rax();
+                code.emit_write_label(1, &destination_label, destination_prefix.len() as u32);
+                code.emit_mov_rdi_r14();
+                code.emit_call_label("cstring_len");
+                code.emit_write_r14_with_rax_len(1);
+                code.emit_write_label(1, "state_copy_newline", 1);
+                code.label(done_label)?;
+            }
+        }
     }
     for (index, line) in success_trace_lines.iter().enumerate() {
         let label = format!("trace_write_{index}");
@@ -3478,6 +3527,8 @@ fn emit_linux_x86_64_elf_for_action(
     }
     emit_has_prefix(&mut code)?;
     emit_has_exact(&mut code)?;
+    emit_find_prefix(&mut code)?;
+    emit_cstring_len(&mut code)?;
     for (index, (prefix, _)) in exists_prefixes.iter().enumerate() {
         code.label(format!("exists_prefix_{index}"))?;
         code.emit(prefix.as_bytes());
@@ -3492,9 +3543,29 @@ fn emit_linux_x86_64_elf_for_action(
             code.emit(exact.as_bytes());
         }
     }
-    for (index, line) in state_write_lines.iter().enumerate() {
-        code.label(format!("state_write_{index}"))?;
-        code.emit(line.as_bytes());
+    let has_state_copies = state_writes
+        .iter()
+        .any(|write| matches!(write, NativeStateWrite::Copy { .. }));
+    for (index, write) in state_writes.iter().enumerate() {
+        match write {
+            NativeStateWrite::Static(line) => {
+                code.label(format!("state_write_{index}"))?;
+                code.emit(line.as_bytes());
+            }
+            NativeStateWrite::Copy {
+                source_prefix,
+                destination_prefix,
+            } => {
+                code.label(format!("state_copy_source_{index}"))?;
+                code.emit(source_prefix.as_bytes());
+                code.label(format!("state_copy_destination_{index}"))?;
+                code.emit(destination_prefix.as_bytes());
+            }
+        }
+    }
+    if has_state_copies {
+        code.label("state_copy_newline")?;
+        code.emit(b"\n");
     }
     for (index, line) in success_trace_lines.iter().enumerate() {
         code.label(format!("trace_write_{index}"))?;
@@ -3591,6 +3662,49 @@ fn emit_has_exact(code: &mut X64Code) -> Result<(), String> {
     Ok(())
 }
 
+fn emit_find_prefix(code: &mut X64Code) -> Result<(), String> {
+    code.label("find_prefix")?;
+    code.emit(&[0x45, 0x31, 0xc0]); // xor r8d, r8d
+    code.label("find_prefix_loop")?;
+    code.emit(&[0x4d, 0x39, 0xe8]); // cmp r8, r13
+    code.emit_jcc_label(&[0x0f, 0x83], "find_prefix_no"); // jae find_prefix_no
+    code.emit(&[
+        0x4b, 0x8b, 0x3c, 0xc4, // mov rdi, [r12+r8*8]
+        0x31, 0xc9, // xor ecx, ecx
+    ]);
+    code.label("find_prefix_cmp")?;
+    code.emit(&[0x39, 0xd1]); // cmp ecx, edx
+    code.emit_jcc_label(&[0x0f, 0x83], "find_prefix_yes"); // jae find_prefix_yes
+    code.emit(&[
+        0x8a, 0x04, 0x0f, // mov al, [rdi+rcx]
+        0x3a, 0x04, 0x0e, // cmp al, [rsi+rcx]
+    ]);
+    code.emit_jcc_label(&[0x0f, 0x85], "find_prefix_next"); // jne find_prefix_next
+    code.emit(&[0x48, 0xff, 0xc1]); // inc rcx
+    code.emit_jmp_label("find_prefix_cmp");
+    code.label("find_prefix_next")?;
+    code.emit(&[0x49, 0xff, 0xc0]); // inc r8
+    code.emit_jmp_label("find_prefix_loop");
+    code.label("find_prefix_yes")?;
+    code.emit(&[0x48, 0x8d, 0x04, 0x17, 0xc3]); // lea rax, [rdi+rdx]; ret
+    code.label("find_prefix_no")?;
+    code.emit(&[0x31, 0xc0, 0xc3]); // xor eax, eax; ret
+    Ok(())
+}
+
+fn emit_cstring_len(code: &mut X64Code) -> Result<(), String> {
+    code.label("cstring_len")?;
+    code.emit(&[0x48, 0x31, 0xc0]); // xor rax, rax
+    code.label("cstring_len_loop")?;
+    code.emit(&[0x80, 0x3c, 0x07, 0x00]); // cmp byte [rdi+rax], 0
+    code.emit_jcc_label(&[0x0f, 0x84], "cstring_len_done"); // je cstring_len_done
+    code.emit(&[0x48, 0xff, 0xc0]); // inc rax
+    code.emit_jmp_label("cstring_len_loop");
+    code.label("cstring_len_done")?;
+    code.emit(&[0xc3]); // ret
+    Ok(())
+}
+
 #[derive(Default)]
 struct X64Code {
     bytes: Vec<u8>,
@@ -3621,6 +3735,18 @@ impl X64Code {
         self.emit(&value.to_le_bytes());
     }
 
+    fn emit_test_rax_rax(&mut self) {
+        self.emit(&[0x48, 0x85, 0xc0]);
+    }
+
+    fn emit_mov_r14_rax(&mut self) {
+        self.emit(&[0x49, 0x89, 0xc6]);
+    }
+
+    fn emit_mov_rdi_r14(&mut self) {
+        self.emit(&[0x4c, 0x89, 0xf7]);
+    }
+
     fn emit_write_label(&mut self, fd: u32, label: &str, len: u32) {
         self.emit(&[
             0xb8, 0x01, 0x00, 0x00, 0x00, // mov eax, 1
@@ -3630,6 +3756,19 @@ impl X64Code {
         self.emit_lea_rsi_label(label);
         self.emit_mov_edx_imm32(len);
         self.emit(&[0x0f, 0x05]); // syscall
+    }
+
+    fn emit_write_r14_with_rax_len(&mut self, fd: u32) {
+        self.emit(&[
+            0x48, 0x89, 0xc2, // mov rdx, rax
+            0xb8, 0x01, 0x00, 0x00, 0x00, // mov eax, 1
+            0xbf, // mov edi, fd
+        ]);
+        self.emit(&fd.to_le_bytes());
+        self.emit(&[
+            0x4c, 0x89, 0xf6, // mov rsi, r14
+            0x0f, 0x05, // syscall
+        ]);
     }
 
     fn emit_call_label(&mut self, label: &str) {
@@ -4916,6 +5055,11 @@ fn compile_ail_action_bytecode(document: &AilDocument, action: &AilAction) -> Ai
                 "SET_FIELD",
                 &[("key", key), ("value", value), ("text", write.clone())],
             ));
+        } else if let Some((source, key)) = field_copy_assignment(document, write) {
+            instructions.push(AilBytecodeInstruction::new(
+                "COPY_FIELD",
+                &[("source", source), ("key", key), ("text", write.clone())],
+            ));
         } else if let Some(key) = referenced_runtime_field_key(document, write) {
             instructions.push(AilBytecodeInstruction::new(
                 "WRITE_FIELD",
@@ -5109,6 +5253,7 @@ fn ail_bytecode_required_operands(opcode: &str) -> Option<&'static [&'static str
         "READ_FIELD" => Some(&["key", "text"]),
         "READ_EFFECT" => Some(&["text"]),
         "SET_FIELD" => Some(&["key", "value", "text"]),
+        "COPY_FIELD" => Some(&["source", "key", "text"]),
         "WRITE_FIELD" => Some(&["key", "text"]),
         "EFFECT" => Some(&["text"]),
         "TOOL_BEGIN" => Some(&["tool", "label"]),
@@ -5427,6 +5572,14 @@ pub fn run_ail_bytecode_action(
                 let value = ail_bytecode_operand(instruction, "value").to_string();
                 final_state.insert(key.clone(), value.clone());
                 trace.push(format!("write {key}={value}"));
+            }
+            "COPY_FIELD" => {
+                let source = ail_bytecode_operand(instruction, "source");
+                let key = ail_bytecode_operand(instruction, "key").to_string();
+                if let Some(value) = final_state.get(source).cloned() {
+                    final_state.insert(key.clone(), value);
+                }
+                trace.push(format!("write {key}"));
             }
             "WRITE_FIELD" => {
                 trace.push(format!(
@@ -7231,6 +7384,52 @@ fn positive_field_requirement(
     let key = referenced_runtime_field_key(document, field_text)?;
     let allowed_values = split_allowed_requirement_values(allowed_text);
     (!allowed_values.is_empty()).then_some((key, allowed_values))
+}
+
+fn field_copy_assignment(document: &AilDocument, write: &str) -> Option<(String, String)> {
+    let (source_text, destination_text) = write.split_once(" as ")?;
+    let source_key = application_user_id_key(document, source_text)
+        .or_else(|| referenced_runtime_field_key(document, source_text))?;
+    let destination_key = copied_destination_key(document, destination_text, &source_key)?;
+    Some((source_key, destination_key))
+}
+
+fn application_user_id_key(document: &AilDocument, text: &str) -> Option<String> {
+    let normalized = normalized_field_reference_text(text).to_ascii_lowercase();
+    for user in &document.application.users {
+        let user_key = runtime_subject_key(user);
+        if normalized == user_key && user_field_name(document, "id").is_some() {
+            return Some(format!("{user_key}.id"));
+        }
+    }
+    None
+}
+
+fn copied_destination_key(
+    document: &AilDocument,
+    destination_text: &str,
+    source_key: &str,
+) -> Option<String> {
+    let destination_key = referenced_runtime_field_key(document, destination_text)?;
+    if source_key.ends_with(".id")
+        && runtime_field_type_name(document, &destination_key)
+            .and_then(|type_name| referenced_thing_type(document, type_name))
+            .is_some_and(|thing| thing.fields.contains_key("id"))
+    {
+        return Some(format!("{destination_key}.id"));
+    }
+    Some(destination_key)
+}
+
+fn runtime_field_type_name<'a>(document: &'a AilDocument, key: &str) -> Option<&'a str> {
+    for thing in document.things.values() {
+        for field in thing.fields.values() {
+            if key == runtime_field_key(&thing.name, &field.name) {
+                return Some(&field.type_name);
+            }
+        }
+    }
+    None
 }
 
 fn field_write_assignment(document: &AilDocument, write: &str) -> Option<(String, String)> {
