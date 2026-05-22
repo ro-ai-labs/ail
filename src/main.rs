@@ -446,7 +446,95 @@ fn run_ail_vm_command(path: &str, cli_options: &CliOptions) -> Result<u8, String
     Ok(if result.status == "succeeded" { 0 } else { 1 })
 }
 
+fn run_ail_pass_command(pass_path: &str, cli_options: &CliOptions) -> Result<u8, String> {
+    let action = cli_options
+        .ail_action
+        .as_deref()
+        .ok_or_else(|| "ail-pass requires --action <name>".to_string())?;
+    let target_path = cli_options
+        .ail_pass_target
+        .as_deref()
+        .ok_or_else(|| "ail-pass requires a target package".to_string())?;
+
+    let (pass_bytecode, pass_bytecode_text) = load_ail_pass_bytecode_or_compile_package(pass_path)?;
+    let bytecode_diagnostics = verify_ail_bytecode(&pass_bytecode);
+    if !bytecode_diagnostics.is_empty() {
+        println!("ail-pass diagnostics:");
+        for diagnostic in bytecode_diagnostics {
+            println!("{diagnostic}");
+        }
+        return Ok(1);
+    }
+
+    let target_package = load_ail_package_dir(target_path)?;
+    let target_document = parse_ail_package_document(&target_package)?;
+    let target_core = elaborate_ail_core(&target_package, &target_document);
+    let target_diagnostics = check_ail_core(&target_core);
+    if !target_diagnostics.is_empty() {
+        for diagnostic in target_diagnostics {
+            println!("{diagnostic}");
+        }
+        return Ok(1);
+    }
+
+    let result = run_ail_compiler_pass_on_core(&pass_bytecode, action, &target_core)?;
+    let result_diagnostics = check_ail_core(&result.core);
+    if !result_diagnostics.is_empty() {
+        println!("ail-pass diagnostics:");
+        for diagnostic in result_diagnostics {
+            println!("{diagnostic}");
+        }
+        return Ok(1);
+    }
+    let input_core_text = format!("{}\n", render_ail_core(&target_core));
+    let output_core_text = format!("{}\n", render_ail_core(&result.core));
+    if let Some(artifact_dir) = &cli_options.artifact_dir {
+        write_ail_pass_artifacts(
+            artifact_dir,
+            &pass_bytecode_text,
+            &input_core_text,
+            &output_core_text,
+            &result.run.trace,
+        )?;
+    }
+    print!("{output_core_text}");
+    Ok(0)
+}
+
+fn load_ail_pass_bytecode_or_compile_package(
+    path: &str,
+) -> Result<(eigl::ail::AilBytecodeProgram, String), String> {
+    if std::path::Path::new(path).is_file() {
+        let text =
+            fs::read_to_string(path).map_err(|error| format!("failed to read {path}: {error}"))?;
+        let bytecode = parse_ail_bytecode(&text)?;
+        let normalized_text = if text.ends_with('\n') {
+            text
+        } else {
+            format!("{text}\n")
+        };
+        return Ok((bytecode, normalized_text));
+    }
+
+    let package = load_ail_package_dir(path)?;
+    let document = parse_ail_package_document(&package)?;
+    let core = elaborate_ail_core(&package, &document);
+    let diagnostics = check_ail_core(&core);
+    if !diagnostics.is_empty() {
+        for diagnostic in diagnostics {
+            println!("{diagnostic}");
+        }
+        return Err("ail-pass compiler pass package has diagnostics".to_string());
+    }
+    let bytecode = compile_ail_core_bytecode(&core)?;
+    let text = format!("{}\n", render_ail_bytecode(&bytecode));
+    Ok((bytecode, text))
+}
+
 fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Result<u8, String> {
+    if command == "ail-pass" {
+        return run_ail_pass_command(path, cli_options);
+    }
     let package = load_ail_package_dir(path)?;
     if command == "ail-conformance" {
         let result = run_ail_conformance(&package)?;
@@ -587,70 +675,6 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
             )?;
         }
         print!("{bytecode_text}");
-        return Ok(0);
-    }
-    if command == "ail-pass" {
-        let action = cli_options
-            .ail_action
-            .as_deref()
-            .ok_or_else(|| "ail-pass requires --action <name>".to_string())?;
-        let target_path = cli_options
-            .ail_pass_target
-            .as_deref()
-            .ok_or_else(|| "ail-pass requires a target package".to_string())?;
-
-        let pass_document = parse_ail_package_document(&package)?;
-        let pass_core = elaborate_ail_core(&package, &pass_document);
-        let pass_diagnostics = check_ail_core(&pass_core);
-        if !pass_diagnostics.is_empty() {
-            for diagnostic in pass_diagnostics {
-                println!("{diagnostic}");
-            }
-            return Ok(1);
-        }
-        let pass_bytecode = compile_ail_core_bytecode(&pass_core)?;
-        let bytecode_diagnostics = verify_ail_bytecode(&pass_bytecode);
-        if !bytecode_diagnostics.is_empty() {
-            println!("ail-pass diagnostics:");
-            for diagnostic in bytecode_diagnostics {
-                println!("{diagnostic}");
-            }
-            return Ok(1);
-        }
-        let pass_bytecode_text = format!("{}\n", render_ail_bytecode(&pass_bytecode));
-
-        let target_package = load_ail_package_dir(target_path)?;
-        let target_document = parse_ail_package_document(&target_package)?;
-        let target_core = elaborate_ail_core(&target_package, &target_document);
-        let target_diagnostics = check_ail_core(&target_core);
-        if !target_diagnostics.is_empty() {
-            for diagnostic in target_diagnostics {
-                println!("{diagnostic}");
-            }
-            return Ok(1);
-        }
-
-        let result = run_ail_compiler_pass_on_core(&pass_bytecode, action, &target_core)?;
-        let result_diagnostics = check_ail_core(&result.core);
-        if !result_diagnostics.is_empty() {
-            println!("ail-pass diagnostics:");
-            for diagnostic in result_diagnostics {
-                println!("{diagnostic}");
-            }
-            return Ok(1);
-        }
-        let input_core_text = format!("{}\n", render_ail_core(&target_core));
-        let output_core_text = format!("{}\n", render_ail_core(&result.core));
-        if let Some(artifact_dir) = &cli_options.artifact_dir {
-            write_ail_pass_artifacts(
-                artifact_dir,
-                &pass_bytecode_text,
-                &input_core_text,
-                &output_core_text,
-                &result.run.trace,
-            )?;
-        }
-        print!("{output_core_text}");
         return Ok(0);
     }
     let document = parse_ail_package_document(&package)?;

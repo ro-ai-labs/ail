@@ -35,10 +35,11 @@ inspection, `ail-lower` compiles checked AIL-Core IR into deterministic
 AIL-Bytecode, `ail-patch <patch-file>` applies a checked AIL patch and prints
 canonical AIL-Spec, `ail-run --action <ActionName>` executes through the
 current AIL bytecode VM, `ail-vm --action <ActionName>` verifies and executes a
-saved AIL-Bytecode artifact directly, `ail-pass <compiler-pass-package>
-<target-package> --action <PassName>` compiles an AIL-Meta compiler pass
-package into verified bytecode and applies it to a checked target package's
-AIL-Core, `ail-conformance` checks accepted and rejected fixtures,
+saved AIL-Bytecode artifact directly,
+`ail-pass <compiler-pass-package-or-bytecode> <target-package> --action
+<PassName>` compiles an AIL-Meta compiler pass package, or reads a saved
+Compiler-profile AIL-Bytecode artifact, and applies it to a checked target
+package's AIL-Core, `ail-conformance` checks accepted and rejected fixtures,
 `ail-draft --prompt <text>` asks the package base LLM endpoint for an AIL-Spec
 candidate before parsing and checking it, and
 `ail-build --prompt <text>` asks the base LLM for requirements, asks it to turn
@@ -75,6 +76,7 @@ cargo run -- ail-run examples/support_ticket.ail --action CloseTicket ticket.id=
 cargo run -- ail-vm /tmp/support-ticket.ailbc.json --action CloseTicket ticket.id=T-1 ticket.status=Open
 cargo run -- ail-pass examples/compiler_pass.ail examples/support_ticket.ail --action InferReadPermissions
 cargo run -- ail-pass examples/compiler_pass.ail examples/support_ticket.ail --action InferReadPermissions --artifact-dir /tmp/support-ticket-ail-pass
+cargo run -- ail-pass /tmp/compiler-pass.ailbc.json examples/support_ticket.ail --action InferReadPermissions
 cargo run -- ail-conformance examples/support_ticket.ail
 cargo run -- ail-conformance examples/ail_toolchain_agent.ail
 cargo run -- ail-conformance examples/refund_tool.ail

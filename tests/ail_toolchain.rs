@@ -2062,6 +2062,60 @@ fn cli_ail_pass_writes_auditable_intermediate_artifacts() {
 }
 
 #[test]
+fn cli_ail_pass_accepts_saved_compiler_pass_bytecode_artifact() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let pass_package = fixture("compiler_pass.ail");
+    let target_package = fixture("support_ticket.ail");
+
+    let lowered = Command::new(binary)
+        .args(["ail-lower", &pass_package])
+        .output()
+        .unwrap();
+    assert!(
+        lowered.status.success(),
+        "{}",
+        String::from_utf8_lossy(&lowered.stderr)
+    );
+
+    let bytecode_path = std::env::temp_dir().join(format!(
+        "eigl-compiler-pass-{}.ailbc.json",
+        std::process::id()
+    ));
+    fs::write(&bytecode_path, lowered.stdout).unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-pass",
+            bytecode_path.to_str().unwrap(),
+            &target_package,
+            "--action",
+            "InferReadPermissions",
+        ])
+        .output()
+        .unwrap();
+
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("package: support-ticket"), "{stdout}");
+    assert!(
+        stdout.contains("node Permission read Ticket.status"),
+        "{stdout}"
+    );
+    assert!(
+        stdout
+            .contains("edge requires Action:MarksOverdueTickets -> Permission:read Ticket.status"),
+        "{stdout}"
+    );
+
+    fs::remove_file(bytecode_path).unwrap();
+}
+
+#[test]
 fn ail_runtime_executes_generic_field_writes_and_requirements() {
     let package = load_ail_package_dir(fixture("runtime_generic.ail")).unwrap();
     let document = parse_ail_package_document(&package).unwrap();

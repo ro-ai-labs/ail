@@ -3223,6 +3223,61 @@ Expected: the artifact files are written, output core matches stdout, pass
 bytecode verifies, and trace records pass start, transform opcode, and
 permission insertion.
 
+### Task 80: `ail-pass` Runs Saved Compiler-Pass Bytecode
+
+**Files:**
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing saved-bytecode `ail-pass` test**
+
+Add a CLI test that first runs:
+
+```bash
+eigl ail-lower examples/compiler_pass.ail
+```
+
+Save stdout as a `.ailbc.json` artifact, then run:
+
+```bash
+eigl ail-pass <saved-pass.ailbc.json> examples/support_ticket.ail --action InferReadPermissions
+```
+
+Require stdout to contain transformed Support Ticket AIL-Core with
+`Permission read Ticket.status` and the `requires` edge from
+`MarksOverdueTickets`.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_pass_accepts_saved_compiler_pass_bytecode_artifact -- --nocapture
+```
+
+Expected: failure because `ail-pass` treats the saved bytecode file path as an
+AIL package directory.
+
+- [x] **Step 3: Implement saved pass bytecode loading**
+
+Teach `ail-pass` to accept either an AIL-Meta package directory or a saved
+Compiler-profile AIL-Bytecode artifact as its first argument. For a file input,
+read and parse bytecode directly, verify it, and run it over the checked target
+AIL-Core without loading the compiler-pass source package.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_pass_accepts_saved_compiler_pass_bytecode_artifact -- --nocapture
+```
+
+Expected: saved compiler-pass bytecode applies to the target package and emits
+the same transformed AIL-Core as source-package pass execution.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**
