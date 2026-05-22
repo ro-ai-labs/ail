@@ -527,6 +527,42 @@ fn write_ail_build_artifacts(
     Ok(())
 }
 
+fn render_ail_lower_manifest(bytecode_fingerprint: &str) -> String {
+    format!(
+        "AIL-Lower-Manifest:\nartifact checked.ail-core.txt\nbytecode artifact.ailbc.json {bytecode_fingerprint}\n"
+    )
+}
+
+fn write_ail_lower_artifacts(
+    artifact_dir: &str,
+    core_text: &str,
+    bytecode_text: &str,
+) -> Result<(), String> {
+    let root = std::path::Path::new(artifact_dir);
+    fs::create_dir_all(root).map_err(|error| {
+        format!("failed to create ail-lower artifact dir {artifact_dir}: {error}")
+    })?;
+    fs::write(root.join("checked.ail-core.txt"), core_text)
+        .map_err(|error| format!("failed to write ail-lower core artifact: {error}"))?;
+    fs::write(root.join("artifact.ailbc.json"), bytecode_text)
+        .map_err(|error| format!("failed to write ail-lower bytecode artifact: {error}"))?;
+    let bytecode_fingerprint = ail_artifact_fingerprint(bytecode_text);
+    fs::write(
+        root.join("artifact.fingerprint.txt"),
+        format!("{bytecode_fingerprint}\n"),
+    )
+    .map_err(|error| format!("failed to write ail-lower bytecode fingerprint artifact: {error}"))?;
+    let manifest_text = render_ail_lower_manifest(&bytecode_fingerprint);
+    fs::write(root.join("manifest.ail-lower.txt"), &manifest_text)
+        .map_err(|error| format!("failed to write ail-lower manifest artifact: {error}"))?;
+    fs::write(
+        root.join("manifest.fingerprint.txt"),
+        format!("{}\n", ail_artifact_fingerprint(&manifest_text)),
+    )
+    .map_err(|error| format!("failed to write ail-lower manifest fingerprint artifact: {error}"))?;
+    Ok(())
+}
+
 fn ail_artifact_fingerprint(text: &str) -> String {
     let mut hash = 0xcbf29ce484222325u64;
     for byte in text.as_bytes() {
@@ -1739,7 +1775,12 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
             }
             return Ok(1);
         }
-        println!("{}", render_ail_bytecode(&bytecode));
+        let bytecode_text = format!("{}\n", render_ail_bytecode(&bytecode));
+        if let Some(artifact_dir) = &cli_options.artifact_dir {
+            let core_text = format!("{}\n", render_ail_core(&core));
+            write_ail_lower_artifacts(artifact_dir, &core_text, &bytecode_text)?;
+        }
+        print!("{bytecode_text}");
         return Ok(0);
     }
     let package = load_ail_package_dir(path)?;
@@ -2071,7 +2112,12 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
                 return Ok(1);
             }
             let bytecode = compile_ail_core_bytecode(&core)?;
-            println!("{}", render_ail_bytecode(&bytecode));
+            let bytecode_text = format!("{}\n", render_ail_bytecode(&bytecode));
+            if let Some(artifact_dir) = &cli_options.artifact_dir {
+                let core_text = format!("{}\n", render_ail_core(&core));
+                write_ail_lower_artifacts(artifact_dir, &core_text, &bytecode_text)?;
+            }
+            print!("{bytecode_text}");
             Ok(0)
         }
         "ail-run" => {
@@ -2416,7 +2462,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         }
 
         if arg == "--artifact-dir" {
-            if !matches!(command, "ail-build" | "ail-pass") {
+            if !matches!(command, "ail-build" | "ail-pass" | "ail-lower") {
                 return Err(usage());
             }
             let Some(path) = args.get(index + 1) else {

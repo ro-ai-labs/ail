@@ -32,10 +32,13 @@ AIL package commands operate on package directories such as
 runs AIL-Core diagnostics, `ail-core` prints deterministic AIL-Core,
 `ail-flow` prints a deterministic AIL-Flow JSON projection for no-code
 inspection, and `ail-lower` compiles checked AIL-Core IR into deterministic
-AIL-Bytecode. `ail-check`, `ail-core`, `ail-flow`, `ail-lower`, `ail-run`, and
-`ail-build` can use `--spec-file <path>` to read a saved generated AIL-Spec
-artifact instead of the package entry spec. `ail-lower --core-file <path>` and
-`ail-build --core-file <path>` read a saved checked AIL-Core artifact and
+AIL-Bytecode. `ail-lower --artifact-dir <dir>` also writes the checked core,
+bytecode, deterministic fingerprints, and a lower manifest while keeping stdout
+as the bytecode artifact. `ail-check`, `ail-core`, `ail-flow`, `ail-lower`,
+`ail-run`, and `ail-build` can use `--spec-file <path>` to read a saved
+generated AIL-Spec artifact instead of the package entry spec.
+`ail-lower --core-file <path>` and `ail-build --core-file <path>` read a
+saved checked AIL-Core artifact and
 compile it directly to bytecode, without loading the source package spec,
 including the serialized edge payloads used by lowering. `ail-patch
 <patch-file>` applies a checked AIL patch and prints canonical AIL-Spec,

@@ -4888,6 +4888,50 @@ Expected: the agent bytecode includes and runs `VerifyPassManifest`, and the
 standalone pass agent trace records manifest verification after pass output
 acceptance.
 
+### Task 115: AIL Lower Writes Auditable Bytecode Artifacts
+
+**Files:**
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing `ail-lower --artifact-dir` test**
+
+Extend the saved-core `ail-lower` test to run with `--artifact-dir <dir>`.
+Require stdout to remain parseable AIL-Bytecode, and require
+`checked.ail-core.txt`, `artifact.ailbc.json`, `artifact.fingerprint.txt`,
+`manifest.ail-lower.txt`, and `manifest.fingerprint.txt`.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_lower_accepts_saved_core_file_artifact -- --nocapture
+```
+
+Expected: failure because `--artifact-dir` is accepted for `ail-build` and
+`ail-pass`, but not for direct `ail-lower`.
+
+- [x] **Step 3: Implement lower artifact output**
+
+Allow `--artifact-dir` for `ail-lower`. Write the checked AIL-Core input,
+lowered bytecode artifact, deterministic bytecode fingerprint, lower manifest,
+and manifest fingerprint for both source-package and `--core-file` lowering
+paths while keeping stdout unchanged.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_lower_accepts_saved_core_file_artifact -- --nocapture
+```
+
+Expected: `ail-lower --core-file --artifact-dir` writes the auditable direct
+IR-to-bytecode artifact set and stdout still equals `artifact.ailbc.json`.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

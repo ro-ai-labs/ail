@@ -330,6 +330,10 @@ loading, parsing, elaboration, and checker gate as `ail-core` and `ail-flow`;
 the bytecode compiler receives the checked AIL-Core IR, not the parsed
 AIL-Spec document. `ail-run` uses the same checked AIL-Core-to-bytecode path and
 then executes through the AIL bytecode VM for supported Application packages.
+With `--artifact-dir`, `ail-lower` writes `checked.ail-core.txt`,
+`artifact.ailbc.json`, `artifact.fingerprint.txt`, `manifest.ail-lower.txt`,
+and `manifest.fingerprint.txt`, keeping direct IR-to-bytecode lowering
+auditable while stdout remains the parseable bytecode artifact.
 `ail-check`, `ail-core`, `ail-flow`, `ail-lower`, `ail-run`, and `ail-build`
 can use `--spec-file <path>` to read a saved generated AIL-Spec artifact
 instead of the package entry spec, preserving the package metadata while making

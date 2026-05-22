@@ -2827,6 +2827,11 @@ fn cli_ail_lower_accepts_saved_core_file_artifact() {
         "eigl-missing-source-package-{}",
         std::process::id()
     ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "eigl-ail-lower-core-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
 
     let lower_output = Command::new(binary)
         .args([
@@ -2834,6 +2839,8 @@ fn cli_ail_lower_accepts_saved_core_file_artifact() {
             missing_source_package.to_str().unwrap(),
             "--core-file",
             core_path.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
         ])
         .output()
         .unwrap();
@@ -2855,7 +2862,38 @@ fn cli_ail_lower_accepts_saved_core_file_artifact() {
                 .is_some_and(|text| text == "the ticket status to Closed")
     }));
 
+    let bytecode_artifact = fs::read_to_string(artifact_dir.join("artifact.ailbc.json")).unwrap();
+    assert_eq!(
+        bytecode_artifact,
+        String::from_utf8_lossy(&lower_output.stdout)
+    );
+    let bytecode_fingerprint =
+        fs::read_to_string(artifact_dir.join("artifact.fingerprint.txt")).unwrap();
+    assert_eq!(
+        bytecode_fingerprint.trim(),
+        fnv64_fingerprint(&bytecode_artifact)
+    );
+    let core_artifact = fs::read_to_string(artifact_dir.join("checked.ail-core.txt")).unwrap();
+    assert_eq!(core_artifact, fs::read_to_string(&core_path).unwrap());
+    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-lower.txt")).unwrap();
+    assert!(manifest.contains("AIL-Lower-Manifest:"), "{manifest}");
+    assert!(
+        manifest.contains("artifact checked.ail-core.txt"),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "bytecode artifact.ailbc.json {}",
+            fnv64_fingerprint(&bytecode_artifact)
+        )),
+        "{manifest}"
+    );
+    let manifest_fingerprint =
+        fs::read_to_string(artifact_dir.join("manifest.fingerprint.txt")).unwrap();
+    assert_eq!(manifest_fingerprint.trim(), fnv64_fingerprint(&manifest));
+
     fs::remove_file(core_path).unwrap();
+    fs::remove_dir_all(artifact_dir).unwrap();
 }
 
 #[test]
