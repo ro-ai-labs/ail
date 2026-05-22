@@ -5480,6 +5480,67 @@ fn cli_ail_build_accepts_saved_spec_file_artifact() {
 }
 
 #[test]
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+fn cli_ail_build_saved_spec_can_emit_native_linux_x86_64_elf() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("support_ticket.ail");
+    let spec_path = std::env::temp_dir().join(format!(
+        "eigl-support-ticket-build-native-spec-{}.ail-spec.md",
+        std::process::id()
+    ));
+    let executable_path = std::env::temp_dir().join(format!(
+        "eigl-support-ticket-build-native-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_file(&executable_path);
+    let spec_text = fs::read_to_string(format!("{package}/spec.ail-spec.md")).unwrap();
+    fs::write(&spec_path, &spec_text).unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-build",
+            &package,
+            "--spec-file",
+            spec_path.to_str().unwrap(),
+            "--action",
+            "AssignTicket",
+            "--target",
+            "linux-x86_64-elf",
+            "--out",
+            executable_path.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("ail-build wrote linux-x86_64-elf executable"));
+    assert!(!stdout.contains("\"kind\":\"AIL-Bytecode\""), "{stdout}");
+
+    let native_run = Command::new(&executable_path)
+        .args(["ticket.id=T-1", "ticket.status=Open"])
+        .output()
+        .unwrap();
+    assert!(
+        native_run.status.success(),
+        "native executable failed: {}",
+        native_run.status
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&native_run.stdout),
+        "ticket.status=Assigned\n"
+    );
+
+    fs::remove_file(spec_path).unwrap();
+    fs::remove_file(executable_path).unwrap();
+}
+
+#[test]
 fn cli_ail_build_agent_accepts_saved_spec_before_core_lowering() {
     let binary = env!("CARGO_BIN_EXE_eigl");
     let package = fixture("support_ticket.ail");

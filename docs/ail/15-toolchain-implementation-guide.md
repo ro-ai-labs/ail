@@ -288,9 +288,10 @@ it supports.
 Checked AIL-Core now has two compiler targets. The current `ail-lower` target
 is a deterministic AIL VM instruction artifact used for inspection, agent
 acceptance checkpoints, compiler-pass execution, and bootstrap runtime tests.
-The native `ail-compile` target is the machine-code path: it emits Linux
-x86_64 ELF executable bytes directly from the bootstrap compiler, without
-generating Rust, invoking a linker, using libc, or relying on LLVM.
+The native target used by `ail-compile` and `ail-build --target
+linux-x86_64-elf` is the machine-code path: it emits Linux x86_64 ELF
+executable bytes directly from the bootstrap compiler, without generating Rust,
+invoking a linker, using libc, or relying on LLVM.
 
 The native executable path is the bytecode target in the machine-level sense.
 The VM instruction artifact remains an intermediate representation until the
@@ -342,6 +343,10 @@ packages.
 AIL-Core gate, validates the selected action, and writes a native executable
 ELF file with direct Linux x86_64 syscall code as the first native compiler
 slice. The first native runtime ABI receives state as `key=value` argv entries.
+`ail-build --target linux-x86_64-elf --action <ActionName> --out <path>` uses
+the same native emitter after its requirements/spec/core pipeline has produced
+checked AIL-Core, so saved-spec and saved-core builds can produce the native
+target without printing the VM artifact on stdout.
 Native code generated from supported `REQUIRE_EXISTS` instructions checks for a
 matching `key=` argument, native code generated from supported
 `REQUIRE_FIELD_IN` instructions checks that at least one allowed `key=value`
@@ -409,8 +414,9 @@ fingerprint. When `--agent` is present, the artifact directory also includes
 `agent.ailbc.json`, `agent.fingerprint.txt`, and `agent-trace.txt`, and the
 manifest indexes the agent bytecode and trace. This keeps pass execution
 auditable while stdout remains the transformed AIL-Core artifact.
-`ail-build` composes the LLM draft loop with the same checked bytecode lowering:
-the base LLM first drafts an AIL-Requirements artifact from a user prompt.
+`ail-build` composes the LLM draft loop with the same checked IR-to-artifact
+lowering: the base LLM first drafts an AIL-Requirements artifact from a user
+prompt.
 `ail-build` checks that artifact for profile-specific coverage before spec
 drafting; if it is too thin, the command sends requirements diagnostics back to
 the base LLM for one repair pass. It then drafts an AIL-Spec candidate for the
@@ -424,13 +430,16 @@ LLM calls, parses the saved accepted AIL-Spec artifact against the package
 metadata, and resumes at checked AIL-Core elaboration. With
 `--core-file <path>`, `ail-build` skips both LLM and AIL-Spec parsing stages
 and resumes from the saved checked AIL-Core IR artifact. Only a checked
-candidate, saved spec, or saved core is lowered to AIL-Bytecode. If `--pass
+candidate, saved spec, or saved core is lowered to a target artifact. If `--pass
 <compiler-pass-package-or-bytecode>` is supplied, `ail-build` loads that
 AIL-authored Compiler-profile bytecode, requires exactly one pass action, runs
 it over the checked candidate AIL-Core, and re-checks the transformed IR before
-lowering. The bytecode compiler then consumes the resulting checked IR to emit
-verified AIL-Bytecode, so the build path still emits bytecode rather than
-host-language source. With `--agent <agent-package-or-bytecode>`, `ail-build`
+lowering. By default the bytecode compiler consumes the resulting checked IR to
+emit verified AIL-Bytecode. With `--target linux-x86_64-elf --action
+<ActionName> --out <path>`, the native emitter consumes the same checked IR and
+writes a Linux x86_64 ELF executable instead of printing the VM artifact. Both
+paths emit toolchain artifacts rather than host-language source. With `--agent
+<agent-package-or-bytecode>`, `ail-build`
 compiles or loads an AIL-authored Application-profile toolchain agent, verifies
 its bytecode, and for prompt-driven builds runs its `CaptureRequirements`
 action before the base LLM requirements request, then includes the

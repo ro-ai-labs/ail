@@ -76,13 +76,15 @@ those requirements into an AIL-Spec candidate for the package profile, gives
 the base LLM one diagnostics-guided repair pass if requirements coverage or the
 checked spec is incomplete, optionally runs `--pass
 <compiler-pass-package-or-bytecode>` over the checked AIL-Core IR, then
-compiles the resulting IR into verified AIL-Bytecode on success.
+compiles the resulting IR into a verified VM instruction artifact or, with
+`--target linux-x86_64-elf --action <ActionName> --out <path>`, a native Linux
+x86_64 ELF executable.
 `ail-build --requirements-file <path> --prompt <text>` skips requirements
 capture and resumes the build from a saved checked AIL-Requirements artifact
 before spec drafting. `ail-build --spec-file <path>` skips all LLM calls and
-resumes from an accepted AIL-Spec artifact before AIL-Core checking and
-bytecode lowering. `ail-build --core-file <path>` skips requirements and spec
-stages entirely and resumes from checked AIL-Core IR. Add
+resumes from an accepted AIL-Spec artifact before AIL-Core checking and target
+lowering. `ail-build --core-file <path>` skips requirements and spec stages
+entirely and resumes from checked AIL-Core IR. Add
 `--artifact-dir <dir>` to also write the captured or loaded requirements when
 present, accepted AIL-Spec when present, checked AIL-Core IR after any build
 pass, final AIL-Bytecode artifact, and `manifest.ail-build.txt` as the
@@ -168,6 +170,8 @@ cargo run -- ail-draft examples/support_ticket.ail --prompt "Draft a support tic
 cargo run -- ail-build examples/support_ticket.ail --prompt "Build a support ticket bytecode artifact" --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
 cargo run -- ail-build examples/support_ticket.ail --prompt "Build a support ticket bytecode artifact from saved requirements" --requirements-file /tmp/support-ticket.ail-requirements.md --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
 cargo run -- ail-build examples/support_ticket.ail --spec-file /tmp/support-ticket.ail-spec.md --artifact-dir /tmp/support-ticket-ail-build-spec
+cargo run -- ail-build examples/support_ticket.ail --spec-file /tmp/support-ticket.ail-spec.md --action AssignTicket --target linux-x86_64-elf --out /tmp/assign-ticket
+/tmp/assign-ticket ticket.id=T-1 ticket.status=Open
 cargo run -- ail-build examples/support_ticket.ail --core-file /tmp/support-ticket.ail-core.txt --artifact-dir /tmp/support-ticket-ail-build-core
 cargo run -- ail-build examples/support_ticket.ail --core-file /tmp/support-ticket.ail-core.txt --agent examples/ail_toolchain_agent.ail --artifact-dir /tmp/support-ticket-ail-build-agent
 cargo run -- ail-build examples/support_ticket.ail --prompt "Build a support ticket bytecode artifact" --artifact-dir /tmp/support-ticket-ail-build --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions

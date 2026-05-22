@@ -1772,6 +1772,20 @@ fn run_ail_build_from_core(
             },
         )?;
     }
+    if let Some(target) = &cli_options.ail_compile_target {
+        let action = cli_options
+            .ail_action
+            .as_deref()
+            .ok_or_else(|| "ail-build native output requires --action <name>".to_string())?;
+        let out = cli_options
+            .ail_compile_out
+            .as_deref()
+            .ok_or_else(|| "ail-build native output requires --out <path>".to_string())?;
+        let executable = compile_ail_core_native_elf(&core, action, target)?;
+        write_native_executable(out, &executable)?;
+        println!("ail-build wrote {target} executable {out}");
+        return Ok(0);
+    }
     print!("{bytecode_text}");
     Ok(0)
 }
@@ -2323,7 +2337,10 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
             continue;
         }
         if arg == "--action" {
-            if !matches!(command, "ail-run" | "ail-vm" | "ail-pass" | "ail-compile") {
+            if !matches!(
+                command,
+                "ail-run" | "ail-vm" | "ail-pass" | "ail-compile" | "ail-build"
+            ) {
                 return Err(usage());
             }
             let Some(action_name) = args.get(index + 1) else {
@@ -2406,7 +2423,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
             continue;
         }
         if arg == "--target" {
-            if command != "ail-compile" {
+            if !matches!(command, "ail-compile" | "ail-build") {
                 return Err(usage());
             }
             let Some(target) = args.get(index + 1) else {
@@ -2428,7 +2445,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
             continue;
         }
         if arg == "--out" {
-            if command != "ail-compile" {
+            if !matches!(command, "ail-compile" | "ail-build") {
                 return Err(usage());
             }
             let Some(path) = args.get(index + 1) else {
@@ -2589,6 +2606,21 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
     }
     if command == "ail-build" && ail_build_target_model.is_some() && ail_build_agent.is_none() {
         return Err("--target-model requires --agent".to_string());
+    }
+    if command == "ail-build" {
+        let native_requested = ail_compile_target.is_some() || ail_compile_out.is_some();
+        if native_requested && ail_compile_target.is_none() {
+            return Err("ail-build native output requires --target <target>".to_string());
+        }
+        if native_requested && ail_compile_out.is_none() {
+            return Err("ail-build native output requires --out <path>".to_string());
+        }
+        if native_requested && ail_action.is_none() {
+            return Err("ail-build native output requires --action <name>".to_string());
+        }
+        if !native_requested && ail_action.is_some() {
+            return Err("ail-build --action requires --target and --out".to_string());
+        }
     }
     if command == "ail-pass" && ail_core_file.is_none() && ail_pass_target.is_none() {
         return Err("ail-pass requires a target package or --core-file <path>".to_string());

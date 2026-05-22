@@ -5116,6 +5116,54 @@ Expected: native `AssignTicket` enforces `New or Open` before emitting
 `ticket.status=Assigned`, while existing native `CloseTicket` behavior remains
 unchanged.
 
+### Task 120: `ail-build` Emits Native ELF Targets
+
+**Files:**
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing saved-spec build test**
+
+Add an `ail-build --spec-file` test that requests `AssignTicket` with
+`--target linux-x86_64-elf --out <path>`. Require the command to write a native
+ELF executable, avoid printing the VM artifact on stdout, and require the
+executable to enforce `ticket.status=Open` before emitting
+`ticket.status=Assigned`.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_saved_spec_can_emit_native_linux_x86_64_elf -- --nocapture
+```
+
+Expected: usage failure because `ail-build` rejects `--action`, `--target`,
+and `--out`.
+
+- [x] **Step 3: Route native output through `ail-build`**
+
+Allow `ail-build` to parse `--action`, `--target`, and `--out` together. After
+requirements/spec/core checking and any build pass, call the native ELF emitter
+for the selected action and write the executable path instead of printing the
+VM artifact.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_saved_spec_can_emit_native_linux_x86_64_elf -- --nocapture
+cargo test --test ail_toolchain cli_ail_build_accepts_saved_spec_file_artifact -- --nocapture
+cargo test --test ail_toolchain cli_ail_compile_native_executable_enforces_field_in_requirements -- --nocapture
+```
+
+Expected: saved-spec `ail-build` can emit a native Linux x86_64 ELF executable
+for `AssignTicket` while the default saved-spec build still emits the verified
+VM artifact and existing native requirement enforcement remains unchanged.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**
