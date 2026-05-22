@@ -360,9 +360,11 @@ verified AIL-Bytecode, so the build path still emits bytecode rather than
 host-language source. With `--artifact-dir`, the same command writes
 `requirements.ail-requirements.md`, `accepted.ail-spec.md`,
 `checked.ail-core.txt`, and `artifact.ailbc.json`; when a build pass is present,
-`checked.ail-core.txt` is the post-pass IR that was actually lowered. This lets
-the developer audit the requirements-to-spec-to-IR-to-bytecode chain while
-stdout remains the parseable bytecode artifact.
+`checked.ail-core.txt` is the post-pass IR that was actually lowered, and the
+artifact directory also includes `pass.ailbc.json` plus `pass-trace.txt` for the
+compiler-pass bytecode and execution trace. This lets the developer audit the
+requirements-to-spec-to-IR-to-pass-to-bytecode chain while stdout remains the
+parseable bytecode artifact.
 
 ### Diagnostics
 

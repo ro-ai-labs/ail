@@ -50,7 +50,9 @@ checked spec is incomplete, optionally runs `--pass
 compiles the resulting IR into verified AIL-Bytecode on success. Add
 `--artifact-dir <dir>` to also write the captured requirements, accepted
 AIL-Spec, checked AIL-Core IR after any build pass, and final AIL-Bytecode
-artifact for review. On `ail-pass`, `--artifact-dir <dir>` writes
+artifact for review. When `ail-build --pass` is used with `--artifact-dir`, it
+also writes `pass.ailbc.json` and `pass-trace.txt`. On `ail-pass`,
+`--artifact-dir <dir>` writes
 `pass.ailbc.json`, `input.ail-core.txt`, `output.ail-core.txt`, and
 `trace.txt` while stdout remains the transformed AIL-Core artifact.
 The default AIL base LLM endpoint is

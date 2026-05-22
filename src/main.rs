@@ -379,6 +379,8 @@ fn write_ail_build_artifacts(
     spec_text: &str,
     core_text: &str,
     bytecode_text: &str,
+    pass_bytecode_text: Option<&str>,
+    pass_trace: Option<&[String]>,
 ) -> Result<(), String> {
     let root = std::path::Path::new(artifact_dir);
     fs::create_dir_all(root).map_err(|error| {
@@ -392,6 +394,18 @@ fn write_ail_build_artifacts(
         .map_err(|error| format!("failed to write ail-build core artifact: {error}"))?;
     fs::write(root.join("artifact.ailbc.json"), bytecode_text)
         .map_err(|error| format!("failed to write ail-build bytecode artifact: {error}"))?;
+    if let Some(pass_bytecode_text) = pass_bytecode_text {
+        fs::write(root.join("pass.ailbc.json"), pass_bytecode_text).map_err(|error| {
+            format!("failed to write ail-build pass bytecode artifact: {error}")
+        })?;
+    }
+    if let Some(pass_trace) = pass_trace {
+        fs::write(
+            root.join("pass-trace.txt"),
+            format!("{}\n", pass_trace.join("\n")),
+        )
+        .map_err(|error| format!("failed to write ail-build pass trace artifact: {error}"))?;
+    }
     Ok(())
 }
 
@@ -668,8 +682,11 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
         }
         let document = parse_ail_package_spec_text(&package, &draft.spec_text)?;
         let mut core = elaborate_ail_core(&package, &document);
+        let mut pass_bytecode_artifact = None;
+        let mut pass_trace_artifact = None;
         if let Some(pass_path) = &cli_options.ail_build_pass {
-            let (pass_bytecode, _) = load_ail_pass_bytecode_or_compile_package(pass_path)?;
+            let (pass_bytecode, pass_bytecode_text) =
+                load_ail_pass_bytecode_or_compile_package(pass_path)?;
             let pass_diagnostics = verify_ail_bytecode(&pass_bytecode);
             if !pass_diagnostics.is_empty() {
                 println!("ail-build diagnostics:");
@@ -681,6 +698,8 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
             let pass_action = select_single_ail_pass_action(&pass_bytecode)?;
             let pass_result = run_ail_compiler_pass_on_core(&pass_bytecode, &pass_action, &core)?;
             core = pass_result.core;
+            pass_bytecode_artifact = Some(pass_bytecode_text);
+            pass_trace_artifact = Some(pass_result.run.trace);
             let core_diagnostics = check_ail_core(&core);
             if !core_diagnostics.is_empty() {
                 println!("ail-build diagnostics:");
@@ -708,6 +727,8 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
                 &draft.spec_text,
                 &core_text,
                 &bytecode_text,
+                pass_bytecode_artifact.as_deref(),
+                pass_trace_artifact.as_deref(),
             )?;
         }
         print!("{bytecode_text}");

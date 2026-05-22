@@ -4490,6 +4490,21 @@ fn cli_ail_build_runs_compiler_pass_before_bytecode_lowering() {
     );
     let bytecode_artifact = fs::read_to_string(artifact_dir.join("artifact.ailbc.json")).unwrap();
     assert_eq!(bytecode_artifact, stdout);
+    let pass_bytecode_artifact = fs::read_to_string(artifact_dir.join("pass.ailbc.json")).unwrap();
+    assert!(pass_bytecode_artifact.contains(r#""package":"ail-meta-permissions""#));
+    assert!(pass_bytecode_artifact.contains(r#""opcode":"CORE_INFER_READ_PERMISSIONS""#));
+    let parsed_pass_bytecode = parse_ail_bytecode(&pass_bytecode_artifact).unwrap();
+    assert_eq!(
+        verify_ail_bytecode(&parsed_pass_bytecode),
+        Vec::<String>::new()
+    );
+    let pass_trace = fs::read_to_string(artifact_dir.join("pass-trace.txt")).unwrap();
+    assert!(pass_trace.contains("compiler pass Infer read permissions started"));
+    assert!(pass_trace.contains("core transform infer read permissions"));
+    assert!(
+        pass_trace
+            .contains("compiler pass InferReadPermissions added Permission read Ticket.status")
+    );
 
     fs::remove_dir_all(&artifact_dir).unwrap();
 }

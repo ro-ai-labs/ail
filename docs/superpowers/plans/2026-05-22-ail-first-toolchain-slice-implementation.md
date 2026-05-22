@@ -3330,6 +3330,49 @@ Expected: `ail-build --pass` writes the post-pass checked AIL-Core artifact,
 stdout remains parseable verified AIL-Bytecode, and final bytecode lowering
 uses the transformed IR instead of the pre-pass candidate.
 
+### Task 82: `ail-build --pass` Writes Auditable Pass Artifacts
+
+**Files:**
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing build-pass artifact test**
+
+Extend the `ail-build --pass --artifact-dir` test to require `pass.ailbc.json`
+and `pass-trace.txt` alongside the existing requirements, spec, checked core,
+and final bytecode artifacts.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_runs_compiler_pass_before_bytecode_lowering -- --nocapture
+```
+
+Expected: failure because `ail-build --pass --artifact-dir` only writes the
+final post-pass core and bytecode, not the pass bytecode or pass trace.
+
+- [x] **Step 3: Implement build-pass artifact writing**
+
+Carry the compiler-pass bytecode text and pass VM trace from `ail-build --pass`
+through artifact writing. When a pass ran, write `pass.ailbc.json` and
+`pass-trace.txt`; when no pass ran, keep the existing four-file artifact set.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_runs_compiler_pass_before_bytecode_lowering -- --nocapture
+```
+
+Expected: `ail-build --pass --artifact-dir` writes the pass bytecode and trace,
+the pass bytecode verifies, and the trace records pass start, transform opcode,
+and permission insertion.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**
