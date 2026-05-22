@@ -462,7 +462,11 @@ compiler passes as a direct bootstrap command, so an AIL-authored toolchain
 package can be reviewed as bytecode plus per-action machine-code ELF artifacts
 without generating Rust or another host-language backend. The compile manifest
 records `bundle all-actions` and one fingerprinted `target` entry per emitted
-executable.
+executable. Adding `--agent <agent-package-or-bytecode>` runs the AIL-authored
+`VerifyCompileBundleManifest` action over the bundle manifest and writes the
+agent bytecode, trace, and native verifier executables into the same artifact
+directory, making the multi-action native package reviewable through AIL
+bytecode rather than host orchestration alone.
 `ail-requirements` runs the first developer-facing agent capture stage by asking
 the package base LLM for an AIL-Requirements artifact, checking profile-specific
 coverage, and sending diagnostics back for one repair pass when the artifact is

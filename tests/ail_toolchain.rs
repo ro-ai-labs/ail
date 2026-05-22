@@ -3924,6 +3924,110 @@ fn cli_ail_compile_writes_all_action_native_bundle() {
 
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+fn cli_ail_compile_agent_verifies_all_action_native_bundle() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("ail_toolchain_agent.ail");
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "eigl-ail-compile-all-actions-agent-dir-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-compile",
+            &package,
+            "--all-actions",
+            "--target",
+            "linux-x86_64-elf",
+            "--agent",
+            &package,
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let bytecode_artifact = fs::read_to_string(artifact_dir.join("artifact.ailbc.json")).unwrap();
+    assert!(bytecode_artifact.contains(r#""action":"VerifyCompileBundleManifest""#));
+    let agent_bytecode = fs::read_to_string(artifact_dir.join("agent.ailbc.json")).unwrap();
+    assert_eq!(agent_bytecode, bytecode_artifact);
+    let agent_fingerprint = fs::read_to_string(artifact_dir.join("agent.fingerprint.txt")).unwrap();
+    assert_eq!(agent_fingerprint.trim(), fnv64_fingerprint(&agent_bytecode));
+
+    let agent_trace = fs::read_to_string(artifact_dir.join("agent-trace.txt")).unwrap();
+    assert!(agent_trace.contains("action VerifyCompileBundleManifest started"));
+    assert!(agent_trace.contains("read buildrequest.bytecode fingerprint"));
+    assert!(agent_trace.contains("read buildrequest.target artifact"));
+    assert!(agent_trace.contains("read buildrequest.target artifact fingerprint"));
+    assert!(agent_trace.contains("read buildrequest.artifact manifest"));
+    assert!(agent_trace.contains("read buildrequest.artifact manifest fingerprint"));
+    assert!(
+        agent_trace.contains("write buildrequest.artifact manifest verification report=Verified")
+    );
+    assert!(agent_trace.contains("trace CompileBundleManifestVerified"));
+
+    let target_verifier =
+        fs::read(artifact_dir.join("target-VerifyCompileBundleManifest.elf")).unwrap();
+    assert_eq!(&target_verifier[0..4], b"\x7fELF");
+    let agent_verifier =
+        fs::read(artifact_dir.join("agent-VerifyCompileBundleManifest.elf")).unwrap();
+    assert_eq!(&agent_verifier[0..4], b"\x7fELF");
+    let expected_agent_verifier_fingerprint = fnv64_fingerprint_bytes(&agent_verifier);
+    let native_agent_run = Command::new(artifact_dir.join("agent-VerifyCompileBundleManifest.elf"))
+        .args([
+            "buildrequest.id=ail-toolchain-agent-compile-bundle",
+            "buildrequest.status=BytecodeReady",
+            "buildrequest.bytecode fingerprint=fnv64:bytecode",
+            "buildrequest.target artifact=bundle",
+            "buildrequest.target artifact fingerprint=fnv64:target-bundle",
+            "buildrequest.artifact manifest=ok",
+            "buildrequest.artifact manifest fingerprint=fnv64:manifest",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        native_agent_run.status.success(),
+        "native compile bundle verifier failed"
+    );
+    assert!(
+        String::from_utf8_lossy(&native_agent_run.stderr)
+            .contains("trace CompileBundleManifestVerified"),
+        "{}",
+        String::from_utf8_lossy(&native_agent_run.stderr)
+    );
+
+    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-compile.txt")).unwrap();
+    assert!(manifest.contains("bundle all-actions"), "{manifest}");
+    assert!(
+        manifest.contains(&format!(
+            "agent agent.ailbc.json {}",
+            fnv64_fingerprint(&agent_bytecode)
+        )),
+        "{manifest}"
+    );
+    assert!(manifest.contains("trace agent-trace.txt"), "{manifest}");
+    assert!(
+        manifest.contains(&format!(
+            "agent-target linux-x86_64-elf agent-VerifyCompileBundleManifest.elf {expected_agent_verifier_fingerprint}"
+        )),
+        "{manifest}"
+    );
+    let manifest_fingerprint =
+        fs::read_to_string(artifact_dir.join("manifest.fingerprint.txt")).unwrap();
+    assert_eq!(manifest_fingerprint.trim(), fnv64_fingerprint(&manifest));
+
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_compile_accepts_saved_spec_file_artifact() {
     let binary = env!("CARGO_BIN_EXE_eigl");
     let package = fixture("support_ticket.ail");
