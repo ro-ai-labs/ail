@@ -3259,6 +3259,7 @@ pub fn compile_ail_core_native_elf(
 fn emit_linux_x86_64_elf_for_action(action: &AilBytecodeAction) -> Result<Vec<u8>, String> {
     let mut exists_prefixes = Vec::new();
     let mut forbidden_exact_args = Vec::new();
+    let mut required_any_exact_args = Vec::new();
     let mut state_write_lines = Vec::new();
     for instruction in &action.instructions {
         match instruction.opcode.as_str() {
@@ -3273,6 +3274,21 @@ fn emit_linux_x86_64_elf_for_action(action: &AilBytecodeAction) -> Result<Vec<u8
                     instruction.operands.get("value"),
                 ) {
                     forbidden_exact_args.push(format!("{key}={value}"));
+                }
+            }
+            "REQUIRE_FIELD_IN" => {
+                if let (Some(key), Some(values)) = (
+                    instruction.operands.get("key"),
+                    instruction.operands.get("values"),
+                ) {
+                    let allowed_values = decode_ail_bytecode_list(values);
+                    let allowed_args = allowed_values
+                        .iter()
+                        .map(|value| format!("{key}={value}"))
+                        .collect::<Vec<_>>();
+                    if !allowed_args.is_empty() {
+                        required_any_exact_args.push(allowed_args);
+                    }
                 }
             }
             "SET_FIELD" => {
@@ -3310,6 +3326,19 @@ fn emit_linux_x86_64_elf_for_action(action: &AilBytecodeAction) -> Result<Vec<u8
         code.emit(&[0x85, 0xc0]); // test eax, eax
         code.emit_jcc_label(&[0x0f, 0x85], "fail"); // jnz fail
     }
+    for (group_index, allowed_args) in required_any_exact_args.iter().enumerate() {
+        let matched_label = format!("field_in_matched_{group_index}");
+        for (value_index, exact) in allowed_args.iter().enumerate() {
+            let label = format!("field_in_arg_{group_index}_{value_index}");
+            code.emit_lea_rsi_label(&label);
+            code.emit_mov_edx_imm32(exact.len() as u32);
+            code.emit_call_label("has_exact");
+            code.emit(&[0x85, 0xc0]); // test eax, eax
+            code.emit_jcc_label(&[0x0f, 0x85], &matched_label); // jnz matched
+        }
+        code.emit_jmp_label("fail");
+        code.label(matched_label)?;
+    }
     for (index, line) in state_write_lines.iter().enumerate() {
         let label = format!("state_write_{index}");
         code.emit_write_stdout_label(&label, line.len() as u32);
@@ -3327,6 +3356,12 @@ fn emit_linux_x86_64_elf_for_action(action: &AilBytecodeAction) -> Result<Vec<u8
     for (index, exact) in forbidden_exact_args.iter().enumerate() {
         code.label(format!("forbidden_arg_{index}"))?;
         code.emit(exact.as_bytes());
+    }
+    for (group_index, allowed_args) in required_any_exact_args.iter().enumerate() {
+        for (value_index, exact) in allowed_args.iter().enumerate() {
+            code.label(format!("field_in_arg_{group_index}_{value_index}"))?;
+            code.emit(exact.as_bytes());
+        }
     }
     for (index, line) in state_write_lines.iter().enumerate() {
         code.label(format!("state_write_{index}"))?;

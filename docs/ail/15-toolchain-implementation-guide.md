@@ -343,7 +343,9 @@ AIL-Core gate, validates the selected action, and writes a native executable
 ELF file with direct Linux x86_64 syscall code as the first native compiler
 slice. The first native runtime ABI receives state as `key=value` argv entries.
 Native code generated from supported `REQUIRE_EXISTS` instructions checks for a
-matching `key=` argument, and native code generated from supported
+matching `key=` argument, native code generated from supported
+`REQUIRE_FIELD_IN` instructions checks that at least one allowed `key=value`
+argument is present, and native code generated from supported
 `REQUIRE_FIELD_NOT_EQUALS` instructions checks that the forbidden `key=value`
 argument is absent. The executable exits `0` when those compiled requirements
 pass and exits `1` when they fail. Native code generated from supported

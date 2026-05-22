@@ -3068,6 +3068,80 @@ fn cli_ail_compile_native_executable_emits_close_ticket_state_write() {
 }
 
 #[test]
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+fn cli_ail_compile_native_executable_enforces_field_in_requirements() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("support_ticket.ail");
+    let executable_path = std::env::temp_dir().join(format!(
+        "eigl-assign-ticket-native-field-in-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_file(&executable_path);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-compile",
+            &package,
+            "--action",
+            "AssignTicket",
+            "--target",
+            "linux-x86_64-elf",
+            "--out",
+            executable_path.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let open_ticket = Command::new(&executable_path)
+        .args(["ticket.id=T-1", "ticket.status=Open"])
+        .output()
+        .unwrap();
+    assert!(open_ticket.status.success(), "Open ticket should pass");
+    assert_eq!(
+        String::from_utf8_lossy(&open_ticket.stdout),
+        "ticket.status=Assigned\n"
+    );
+
+    let new_ticket = Command::new(&executable_path)
+        .args(["ticket.id=T-1", "ticket.status=New"])
+        .output()
+        .unwrap();
+    assert!(new_ticket.status.success(), "New ticket should pass");
+    assert_eq!(
+        String::from_utf8_lossy(&new_ticket.stdout),
+        "ticket.status=Assigned\n"
+    );
+
+    let missing_status = Command::new(&executable_path)
+        .arg("ticket.id=T-1")
+        .output()
+        .unwrap();
+    assert!(
+        !missing_status.status.success(),
+        "missing ticket.status should fail"
+    );
+    assert_eq!(String::from_utf8_lossy(&missing_status.stdout), "");
+
+    let closed_ticket = Command::new(&executable_path)
+        .args(["ticket.id=T-1", "ticket.status=Closed"])
+        .output()
+        .unwrap();
+    assert!(
+        !closed_ticket.status.success(),
+        "Closed ticket status should fail allow-list requirement"
+    );
+    assert_eq!(String::from_utf8_lossy(&closed_ticket.stdout), "");
+
+    fs::remove_file(executable_path).unwrap();
+}
+
+#[test]
 fn cli_ail_run_executes_close_ticket_with_trace() {
     let binary = env!("CARGO_BIN_EXE_eigl");
     let package = fixture("support_ticket.ail");

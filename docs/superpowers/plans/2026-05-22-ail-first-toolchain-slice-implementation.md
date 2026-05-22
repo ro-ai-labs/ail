@@ -5068,6 +5068,54 @@ cargo test --test ail_toolchain cli_ail_compile_emits_runnable_linux_x86_64_elf_
 Expected: native `CloseTicket` emits `ticket.status=Closed` only on successful
 execution and preserves requirement exit-status behavior and ELF validity.
 
+### Task 119: Native ELF Enforces Field Allow-List Requirements
+
+**Files:**
+- Modify: `src/ail.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing field allow-list test**
+
+Compile `AssignTicket` to native ELF and run it with `ticket.status=Open`,
+`ticket.status=New`, missing `ticket.status`, and `ticket.status=Closed`.
+Require allowed statuses to exit successfully and emit `ticket.status=Assigned`,
+and require missing or disallowed statuses to exit nonzero with no stdout.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_compile_native_executable_enforces_field_in_requirements -- --nocapture
+```
+
+Expected: failure because the native executable ignores `REQUIRE_FIELD_IN` and
+continues to the success/write path for missing or disallowed field values.
+
+- [x] **Step 3: Generate native allow-list checks**
+
+Translate supported `REQUIRE_FIELD_IN` instructions into exact argv
+allow-list searches for `key=value`, using the VM instruction artifact's
+encoded value list as the native compiler input. Continue only when at least
+one allowed value is present.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_compile_native_executable_enforces_field_in_requirements -- --nocapture
+cargo test --test ail_toolchain cli_ail_compile_native_executable_emits_close_ticket_state_write -- --nocapture
+cargo test --test ail_toolchain cli_ail_compile_native_executable_enforces_close_ticket_requirements -- --nocapture
+cargo test --test ail_toolchain cli_ail_compile_emits_runnable_linux_x86_64_elf_executable -- --nocapture
+```
+
+Expected: native `AssignTicket` enforces `New or Open` before emitting
+`ticket.status=Assigned`, while existing native `CloseTicket` behavior remains
+unchanged.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**
