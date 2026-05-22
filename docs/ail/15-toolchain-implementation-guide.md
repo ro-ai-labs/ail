@@ -360,7 +360,10 @@ pass and exits `1` when they fail. Native code generated from supported
 stdout after requirements pass and before process exit. Native code generated
 from supported `EMIT_TRACE` instructions writes `trace <EventName>` lines to
 stderr on the same successful native path, keeping stdout reserved for
-parseable state changes.
+parseable state changes. The first native backend treats known Application
+metadata opcodes as explicit no-ops when they have no machine-level effect in
+this slice, and rejects unsupported System, AgentTool, CompilerPass, or future
+unknown VM opcodes instead of silently emitting a partial executable.
 With `--artifact-dir`, `ail-lower` writes `checked.ail-core.txt`,
 `artifact.ailbc.json`, `artifact.fingerprint.txt`, `manifest.ail-lower.txt`,
 and `manifest.fingerprint.txt`, keeping direct IR-to-VM-instruction lowering

@@ -3305,7 +3305,14 @@ fn emit_linux_x86_64_elf_for_action(action: &AilBytecodeAction) -> Result<Vec<u8
                     trace_lines.push(format!("trace {event}\n"));
                 }
             }
-            _ => {}
+            "ACTION_BEGIN" | "OBSERVE_RULE" | "READ_FIELD" | "READ_EFFECT" | "WRITE_FIELD"
+            | "EFFECT" | "ASSERT_GUARANTEE" | "RETURN_SUCCESS" => {}
+            opcode => {
+                return Err(format!(
+                    "unsupported native linux-x86_64-elf opcode '{opcode}' in action '{}'",
+                    action.name
+                ));
+            }
         }
     }
 

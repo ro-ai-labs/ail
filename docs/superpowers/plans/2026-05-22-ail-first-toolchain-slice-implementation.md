@@ -5406,6 +5406,52 @@ Expected: native `CloseTicket` emits `ticket.status=Closed` on stdout and
 `trace TicketClosed` on stderr only after requirements pass, while existing
 state-write behavior remains unchanged.
 
+### Task 126: Native ELF Rejects Unsupported VM Opcodes
+
+**Files:**
+- Modify: `src/ail.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing unsupported-opcode native test**
+
+Compile the `network_driver.ail` System package to
+`--target linux-x86_64-elf` and require failure with an unsupported native
+opcode diagnostic for `SYSTEM_BEGIN`.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_compile_native_rejects_unsupported_system_opcodes -- --nocapture
+```
+
+Expected: failure because the native backend silently ignores System VM opcodes
+and writes a runnable ELF.
+
+- [x] **Step 3: Guard native opcode coverage**
+
+Keep supported Application opcodes and explicit no-op Application metadata
+opcodes in the native lowering boundary. Reject unsupported System, AgentTool,
+CompilerPass, or future unknown VM opcodes with a stable native target error
+instead of emitting a partial executable.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_compile_native_rejects_unsupported_system_opcodes -- --nocapture
+cargo test --test ail_toolchain cli_ail_compile_native_executable_emits_trace_to_stderr -- --nocapture
+cargo test --test ail_toolchain cli_ail_compile_native_executable_enforces_field_in_requirements -- --nocapture
+```
+
+Expected: native System compilation is rejected with an unsupported-opcode
+diagnostic while supported Application native actions continue to compile and
+run.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

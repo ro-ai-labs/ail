@@ -42,7 +42,8 @@ as `<field> is <value>`;
 supported `SET_FIELD` writes are emitted as
 `key=value` stdout lines on successful execution, and supported `EMIT_TRACE`
 events are emitted as `trace <EventName>` stderr lines on successful native
-execution. `ail-lower --artifact-dir
+execution. The first native backend rejects unsupported non-application VM
+opcodes instead of silently dropping them. `ail-lower --artifact-dir
 <dir>` also writes the checked core, VM instruction artifact, deterministic
 fingerprints, and a lower manifest while keeping stdout as the VM artifact.
 `ail-check`, `ail-core`,
