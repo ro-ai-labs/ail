@@ -3466,6 +3466,80 @@ fn cli_ail_compile_emits_runnable_linux_x86_64_elf_executable() {
 
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+fn cli_ail_compile_accepts_saved_bytecode_artifact_for_native_elf() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("support_ticket.ail");
+    let bytecode_path = std::env::temp_dir().join(format!(
+        "eigl-ail-compile-saved-bytecode-{}.ailbc.json",
+        std::process::id()
+    ));
+    let executable_path = std::env::temp_dir().join(format!(
+        "eigl-ail-compile-saved-bytecode-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_file(&bytecode_path);
+    let _ = fs::remove_file(&executable_path);
+
+    let lowered = Command::new(binary)
+        .args(["ail-lower", &package])
+        .output()
+        .unwrap();
+    assert!(
+        lowered.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&lowered.stdout),
+        String::from_utf8_lossy(&lowered.stderr)
+    );
+    fs::write(&bytecode_path, lowered.stdout).unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-compile",
+            bytecode_path.to_str().unwrap(),
+            "--action",
+            "CloseTicket",
+            "--target",
+            "linux-x86_64-elf",
+            "--out",
+            executable_path.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let executable = fs::read(&executable_path).unwrap();
+    assert_eq!(&executable[0..4], b"\x7fELF");
+    let run = Command::new(&executable_path)
+        .args(["ticket.id=T-1", "ticket.status=Open"])
+        .output()
+        .unwrap();
+    assert!(
+        run.status.success(),
+        "native executable failed: {}",
+        run.status
+    );
+    assert!(
+        String::from_utf8_lossy(&run.stdout).contains("ticket.status=Closed"),
+        "{}",
+        String::from_utf8_lossy(&run.stdout)
+    );
+    assert!(
+        String::from_utf8_lossy(&run.stderr).contains("trace TicketClosed"),
+        "{}",
+        String::from_utf8_lossy(&run.stderr)
+    );
+
+    fs::remove_file(bytecode_path).unwrap();
+    fs::remove_file(executable_path).unwrap();
+}
+
+#[test]
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_compile_accepts_saved_spec_file_artifact() {
     let binary = env!("CARGO_BIN_EXE_eigl");
     let package = fixture("support_ticket.ail");

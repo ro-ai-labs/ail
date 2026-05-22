@@ -2266,6 +2266,36 @@ fn run_ail_compile_from_core(
     Ok(0)
 }
 
+fn run_ail_compile_from_bytecode_file(path: &str, cli_options: &CliOptions) -> Result<u8, String> {
+    let action = cli_options
+        .ail_action
+        .as_deref()
+        .ok_or_else(|| "ail-compile requires --action <name>".to_string())?;
+    let target = cli_options
+        .ail_compile_target
+        .as_deref()
+        .ok_or_else(|| "ail-compile requires --target <target>".to_string())?;
+    let out = cli_options
+        .ail_compile_out
+        .as_deref()
+        .ok_or_else(|| "ail-compile requires --out <path>".to_string())?;
+    let bytecode_text =
+        fs::read_to_string(path).map_err(|error| format!("failed to read {path}: {error}"))?;
+    let bytecode = parse_ail_bytecode(&bytecode_text)?;
+    let diagnostics = verify_ail_bytecode(&bytecode);
+    if !diagnostics.is_empty() {
+        println!("ail-compile diagnostics:");
+        for diagnostic in diagnostics {
+            println!("{diagnostic}");
+        }
+        return Ok(1);
+    }
+    let executable = compile_ail_bytecode_native_elf(&bytecode, action, target)?;
+    write_native_executable(out, &executable)?;
+    println!("ail-compile wrote {target} executable {out}");
+    Ok(0)
+}
+
 fn run_ail_build_from_core(
     mut core: eigl::ail::AilCore,
     cli_options: &CliOptions,
@@ -2489,6 +2519,9 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
     if command == "ail-compile" && cli_options.ail_core_file.is_some() {
         let core = parse_cli_ail_core(cli_options)?;
         return run_ail_compile_from_core(&core, cli_options);
+    }
+    if command == "ail-compile" && std::path::Path::new(path).is_file() {
+        return run_ail_compile_from_bytecode_file(path, cli_options);
     }
     if command == "ail-lower" && cli_options.ail_core_file.is_some() {
         let core = parse_cli_ail_core(cli_options)?;

@@ -439,6 +439,10 @@ affect emitted bytecode instructions.
 reparsing the source AIL package, making bytecode a real artifact boundary
 instead of only a display format. The VM verifier rejects unknown opcodes and
 missing required operands before executing saved bytecode.
+`ail-compile <artifact.ailbc.json> --action <ActionName> --target
+linux-x86_64-elf --out <path>` reads the same saved AIL-Bytecode artifact,
+verifies it, and emits a native ELF executable from that artifact boundary
+without loading the source package or generating host-language backend source.
 `ail-requirements` runs the first developer-facing agent capture stage by asking
 the package base LLM for an AIL-Requirements artifact, checking profile-specific
 coverage, and sending diagnostics back for one repair pass when the artifact is
