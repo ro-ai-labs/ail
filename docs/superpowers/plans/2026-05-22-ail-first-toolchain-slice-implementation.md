@@ -3920,6 +3920,50 @@ Expected: the agent trace records `CaptureRequirements`,
 `CompareAgentPromptPortability`, `AgentPromptPortabilityCompared`, and then
 `ApplicationBytecodeCompiled`.
 
+### Task 94: AIL Build Agent Capture Preflight
+
+**Files:**
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing agent-preflight test**
+
+Add a prompt-driven `ail-build --agent` CLI test that uses an Application
+package without `CaptureRequirements` as the build agent and a mock base LLM
+endpoint. Require the command to fail with the capture-action diagnostic before
+the mock endpoint receives any request.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_agent_capture_failure_happens_before_llm_request -- --nocapture
+```
+
+Expected: failure because the current command sends the base LLM requirements
+request before validating or running the AIL-authored agent.
+
+- [x] **Step 3: Implement early capture preflight**
+
+For prompt-driven builds with `--agent` and no saved requirements file, load and
+verify the agent before requirements drafting, require `CaptureRequirements`,
+run that bytecode action against the developer prompt, and thread the resulting
+agent state and trace into the later compile/portability stage.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_agent_capture_failure_happens_before_llm_request -- --nocapture
+```
+
+Expected: the command fails before any LLM request when the agent cannot run
+`CaptureRequirements`.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

@@ -71,11 +71,12 @@ stages entirely and resumes from checked AIL-Core IR. Add
 present, accepted AIL-Spec when present, checked AIL-Core IR after any build
 pass, and final AIL-Bytecode artifact for review. `ail-build --agent
 <agent-package-or-bytecode>` compiles or loads an AIL-authored Application
-agent, runs its `CaptureRequirements` bytecode action for prompt-driven
-requirements capture, optionally runs `CompareAgentPromptPortability` when
-`--target-model <name>` is supplied, runs `CompileApplication` over the
-completed build state, and, with `--artifact-dir`, writes `agent.ailbc.json`
-and `agent-trace.txt`. When `ail-build --pass` is used with `--artifact-dir`, it
+agent, validates and runs its `CaptureRequirements` bytecode action before the
+base LLM requirements request for prompt-driven requirements capture,
+optionally runs `CompareAgentPromptPortability` when `--target-model <name>` is
+supplied, runs `CompileApplication` over the completed build state, and, with
+`--artifact-dir`, writes `agent.ailbc.json` and `agent-trace.txt`. When
+`ail-build --pass` is used with `--artifact-dir`, it
 also writes `pass.ailbc.json` and `pass-trace.txt`. On `ail-pass`,
 `--artifact-dir <dir>` writes
 `pass.ailbc.json`, `input.ail-core.txt`, `output.ail-core.txt`, and

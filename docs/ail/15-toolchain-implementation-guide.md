@@ -393,12 +393,13 @@ lowering. The bytecode compiler then consumes the resulting checked IR to emit
 verified AIL-Bytecode, so the build path still emits bytecode rather than
 host-language source. With `--agent <agent-package-or-bytecode>`, `ail-build`
 compiles or loads an AIL-authored Application-profile toolchain agent, verifies
-its bytecode, runs its `CaptureRequirements` action for prompt-driven
-requirements capture, optionally runs `CompareAgentPromptPortability` when
-`--target-model <name>` is supplied, and runs its `CompileApplication` action
-against the completed build state. This keeps the developer-facing build
-coordinator in AIL bytecode instead of adding a host-language orchestration
-layer. With `--artifact-dir`, the same command writes
+its bytecode, and for prompt-driven builds runs its `CaptureRequirements`
+action before the base LLM requirements request. After requirements capture it
+optionally runs `CompareAgentPromptPortability` when `--target-model <name>` is
+supplied, and runs its `CompileApplication` action against the completed build
+state. This keeps the developer-facing build coordinator in AIL bytecode
+instead of adding a host-language orchestration layer. With `--artifact-dir`,
+the same command writes
 `accepted.ail-spec.md`, `checked.ail-core.txt`, and `artifact.ailbc.json`; it
 also writes `requirements.ail-requirements.md` when the build captured or loaded
 requirements, and it writes `accepted.ail-spec.md` only when an AIL-Spec stage

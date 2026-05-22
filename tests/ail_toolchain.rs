@@ -126,6 +126,52 @@ fn serve_chat_responses(
     })
 }
 
+fn observe_optional_chat_request(
+    listener: TcpListener,
+    response_body: String,
+) -> thread::JoinHandle<Option<String>> {
+    thread::spawn(move || {
+        listener.set_nonblocking(true).unwrap();
+        let deadline = Instant::now() + Duration::from_millis(500);
+        let (mut stream, _) = loop {
+            match listener.accept() {
+                Ok(connection) => break connection,
+                Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                    if Instant::now() >= deadline {
+                        return None;
+                    }
+                    thread::sleep(Duration::from_millis(10));
+                }
+                Err(error) => panic!("test LLM endpoint accept failed: {error}"),
+            }
+        };
+        let mut reader = BufReader::new(stream.try_clone().unwrap());
+        let mut content_length = 0usize;
+        loop {
+            let mut line = String::new();
+            let read = reader.read_line(&mut line).unwrap();
+            if read == 0 || line == "\r\n" {
+                break;
+            }
+            if let Some(value) = line
+                .strip_prefix("Content-Length:")
+                .or_else(|| line.strip_prefix("content-length:"))
+            {
+                content_length = value.trim().parse().unwrap();
+            }
+        }
+        let mut request_body = vec![0; content_length];
+        reader.read_exact(&mut request_body).unwrap();
+        let response = format!(
+            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+            response_body.len(),
+            response_body
+        );
+        stream.write_all(response.as_bytes()).unwrap();
+        Some(String::from_utf8(request_body).unwrap())
+    })
+}
+
 #[test]
 fn ail_package_loader_reads_metadata_and_default_llm_endpoint() {
     let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
@@ -5124,6 +5170,57 @@ fn cli_ail_build_agent_compares_prompt_portability_before_compile() {
     assert!(agent_trace.contains("trace ApplicationBytecodeCompiled"));
 
     fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
+fn cli_ail_build_agent_capture_failure_happens_before_llm_request() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("support_ticket.ail");
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "eigl-ail-build-agent-preflight-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let requirements = "AIL-Requirements:\n- The application manages support tickets.\n";
+    let requirements_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(requirements)
+    );
+    let server = observe_optional_chat_request(listener, requirements_body);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-build",
+            &package,
+            "--prompt",
+            "Build an AIL support ticket bytecode artifact",
+            "--agent",
+            &package,
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+            "--llm-endpoint",
+            &format!("http://127.0.0.1:{}/v1/chat/completions", addr.port()),
+        ])
+        .output()
+        .unwrap();
+
+    let observed_request = server.join().unwrap();
+    assert!(
+        !output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(observed_request, None);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr
+            .contains("ail-build --agent requires a CaptureRequirements action for prompt builds"),
+        "{stderr}"
+    );
+    assert!(!artifact_dir.exists());
 }
 
 #[test]
