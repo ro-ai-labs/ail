@@ -38,7 +38,8 @@ directly from checked AIL. The first native ABI accepts runtime state as
 `key=value` argv entries and returns a nonzero process status when supported
 compiled existence, allow-list, or forbidden-value requirements fail. Allow-list
 requirements can come from `<field> to be <value>` or common LLM wording such
-as `<field> is <value>`;
+as `<field> is <value>`; typed nested field phrases such as `assignee role`
+lower to explicit runtime keys such as `ticket.assignee.role`.
 supported `SET_FIELD` writes are emitted as
 `key=value` stdout lines on successful execution, and supported Application
 semantic trace entries are emitted to stderr on successful native execution and

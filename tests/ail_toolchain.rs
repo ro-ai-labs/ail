@@ -1696,6 +1696,14 @@ fn ail_compiler_lowers_checked_application_to_bytecode() {
         rendered.contains(r#""opcode":"REQUIRE_FIELD_NOT_EQUALS""#),
         "{rendered}"
     );
+    assert!(
+        rendered.contains(r#""key":"ticket.assignee.role""#),
+        "{rendered}"
+    );
+    assert!(
+        rendered.contains(r#""rule":"the assignee role to be SupportAgent or SupportManager""#),
+        "{rendered}"
+    );
     assert!(rendered.contains(r#""opcode":"SET_FIELD""#), "{rendered}");
     assert!(rendered.contains(r#""value":"Closed""#), "{rendered}");
     assert!(rendered.contains(r#""opcode":"EMIT_TRACE""#), "{rendered}");
@@ -3361,28 +3369,73 @@ fn cli_ail_compile_native_executable_enforces_field_in_requirements() {
         String::from_utf8_lossy(&output.stderr)
     );
 
-    let open_ticket = Command::new(&executable_path)
+    let support_agent = Command::new(&executable_path)
+        .args([
+            "ticket.id=T-1",
+            "ticket.status=Open",
+            "ticket.assignee.role=SupportAgent",
+        ])
+        .output()
+        .unwrap();
+    assert!(support_agent.status.success(), "SupportAgent should pass");
+    assert_eq!(
+        String::from_utf8_lossy(&support_agent.stdout),
+        "ticket.status=Assigned\n"
+    );
+
+    let support_manager = Command::new(&executable_path)
+        .args([
+            "ticket.id=T-1",
+            "ticket.status=New",
+            "ticket.assignee.role=SupportManager",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        support_manager.status.success(),
+        "SupportManager should pass"
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&support_manager.stdout),
+        "ticket.status=Assigned\n"
+    );
+
+    let missing_role = Command::new(&executable_path)
         .args(["ticket.id=T-1", "ticket.status=Open"])
         .output()
         .unwrap();
-    assert!(open_ticket.status.success(), "Open ticket should pass");
+    assert!(
+        !missing_role.status.success(),
+        "missing ticket.assignee.role should fail"
+    );
+    assert_eq!(String::from_utf8_lossy(&missing_role.stdout), "");
     assert_eq!(
-        String::from_utf8_lossy(&open_ticket.stdout),
-        "ticket.status=Assigned\n"
+        String::from_utf8_lossy(&missing_role.stderr),
+        concat!(
+            "action AssignTicket started\n",
+            "rule passed: the ticket to exist\n",
+            "rule passed: the ticket status to be New or Open\n",
+            "failure PermissionDenied\n",
+            "trace InternalNotesDenied\n"
+        )
     );
 
-    let new_ticket = Command::new(&executable_path)
-        .args(["ticket.id=T-1", "ticket.status=New"])
+    let customer = Command::new(&executable_path)
+        .args([
+            "ticket.id=T-1",
+            "ticket.status=Open",
+            "ticket.assignee.role=Customer",
+        ])
         .output()
         .unwrap();
-    assert!(new_ticket.status.success(), "New ticket should pass");
-    assert_eq!(
-        String::from_utf8_lossy(&new_ticket.stdout),
-        "ticket.status=Assigned\n"
+    assert!(
+        !customer.status.success(),
+        "Customer assignee role should fail"
     );
+    assert_eq!(String::from_utf8_lossy(&customer.stdout), "");
 
     let missing_status = Command::new(&executable_path)
-        .arg("ticket.id=T-1")
+        .args(["ticket.id=T-1", "ticket.assignee.role=SupportAgent"])
         .output()
         .unwrap();
     assert!(
@@ -3392,7 +3445,11 @@ fn cli_ail_compile_native_executable_enforces_field_in_requirements() {
     assert_eq!(String::from_utf8_lossy(&missing_status.stdout), "");
 
     let closed_ticket = Command::new(&executable_path)
-        .args(["ticket.id=T-1", "ticket.status=Closed"])
+        .args([
+            "ticket.id=T-1",
+            "ticket.status=Closed",
+            "ticket.assignee.role=SupportAgent",
+        ])
         .output()
         .unwrap();
     assert!(
@@ -5786,7 +5843,11 @@ fn cli_ail_build_saved_spec_can_emit_native_linux_x86_64_elf() {
     assert!(!stdout.contains("\"kind\":\"AIL-Bytecode\""), "{stdout}");
 
     let native_run = Command::new(&executable_path)
-        .args(["ticket.id=T-1", "ticket.status=Open"])
+        .args([
+            "ticket.id=T-1",
+            "ticket.status=Open",
+            "ticket.assignee.role=SupportAgent",
+        ])
         .output()
         .unwrap();
     assert!(
@@ -5914,7 +5975,11 @@ fn cli_ail_build_agent_verifies_native_target_artifact() {
     assert!(stdout.contains("ail-build wrote linux-x86_64-elf executable"));
 
     let native_run = Command::new(&executable_path)
-        .args(["ticket.id=T-1", "ticket.status=Open"])
+        .args([
+            "ticket.id=T-1",
+            "ticket.status=Open",
+            "ticket.assignee.role=SupportAgent",
+        ])
         .output()
         .unwrap();
     assert_eq!(

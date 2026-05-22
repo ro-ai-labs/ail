@@ -7170,6 +7170,7 @@ fn split_allowed_requirement_values(text: &str) -> Vec<String> {
 
 fn referenced_runtime_field_key(document: &AilDocument, text: &str) -> Option<String> {
     let normalized = text.to_ascii_lowercase();
+    let mut nested_matches = Vec::new();
     let mut qualified_matches = Vec::new();
     let mut field_matches = Vec::new();
     for thing in document.things.values() {
@@ -7179,11 +7180,29 @@ fn referenced_runtime_field_key(document: &AilDocument, text: &str) -> Option<St
             let qualified = format!("{thing_text} {field_text}");
             let key = runtime_field_key(&thing.name, &field.name);
             if normalized.contains(&qualified) {
-                qualified_matches.push((qualified.len(), key));
+                qualified_matches.push((qualified.len(), key.clone()));
             } else if normalized.contains(&field_text) {
-                field_matches.push(key);
+                field_matches.push(key.clone());
+            }
+            if let Some(target_thing) = referenced_thing_type(document, &field.type_name) {
+                for nested_field in target_thing.fields.values() {
+                    let nested_field_text = nested_field.name.to_ascii_lowercase();
+                    let nested_field_phrase = format!("{field_text} {nested_field_text}");
+                    let qualified_nested_field_phrase =
+                        format!("{thing_text} {nested_field_phrase}");
+                    let nested_key = format!("{key}.{}", runtime_subject_key(&nested_field.name));
+                    if normalized.contains(&qualified_nested_field_phrase) {
+                        nested_matches.push((qualified_nested_field_phrase.len(), nested_key));
+                    } else if normalized.contains(&nested_field_phrase) {
+                        nested_matches.push((nested_field_phrase.len(), nested_key));
+                    }
+                }
             }
         }
+    }
+    nested_matches.sort_by_key(|(len, _)| std::cmp::Reverse(*len));
+    if let Some((_, key)) = nested_matches.into_iter().next() {
+        return Some(key);
     }
     qualified_matches.sort_by_key(|(len, _)| std::cmp::Reverse(*len));
     if let Some((_, key)) = qualified_matches.into_iter().next() {
@@ -7192,6 +7211,26 @@ fn referenced_runtime_field_key(document: &AilDocument, text: &str) -> Option<St
     field_matches.sort();
     field_matches.dedup();
     (field_matches.len() == 1).then(|| field_matches.remove(0))
+}
+
+fn referenced_thing_type<'a>(document: &'a AilDocument, type_name: &str) -> Option<&'a AilThing> {
+    let normalized = normalize_type_name(type_name);
+    let unwrapped = unwrap_ail_value_type(&normalized);
+    document
+        .things
+        .values()
+        .find(|thing| thing.name == unwrapped || thing.name.rsplit('.').next() == Some(unwrapped))
+}
+
+fn unwrap_ail_value_type(type_name: &str) -> &str {
+    let mut current = type_name;
+    while let Some(inner) = generic_inner(current, "Option")
+        .or_else(|| generic_inner(current, "List"))
+        .or_else(|| generic_inner(current, "Secret"))
+    {
+        current = inner;
+    }
+    current
 }
 
 fn runtime_field_key(thing_name: &str, field_name: &str) -> String {

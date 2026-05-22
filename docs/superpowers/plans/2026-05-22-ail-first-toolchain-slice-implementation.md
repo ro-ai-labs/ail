@@ -5545,6 +5545,54 @@ Expected: native `CloseTicket` now emits VM-style semantic traces for both
 success and supported requirement failure paths while keeping failure stdout
 empty.
 
+### Task 129: Nested Field Requirements Compile
+
+**Files:**
+- Modify: `src/ail.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing nested requirement tests**
+
+Require the Support Ticket `AssignTicket` bytecode to lower
+`the assignee role to be SupportAgent or SupportManager` into
+`REQUIRE_FIELD_IN` on `ticket.assignee.role`. Extend native `AssignTicket`
+coverage so successful execution must supply `ticket.assignee.role`, and
+missing or `Customer` roles fail without stdout.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain ail_compiler_lowers_checked_application_to_bytecode -- --nocapture
+cargo test --test ail_toolchain cli_ail_compile_native_executable_enforces_field_in_requirements -- --nocapture
+```
+
+Expected: failure because `assignee role` currently lowers to `OBSERVE_RULE`
+and native execution accepts missing assignee-role input.
+
+- [x] **Step 3: Resolve nested typed field phrases**
+
+Teach field-reference resolution to follow declared typed fields through
+wrappers such as `Option<T>`, `List<T>`, and `Secret<T>`. Phrases like
+`assignee role` now resolve through `Ticket.assignee: Option<User>` to the
+explicit runtime key `ticket.assignee.role`.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain ail_compiler_lowers_checked_application_to_bytecode -- --nocapture
+cargo test --test ail_toolchain cli_ail_compile_native_executable_enforces_field_in_requirements -- --nocapture
+```
+
+Expected: `AssignTicket` bytecode contains an enforceable nested
+`REQUIRE_FIELD_IN`, and native execution enforces SupportAgent/SupportManager
+assignee roles.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

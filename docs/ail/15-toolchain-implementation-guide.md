@@ -351,7 +351,9 @@ Native code generated from supported `REQUIRE_EXISTS` instructions checks for a
 matching `key=` argument, native code generated from supported
 `REQUIRE_FIELD_IN` instructions checks that at least one allowed `key=value`
 argument is present, including LLM-style field requirements phrased as
-`<field> is <value>` as well as `<field> to be <value>`, and native code
+`<field> is <value>` as well as `<field> to be <value>`. Field-reference
+resolution can follow typed object fields, so `assignee role` on a `Ticket`
+with `assignee: Option<User>` lowers to `ticket.assignee.role`. Native code
 generated from supported
 `REQUIRE_FIELD_NOT_EQUALS` instructions checks that the forbidden `key=value`
 argument is absent. The executable exits `0` when those compiled requirements
