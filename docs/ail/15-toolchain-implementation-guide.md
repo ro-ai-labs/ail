@@ -288,8 +288,9 @@ Rust, but the generated executable artifact is bytecode, not Rust, JavaScript,
 or another host-language backend. AIL-Bytecode is the target for future AIL
 compiler, tool, and runtime self-hosting work.
 
-The first bytecode compiler supports Application-profile actions and
-Compiler-profile compiler passes. For applications it emits:
+The first bytecode compiler supports Application-profile actions,
+AgentTool-profile tool declarations, and Compiler-profile compiler passes. For
+applications it emits:
 
 - package metadata and profile identity
 - one bytecode action per checked AIL action
@@ -303,6 +304,13 @@ including pass metadata, input and output declarations, read, step, write,
 guarantee, trace, and return opcodes. This keeps AIL-Meta compiler work on the
 same bytecode path as applications instead of generating Rust or another host
 backend.
+
+For agent-tool packages it emits one bytecode action per checked tool,
+including tool metadata, requirements, typed inputs and outputs with secret
+markers, reads, calls, writes, permissions, approvals, secret protections,
+guarantees, traces, and return opcodes. This lets developer-facing agents call
+auditable AIL-authored tools as bytecode artifacts instead of host-language
+plugins.
 
 `ail-lower` renders the deterministic bytecode artifact after the same package
 loading, parsing, elaboration, and checker gate as `ail-core` and `ail-flow`.
@@ -428,9 +436,9 @@ The first slice is ready when:
   not attached to actions or failures, and secrets not attached to fields or
   actions
 - an AIL-Flow projection renders from checked AIL-Core
-- AIL-Core lowers to deterministic AIL-Bytecode for supported Application
-  packages
-- `ail-run` executes supported Application packages through the AIL bytecode VM
+- AIL-Core lowers to deterministic AIL-Bytecode for supported Application,
+  AgentTool, and Compiler packages
+- `ail-run` executes supported bytecode packages through the AIL bytecode VM
 - saved AIL-Bytecode artifacts parse back into bytecode and execute through
   `ail-vm` without requiring the source package
 - saved AIL-Bytecode artifacts are verified for known opcodes and required

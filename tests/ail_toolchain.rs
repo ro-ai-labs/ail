@@ -233,6 +233,68 @@ fn ail_agent_tool_profile_parses_renders_and_checks_refund_tool() {
 }
 
 #[test]
+fn ail_agent_tool_profile_lowers_to_verified_bytecode() {
+    let package = load_ail_package_dir(fixture("refund_tool.ail")).unwrap();
+    let document = parse_ail_package_document(&package).unwrap();
+    let core = elaborate_ail_core(&package, &document);
+    assert_eq!(check_ail_core(&core), Vec::<String>::new());
+
+    let bytecode = compile_ail_bytecode(&package, &document).unwrap();
+    let rendered = render_ail_bytecode(&bytecode);
+
+    assert_eq!(bytecode.profile, "AgentTool");
+    assert!(bytecode.actions.contains_key("RefundCustomerPayment"));
+    assert!(rendered.contains(r#""opcode":"TOOL_BEGIN""#), "{rendered}");
+    assert!(rendered.contains(r#""opcode":"TOOL_INPUT""#), "{rendered}");
+    assert!(rendered.contains(r#""opcode":"TOOL_OUTPUT""#), "{rendered}");
+    assert!(
+        rendered.contains(r#""opcode":"TOOL_REQUIREMENT""#),
+        "{rendered}"
+    );
+    assert!(rendered.contains(r#""opcode":"TOOL_CALL""#), "{rendered}");
+    assert!(
+        rendered.contains(r#""opcode":"TOOL_PERMISSION""#),
+        "{rendered}"
+    );
+    assert!(
+        rendered.contains(r#""opcode":"TOOL_APPROVAL""#),
+        "{rendered}"
+    );
+    assert!(
+        rendered.contains(r#""opcode":"TOOL_SECRET_PROTECTION""#),
+        "{rendered}"
+    );
+    assert!(
+        rendered.contains("RefundCustomerPaymentRequested"),
+        "{rendered}"
+    );
+
+    let parsed = parse_ail_bytecode(&rendered).unwrap();
+    assert_eq!(verify_ail_bytecode(&parsed), Vec::<String>::new());
+
+    let run = run_ail_bytecode_action(
+        &parsed,
+        "RefundCustomerPayment",
+        BTreeMap::from([
+            ("order id".to_string(), "O-1".to_string()),
+            ("payment token".to_string(), "tok_123".to_string()),
+            ("refund amount".to_string(), "USD:25.00".to_string()),
+        ]),
+    )
+    .unwrap();
+
+    assert_eq!(run.status, "succeeded");
+    assert!(
+        run.trace
+            .contains(&"tool Refund customer payment started".to_string())
+    );
+    assert!(
+        run.trace
+            .contains(&"trace RefundCustomerPaymentRequested".to_string())
+    );
+}
+
+#[test]
 fn ail_compiler_profile_parses_renders_and_checks_compiler_pass() {
     let package = load_ail_package_dir(fixture("compiler_pass.ail")).unwrap();
     assert_eq!(package.metadata.profile, "Compiler");
@@ -2055,6 +2117,29 @@ fn cli_ail_run_redacts_secret_runtime_state() {
     let success_stdout = String::from_utf8_lossy(&success.stdout);
     assert!(success_stdout.contains("ticket.internal notes=<secret>"));
     assert!(!success_stdout.contains("sensitive note"));
+
+    let tool_package = fixture("refund_tool.ail");
+    let tool_success = Command::new(binary)
+        .args([
+            "ail-run",
+            &tool_package,
+            "--action",
+            "RefundCustomerPayment",
+            "order id=O-1",
+            "payment token=tok_123",
+            "refund amount=USD:25.00",
+            "reason=duplicate",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        tool_success.status.success(),
+        "{}",
+        String::from_utf8_lossy(&tool_success.stderr)
+    );
+    let tool_stdout = String::from_utf8_lossy(&tool_success.stdout);
+    assert!(tool_stdout.contains("payment token=<secret>"));
+    assert!(!tool_stdout.contains("tok_123"));
 }
 
 #[test]

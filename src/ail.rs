@@ -2963,6 +2963,11 @@ pub fn compile_ail_bytecode(
             .iter()
             .map(|(name, action)| (name.clone(), compile_ail_action_bytecode(document, action)))
             .collect(),
+        "AgentTool" => document
+            .tools
+            .iter()
+            .map(|(name, tool)| (name.clone(), compile_ail_tool_bytecode(tool)))
+            .collect(),
         "Compiler" => document
             .compiler_passes
             .iter()
@@ -2970,7 +2975,7 @@ pub fn compile_ail_bytecode(
             .collect(),
         profile => {
             return Err(format!(
-                "ail-lower currently supports Application and Compiler packages, not {profile}"
+                "ail-lower currently supports Application, AgentTool, and Compiler packages, not {profile}"
             ));
         }
     };
@@ -3057,6 +3062,93 @@ fn compile_ail_compiler_pass_bytecode(pass: &AilCompilerPass) -> AilBytecodeActi
     instructions.push(AilBytecodeInstruction::new("RETURN_SUCCESS", &[]));
     AilBytecodeAction {
         name: pass.name.clone(),
+        instructions,
+    }
+}
+
+fn compile_ail_tool_bytecode(tool: &AilTool) -> AilBytecodeAction {
+    let mut instructions = Vec::new();
+    instructions.push(AilBytecodeInstruction::new(
+        "TOOL_BEGIN",
+        &[("tool", tool.name.clone()), ("label", tool.label.clone())],
+    ));
+    for requirement in &tool.requirements {
+        instructions.push(AilBytecodeInstruction::new(
+            "TOOL_REQUIREMENT",
+            &[("text", requirement.clone())],
+        ));
+    }
+    for input in tool.inputs.values() {
+        instructions.push(AilBytecodeInstruction::new(
+            "TOOL_INPUT",
+            &[
+                ("name", input.name.clone()),
+                ("type", input.type_name.clone()),
+                ("secret", input.is_secret.to_string()),
+            ],
+        ));
+    }
+    for output in tool.outputs.values() {
+        instructions.push(AilBytecodeInstruction::new(
+            "TOOL_OUTPUT",
+            &[
+                ("name", output.name.clone()),
+                ("type", output.type_name.clone()),
+                ("secret", output.is_secret.to_string()),
+            ],
+        ));
+    }
+    for read in &tool.reads {
+        instructions.push(AilBytecodeInstruction::new(
+            "TOOL_READ",
+            &[("text", read.clone())],
+        ));
+    }
+    for call in &tool.calls {
+        instructions.push(AilBytecodeInstruction::new(
+            "TOOL_CALL",
+            &[("target", call.clone())],
+        ));
+    }
+    for write in &tool.writes {
+        instructions.push(AilBytecodeInstruction::new(
+            "TOOL_WRITE",
+            &[("text", write.clone())],
+        ));
+    }
+    for permission in &tool.permissions {
+        instructions.push(AilBytecodeInstruction::new(
+            "TOOL_PERMISSION",
+            &[("text", permission.clone())],
+        ));
+    }
+    for approval in &tool.approvals {
+        instructions.push(AilBytecodeInstruction::new(
+            "TOOL_APPROVAL",
+            &[("text", approval.clone())],
+        ));
+    }
+    for protection in &tool.secret_protections {
+        instructions.push(AilBytecodeInstruction::new(
+            "TOOL_SECRET_PROTECTION",
+            &[("text", protection.clone())],
+        ));
+    }
+    for guarantee in &tool.guarantees {
+        instructions.push(AilBytecodeInstruction::new(
+            "ASSERT_GUARANTEE",
+            &[("text", guarantee.clone())],
+        ));
+    }
+    for event in &tool.traces {
+        instructions.push(AilBytecodeInstruction::new(
+            "EMIT_TRACE",
+            &[("event", event.clone())],
+        ));
+    }
+    instructions.push(AilBytecodeInstruction::new("RETURN_SUCCESS", &[]));
+    AilBytecodeAction {
+        name: tool.name.clone(),
         instructions,
     }
 }
@@ -3323,6 +3415,16 @@ fn ail_bytecode_required_operands(opcode: &str) -> Option<&'static [&'static str
         "SET_FIELD" => Some(&["key", "value", "text"]),
         "WRITE_FIELD" => Some(&["key", "text"]),
         "EFFECT" => Some(&["text"]),
+        "TOOL_BEGIN" => Some(&["tool", "label"]),
+        "TOOL_REQUIREMENT" => Some(&["text"]),
+        "TOOL_INPUT" => Some(&["name", "type", "secret"]),
+        "TOOL_OUTPUT" => Some(&["name", "type", "secret"]),
+        "TOOL_READ" => Some(&["text"]),
+        "TOOL_CALL" => Some(&["target"]),
+        "TOOL_WRITE" => Some(&["text"]),
+        "TOOL_PERMISSION" => Some(&["text"]),
+        "TOOL_APPROVAL" => Some(&["text"]),
+        "TOOL_SECRET_PROTECTION" => Some(&["text"]),
         "PASS_BEGIN" => Some(&["pass", "label", "purpose"]),
         "PASS_INPUT" => Some(&["name", "type"]),
         "PASS_OUTPUT" => Some(&["name", "type"]),
@@ -3615,6 +3717,68 @@ pub fn run_ail_bytecode_action(
             "EFFECT" => {
                 trace.push(format!(
                     "effect {}",
+                    ail_bytecode_operand(instruction, "text")
+                ));
+            }
+            "TOOL_BEGIN" => {
+                trace.push(format!(
+                    "tool {} started",
+                    ail_bytecode_operand(instruction, "label")
+                ));
+            }
+            "TOOL_REQUIREMENT" => {
+                trace.push(format!(
+                    "tool requirement {}",
+                    ail_bytecode_operand(instruction, "text")
+                ));
+            }
+            "TOOL_INPUT" => {
+                trace.push(format!(
+                    "tool input {}:{}",
+                    ail_bytecode_operand(instruction, "name"),
+                    ail_bytecode_operand(instruction, "type")
+                ));
+            }
+            "TOOL_OUTPUT" => {
+                trace.push(format!(
+                    "tool output {}:{}",
+                    ail_bytecode_operand(instruction, "name"),
+                    ail_bytecode_operand(instruction, "type")
+                ));
+            }
+            "TOOL_READ" => {
+                trace.push(format!(
+                    "tool read {}",
+                    ail_bytecode_operand(instruction, "text")
+                ));
+            }
+            "TOOL_CALL" => {
+                trace.push(format!(
+                    "tool call {}",
+                    ail_bytecode_operand(instruction, "target")
+                ));
+            }
+            "TOOL_WRITE" => {
+                trace.push(format!(
+                    "tool write {}",
+                    ail_bytecode_operand(instruction, "text")
+                ));
+            }
+            "TOOL_PERMISSION" => {
+                trace.push(format!(
+                    "tool permission {}",
+                    ail_bytecode_operand(instruction, "text")
+                ));
+            }
+            "TOOL_APPROVAL" => {
+                trace.push(format!(
+                    "tool approval {}",
+                    ail_bytecode_operand(instruction, "text")
+                ));
+            }
+            "TOOL_SECRET_PROTECTION" => {
+                trace.push(format!(
+                    "tool secret protection {}",
                     ail_bytecode_operand(instruction, "text")
                 ));
             }
@@ -4835,11 +4999,22 @@ fn runtime_field_key(thing_name: &str, field_name: &str) -> String {
 }
 
 fn is_secret_runtime_state_key(document: &AilDocument, key: &str) -> bool {
-    document.things.values().any(|thing| {
+    if document.things.values().any(|thing| {
         thing
             .fields
             .values()
             .any(|field| field.is_secret && key == runtime_field_key(&thing.name, &field.name))
+    }) {
+        return true;
+    }
+    document.tools.values().any(|tool| {
+        tool.inputs
+            .values()
+            .chain(tool.outputs.values())
+            .any(|slot| {
+                slot.is_secret
+                    && (key == slot.name || key == format!("{}.{}", tool.name, slot.name))
+            })
     })
 }
 

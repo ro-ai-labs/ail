@@ -2707,6 +2707,53 @@ cargo test --test ail_toolchain ail_compiler_profile_lowers_to_verified_bytecode
 Expected: the Compiler package lowers to verified bytecode and the VM executes
 `InferReadPermissions` successfully with pass and trace events.
 
+### Task 69: AgentTool-Profile Bytecode Lowering
+
+**Files:**
+- Modify: `src/ail.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing AgentTool bytecode test**
+
+Add an AgentTool lowering test for `examples/refund_tool.ail` requiring
+`RefundCustomerPayment` to lower to verified AIL-Bytecode, include explicit
+tool opcodes for requirements, inputs, outputs, external calls, permissions,
+approvals, secret protections, guarantees, and traces, and execute through the
+bytecode VM.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain ail_agent_tool_profile_lowers_to_verified_bytecode -- --nocapture
+```
+
+Expected: failure because `compile_ail_bytecode` rejects `AgentTool` packages
+with `ail-lower currently supports Application and Compiler packages, not
+AgentTool`.
+
+- [x] **Step 3: Implement AgentTool bytecode lowering**
+
+Teach the bytecode compiler to lower AgentTool-profile tool declarations into
+bytecode actions with tool metadata, requirements, typed inputs and outputs,
+reads, calls, writes, permissions, approvals, secret protections, guarantees,
+traces, and return. Extend bytecode verification and VM trace handling for the
+new tool opcodes.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain ail_agent_tool_profile_lowers_to_verified_bytecode -- --nocapture
+```
+
+Expected: the AgentTool package lowers to verified bytecode and the VM executes
+`RefundCustomerPayment` successfully with tool and trace events.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**
