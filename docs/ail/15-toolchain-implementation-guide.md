@@ -289,8 +289,8 @@ or another host-language backend. AIL-Bytecode is the target for future AIL
 compiler, tool, and runtime self-hosting work.
 
 The first bytecode compiler supports Application-profile actions,
-AgentTool-profile tool declarations, and Compiler-profile compiler passes. For
-applications it emits:
+AgentTool-profile tool declarations, Compiler-profile compiler passes, and
+System-profile components. For applications it emits:
 
 - package metadata and profile identity
 - one bytecode action per checked AIL action
@@ -311,6 +311,14 @@ markers, reads, calls, writes, permissions, approvals, secret protections,
 guarantees, traces, and return opcodes. This lets developer-facing agents call
 auditable AIL-authored tools as bytecode artifacts instead of host-language
 plugins.
+
+For system packages it emits one bytecode action per checked component,
+including component metadata, resources, ownership and borrow relations,
+regions, layouts, allocations, lock guards, execution contexts, interrupt
+configuration, scheduler tasks, capabilities, effects, guarantees, traces, and
+return opcodes. This keeps low-level toolchain/runtime components in the same
+verified bytecode artifact family as applications, agent tools, and compiler
+passes.
 
 `ail-lower` renders the deterministic bytecode artifact after the same package
 loading, parsing, elaboration, and checker gate as `ail-core` and `ail-flow`.
@@ -437,7 +445,7 @@ The first slice is ready when:
   actions
 - an AIL-Flow projection renders from checked AIL-Core
 - AIL-Core lowers to deterministic AIL-Bytecode for supported Application,
-  AgentTool, and Compiler packages
+  AgentTool, Compiler, and System packages
 - `ail-run` executes supported bytecode packages through the AIL bytecode VM
 - saved AIL-Bytecode artifacts parse back into bytecode and execute through
   `ail-vm` without requiring the source package

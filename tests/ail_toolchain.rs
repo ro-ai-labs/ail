@@ -532,6 +532,58 @@ fn ail_system_profile_parses_renders_and_checks_resource_capabilities() {
 }
 
 #[test]
+fn ail_system_profile_lowers_to_verified_bytecode() {
+    let package = load_ail_package_dir(fixture("network_driver.ail")).unwrap();
+    let document = parse_ail_package_document(&package).unwrap();
+    let core = elaborate_ail_core(&package, &document);
+    assert_eq!(check_ail_core(&core), Vec::<String>::new());
+
+    let bytecode = compile_ail_bytecode(&package, &document).unwrap();
+    let rendered = render_ail_bytecode(&bytecode);
+
+    assert_eq!(bytecode.profile, "System");
+    assert!(bytecode.actions.contains_key("NetworkPacketReceiver"));
+    assert!(
+        rendered.contains(r#""opcode":"SYSTEM_BEGIN""#),
+        "{rendered}"
+    );
+    assert!(
+        rendered.contains(r#""opcode":"SYSTEM_RESOURCE""#),
+        "{rendered}"
+    );
+    assert!(rendered.contains(r#""opcode":"SYSTEM_OWNS""#), "{rendered}");
+    assert!(
+        rendered.contains(r#""opcode":"SYSTEM_BORROWS""#),
+        "{rendered}"
+    );
+    assert!(
+        rendered.contains(r#""opcode":"SYSTEM_REGION""#),
+        "{rendered}"
+    );
+    assert!(
+        rendered.contains(r#""opcode":"SYSTEM_CAPABILITY""#),
+        "{rendered}"
+    );
+    assert!(
+        rendered.contains(r#""opcode":"SYSTEM_EFFECT""#),
+        "{rendered}"
+    );
+    assert!(rendered.contains("PacketReceived"), "{rendered}");
+
+    let parsed = parse_ail_bytecode(&rendered).unwrap();
+    assert_eq!(verify_ail_bytecode(&parsed), Vec::<String>::new());
+
+    let run = run_ail_bytecode_action(&parsed, "NetworkPacketReceiver", BTreeMap::new()).unwrap();
+
+    assert_eq!(run.status, "succeeded");
+    assert!(
+        run.trace
+            .contains(&"system component Network packet receiver started".to_string())
+    );
+    assert!(run.trace.contains(&"trace PacketReceived".to_string()));
+}
+
+#[test]
 fn ail_system_profile_accepts_mutable_borrowed_resources() {
     let package = load_ail_package_dir(fixture("network_driver.ail")).unwrap();
     let spec = fs::read_to_string(format!(

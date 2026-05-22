@@ -2754,6 +2754,54 @@ cargo test --test ail_toolchain ail_agent_tool_profile_lowers_to_verified_byteco
 Expected: the AgentTool package lowers to verified bytecode and the VM executes
 `RefundCustomerPayment` successfully with tool and trace events.
 
+### Task 70: System-Profile Bytecode Lowering
+
+**Files:**
+- Modify: `src/ail.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing System bytecode test**
+
+Add a System lowering test for `examples/network_driver.ail` requiring
+`NetworkPacketReceiver` to lower to verified AIL-Bytecode, include explicit
+system opcodes for component metadata, resources, ownership, borrowing,
+regions, capabilities, effects, guarantees, and traces, and execute through the
+bytecode VM.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain ail_system_profile_lowers_to_verified_bytecode -- --nocapture
+```
+
+Expected: failure because `compile_ail_bytecode` rejects `System` packages
+with `ail-lower currently supports Application, AgentTool, and Compiler
+packages, not System`.
+
+- [x] **Step 3: Implement System bytecode lowering**
+
+Teach the bytecode compiler to lower System-profile component declarations into
+bytecode actions with component metadata, resources, ownership and borrow
+relations, regions, layouts, allocations, lock guards, execution contexts,
+interrupt configuration, scheduler tasks, capabilities, effects, guarantees,
+traces, and return. Extend bytecode verification and VM trace handling for the
+new system opcodes.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain ail_system_profile_lowers_to_verified_bytecode -- --nocapture
+```
+
+Expected: the System package lowers to verified bytecode and the VM executes
+`NetworkPacketReceiver` successfully with system and trace events.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

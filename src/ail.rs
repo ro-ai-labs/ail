@@ -2973,9 +2973,14 @@ pub fn compile_ail_bytecode(
             .iter()
             .map(|(name, pass)| (name.clone(), compile_ail_compiler_pass_bytecode(pass)))
             .collect(),
+        "System" => document
+            .system_components
+            .iter()
+            .map(|(name, component)| (name.clone(), compile_ail_system_bytecode(component)))
+            .collect(),
         profile => {
             return Err(format!(
-                "ail-lower currently supports Application, AgentTool, and Compiler packages, not {profile}"
+                "ail-lower currently supports Application, AgentTool, Compiler, and System packages, not {profile}"
             ));
         }
     };
@@ -3062,6 +3067,161 @@ fn compile_ail_compiler_pass_bytecode(pass: &AilCompilerPass) -> AilBytecodeActi
     instructions.push(AilBytecodeInstruction::new("RETURN_SUCCESS", &[]));
     AilBytecodeAction {
         name: pass.name.clone(),
+        instructions,
+    }
+}
+
+fn compile_ail_system_bytecode(component: &AilSystemComponent) -> AilBytecodeAction {
+    let mut instructions = Vec::new();
+    instructions.push(AilBytecodeInstruction::new(
+        "SYSTEM_BEGIN",
+        &[
+            ("component", component.name.clone()),
+            ("label", component.label.clone()),
+        ],
+    ));
+    for resource in component.resources.values() {
+        instructions.push(AilBytecodeInstruction::new(
+            "SYSTEM_RESOURCE",
+            &[
+                ("name", resource.name.clone()),
+                ("type", resource.type_name.clone()),
+            ],
+        ));
+    }
+    for resource in &component.owned_resources {
+        instructions.push(AilBytecodeInstruction::new(
+            "SYSTEM_OWNS",
+            &[("resource", resource.clone())],
+        ));
+    }
+    for resource in &component.borrowed_resources {
+        instructions.push(AilBytecodeInstruction::new(
+            "SYSTEM_BORROWS",
+            &[("resource", resource.clone())],
+        ));
+    }
+    for resource in &component.mutably_borrowed_resources {
+        instructions.push(AilBytecodeInstruction::new(
+            "SYSTEM_MUTABLY_BORROWS",
+            &[("resource", resource.clone())],
+        ));
+    }
+    for region in &component.resource_regions {
+        instructions.push(AilBytecodeInstruction::new(
+            "SYSTEM_REGION",
+            &[
+                ("resource", region.resource_name.clone()),
+                ("region", region.region_name.clone()),
+            ],
+        ));
+    }
+    for layout in &component.resource_layouts {
+        instructions.push(AilBytecodeInstruction::new(
+            "SYSTEM_LAYOUT",
+            &[
+                ("resource", layout.resource_name.clone()),
+                ("layout", layout.layout.clone()),
+            ],
+        ));
+    }
+    for allocation in &component.resource_allocations {
+        instructions.push(AilBytecodeInstruction::new(
+            "SYSTEM_ALLOCATION",
+            &[
+                ("resource", allocation.resource_name.clone()),
+                ("placement", allocation.placement.clone()),
+            ],
+        ));
+    }
+    for guard in &component.lock_guards {
+        instructions.push(AilBytecodeInstruction::new(
+            "SYSTEM_LOCK_GUARD",
+            &[
+                ("resource", guard.resource_name.clone()),
+                ("lock", guard.lock_name.clone()),
+            ],
+        ));
+    }
+    for context in &component.execution_contexts {
+        instructions.push(AilBytecodeInstruction::new(
+            "SYSTEM_CONTEXT",
+            &[("name", context.name.clone())],
+        ));
+    }
+    for priority in &component.interrupt_priorities {
+        instructions.push(AilBytecodeInstruction::new(
+            "SYSTEM_INTERRUPT_PRIORITY",
+            &[
+                ("context", priority.context_name.clone()),
+                ("priority", priority.priority.clone()),
+            ],
+        ));
+    }
+    for mask in &component.interrupt_masks {
+        instructions.push(AilBytecodeInstruction::new(
+            "SYSTEM_INTERRUPT_MASK",
+            &[
+                ("context", mask.context_name.clone()),
+                ("mask", mask.mask.clone()),
+            ],
+        ));
+    }
+    for task in &component.scheduler_tasks {
+        instructions.push(AilBytecodeInstruction::new(
+            "SYSTEM_SCHEDULER_TASK",
+            &[
+                ("task", task.task_name.clone()),
+                ("context", task.context_name.clone()),
+            ],
+        ));
+    }
+    for priority in &component.scheduler_task_priorities {
+        instructions.push(AilBytecodeInstruction::new(
+            "SYSTEM_TASK_PRIORITY",
+            &[
+                ("task", priority.task_name.clone()),
+                ("priority", priority.priority.clone()),
+            ],
+        ));
+    }
+    for timing in &component.scheduler_task_timings {
+        instructions.push(AilBytecodeInstruction::new(
+            "SYSTEM_TASK_TIMING",
+            &[
+                ("task", timing.task_name.clone()),
+                ("deadline", timing.deadline.clone()),
+                ("budget", timing.budget.clone()),
+            ],
+        ));
+    }
+    for capability in &component.capabilities {
+        instructions.push(AilBytecodeInstruction::new(
+            "SYSTEM_CAPABILITY",
+            &[("text", capability.clone())],
+        ));
+    }
+    for effect in &component.effects {
+        instructions.push(AilBytecodeInstruction::new(
+            "SYSTEM_EFFECT",
+            &[("text", effect.clone())],
+        ));
+    }
+    for guarantee in &component.guarantees {
+        instructions.push(AilBytecodeInstruction::new(
+            "ASSERT_GUARANTEE",
+            &[("text", guarantee.clone())],
+        ));
+    }
+    for event in &component.traces {
+        instructions.push(AilBytecodeInstruction::new(
+            "EMIT_TRACE",
+            &[("event", event.clone())],
+        ));
+    }
+    instructions.push(AilBytecodeInstruction::new("RETURN_SUCCESS", &[]));
+    AilBytecodeAction {
+        name: component.name.clone(),
         instructions,
     }
 }
@@ -3425,6 +3585,23 @@ fn ail_bytecode_required_operands(opcode: &str) -> Option<&'static [&'static str
         "TOOL_PERMISSION" => Some(&["text"]),
         "TOOL_APPROVAL" => Some(&["text"]),
         "TOOL_SECRET_PROTECTION" => Some(&["text"]),
+        "SYSTEM_BEGIN" => Some(&["component", "label"]),
+        "SYSTEM_RESOURCE" => Some(&["name", "type"]),
+        "SYSTEM_OWNS" => Some(&["resource"]),
+        "SYSTEM_BORROWS" => Some(&["resource"]),
+        "SYSTEM_MUTABLY_BORROWS" => Some(&["resource"]),
+        "SYSTEM_REGION" => Some(&["resource", "region"]),
+        "SYSTEM_LAYOUT" => Some(&["resource", "layout"]),
+        "SYSTEM_ALLOCATION" => Some(&["resource", "placement"]),
+        "SYSTEM_LOCK_GUARD" => Some(&["resource", "lock"]),
+        "SYSTEM_CONTEXT" => Some(&["name"]),
+        "SYSTEM_INTERRUPT_PRIORITY" => Some(&["context", "priority"]),
+        "SYSTEM_INTERRUPT_MASK" => Some(&["context", "mask"]),
+        "SYSTEM_SCHEDULER_TASK" => Some(&["task", "context"]),
+        "SYSTEM_TASK_PRIORITY" => Some(&["task", "priority"]),
+        "SYSTEM_TASK_TIMING" => Some(&["task", "deadline", "budget"]),
+        "SYSTEM_CAPABILITY" => Some(&["text"]),
+        "SYSTEM_EFFECT" => Some(&["text"]),
         "PASS_BEGIN" => Some(&["pass", "label", "purpose"]),
         "PASS_INPUT" => Some(&["name", "type"]),
         "PASS_OUTPUT" => Some(&["name", "type"]),
@@ -3779,6 +3956,119 @@ pub fn run_ail_bytecode_action(
             "TOOL_SECRET_PROTECTION" => {
                 trace.push(format!(
                     "tool secret protection {}",
+                    ail_bytecode_operand(instruction, "text")
+                ));
+            }
+            "SYSTEM_BEGIN" => {
+                trace.push(format!(
+                    "system component {} started",
+                    ail_bytecode_operand(instruction, "label")
+                ));
+            }
+            "SYSTEM_RESOURCE" => {
+                trace.push(format!(
+                    "system resource {}:{}",
+                    ail_bytecode_operand(instruction, "name"),
+                    ail_bytecode_operand(instruction, "type")
+                ));
+            }
+            "SYSTEM_OWNS" => {
+                trace.push(format!(
+                    "system owns {}",
+                    ail_bytecode_operand(instruction, "resource")
+                ));
+            }
+            "SYSTEM_BORROWS" => {
+                trace.push(format!(
+                    "system borrows {}",
+                    ail_bytecode_operand(instruction, "resource")
+                ));
+            }
+            "SYSTEM_MUTABLY_BORROWS" => {
+                trace.push(format!(
+                    "system mutably borrows {}",
+                    ail_bytecode_operand(instruction, "resource")
+                ));
+            }
+            "SYSTEM_REGION" => {
+                trace.push(format!(
+                    "system places {} in {}",
+                    ail_bytecode_operand(instruction, "resource"),
+                    ail_bytecode_operand(instruction, "region")
+                ));
+            }
+            "SYSTEM_LAYOUT" => {
+                trace.push(format!(
+                    "system layout {} {}",
+                    ail_bytecode_operand(instruction, "resource"),
+                    ail_bytecode_operand(instruction, "layout")
+                ));
+            }
+            "SYSTEM_ALLOCATION" => {
+                trace.push(format!(
+                    "system allocation {} {}",
+                    ail_bytecode_operand(instruction, "resource"),
+                    ail_bytecode_operand(instruction, "placement")
+                ));
+            }
+            "SYSTEM_LOCK_GUARD" => {
+                trace.push(format!(
+                    "system lock guard {} with {}",
+                    ail_bytecode_operand(instruction, "resource"),
+                    ail_bytecode_operand(instruction, "lock")
+                ));
+            }
+            "SYSTEM_CONTEXT" => {
+                trace.push(format!(
+                    "system context {}",
+                    ail_bytecode_operand(instruction, "name")
+                ));
+            }
+            "SYSTEM_INTERRUPT_PRIORITY" => {
+                trace.push(format!(
+                    "system interrupt priority {} {}",
+                    ail_bytecode_operand(instruction, "context"),
+                    ail_bytecode_operand(instruction, "priority")
+                ));
+            }
+            "SYSTEM_INTERRUPT_MASK" => {
+                trace.push(format!(
+                    "system interrupt mask {} {}",
+                    ail_bytecode_operand(instruction, "context"),
+                    ail_bytecode_operand(instruction, "mask")
+                ));
+            }
+            "SYSTEM_SCHEDULER_TASK" => {
+                trace.push(format!(
+                    "system scheduler task {} in {}",
+                    ail_bytecode_operand(instruction, "task"),
+                    ail_bytecode_operand(instruction, "context")
+                ));
+            }
+            "SYSTEM_TASK_PRIORITY" => {
+                trace.push(format!(
+                    "system task priority {} {}",
+                    ail_bytecode_operand(instruction, "task"),
+                    ail_bytecode_operand(instruction, "priority")
+                ));
+            }
+            "SYSTEM_TASK_TIMING" => {
+                trace.push(format!(
+                    "system task timing {} deadline {} budget {}",
+                    ail_bytecode_operand(instruction, "task"),
+                    ail_bytecode_operand(instruction, "deadline"),
+                    ail_bytecode_operand(instruction, "budget")
+                ));
+            }
+            "SYSTEM_CAPABILITY" => {
+                trace.push(format!(
+                    "system capability {}",
+                    ail_bytecode_operand(instruction, "text")
+                ));
+            }
+            "SYSTEM_EFFECT" => {
+                trace.push(format!(
+                    "system effect {}",
                     ail_bytecode_operand(instruction, "text")
                 ));
             }
