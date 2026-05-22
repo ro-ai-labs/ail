@@ -314,18 +314,9 @@ fn ail_compiler_profile_lowers_to_verified_bytecode() {
 
     assert_eq!(bytecode.profile, "Compiler");
     assert!(bytecode.actions.contains_key("InferReadPermissions"));
-    assert!(
-        rendered.contains(r#""opcode":"PASS_BEGIN""#),
-        "{rendered}"
-    );
-    assert!(
-        rendered.contains(r#""opcode":"PASS_INPUT""#),
-        "{rendered}"
-    );
-    assert!(
-        rendered.contains(r#""opcode":"PASS_OUTPUT""#),
-        "{rendered}"
-    );
+    assert!(rendered.contains(r#""opcode":"PASS_BEGIN""#), "{rendered}");
+    assert!(rendered.contains(r#""opcode":"PASS_INPUT""#), "{rendered}");
+    assert!(rendered.contains(r#""opcode":"PASS_OUTPUT""#), "{rendered}");
     assert!(rendered.contains(r#""opcode":"PASS_READ""#), "{rendered}");
     assert!(rendered.contains(r#""opcode":"PASS_STEP""#), "{rendered}");
     assert!(rendered.contains(r#""opcode":"PASS_WRITE""#), "{rendered}");
@@ -349,10 +340,7 @@ fn ail_compiler_profile_lowers_to_verified_bytecode() {
         run.trace
             .contains(&"compiler pass Infer read permissions started".to_string())
     );
-    assert!(
-        run.trace
-            .contains(&"trace ReadPermissionAdded".to_string())
-    );
+    assert!(run.trace.contains(&"trace ReadPermissionAdded".to_string()));
 }
 
 #[test]

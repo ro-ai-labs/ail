@@ -2957,17 +2957,23 @@ pub fn compile_ail_bytecode(
     package: &AilPackage,
     document: &AilDocument,
 ) -> Result<AilBytecodeProgram, String> {
-    if package.metadata.profile != "Application" {
-        return Err(format!(
-            "ail-lower currently supports Application packages, not {}",
-            package.metadata.profile
-        ));
-    }
-    let actions = document
-        .actions
-        .iter()
-        .map(|(name, action)| (name.clone(), compile_ail_action_bytecode(document, action)))
-        .collect();
+    let actions = match package.metadata.profile.as_str() {
+        "Application" => document
+            .actions
+            .iter()
+            .map(|(name, action)| (name.clone(), compile_ail_action_bytecode(document, action)))
+            .collect(),
+        "Compiler" => document
+            .compiler_passes
+            .iter()
+            .map(|(name, pass)| (name.clone(), compile_ail_compiler_pass_bytecode(pass)))
+            .collect(),
+        profile => {
+            return Err(format!(
+                "ail-lower currently supports Application and Compiler packages, not {profile}"
+            ));
+        }
+    };
     let failures = document
         .failures
         .iter()
@@ -2988,6 +2994,71 @@ pub fn compile_ail_bytecode(
         actions,
         failures,
     })
+}
+
+fn compile_ail_compiler_pass_bytecode(pass: &AilCompilerPass) -> AilBytecodeAction {
+    let mut instructions = Vec::new();
+    instructions.push(AilBytecodeInstruction::new(
+        "PASS_BEGIN",
+        &[
+            ("pass", pass.name.clone()),
+            ("label", pass.label.clone()),
+            ("purpose", pass.purpose.clone()),
+        ],
+    ));
+    for input in pass.inputs.values() {
+        instructions.push(AilBytecodeInstruction::new(
+            "PASS_INPUT",
+            &[
+                ("name", input.name.clone()),
+                ("type", input.type_name.clone()),
+            ],
+        ));
+    }
+    for output in pass.outputs.values() {
+        instructions.push(AilBytecodeInstruction::new(
+            "PASS_OUTPUT",
+            &[
+                ("name", output.name.clone()),
+                ("type", output.type_name.clone()),
+            ],
+        ));
+    }
+    for read in &pass.reads {
+        instructions.push(AilBytecodeInstruction::new(
+            "PASS_READ",
+            &[("text", read.clone())],
+        ));
+    }
+    for step in &pass.steps {
+        instructions.push(AilBytecodeInstruction::new(
+            "PASS_STEP",
+            &[("text", step.clone())],
+        ));
+    }
+    for write in &pass.writes {
+        instructions.push(AilBytecodeInstruction::new(
+            "PASS_WRITE",
+            &[("text", write.clone())],
+        ));
+    }
+    for guarantee in &pass.guarantees {
+        instructions.push(AilBytecodeInstruction::new(
+            "ASSERT_GUARANTEE",
+            &[("text", guarantee.clone())],
+        ));
+    }
+    for event in &pass.traces {
+        instructions.push(AilBytecodeInstruction::new(
+            "EMIT_TRACE",
+            &[("event", event.clone())],
+        ));
+    }
+    instructions.push(AilBytecodeInstruction::new("RETURN_SUCCESS", &[]));
+    AilBytecodeAction {
+        name: pass.name.clone(),
+        instructions,
+    }
 }
 
 fn compile_ail_action_bytecode(document: &AilDocument, action: &AilAction) -> AilBytecodeAction {
@@ -3252,6 +3323,12 @@ fn ail_bytecode_required_operands(opcode: &str) -> Option<&'static [&'static str
         "SET_FIELD" => Some(&["key", "value", "text"]),
         "WRITE_FIELD" => Some(&["key", "text"]),
         "EFFECT" => Some(&["text"]),
+        "PASS_BEGIN" => Some(&["pass", "label", "purpose"]),
+        "PASS_INPUT" => Some(&["name", "type"]),
+        "PASS_OUTPUT" => Some(&["name", "type"]),
+        "PASS_READ" => Some(&["text"]),
+        "PASS_STEP" => Some(&["text"]),
+        "PASS_WRITE" => Some(&["text"]),
         "ASSERT_GUARANTEE" => Some(&["text"]),
         "EMIT_TRACE" => Some(&["event"]),
         "RETURN_SUCCESS" => Some(&[]),
@@ -3538,6 +3615,44 @@ pub fn run_ail_bytecode_action(
             "EFFECT" => {
                 trace.push(format!(
                     "effect {}",
+                    ail_bytecode_operand(instruction, "text")
+                ));
+            }
+            "PASS_BEGIN" => {
+                trace.push(format!(
+                    "compiler pass {} started",
+                    ail_bytecode_operand(instruction, "label")
+                ));
+            }
+            "PASS_INPUT" => {
+                trace.push(format!(
+                    "input {}:{}",
+                    ail_bytecode_operand(instruction, "name"),
+                    ail_bytecode_operand(instruction, "type")
+                ));
+            }
+            "PASS_OUTPUT" => {
+                trace.push(format!(
+                    "output {}:{}",
+                    ail_bytecode_operand(instruction, "name"),
+                    ail_bytecode_operand(instruction, "type")
+                ));
+            }
+            "PASS_READ" => {
+                trace.push(format!(
+                    "pass read {}",
+                    ail_bytecode_operand(instruction, "text")
+                ));
+            }
+            "PASS_STEP" => {
+                trace.push(format!(
+                    "pass step {}",
+                    ail_bytecode_operand(instruction, "text")
+                ));
+            }
+            "PASS_WRITE" => {
+                trace.push(format!(
+                    "pass write {}",
                     ail_bytecode_operand(instruction, "text")
                 ));
             }

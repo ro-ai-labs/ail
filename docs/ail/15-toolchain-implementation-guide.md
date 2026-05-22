@@ -288,7 +288,8 @@ Rust, but the generated executable artifact is bytecode, not Rust, JavaScript,
 or another host-language backend. AIL-Bytecode is the target for future AIL
 compiler, tool, and runtime self-hosting work.
 
-The first bytecode compiler supports Application-profile actions and emits:
+The first bytecode compiler supports Application-profile actions and
+Compiler-profile compiler passes. For applications it emits:
 
 - package metadata and profile identity
 - one bytecode action per checked AIL action
@@ -296,6 +297,12 @@ The first bytecode compiler supports Application-profile actions and emits:
   negative field requirements
 - read, write, field-set, effect, guarantee, trace, and return opcodes
 - declared failure trace tables
+
+For compiler packages it emits one bytecode action per checked compiler pass,
+including pass metadata, input and output declarations, read, step, write,
+guarantee, trace, and return opcodes. This keeps AIL-Meta compiler work on the
+same bytecode path as applications instead of generating Rust or another host
+backend.
 
 `ail-lower` renders the deterministic bytecode artifact after the same package
 loading, parsing, elaboration, and checker gate as `ail-core` and `ail-flow`.

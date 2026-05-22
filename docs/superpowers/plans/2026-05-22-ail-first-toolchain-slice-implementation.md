@@ -2664,6 +2664,49 @@ Expected: the package checks cleanly, lowers to verified bytecode, includes
 `CompileApplication` and `CompareAgentPromptPortability`, and executes
 `CompileApplication` successfully through the bytecode VM.
 
+### Task 68: Compiler-Profile Bytecode Lowering
+
+**Files:**
+- Modify: `src/ail.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+- Test: `tests/ail_toolchain.rs`
+
+- [x] **Step 1: Write failing Compiler bytecode test**
+
+Add a test requiring `examples/compiler_pass.ail` to load, check cleanly, lower
+to verified AIL-Bytecode, include compiler-pass opcodes, and execute
+`InferReadPermissions` through the bytecode VM trace path.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain ail_compiler_profile_lowers_to_verified_bytecode -- --nocapture
+```
+
+Expected: failure because `compile_ail_bytecode` rejects `Compiler` packages
+with `ail-lower currently supports Application packages, not Compiler`.
+
+- [x] **Step 3: Implement Compiler bytecode lowering**
+
+Teach the bytecode compiler to lower Compiler-profile compiler passes into
+bytecode actions with pass metadata, input/output declarations, reads, steps,
+writes, guarantees, traces, and return. Extend bytecode verification and VM
+trace handling for the new pass opcodes.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain ail_compiler_profile_lowers_to_verified_bytecode -- --nocapture
+```
+
+Expected: the Compiler package lowers to verified bytecode and the VM executes
+`InferReadPermissions` successfully with pass and trace events.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

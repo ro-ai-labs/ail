@@ -56,6 +56,7 @@ cargo run -- ail-check examples/support_ticket.ail
 cargo run -- ail-core examples/support_ticket.ail
 cargo run -- ail-flow examples/support_ticket.ail
 cargo run -- ail-lower examples/support_ticket.ail
+cargo run -- ail-lower examples/compiler_pass.ail
 cargo run -- ail-patch examples/support_ticket.ail examples/support_ticket.ail/examples/patches/escalate-ticket.ail-patch.md
 cargo run -- ail-core examples/support_composed.ail
 cargo run -- ail-run examples/support_ticket.ail --action CloseTicket ticket.id=T-1 ticket.status=Open
