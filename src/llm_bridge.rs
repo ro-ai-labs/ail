@@ -9,14 +9,18 @@ use crate::rif_model::RifDocument;
 pub fn llm_round_trip(document: &RifDocument, endpoint: &str) -> Result<(String, String), String> {
     let canonical = render_rif_document(document);
     let prompt = build_round_trip_prompt(&canonical);
-    let response = invoke_completion(endpoint, &prompt)?;
-    let candidate_rsl = sanitize_model_text(&response);
+    let candidate_rsl = invoke_llm_text(endpoint, &prompt)?;
     let candidate_document = parse_rsl_text(&candidate_rsl)?;
     let round_tripped = render_rif_document(&candidate_document);
     if round_tripped != canonical {
         return Err("LLM rewrite did not round-trip back to the same canonical RIF".to_string());
     }
     Ok((candidate_rsl, round_tripped))
+}
+
+pub fn invoke_llm_text(endpoint: &str, prompt: &str) -> Result<String, String> {
+    let response = invoke_completion(endpoint, prompt)?;
+    Ok(sanitize_model_text(&response))
 }
 
 fn build_round_trip_prompt(canonical_rif: &str) -> String {

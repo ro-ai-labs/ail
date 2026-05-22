@@ -11,7 +11,8 @@ use eigl::{
     build_program, check_document,
     collections::collection_path_value,
     core_model::json_string,
-    eig_ir::{lower_document, run_bytecode},
+    eig_ir::{lower_document, run_bytecode, run_bytecode_with_operation_outputs},
+    interpreter::simulate_with_operation_outputs,
     parse_rif_file, parse_rif_text, parse_rsl_text, predicate, render_rif_document, simulate,
     views::{effect_view, failure_view, flow_view, permission_view, view_model},
 };
@@ -708,6 +709,79 @@ fn checker_reports_unknown_endpoint_requirement_references() {
 }
 
 #[test]
+fn checker_rejects_step_outputs_in_endpoint_requirements() {
+    let document = parse_rif_text(
+        r#"
+        app EndpointRequirementOutput
+
+        things:
+          thing Ticket
+            field id: Text
+
+        operations:
+          operation Catalog.title(id: Text) -> Text
+
+        endpoints:
+          endpoint GET /ticket -> FetchTicketTitle
+            requires:
+              fetched_title exists
+
+        intent FetchTicketTitle
+
+        subject:
+          ticket: Ticket
+
+        steps:
+          1. Fetch title
+             call: Catalog.title(ticket.id)
+             output: fetched_title: Text
+        "#,
+    )
+    .unwrap();
+
+    let codes: Vec<_> = check_document(&document)
+        .into_iter()
+        .map(|diagnostic| diagnostic.code)
+        .collect();
+    assert!(codes.contains(&"EIGL_OUTPUT_UNAVAILABLE".to_string()));
+}
+
+#[test]
+fn checker_rejects_local_computes_in_endpoint_requirements() {
+    let document = parse_rif_text(
+        r#"
+        app EndpointRequirementLocal
+
+        things:
+          thing Invoice
+            field subtotal: Int
+            field tax: Int
+
+        endpoints:
+          endpoint GET /invoice -> CalculateInvoice
+            requires:
+              line_total > 0
+
+        intent CalculateInvoice
+
+        subject:
+          invoice: Invoice
+
+        steps:
+          1. Calculate total
+             compute: line_total = invoice.subtotal + invoice.tax
+        "#,
+    )
+    .unwrap();
+
+    let codes: Vec<_> = check_document(&document)
+        .into_iter()
+        .map(|diagnostic| diagnostic.code)
+        .collect();
+    assert!(codes.contains(&"EIGL_LOCAL_VALUE_UNAVAILABLE".to_string()));
+}
+
+#[test]
 fn checker_accepts_collection_keys_json_response_sources() {
     let document = parse_rif_file(fixture("ticket_api_app.rif.md")).unwrap();
 
@@ -1018,6 +1092,81 @@ fn checker_reports_undeclared_endpoint_request_binding_sources() {
 }
 
 #[test]
+fn checker_rejects_step_outputs_in_endpoint_bindings() {
+    let document = parse_rif_text(
+        r#"
+        app EndpointBindingOutput
+
+        things:
+          thing Ticket
+            field id: Text
+            field title: Text
+
+        operations:
+          operation Catalog.title(id: Text) -> Text
+
+        endpoints:
+          endpoint POST /ticket -> FetchTicketTitle
+            bind:
+              ticket.title = fetched_title
+
+        intent FetchTicketTitle
+
+        subject:
+          ticket: Ticket
+
+        steps:
+          1. Fetch title
+             call: Catalog.title(ticket.id)
+             output: fetched_title: Text
+        "#,
+    )
+    .unwrap();
+
+    let codes: Vec<_> = check_document(&document)
+        .into_iter()
+        .map(|diagnostic| diagnostic.code)
+        .collect();
+    assert!(codes.contains(&"EIGL_OUTPUT_UNAVAILABLE".to_string()));
+}
+
+#[test]
+fn checker_rejects_local_computes_in_endpoint_bindings() {
+    let document = parse_rif_text(
+        r#"
+        app EndpointBindingLocal
+
+        things:
+          thing Invoice
+            field subtotal: Int
+            field tax: Int
+            field total: Int
+
+        endpoints:
+          endpoint POST /invoice -> CalculateInvoice
+            bind:
+              invoice.total = line_total
+
+        intent CalculateInvoice
+
+        subject:
+          invoice: Invoice
+
+        steps:
+          1. Calculate total
+             compute: line_total = invoice.subtotal + invoice.tax
+        "#,
+    )
+    .unwrap();
+
+    let codes: Vec<_> = check_document(&document)
+        .into_iter()
+        .map(|diagnostic| diagnostic.code)
+        .collect();
+    assert!(codes.contains(&"EIGL_LOCAL_VALUE_UNAVAILABLE".to_string()));
+}
+
+#[test]
 fn checker_reports_endpoint_request_binding_type_mismatches() {
     let document = parse_rif_text(
         r#"
@@ -1047,6 +1196,30 @@ fn checker_reports_endpoint_request_binding_type_mismatches() {
             .iter()
             .any(|diagnostic| diagnostic.code == "EIGL_ENDPOINT_BINDING_TYPE_MISMATCH")
     );
+}
+
+#[test]
+fn checker_rejects_duplicate_endpoint_routes() {
+    let document = parse_rif_text(
+        r#"
+        app DuplicateRoutes
+
+        endpoints:
+          endpoint GET /tickets -> ListTickets
+          endpoint get /tickets -> SearchTickets
+
+        intent ListTickets
+
+        intent SearchTickets
+        "#,
+    )
+    .unwrap();
+
+    let codes: Vec<_> = check_document(&document)
+        .into_iter()
+        .map(|diagnostic| diagnostic.code)
+        .collect();
+    assert!(codes.contains(&"EIGL_DUPLICATE_ENDPOINT".to_string()));
 }
 
 #[test]
@@ -1082,6 +1255,30 @@ fn trigger_payload_schema_round_trips_and_checks() {
     assert!(rendered.contains("    payload:\n      job_id: Text\n      run_index: Int\n"));
     let reparsed = parse_rif_text(&rendered).unwrap();
     assert_eq!(reparsed, document);
+}
+
+#[test]
+fn checker_rejects_duplicate_trigger_names() {
+    let document = parse_rif_text(
+        r#"
+        app DuplicateTriggers
+
+        triggers:
+          trigger nightly.cleanup -> RunCleanup
+          trigger nightly.cleanup -> ArchiveCleanup
+
+        intent RunCleanup
+
+        intent ArchiveCleanup
+        "#,
+    )
+    .unwrap();
+
+    let codes: Vec<_> = check_document(&document)
+        .into_iter()
+        .map(|diagnostic| diagnostic.code)
+        .collect();
+    assert!(codes.contains(&"EIGL_DUPLICATE_TRIGGER".to_string()));
 }
 
 #[test]
@@ -1230,6 +1427,154 @@ fn checker_reports_undeclared_trigger_payload_binding_sources() {
             .iter()
             .any(|diagnostic| diagnostic.code == "EIGL_UNKNOWN_TRIGGER_BINDING_SOURCE")
     );
+}
+
+#[test]
+fn checker_rejects_step_outputs_in_trigger_bindings() {
+    let document = parse_rif_text(
+        r#"
+        app TriggerBindingOutput
+
+        things:
+          thing Job
+            field id: Text
+            field title: Text
+
+        operations:
+          operation Catalog.title(id: Text) -> Text
+
+        triggers:
+          trigger nightly.cleanup -> RunCleanup
+            bind:
+              job.title = fetched_title
+
+        intent RunCleanup
+
+        subject:
+          job: Job
+
+        steps:
+          1. Fetch title
+             call: Catalog.title(job.id)
+             output: fetched_title: Text
+        "#,
+    )
+    .unwrap();
+
+    let codes: Vec<_> = check_document(&document)
+        .into_iter()
+        .map(|diagnostic| diagnostic.code)
+        .collect();
+    assert!(codes.contains(&"EIGL_OUTPUT_UNAVAILABLE".to_string()));
+}
+
+#[test]
+fn checker_rejects_local_computes_in_trigger_bindings() {
+    let document = parse_rif_text(
+        r#"
+        app TriggerBindingLocal
+
+        things:
+          thing Job
+            field subtotal: Int
+            field tax: Int
+            field total: Int
+
+        triggers:
+          trigger nightly.cleanup -> RunCleanup
+            bind:
+              job.total = line_total
+
+        intent RunCleanup
+
+        subject:
+          job: Job
+
+        steps:
+          1. Calculate total
+             compute: line_total = job.subtotal + job.tax
+        "#,
+    )
+    .unwrap();
+
+    let codes: Vec<_> = check_document(&document)
+        .into_iter()
+        .map(|diagnostic| diagnostic.code)
+        .collect();
+    assert!(codes.contains(&"EIGL_LOCAL_VALUE_UNAVAILABLE".to_string()));
+}
+
+#[test]
+fn checker_rejects_step_outputs_in_trigger_requirements() {
+    let document = parse_rif_text(
+        r#"
+        app TriggerRequirementOutput
+
+        things:
+          thing Job
+            field id: Text
+
+        operations:
+          operation Catalog.title(id: Text) -> Text
+
+        triggers:
+          trigger nightly.cleanup -> RunCleanup
+            requires:
+              fetched_title exists
+
+        intent RunCleanup
+
+        subject:
+          job: Job
+
+        steps:
+          1. Fetch title
+             call: Catalog.title(job.id)
+             output: fetched_title: Text
+        "#,
+    )
+    .unwrap();
+
+    let codes: Vec<_> = check_document(&document)
+        .into_iter()
+        .map(|diagnostic| diagnostic.code)
+        .collect();
+    assert!(codes.contains(&"EIGL_OUTPUT_UNAVAILABLE".to_string()));
+}
+
+#[test]
+fn checker_rejects_local_computes_in_trigger_requirements() {
+    let document = parse_rif_text(
+        r#"
+        app TriggerRequirementLocal
+
+        things:
+          thing Job
+            field subtotal: Int
+            field tax: Int
+
+        triggers:
+          trigger nightly.cleanup -> RunCleanup
+            requires:
+              line_total > 0
+
+        intent RunCleanup
+
+        subject:
+          job: Job
+
+        steps:
+          1. Calculate total
+             compute: line_total = job.subtotal + job.tax
+        "#,
+    )
+    .unwrap();
+
+    let codes: Vec<_> = check_document(&document)
+        .into_iter()
+        .map(|diagnostic| diagnostic.code)
+        .collect();
+    assert!(codes.contains(&"EIGL_LOCAL_VALUE_UNAVAILABLE".to_string()));
 }
 
 #[test]
@@ -1461,6 +1806,83 @@ fn checker_validates_endpoint_response_return_alias_types() {
         .map(|diagnostic| diagnostic.code)
         .collect();
     assert!(codes.contains(&"EIGL_ENDPOINT_RESPONSE_TYPE_MISMATCH".to_string()));
+}
+
+#[test]
+fn checker_rejects_unavailable_step_outputs_in_endpoint_responses() {
+    let document = parse_rif_text(
+        r#"
+        app GuardedOutputEndpointResponse
+
+        things:
+          thing Ticket
+            field id: Text
+
+        operations:
+          operation Catalog.title(id: Text) -> Text
+
+        endpoints:
+          endpoint GET /ticket -> FetchTicketTitle
+            respond:
+              title: Text
+              title = fetched_title
+
+        intent FetchTicketTitle
+
+        subject:
+          ticket: Ticket
+
+        steps:
+          1. Fetch title conditionally
+             when: ticket.id == "T-1"
+             call: Catalog.title(ticket.id)
+             output: fetched_title: Text
+        "#,
+    )
+    .unwrap();
+
+    let codes: Vec<_> = check_document(&document)
+        .into_iter()
+        .map(|diagnostic| diagnostic.code)
+        .collect();
+    assert!(codes.contains(&"EIGL_OUTPUT_UNAVAILABLE".to_string()));
+}
+
+#[test]
+fn checker_rejects_unavailable_local_computes_in_endpoint_responses() {
+    let document = parse_rif_text(
+        r#"
+        app GuardedLocalEndpointResponse
+
+        things:
+          thing Invoice
+            field subtotal: Int
+            field tax: Int
+
+        endpoints:
+          endpoint GET /invoice -> CalculateInvoice
+            respond:
+              amount: Int
+              amount = line_total
+
+        intent CalculateInvoice
+
+        subject:
+          invoice: Invoice
+
+        steps:
+          1. Calculate total conditionally
+             when: invoice.subtotal > 0
+             compute: line_total = invoice.subtotal + invoice.tax
+        "#,
+    )
+    .unwrap();
+
+    let codes: Vec<_> = check_document(&document)
+        .into_iter()
+        .map(|diagnostic| diagnostic.code)
+        .collect();
+    assert!(codes.contains(&"EIGL_LOCAL_VALUE_UNAVAILABLE".to_string()));
 }
 
 #[test]
@@ -2484,6 +2906,71 @@ fn simulation_iterates_over_filtered_collection_records() {
 }
 
 #[test]
+fn collection_record_projection_iteration_yields_typed_records() {
+    let document = parse_rif_text(
+        r#"
+        app TicketReports
+
+        things:
+          thing Ticket
+            field id: Text
+            field status: State<Open, Closed>
+            field title: Text
+
+          thing Report
+            field titles: List<Text>
+            field last_id: Text
+
+        collections:
+          collection tickets: Ticket
+
+        intent SummarizeOpenTickets
+
+        subject:
+          report: Report
+
+        steps:
+          1. Collect open ticket titles
+             for each: tickets[status=Open].records as ticket
+             append: report.titles += ticket.title
+             set: report.last_id = ticket.id
+        "#,
+    )
+    .unwrap();
+
+    assert_eq!(check_document(&document), Vec::new());
+
+    let state: std::collections::BTreeMap<String, String> = [
+        ("report.titles".to_string(), "[]".to_string()),
+        ("report.last_id".to_string(), "".to_string()),
+        ("tickets.T1.id".to_string(), "T1".to_string()),
+        ("tickets.T1.status".to_string(), "Closed".to_string()),
+        ("tickets.T1.title".to_string(), "Stale".to_string()),
+        ("tickets.T2.id".to_string(), "T2".to_string()),
+        ("tickets.T2.status".to_string(), "Open".to_string()),
+        ("tickets.T2.title".to_string(), "Active".to_string()),
+        ("tickets.T3.id".to_string(), "T3".to_string()),
+        ("tickets.T3.status".to_string(), "Open".to_string()),
+        ("tickets.T3.title".to_string(), "Review".to_string()),
+    ]
+    .into();
+
+    let result = run_bytecode(
+        &lower_document(&document),
+        state.clone(),
+        Default::default(),
+    );
+    assert_eq!(result.status, "succeeded");
+    assert_eq!(result.final_state["report.titles"], "[Active,Review]");
+    assert_eq!(result.final_state["report.last_id"], "T3");
+
+    let simulation = simulate(&document, state, Default::default());
+    assert_eq!(simulation.status, "succeeded");
+    assert_eq!(simulation.final_state["report.titles"], "[Active,Review]");
+    assert_eq!(simulation.final_state["report.last_id"], "T3");
+}
+
+#[test]
 fn set_steps_upsert_typed_objects_into_collections() {
     let document = parse_rif_text(
         r#"
@@ -3212,6 +3699,26 @@ fn checker_accepts_valid_examples_and_reports_conflicts() {
     assert!(diagnostics[0].message.contains("order.status"));
     assert!(diagnostics[0].message.contains("Mark order paid"));
     assert!(diagnostics[0].message.contains("Mark order cancelled"));
+}
+
+#[test]
+fn checker_rejects_duplicate_intent_names() {
+    let document = parse_rif_text(
+        r#"
+        app DuplicateIntents
+
+        intent RunJob
+
+        intent RunJob
+        "#,
+    )
+    .unwrap();
+
+    let codes: Vec<_> = check_document(&document)
+        .into_iter()
+        .map(|diagnostic| diagnostic.code)
+        .collect();
+    assert!(codes.contains(&"EIGL_DUPLICATE_INTENT".to_string()));
 }
 
 #[test]
@@ -3968,6 +4475,42 @@ fn checker_validates_operation_call_argument_signatures() {
 }
 
 #[test]
+fn checker_reports_invalid_operation_permission_targets() {
+    let document = parse_rif_text(
+        r#"
+        app BrokenOperationPermissions
+
+        things:
+          thing Invoice
+            field subtotal: Int
+            field total: Int
+
+        operations:
+          operation Billing.audit(invoice: Invoice) -> Unit
+            reads: invoice.missing
+            changes: invoice.unknown
+
+        intent AuditInvoice
+
+        subject:
+          invoice: Invoice
+
+        steps:
+          1. Audit invoice
+             call: Billing.audit(invoice)
+        "#,
+    )
+    .unwrap();
+
+    let codes: Vec<_> = check_document(&document)
+        .into_iter()
+        .map(|diagnostic| diagnostic.code)
+        .collect();
+    assert!(codes.contains(&"EIGL_UNKNOWN_OPERATION_READ_TARGET".to_string()));
+    assert!(codes.contains(&"EIGL_UNKNOWN_OPERATION_CHANGE_TARGET".to_string()));
+}
+
+#[test]
 fn operation_calls_accept_expression_arguments() {
     let document = parse_rif_text(
         r#"
@@ -4119,6 +4662,65 @@ fn operation_named_outputs_round_trip_check_and_execute() {
 }
 
 #[test]
+fn operation_object_outputs_can_assign_whole_typed_objects() {
+    let document = parse_rif_text(
+        r#"
+        app CatalogTicketLookup
+
+        things:
+          thing Ticket
+            field id: Text
+            field title: Text
+
+        operations:
+          operation Catalog.fetch(id: Text) -> Ticket
+
+        intent FillTicket
+
+        subject:
+          ticket: Ticket
+
+        steps:
+          1. Fetch ticket
+             call: Catalog.fetch(ticket.id)
+             output: fetched_ticket: Ticket
+
+          2. Store returned ticket
+             set: ticket = fetched_ticket
+        "#,
+    )
+    .unwrap();
+
+    assert_eq!(check_document(&document), Vec::new());
+    let state: std::collections::BTreeMap<String, String> = [
+        ("ticket.id".to_string(), "T-1".to_string()),
+        ("ticket.title".to_string(), "Old".to_string()),
+    ]
+    .into();
+    let operation_outputs: std::collections::BTreeMap<String, String> = [(
+        "fetched_ticket".to_string(),
+        r#"{"id":"T-1","title":"Printer"}"#.to_string(),
+    )]
+    .into();
+
+    let bytecode = run_bytecode_with_operation_outputs(
+        &lower_document(&document),
+        state.clone(),
+        operation_outputs.clone(),
+        Default::default(),
+    );
+    assert_eq!(bytecode.status, "succeeded");
+    assert_eq!(bytecode.final_state["ticket.id"], "T-1");
+    assert_eq!(bytecode.final_state["ticket.title"], "Printer");
+
+    let simulation =
+        simulate_with_operation_outputs(&document, state, operation_outputs, Default::default());
+    assert_eq!(simulation.status, "succeeded");
+    assert_eq!(simulation.final_state["ticket.id"], "T-1");
+    assert_eq!(simulation.final_state["ticket.title"], "Printer");
+}
+
+#[test]
 fn checker_validates_named_operation_output_contracts() {
     let document = parse_rif_text(
         r#"
@@ -4162,6 +4764,29 @@ fn checker_validates_named_operation_output_contracts() {
         .collect();
     assert!(codes.contains(&"EIGL_OPERATION_OUTPUT_TYPE".to_string()));
     assert!(codes.contains(&"EIGL_OPERATION_OUTPUT_NAME".to_string()));
+}
+
+#[test]
+fn checker_rejects_duplicate_operation_output_names() {
+    let document = parse_rif_text(
+        r#"
+        app DuplicateOperationOutputs
+
+        operations:
+          operation Catalog.lookup(id: Text)
+            output: title: Text
+            output: title: Text
+
+        intent LookupTicket
+        "#,
+    )
+    .unwrap();
+
+    let codes: Vec<_> = check_document(&document)
+        .into_iter()
+        .map(|diagnostic| diagnostic.code)
+        .collect();
+    assert!(codes.contains(&"EIGL_DUPLICATE_OPERATION_OUTPUT".to_string()));
 }
 
 #[test]
@@ -4324,6 +4949,16 @@ fn set_assignments_accept_arithmetic_expressions() {
     .unwrap();
 
     assert_eq!(check_document(&document), Vec::new());
+    let program = build_program(&document);
+    for target in ["invoice.subtotal", "invoice.tax"] {
+        assert!(
+            program
+                .permissions
+                .iter()
+                .any(|permission| permission.kind == "Read" && permission.target == target),
+            "missing read permission for {target}"
+        );
+    }
 
     let result = run_bytecode(
         &lower_document(&document),
@@ -4833,6 +5468,44 @@ fn list_append_steps_update_aggregate_state() {
 }
 
 #[test]
+fn list_appends_infer_read_permissions_from_expressions() {
+    let document = parse_rif_text(
+        r#"
+        app ActivityLogExpressions
+
+        things:
+          thing Profile
+            field events: List<Text>
+            field prefix: Text
+            field suffix: Text
+
+        intent RecordActivity
+
+        subject:
+          profile: Profile
+
+        steps:
+          1. Append event
+             append: profile.events += profile.prefix + profile.suffix
+             changes: profile.events
+        "#,
+    )
+    .unwrap();
+
+    assert_eq!(check_document(&document), Vec::new());
+    let program = build_program(&document);
+    for target in ["profile.prefix", "profile.suffix"] {
+        assert!(
+            program
+                .permissions
+                .iter()
+                .any(|permission| permission.kind == "Read" && permission.target == target),
+            "missing read permission for {target}"
+        );
+    }
+}
+
+#[test]
 fn list_index_expressions_drive_runtime_flow() {
     let document = parse_rif_text(
         r#"
@@ -5215,6 +5888,123 @@ fn map_iteration_drives_runtime_flow() {
 }
 
 #[test]
+fn checker_reports_invalid_iteration_sources() {
+    let document = parse_rif_text(
+        r#"
+        app BrokenIteration
+
+        things:
+          thing Ticket
+            field id: Text
+            field status: State<Open, Closed>
+
+          thing Profile
+            field name: Text
+            field current: Text
+
+        collections:
+          collection tickets: Ticket
+
+        intent IterateBrokenSources
+
+        subject:
+          profile: Profile
+
+        steps:
+          1. Iterate scalar
+             for each: profile.name as letter
+             set: profile.current = letter
+
+          2. Iterate unknown
+             for each: profile.missing as missing
+             set: profile.current = missing
+
+          3. Iterate bad collection filter
+             for each: tickets[missing=Closed] as ticket_id
+             set: profile.current = ticket_id
+        "#,
+    )
+    .unwrap();
+
+    let codes: Vec<_> = check_document(&document)
+        .into_iter()
+        .map(|diagnostic| diagnostic.code)
+        .collect();
+    assert!(codes.contains(&"EIGL_ITERATION_SOURCE_TYPE".to_string()));
+    assert!(codes.contains(&"EIGL_UNKNOWN_ITERATION_SOURCE".to_string()));
+    assert!(codes.contains(&"EIGL_UNKNOWN_COLLECTION_SELECTOR_FIELD".to_string()));
+}
+
+#[test]
+fn checker_rejects_scalar_collection_iteration_sources() {
+    let document = parse_rif_text(
+        r#"
+        app BrokenCollectionIteration
+
+        things:
+          thing Ticket
+            field id: Text
+
+          thing Report
+            field value: Text
+
+        collections:
+          collection tickets: Ticket
+
+        intent IterateScalarProjection
+
+        subject:
+          report: Report
+
+        steps:
+          1. Iterate count
+             for each: tickets.count as count
+             set: report.value = count
+        "#,
+    )
+    .unwrap();
+
+    let codes: Vec<_> = check_document(&document)
+        .into_iter()
+        .map(|diagnostic| diagnostic.code)
+        .collect();
+    assert!(codes.contains(&"EIGL_ITERATION_SOURCE_TYPE".to_string()));
+}
+
+#[test]
+fn checker_reports_invalid_step_permission_targets() {
+    let document = parse_rif_text(
+        r#"
+        app BrokenPermissions
+
+        things:
+          thing Invoice
+            field subtotal: Int
+            field total: Int
+
+        intent CalculateInvoice
+
+        subject:
+          invoice: Invoice
+
+        steps:
+          1. Calculate total
+             reads: invoice.missing
+             changes: invoice.unknown
+             set: invoice.total = invoice.subtotal
+        "#,
+    )
+    .unwrap();
+
+    let codes: Vec<_> = check_document(&document)
+        .into_iter()
+        .map(|diagnostic| diagnostic.code)
+        .collect();
+    assert!(codes.contains(&"EIGL_UNKNOWN_READ_TARGET".to_string()));
+    assert!(codes.contains(&"EIGL_UNKNOWN_CHANGE_TARGET".to_string()));
+}
+
+#[test]
 fn map_entry_assignments_update_runtime_map_values() {
     let document = parse_rif_text(
         r#"
@@ -5352,6 +6142,51 @@ fn container_entry_deletes_update_runtime_values() {
             .final_state
             .contains_key("dashboard.counts.closed")
     );
+}
+
+#[test]
+fn checker_reports_invalid_delete_targets() {
+    let document = parse_rif_text(
+        r#"
+        app BrokenDeletes
+
+        things:
+          thing Profile
+            field events: List<Text>
+            field counts: Map<Text, Int>
+            field name: Text
+            field bad_index: Text
+            field bad_key: Int
+
+        intent RemoveBrokenEntries
+
+        subject:
+          profile: Profile
+
+        steps:
+          1. Delete list with text index
+             delete: profile.events[profile.bad_index]
+
+          2. Delete map with int key
+             delete: profile.counts[profile.bad_key]
+
+          3. Delete indexed scalar
+             delete: profile.name[0]
+
+          4. Delete unknown path
+             delete: profile.missing[0]
+        "#,
+    )
+    .unwrap();
+
+    let codes: Vec<_> = check_document(&document)
+        .into_iter()
+        .map(|diagnostic| diagnostic.code)
+        .collect();
+    assert!(codes.contains(&"EIGL_DELETE_INDEX_TYPE".to_string()));
+    assert!(codes.contains(&"EIGL_DELETE_KEY_TYPE".to_string()));
+    assert!(codes.contains(&"EIGL_DELETE_TARGET_TYPE".to_string()));
+    assert!(codes.contains(&"EIGL_UNKNOWN_DELETE_TARGET".to_string()));
 }
 
 #[test]
@@ -8145,6 +8980,52 @@ fn invoke_steps_accept_expression_bindings_for_child_inputs() {
 }
 
 #[test]
+fn checker_rejects_local_compute_values_before_invoke_bindings() {
+    let document = parse_rif_text(
+        r#"
+        app FutureInvokeBindingLocal
+
+        things:
+          thing Invoice
+            field subtotal: Int
+            field tax: Int
+            field total: Int
+
+        intent FinalizeInvoice
+
+        subject:
+          invoice: Invoice
+
+        steps:
+          1. Delegate total too early
+             invoke: StoreTotal(total = line_total)
+
+          2. Calculate local total
+             compute: line_total = invoice.subtotal + invoice.tax
+
+        intent StoreTotal
+
+        subject:
+          invoice: Invoice
+
+        inputs:
+          total: Int
+
+        steps:
+          1. Store calculated total
+             set: invoice.total = total
+        "#,
+    )
+    .unwrap();
+
+    let codes: Vec<_> = check_document(&document)
+        .into_iter()
+        .map(|diagnostic| diagnostic.code)
+        .collect();
+    assert!(codes.contains(&"EIGL_LOCAL_VALUE_UNAVAILABLE".to_string()));
+}
+
+#[test]
 fn checker_requires_missing_invocation_bindings() {
     let document = parse_rif_text(
         r#"
@@ -8393,6 +9274,36 @@ fn intent_returns_publish_typed_object_aliases() {
 }
 
 #[test]
+fn checker_rejects_duplicate_return_aliases() {
+    let document = parse_rif_text(
+        r#"
+        app DuplicateReturns
+
+        things:
+          thing Ticket
+            field id: Text
+            field title: Text
+
+        intent ShowTicket
+
+        subject:
+          ticket: Ticket
+
+        returns:
+          result: ticket.id
+          result: ticket.title
+        "#,
+    )
+    .unwrap();
+
+    let codes: Vec<_> = check_document(&document)
+        .into_iter()
+        .map(|diagnostic| diagnostic.code)
+        .collect();
+    assert!(codes.contains(&"EIGL_DUPLICATE_RETURN".to_string()));
+}
+
+#[test]
 fn intent_returns_publish_literal_aliases() {
     let document = parse_rif_text(
         r#"
@@ -8554,6 +9465,414 @@ fn checker_reports_unknown_compute_expression_reference() {
         .map(|diagnostic| diagnostic.code)
         .collect();
     assert!(codes.contains(&"EIGL_UNKNOWN_EXPRESSION_REFERENCE".to_string()));
+}
+
+#[test]
+fn checker_rejects_step_outputs_before_they_are_available() {
+    let document = parse_rif_text(
+        r#"
+        app FutureOutputReference
+
+        things:
+          thing Ticket
+            field id: Text
+            field title: Text
+
+        operations:
+          operation Catalog.title(id: Text) -> Text
+
+        intent FillTicket
+
+        subject:
+          ticket: Ticket
+
+        steps:
+          1. Store title too early
+             set: ticket.title = fetched_title
+
+          2. Fetch title
+             call: Catalog.title(ticket.id)
+             output: fetched_title: Text
+        "#,
+    )
+    .unwrap();
+
+    let codes: Vec<_> = check_document(&document)
+        .into_iter()
+        .map(|diagnostic| diagnostic.code)
+        .collect();
+    assert!(codes.contains(&"EIGL_OUTPUT_UNAVAILABLE".to_string()));
+}
+
+#[test]
+fn checker_rejects_step_outputs_before_invoke_bindings() {
+    let document = parse_rif_text(
+        r#"
+        app FutureInvokeBindingOutput
+
+        things:
+          thing Ticket
+            field id: Text
+            field title: Text
+
+        operations:
+          operation Catalog.title(id: Text) -> Text
+
+        intent FillTicket
+
+        subject:
+          ticket: Ticket
+
+        steps:
+          1. Delegate title too early
+             invoke: StoreTitle(title = fetched_title)
+
+          2. Fetch title
+             call: Catalog.title(ticket.id)
+             output: fetched_title: Text
+
+        intent StoreTitle
+
+        subject:
+          ticket: Ticket
+
+        inputs:
+          title: Text
+
+        steps:
+          1. Store title
+             set: ticket.title = title
+        "#,
+    )
+    .unwrap();
+
+    let codes: Vec<_> = check_document(&document)
+        .into_iter()
+        .map(|diagnostic| diagnostic.code)
+        .collect();
+    assert!(codes.contains(&"EIGL_OUTPUT_UNAVAILABLE".to_string()));
+}
+
+#[test]
+fn checker_rejects_duplicate_step_output_names() {
+    let document = parse_rif_text(
+        r#"
+        app DuplicateStepOutputs
+
+        things:
+          thing Ticket
+            field id: Text
+
+        operations:
+          operation Catalog.title(id: Text) -> Text
+          operation Catalog.summary(id: Text) -> Text
+
+        intent FillTicket
+
+        subject:
+          ticket: Ticket
+
+        steps:
+          1. Fetch title
+             call: Catalog.title(ticket.id)
+             output: fetched_text: Text
+
+          2. Fetch summary
+             call: Catalog.summary(ticket.id)
+             output: fetched_text: Text
+        "#,
+    )
+    .unwrap();
+
+    let codes: Vec<_> = check_document(&document)
+        .into_iter()
+        .map(|diagnostic| diagnostic.code)
+        .collect();
+    assert!(codes.contains(&"EIGL_DUPLICATE_OUTPUT".to_string()));
+}
+
+#[test]
+fn checker_rejects_local_compute_values_before_they_are_available() {
+    let document = parse_rif_text(
+        r#"
+        app FutureLocalComputeReference
+
+        things:
+          thing Invoice
+            field subtotal: Int
+            field tax: Int
+            field total: Int
+
+        intent CalculateInvoice
+
+        subject:
+          invoice: Invoice
+
+        steps:
+          1. Store total too early
+             set: invoice.total = line_total
+
+          2. Calculate local total
+             compute: line_total = invoice.subtotal + invoice.tax
+        "#,
+    )
+    .unwrap();
+
+    let codes: Vec<_> = check_document(&document)
+        .into_iter()
+        .map(|diagnostic| diagnostic.code)
+        .collect();
+    assert!(codes.contains(&"EIGL_LOCAL_VALUE_UNAVAILABLE".to_string()));
+}
+
+#[test]
+fn checker_rejects_local_compute_values_in_intent_requirements() {
+    let document = parse_rif_text(
+        r#"
+        app RequirementLocalComputeReference
+
+        things:
+          thing Invoice
+            field subtotal: Int
+            field tax: Int
+
+        intent CalculateInvoice
+
+        subject:
+          invoice: Invoice
+
+        requires:
+          line_total > 0
+
+        steps:
+          1. Calculate local total
+             compute: line_total = invoice.subtotal + invoice.tax
+        "#,
+    )
+    .unwrap();
+
+    let codes: Vec<_> = check_document(&document)
+        .into_iter()
+        .map(|diagnostic| diagnostic.code)
+        .collect();
+    assert!(codes.contains(&"EIGL_LOCAL_VALUE_UNAVAILABLE".to_string()));
+}
+
+#[test]
+fn checker_rejects_outputs_from_skippable_guarded_steps() {
+    let document = parse_rif_text(
+        r#"
+        app GuardedOutputReference
+
+        things:
+          thing Ticket
+            field id: Text
+            field title: Text
+
+        operations:
+          operation Catalog.title(id: Text) -> Text
+
+        intent FillTicket
+
+        subject:
+          ticket: Ticket
+
+        steps:
+          1. Fetch title conditionally
+             when: ticket.id == "T-1"
+             call: Catalog.title(ticket.id)
+             output: fetched_title: Text
+
+          2. Store title
+             set: ticket.title = fetched_title
+        "#,
+    )
+    .unwrap();
+
+    let codes: Vec<_> = check_document(&document)
+        .into_iter()
+        .map(|diagnostic| diagnostic.code)
+        .collect();
+    assert!(codes.contains(&"EIGL_OUTPUT_UNAVAILABLE".to_string()));
+}
+
+#[test]
+fn checker_rejects_local_computes_from_skippable_guarded_steps() {
+    let document = parse_rif_text(
+        r#"
+        app GuardedLocalComputeReference
+
+        things:
+          thing Invoice
+            field subtotal: Int
+            field tax: Int
+            field total: Int
+
+        intent CalculateInvoice
+
+        subject:
+          invoice: Invoice
+
+        steps:
+          1. Calculate local total conditionally
+             when: invoice.subtotal > 0
+             compute: line_total = invoice.subtotal + invoice.tax
+
+          2. Store total
+             set: invoice.total = line_total
+        "#,
+    )
+    .unwrap();
+
+    let codes: Vec<_> = check_document(&document)
+        .into_iter()
+        .map(|diagnostic| diagnostic.code)
+        .collect();
+    assert!(codes.contains(&"EIGL_LOCAL_VALUE_UNAVAILABLE".to_string()));
+}
+
+#[test]
+fn checker_rejects_unavailable_step_outputs_in_returns() {
+    let document = parse_rif_text(
+        r#"
+        app GuardedOutputReturn
+
+        things:
+          thing Ticket
+            field id: Text
+
+        operations:
+          operation Catalog.title(id: Text) -> Text
+
+        intent FetchTicketTitle
+
+        subject:
+          ticket: Ticket
+
+        steps:
+          1. Fetch title conditionally
+             when: ticket.id == "T-1"
+             call: Catalog.title(ticket.id)
+             output: fetched_title: Text
+
+        returns:
+          title: fetched_title
+        "#,
+    )
+    .unwrap();
+
+    let codes: Vec<_> = check_document(&document)
+        .into_iter()
+        .map(|diagnostic| diagnostic.code)
+        .collect();
+    assert!(codes.contains(&"EIGL_OUTPUT_UNAVAILABLE".to_string()));
+}
+
+#[test]
+fn checker_rejects_unavailable_local_computes_in_returns() {
+    let document = parse_rif_text(
+        r#"
+        app GuardedLocalComputeReturn
+
+        things:
+          thing Invoice
+            field subtotal: Int
+            field tax: Int
+
+        intent CalculateInvoice
+
+        subject:
+          invoice: Invoice
+
+        steps:
+          1. Calculate total conditionally
+             when: invoice.subtotal > 0
+             compute: line_total = invoice.subtotal + invoice.tax
+
+        returns:
+          amount: line_total
+        "#,
+    )
+    .unwrap();
+
+    let codes: Vec<_> = check_document(&document)
+        .into_iter()
+        .map(|diagnostic| diagnostic.code)
+        .collect();
+    assert!(codes.contains(&"EIGL_LOCAL_VALUE_UNAVAILABLE".to_string()));
+}
+
+#[test]
+fn checker_rejects_unavailable_step_outputs_in_guarantees() {
+    let document = parse_rif_text(
+        r#"
+        app GuardedOutputGuarantee
+
+        things:
+          thing Ticket
+            field id: Text
+
+        operations:
+          operation Catalog.title(id: Text) -> Text
+
+        intent FetchTicketTitle
+
+        subject:
+          ticket: Ticket
+
+        steps:
+          1. Fetch title conditionally
+             when: ticket.id == "T-1"
+             call: Catalog.title(ticket.id)
+             output: fetched_title: Text
+
+        guarantees:
+          if this intent succeeds:
+            fetched_title exists
+        "#,
+    )
+    .unwrap();
+
+    let codes: Vec<_> = check_document(&document)
+        .into_iter()
+        .map(|diagnostic| diagnostic.code)
+        .collect();
+    assert!(codes.contains(&"EIGL_OUTPUT_UNAVAILABLE".to_string()));
+}
+
+#[test]
+fn checker_rejects_unavailable_local_computes_in_guarantees() {
+    let document = parse_rif_text(
+        r#"
+        app GuardedLocalComputeGuarantee
+
+        things:
+          thing Invoice
+            field subtotal: Int
+            field tax: Int
+
+        intent CalculateInvoice
+
+        subject:
+          invoice: Invoice
+
+        steps:
+          1. Calculate total conditionally
+             when: invoice.subtotal > 0
+             compute: line_total = invoice.subtotal + invoice.tax
+
+        guarantees:
+          if this intent succeeds:
+            line_total > 0
+        "#,
+    )
+    .unwrap();
+
+    let codes: Vec<_> = check_document(&document)
+        .into_iter()
+        .map(|diagnostic| diagnostic.code)
+        .collect();
+    assert!(codes.contains(&"EIGL_LOCAL_VALUE_UNAVAILABLE".to_string()));
 }
 
 #[test]
@@ -10305,6 +11624,130 @@ fn cli_rejects_runtime_state_result_values_with_invalid_inner_value() {
             "invalid runtime value for 'payment.confirmation': expected Result<Int, Text>"
         )
     );
+}
+
+#[test]
+fn cli_uses_supplied_operation_output_values() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let document_path = temp_path("operation-output-values.rif.md");
+    fs::write(
+        &document_path,
+        r#"
+        app OperationOutputValues
+
+        things:
+          thing Ticket
+            field id: Text
+            field title: Text
+
+        operations:
+          operation Catalog.title(id: Text) -> Text
+
+        intent FillTicketTitle
+
+        subject:
+          ticket: Ticket
+
+        steps:
+          1. Fetch title
+             call: Catalog.title(ticket.id)
+             output: fetched_title: Text
+          2. Store fetched title
+             set: ticket.title = fetched_title
+        "#,
+    )
+    .unwrap();
+
+    let run = Command::new(binary)
+        .args([
+            "run",
+            document_path.to_str().unwrap(),
+            "--operation-output",
+            "fetched_title=Printer",
+            "ticket.id=T-1",
+            "ticket.title=Old",
+        ])
+        .current_dir(env!("CARGO_MANIFEST_DIR"))
+        .output()
+        .unwrap();
+
+    assert!(
+        run.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&run.stdout),
+        String::from_utf8_lossy(&run.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&run.stdout);
+    assert!(stdout.contains("ticket.title=Printer"));
+    assert!(!stdout.contains("fetched_title#1"));
+
+    let _ = fs::remove_file(document_path);
+}
+
+#[test]
+fn cli_accepts_operation_outputs_for_invoked_intents() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let document_path = temp_path("invoked-operation-output-values.rif.md");
+    fs::write(
+        &document_path,
+        r#"
+        app InvokedOperationOutputValues
+
+        things:
+          thing Ticket
+            field id: Text
+            field title: Text
+
+        operations:
+          operation Catalog.title(id: Text) -> Text
+
+        intent FillTicketViaChild
+
+        subject:
+          ticket: Ticket
+
+        steps:
+          1. Fill from child
+             invoke: LookupTicketTitle(ticket = ticket)
+
+        intent LookupTicketTitle
+
+        subject:
+          ticket: Ticket
+
+        steps:
+          1. Fetch title
+             call: Catalog.title(ticket.id)
+             output: fetched_title: Text
+          2. Store fetched title
+             set: ticket.title = fetched_title
+        "#,
+    )
+    .unwrap();
+
+    let run = Command::new(binary)
+        .args([
+            "run",
+            document_path.to_str().unwrap(),
+            "--operation-output",
+            "fetched_title=Printer",
+            "ticket.id=T-1",
+            "ticket.title=Old",
+        ])
+        .current_dir(env!("CARGO_MANIFEST_DIR"))
+        .output()
+        .unwrap();
+
+    assert!(
+        run.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&run.stdout),
+        String::from_utf8_lossy(&run.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&run.stdout);
+    assert!(stdout.contains("ticket.title=Printer"));
+
+    let _ = fs::remove_file(document_path);
 }
 
 #[test]

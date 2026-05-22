@@ -452,8 +452,8 @@ fn build_step(
         if let Some((left, right)) = split_set(statement) {
             add_permission(graph, permissions, "Change", &left, step_node);
             add_effect(graph, effects, "write", &left, step_node);
-            if looks_like_reference(&right) {
-                add_permission(graph, permissions, "Read", &right, step_node);
+            for reference in expression::references(&right) {
+                add_permission(graph, permissions, "Read", &reference, step_node);
             }
         }
     }
@@ -480,8 +480,8 @@ fn build_step(
         if let Some((left, right)) = split_append(statement) {
             add_permission(graph, permissions, "Change", &left, step_node);
             add_effect(graph, effects, "append", &left, step_node);
-            if looks_like_reference(&right) {
-                add_permission(graph, permissions, "Read", &right, step_node);
+            for reference in expression::references(&right) {
+                add_permission(graph, permissions, "Read", &reference, step_node);
             }
         }
     }
@@ -620,16 +620,6 @@ fn split_set(statement: &str) -> Option<(String, String)> {
 fn split_append(statement: &str) -> Option<(String, String)> {
     let (left, right) = statement.split_once("+=")?;
     Some((left.trim().to_string(), right.trim().to_string()))
-}
-
-fn looks_like_reference(value: &str) -> bool {
-    let Some(first) = value.chars().next() else {
-        return false;
-    };
-    (value.contains('.') || first == '_' || first.is_ascii_lowercase())
-        && value
-            .chars()
-            .all(|ch| ch == '_' || ch == '.' || ch.is_ascii_alphanumeric())
 }
 
 fn state_type_values(type_name: &str) -> Vec<&str> {

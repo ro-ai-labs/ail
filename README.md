@@ -1,6 +1,17 @@
-# EIGL Prototype
+# AIL / EIGL Prototype
 
-This repository contains an early Rust prototype of EIGL: Executable Intent Graph Language.
+AIL means Agentic Intent Language. It is the active language direction for this
+repository: a semantic programming language and toolchain where humans begin in
+English, AI agents help clarify intent, and checked deterministic artifacts
+compile into executable behavior.
+
+The current language specification suite starts at
+[`docs/ail/README.md`](docs/ail/README.md).
+
+This repository also contains an early Rust prototype from the previous EIGL:
+Executable Intent Graph Language direction. The prototype remains useful
+bootstrap scaffolding while AIL names, specs, and toolchain contracts are
+defined.
 
 The prototype starts from explicit RIF documents, builds an EIG-Core graph, checks safety rules, renders text views, and simulates simple process graphs.
 
@@ -16,11 +27,46 @@ RIF also accepts an optional `module` line near the top of a document. The modul
 
 `llm-roundtrip` sends canonical RIF to a local llama.cpp endpoint, asks it to rewrite the document back into RSL, and then verifies that parsing the rewrite returns the same canonical RIF. The default endpoint is `http://inteligentia-pro-1:8080/v1/chat/completions`; legacy `/completion` endpoints are still supported when passed with `--llm-endpoint`.
 
+AIL package commands operate on package directories such as
+`examples/support_ticket.ail`. `ail-check` loads the package entry spec and
+runs AIL-Core diagnostics, `ail-core` prints deterministic AIL-Core,
+`ail-flow` prints a deterministic AIL-Flow JSON projection for no-code
+inspection, `ail-lower` prints deterministic AIL-Bytecode, `ail-patch
+<patch-file>` applies a checked AIL patch and prints canonical AIL-Spec,
+`ail-run --action <ActionName>` executes through the current AIL bytecode VM,
+`ail-vm --action <ActionName>` verifies and executes a saved AIL-Bytecode
+artifact directly, `ail-conformance` checks accepted and rejected fixtures,
+`ail-draft --prompt <text>` asks the package base LLM endpoint for an AIL-Spec
+candidate before parsing and checking it, and `ail-build --prompt <text>` asks
+the base LLM for requirements, asks it to turn those requirements into an
+Application AIL-Spec candidate, and prints verified AIL-Bytecode on success.
+The default AIL base LLM endpoint is
+`http://inteligentia-pro-1:8080/v1/chat/completions`.
+
+AIL package metadata can declare imports with `imports: <path> as <Alias>`.
+Imported fragments are namespace boundaries, so imported things, actions, and
+failures are qualified under the alias before checking and rendering.
+
 `unresolved questions:` sections keep ambiguity explicit in RIF. The checker rejects documents that still contain unresolved questions, which makes clarification a first-class part of the authoring loop instead of a hidden guess.
 
 Run commands through Cargo:
 
 ```sh
+cargo run -- ail-check examples/support_ticket.ail
+cargo run -- ail-core examples/support_ticket.ail
+cargo run -- ail-flow examples/support_ticket.ail
+cargo run -- ail-lower examples/support_ticket.ail
+cargo run -- ail-patch examples/support_ticket.ail examples/support_ticket.ail/examples/patches/escalate-ticket.ail-patch.md
+cargo run -- ail-core examples/support_composed.ail
+cargo run -- ail-run examples/support_ticket.ail --action CloseTicket ticket.id=T-1 ticket.status=Open
+cargo run -- ail-vm /tmp/support-ticket.ailbc.json --action CloseTicket ticket.id=T-1 ticket.status=Open
+cargo run -- ail-conformance examples/support_ticket.ail
+cargo run -- ail-conformance examples/ail_toolchain_agent.ail
+cargo run -- ail-conformance examples/refund_tool.ail
+cargo run -- ail-conformance examples/compiler_pass.ail
+cargo run -- ail-conformance examples/network_driver.ail
+cargo run -- ail-draft examples/support_ticket.ail --prompt "Draft a support ticket app with private internal notes" --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
+cargo run -- ail-build examples/support_ticket.ail --prompt "Build a support ticket bytecode artifact" --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
 cargo run -- check examples/confirm_order.rif.md
 cargo run -- graph examples/confirm_order.rif.md
 cargo run -- views examples/confirm_order.rif.md
@@ -102,7 +148,7 @@ Steps can delete durable records with `delete:` lines. A delete path removes the
 
 Collection paths also support simple queries. `tickets.count` returns the number of stored ticket records, `tickets.keys` returns the record ids as comma-delimited text, `tickets.keys_json` returns the record ids as a JSON string array for response bodies, `tickets.records` returns stored records as `List<Ticket>`, and `tickets[id].record` returns the first matching `Ticket` object. Compatibility projections `tickets.records_json` and `tickets[id].record_json` expose the same values as `List<Map<Text, Text>>` and `Map<Text, Text>`; record projections preserve boolean, numeric, `None`/`null`, list, and map JSON values. `tickets[status=Closed].count` filters by a field value before counting or deleting. Field filters can use literals, live values, typed arithmetic/text expressions, or `contains` membership checks with `=`, `==`, `!=`, `>`, `<`, `>=`, `<=`, and `contains`, so application rules can express selectors such as `tickets[priority>=2].count`, `tickets[priority>=report.minimum_priority + 1].count`, and `tickets[tags contains "urgent"].count`. Filters can combine clauses with `and`, such as `tickets[status=Open and priority>=2]`, `tickets[title contains "printer" and tags contains "urgent"]`, or the same selectors with `.records`, `.record`, `.records_json`, and `.record_json` suffixes. The checker validates selector field types and rejects invalid combinations such as ordering a state field against a number.
 
-Steps can also iterate over collection matches with `for each: tickets[status=Closed] as ticket_id`. Inside the step body, the current record id is available under the item name, so the step can update or delete each matching record in turn. The same `for each:` form can iterate over list values, such as `for each: profile.events as event`, where the item name holds each element value, or maps, such as `for each: dashboard.counts as status`, where the item name holds each key.
+Steps can also iterate over collection matches with `for each: tickets[status=Closed] as ticket_id`. Inside the step body, the current record id is available under the item name, so the step can update or delete each matching record in turn. Collection record projections iterate as typed objects, so `for each: tickets[status=Open].records as ticket` lets the step read fields such as `ticket.id` and `ticket.title`. The same `for each:` form can iterate over list values, such as `for each: profile.events as event`, where the item name holds each element value, or maps, such as `for each: dashboard.counts as status`, where the item name holds each key.
 
 Predicates in `requires:`, `when:`, and `guarantees:` can combine simple checks with `and`, `or`, `not`, and parentheses. `not` binds tighter than `and`, and `and` binds tighter than `or`. Predicates also support `value exists`, including collection paths such as `tickets[id].id exists`, plus `contains` checks for text substrings, list elements, and map keys such as `account.email contains "@"`, `account.roles contains "admin"`, or `account.flags contains "beta"`. The checker validates reference-shaped operands on both sides of a predicate, so `invoice.status is invoice.expected_status` is checked as a field-to-field comparison while scalar values such as `Draft`, `true`, `12.50`, and quoted strings remain literals. It also rejects invalid typed predicate combinations before runtime, such as ordering a `State` or comparing `Money` with `Decimal`. Runtime comparisons order normalized `Int`/`Decimal` values, same-currency `Money` values, UTC `Time` values, and exact-unit `Duration` values using weeks, days, hours, minutes, or seconds, so guards can express thresholds such as `product.discount_rate < 0.50`, `invoice.total >= USD:20.00`, or `job.timeout <= PT1H`.
 
@@ -128,15 +174,15 @@ Steps can also invoke other intents in the same application with `invoke:` and `
 
 Steps can fan out to multiple intents with `parallel invoke:` and `otherwise parallel invoke:`. Each branch runs from the same state snapshot, and the runtime rejects conflicting writes during the join.
 
-Operations can accept typed expression arguments in `call:` lines. They can return one anonymous value with `operation Name(...) -> Type`, which a step may store under any local `output:` name. Operations can also declare named output contracts with indented `output: name: Type` lines; callers must store those returned names with matching types, and the checker reports missing, unknown, or mismatched output declarations before runtime.
+Operations can accept typed expression arguments in `call:` lines. They can return one anonymous value with `operation Name(...) -> Type`, which a step may store under any local `output:` name. Operations can also declare named output contracts with indented `output: name: Type` lines; callers must store those returned names with matching types, and the checker reports duplicate, missing, unknown, or mismatched output declarations before runtime. Step output names must be unique within an intent so later references and supplied `--operation-output name=value` values are unambiguous. Local execution can supply deterministic external operation results with repeated `--operation-output name=value` flags; supplied values are validated against the step output type and are used wherever that output name is read, while omitted outputs keep the existing placeholder value.
 
-Intents can publish explicit result aliases with `returns:`. Each alias names a source value from the final state, a step output, a typed literal, a declared `thing` object, or a typed arithmetic/text expression, so reusable workflows can expose a stable public result without leaking every internal field. A whole-object alias such as `result: ticket` renders the declared fields as a JSON object, which endpoint response contracts can return as a typed object.
+Intent names must be unique in an application so invocations, endpoints, triggers, and CLI selection resolve one workflow. Intents can publish explicit result aliases with `returns:`. Each alias names a source value from the final state, a step output, a typed literal, a declared `thing` object, or a typed arithmetic/text expression, so reusable workflows can expose a stable public result without leaking every internal field. Return alias names must be unique within the intent. A whole-object alias such as `result: ticket` renders the declared fields as a JSON object, which endpoint response contracts can return as a typed object.
 
 The CLI can load initial runtime state from `--state-in <file>` and write the final state back with `--state-out <file>`. State files use the same `key=value` line format as command-line runtime assignments.
 
 Durable collection data uses the same line format, but is loaded with `--data-in <file>` and written back with `--data-out <file>`.
 
-Applications can define request routes in an `endpoints:` section. A route names an HTTP method, a path, and a target intent, can declare typed request fields with a `request:` block, can add `requires:` guards for request-level access control, and maps incoming request values into typed state paths with `bind:` lines. When a `request:` block is present, binding sources must come from declared request fields, path parameters, framework request values such as `auth.*`, `headers.*`, `cookies.*`, and `query.*`, known runtime state expressions, or typed arithmetic/text expressions composed from those sources; the checker reports undeclared request fields and type mismatches before runtime. Query parameters can be declared and validated as typed request fields such as `query.status: State<Open, Closed>`, then used in guards, bindings, and responses as `query.status`. Request fields can also use declared `thing` types, so a JSON object request value such as `ticket: Ticket` is validated against the `Ticket` fields and `bind: ticket = ticket` expands it into `ticket.id`, `ticket.title`, and the other declared state fields; `dispatch` and form-style callers can pass the same object as one aggregate request value such as `ticket={"id":"T-1","title":"Printer"}`. Durable collection records can be loaded the same way, so `bind: ticket = tickets[id]` copies the selected record into the target intent subject. The `dispatch` command resolves a route, validates declared request fields, applies the bindings, and runs the target intent against the current state. Missing or invalid declared request fields fail with `BadRequest`, which can be shaped with an `error BadRequest:` response block.
+Applications can define request routes in an `endpoints:` section. A route names an HTTP method, a path, and a target intent, can declare typed request fields with a `request:` block, can add `requires:` guards for request-level access control, and maps incoming request values into typed state paths with `bind:` lines. Endpoint method/path pairs must be unique in the application, with methods compared case-insensitively. When a `request:` block is present, binding sources must come from declared request fields, path parameters, framework request values such as `auth.*`, `headers.*`, `cookies.*`, and `query.*`, known runtime state expressions, or typed arithmetic/text expressions composed from those sources; the checker reports undeclared request fields and type mismatches before runtime. Query parameters can be declared and validated as typed request fields such as `query.status: State<Open, Closed>`, then used in guards, bindings, and responses as `query.status`. Request fields can also use declared `thing` types, so a JSON object request value such as `ticket: Ticket` is validated against the `Ticket` fields and `bind: ticket = ticket` expands it into `ticket.id`, `ticket.title`, and the other declared state fields; `dispatch` and form-style callers can pass the same object as one aggregate request value such as `ticket={"id":"T-1","title":"Printer"}`. Durable collection records can be loaded the same way, so `bind: ticket = tickets[id]` copies the selected record into the target intent subject. The `dispatch` command resolves a route, validates declared request fields, applies the bindings, and runs the target intent against the current state. Missing or invalid declared request fields fail with `BadRequest`, which can be shaped with an `error BadRequest:` response block.
 
 Route paths can use `{name}` segments. Those segments bind to the matching request path parts, so `POST /tickets/{id}` can capture `id` from `/tickets/INC-99` and feed it into the target intent like any other request value.
 
@@ -146,7 +192,7 @@ The `serve` command starts a small HTTP server that uses the same endpoint defin
 
 This lets the same endpoint model support both API tokens and browser-style session cookies without changing the application logic model.
 
-Applications can also define non-HTTP ingress in a `triggers:` section. Triggers name an external event, can declare typed payload fields with a `payload:` block, can add `requires:` guards, and map payload values into typed state paths with `bind:` lines. Binding sources can be payload fields, `event.*` metadata, known runtime state expressions, or typed arithmetic/text expressions composed from those sources. The checker validates declared payload types, rejects undeclared payload binding sources, and reports payload-to-target type mismatches. The `emit` command resolves a trigger, validates declared payload fields, applies the bindings, and runs the target intent against the current state. Missing or invalid declared payload fields fail with `BadEvent`.
+Applications can also define non-HTTP ingress in a `triggers:` section. Triggers name an external event, can declare typed payload fields with a `payload:` block, can add `requires:` guards, and map payload values into typed state paths with `bind:` lines. Trigger names must be unique in the application. Binding sources can be payload fields, `event.*` metadata, known runtime state expressions, or typed arithmetic/text expressions composed from those sources. The checker validates declared payload types, rejects undeclared payload binding sources, and reports payload-to-target type mismatches. The `emit` command resolves a trigger, validates declared payload fields, applies the bindings, and runs the target intent against the current state. Missing or invalid declared payload fields fail with `BadEvent`.
 
 Trigger payload values are exposed as `event.<name>` bindings, and the trigger name is always available as `event.name`. This keeps queue messages, pub/sub events, and other external inputs in the same guard and binding model as endpoints without forcing them through HTTP.
 

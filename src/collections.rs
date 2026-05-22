@@ -107,6 +107,9 @@ where
     let Some(parsed) = parse_collection_path(query) else {
         return Vec::new();
     };
+    if !parsed.suffix.is_empty() {
+        return Vec::new();
+    }
     matching_collection_ids(state, parsed.name, parsed.selector, &mut resolve).unwrap_or_default()
 }
 

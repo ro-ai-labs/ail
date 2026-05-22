@@ -15,6 +15,11 @@ type ParallelJoin = (
     Vec<String>,
 );
 
+struct ExecutionControls<'a> {
+    operation_outputs: &'a BTreeMap<String, String>,
+    fail_at: &'a BTreeMap<String, String>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SimulationResult {
     pub status: String,
@@ -29,9 +34,22 @@ pub fn simulate(
     initial_state: BTreeMap<String, String>,
     fail_at: BTreeMap<String, String>,
 ) -> SimulationResult {
+    simulate_with_operation_outputs(document, initial_state, BTreeMap::new(), fail_at)
+}
+
+pub fn simulate_with_operation_outputs(
+    document: &RifDocument,
+    initial_state: BTreeMap<String, String>,
+    operation_outputs: BTreeMap<String, String>,
+    fail_at: BTreeMap<String, String>,
+) -> SimulationResult {
     let mut state = initial_state;
     let mut outputs = BTreeMap::new();
     let mut trace = Vec::new();
+    let controls = ExecutionControls {
+        operation_outputs: &operation_outputs,
+        fail_at: &fail_at,
+    };
 
     for requirement in &document.intent.requires {
         if evaluate_predicate(&requirement.text, &state, &outputs) {
@@ -79,7 +97,7 @@ pub fn simulate(
                         &mut state,
                         &mut outputs,
                         &mut trace,
-                        &fail_at,
+                        &controls,
                     ) {
                         return result;
                     }
@@ -91,7 +109,7 @@ pub fn simulate(
                 &mut state,
                 &mut outputs,
                 &mut trace,
-                &fail_at,
+                &controls,
             ) {
                 return result;
             }
@@ -158,14 +176,16 @@ fn execute_step_body(
     state: &mut BTreeMap<String, String>,
     outputs: &mut BTreeMap<String, String>,
     trace: &mut Vec<String>,
-    fail_at: &BTreeMap<String, String>,
+    controls: &ExecutionControls<'_>,
 ) -> Option<SimulationResult> {
     let call = if use_else {
         step.otherwise_call.as_ref()
     } else {
         step.call.as_ref()
     };
-    if let Some(failure) = call.and_then(|call| forced_failure(step, &call.target, fail_at)) {
+    if let Some(failure) =
+        call.and_then(|call| forced_failure(step, &call.target, controls.fail_at))
+    {
         return Some(apply_failure(
             document,
             step,
@@ -177,7 +197,14 @@ fn execute_step_body(
     }
 
     for output in step.outputs.keys() {
-        outputs.insert(output.clone(), format!("{output}#{}", step.number));
+        outputs.insert(
+            output.clone(),
+            controls
+                .operation_outputs
+                .get(output)
+                .cloned()
+                .unwrap_or_else(|| format!("{output}#{}", step.number)),
+        );
         trace.push(format!("produce {output}"));
     }
 
@@ -239,7 +266,12 @@ fn execute_step_body(
         };
         let mut child_state = state.clone();
         apply_invocation_bindings(target, document, state, outputs, &mut child_state);
-        let mut result = simulate(&subdocument, child_state, fail_at.clone());
+        let mut result = simulate_with_operation_outputs(
+            &subdocument,
+            child_state,
+            controls.operation_outputs.clone(),
+            controls.fail_at.clone(),
+        );
         trace.extend(result.trace);
         if result.status == "failed" {
             return Some(SimulationResult {
@@ -274,7 +306,8 @@ fn execute_step_body(
             parallel_targets,
             state.clone(),
             outputs.clone(),
-            fail_at.clone(),
+            controls.operation_outputs.clone(),
+            controls.fail_at.clone(),
         ) {
             Ok((merged_state, merged_outputs, parallel_trace)) => {
                 trace.extend(parallel_trace);
@@ -335,6 +368,13 @@ fn object_source_type(document: &crate::rif_model::RifDocument, source: &str) ->
             object_field_type(document, &collection_type, field_path)
         };
     }
+    if let Some(output_type) = operation_output_source_type(document, root) {
+        return if field_path.is_empty() {
+            Some(output_type)
+        } else {
+            object_field_type(document, &output_type, field_path)
+        };
+    }
     let root_type = document
         .intent
         .subjects
@@ -356,6 +396,18 @@ fn collection_record_type(document: &crate::rif_model::RifDocument, path: &str) 
         .collections
         .get(collection_name)
         .map(|collection| collection.type_name.clone())
+}
+
+fn operation_output_source_type(
+    document: &crate::rif_model::RifDocument,
+    output_name: &str,
+) -> Option<String> {
+    document
+        .intent
+        .steps
+        .iter()
+        .find_map(|step| step.outputs.get(output_name))
+        .map(|output| output.type_name.clone())
 }
 
 fn split_object_path_suffix(path: &str) -> (&str, &str) {
@@ -433,11 +485,7 @@ fn typed_object_state_value_with_outputs(
                 outputs,
             )?
         } else {
-            let resolved_source = resolve_state_path(&field_source, state, outputs);
-            state
-                .get(&resolved_source)
-                .or_else(|| outputs.get(&resolved_source))?
-                .clone()
+            runtime_value_with_outputs(&field_source, state, outputs)?
         };
         entries.push(format!(
             "{}:{}",
@@ -446,6 +494,23 @@ fn typed_object_state_value_with_outputs(
         ));
     }
     Some(format!("{{{}}}", entries.join(",")))
+}
+
+fn runtime_value_with_outputs(
+    source: &str,
+    state: &BTreeMap<String, String>,
+    outputs: &BTreeMap<String, String>,
+) -> Option<String> {
+    let resolved_source = resolve_state_path(source, state, outputs);
+    state
+        .get(&resolved_source)
+        .or_else(|| outputs.get(&resolved_source))
+        .cloned()
+        .or_else(|| {
+            expression::resolve_object_field_lookup(source, |name| {
+                runtime_value_with_outputs(name, state, outputs)
+            })
+        })
 }
 
 fn apply_failure(
@@ -618,11 +683,7 @@ fn copy_typed_object_fields(
                 outputs,
             )?);
         } else {
-            let resolved_source = resolve_state_path(&source_field, state, outputs);
-            let value = state
-                .get(&resolved_source)
-                .or_else(|| outputs.get(&resolved_source))?
-                .clone();
+            let value = runtime_value_with_outputs(&source_field, state, outputs)?;
             let resolved_target = resolve_state_path(&target_field, state, outputs);
             state.insert(resolved_target.clone(), value);
             changed_fields.push(resolved_target);
@@ -1939,6 +2000,7 @@ fn run_parallel_invocations(
     targets: &[InvocationTarget],
     base_state: BTreeMap<String, String>,
     base_outputs: BTreeMap<String, String>,
+    operation_outputs: BTreeMap<String, String>,
     fail_at: BTreeMap<String, String>,
 ) -> Result<ParallelJoin, SimulationResult> {
     let mut merged_state = base_state.clone();
@@ -1966,7 +2028,12 @@ fn run_parallel_invocations(
             &base_outputs,
             &mut child_state,
         );
-        let mut result = simulate(&subdocument, child_state, fail_at.clone());
+        let mut result = simulate_with_operation_outputs(
+            &subdocument,
+            child_state,
+            operation_outputs.clone(),
+            fail_at.clone(),
+        );
         trace.extend(result.trace);
         if result.status == "failed" {
             return Err(SimulationResult {

@@ -5,15 +5,22 @@ use std::io::{Read, Write};
 use std::net::TcpListener;
 use std::process::ExitCode;
 
+use eigl::ail::{
+    apply_ail_patch, check_ail_core, compile_ail_bytecode, draft_ail_requirements, draft_ail_spec,
+    draft_ail_spec_from_requirements, elaborate_ail_core, load_ail_package_dir, parse_ail_bytecode,
+    parse_ail_package_document, parse_ail_package_spec_text, parse_ail_patch_text,
+    render_ail_bytecode, render_ail_core, render_ail_flow_view, render_ail_runtime_state_lines,
+    render_ail_spec, run_ail_bytecode_action, run_ail_conformance, verify_ail_bytecode,
+};
 use eigl::apply_rif_patch;
 use eigl::checker::check_document;
 use eigl::collections::{collection_path_value_with, collection_record_keys};
 use eigl::core_model::{json_string, json_value};
-use eigl::eig_ir::{lower_document, run_bytecode};
+use eigl::eig_ir::{lower_document, run_bytecode_with_operation_outputs};
 use eigl::explanations::explain_intent;
 use eigl::expression;
 use eigl::graph_builder::build_program;
-use eigl::interpreter::simulate;
+use eigl::interpreter::simulate_with_operation_outputs;
 use eigl::llm_round_trip;
 use eigl::parse_rif_patch;
 use eigl::predicate;
@@ -32,12 +39,15 @@ struct CliOptions {
     state_out: Option<String>,
     data_in: Option<String>,
     data_out: Option<String>,
+    operation_outputs: BTreeMap<String, String>,
     listen: Option<String>,
     llm_endpoint: Option<String>,
     patch_path: Option<String>,
     dispatch_method: Option<String>,
     dispatch_path: Option<String>,
     trigger_name: Option<String>,
+    ail_action: Option<String>,
+    ail_prompt: Option<String>,
 }
 
 struct EndpointExecutionResult {
@@ -59,12 +69,29 @@ fn main() -> ExitCode {
 }
 
 fn run(args: Vec<String>) -> Result<u8, String> {
-    if args.len() < 2 || (args[0] == "patch" && args.len() < 3) {
+    if args.len() < 2 || (matches!(args[0].as_str(), "patch" | "ail-patch") && args.len() < 3) {
         return Err(usage());
     }
     let command = &args[0];
     let path = &args[1];
     let cli_options = parse_cli_options(command, &args[2..])?;
+    if command == "ail-vm" {
+        return run_ail_vm_command(path, &cli_options);
+    }
+    if matches!(
+        command.as_str(),
+        "ail-check"
+            | "ail-core"
+            | "ail-flow"
+            | "ail-lower"
+            | "ail-run"
+            | "ail-conformance"
+            | "ail-draft"
+            | "ail-build"
+            | "ail-patch"
+    ) {
+        return run_ail_command(command, path, &cli_options);
+    }
     let mut document = parse_document_file(path)?;
     if let Some(intent_name) = &cli_options.selected_intent {
         select_intent(&mut document, intent_name)?;
@@ -118,7 +145,13 @@ fn run(args: Vec<String>) -> Result<u8, String> {
         "simulate" => {
             let runtime_state = load_execution_state(&cli_options)?;
             validate_runtime_state(&document, &runtime_state)?;
-            let result = simulate(&document, runtime_state, BTreeMap::new());
+            validate_operation_outputs(&document, &cli_options.operation_outputs)?;
+            let result = simulate_with_operation_outputs(
+                &document,
+                runtime_state,
+                cli_options.operation_outputs.clone(),
+                BTreeMap::new(),
+            );
             println!("{}", result.status);
             if let Some(failure) = &result.failure {
                 println!("failure={failure}");
@@ -147,8 +180,14 @@ fn run(args: Vec<String>) -> Result<u8, String> {
         "run" => {
             let runtime_state = load_execution_state(&cli_options)?;
             validate_runtime_state(&document, &runtime_state)?;
+            validate_operation_outputs(&document, &cli_options.operation_outputs)?;
             let bytecode = lower_document(&document);
-            let result = run_bytecode(&bytecode, runtime_state, BTreeMap::new());
+            let result = run_bytecode_with_operation_outputs(
+                &bytecode,
+                runtime_state,
+                cli_options.operation_outputs.clone(),
+                BTreeMap::new(),
+            );
             println!("bytecode {}", result.status);
             if let Some(failure) = &result.failure {
                 println!("failure={failure}");
@@ -184,6 +223,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
                 request_path,
                 &runtime_state,
                 &cli_options.request_state,
+                &cli_options.operation_outputs,
             )?;
             println!("dispatch {}", result.run.status);
             if let Some(failure) = &result.run.failure {
@@ -239,6 +279,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
                 trigger_name,
                 &runtime_state,
                 &cli_options.request_state,
+                &cli_options.operation_outputs,
             )?;
             println!("{command} {}", result.status);
             if let Some(failure) = &result.failure {
@@ -321,8 +362,233 @@ fn run(args: Vec<String>) -> Result<u8, String> {
 }
 
 fn usage() -> String {
-    "usage: eigl <check|graph|views|simulate|lower|run|dispatch|emit|schedule|dequeue|serve|normalize|patch|llm-roundtrip|view-model> <path> [patch] [--intent name] [--state-in path] [--state-out path] [--data-in path] [--data-out path] [--listen addr] [--llm-endpoint url] [method path|trigger] [key=value ...]"
+    "usage: eigl <check|graph|views|simulate|lower|run|dispatch|emit|schedule|dequeue|serve|normalize|patch|llm-roundtrip|view-model|ail-check|ail-core|ail-flow|ail-lower|ail-run|ail-vm|ail-conformance|ail-draft|ail-build|ail-patch> <path> [patch] [--intent name] [--action name] [--prompt text] [--state-in path] [--state-out path] [--data-in path] [--data-out path] [--operation-output name=value] [--listen addr] [--llm-endpoint url] [method path|trigger] [key=value ...]"
         .to_string()
+}
+
+fn run_ail_vm_command(path: &str, cli_options: &CliOptions) -> Result<u8, String> {
+    let action = cli_options
+        .ail_action
+        .as_deref()
+        .ok_or_else(|| "ail-vm requires --action <name>".to_string())?;
+    let bytecode_text =
+        fs::read_to_string(path).map_err(|error| format!("failed to read {path}: {error}"))?;
+    let bytecode = parse_ail_bytecode(&bytecode_text)?;
+    let diagnostics = verify_ail_bytecode(&bytecode);
+    if !diagnostics.is_empty() {
+        println!("ail-vm diagnostics:");
+        for diagnostic in diagnostics {
+            println!("{diagnostic}");
+        }
+        return Ok(1);
+    }
+    let result = run_ail_bytecode_action(&bytecode, action, cli_options.runtime_state.clone())?;
+    println!("ail-vm {}", result.status);
+    if let Some(failure) = &result.failure {
+        println!("failure={failure}");
+    }
+    for (key, value) in &result.final_state {
+        println!("{key}={value}");
+    }
+    if !result.trace.is_empty() {
+        println!("trace={}", result.trace.join(" -> "));
+    }
+    Ok(if result.status == "succeeded" { 0 } else { 1 })
+}
+
+fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Result<u8, String> {
+    let package = load_ail_package_dir(path)?;
+    if command == "ail-conformance" {
+        let result = run_ail_conformance(&package)?;
+        println!("ail conformance: package {}", result.package_name);
+        if result.accepted_diagnostics.is_empty() {
+            println!("valid: {}", result.accepted_fixture);
+        } else {
+            for diagnostic in &result.accepted_diagnostics {
+                println!(
+                    "valid: {} {}",
+                    result.accepted_fixture,
+                    diagnostic.detailed_message()
+                );
+            }
+        }
+        for fixture in &result.accepted {
+            if fixture.diagnostics.is_empty() {
+                println!("accepted: {}", fixture.fixture);
+            } else {
+                for diagnostic in &fixture.diagnostics {
+                    println!(
+                        "accepted: {} {}",
+                        fixture.fixture,
+                        diagnostic.detailed_message()
+                    );
+                }
+            }
+        }
+        for fixture in &result.rejected {
+            if fixture.diagnostics.is_empty() {
+                println!("rejected: {} unexpectedly accepted", fixture.fixture);
+            } else {
+                for diagnostic in &fixture.diagnostics {
+                    println!(
+                        "rejected: {} {}",
+                        fixture.fixture,
+                        diagnostic.detailed_message()
+                    );
+                }
+            }
+        }
+        if result.success() {
+            println!("ail conformance: ok");
+            return Ok(0);
+        }
+        println!("ail conformance: failed");
+        return Ok(1);
+    }
+    if command == "ail-draft" {
+        let prompt = cli_options
+            .ail_prompt
+            .as_deref()
+            .ok_or_else(|| "ail-draft requires --prompt <text>".to_string())?;
+        let endpoint = cli_options
+            .llm_endpoint
+            .as_deref()
+            .unwrap_or(&package.metadata.base_llm_endpoint);
+        let result = draft_ail_spec(&package, prompt, endpoint)?;
+        println!("ail-draft candidate:");
+        println!("{}", result.spec_text);
+        if result.success() {
+            println!("ail-draft diagnostics: none");
+            return Ok(0);
+        }
+        println!("ail-draft diagnostics:");
+        for diagnostic in result.diagnostics {
+            println!("{}", diagnostic.detailed_message());
+        }
+        return Ok(1);
+    }
+    if command == "ail-build" {
+        let prompt = cli_options
+            .ail_prompt
+            .as_deref()
+            .ok_or_else(|| "ail-build requires --prompt <text>".to_string())?;
+        let endpoint = cli_options
+            .llm_endpoint
+            .as_deref()
+            .unwrap_or(&package.metadata.base_llm_endpoint);
+        let requirements = draft_ail_requirements(&package, prompt, endpoint)?;
+        let draft = draft_ail_spec_from_requirements(&package, prompt, &requirements, endpoint)?;
+        if !draft.success() {
+            println!("ail-build diagnostics:");
+            for diagnostic in draft.diagnostics {
+                println!("{}", diagnostic.detailed_message());
+            }
+            return Ok(1);
+        }
+        let document = parse_ail_package_spec_text(&package, &draft.spec_text)?;
+        let bytecode = compile_ail_bytecode(&package, &document)?;
+        let diagnostics = verify_ail_bytecode(&bytecode);
+        if !diagnostics.is_empty() {
+            println!("ail-build diagnostics:");
+            for diagnostic in diagnostics {
+                println!("{diagnostic}");
+            }
+            return Ok(1);
+        }
+        println!("{}", render_ail_bytecode(&bytecode));
+        return Ok(0);
+    }
+    let document = parse_ail_package_document(&package)?;
+    if command == "ail-patch" {
+        let Some(patch_path) = cli_options.patch_path.as_ref() else {
+            return Err("ail-patch requires a patch file".to_string());
+        };
+        let patch_text = fs::read_to_string(patch_path)
+            .map_err(|error| format!("failed to read {patch_path}: {error}"))?;
+        let patch = parse_ail_patch_text(&patch_text)?;
+        let patched = apply_ail_patch(&document, &patch)?;
+        let core = elaborate_ail_core(&package, &patched);
+        let diagnostics = check_ail_core(&core);
+        if !diagnostics.is_empty() {
+            for diagnostic in diagnostics {
+                println!("{diagnostic}");
+            }
+            return Ok(1);
+        }
+        println!("{}", render_ail_spec(&patched));
+        return Ok(0);
+    }
+    let core = elaborate_ail_core(&package, &document);
+    let diagnostics = check_ail_core(&core);
+    match command {
+        "ail-check" => {
+            println!("ail package: {}", package.metadata.name);
+            println!("profile: {}", package.metadata.profile);
+            println!("base_llm_endpoint: {}", package.metadata.base_llm_endpoint);
+            if diagnostics.is_empty() {
+                println!("ail diagnostics: none");
+                Ok(0)
+            } else {
+                println!("ail diagnostics:");
+                for diagnostic in diagnostics {
+                    println!("{diagnostic}");
+                }
+                Ok(1)
+            }
+        }
+        "ail-core" => {
+            if !diagnostics.is_empty() {
+                for diagnostic in diagnostics {
+                    println!("{diagnostic}");
+                }
+                return Ok(1);
+            }
+            println!("{}", render_ail_core(&core));
+            Ok(0)
+        }
+        "ail-flow" => {
+            if !diagnostics.is_empty() {
+                for diagnostic in diagnostics {
+                    println!("{diagnostic}");
+                }
+                return Ok(1);
+            }
+            println!("{}", render_ail_flow_view(&core));
+            Ok(0)
+        }
+        "ail-lower" => {
+            if !diagnostics.is_empty() {
+                for diagnostic in diagnostics {
+                    println!("{diagnostic}");
+                }
+                return Ok(1);
+            }
+            let bytecode = compile_ail_bytecode(&package, &document)?;
+            println!("{}", render_ail_bytecode(&bytecode));
+            Ok(0)
+        }
+        "ail-run" => {
+            let action = cli_options
+                .ail_action
+                .as_deref()
+                .ok_or_else(|| "ail-run requires --action <name>".to_string())?;
+            let bytecode = compile_ail_bytecode(&package, &document)?;
+            let result =
+                run_ail_bytecode_action(&bytecode, action, cli_options.runtime_state.clone())?;
+            println!("ail-run {}", result.status);
+            if let Some(failure) = &result.failure {
+                println!("failure={failure}");
+            }
+            for line in render_ail_runtime_state_lines(&document, &result.final_state) {
+                println!("{line}");
+            }
+            if !result.trace.is_empty() {
+                println!("trace={}", result.trace.join(" -> "));
+            }
+            Ok(if result.status == "succeeded" { 0 } else { 1 })
+        }
+        _ => Err(format!("unknown AIL command '{command}'")),
+    }
 }
 
 fn print_runtime_state(document: &RifDocument, runtime_state: &BTreeMap<String, String>) {
@@ -385,16 +651,19 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
     let mut state_out = None;
     let mut data_in = None;
     let mut data_out = None;
+    let mut operation_outputs = BTreeMap::new();
     let mut listen = None;
     let mut llm_endpoint = None;
     let mut patch_path = None;
     let mut dispatch_method = None;
     let mut dispatch_path = None;
     let mut trigger_name = None;
+    let mut ail_action = None;
+    let mut ail_prompt = None;
     let mut index = 0;
-    if command == "patch" {
+    if command == "patch" || command == "ail-patch" {
         let Some(path) = args.get(index) else {
-            return Err("patch requires a patch file".to_string());
+            return Err(format!("{command} requires a patch file"));
         };
         patch_path = Some(path.clone());
         index += 1;
@@ -424,6 +693,28 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
                 return Err("missing value for --intent".to_string());
             };
             selected_intent = Some(intent_name.clone());
+            index += 2;
+            continue;
+        }
+        if arg == "--action" {
+            if !matches!(command, "ail-run" | "ail-vm") {
+                return Err(usage());
+            }
+            let Some(action_name) = args.get(index + 1) else {
+                return Err("missing value for --action".to_string());
+            };
+            ail_action = Some(action_name.clone());
+            index += 2;
+            continue;
+        }
+        if arg == "--prompt" {
+            if !matches!(command, "ail-draft" | "ail-build") {
+                return Err(usage());
+            }
+            let Some(prompt) = args.get(index + 1) else {
+                return Err("missing value for --prompt".to_string());
+            };
+            ail_prompt = Some(prompt.clone());
             index += 2;
             continue;
         }
@@ -483,6 +774,20 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
             index += 2;
             continue;
         }
+        if arg == "--operation-output" {
+            if !matches!(
+                command,
+                "run" | "simulate" | "dispatch" | "emit" | "schedule" | "dequeue" | "serve"
+            ) {
+                return Err(usage());
+            }
+            let Some(value) = args.get(index + 1) else {
+                return Err("missing value for --operation-output".to_string());
+            };
+            insert_runtime_state_arg(value, &mut operation_outputs)?;
+            index += 2;
+            continue;
+        }
         if arg == "--listen" {
             if command != "serve" {
                 return Err(usage());
@@ -496,7 +801,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         }
 
         if arg == "--llm-endpoint" {
-            if command != "llm-roundtrip" {
+            if !matches!(command, "llm-roundtrip" | "ail-draft" | "ail-build") {
                 return Err(usage());
             }
             let Some(url) = args.get(index + 1) else {
@@ -509,7 +814,15 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
 
         if !matches!(
             command,
-            "run" | "simulate" | "dispatch" | "emit" | "schedule" | "dequeue" | "serve"
+            "run"
+                | "simulate"
+                | "dispatch"
+                | "emit"
+                | "schedule"
+                | "dequeue"
+                | "serve"
+                | "ail-run"
+                | "ail-vm"
         ) && command != "dispatch"
             && command != "emit"
             && command != "schedule"
@@ -538,12 +851,15 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         state_out,
         data_in,
         data_out,
+        operation_outputs,
         listen,
         llm_endpoint,
         patch_path,
         dispatch_method,
         dispatch_path,
         trigger_name,
+        ail_action,
+        ail_prompt,
     })
 }
 
@@ -913,6 +1229,7 @@ fn execute_endpoint(
     request_path: &str,
     runtime_state: &BTreeMap<String, String>,
     request_state: &BTreeMap<String, String>,
+    operation_outputs: &BTreeMap<String, String>,
 ) -> Result<EndpointExecutionResult, String> {
     let (path, path_params) = split_request_path(request_path);
     let (endpoint, matched_path_params) = select_endpoint(document, method, path)?;
@@ -980,9 +1297,11 @@ fn execute_endpoint(
     let mut dispatch_document = document.clone();
     dispatch_document.intent = target_intent;
     validate_runtime_state(&dispatch_document, &bound_state)?;
-    let run = run_bytecode(
+    validate_operation_outputs(&dispatch_document, operation_outputs)?;
+    let run = run_bytecode_with_operation_outputs(
         &lower_document(&dispatch_document),
         bound_state,
+        operation_outputs.clone(),
         BTreeMap::new(),
     );
     let response = if run.status == "succeeded" {
@@ -1165,6 +1484,7 @@ fn execute_trigger(
     trigger_name: &str,
     runtime_state: &BTreeMap<String, String>,
     request_state: &BTreeMap<String, String>,
+    operation_outputs: &BTreeMap<String, String>,
 ) -> Result<eigl::eig_ir::BytecodeRunResult, String> {
     let trigger = select_trigger(document, trigger_name)?;
     let target_intent = document
@@ -1230,9 +1550,11 @@ fn execute_trigger(
     let mut dispatch_document = document.clone();
     dispatch_document.intent = target_intent;
     validate_runtime_state(&dispatch_document, &bound_state)?;
-    Ok(run_bytecode(
+    validate_operation_outputs(&dispatch_document, operation_outputs)?;
+    Ok(run_bytecode_with_operation_outputs(
         &lower_document(&dispatch_document),
         bound_state,
+        operation_outputs.clone(),
         BTreeMap::new(),
     ))
 }
@@ -1632,7 +1954,14 @@ fn handle_http_connection(
         path.split_once('?').map(|(_, query)| query).unwrap_or(""),
     ));
     let runtime_state = load_execution_state(cli_options)?;
-    let result = execute_endpoint(document, method, path, &runtime_state, &request_state)?;
+    let result = execute_endpoint(
+        document,
+        method,
+        path,
+        &runtime_state,
+        &request_state,
+        &cli_options.operation_outputs,
+    )?;
     let fallback_failure_status = if result.run.failure.as_deref() == Some("Unauthorized") {
         "401 Unauthorized"
     } else {
@@ -1798,6 +2127,96 @@ fn validate_runtime_state(
     }
     validate_collection_constraints(document, runtime_state)?;
     Ok(())
+}
+
+fn validate_operation_outputs(
+    document: &RifDocument,
+    operation_outputs: &BTreeMap<String, String>,
+) -> Result<(), String> {
+    let reachable_intents = reachable_intent_names(document);
+    for (name, value) in operation_outputs {
+        let output_types = reachable_operation_output_types(document, &reachable_intents, name);
+        if output_types.is_empty() {
+            return Err(format!("unknown operation output '{name}'"));
+        };
+        for type_name in output_types {
+            validate_runtime_value(document, name, value, &type_name)?;
+        }
+    }
+    Ok(())
+}
+
+fn reachable_intent_names(document: &RifDocument) -> BTreeSet<String> {
+    let mut reachable = BTreeSet::new();
+    let mut stack = vec![document.intent.name.clone()];
+    while let Some(intent_name) = stack.pop() {
+        if !reachable.insert(intent_name.clone()) {
+            continue;
+        }
+        let Some(intent) = document
+            .intents
+            .iter()
+            .find(|candidate| candidate.name == intent_name)
+            .or_else(|| (document.intent.name == intent_name).then_some(&document.intent))
+        else {
+            continue;
+        };
+        for target in invoked_intent_names(intent) {
+            if !reachable.contains(&target) {
+                stack.push(target);
+            }
+        }
+    }
+    reachable
+}
+
+fn invoked_intent_names(intent: &Intent) -> Vec<String> {
+    let mut targets = Vec::new();
+    for step in &intent.steps {
+        if let Some(invoke) = &step.invoke {
+            targets.push(invoke.target.clone());
+        }
+        targets.extend(
+            step.parallel_invokes
+                .iter()
+                .map(|invoke| invoke.target.clone()),
+        );
+        if let Some(invoke) = &step.otherwise_invoke {
+            targets.push(invoke.target.clone());
+        }
+        targets.extend(
+            step.otherwise_parallel_invokes
+                .iter()
+                .map(|invoke| invoke.target.clone()),
+        );
+    }
+    targets
+}
+
+fn reachable_operation_output_types(
+    document: &RifDocument,
+    reachable_intents: &BTreeSet<String>,
+    output_name: &str,
+) -> BTreeSet<String> {
+    document
+        .intents
+        .iter()
+        .filter(|intent| reachable_intents.contains(&intent.name))
+        .chain(
+            (!document
+                .intents
+                .iter()
+                .any(|intent| intent.name == document.intent.name))
+            .then_some(&document.intent),
+        )
+        .flat_map(|intent| {
+            intent
+                .steps
+                .iter()
+                .filter_map(|step| step.outputs.get(output_name))
+                .map(|output| output.type_name.clone())
+        })
+        .collect()
 }
 
 fn validate_collection_constraints(

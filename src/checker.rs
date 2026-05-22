@@ -6,8 +6,8 @@ use crate::graph_builder::build_program;
 use crate::imports::export_exists;
 use crate::predicate;
 use crate::rif_model::{
-    EndpointDefinition, FailureCase, Intent, InvocationTarget, OperationCall, OutputValue,
-    RifDocument, Step, TriggerDefinition,
+    EndpointDefinition, FailureCase, Intent, InvocationTarget, OperationCall, OperationDefinition,
+    OutputValue, ReturnValue, RifDocument, Step, TriggerDefinition,
 };
 
 pub fn check_document(document: &RifDocument) -> Vec<Diagnostic> {
@@ -15,7 +15,9 @@ pub fn check_document(document: &RifDocument) -> Vec<Diagnostic> {
 
     diagnostics.extend(check_graph_integrity(document));
     diagnostics.extend(check_application_declarations(document));
+    diagnostics.extend(check_top_level_names(document));
     diagnostics.extend(check_exports(document));
+    diagnostics.extend(check_operation_permission_targets(document));
     diagnostics.extend(check_endpoints(document));
     diagnostics.extend(check_triggers(document));
     for intent in &document.intents {
@@ -24,6 +26,9 @@ pub fn check_document(document: &RifDocument) -> Vec<Diagnostic> {
         diagnostics.extend(check_invocation_bindings(document, intent));
         diagnostics.extend(check_operation_call_signatures(document, intent));
         diagnostics.extend(check_output_types(document, &intent.steps));
+        diagnostics.extend(check_duplicate_step_outputs(intent));
+        diagnostics.extend(check_output_reference_availability(intent));
+        diagnostics.extend(check_local_compute_reference_availability(intent));
         diagnostics.extend(check_failure_completeness(
             document,
             &intent.steps,
@@ -34,11 +39,14 @@ pub fn check_document(document: &RifDocument) -> Vec<Diagnostic> {
             &intent.step_schedule,
         ));
         diagnostics.extend(check_requirements(document, intent));
+        diagnostics.extend(check_step_permission_targets(document, intent));
         diagnostics.extend(check_set_assignments(document, intent));
         diagnostics.extend(check_guards(document, intent));
+        diagnostics.extend(check_iteration_sources(document, intent));
         diagnostics.extend(check_repeats(document, intent));
         diagnostics.extend(check_compute_expressions(document, intent));
         diagnostics.extend(check_append_assignments(document, intent));
+        diagnostics.extend(check_delete_targets(document, intent));
         diagnostics.extend(check_returns(document, intent));
     }
     diagnostics.extend(check_secret_flows(document));
@@ -123,6 +131,7 @@ fn check_application_declarations(document: &RifDocument) -> Vec<Diagnostic> {
         }
     }
     for operation in document.application.operations.values() {
+        let mut output_names = BTreeMap::new();
         for type_name in operation.inputs.values() {
             for referenced in referenced_types(type_name) {
                 if !known_types.contains(&referenced) {
@@ -137,6 +146,18 @@ fn check_application_declarations(document: &RifDocument) -> Vec<Diagnostic> {
             }
         }
         for output in &operation.outputs {
+            if !output.name.trim().is_empty()
+                && let Some(previous_type) =
+                    output_names.insert(output.name.clone(), output.type_name.clone())
+            {
+                diagnostics.push(Diagnostic::error(
+                    "EIGL_DUPLICATE_OPERATION_OUTPUT",
+                    format!(
+                        "Operation '{}' declares output '{}' more than once, with types '{}' and '{}'.",
+                        operation.name, output.name, previous_type, output.type_name
+                    ),
+                ));
+            }
             for referenced in referenced_types(&output.type_name) {
                 if !known_types.contains(&referenced) {
                     diagnostics.push(Diagnostic::error(
@@ -194,6 +215,60 @@ fn check_application_declarations(document: &RifDocument) -> Vec<Diagnostic> {
             ));
         }
     }
+    diagnostics
+}
+
+fn check_top_level_names(document: &RifDocument) -> Vec<Diagnostic> {
+    let mut diagnostics = Vec::new();
+    let mut intent_names = BTreeSet::new();
+    for intent in &document.intents {
+        if intent.name.trim().is_empty() {
+            continue;
+        }
+        if !intent_names.insert(intent.name.clone()) {
+            diagnostics.push(
+                Diagnostic::error(
+                    "EIGL_DUPLICATE_INTENT",
+                    format!("Intent '{}' is declared more than once.", intent.name),
+                )
+                .at(format!("intent {}", intent.name)),
+            );
+        }
+    }
+
+    let mut endpoint_routes = BTreeSet::new();
+    for endpoint in &document.application.endpoints {
+        if endpoint.method.trim().is_empty() || endpoint.path.trim().is_empty() {
+            continue;
+        }
+        let route = format!("{} {}", endpoint.method.to_ascii_uppercase(), endpoint.path);
+        if !endpoint_routes.insert(route.clone()) {
+            diagnostics.push(
+                Diagnostic::error(
+                    "EIGL_DUPLICATE_ENDPOINT",
+                    format!("Endpoint route '{route}' is declared more than once."),
+                )
+                .at(format!("endpoint {} {}", endpoint.method, endpoint.path)),
+            );
+        }
+    }
+
+    let mut trigger_names = BTreeSet::new();
+    for trigger in &document.application.triggers {
+        if trigger.name.trim().is_empty() {
+            continue;
+        }
+        if !trigger_names.insert(trigger.name.clone()) {
+            diagnostics.push(
+                Diagnostic::error(
+                    "EIGL_DUPLICATE_TRIGGER",
+                    format!("Trigger '{}' is declared more than once.", trigger.name),
+                )
+                .at(format!("trigger {}", trigger.name)),
+            );
+        }
+    }
+
     diagnostics
 }
 
@@ -355,6 +430,8 @@ fn check_trigger_bindings(document: &RifDocument, trigger: &TriggerDefinition) -
     else {
         return diagnostics;
     };
+    let declared_outputs = declared_output_targets(intent);
+    let declared_locals = local_compute_targets(intent);
     for (target, source) in &trigger.bindings {
         let target_type = expression_type(document, intent, target);
         if target_type.is_none() {
@@ -376,6 +453,13 @@ fn check_trigger_bindings(document: &RifDocument, trigger: &TriggerDefinition) -
             ));
             continue;
         }
+        diagnostics.extend(check_trigger_pre_run_value_availability(
+            trigger,
+            &format!("binding '{target}'"),
+            source,
+            &declared_outputs,
+            &declared_locals,
+        ));
         let source_type = trigger_binding_source_type(document, intent, trigger, source);
         if source_type.is_none() && !trigger.payload_fields.is_empty() {
             diagnostics.push(Diagnostic::error(
@@ -465,7 +549,16 @@ fn check_trigger_requirements(
     else {
         return diagnostics;
     };
+    let declared_outputs = declared_output_targets(intent);
+    let declared_locals = local_compute_targets(intent);
     for requirement in &trigger.requires {
+        diagnostics.extend(check_trigger_pre_run_value_availability(
+            trigger,
+            &format!("requirement '{requirement}'"),
+            requirement,
+            &declared_outputs,
+            &declared_locals,
+        ));
         for reference in predicate::references(requirement) {
             if !trigger_requirement_reference_is_known(
                 document,
@@ -492,6 +585,76 @@ fn check_trigger_requirements(
         ));
     }
     diagnostics
+}
+
+fn check_trigger_pre_run_value_availability(
+    trigger: &TriggerDefinition,
+    context: &str,
+    expression: &str,
+    declared_outputs: &BTreeSet<String>,
+    declared_locals: &BTreeSet<String>,
+) -> Vec<Diagnostic> {
+    let mut diagnostics = Vec::new();
+    diagnostics.extend(
+        trigger_pre_run_declared_references(trigger, expression, declared_outputs)
+            .into_iter()
+            .map(|output| {
+                Diagnostic::error(
+                    "EIGL_OUTPUT_UNAVAILABLE",
+                    format!(
+                        "Trigger '{}' {} refers to output '{}' before it is available.",
+                        trigger.name, context, output
+                    ),
+                )
+                .at(format!("trigger {}", trigger.name))
+            }),
+    );
+    diagnostics.extend(
+        trigger_pre_run_declared_references(trigger, expression, declared_locals)
+            .into_iter()
+            .map(|local| {
+                Diagnostic::error(
+                    "EIGL_LOCAL_VALUE_UNAVAILABLE",
+                    format!(
+                        "Trigger '{}' {} refers to local value '{}' before it is available.",
+                        trigger.name, context, local
+                    ),
+                )
+                .at(format!("trigger {}", trigger.name))
+            }),
+    );
+    diagnostics
+}
+
+fn trigger_pre_run_declared_references(
+    trigger: &TriggerDefinition,
+    expression: &str,
+    declared: &BTreeSet<String>,
+) -> BTreeSet<String> {
+    expression::references(expression)
+        .into_iter()
+        .filter_map(|reference| {
+            if trigger_pre_run_reference_is_available(trigger, &reference) {
+                return None;
+            }
+            if declared.contains(&reference) {
+                return Some(reference);
+            }
+            let root = root_name(&reference);
+            if trigger_pre_run_reference_is_available(trigger, root) {
+                return None;
+            }
+            declared.contains(root).then(|| root.to_string())
+        })
+        .collect()
+}
+
+fn trigger_pre_run_reference_is_available(trigger: &TriggerDefinition, reference: &str) -> bool {
+    let root = root_name(reference);
+    reference.starts_with("event.")
+        || root == "event"
+        || trigger.payload_fields.contains_key(reference)
+        || trigger.payload_fields.contains_key(root)
 }
 
 fn trigger_requirement_reference_is_known(
@@ -538,6 +701,7 @@ fn check_endpoint_bindings(
 ) -> Vec<Diagnostic> {
     let mut diagnostics = Vec::new();
     let allowed_request_sources = endpoint_allowed_request_sources(endpoint);
+    let path_params = endpoint_path_params(&endpoint.path);
     let Some(intent) = document
         .intents
         .iter()
@@ -545,6 +709,8 @@ fn check_endpoint_bindings(
     else {
         return diagnostics;
     };
+    let declared_outputs = declared_output_targets(intent);
+    let declared_locals = local_compute_targets(intent);
     for (target, source) in &endpoint.bindings {
         let target_type = expression_type(document, intent, target);
         if target_type.is_none() {
@@ -566,6 +732,14 @@ fn check_endpoint_bindings(
             ));
             continue;
         }
+        diagnostics.extend(check_endpoint_pre_run_value_availability(
+            endpoint,
+            &path_params,
+            &format!("binding '{target}'"),
+            source,
+            &declared_outputs,
+            &declared_locals,
+        ));
         let source_type = endpoint_binding_source_type(
             document,
             intent,
@@ -673,8 +847,18 @@ fn check_endpoint_requirements(
     else {
         return diagnostics;
     };
+    let declared_outputs = declared_output_targets(intent);
+    let declared_locals = local_compute_targets(intent);
     for requirement in &endpoint.requires {
         let condition = endpoint_requirement_condition(requirement);
+        diagnostics.extend(check_endpoint_pre_run_value_availability(
+            endpoint,
+            &path_params,
+            &format!("requirement '{requirement}'"),
+            condition,
+            &declared_outputs,
+            &declared_locals,
+        ));
         for reference in predicate::references(condition) {
             if endpoint_requirement_reference_is_known(
                 document,
@@ -707,6 +891,83 @@ fn check_endpoint_requirements(
     diagnostics
 }
 
+fn check_endpoint_pre_run_value_availability(
+    endpoint: &EndpointDefinition,
+    path_params: &BTreeSet<String>,
+    context: &str,
+    expression: &str,
+    declared_outputs: &BTreeSet<String>,
+    declared_locals: &BTreeSet<String>,
+) -> Vec<Diagnostic> {
+    let mut diagnostics = Vec::new();
+    diagnostics.extend(
+        endpoint_pre_run_declared_references(endpoint, path_params, expression, declared_outputs)
+            .into_iter()
+            .map(|output| {
+                Diagnostic::error(
+                    "EIGL_OUTPUT_UNAVAILABLE",
+                    format!(
+                        "Endpoint '{} {}' {} refers to output '{}' before it is available.",
+                        endpoint.method, endpoint.path, context, output
+                    ),
+                )
+                .at(format!("endpoint {} {}", endpoint.method, endpoint.path))
+            }),
+    );
+    diagnostics.extend(
+        endpoint_pre_run_declared_references(endpoint, path_params, expression, declared_locals)
+            .into_iter()
+            .map(|local| {
+                Diagnostic::error(
+                    "EIGL_LOCAL_VALUE_UNAVAILABLE",
+                    format!(
+                        "Endpoint '{} {}' {} refers to local value '{}' before it is available.",
+                        endpoint.method, endpoint.path, context, local
+                    ),
+                )
+                .at(format!("endpoint {} {}", endpoint.method, endpoint.path))
+            }),
+    );
+    diagnostics
+}
+
+fn endpoint_pre_run_declared_references(
+    endpoint: &EndpointDefinition,
+    path_params: &BTreeSet<String>,
+    expression: &str,
+    declared: &BTreeSet<String>,
+) -> BTreeSet<String> {
+    expression::references(expression)
+        .into_iter()
+        .filter_map(|reference| {
+            if endpoint_pre_run_reference_is_available(endpoint, path_params, &reference) {
+                return None;
+            }
+            if declared.contains(&reference) {
+                return Some(reference);
+            }
+            let root = root_name(&reference);
+            if endpoint_pre_run_reference_is_available(endpoint, path_params, root) {
+                return None;
+            }
+            declared.contains(root).then(|| root.to_string())
+        })
+        .collect()
+}
+
+fn endpoint_pre_run_reference_is_available(
+    endpoint: &EndpointDefinition,
+    path_params: &BTreeSet<String>,
+    reference: &str,
+) -> bool {
+    let root = root_name(reference);
+    endpoint.request_fields.contains_key(reference)
+        || endpoint.request_fields.contains_key(root)
+        || endpoint_framework_request_source(reference)
+        || matches!(root, "auth" | "headers" | "cookies" | "query")
+        || path_params.contains(root)
+}
+
 fn endpoint_requirement_condition(requirement: &str) -> &str {
     requirement
         .rsplit_once(" else ")
@@ -726,6 +987,10 @@ fn check_endpoint_responses(
         return diagnostics;
     };
     let known = known_references(document);
+    let declared_outputs = declared_output_targets(intent);
+    let available_outputs = final_available_outputs(intent);
+    let declared_locals = local_compute_targets(intent);
+    let available_locals = final_available_local_computes(intent);
     if let Some(status) = endpoint.response_status.as_ref()
         && !valid_http_status(status)
     {
@@ -785,6 +1050,15 @@ fn check_endpoint_responses(
         "response",
         &endpoint.responses,
     ));
+    diagnostics.extend(check_endpoint_response_value_availability(
+        endpoint,
+        "response",
+        &endpoint.responses,
+        &declared_outputs,
+        &available_outputs,
+        &declared_locals,
+        &available_locals,
+    ));
     diagnostics.extend(check_endpoint_response_map(
         document,
         intent,
@@ -792,6 +1066,15 @@ fn check_endpoint_responses(
         endpoint,
         "error response",
         &endpoint.error_responses,
+    ));
+    diagnostics.extend(check_endpoint_response_value_availability(
+        endpoint,
+        "error response",
+        &endpoint.error_responses,
+        &declared_outputs,
+        &available_outputs,
+        &declared_locals,
+        &available_locals,
     ));
     for (name, error) in &endpoint.error_cases {
         diagnostics.extend(check_endpoint_response_fields(
@@ -810,6 +1093,60 @@ fn check_endpoint_responses(
             &format!("error '{name}' response"),
             &error.responses,
         ));
+        diagnostics.extend(check_endpoint_response_value_availability(
+            endpoint,
+            &format!("error '{name}' response"),
+            &error.responses,
+            &declared_outputs,
+            &available_outputs,
+            &declared_locals,
+            &available_locals,
+        ));
+    }
+    diagnostics
+}
+
+fn check_endpoint_response_value_availability(
+    endpoint: &EndpointDefinition,
+    label: &str,
+    responses: &BTreeMap<String, String>,
+    declared_outputs: &BTreeSet<String>,
+    available_outputs: &BTreeSet<String>,
+    declared_locals: &BTreeSet<String>,
+    available_locals: &BTreeSet<String>,
+) -> Vec<Diagnostic> {
+    let mut diagnostics = Vec::new();
+    for (name, source) in responses {
+        diagnostics.extend(
+            referenced_output_names(source, declared_outputs)
+                .into_iter()
+                .filter(|output| !available_outputs.contains(output))
+                .map(|output| {
+                    Diagnostic::error(
+                        "EIGL_OUTPUT_UNAVAILABLE",
+                        format!(
+                            "Endpoint '{} {}' {} '{}' refers to output '{}' before it is available.",
+                            endpoint.method, endpoint.path, label, name, output
+                        ),
+                    )
+                    .at(format!("endpoint {} {}", endpoint.method, endpoint.path))
+                }),
+        );
+        diagnostics.extend(
+            referenced_local_compute_names(source, declared_locals)
+                .into_iter()
+                .filter(|local| !available_locals.contains(local))
+                .map(|local| {
+                    Diagnostic::error(
+                        "EIGL_LOCAL_VALUE_UNAVAILABLE",
+                        format!(
+                            "Endpoint '{} {}' {} '{}' refers to local value '{}' before it is available.",
+                            endpoint.method, endpoint.path, label, name, local
+                        ),
+                    )
+                    .at(format!("endpoint {} {}", endpoint.method, endpoint.path))
+                }),
+        );
     }
     diagnostics
 }
@@ -1247,8 +1584,91 @@ fn check_operation_call_signatures(document: &RifDocument, intent: &Intent) -> V
     diagnostics
 }
 
+fn check_operation_permission_targets(document: &RifDocument) -> Vec<Diagnostic> {
+    let mut diagnostics = Vec::new();
+    for operation in document.application.operations.values() {
+        for target in &operation.reads {
+            diagnostics.extend(check_operation_permission_target(
+                document,
+                operation,
+                "read",
+                target,
+                "EIGL_UNKNOWN_OPERATION_READ_TARGET",
+            ));
+        }
+        for target in &operation.changes {
+            diagnostics.extend(check_operation_permission_target(
+                document,
+                operation,
+                "change",
+                target,
+                "EIGL_UNKNOWN_OPERATION_CHANGE_TARGET",
+            ));
+        }
+    }
+    diagnostics
+}
+
+fn check_operation_permission_target(
+    document: &RifDocument,
+    operation: &OperationDefinition,
+    kind: &str,
+    target: &str,
+    code: &str,
+) -> Vec<Diagnostic> {
+    if operation_permission_target_is_known(document, operation, target) {
+        return Vec::new();
+    }
+
+    vec![Diagnostic::error(
+        code,
+        format!(
+            "Operation '{}' declares {kind} permission for unknown target '{}'.",
+            operation.name,
+            target.trim()
+        ),
+    )]
+}
+
+fn operation_permission_target_is_known(
+    document: &RifDocument,
+    operation: &OperationDefinition,
+    target: &str,
+) -> bool {
+    let target = target.trim();
+    if target.is_empty() {
+        return false;
+    }
+    if operation_permission_target_type(document, operation, target).is_some() {
+        return true;
+    }
+    if !target.contains('.') && !target.contains('[') {
+        return true;
+    }
+
+    let root = collection_aware_root_name(target);
+    let Some(root_type) = operation.inputs.get(root) else {
+        return !has_application_declarations(document);
+    };
+    !document.application.things.contains_key(root_type)
+}
+
+fn operation_permission_target_type(
+    document: &RifDocument,
+    operation: &OperationDefinition,
+    target: &str,
+) -> Option<String> {
+    let target = target.trim();
+    if let Some(type_name) = operation.inputs.get(target) {
+        return Some(type_name.clone());
+    }
+    let (root, field_path) = target.split_once('.')?;
+    let root_type = operation.inputs.get(root)?;
+    field_type(document, root_type, field_path)
+}
+
 fn operation_output_contract<'a>(
-    operation: &'a crate::rif_model::OperationDefinition,
+    operation: &'a OperationDefinition,
     name: &str,
 ) -> Option<&'a OutputValue> {
     let output = operation.outputs.first()?;
@@ -1258,7 +1678,7 @@ fn operation_output_contract<'a>(
     operation.outputs.iter().find(|output| output.name == name)
 }
 
-fn operation_requires_stored_outputs(operation: &crate::rif_model::OperationDefinition) -> bool {
+fn operation_requires_stored_outputs(operation: &OperationDefinition) -> bool {
     operation
         .outputs
         .iter()
@@ -1303,6 +1723,33 @@ fn check_output_types(document: &RifDocument, steps: &[Step]) -> Vec<Diagnostic>
                         );
                     }
                 }
+            }
+        }
+    }
+    diagnostics
+}
+
+fn check_duplicate_step_outputs(intent: &Intent) -> Vec<Diagnostic> {
+    let mut diagnostics = Vec::new();
+    let mut output_steps = BTreeMap::new();
+    for step in &intent.steps {
+        for output in step.outputs.values() {
+            if output.name.trim().is_empty() {
+                continue;
+            }
+            if let Some(previous_step) =
+                output_steps.insert(output.name.clone(), step.title.clone())
+            {
+                diagnostics.push(
+                    Diagnostic::error(
+                        "EIGL_DUPLICATE_OUTPUT",
+                        format!(
+                            "Intent '{}' declares output '{}' in both step '{}' and step '{}'.",
+                            intent.name, output.name, previous_step, step.title
+                        ),
+                    )
+                    .at(format!("intent {}", intent.name)),
+                );
             }
         }
     }
@@ -1383,6 +1830,634 @@ fn check_unordered_change_conflicts(steps: &[Step], schedule: &str) -> Vec<Diagn
         }
     }
     diagnostics
+}
+
+fn check_output_reference_availability(intent: &Intent) -> Vec<Diagnostic> {
+    let declared_outputs = declared_output_targets(intent);
+    if declared_outputs.is_empty() {
+        return Vec::new();
+    }
+
+    let mut diagnostics = Vec::new();
+    let mut available_outputs = BTreeSet::new();
+    for step in &intent.steps {
+        if let Some(source) = &step.iterate_over {
+            diagnostics.extend(check_unavailable_output_references(
+                step,
+                source,
+                &declared_outputs,
+                &available_outputs,
+            ));
+        }
+        if let Some(guard) = &step.guard {
+            diagnostics.extend(check_unavailable_output_references(
+                step,
+                guard,
+                &declared_outputs,
+                &available_outputs,
+            ));
+        }
+        for call in step_calls(step) {
+            for arg in &call.args {
+                diagnostics.extend(check_unavailable_output_references(
+                    step,
+                    arg,
+                    &declared_outputs,
+                    &available_outputs,
+                ));
+            }
+        }
+        for invocation in step_invocations(step) {
+            for value in invocation.bindings.values() {
+                diagnostics.extend(check_unavailable_output_references(
+                    step,
+                    value,
+                    &declared_outputs,
+                    &available_outputs,
+                ));
+            }
+        }
+
+        let mut body_outputs = available_outputs.clone();
+        body_outputs.extend(step.outputs.keys().cloned());
+        for statement in step_assignments(step) {
+            if let Some((_, value)) = split_top_level_once(statement, '=') {
+                diagnostics.extend(check_unavailable_output_references(
+                    step,
+                    value.trim(),
+                    &declared_outputs,
+                    &body_outputs,
+                ));
+            }
+        }
+        for statement in step_appends(step) {
+            if let Some((_, value)) = statement.split_once("+=") {
+                diagnostics.extend(check_unavailable_output_references(
+                    step,
+                    value.trim(),
+                    &declared_outputs,
+                    &body_outputs,
+                ));
+            }
+        }
+        for statement in step_computes(step) {
+            if let Some((_, value)) = split_top_level_once(statement, '=') {
+                diagnostics.extend(check_unavailable_output_references(
+                    step,
+                    value.trim(),
+                    &declared_outputs,
+                    &body_outputs,
+                ));
+            }
+        }
+        if let Some(condition) = &step.repeat_while {
+            diagnostics.extend(check_unavailable_output_references(
+                step,
+                condition,
+                &declared_outputs,
+                &body_outputs,
+            ));
+        }
+        if let Some(condition) = &step.repeat_until {
+            diagnostics.extend(check_unavailable_output_references(
+                step,
+                condition,
+                &declared_outputs,
+                &body_outputs,
+            ));
+        }
+
+        if step_values_available_after_step(step) {
+            available_outputs.extend(step.outputs.keys().cloned());
+        }
+    }
+    for return_value in &intent.returns {
+        diagnostics.extend(check_unavailable_output_return_references(
+            intent,
+            return_value,
+            &declared_outputs,
+            &available_outputs,
+        ));
+    }
+    for guarantee in &intent.guarantees {
+        for statement in &guarantee.statements {
+            diagnostics.extend(check_unavailable_output_guarantee_references(
+                intent,
+                statement,
+                &declared_outputs,
+                &available_outputs,
+            ));
+        }
+    }
+    diagnostics
+}
+
+fn declared_output_targets(intent: &Intent) -> BTreeSet<String> {
+    intent
+        .steps
+        .iter()
+        .flat_map(|step| step.outputs.keys().cloned())
+        .collect()
+}
+
+fn final_available_outputs(intent: &Intent) -> BTreeSet<String> {
+    let mut available_outputs = BTreeSet::new();
+    for step in &intent.steps {
+        if step_values_available_after_step(step) {
+            available_outputs.extend(step.outputs.keys().cloned());
+        }
+    }
+    available_outputs
+}
+
+fn check_unavailable_output_references(
+    step: &Step,
+    expression: &str,
+    declared_outputs: &BTreeSet<String>,
+    available_outputs: &BTreeSet<String>,
+) -> Vec<Diagnostic> {
+    referenced_output_names(expression, declared_outputs)
+        .into_iter()
+        .filter(|name| !available_outputs.contains(name))
+        .map(|name| {
+            Diagnostic::error(
+                "EIGL_OUTPUT_UNAVAILABLE",
+                format!(
+                    "Step '{}' refers to output '{}' before it is available.",
+                    step.title, name
+                ),
+            )
+            .at(format!("step {}", step.number))
+        })
+        .collect()
+}
+
+fn referenced_output_names(
+    expression: &str,
+    declared_outputs: &BTreeSet<String>,
+) -> BTreeSet<String> {
+    expression::references(expression)
+        .into_iter()
+        .filter_map(|reference| {
+            if declared_outputs.contains(&reference) {
+                Some(reference)
+            } else {
+                let root = root_name(&reference);
+                declared_outputs.contains(root).then(|| root.to_string())
+            }
+        })
+        .collect()
+}
+
+fn check_unavailable_output_return_references(
+    intent: &Intent,
+    return_value: &ReturnValue,
+    declared_outputs: &BTreeSet<String>,
+    available_outputs: &BTreeSet<String>,
+) -> Vec<Diagnostic> {
+    referenced_output_names(&return_value.source, declared_outputs)
+        .into_iter()
+        .filter(|name| !available_outputs.contains(name))
+        .map(|name| {
+            Diagnostic::error(
+                "EIGL_OUTPUT_UNAVAILABLE",
+                format!(
+                    "Intent '{}' return '{}' refers to output '{}' before it is available.",
+                    intent.name, return_value.name, name
+                ),
+            )
+            .at(format!("intent {}", intent.name))
+        })
+        .collect()
+}
+
+fn check_unavailable_output_guarantee_references(
+    intent: &Intent,
+    statement: &str,
+    declared_outputs: &BTreeSet<String>,
+    available_outputs: &BTreeSet<String>,
+) -> Vec<Diagnostic> {
+    referenced_output_names(statement, declared_outputs)
+        .into_iter()
+        .filter(|name| !available_outputs.contains(name))
+        .map(|name| {
+            Diagnostic::error(
+                "EIGL_OUTPUT_UNAVAILABLE",
+                format!(
+                    "Intent '{}' guarantee '{}' refers to output '{}' before it is available.",
+                    intent.name, statement, name
+                ),
+            )
+            .at(format!("intent {}", intent.name))
+        })
+        .collect()
+}
+
+fn check_local_compute_reference_availability(intent: &Intent) -> Vec<Diagnostic> {
+    let declared_locals = local_compute_targets(intent);
+    if declared_locals.is_empty() {
+        return Vec::new();
+    }
+
+    let mut diagnostics = Vec::new();
+    let mut available_locals = BTreeSet::new();
+    for requirement in &intent.requires {
+        diagnostics.extend(
+            referenced_local_compute_names(&requirement.text, &declared_locals)
+                .into_iter()
+                .map(|name| {
+                    Diagnostic::error(
+                        "EIGL_LOCAL_VALUE_UNAVAILABLE",
+                        format!(
+                            "Intent '{}' requirement '{}' refers to local value '{}' before it is available.",
+                            intent.name, requirement.text, name
+                        ),
+                    )
+                    .at(format!("intent {}", intent.name))
+                }),
+        );
+    }
+    for step in &intent.steps {
+        if let Some(source) = &step.iterate_over {
+            diagnostics.extend(check_unavailable_local_compute_references(
+                step,
+                source,
+                &declared_locals,
+                &available_locals,
+            ));
+        }
+        if let Some(guard) = &step.guard {
+            diagnostics.extend(check_unavailable_local_compute_references(
+                step,
+                guard,
+                &declared_locals,
+                &available_locals,
+            ));
+        }
+        for call in step_calls(step) {
+            for arg in &call.args {
+                diagnostics.extend(check_unavailable_local_compute_references(
+                    step,
+                    arg,
+                    &declared_locals,
+                    &available_locals,
+                ));
+            }
+        }
+        for invocation in step_invocations(step) {
+            for value in invocation.bindings.values() {
+                diagnostics.extend(check_unavailable_local_compute_references(
+                    step,
+                    value,
+                    &declared_locals,
+                    &available_locals,
+                ));
+            }
+        }
+        for statement in step_assignments(step) {
+            if let Some((_, value)) = split_top_level_once(statement, '=') {
+                diagnostics.extend(check_unavailable_local_compute_references(
+                    step,
+                    value.trim(),
+                    &declared_locals,
+                    &available_locals,
+                ));
+            }
+        }
+        for statement in step_appends(step) {
+            if let Some((_, value)) = statement.split_once("+=") {
+                diagnostics.extend(check_unavailable_local_compute_references(
+                    step,
+                    value.trim(),
+                    &declared_locals,
+                    &available_locals,
+                ));
+            }
+        }
+
+        let mut primary_locals = available_locals.clone();
+        check_compute_branch_local_availability(
+            step,
+            &step.compute_statements,
+            &declared_locals,
+            &mut primary_locals,
+            &mut diagnostics,
+        );
+
+        let mut otherwise_locals = available_locals.clone();
+        check_compute_branch_local_availability(
+            step,
+            &step.otherwise_compute_statements,
+            &declared_locals,
+            &mut otherwise_locals,
+            &mut diagnostics,
+        );
+
+        let repeat_locals = if step.guard.is_some() && step_has_else_branch(step) {
+            set_intersection(&primary_locals, &otherwise_locals)
+        } else {
+            primary_locals.clone()
+        };
+
+        if let Some(condition) = &step.repeat_while {
+            diagnostics.extend(check_unavailable_local_compute_references(
+                step,
+                condition,
+                &declared_locals,
+                &repeat_locals,
+            ));
+        }
+        if let Some(condition) = &step.repeat_until {
+            diagnostics.extend(check_unavailable_local_compute_references(
+                step,
+                condition,
+                &declared_locals,
+                &repeat_locals,
+            ));
+        }
+
+        let mut after_step_locals = available_locals.clone();
+        if step.iterate_over.is_none() {
+            if step.guard.is_none() {
+                after_step_locals.extend(primary_locals);
+            } else if step_has_else_branch(step) {
+                after_step_locals.extend(set_intersection(&primary_locals, &otherwise_locals));
+            }
+        }
+        available_locals = after_step_locals;
+    }
+    for return_value in &intent.returns {
+        diagnostics.extend(check_unavailable_local_compute_return_references(
+            intent,
+            return_value,
+            &declared_locals,
+            &available_locals,
+        ));
+    }
+    for guarantee in &intent.guarantees {
+        for statement in &guarantee.statements {
+            diagnostics.extend(check_unavailable_local_compute_guarantee_references(
+                intent,
+                statement,
+                &declared_locals,
+                &available_locals,
+            ));
+        }
+    }
+    diagnostics
+}
+
+fn check_compute_branch_local_availability(
+    step: &Step,
+    statements: &[String],
+    declared_locals: &BTreeSet<String>,
+    available_locals: &mut BTreeSet<String>,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    for statement in statements {
+        let Some((target, value)) = split_top_level_once(statement, '=') else {
+            continue;
+        };
+        diagnostics.extend(check_unavailable_local_compute_references(
+            step,
+            value.trim(),
+            declared_locals,
+            available_locals,
+        ));
+        let target = target.trim();
+        if is_local_compute_target(target) {
+            available_locals.insert(target.to_string());
+        }
+    }
+}
+
+fn check_unavailable_local_compute_references(
+    step: &Step,
+    expression: &str,
+    declared_locals: &BTreeSet<String>,
+    available_locals: &BTreeSet<String>,
+) -> Vec<Diagnostic> {
+    referenced_local_compute_names(expression, declared_locals)
+        .into_iter()
+        .filter(|name| !available_locals.contains(name))
+        .map(|name| {
+            Diagnostic::error(
+                "EIGL_LOCAL_VALUE_UNAVAILABLE",
+                format!(
+                    "Step '{}' refers to local value '{}' before it is available.",
+                    step.title, name
+                ),
+            )
+            .at(format!("step {}", step.number))
+        })
+        .collect()
+}
+
+fn referenced_local_compute_names(
+    expression: &str,
+    declared_locals: &BTreeSet<String>,
+) -> BTreeSet<String> {
+    expression::references(expression)
+        .into_iter()
+        .filter_map(|reference| {
+            if declared_locals.contains(&reference) {
+                Some(reference)
+            } else {
+                let root = root_name(&reference);
+                declared_locals.contains(root).then(|| root.to_string())
+            }
+        })
+        .collect()
+}
+
+fn check_unavailable_local_compute_return_references(
+    intent: &Intent,
+    return_value: &ReturnValue,
+    declared_locals: &BTreeSet<String>,
+    available_locals: &BTreeSet<String>,
+) -> Vec<Diagnostic> {
+    referenced_local_compute_names(&return_value.source, declared_locals)
+        .into_iter()
+        .filter(|name| !available_locals.contains(name))
+        .map(|name| {
+            Diagnostic::error(
+                "EIGL_LOCAL_VALUE_UNAVAILABLE",
+                format!(
+                    "Intent '{}' return '{}' refers to local value '{}' before it is available.",
+                    intent.name, return_value.name, name
+                ),
+            )
+            .at(format!("intent {}", intent.name))
+        })
+        .collect()
+}
+
+fn check_unavailable_local_compute_guarantee_references(
+    intent: &Intent,
+    statement: &str,
+    declared_locals: &BTreeSet<String>,
+    available_locals: &BTreeSet<String>,
+) -> Vec<Diagnostic> {
+    referenced_local_compute_names(statement, declared_locals)
+        .into_iter()
+        .filter(|name| !available_locals.contains(name))
+        .map(|name| {
+            Diagnostic::error(
+                "EIGL_LOCAL_VALUE_UNAVAILABLE",
+                format!(
+                    "Intent '{}' guarantee '{}' refers to local value '{}' before it is available.",
+                    intent.name, statement, name
+                ),
+            )
+            .at(format!("intent {}", intent.name))
+        })
+        .collect()
+}
+
+fn local_compute_targets(intent: &Intent) -> BTreeSet<String> {
+    intent
+        .steps
+        .iter()
+        .flat_map(step_computes)
+        .filter_map(|statement| local_compute_target(statement))
+        .collect()
+}
+
+fn final_available_local_computes(intent: &Intent) -> BTreeSet<String> {
+    let mut available_locals = BTreeSet::new();
+    for step in &intent.steps {
+        let mut primary_locals = available_locals.clone();
+        for statement in &step.compute_statements {
+            if let Some(target) = local_compute_target(statement) {
+                primary_locals.insert(target);
+            }
+        }
+
+        let mut otherwise_locals = available_locals.clone();
+        for statement in &step.otherwise_compute_statements {
+            if let Some(target) = local_compute_target(statement) {
+                otherwise_locals.insert(target);
+            }
+        }
+
+        let mut after_step_locals = available_locals.clone();
+        if step.iterate_over.is_none() {
+            if step.guard.is_none() {
+                after_step_locals.extend(primary_locals);
+            } else if step_has_else_branch(step) {
+                after_step_locals.extend(set_intersection(&primary_locals, &otherwise_locals));
+            }
+        }
+        available_locals = after_step_locals;
+    }
+    available_locals
+}
+
+fn local_compute_target(statement: &str) -> Option<String> {
+    let (target, _) = split_top_level_once(statement, '=')?;
+    let target = target.trim();
+    is_local_compute_target(target).then(|| target.to_string())
+}
+
+fn step_values_available_after_step(step: &Step) -> bool {
+    step.iterate_over.is_none() && (step.guard.is_none() || step_has_else_branch(step))
+}
+
+fn step_has_else_branch(step: &Step) -> bool {
+    step.otherwise_call.is_some()
+        || step.otherwise_invoke.is_some()
+        || !step.otherwise_parallel_invokes.is_empty()
+        || !step.otherwise_set_statements.is_empty()
+        || !step.otherwise_append_statements.is_empty()
+        || !step.otherwise_compute_statements.is_empty()
+        || !step.otherwise_delete_statements.is_empty()
+}
+
+fn set_intersection(left: &BTreeSet<String>, right: &BTreeSet<String>) -> BTreeSet<String> {
+    left.intersection(right).cloned().collect()
+}
+
+fn check_step_permission_targets(document: &RifDocument, intent: &Intent) -> Vec<Diagnostic> {
+    let mut diagnostics = Vec::new();
+    for step in &intent.steps {
+        for target in &step.reads {
+            diagnostics.extend(check_step_permission_target(
+                document,
+                intent,
+                step,
+                "read",
+                target,
+                "EIGL_UNKNOWN_READ_TARGET",
+            ));
+        }
+        for target in &step.changes {
+            diagnostics.extend(check_step_permission_target(
+                document,
+                intent,
+                step,
+                "change",
+                target,
+                "EIGL_UNKNOWN_CHANGE_TARGET",
+            ));
+        }
+    }
+    diagnostics
+}
+
+fn check_step_permission_target(
+    document: &RifDocument,
+    intent: &Intent,
+    step: &Step,
+    kind: &str,
+    target: &str,
+    code: &str,
+) -> Vec<Diagnostic> {
+    let target = target.trim();
+    let location = format!("step {}", step.number);
+    let mut diagnostics = check_collection_selector_types(
+        document,
+        intent,
+        target,
+        &format!("Step '{}' {kind} permission", step.title),
+        Some(location.clone()),
+    );
+    if permission_target_is_known(document, intent, target) {
+        return diagnostics;
+    }
+
+    diagnostics.push(
+        Diagnostic::error(
+            code,
+            format!(
+                "Step '{}' declares {kind} permission for unknown target '{}'.",
+                step.title, target
+            ),
+        )
+        .at(location),
+    );
+    diagnostics
+}
+
+fn permission_target_is_known(document: &RifDocument, intent: &Intent, target: &str) -> bool {
+    let target = target.trim();
+    if target.is_empty() {
+        return false;
+    }
+    if expression_type(document, intent, target).is_some()
+        || collection_expression_type(document, intent, target).is_some()
+    {
+        return true;
+    }
+    if !target.contains('.') && !target.contains('[') {
+        return true;
+    }
+
+    let root = collection_aware_root_name(target);
+    let Some(root_type) = expression_type(document, intent, root) else {
+        return !has_application_declarations(document);
+    };
+    !document.application.things.contains_key(&root_type)
+        && !document.application.collections.contains_key(root)
 }
 
 fn check_set_assignments(document: &RifDocument, intent: &Intent) -> Vec<Diagnostic> {
@@ -1588,6 +2663,131 @@ fn check_append_assignments(document: &RifDocument, intent: &Intent) -> Vec<Diag
     diagnostics
 }
 
+fn check_delete_targets(document: &RifDocument, intent: &Intent) -> Vec<Diagnostic> {
+    let mut diagnostics = Vec::new();
+    for step in &intent.steps {
+        for target in step_deletes(step) {
+            let target = target.trim();
+            let location = format!("step {}", step.number);
+            diagnostics.extend(check_collection_selector_types(
+                document,
+                intent,
+                target,
+                &format!("Step '{}' delete", step.title),
+                Some(location.clone()),
+            ));
+            if expression_type(document, intent, target).is_some() {
+                continue;
+            }
+
+            if let Some((container, key)) = expression::split_index_lookup(target) {
+                let Some(container_type) = expression_type(document, intent, container) else {
+                    if has_application_declarations(document) {
+                        diagnostics.push(
+                            Diagnostic::error(
+                                "EIGL_UNKNOWN_DELETE_TARGET",
+                                format!(
+                                    "Step '{}' deletes unknown target '{}'.",
+                                    step.title, target
+                                ),
+                            )
+                            .at(location.clone()),
+                        );
+                    }
+                    continue;
+                };
+
+                if generic_inner(&container_type, "List").is_some() {
+                    let Some(index_type) = value_expression_type(document, intent, key) else {
+                        diagnostics.push(
+                            Diagnostic::error(
+                                "EIGL_UNKNOWN_DELETE_INDEX",
+                                format!(
+                                    "Step '{}' deletes from '{}', but index '{}' is unknown.",
+                                    step.title, container, key
+                                ),
+                            )
+                            .at(location.clone()),
+                        );
+                        continue;
+                    };
+                    if !types_compatible(&index_type, "Int") {
+                        diagnostics.push(
+                            Diagnostic::error(
+                                "EIGL_DELETE_INDEX_TYPE",
+                                format!(
+                                    "Step '{}' deletes from list '{}', but index '{}' has type '{}' instead of Int.",
+                                    step.title, container, key, index_type
+                                ),
+                            )
+                            .at(location.clone()),
+                        );
+                    }
+                    continue;
+                }
+
+                if let Some(map_types) = generic_args(&container_type, "Map")
+                    && map_types.len() == 2
+                {
+                    let key_type = value_expression_type(document, intent, key).or_else(|| {
+                        (map_types[0] == "Text" && plain_text_map_key_literal(key))
+                            .then(|| "Text".to_string())
+                    });
+                    let Some(key_type) = key_type else {
+                        diagnostics.push(
+                            Diagnostic::error(
+                                "EIGL_UNKNOWN_DELETE_KEY",
+                                format!(
+                                    "Step '{}' deletes from '{}', but key '{}' is unknown.",
+                                    step.title, container, key
+                                ),
+                            )
+                            .at(location.clone()),
+                        );
+                        continue;
+                    };
+                    if !types_compatible(&key_type, map_types[0]) {
+                        diagnostics.push(
+                            Diagnostic::error(
+                                "EIGL_DELETE_KEY_TYPE",
+                                format!(
+                                    "Step '{}' deletes from map '{}', but key '{}' has type '{}' instead of '{}'.",
+                                    step.title, container, key, key_type, map_types[0]
+                                ),
+                            )
+                            .at(location.clone()),
+                        );
+                    }
+                    continue;
+                }
+
+                diagnostics.push(
+                    Diagnostic::error(
+                        "EIGL_DELETE_TARGET_TYPE",
+                        format!(
+                            "Step '{}' deletes indexed target '{}', but '{}' has type '{}' instead of a List or Map type.",
+                            step.title, target, container, container_type
+                        ),
+                    )
+                    .at(location.clone()),
+                );
+                continue;
+            }
+
+            if has_application_declarations(document) {
+                diagnostics.push(
+                    Diagnostic::error(
+                        "EIGL_UNKNOWN_DELETE_TARGET",
+                        format!("Step '{}' deletes unknown target '{}'.", step.title, target),
+                    )
+                    .at(location),
+                );
+            }
+        }
+    }
+    diagnostics
+}
+
 fn append_value_type(
     document: &RifDocument,
     intent: &Intent,
@@ -1675,6 +2875,73 @@ fn check_guards(document: &RifDocument, intent: &crate::rif_model::Intent) -> Ve
         ));
     }
     diagnostics
+}
+
+fn check_iteration_sources(document: &RifDocument, intent: &Intent) -> Vec<Diagnostic> {
+    let mut diagnostics = Vec::new();
+    for step in &intent.steps {
+        let Some(source) = step.iterate_over.as_deref() else {
+            continue;
+        };
+        let source = source.trim();
+        let location = format!("step {}", step.number);
+        diagnostics.extend(check_collection_selector_types(
+            document,
+            intent,
+            source,
+            &format!("Step '{}' iteration", step.title),
+            Some(location.clone()),
+        ));
+        if collection_key_iteration_item_type(document, intent, source).is_some() {
+            continue;
+        }
+
+        let Some(source_type) = expression_type(document, intent, source) else {
+            if has_application_declarations(document) {
+                diagnostics.push(
+                    Diagnostic::error(
+                        "EIGL_UNKNOWN_ITERATION_SOURCE",
+                        format!(
+                            "Step '{}' iterates over unknown source '{}'.",
+                            step.title, source
+                        ),
+                    )
+                    .at(location),
+                );
+            }
+            continue;
+        };
+
+        if generic_inner(&source_type, "List").is_some()
+            || generic_args(&source_type, "Map").is_some_and(|args| args.len() == 2)
+        {
+            continue;
+        }
+
+        diagnostics.push(
+            Diagnostic::error(
+                "EIGL_ITERATION_SOURCE_TYPE",
+                format!(
+                    "Step '{}' iterates over '{}', but '{}' has type '{}' instead of a collection, List, or Map type.",
+                    step.title, source, source, source_type
+                ),
+            )
+            .at(location),
+        );
+    }
+    diagnostics
+}
+
+fn collection_key_iteration_item_type(
+    document: &RifDocument,
+    intent: &Intent,
+    source: &str,
+) -> Option<String> {
+    let (_, suffix) = split_collection_expression_suffix(source.trim());
+    if !suffix.is_empty() {
+        return None;
+    }
+    collection_expression_type(document, intent, source).map(|_| "Text".to_string())
 }
 
 fn check_repeats(document: &RifDocument, intent: &crate::rif_model::Intent) -> Vec<Diagnostic> {
@@ -1936,12 +3203,28 @@ fn check_compute_expressions(
 
 fn check_returns(document: &RifDocument, intent: &Intent) -> Vec<Diagnostic> {
     let mut diagnostics = Vec::new();
+    let mut return_sources = BTreeMap::new();
     for return_value in &intent.returns {
         if return_value.name.trim().is_empty() {
             diagnostics.push(
                 Diagnostic::error(
                     "EIGL_RETURN_NAME_REQUIRED",
                     "Intent return values must declare a name.",
+                )
+                .at(format!("intent {}", intent.name)),
+            );
+        }
+        if !return_value.name.trim().is_empty()
+            && let Some(previous_source) =
+                return_sources.insert(return_value.name.clone(), return_value.source.clone())
+        {
+            diagnostics.push(
+                Diagnostic::error(
+                    "EIGL_DUPLICATE_RETURN",
+                    format!(
+                        "Intent '{}' declares return '{}' more than once, from '{}' and '{}'.",
+                        intent.name, return_value.name, previous_source, return_value.source
+                    ),
                 )
                 .at(format!("intent {}", intent.name)),
             );
@@ -2693,6 +3976,9 @@ fn iteration_item_type(
         if source == expression {
             continue;
         }
+        if let Some(item_type) = collection_key_iteration_item_type(document, intent, source) {
+            return Some(item_type);
+        }
         let source_type = expression_type(document, intent, source)?;
         if let Some(element_type) = generic_inner(&source_type, "List") {
             return Some(element_type.to_string());
@@ -2701,9 +3987,6 @@ fn iteration_item_type(
             && map_types.len() == 2
         {
             return Some(map_types[0].to_string());
-        }
-        if collection_expression_type(document, intent, source).is_some() {
-            return Some("Text".to_string());
         }
     }
     None

@@ -432,13 +432,30 @@ pub fn run_bytecode(
     initial_state: BTreeMap<String, String>,
     fail_at: BTreeMap<String, String>,
 ) -> BytecodeRunResult {
-    run_bytecode_frame(program, initial_state, BTreeMap::new(), fail_at, 0)
+    run_bytecode_with_operation_outputs(program, initial_state, BTreeMap::new(), fail_at)
+}
+
+pub fn run_bytecode_with_operation_outputs(
+    program: &BytecodeProgram,
+    initial_state: BTreeMap<String, String>,
+    operation_outputs: BTreeMap<String, String>,
+    fail_at: BTreeMap<String, String>,
+) -> BytecodeRunResult {
+    run_bytecode_frame(
+        program,
+        initial_state,
+        BTreeMap::new(),
+        &operation_outputs,
+        fail_at,
+        0,
+    )
 }
 
 fn run_bytecode_frame(
     program: &BytecodeProgram,
     initial_state: BTreeMap<String, String>,
     initial_outputs: BTreeMap<String, String>,
+    operation_outputs: &BTreeMap<String, String>,
     fail_at: BTreeMap<String, String>,
     invoke_depth: usize,
 ) -> BytecodeRunResult {
@@ -544,6 +561,7 @@ fn run_bytecode_frame(
                         &body_program,
                         state.clone(),
                         outputs.clone(),
+                        operation_outputs,
                         fail_at.clone(),
                         invoke_depth,
                     );
@@ -702,6 +720,7 @@ fn run_bytecode_frame(
                     &subprogram,
                     child_state,
                     BTreeMap::new(),
+                    operation_outputs,
                     fail_at.clone(),
                     invoke_depth + 1,
                 );
@@ -748,6 +767,7 @@ fn run_bytecode_frame(
                     &targets,
                     state.clone(),
                     outputs.clone(),
+                    operation_outputs,
                     fail_at.clone(),
                     invoke_depth,
                 ) {
@@ -778,7 +798,13 @@ fn run_bytecode_frame(
                 }
                 let name = field(instruction, "name");
                 let step_number = field(instruction, "step_number");
-                outputs.insert(name.to_string(), format!("{name}#{step_number}"));
+                outputs.insert(
+                    name.to_string(),
+                    operation_outputs
+                        .get(name)
+                        .cloned()
+                        .unwrap_or_else(|| format!("{name}#{step_number}")),
+                );
                 trace.push(format!("STORE {name}"));
             }
             "SET_FIELD" => {
@@ -1109,6 +1135,13 @@ fn object_source_type(document: &crate::rif_model::RifDocument, source: &str) ->
             object_field_type(document, &collection_type, field_path)
         };
     }
+    if let Some(output_type) = operation_output_source_type(document, root) {
+        return if field_path.is_empty() {
+            Some(output_type)
+        } else {
+            object_field_type(document, &output_type, field_path)
+        };
+    }
     let root_type = document
         .intent
         .subjects
@@ -1130,6 +1163,18 @@ fn collection_record_type(document: &crate::rif_model::RifDocument, path: &str) 
         .collections
         .get(collection_name)
         .map(|collection| collection.type_name.clone())
+}
+
+fn operation_output_source_type(
+    document: &crate::rif_model::RifDocument,
+    output_name: &str,
+) -> Option<String> {
+    document
+        .intent
+        .steps
+        .iter()
+        .find_map(|step| step.outputs.get(output_name))
+        .map(|output| output.type_name.clone())
 }
 
 fn split_object_path_suffix(path: &str) -> (&str, &str) {
@@ -1207,11 +1252,7 @@ fn typed_object_state_value_with_outputs(
                 outputs,
             )?
         } else {
-            let resolved_source = resolve_state_path(&field_source, state, outputs);
-            state
-                .get(&resolved_source)
-                .or_else(|| outputs.get(&resolved_source))?
-                .clone()
+            runtime_value_with_outputs(&field_source, state, outputs)?
         };
         entries.push(format!(
             "{}:{}",
@@ -1220,6 +1261,23 @@ fn typed_object_state_value_with_outputs(
         ));
     }
     Some(format!("{{{}}}", entries.join(",")))
+}
+
+fn runtime_value_with_outputs(
+    source: &str,
+    state: &BTreeMap<String, String>,
+    outputs: &BTreeMap<String, String>,
+) -> Option<String> {
+    let resolved_source = resolve_state_path(source, state, outputs);
+    state
+        .get(&resolved_source)
+        .or_else(|| outputs.get(&resolved_source))
+        .cloned()
+        .or_else(|| {
+            expression::resolve_object_field_lookup(source, |name| {
+                runtime_value_with_outputs(name, state, outputs)
+            })
+        })
 }
 
 fn serialize_bindings(bindings: &BTreeMap<String, String>) -> String {
@@ -1402,6 +1460,7 @@ fn run_parallel_invocations(
     targets: &[InvocationTarget],
     base_state: BTreeMap<String, String>,
     base_outputs: BTreeMap<String, String>,
+    operation_outputs: &BTreeMap<String, String>,
     fail_at: BTreeMap<String, String>,
     invoke_depth: usize,
 ) -> Result<ParallelJoin, BytecodeRunResult> {
@@ -1444,6 +1503,7 @@ fn run_parallel_invocations(
             &subprogram,
             child_state,
             BTreeMap::new(),
+            operation_outputs,
             fail_at.clone(),
             invoke_depth + 1,
         );
@@ -1837,11 +1897,7 @@ fn copy_typed_object_fields(
                 outputs,
             )?);
         } else {
-            let resolved_source = resolve_state_path(&source_field, state, outputs);
-            let value = state
-                .get(&resolved_source)
-                .or_else(|| outputs.get(&resolved_source))?
-                .clone();
+            let value = runtime_value_with_outputs(&source_field, state, outputs)?;
             let resolved_target = resolve_state_path(&target_field, state, outputs);
             state.insert(resolved_target.clone(), value);
             changed_fields.push(resolved_target);
