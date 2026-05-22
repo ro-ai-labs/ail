@@ -104,7 +104,11 @@ imported fragment before checking and rendering.
 Conformance checks must validate the entry spec, every accepted fixture, and
 every rejected fixture. Accepted fixtures pass only when they produce no checker
 diagnostics; rejected fixtures pass only when they produce at least one stable
-diagnostic.
+diagnostic. With `--artifact-dir`, `ail-conformance` writes
+`conformance-report.txt`, `conformance-report.fingerprint.txt`,
+`manifest.ail-conformance.txt`, and `manifest.fingerprint.txt`, so the
+conformance gate produces deterministic audit artifacts instead of only
+host-side stdout.
 
 ### AIL-Spec Parser
 

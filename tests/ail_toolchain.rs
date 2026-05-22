@@ -5653,6 +5653,65 @@ fn cli_ail_conformance_checks_valid_and_rejected_fixtures() {
 }
 
 #[test]
+fn cli_ail_conformance_writes_auditable_artifacts() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("support_ticket.ail");
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "eigl-ail-conformance-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-conformance",
+            &package,
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    let report = fs::read_to_string(artifact_dir.join("conformance-report.txt")).unwrap();
+    assert_eq!(report, stdout);
+    let expected_report_fingerprint = fnv64_fingerprint(&report);
+    let report_fingerprint =
+        fs::read_to_string(artifact_dir.join("conformance-report.fingerprint.txt")).unwrap();
+    assert_eq!(report_fingerprint.trim(), expected_report_fingerprint);
+
+    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-conformance.txt")).unwrap();
+    assert!(manifest.contains("AIL-Conformance-Manifest:"), "{manifest}");
+    assert!(manifest.contains("package support-ticket"), "{manifest}");
+    assert!(
+        manifest.contains(&format!(
+            "report conformance-report.txt {expected_report_fingerprint}"
+        )),
+        "{manifest}"
+    );
+    assert!(manifest.contains("valid spec.ail-spec.md"), "{manifest}");
+    assert!(
+        manifest.contains("accepted close-ticket-minimal.ail-spec.md"),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains("rejected missing-reference.ail-spec.md"),
+        "{manifest}"
+    );
+    let manifest_fingerprint =
+        fs::read_to_string(artifact_dir.join("manifest.fingerprint.txt")).unwrap();
+    assert_eq!(manifest_fingerprint.trim(), fnv64_fingerprint(&manifest));
+
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
 fn cli_ail_conformance_checks_agent_tool_fixtures() {
     let binary = env!("CARGO_BIN_EXE_eigl");
     let package = fixture("refund_tool.ail");

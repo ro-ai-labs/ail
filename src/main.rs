@@ -680,6 +680,109 @@ fn ail_artifact_fingerprint_bytes(bytes: &[u8]) -> String {
     format!("fnv64:{hash:016x}")
 }
 
+fn render_ail_conformance_report(result: &eigl::ail::AilConformanceResult) -> String {
+    let mut lines = vec![format!("ail conformance: package {}", result.package_name)];
+    if result.accepted_diagnostics.is_empty() {
+        lines.push(format!("valid: {}", result.accepted_fixture));
+    } else {
+        for diagnostic in &result.accepted_diagnostics {
+            lines.push(format!(
+                "valid: {} {}",
+                result.accepted_fixture,
+                diagnostic.detailed_message()
+            ));
+        }
+    }
+    for fixture in &result.accepted {
+        if fixture.diagnostics.is_empty() {
+            lines.push(format!("accepted: {}", fixture.fixture));
+        } else {
+            for diagnostic in &fixture.diagnostics {
+                lines.push(format!(
+                    "accepted: {} {}",
+                    fixture.fixture,
+                    diagnostic.detailed_message()
+                ));
+            }
+        }
+    }
+    for fixture in &result.rejected {
+        if fixture.diagnostics.is_empty() {
+            lines.push(format!(
+                "rejected: {} unexpectedly accepted",
+                fixture.fixture
+            ));
+        } else {
+            for diagnostic in &fixture.diagnostics {
+                lines.push(format!(
+                    "rejected: {} {}",
+                    fixture.fixture,
+                    diagnostic.detailed_message()
+                ));
+            }
+        }
+    }
+    if result.success() {
+        lines.push("ail conformance: ok".to_string());
+    } else {
+        lines.push("ail conformance: failed".to_string());
+    }
+    format!("{}\n", lines.join("\n"))
+}
+
+fn render_ail_conformance_manifest(
+    result: &eigl::ail::AilConformanceResult,
+    report_text: &str,
+) -> String {
+    let mut lines = vec![
+        "AIL-Conformance-Manifest:".to_string(),
+        format!("package {}", result.package_name),
+        format!(
+            "report conformance-report.txt {}",
+            ail_artifact_fingerprint(report_text)
+        ),
+        format!("valid {}", result.accepted_fixture),
+    ];
+    for fixture in &result.accepted {
+        lines.push(format!("accepted {}", fixture.fixture));
+    }
+    for fixture in &result.rejected {
+        lines.push(format!("rejected {}", fixture.fixture));
+    }
+    format!("{}\n", lines.join("\n"))
+}
+
+fn write_ail_conformance_artifacts(
+    artifact_dir: &str,
+    result: &eigl::ail::AilConformanceResult,
+    report_text: &str,
+) -> Result<(), String> {
+    let root = std::path::Path::new(artifact_dir);
+    fs::create_dir_all(root).map_err(|error| {
+        format!("failed to create ail-conformance artifact dir {artifact_dir}: {error}")
+    })?;
+    fs::write(root.join("conformance-report.txt"), report_text)
+        .map_err(|error| format!("failed to write ail-conformance report artifact: {error}"))?;
+    fs::write(
+        root.join("conformance-report.fingerprint.txt"),
+        format!("{}\n", ail_artifact_fingerprint(report_text)),
+    )
+    .map_err(|error| {
+        format!("failed to write ail-conformance report fingerprint artifact: {error}")
+    })?;
+    let manifest_text = render_ail_conformance_manifest(result, report_text);
+    fs::write(root.join("manifest.ail-conformance.txt"), &manifest_text)
+        .map_err(|error| format!("failed to write ail-conformance manifest artifact: {error}"))?;
+    fs::write(
+        root.join("manifest.fingerprint.txt"),
+        format!("{}\n", ail_artifact_fingerprint(&manifest_text)),
+    )
+    .map_err(|error| {
+        format!("failed to write ail-conformance manifest fingerprint artifact: {error}")
+    })?;
+    Ok(())
+}
+
 fn render_ail_pass_manifest(artifacts: &AilPassArtifactSet<'_>) -> String {
     let pass_fingerprint = ail_artifact_fingerprint(artifacts.pass_bytecode_text);
     let mut lines = vec![
@@ -2148,49 +2251,14 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
     let package = load_ail_package_dir(path)?;
     if command == "ail-conformance" {
         let result = run_ail_conformance(&package)?;
-        println!("ail conformance: package {}", result.package_name);
-        if result.accepted_diagnostics.is_empty() {
-            println!("valid: {}", result.accepted_fixture);
-        } else {
-            for diagnostic in &result.accepted_diagnostics {
-                println!(
-                    "valid: {} {}",
-                    result.accepted_fixture,
-                    diagnostic.detailed_message()
-                );
-            }
+        let report_text = render_ail_conformance_report(&result);
+        if let Some(artifact_dir) = &cli_options.artifact_dir {
+            write_ail_conformance_artifacts(artifact_dir, &result, &report_text)?;
         }
-        for fixture in &result.accepted {
-            if fixture.diagnostics.is_empty() {
-                println!("accepted: {}", fixture.fixture);
-            } else {
-                for diagnostic in &fixture.diagnostics {
-                    println!(
-                        "accepted: {} {}",
-                        fixture.fixture,
-                        diagnostic.detailed_message()
-                    );
-                }
-            }
-        }
-        for fixture in &result.rejected {
-            if fixture.diagnostics.is_empty() {
-                println!("rejected: {} unexpectedly accepted", fixture.fixture);
-            } else {
-                for diagnostic in &fixture.diagnostics {
-                    println!(
-                        "rejected: {} {}",
-                        fixture.fixture,
-                        diagnostic.detailed_message()
-                    );
-                }
-            }
-        }
+        print!("{report_text}");
         if result.success() {
-            println!("ail conformance: ok");
             return Ok(0);
         }
-        println!("ail conformance: failed");
         return Ok(1);
     }
     if command == "ail-draft" {
@@ -2861,7 +2929,10 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         }
 
         if arg == "--artifact-dir" {
-            if !matches!(command, "ail-build" | "ail-pass" | "ail-lower") {
+            if !matches!(
+                command,
+                "ail-build" | "ail-pass" | "ail-lower" | "ail-conformance"
+            ) {
                 return Err(usage());
             }
             let Some(path) = args.get(index + 1) else {
