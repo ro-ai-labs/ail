@@ -106,8 +106,9 @@ with `--artifact-dir`, it also writes `pass.ailbc.json`,
 `pass.fingerprint.txt`, and `pass-trace.txt`. On `ail-pass`,
 `--artifact-dir <dir>` writes
 `pass.ailbc.json`, `pass.fingerprint.txt`, `input.ail-core.txt`,
-`output.ail-core.txt`, `trace.txt`, and `manifest.ail-pass.txt` while stdout
-remains the transformed AIL-Core artifact.
+`output.ail-core.txt`, `trace.txt`, `manifest.ail-pass.txt`, and
+`manifest.fingerprint.txt` while stdout remains the transformed AIL-Core
+artifact.
 The default AIL base LLM endpoint is
 `http://inteligentia-pro-1:8080/v1/chat/completions`.
 

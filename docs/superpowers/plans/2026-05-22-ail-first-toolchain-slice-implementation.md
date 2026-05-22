@@ -4745,6 +4745,48 @@ Expected: the agent bytecode includes and runs `VerifyBuildManifest`, the trace
 records manifest verification after bytecode verification, and the manifest
 fingerprint file matches the manifest artifact.
 
+### Task 112: Standalone AIL Pass Writes Manifest Fingerprint
+
+**Files:**
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing pass manifest fingerprint test**
+
+Extend the `ail-pass --artifact-dir` test to require
+`manifest.fingerprint.txt` beside `manifest.ail-pass.txt`, using the same
+deterministic FNV-1a fingerprint format as bytecode artifacts.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_pass_writes_auditable_intermediate_artifacts -- --nocapture
+```
+
+Expected: failure because standalone `ail-pass --artifact-dir` writes the pass
+manifest but no manifest fingerprint.
+
+- [x] **Step 3: Implement pass manifest fingerprint output**
+
+Reuse the dependency-free fingerprint helper in the `ail-pass` artifact writer
+and write `manifest.fingerprint.txt` whenever `manifest.ail-pass.txt` is
+written.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_pass_writes_auditable_intermediate_artifacts -- --nocapture
+```
+
+Expected: `manifest.fingerprint.txt` matches `manifest.ail-pass.txt` while
+stdout remains the transformed AIL-Core artifact.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

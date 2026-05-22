@@ -2202,6 +2202,9 @@ fn cli_ail_pass_writes_auditable_intermediate_artifacts() {
         "{manifest}"
     );
     assert!(manifest.contains("trace trace.txt"), "{manifest}");
+    let manifest_fingerprint =
+        fs::read_to_string(artifact_dir.join("manifest.fingerprint.txt")).unwrap();
+    assert_eq!(manifest_fingerprint.trim(), fnv64_fingerprint(&manifest));
 
     fs::remove_dir_all(&artifact_dir).unwrap();
 }

@@ -567,11 +567,14 @@ fn write_ail_pass_artifacts(
         .map_err(|error| format!("failed to write ail-pass output core artifact: {error}"))?;
     fs::write(root.join("trace.txt"), format!("{}\n", trace.join("\n")))
         .map_err(|error| format!("failed to write ail-pass trace artifact: {error}"))?;
+    let manifest_text = render_ail_pass_manifest(pass_bytecode_text);
+    fs::write(root.join("manifest.ail-pass.txt"), &manifest_text)
+        .map_err(|error| format!("failed to write ail-pass manifest artifact: {error}"))?;
     fs::write(
-        root.join("manifest.ail-pass.txt"),
-        render_ail_pass_manifest(pass_bytecode_text),
+        root.join("manifest.fingerprint.txt"),
+        format!("{}\n", ail_artifact_fingerprint(&manifest_text)),
     )
-    .map_err(|error| format!("failed to write ail-pass manifest artifact: {error}"))?;
+    .map_err(|error| format!("failed to write ail-pass manifest fingerprint artifact: {error}"))?;
     Ok(())
 }
 

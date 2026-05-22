@@ -370,9 +370,10 @@ standalone compiler stage. With
 `--artifact-dir`, the same command writes `pass.ailbc.json`,
 `pass.fingerprint.txt`, `input.ail-core.txt`, `output.ail-core.txt`, and
 `trace.txt` plus `manifest.ail-pass.txt`, a deterministic index tying the pass
-bytecode fingerprint to the input core, output core, and execution trace. This
-keeps pass execution auditable while stdout remains the transformed AIL-Core
-artifact.
+bytecode fingerprint to the input core, output core, and execution trace. It
+also writes `manifest.fingerprint.txt` for that manifest's deterministic
+fingerprint. This keeps pass execution auditable while stdout remains the
+transformed AIL-Core artifact.
 `ail-build` composes the LLM draft loop with the same checked bytecode lowering:
 the base LLM first drafts an AIL-Requirements artifact from a user prompt.
 `ail-build` checks that artifact for profile-specific coverage before spec
