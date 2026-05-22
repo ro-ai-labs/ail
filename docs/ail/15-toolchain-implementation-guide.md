@@ -366,8 +366,8 @@ guarantee, and explicit trace-event entries. Supported requirement failure
 branches emit the VM-style action prefix, failure name, and any declared
 failure trace events to stderr before exiting `1`. Stdout remains reserved for
 parseable state changes. The first native backend rejects unsupported System,
-AgentTool, CompilerPass, or future unknown VM opcodes instead of silently
-emitting a partial executable.
+AgentTool, CompilerPass, future unknown VM opcodes, and unlowered
+`OBSERVE_RULE` requirements instead of silently emitting a partial executable.
 With `--artifact-dir`, `ail-lower` writes `checked.ail-core.txt`,
 `artifact.ailbc.json`, `artifact.fingerprint.txt`, `manifest.ail-lower.txt`,
 and `manifest.fingerprint.txt`, keeping direct IR-to-VM-instruction lowering

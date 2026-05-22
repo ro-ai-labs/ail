@@ -44,7 +44,8 @@ supported `SET_FIELD` writes are emitted as
 `key=value` stdout lines on successful execution, and supported Application
 semantic trace entries are emitted to stderr on successful native execution and
 on supported requirement failures. The first native backend rejects unsupported
-non-application VM opcodes instead of silently dropping them. `ail-lower --artifact-dir
+VM opcodes and unlowered observed rules instead of silently dropping them.
+`ail-lower --artifact-dir
 <dir>` also writes the checked core, VM instruction artifact, deterministic
 fingerprints, and a lower manifest while keeping stdout as the VM artifact.
 `ail-check`, `ail-core`,

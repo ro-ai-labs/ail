@@ -5593,6 +5593,49 @@ Expected: `AssignTicket` bytecode contains an enforceable nested
 `REQUIRE_FIELD_IN`, and native execution enforces SupportAgent/SupportManager
 assignee roles.
 
+### Task 130: Native ELF Rejects Unlowered Observed Requirements
+
+**Files:**
+- Modify: `src/ail.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing unlowered-rule native test**
+
+Compile `CreateTicket` to `--target linux-x86_64-elf` and require failure
+because its `the customer id and title` requirement still lowers to
+`OBSERVE_RULE`.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_compile_native_rejects_unlowered_observed_requirements -- --nocapture
+```
+
+Expected: failure because the native backend silently emits an executable for
+an action with an unlowered observed requirement.
+
+- [x] **Step 3: Reject observed rules in native lowering**
+
+Treat `OBSERVE_RULE` as an unsupported native machine-code opcode with a clear
+diagnostic that includes the rule text and action name. Supported native actions
+must lower requirements to executable opcodes before ELF emission.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_compile_native_rejects_unlowered_observed_requirements -- --nocapture
+cargo test --test ail_toolchain cli_ail_compile_native_executable_enforces_field_in_requirements -- --nocapture
+```
+
+Expected: native `CreateTicket` is rejected until its requirement is lowered,
+while fully lowered native `AssignTicket` still compiles and runs.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

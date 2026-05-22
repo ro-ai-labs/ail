@@ -3039,6 +3039,46 @@ fn cli_ail_compile_native_rejects_unsupported_system_opcodes() {
 
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+fn cli_ail_compile_native_rejects_unlowered_observed_requirements() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("support_ticket.ail");
+    let executable_path = std::env::temp_dir().join(format!(
+        "eigl-create-ticket-native-unlowered-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_file(&executable_path);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-compile",
+            &package,
+            "--action",
+            "CreateTicket",
+            "--target",
+            "linux-x86_64-elf",
+            "--out",
+            executable_path.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    let status = output.status;
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let _ = fs::remove_file(&executable_path);
+    assert!(
+        !status.success(),
+        "native compile should reject unlowered observed requirements\nstdout:\n{stdout}\nstderr:\n{stderr}"
+    );
+    assert!(
+        stderr.contains(
+            "unsupported native linux-x86_64-elf observed rule 'the customer id and title' in action 'CreateTicket'"
+        ),
+        "{stderr}"
+    );
+}
+
+#[test]
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_compile_native_executable_enforces_close_ticket_requirements() {
     let binary = env!("CARGO_BIN_EXE_eigl");
     let package = fixture("support_ticket.ail");

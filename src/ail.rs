@@ -3343,9 +3343,15 @@ fn emit_linux_x86_64_elf_for_action(
                 }
             }
             "OBSERVE_RULE" => {
-                if let Some(rule) = instruction.operands.get("rule") {
-                    success_trace_lines.push(format!("rule observed: {rule}\n"));
-                }
+                let rule = instruction
+                    .operands
+                    .get("rule")
+                    .map(String::as_str)
+                    .unwrap_or("<missing rule>");
+                return Err(format!(
+                    "unsupported native linux-x86_64-elf observed rule '{rule}' in action '{}'",
+                    action.name
+                ));
             }
             "READ_FIELD" => {
                 if let Some(key) = instruction.operands.get("key") {
