@@ -3231,6 +3231,90 @@ pub fn compile_ail_core_bytecode(core: &AilCore) -> Result<AilBytecodeProgram, S
     compile_ail_document_bytecode(&package, &document)
 }
 
+pub fn compile_ail_core_native_elf(
+    core: &AilCore,
+    action_name: &str,
+    target: &str,
+) -> Result<Vec<u8>, String> {
+    if target != "linux-x86_64-elf" {
+        return Err(format!(
+            "unsupported native target '{target}'; expected linux-x86_64-elf"
+        ));
+    }
+    let program = compile_ail_core_bytecode(core)?;
+    let diagnostics = verify_ail_bytecode(&program);
+    if !diagnostics.is_empty() {
+        return Err(format!(
+            "cannot emit native executable from invalid AIL VM IR:\n{}",
+            diagnostics.join("\n")
+        ));
+    }
+    if !program.actions.contains_key(action_name) {
+        return Err(format!("unknown AIL action '{action_name}'"));
+    }
+    Ok(emit_minimal_linux_x86_64_elf())
+}
+
+fn emit_minimal_linux_x86_64_elf() -> Vec<u8> {
+    let code = [
+        0xb8, 0x3c, 0x00, 0x00, 0x00, // mov eax, 60
+        0x31, 0xff, // xor edi, edi
+        0x0f, 0x05, // syscall
+    ];
+    let elf_header_size = 64u16;
+    let program_header_size = 56u16;
+    let code_offset = u64::from(elf_header_size + program_header_size);
+    let image_base = 0x400000u64;
+    let file_size = code_offset + code.len() as u64;
+    let mut out = Vec::with_capacity(file_size as usize);
+
+    out.extend_from_slice(b"\x7fELF");
+    out.push(2); // ELFCLASS64
+    out.push(1); // ELFDATA2LSB
+    out.push(1); // EV_CURRENT
+    out.push(0); // System V ABI
+    out.extend_from_slice(&[0; 8]);
+
+    push_u16_le(&mut out, 2); // ET_EXEC
+    push_u16_le(&mut out, 0x3e); // EM_X86_64
+    push_u32_le(&mut out, 1); // EV_CURRENT
+    push_u64_le(&mut out, image_base + code_offset);
+    push_u64_le(&mut out, u64::from(elf_header_size));
+    push_u64_le(&mut out, 0);
+    push_u32_le(&mut out, 0);
+    push_u16_le(&mut out, elf_header_size);
+    push_u16_le(&mut out, program_header_size);
+    push_u16_le(&mut out, 1);
+    push_u16_le(&mut out, 0);
+    push_u16_le(&mut out, 0);
+    push_u16_le(&mut out, 0);
+
+    push_u32_le(&mut out, 1); // PT_LOAD
+    push_u32_le(&mut out, 5); // PF_R | PF_X
+    push_u64_le(&mut out, 0);
+    push_u64_le(&mut out, image_base);
+    push_u64_le(&mut out, image_base);
+    push_u64_le(&mut out, file_size);
+    push_u64_le(&mut out, file_size);
+    push_u64_le(&mut out, 0x1000);
+
+    debug_assert_eq!(out.len(), code_offset as usize);
+    out.extend_from_slice(&code);
+    out
+}
+
+fn push_u16_le(out: &mut Vec<u8>, value: u16) {
+    out.extend_from_slice(&value.to_le_bytes());
+}
+
+fn push_u32_le(out: &mut Vec<u8>, value: u32) {
+    out.extend_from_slice(&value.to_le_bytes());
+}
+
+fn push_u64_le(out: &mut Vec<u8>, value: u64) {
+    out.extend_from_slice(&value.to_le_bytes());
+}
+
 fn compile_ail_document_bytecode(
     package: &AilPackage,
     document: &AilDocument,

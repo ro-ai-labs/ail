@@ -2897,6 +2897,57 @@ fn cli_ail_lower_accepts_saved_core_file_artifact() {
 }
 
 #[test]
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+fn cli_ail_compile_emits_runnable_linux_x86_64_elf_executable() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("support_ticket.ail");
+    let executable_path =
+        std::env::temp_dir().join(format!("eigl-close-ticket-native-{}", std::process::id()));
+    let _ = fs::remove_file(&executable_path);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-compile",
+            &package,
+            "--action",
+            "CloseTicket",
+            "--target",
+            "linux-x86_64-elf",
+            "--out",
+            executable_path.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let executable = fs::read(&executable_path).unwrap();
+    assert_eq!(&executable[0..4], b"\x7fELF");
+    assert_eq!(executable[4], 2, "ELFCLASS64");
+    assert_eq!(executable[5], 1, "little-endian ELF");
+    assert_eq!(&executable[18..20], &[0x3e, 0x00], "EM_X86_64");
+    assert_ne!(
+        fs::metadata(&executable_path).unwrap().permissions().mode() & 0o111,
+        0,
+        "native output should be executable"
+    );
+
+    let run_status = Command::new(&executable_path).status().unwrap();
+    assert!(
+        run_status.success(),
+        "native executable failed: {run_status}"
+    );
+
+    fs::remove_file(executable_path).unwrap();
+}
+
+#[test]
 fn cli_ail_run_executes_close_ticket_with_trace() {
     let binary = env!("CARGO_BIN_EXE_eigl");
     let package = fixture("support_ticket.ail");

@@ -283,14 +283,21 @@ The first runtime executes a checked action against simple state and returns:
 The runtime must enforce checked permissions and secret redaction for the slice
 it supports.
 
-### Bytecode Compiler
+### Native And VM Compiler
 
-Checked AIL-Core lowers to AIL-Bytecode. The bootstrap compiler is written in
-Rust, but the generated executable artifact is bytecode, not Rust, JavaScript,
-or another host-language backend. AIL-Bytecode is the target for future AIL
-compiler, tool, and runtime self-hosting work.
+Checked AIL-Core now has two compiler targets. The current `ail-lower` target
+is a deterministic AIL VM instruction artifact used for inspection, agent
+acceptance checkpoints, compiler-pass execution, and bootstrap runtime tests.
+The native `ail-compile` target is the machine-code path: it emits Linux
+x86_64 ELF executable bytes directly from the bootstrap compiler, without
+generating Rust, invoking a linker, using libc, or relying on LLVM.
 
-The first bytecode compiler supports Application-profile actions,
+The native executable path is the bytecode target in the machine-level sense.
+The VM instruction artifact remains an intermediate representation until the
+native compiler covers the full action ABI, runtime state, traces,
+requirements, and field writes.
+
+The first VM instruction compiler supports Application-profile actions,
 AgentTool-profile tool declarations, Compiler-profile compiler passes, and
 System-profile components. For applications it emits:
 
@@ -325,15 +332,20 @@ return opcodes. This keeps low-level toolchain/runtime components in the same
 verified bytecode artifact family as applications, agent tools, and compiler
 passes.
 
-`ail-lower` renders the deterministic bytecode artifact after the same package
-loading, parsing, elaboration, and checker gate as `ail-core` and `ail-flow`;
-the bytecode compiler receives the checked AIL-Core IR, not the parsed
-AIL-Spec document. `ail-run` uses the same checked AIL-Core-to-bytecode path and
-then executes through the AIL bytecode VM for supported Application packages.
+`ail-lower` renders the deterministic VM instruction artifact after the same
+package loading, parsing, elaboration, and checker gate as `ail-core` and
+`ail-flow`; the VM instruction compiler receives the checked AIL-Core IR, not
+the parsed AIL-Spec document. `ail-run` uses the same checked AIL-Core-to-VM
+instruction path and then executes through the AIL VM for supported Application
+packages.
+`ail-compile --target linux-x86_64-elf --out <path>` uses the same checked
+AIL-Core gate, validates the selected action, and writes a native executable
+ELF file with direct Linux x86_64 syscall code as the first native compiler
+slice.
 With `--artifact-dir`, `ail-lower` writes `checked.ail-core.txt`,
 `artifact.ailbc.json`, `artifact.fingerprint.txt`, `manifest.ail-lower.txt`,
-and `manifest.fingerprint.txt`, keeping direct IR-to-bytecode lowering
-auditable while stdout remains the parseable bytecode artifact.
+and `manifest.fingerprint.txt`, keeping direct IR-to-VM-instruction lowering
+auditable while stdout remains the parseable VM instruction artifact.
 `ail-check`, `ail-core`, `ail-flow`, `ail-lower`, `ail-run`, and `ail-build`
 can use `--spec-file <path>` to read a saved generated AIL-Spec artifact
 instead of the package entry spec, preserving the package metadata while making
@@ -342,7 +354,7 @@ auditable build artifacts.
 `ail-lower --core-file <path>` and `ail-build --core-file <path>` read a saved
 checked AIL-Core artifact, reconstruct the graph from the serialized nodes,
 edges, and edge attributes, run the core checker, and compile that IR directly
-to AIL-Bytecode without loading the source package spec. This keeps AIL-Core as
+to the VM instruction artifact without loading the source package spec. This keeps AIL-Core as
 a real compiler input boundary rather than only a display format, and it
 preserves lowering payloads such as read/write provenance text that affect
 emitted bytecode instructions.

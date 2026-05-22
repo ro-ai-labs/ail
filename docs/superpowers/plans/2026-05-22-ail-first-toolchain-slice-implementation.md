@@ -4932,6 +4932,52 @@ cargo test --test ail_toolchain cli_ail_lower_accepts_saved_core_file_artifact -
 Expected: `ail-lower --core-file --artifact-dir` writes the auditable direct
 IR-to-bytecode artifact set and stdout still equals `artifact.ailbc.json`.
 
+### Task 116: AIL Compile Emits Native Linux ELF Executables
+
+**Files:**
+- Modify: `src/ail.rs`
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing native executable test**
+
+Add a Linux x86_64 CLI test for `ail-compile <package> --action CloseTicket
+--target linux-x86_64-elf --out <path>`. Require the output file to have ELF
+magic, ELFCLASS64, little-endian encoding, `EM_X86_64`, executable permission,
+and a successful process exit when run.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_compile_emits_runnable_linux_x86_64_elf_executable -- --nocapture
+```
+
+Expected: failure because `ail-compile`, `--target`, and `--out` do not exist
+yet.
+
+- [x] **Step 3: Implement direct ELF emission**
+
+Add `compile_ail_core_native_elf` as the first native compiler backend. It
+checks the requested target, validates the selected action through the existing
+checked AIL-Core to VM-instruction lowering path, emits ELF64 bytes directly,
+writes them with executable permissions, and uses direct Linux x86_64 syscall
+machine code without Rust codegen, libc, a linker, LLVM, or an assembler.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_compile_emits_runnable_linux_x86_64_elf_executable -- --nocapture
+```
+
+Expected: the native output is a runnable Linux x86_64 ELF executable and exits
+successfully.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

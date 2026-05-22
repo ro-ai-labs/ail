@@ -7,13 +7,13 @@ use std::process::ExitCode;
 
 use eigl::ail::{
     apply_ail_patch, check_ail_core, check_ail_requirements, compile_ail_core_bytecode,
-    draft_ail_requirements, draft_ail_spec, draft_ail_spec_from_requirements, elaborate_ail_core,
-    load_ail_package_dir, parse_ail_bytecode, parse_ail_core_text, parse_ail_package_document,
-    parse_ail_package_spec_text, parse_ail_patch_text, render_ail_bytecode, render_ail_core,
-    render_ail_flow_view, render_ail_runtime_state_lines, render_ail_spec,
-    repair_ail_requirements_from_diagnostics, repair_ail_spec_from_diagnostics,
-    run_ail_bytecode_action, run_ail_compiler_pass_on_core, run_ail_conformance,
-    verify_ail_bytecode,
+    compile_ail_core_native_elf, draft_ail_requirements, draft_ail_spec,
+    draft_ail_spec_from_requirements, elaborate_ail_core, load_ail_package_dir, parse_ail_bytecode,
+    parse_ail_core_text, parse_ail_package_document, parse_ail_package_spec_text,
+    parse_ail_patch_text, render_ail_bytecode, render_ail_core, render_ail_flow_view,
+    render_ail_runtime_state_lines, render_ail_spec, repair_ail_requirements_from_diagnostics,
+    repair_ail_spec_from_diagnostics, run_ail_bytecode_action, run_ail_compiler_pass_on_core,
+    run_ail_conformance, verify_ail_bytecode,
 };
 use eigl::apply_rif_patch;
 use eigl::checker::check_document;
@@ -59,6 +59,8 @@ struct CliOptions {
     ail_requirements_file: Option<String>,
     ail_spec_file: Option<String>,
     ail_core_file: Option<String>,
+    ail_compile_target: Option<String>,
+    ail_compile_out: Option<String>,
 }
 
 struct EndpointExecutionResult {
@@ -95,6 +97,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
             | "ail-core"
             | "ail-flow"
             | "ail-lower"
+            | "ail-compile"
             | "ail-run"
             | "ail-conformance"
             | "ail-requirements"
@@ -376,7 +379,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
 }
 
 fn usage() -> String {
-    "usage: eigl <check|graph|views|simulate|lower|run|dispatch|emit|schedule|dequeue|serve|normalize|patch|llm-roundtrip|view-model|ail-check|ail-core|ail-flow|ail-lower|ail-run|ail-vm|ail-conformance|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-patch> <path> [patch|target-package] [--intent name] [--action name] [--prompt text] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target-model name] [--artifact-dir path] [--state-in path] [--state-out path] [--data-in path] [--data-out path] [--operation-output name=value] [--listen addr] [--llm-endpoint url] [method path|trigger] [key=value ...]\nail-pass usage: eigl ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] OR eigl ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>]"
+    "usage: eigl <check|graph|views|simulate|lower|run|dispatch|emit|schedule|dequeue|serve|normalize|patch|llm-roundtrip|view-model|ail-check|ail-core|ail-flow|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-patch> <path> [patch|target-package] [--intent name] [--action name] [--prompt text] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--target-model name] [--out path] [--artifact-dir path] [--state-in path] [--state-out path] [--data-in path] [--data-out path] [--operation-output name=value] [--listen addr] [--llm-endpoint url] [method path|trigger] [key=value ...]\nail-pass usage: eigl ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] OR eigl ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>]"
         .to_string()
 }
 
@@ -560,6 +563,29 @@ fn write_ail_lower_artifacts(
         format!("{}\n", ail_artifact_fingerprint(&manifest_text)),
     )
     .map_err(|error| format!("failed to write ail-lower manifest fingerprint artifact: {error}"))?;
+    Ok(())
+}
+
+fn write_native_executable(path: &str, bytes: &[u8]) -> Result<(), String> {
+    fs::write(path, bytes)
+        .map_err(|error| format!("failed to write native executable {path}: {error}"))?;
+    set_native_executable_permissions(path)
+}
+
+#[cfg(unix)]
+fn set_native_executable_permissions(path: &str) -> Result<(), String> {
+    use std::os::unix::fs::PermissionsExt;
+
+    let mut permissions = fs::metadata(path)
+        .map_err(|error| format!("failed to stat native executable {path}: {error}"))?
+        .permissions();
+    permissions.set_mode(0o755);
+    fs::set_permissions(path, permissions)
+        .map_err(|error| format!("failed to mark native executable {path} executable: {error}"))
+}
+
+#[cfg(not(unix))]
+fn set_native_executable_permissions(_path: &str) -> Result<(), String> {
     Ok(())
 }
 
@@ -2120,6 +2146,30 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
             print!("{bytecode_text}");
             Ok(0)
         }
+        "ail-compile" => {
+            if !diagnostics.is_empty() {
+                for diagnostic in diagnostics {
+                    println!("{diagnostic}");
+                }
+                return Ok(1);
+            }
+            let action = cli_options
+                .ail_action
+                .as_deref()
+                .ok_or_else(|| "ail-compile requires --action <name>".to_string())?;
+            let target = cli_options
+                .ail_compile_target
+                .as_deref()
+                .ok_or_else(|| "ail-compile requires --target <target>".to_string())?;
+            let out = cli_options
+                .ail_compile_out
+                .as_deref()
+                .ok_or_else(|| "ail-compile requires --out <path>".to_string())?;
+            let executable = compile_ail_core_native_elf(&core, action, target)?;
+            write_native_executable(out, &executable)?;
+            println!("ail-compile wrote {target} executable {out}");
+            Ok(0)
+        }
         "ail-run" => {
             if !diagnostics.is_empty() {
                 for diagnostic in diagnostics {
@@ -2227,6 +2277,8 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
     let mut ail_requirements_file = None;
     let mut ail_spec_file = None;
     let mut ail_core_file = None;
+    let mut ail_compile_target = None;
+    let mut ail_compile_out = None;
     let mut index = 0;
     if command == "patch" || command == "ail-patch" {
         let Some(path) = args.get(index) else {
@@ -2271,7 +2323,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
             continue;
         }
         if arg == "--action" {
-            if !matches!(command, "ail-run" | "ail-vm" | "ail-pass") {
+            if !matches!(command, "ail-run" | "ail-vm" | "ail-pass" | "ail-compile") {
                 return Err(usage());
             }
             let Some(action_name) = args.get(index + 1) else {
@@ -2353,6 +2405,17 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
             index += 2;
             continue;
         }
+        if arg == "--target" {
+            if command != "ail-compile" {
+                return Err(usage());
+            }
+            let Some(target) = args.get(index + 1) else {
+                return Err("missing value for --target".to_string());
+            };
+            ail_compile_target = Some(target.clone());
+            index += 2;
+            continue;
+        }
         if arg == "--target-model" {
             if command != "ail-build" {
                 return Err(usage());
@@ -2361,6 +2424,17 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
                 return Err("missing value for --target-model".to_string());
             };
             ail_build_target_model = Some(model.clone());
+            index += 2;
+            continue;
+        }
+        if arg == "--out" {
+            if command != "ail-compile" {
+                return Err(usage());
+            }
+            let Some(path) = args.get(index + 1) else {
+                return Err("missing value for --out".to_string());
+            };
+            ail_compile_out = Some(path.clone());
             index += 2;
             continue;
         }
@@ -2545,6 +2619,8 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         ail_requirements_file,
         ail_spec_file,
         ail_core_file,
+        ail_compile_target,
+        ail_compile_out,
     })
 }
 

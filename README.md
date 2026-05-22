@@ -31,16 +31,19 @@ AIL package commands operate on package directories such as
 `examples/support_ticket.ail`. `ail-check` loads the package entry spec and
 runs AIL-Core diagnostics, `ail-core` prints deterministic AIL-Core,
 `ail-flow` prints a deterministic AIL-Flow JSON projection for no-code
-inspection, and `ail-lower` compiles checked AIL-Core IR into deterministic
-AIL-Bytecode. `ail-lower --artifact-dir <dir>` also writes the checked core,
-bytecode, deterministic fingerprints, and a lower manifest while keeping stdout
-as the bytecode artifact. `ail-check`, `ail-core`, `ail-flow`, `ail-lower`,
-`ail-run`, and `ail-build` can use `--spec-file <path>` to read a saved
-generated AIL-Spec artifact instead of the package entry spec.
+inspection, `ail-lower` compiles checked AIL-Core IR into the current
+deterministic AIL VM instruction artifact, and `ail-compile --target
+linux-x86_64-elf --out <path>` emits a native Linux x86_64 ELF executable
+directly from checked AIL. `ail-lower --artifact-dir <dir>` also writes the
+checked core, VM instruction artifact, deterministic fingerprints, and a lower
+manifest while keeping stdout as the VM artifact. `ail-check`, `ail-core`,
+`ail-flow`, `ail-lower`, `ail-run`, and `ail-build` can use `--spec-file
+<path>` to read a saved generated AIL-Spec artifact instead of the package
+entry spec.
 `ail-lower --core-file <path>` and `ail-build --core-file <path>` read a
-saved checked AIL-Core artifact and
-compile it directly to bytecode, without loading the source package spec,
-including the serialized edge payloads used by lowering. `ail-patch
+saved checked AIL-Core artifact and compile it directly to the VM instruction
+artifact, without loading the source package spec, including the serialized
+edge payloads used by lowering. `ail-patch
 <patch-file>` applies a checked AIL patch and prints canonical AIL-Spec,
 `ail-run --action <ActionName>` executes through the current AIL bytecode VM,
 `ail-vm --action <ActionName>` verifies and executes a saved AIL-Bytecode
@@ -134,6 +137,7 @@ cargo run -- ail-check examples/support_ticket.ail
 cargo run -- ail-core examples/support_ticket.ail
 cargo run -- ail-flow examples/support_ticket.ail
 cargo run -- ail-lower examples/support_ticket.ail
+cargo run -- ail-compile examples/support_ticket.ail --action CloseTicket --target linux-x86_64-elf --out /tmp/close-ticket
 cargo run -- ail-lower examples/refund_tool.ail
 cargo run -- ail-lower examples/compiler_pass.ail
 cargo run -- ail-lower examples/network_driver.ail
