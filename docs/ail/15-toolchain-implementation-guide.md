@@ -338,7 +338,10 @@ missing required operands before executing saved bytecode.
 AIL-Bytecode, checks a target package into AIL-Core, executes the selected pass
 bytecode over that checked IR, and prints the transformed AIL-Core artifact.
 This exposes AIL-authored compiler passes as a command-line toolchain stage
-without generating Rust or other host-language source.
+without generating Rust or other host-language source. With `--artifact-dir`,
+the same command writes `pass.ailbc.json`, `input.ail-core.txt`,
+`output.ail-core.txt`, and `trace.txt` so pass execution can be audited while
+stdout remains the transformed AIL-Core artifact.
 `ail-build` composes the LLM draft loop with the same checked bytecode lowering:
 the base LLM first drafts an AIL-Requirements artifact from a user prompt.
 `ail-build` checks that artifact for profile-specific coverage before spec

@@ -3179,6 +3179,50 @@ cargo test --test ail_toolchain cli_ail_pass_runs_compiler_pass_over_checked_pac
 Expected: `ail-pass` succeeds and prints only the transformed checked AIL-Core,
 making AIL-authored compiler passes available as a CLI toolchain stage.
 
+### Task 79: `ail-pass` Intermediate Artifact Output
+
+**Files:**
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing `ail-pass --artifact-dir` test**
+
+Add a CLI test that runs `ail-pass` with `--artifact-dir <dir>` and requires
+stdout to remain the transformed AIL-Core while the artifact directory contains
+`pass.ailbc.json`, `input.ail-core.txt`, `output.ail-core.txt`, and
+`trace.txt`.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_pass_writes_auditable_intermediate_artifacts -- --nocapture
+```
+
+Expected: failure because `--artifact-dir` is still restricted to `ail-build`.
+
+- [x] **Step 3: Implement pass artifact writing**
+
+Allow `--artifact-dir` for `ail-pass`, create the directory, and write the
+compiled pass bytecode, checked target input core, transformed output core, and
+compiler-pass VM trace. Keep stdout as the transformed output core so the
+command remains pipeline-friendly.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_pass_writes_auditable_intermediate_artifacts -- --nocapture
+```
+
+Expected: the artifact files are written, output core matches stdout, pass
+bytecode verifies, and trace records pass start, transform opcode, and
+permission insertion.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

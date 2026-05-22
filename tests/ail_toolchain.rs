@@ -2011,6 +2011,57 @@ fn cli_ail_pass_runs_compiler_pass_over_checked_package_core() {
 }
 
 #[test]
+fn cli_ail_pass_writes_auditable_intermediate_artifacts() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let pass_package = fixture("compiler_pass.ail");
+    let target_package = fixture("support_ticket.ail");
+    let artifact_dir =
+        std::env::temp_dir().join(format!("eigl-ail-pass-artifacts-{}", std::process::id()));
+    let _ = fs::remove_dir_all(&artifact_dir);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-pass",
+            &pass_package,
+            &target_package,
+            "--action",
+            "InferReadPermissions",
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let pass_bytecode = fs::read_to_string(artifact_dir.join("pass.ailbc.json")).unwrap();
+    let input_core = fs::read_to_string(artifact_dir.join("input.ail-core.txt")).unwrap();
+    let output_core = fs::read_to_string(artifact_dir.join("output.ail-core.txt")).unwrap();
+    let trace = fs::read_to_string(artifact_dir.join("trace.txt")).unwrap();
+
+    assert_eq!(output_core, stdout);
+    assert!(pass_bytecode.contains(r#""package":"ail-meta-permissions""#));
+    assert!(pass_bytecode.contains(r#""opcode":"CORE_INFER_READ_PERMISSIONS""#));
+    assert!(!input_core.contains("node Permission read Ticket.status"));
+    assert!(output_core.contains("node Permission read Ticket.status"));
+    assert!(trace.contains("compiler pass Infer read permissions started"));
+    assert!(trace.contains("core transform infer read permissions"));
+    assert!(
+        trace.contains("compiler pass InferReadPermissions added Permission read Ticket.status")
+    );
+
+    let parsed_bytecode = parse_ail_bytecode(&pass_bytecode).unwrap();
+    assert_eq!(verify_ail_bytecode(&parsed_bytecode), Vec::<String>::new());
+
+    fs::remove_dir_all(&artifact_dir).unwrap();
+}
+
+#[test]
 fn ail_runtime_executes_generic_field_writes_and_requirements() {
     let package = load_ail_package_dir(fixture("runtime_generic.ail")).unwrap();
     let document = parse_ail_package_document(&package).unwrap();

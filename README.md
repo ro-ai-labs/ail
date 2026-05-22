@@ -47,7 +47,9 @@ the base LLM one diagnostics-guided repair pass if requirements coverage or the
 checked spec is incomplete, then compiles the checked AIL-Core IR into verified
 AIL-Bytecode on success. Add `--artifact-dir <dir>` to also write the captured
 requirements, accepted AIL-Spec, checked AIL-Core IR, and final AIL-Bytecode
-artifact for review.
+artifact for review. On `ail-pass`, `--artifact-dir <dir>` writes
+`pass.ailbc.json`, `input.ail-core.txt`, `output.ail-core.txt`, and
+`trace.txt` while stdout remains the transformed AIL-Core artifact.
 The default AIL base LLM endpoint is
 `http://inteligentia-pro-1:8080/v1/chat/completions`.
 
@@ -72,6 +74,7 @@ cargo run -- ail-core examples/support_composed.ail
 cargo run -- ail-run examples/support_ticket.ail --action CloseTicket ticket.id=T-1 ticket.status=Open
 cargo run -- ail-vm /tmp/support-ticket.ailbc.json --action CloseTicket ticket.id=T-1 ticket.status=Open
 cargo run -- ail-pass examples/compiler_pass.ail examples/support_ticket.ail --action InferReadPermissions
+cargo run -- ail-pass examples/compiler_pass.ail examples/support_ticket.ail --action InferReadPermissions --artifact-dir /tmp/support-ticket-ail-pass
 cargo run -- ail-conformance examples/support_ticket.ail
 cargo run -- ail-conformance examples/ail_toolchain_agent.ail
 cargo run -- ail-conformance examples/refund_tool.ail

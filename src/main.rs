@@ -394,6 +394,28 @@ fn write_ail_build_artifacts(
     Ok(())
 }
 
+fn write_ail_pass_artifacts(
+    artifact_dir: &str,
+    pass_bytecode_text: &str,
+    input_core_text: &str,
+    output_core_text: &str,
+    trace: &[String],
+) -> Result<(), String> {
+    let root = std::path::Path::new(artifact_dir);
+    fs::create_dir_all(root).map_err(|error| {
+        format!("failed to create ail-pass artifact dir {artifact_dir}: {error}")
+    })?;
+    fs::write(root.join("pass.ailbc.json"), pass_bytecode_text)
+        .map_err(|error| format!("failed to write ail-pass bytecode artifact: {error}"))?;
+    fs::write(root.join("input.ail-core.txt"), input_core_text)
+        .map_err(|error| format!("failed to write ail-pass input core artifact: {error}"))?;
+    fs::write(root.join("output.ail-core.txt"), output_core_text)
+        .map_err(|error| format!("failed to write ail-pass output core artifact: {error}"))?;
+    fs::write(root.join("trace.txt"), format!("{}\n", trace.join("\n")))
+        .map_err(|error| format!("failed to write ail-pass trace artifact: {error}"))?;
+    Ok(())
+}
+
 fn run_ail_vm_command(path: &str, cli_options: &CliOptions) -> Result<u8, String> {
     let action = cli_options
         .ail_action
@@ -595,6 +617,7 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
             }
             return Ok(1);
         }
+        let pass_bytecode_text = format!("{}\n", render_ail_bytecode(&pass_bytecode));
 
         let target_package = load_ail_package_dir(target_path)?;
         let target_document = parse_ail_package_document(&target_package)?;
@@ -616,7 +639,18 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
             }
             return Ok(1);
         }
-        println!("{}", render_ail_core(&result.core));
+        let input_core_text = format!("{}\n", render_ail_core(&target_core));
+        let output_core_text = format!("{}\n", render_ail_core(&result.core));
+        if let Some(artifact_dir) = &cli_options.artifact_dir {
+            write_ail_pass_artifacts(
+                artifact_dir,
+                &pass_bytecode_text,
+                &input_core_text,
+                &output_core_text,
+                &result.run.trace,
+            )?;
+        }
+        print!("{output_core_text}");
         return Ok(0);
     }
     let document = parse_ail_package_document(&package)?;
@@ -949,7 +983,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         }
 
         if arg == "--artifact-dir" {
-            if command != "ail-build" {
+            if !matches!(command, "ail-build" | "ail-pass") {
                 return Err(usage());
             }
             let Some(path) = args.get(index + 1) else {
