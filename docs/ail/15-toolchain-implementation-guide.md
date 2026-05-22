@@ -485,21 +485,25 @@ when the build captured or loaded requirements, and it writes
 pass is present, `checked.ail-core.txt` is the post-pass IR that was actually
 lowered, and the artifact directory also includes `pass.ailbc.json`,
 `pass.fingerprint.txt`, and `pass-trace.txt` for the compiler-pass bytecode,
-deterministic pass fingerprint, and execution trace. When a build agent is
+deterministic pass fingerprint, and execution trace. When a native target is
+selected, the artifact directory also includes `target.elf` and
+`target.fingerprint.txt`, and `manifest.ail-build.txt` indexes the native target
+and fingerprint alongside the VM artifact. When a build agent is
 present, the artifact directory also includes
 `agent.ailbc.json`, `agent.fingerprint.txt`, and `agent-trace.txt` for the
 agent bytecode, deterministic agent fingerprint, and its requirements-capture,
 prompt-portability, application-compile, and bytecode-verification trace. The
 artifact directory also includes `manifest.ail-build.txt`, a deterministic
 index tying the emitted requirements, accepted spec, checked core, compiler-pass
-bytecode and trace, agent bytecode and trace, and final bytecode fingerprint
-into one review artifact, plus `manifest.fingerprint.txt` for that manifest's
+bytecode and trace, agent bytecode and trace, final bytecode fingerprint, and
+native target fingerprint into one review artifact, plus
+`manifest.fingerprint.txt` for that manifest's
 deterministic fingerprint. This
 lets the developer audit the
-requirements-to-spec-to-IR-to-pass-to-agent-to-bytecode chain, a
-saved-spec-to-IR-to-agent-to-bytecode chain, or a
-saved-core-to-agent-to-bytecode chain while stdout remains the parseable
-bytecode artifact.
+requirements-to-spec-to-IR-to-pass-to-agent-to-artifact chain, a
+saved-spec-to-IR-to-agent-to-artifact chain, or a
+saved-core-to-agent-to-artifact chain while stdout remains the parseable
+bytecode artifact for VM builds and a status line for native target builds.
 
 ### Diagnostics
 

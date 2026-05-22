@@ -122,8 +122,10 @@ the pass bytecode, pass fingerprint, and VM trace are accepted through
 and its deterministic fingerprint, `VerifyTargetArtifact` reads the native
 target artifact summary and deterministic fingerprint when a native target is
 selected, and `VerifyBuildManifest` reads the artifact manifest and its
-deterministic fingerprint. When `ail-build --pass` is used with
-`--artifact-dir`, it also writes `pass.ailbc.json`,
+deterministic fingerprint. When `ail-build --target linux-x86_64-elf` is used
+with `--artifact-dir`, it also writes `target.elf`, `target.fingerprint.txt`,
+and a manifest target entry for the native executable bytes. When
+`ail-build --pass` is used with `--artifact-dir`, it also writes `pass.ailbc.json`,
 `pass.fingerprint.txt`, and `pass-trace.txt`. On `ail-pass`,
 `--artifact-dir <dir>` writes
 `pass.ailbc.json`, `pass.fingerprint.txt`, `input.ail-core.txt`,

@@ -5212,6 +5212,53 @@ Expected: native `ail-build --agent` records target artifact verification after
 `CompileApplication`, and the AIL-authored agent still lowers to verified
 bytecode with the new action.
 
+### Task 122: Native Build Artifacts Are Manifested
+
+**Files:**
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing native manifest test**
+
+Add an `ail-build --spec-file --target linux-x86_64-elf --artifact-dir` test
+that requires the artifact directory to contain `target.elf`,
+`target.fingerprint.txt`, and a `manifest.ail-build.txt` target entry tying the
+native executable bytes to the deterministic fingerprint.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_native_target_is_in_artifact_manifest -- --nocapture
+```
+
+Expected: failure because the native ELF is written only to `--out`; the build
+artifact directory has no `target.elf` and the manifest does not index the
+native target.
+
+- [x] **Step 3: Persist native target artifacts**
+
+Extend the build artifact set with the selected target name and emitted
+executable bytes. Write `target.elf`, mark it executable, write
+`target.fingerprint.txt`, and include `target linux-x86_64-elf target.elf
+<fingerprint>` in `manifest.ail-build.txt`.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_native_target_is_in_artifact_manifest -- --nocapture
+cargo test --test ail_toolchain cli_ail_build_agent_verifies_native_target_artifact -- --nocapture
+cargo test --test ail_toolchain cli_ail_build_writes_requirements_spec_core_and_bytecode_artifacts -- --nocapture
+```
+
+Expected: native builds persist and manifest the target ELF while agent-native
+verification and the existing VM artifact directory path remain unchanged.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

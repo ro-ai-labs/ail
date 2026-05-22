@@ -389,6 +389,8 @@ struct AilBuildArtifactSet<'a> {
     core_text: &'a str,
     bytecode_text: &'a str,
     bytecode_fingerprint: &'a str,
+    target_name: Option<&'a str>,
+    target_executable: Option<&'a [u8]>,
     pass_bytecode_text: Option<&'a str>,
     pass_bytecode_fingerprint: Option<&'a str>,
     pass_trace: Option<&'a [String]>,
@@ -430,6 +432,14 @@ fn render_ail_build_manifest(artifacts: &AilBuildArtifactSet<'_>) -> String {
         "bytecode artifact.ailbc.json {}",
         artifacts.bytecode_fingerprint
     ));
+    if let (Some(target_name), Some(target_executable)) =
+        (artifacts.target_name, artifacts.target_executable)
+    {
+        lines.push(format!(
+            "target {target_name} target.elf {}",
+            ail_artifact_fingerprint_bytes(target_executable)
+        ));
+    }
     if let Some(pass_bytecode_text) = artifacts.pass_bytecode_text {
         let pass_bytecode_fingerprint = artifacts
             .pass_bytecode_fingerprint
@@ -479,6 +489,19 @@ fn write_ail_build_artifacts(
         format!("{}\n", artifacts.bytecode_fingerprint),
     )
     .map_err(|error| format!("failed to write ail-build bytecode fingerprint artifact: {error}"))?;
+    if let Some(target_executable) = artifacts.target_executable {
+        let target_path = root.join("target.elf");
+        fs::write(&target_path, target_executable)
+            .map_err(|error| format!("failed to write ail-build target artifact: {error}"))?;
+        set_native_executable_permissions(&target_path.to_string_lossy())?;
+        fs::write(
+            root.join("target.fingerprint.txt"),
+            format!("{}\n", ail_artifact_fingerprint_bytes(target_executable)),
+        )
+        .map_err(|error| {
+            format!("failed to write ail-build target fingerprint artifact: {error}")
+        })?;
+    }
     if let Some(pass_bytecode_text) = artifacts.pass_bytecode_text {
         fs::write(root.join("pass.ailbc.json"), pass_bytecode_text).map_err(|error| {
             format!("failed to write ail-build pass bytecode artifact: {error}")
@@ -1817,6 +1840,10 @@ fn run_ail_build_from_core(
                 core_text: &core_text,
                 bytecode_text: &bytecode_text,
                 bytecode_fingerprint: &bytecode_fingerprint,
+                target_name: native_build.as_ref().map(|(target, _, _)| target.as_str()),
+                target_executable: native_build
+                    .as_ref()
+                    .map(|(_, _, executable)| executable.as_slice()),
                 pass_bytecode_text: pass_bytecode_artifact.as_deref(),
                 pass_bytecode_fingerprint: pass_bytecode_fingerprint_artifact.as_deref(),
                 pass_trace: pass_trace_artifact.as_deref(),
@@ -1834,6 +1861,10 @@ fn run_ail_build_from_core(
                 core_text: &core_text,
                 bytecode_text: &bytecode_text,
                 bytecode_fingerprint: &bytecode_fingerprint,
+                target_name: native_build.as_ref().map(|(target, _, _)| target.as_str()),
+                target_executable: native_build
+                    .as_ref()
+                    .map(|(_, _, executable)| executable.as_slice()),
                 pass_bytecode_text: pass_bytecode_artifact.as_deref(),
                 pass_bytecode_fingerprint: pass_bytecode_fingerprint_artifact.as_deref(),
                 pass_trace: pass_trace_artifact.as_deref(),
