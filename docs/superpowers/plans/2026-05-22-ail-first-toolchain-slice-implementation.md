@@ -2847,6 +2847,53 @@ Expected: `ail-build` sends a profile-aware requirements prompt, sends an
 AgentTool-shaped AIL-Spec prompt grounded in those requirements, and prints
 verified AgentTool AIL-Bytecode.
 
+### Task 72: `ail-build` Diagnostics-Guided Repair Pass
+
+**Files:**
+- Modify: `src/ail.rs`
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing repair-loop test**
+
+Add an `ail-build` test where the mock base LLM first returns requirements,
+then returns a rejected AIL-Spec candidate, then returns a repaired accepted
+candidate. Require the third prompt to include the previous candidate, the
+draft requirements, detailed checker diagnostics, source provenance, affected
+graph item, and repair suggestion; require the command to emit verified
+AIL-Bytecode from the repaired candidate.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_repairs_rejected_candidate_before_lowering -- --nocapture
+```
+
+Expected: failure because `ail-build` stops after the rejected candidate and
+does not send a third diagnostics-guided repair request.
+
+- [x] **Step 3: Implement one repair pass**
+
+Add a repair prompt that preserves the original human request and
+AIL-Requirements, includes the rejected AIL-Spec candidate and detailed checker
+diagnostics, calls the base LLM once more, and rechecks the repaired candidate
+before lowering. Keep the output target as verified AIL-Bytecode only.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_repairs_rejected_candidate_before_lowering -- --nocapture
+```
+
+Expected: `ail-build` sends requirements, initial AIL-Spec, and repair prompts,
+then emits verified AIL-Bytecode from the repaired candidate.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

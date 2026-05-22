@@ -3912,6 +3912,84 @@ fn cli_ail_build_uses_llm_candidate_and_outputs_verified_bytecode() {
 }
 
 #[test]
+fn cli_ail_build_repairs_rejected_candidate_before_lowering() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("support_ticket.ail");
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let requirements = concat!(
+        "AIL-Requirements:\n",
+        "- The application manages support tickets.\n",
+        "- Closing a ticket must refer to declared ticket fields only.\n",
+        "- Closing a ticket changes ticket status to Closed and records TicketClosed.\n"
+    );
+    let requirements_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(requirements)
+    );
+    let rejected_spec = fs::read_to_string(format!(
+        "{package}/examples/rejected/missing-reference.ail-spec.md"
+    ))
+    .unwrap();
+    let rejected_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(&format!(
+            "<think>ignore this</think>\n```ail\n{rejected_spec}\n```"
+        ))
+    );
+    let repaired_spec = fs::read_to_string(format!("{package}/spec.ail-spec.md")).unwrap();
+    let repaired_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(&format!(
+            "<think>ignore this</think>\n```ail\n{repaired_spec}\n```"
+        ))
+    );
+    let server = serve_chat_responses(
+        listener,
+        vec![requirements_body, rejected_body, repaired_body],
+    );
+
+    let output = Command::new(binary)
+        .args([
+            "ail-build",
+            &package,
+            "--prompt",
+            "Build an AIL support ticket bytecode artifact",
+            "--llm-endpoint",
+            &format!("http://127.0.0.1:{}/v1/chat/completions", addr.port()),
+        ])
+        .output()
+        .unwrap();
+
+    let request_bodies = server.join().unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(request_bodies.len(), 3);
+    assert!(request_bodies[1].contains("DRAFT REQUIREMENTS:"));
+    assert!(request_bodies[2].contains("Repair an AIL-Spec candidate"));
+    assert!(request_bodies[2].contains("AIL001 unknown requirement reference"));
+    assert!(
+        request_bodies[2].contains(
+            "repair=Declare a Thing named 'account' or update the requirement to reference an existing thing."
+        ),
+        "{}",
+        request_bodies[2]
+    );
+    assert!(request_bodies[2].contains("PREVIOUS AIL-SPEC CANDIDATE:"));
+    assert!(request_bodies[2].contains("DRAFT REQUIREMENTS:"));
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let bytecode = parse_ail_bytecode(&stdout).unwrap();
+    assert_eq!(bytecode.profile, "Application");
+    assert_eq!(verify_ail_bytecode(&bytecode), Vec::<String>::new());
+    assert!(bytecode.actions.contains_key("CloseTicket"));
+}
+
+#[test]
 fn cli_ail_build_for_agent_tool_profile_prompts_tool_requirements_and_outputs_bytecode() {
     let binary = env!("CARGO_BIN_EXE_eigl");
     let package = fixture("refund_tool.ail");

@@ -4212,6 +4212,25 @@ pub fn draft_ail_spec_from_requirements(
     Ok(check_ail_draft_spec(package, spec_text))
 }
 
+pub fn repair_ail_spec_from_diagnostics(
+    package: &AilPackage,
+    user_prompt: &str,
+    requirements_text: &str,
+    previous_spec_text: &str,
+    diagnostics: &[AilDiagnostic],
+    endpoint: &str,
+) -> Result<AilDraftResult, String> {
+    let prompt = build_ail_repair_prompt(
+        package,
+        user_prompt,
+        requirements_text,
+        previous_spec_text,
+        diagnostics,
+    );
+    let spec_text = crate::llm_bridge::invoke_llm_text(endpoint, &prompt)?;
+    Ok(check_ail_draft_spec(package, spec_text))
+}
+
 fn check_ail_draft_spec(package: &AilPackage, spec_text: String) -> AilDraftResult {
     let diagnostics = match parse_ail_package_spec_text(package, &spec_text) {
         Ok(document) => check_ail_core_diagnostics(&elaborate_ail_core(package, &document)),
@@ -5019,6 +5038,37 @@ fn build_ail_requirements_prompt(package: &AilPackage, user_prompt: &str) -> Str
         package.metadata.features.join(", "),
         user_prompt
     )
+}
+
+fn build_ail_repair_prompt(
+    package: &AilPackage,
+    user_prompt: &str,
+    requirements_text: &str,
+    previous_spec_text: &str,
+    diagnostics: &[AilDiagnostic],
+) -> String {
+    let diagnostics_text = diagnostics
+        .iter()
+        .map(AilDiagnostic::detailed_message)
+        .collect::<Vec<_>>()
+        .join("\n");
+    let repair_request = format!(
+        concat!(
+            "Repair an AIL-Spec candidate for package {}.\n",
+            "Keep the original human request and requirements, but fix every checker diagnostic before returning the candidate.\n",
+            "Do not explain the fix. Do not generate host-language source. The repaired candidate will be parsed, checked, lowered to AIL-Core, and compiled to AIL-Bytecode.\n\n",
+            "ORIGINAL HUMAN REQUEST:\n",
+            "{}\n\n",
+            "DRAFT REQUIREMENTS:\n",
+            "{}\n\n",
+            "PREVIOUS AIL-SPEC CANDIDATE:\n",
+            "{}\n\n",
+            "CHECKER DIAGNOSTICS:\n",
+            "{}\n"
+        ),
+        package.metadata.name, user_prompt, requirements_text, previous_spec_text, diagnostics_text
+    );
+    build_ail_draft_prompt(package, &repair_request)
 }
 
 fn build_ail_draft_prompt(package: &AilPackage, user_prompt: &str) -> String {

@@ -10,7 +10,8 @@ use eigl::ail::{
     draft_ail_spec_from_requirements, elaborate_ail_core, load_ail_package_dir, parse_ail_bytecode,
     parse_ail_package_document, parse_ail_package_spec_text, parse_ail_patch_text,
     render_ail_bytecode, render_ail_core, render_ail_flow_view, render_ail_runtime_state_lines,
-    render_ail_spec, run_ail_bytecode_action, run_ail_conformance, verify_ail_bytecode,
+    render_ail_spec, repair_ail_spec_from_diagnostics, run_ail_bytecode_action,
+    run_ail_conformance, verify_ail_bytecode,
 };
 use eigl::apply_rif_patch;
 use eigl::checker::check_document;
@@ -477,7 +478,18 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
             .as_deref()
             .unwrap_or(&package.metadata.base_llm_endpoint);
         let requirements = draft_ail_requirements(&package, prompt, endpoint)?;
-        let draft = draft_ail_spec_from_requirements(&package, prompt, &requirements, endpoint)?;
+        let mut draft =
+            draft_ail_spec_from_requirements(&package, prompt, &requirements, endpoint)?;
+        if !draft.success() {
+            draft = repair_ail_spec_from_diagnostics(
+                &package,
+                prompt,
+                &requirements,
+                &draft.spec_text,
+                &draft.diagnostics,
+                endpoint,
+            )?;
+        }
         if !draft.success() {
             println!("ail-build diagnostics:");
             for diagnostic in draft.diagnostics {

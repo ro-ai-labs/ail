@@ -39,8 +39,9 @@ artifact directly, `ail-conformance` checks accepted and rejected fixtures,
 `ail-draft --prompt <text>` asks the package base LLM endpoint for an AIL-Spec
 candidate before parsing and checking it, and `ail-build --prompt <text>` asks
 the base LLM for requirements, asks it to turn those requirements into an
-AIL-Spec candidate for the package profile, and prints verified AIL-Bytecode on
-success.
+AIL-Spec candidate for the package profile, gives the base LLM one
+diagnostics-guided repair pass if the checker rejects the candidate, and prints
+verified AIL-Bytecode on success.
 The default AIL base LLM endpoint is
 `http://inteligentia-pro-1:8080/v1/chat/completions`.
 

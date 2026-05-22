@@ -330,8 +330,11 @@ opcodes and missing required operands before executing saved bytecode.
 `ail-build` composes the LLM draft loop with the same checked bytecode lowering:
 the base LLM first drafts an AIL-Requirements artifact from a user prompt, then
 drafts an AIL-Spec candidate for the package profile grounded in those
-requirements. The checker accepts or rejects the candidate, and successful
-candidates render as verified AIL-Bytecode rather than host-language source.
+requirements. If the checker rejects the first candidate, `ail-build` sends the
+candidate plus detailed diagnostics and repair suggestions back to the base LLM
+for one repair pass. Only a checked candidate is lowered to AIL-Core and
+verified AIL-Bytecode, so the build path still emits bytecode rather than
+host-language source.
 
 ### Diagnostics
 
