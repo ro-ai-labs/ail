@@ -78,6 +78,7 @@ the agent-produced requirements checklist state into that first LLM prompt, runs
 spec checklist state into the AIL-Spec prompt, runs `AcceptSpecDraft` after the
 checked AIL-Spec draft is accepted and before AIL-Core elaboration, optionally
 runs `CompareAgentPromptPortability` when `--target-model <name>` is supplied,
+runs `AcceptCoreIR` after AIL-Core is checked and before compilation,
 runs `CompileApplication` over the completed build state before target bytecode
 emission, runs `VerifyBytecodeArtifact` after the emitted bytecode verifies, and,
 with `--artifact-dir`, writes `agent.ailbc.json` and `agent-trace.txt`. When

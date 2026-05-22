@@ -4194,6 +4194,52 @@ cargo test --test ail_toolchain cli_ail_build_agent_accepts_spec_draft_before_co
 Expected: the agent trace records `AcceptSpecDraft`, `SpecCaptured`, and
 `SpecDraftAccepted` before `CompileApplication`.
 
+### Task 100: AIL Build Agent Accepts Checked AIL-Core IR
+
+**Files:**
+- Modify: `examples/ail_toolchain_agent.ail/spec.ail-spec.md`
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing accepted-core agent test**
+
+Add a prompt-driven `ail-build --agent` CLI test that requires the agent trace
+to record `AcceptCoreIR` after `AcceptSpecDraft` and before
+`CompileApplication`, read the checked `BuildRequest` core ir, write
+`buildrequest.core review report=Accepted`, change status to `CoreChecked`, and
+record `CoreIrAccepted`.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_agent_accepts_checked_core_before_compile -- --nocapture
+```
+
+Expected: failure because the command currently lets `CompileApplication` be
+the first AIL bytecode action to observe checked AIL-Core.
+
+- [x] **Step 3: Implement accepted-core bytecode checkpoint**
+
+Extend the AIL-authored toolchain agent with a `core review report` field and
+`AcceptCoreIR` action. After AIL-Core checking and any compiler pass, render the
+checked core, run that action with the captured build state, and pass the
+resulting `CoreChecked` state into `CompileApplication`.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_agent_accepts_checked_core_before_compile -- --nocapture
+```
+
+Expected: the agent trace records `AcceptCoreIR`, `CoreChecked`, and
+`CoreIrAccepted` before `CompileApplication`.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

@@ -770,6 +770,47 @@ fn run_ail_build_agent_accept_spec(
     Ok(agent_start)
 }
 
+fn run_ail_build_agent_accept_core(
+    agent_path: &str,
+    mut agent_start: AilBuildAgentStart,
+    requirements_artifact: Option<&str>,
+    spec_text: Option<&str>,
+    core_text: &str,
+) -> Result<AilBuildAgentStart, String> {
+    let (agent_bytecode, _) = load_verified_ail_build_agent(agent_path)?;
+    if !agent_bytecode.actions.contains_key("AcceptCoreIR") {
+        return Err("ail-build --agent requires an AcceptCoreIR action".to_string());
+    }
+    if let Some(requirements_artifact) = requirements_artifact {
+        agent_start.state.insert(
+            "buildrequest.requirements".to_string(),
+            requirements_artifact.to_string(),
+        );
+    }
+    if let Some(spec_text) = spec_text {
+        agent_start
+            .state
+            .insert("buildrequest.spec".to_string(), spec_text.to_string());
+    }
+    agent_start
+        .state
+        .insert("buildrequest.core ir".to_string(), core_text.to_string());
+    let accept_run = run_ail_bytecode_action(&agent_bytecode, "AcceptCoreIR", agent_start.state)?;
+    if accept_run.status != "succeeded" {
+        let mut message = "ail-build agent AcceptCoreIR failed".to_string();
+        if let Some(failure) = accept_run.failure {
+            message.push_str(&format!(": {failure}"));
+        }
+        if !accept_run.trace.is_empty() {
+            message.push_str(&format!("\n{}", accept_run.trace.join("\n")));
+        }
+        return Err(message);
+    }
+    agent_start.trace.extend(accept_run.trace);
+    agent_start.state = accept_run.final_state;
+    Ok(agent_start)
+}
+
 fn run_ail_build_agent(
     agent_path: &str,
     core: &eigl::ail::AilCore,
@@ -1096,6 +1137,23 @@ fn run_ail_build_from_core(
             return Ok(1);
         }
     }
+    let agent_start = match agent_start {
+        Some(agent_start) => {
+            if let Some(agent_path) = &cli_options.ail_build_agent {
+                let core_text = render_ail_core(&core);
+                Some(run_ail_build_agent_accept_core(
+                    agent_path,
+                    agent_start,
+                    requirements_artifact,
+                    spec_text,
+                    &core_text,
+                )?)
+            } else {
+                Some(agent_start)
+            }
+        }
+        None => None,
+    };
     let mut agent_run = if let Some(agent_path) = &cli_options.ail_build_agent {
         Some(run_ail_build_agent(
             agent_path,

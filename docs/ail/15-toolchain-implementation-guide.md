@@ -401,9 +401,10 @@ agent-produced spec checklist state in the AIL-Spec prompt. Once the checked
 AIL-Spec draft is accepted, it runs `AcceptSpecDraft` before AIL-Core
 elaboration so the `SpecCaptured` transition is also represented in AIL
 bytecode. It optionally runs `CompareAgentPromptPortability` when
-`--target-model <name>` is supplied, and runs its `CompileApplication` action
-against the completed build state before target bytecode emission. After the
-Rust bootstrap compiler emits and verifies the target artifact, the agent runs
+`--target-model <name>` is supplied, runs `AcceptCoreIR` after AIL-Core checking
+and any compiler pass, and then runs its `CompileApplication` action against the
+completed build state before target bytecode emission. After the Rust bootstrap
+compiler emits and verifies the target artifact, the agent runs
 `VerifyBytecodeArtifact` so the final artifact boundary is also represented in
 AIL bytecode. This keeps the developer-facing build coordinator in AIL bytecode
 instead of adding a host-language orchestration layer. With `--artifact-dir`,
