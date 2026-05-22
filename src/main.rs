@@ -385,6 +385,7 @@ struct AilBuildArtifactSet<'a> {
     spec_text: Option<&'a str>,
     core_text: &'a str,
     bytecode_text: &'a str,
+    bytecode_fingerprint: &'a str,
     pass_bytecode_text: Option<&'a str>,
     pass_trace: Option<&'a [String]>,
     agent_bytecode_text: Option<&'a str>,
@@ -423,6 +424,11 @@ fn write_ail_build_artifacts(
         .map_err(|error| format!("failed to write ail-build core artifact: {error}"))?;
     fs::write(root.join("artifact.ailbc.json"), artifacts.bytecode_text)
         .map_err(|error| format!("failed to write ail-build bytecode artifact: {error}"))?;
+    fs::write(
+        root.join("artifact.fingerprint.txt"),
+        format!("{}\n", artifacts.bytecode_fingerprint),
+    )
+    .map_err(|error| format!("failed to write ail-build bytecode fingerprint artifact: {error}"))?;
     if let Some(pass_bytecode_text) = artifacts.pass_bytecode_text {
         fs::write(root.join("pass.ailbc.json"), pass_bytecode_text).map_err(|error| {
             format!("failed to write ail-build pass bytecode artifact: {error}")
@@ -448,6 +454,15 @@ fn write_ail_build_artifacts(
         .map_err(|error| format!("failed to write ail-build agent trace artifact: {error}"))?;
     }
     Ok(())
+}
+
+fn ail_artifact_fingerprint(text: &str) -> String {
+    let mut hash = 0xcbf29ce484222325u64;
+    for byte in text.as_bytes() {
+        hash ^= u64::from(*byte);
+        hash = hash.wrapping_mul(0x100000001b3);
+    }
+    format!("fnv64:{hash:016x}")
 }
 
 fn write_ail_pass_artifacts(
@@ -1102,6 +1117,7 @@ fn run_ail_build_agent(
 fn run_ail_build_agent_verify_bytecode(
     agent_run: &mut AilBuildAgentRun,
     bytecode_text: &str,
+    bytecode_fingerprint: &str,
 ) -> Result<(), String> {
     if !agent_run
         .bytecode
@@ -1117,6 +1133,10 @@ fn run_ail_build_agent_verify_bytecode(
     verify_state.insert(
         "buildrequest.bytecode artifact".to_string(),
         format!("Verified AIL-Bytecode ({} bytes)", bytecode_text.len()),
+    );
+    verify_state.insert(
+        "buildrequest.bytecode fingerprint".to_string(),
+        bytecode_fingerprint.to_string(),
     );
     let verify_run =
         run_ail_bytecode_action(&agent_run.bytecode, "VerifyBytecodeArtifact", verify_state)?;
@@ -1343,8 +1363,9 @@ fn run_ail_build_from_core(
         return Ok(1);
     }
     let bytecode_text = format!("{}\n", render_ail_bytecode(&bytecode));
+    let bytecode_fingerprint = ail_artifact_fingerprint(&bytecode_text);
     if let Some(agent_run) = agent_run.as_mut() {
-        run_ail_build_agent_verify_bytecode(agent_run, &bytecode_text)?;
+        run_ail_build_agent_verify_bytecode(agent_run, &bytecode_text, &bytecode_fingerprint)?;
     }
     if let Some(artifact_dir) = &cli_options.artifact_dir {
         let core_text = format!("{}\n", render_ail_core(&core));
@@ -1355,6 +1376,7 @@ fn run_ail_build_from_core(
                 spec_text,
                 core_text: &core_text,
                 bytecode_text: &bytecode_text,
+                bytecode_fingerprint: &bytecode_fingerprint,
                 pass_bytecode_text: pass_bytecode_artifact.as_deref(),
                 pass_trace: pass_trace_artifact.as_deref(),
                 agent_bytecode_text: agent_run.as_ref().map(|run| run.bytecode_text.as_str()),

@@ -419,19 +419,21 @@ bytecode emission. For saved
 loads the checked core into the `BuildRequest`, and still runs `AcceptCoreIR`
 before `CompileApplication`. After the Rust bootstrap compiler emits and
 verifies the target artifact, the agent runs
-`VerifyBytecodeArtifact` so the final artifact boundary is also represented in
+`VerifyBytecodeArtifact` with the emitted artifact summary and deterministic
+bytecode fingerprint so the final artifact boundary is also represented in
 AIL bytecode. This keeps the developer-facing build coordinator in AIL bytecode
 instead of adding a host-language orchestration layer. With `--artifact-dir`,
 the same command writes
-`accepted.ail-spec.md`, `checked.ail-core.txt`, and `artifact.ailbc.json`; it
-also writes `requirements.ail-requirements.md` when the build captured or loaded
-requirements, and it writes `accepted.ail-spec.md` only when an AIL-Spec stage
-was present. When a build pass is present, `checked.ail-core.txt` is the
-post-pass IR that was actually lowered, and the artifact directory also includes
-`pass.ailbc.json` plus `pass-trace.txt` for the compiler-pass bytecode and
-execution trace. When a build agent is present, the artifact directory also
-includes `agent.ailbc.json` plus `agent-trace.txt` for the agent bytecode and
-its requirements-capture, prompt-portability, application-compile, and
+`accepted.ail-spec.md`, `checked.ail-core.txt`, `artifact.ailbc.json`, and
+`artifact.fingerprint.txt`; it also writes `requirements.ail-requirements.md`
+when the build captured or loaded requirements, and it writes
+`accepted.ail-spec.md` only when an AIL-Spec stage was present. When a build
+pass is present, `checked.ail-core.txt` is the post-pass IR that was actually
+lowered, and the artifact directory also includes `pass.ailbc.json` plus
+`pass-trace.txt` for the compiler-pass bytecode and execution trace. When a
+build agent is present, the artifact directory also includes
+`agent.ailbc.json` plus `agent-trace.txt` for the agent bytecode and its
+requirements-capture, prompt-portability, application-compile, and
 bytecode-verification trace. This lets the developer audit the
 requirements-to-spec-to-IR-to-pass-to-agent-to-bytecode chain, a
 saved-spec-to-IR-to-agent-to-bytecode chain, or a

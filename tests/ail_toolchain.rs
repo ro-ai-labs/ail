@@ -20,6 +20,15 @@ fn fixture(name: &str) -> String {
     format!("{}/examples/{name}", env!("CARGO_MANIFEST_DIR"))
 }
 
+fn fnv64_fingerprint(text: &str) -> String {
+    let mut hash = 0xcbf29ce484222325u64;
+    for byte in text.as_bytes() {
+        hash ^= u64::from(*byte);
+        hash = hash.wrapping_mul(0x100000001b3);
+    }
+    format!("fnv64:{hash:016x}")
+}
+
 fn detailed_ail_diagnostic(core: &eigl::ail::AilCore, code: &str, message: &str) -> String {
     check_ail_core_diagnostics(core)
         .into_iter()
@@ -5818,6 +5827,7 @@ fn cli_ail_build_agent_verifies_bytecode_artifact_after_compile() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     let bytecode = parse_ail_bytecode(&stdout).unwrap();
     assert_eq!(verify_ail_bytecode(&bytecode), Vec::<String>::new());
+    let expected_fingerprint = fnv64_fingerprint(&stdout);
 
     let agent_trace = fs::read_to_string(artifact_dir.join("agent-trace.txt")).unwrap();
     let compile_index = agent_trace
@@ -5828,8 +5838,12 @@ fn cli_ail_build_agent_verifies_bytecode_artifact_after_compile() {
         .unwrap_or_else(|| panic!("{agent_trace}"));
     assert!(compile_index < verify_index, "{agent_trace}");
     assert!(agent_trace.contains("read buildrequest.bytecode artifact"));
+    assert!(agent_trace.contains("read buildrequest.bytecode fingerprint"));
     assert!(agent_trace.contains("write buildrequest.bytecode verification report=Verified"));
     assert!(agent_trace.contains("trace BytecodeArtifactVerified"));
+
+    let fingerprint = fs::read_to_string(artifact_dir.join("artifact.fingerprint.txt")).unwrap();
+    assert_eq!(fingerprint.trim(), expected_fingerprint);
 
     let agent_bytecode = fs::read_to_string(artifact_dir.join("agent.ailbc.json")).unwrap();
     assert!(agent_bytecode.contains(r#""action":"VerifyBytecodeArtifact""#));

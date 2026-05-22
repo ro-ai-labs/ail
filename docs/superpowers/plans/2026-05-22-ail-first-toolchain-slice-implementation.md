@@ -4427,6 +4427,54 @@ Expected: `AcceptCompilerPassOutput`, `PassApplied`, and
 `CompilerPassOutputAccepted` appear before `AcceptCoreIR` and
 `CompileApplication`.
 
+### Task 105: AIL Build Agent Verifies Bytecode Fingerprint
+
+**Files:**
+- Modify: `examples/ail_toolchain_agent.ail/spec.ail-spec.md`
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing bytecode-fingerprint test**
+
+Extend the `ail-build --agent --artifact-dir` verification test to require the
+AIL-authored build-agent trace to read `BuildRequest.bytecode fingerprint`, and
+require the artifact directory to include `artifact.fingerprint.txt` matching
+the deterministic fingerprint of stdout bytecode.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_agent_verifies_bytecode_artifact_after_compile -- --nocapture
+```
+
+Expected: failure because `VerifyBytecodeArtifact` only reads the bytecode
+artifact summary and `ail-build --artifact-dir` writes no bytecode fingerprint
+artifact.
+
+- [x] **Step 3: Implement dependency-free bytecode fingerprinting**
+
+Add a `BuildRequest.bytecode fingerprint` field to the AIL-authored toolchain
+agent and require `VerifyBytecodeArtifact` to read it. Compute a stable FNV-1a
+fingerprint over the emitted bytecode text in the Rust bootstrap, pass it into
+the AIL bytecode agent action, and write `artifact.fingerprint.txt` beside
+`artifact.ailbc.json`.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_agent_verifies_bytecode_artifact_after_compile -- --nocapture
+```
+
+Expected: the agent trace reads `buildrequest.bytecode fingerprint`, the final
+verification trace still records `BytecodeArtifactVerified`, and the fingerprint
+artifact matches stdout bytecode.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

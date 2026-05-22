@@ -82,7 +82,8 @@ runs `AcceptCompilerPassOutput` after an AIL-authored compiler pass is applied,
 runs `AcceptCoreIR` after AIL-Core is checked and before compilation, runs
 `CompileApplication` over the completed build state before target bytecode
 emission, runs `VerifyBytecodeArtifact` after the emitted bytecode verifies, and,
-with `--artifact-dir`, writes `agent.ailbc.json` and `agent-trace.txt`. When
+with `--artifact-dir`, writes `artifact.fingerprint.txt`, `agent.ailbc.json`,
+and `agent-trace.txt`. When
 `ail-build --requirements-file` is used with `--agent`, the saved checked
 requirements are loaded as an agent-visible `RequirementsLoaded` artifact,
 prepared through `PrepareSpecDraft`, and accepted through `AcceptSpecDraft`
@@ -94,8 +95,10 @@ as an agent-visible `SpecLoaded` artifact and accepted through
 as an agent-visible `CoreLoaded` artifact and accepted through `AcceptCoreIR`
 before `CompileApplication`. When `ail-build --pass` is used with `--agent`,
 the pass bytecode and VM trace are accepted through `AcceptCompilerPassOutput`
-before `AcceptCoreIR`. When `ail-build --pass` is used with `--artifact-dir`,
-it also writes `pass.ailbc.json` and `pass-trace.txt`. On `ail-pass`,
+before `AcceptCoreIR`. The final `VerifyBytecodeArtifact` action reads both
+the emitted bytecode artifact summary and its deterministic fingerprint. When
+`ail-build --pass` is used with `--artifact-dir`, it also writes
+`pass.ailbc.json` and `pass-trace.txt`. On `ail-pass`,
 `--artifact-dir <dir>` writes
 `pass.ailbc.json`, `input.ail-core.txt`, `output.ail-core.txt`, and
 `trace.txt` while stdout remains the transformed AIL-Core artifact.
