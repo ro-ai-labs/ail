@@ -368,8 +368,9 @@ directly instead of loading the target source package, so a saved
 Compiler-profile bytecode artifact can transform a saved IR artifact as a
 standalone compiler stage. With
 `--artifact-dir`, the same command writes `pass.ailbc.json`,
-`input.ail-core.txt`, `output.ail-core.txt`, and `trace.txt` so pass execution
-can be audited while stdout remains the transformed AIL-Core artifact.
+`pass.fingerprint.txt`, `input.ail-core.txt`, `output.ail-core.txt`, and
+`trace.txt` so pass execution can be audited while stdout remains the
+transformed AIL-Core artifact.
 `ail-build` composes the LLM draft loop with the same checked bytecode lowering:
 the base LLM first drafts an AIL-Requirements artifact from a user prompt.
 `ail-build` checks that artifact for profile-specific coverage before spec

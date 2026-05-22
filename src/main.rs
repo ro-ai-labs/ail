@@ -497,6 +497,11 @@ fn write_ail_pass_artifacts(
     })?;
     fs::write(root.join("pass.ailbc.json"), pass_bytecode_text)
         .map_err(|error| format!("failed to write ail-pass bytecode artifact: {error}"))?;
+    fs::write(
+        root.join("pass.fingerprint.txt"),
+        format!("{}\n", ail_artifact_fingerprint(pass_bytecode_text)),
+    )
+    .map_err(|error| format!("failed to write ail-pass bytecode fingerprint artifact: {error}"))?;
     fs::write(root.join("input.ail-core.txt"), input_core_text)
         .map_err(|error| format!("failed to write ail-pass input core artifact: {error}"))?;
     fs::write(root.join("output.ail-core.txt"), output_core_text)

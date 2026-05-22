@@ -2128,11 +2128,13 @@ fn cli_ail_pass_writes_auditable_intermediate_artifacts() {
     );
     let stdout = String::from_utf8_lossy(&output.stdout);
     let pass_bytecode = fs::read_to_string(artifact_dir.join("pass.ailbc.json")).unwrap();
+    let pass_fingerprint = fs::read_to_string(artifact_dir.join("pass.fingerprint.txt")).unwrap();
     let input_core = fs::read_to_string(artifact_dir.join("input.ail-core.txt")).unwrap();
     let output_core = fs::read_to_string(artifact_dir.join("output.ail-core.txt")).unwrap();
     let trace = fs::read_to_string(artifact_dir.join("trace.txt")).unwrap();
 
     assert_eq!(output_core, stdout);
+    assert_eq!(pass_fingerprint.trim(), fnv64_fingerprint(&pass_bytecode));
     assert!(pass_bytecode.contains(r#""package":"ail-meta-permissions""#));
     assert!(pass_bytecode.contains(r#""opcode":"CORE_INFER_READ_PERMISSIONS""#));
     assert!(!input_core.contains("node Permission read Ticket.status"));

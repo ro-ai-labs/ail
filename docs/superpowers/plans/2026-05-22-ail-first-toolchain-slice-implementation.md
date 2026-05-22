@@ -4522,6 +4522,48 @@ Expected: the pass fingerprint artifact matches `pass.ailbc.json`, the agent
 trace reads `buildrequest.compiler pass fingerprint`, and compiler-pass output
 acceptance still precedes `AcceptCoreIR`.
 
+### Task 107: Standalone AIL Pass Writes Bytecode Fingerprint
+
+**Files:**
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing standalone pass fingerprint test**
+
+Extend the `ail-pass --artifact-dir` test to require `pass.fingerprint.txt`
+beside `pass.ailbc.json`, using the same deterministic FNV-1a fingerprint
+format as `ail-build` pass artifacts.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_pass_writes_auditable_intermediate_artifacts -- --nocapture
+```
+
+Expected: failure because standalone `ail-pass --artifact-dir` writes the pass
+bytecode, input core, output core, and trace, but no pass fingerprint.
+
+- [x] **Step 3: Implement standalone pass fingerprint output**
+
+Reuse the dependency-free bytecode fingerprint helper in the `ail-pass`
+artifact writer and write `pass.fingerprint.txt` whenever `pass.ailbc.json` is
+written.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_pass_writes_auditable_intermediate_artifacts -- --nocapture
+```
+
+Expected: `pass.fingerprint.txt` matches `pass.ailbc.json` while stdout remains
+the transformed AIL-Core artifact.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**
