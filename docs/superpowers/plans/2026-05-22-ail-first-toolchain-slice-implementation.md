@@ -4101,6 +4101,53 @@ cargo test --test ail_toolchain cli_ail_build_agent_threads_capture_checklist_in
 Expected: the first base LLM requirements request includes the agent context and
 the agent trace records the checklist state write before compilation.
 
+### Task 98: AIL Build Agent Spec Prompt Context
+
+**Files:**
+- Modify: `examples/ail_toolchain_agent.ail/spec.ail-spec.md`
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing spec-prompt context test**
+
+Add a prompt-driven `ail-build --agent` CLI test that requires the second base
+LLM request, the AIL-Spec draft prompt, to include an `AGENT SPEC CONTEXT`
+section and the AIL agent's `buildrequest.spec coverage checklist=Prepared`
+state. Require the agent trace to record `PrepareSpecDraft` before
+`CompileApplication`.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_agent_threads_spec_checklist_into_spec_prompt -- --nocapture
+```
+
+Expected: failure because the command drafts AIL-Spec directly after
+requirements checking without running an AIL-authored spec-preparation action or
+including agent state in the spec prompt.
+
+- [x] **Step 3: Implement spec prompt context threading**
+
+Extend the AIL-authored toolchain agent with a `spec coverage checklist` field
+and `PrepareSpecDraft` action. After requirements are checked, run that action
+against the captured build state, append its trace, and pass the resulting
+checklist context to both initial AIL-Spec drafting and spec repair.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_agent_threads_spec_checklist_into_spec_prompt -- --nocapture
+```
+
+Expected: the AIL-Spec prompt includes `AGENT SPEC CONTEXT`, and the agent trace
+records `PrepareSpecDraft` before `CompileApplication`.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

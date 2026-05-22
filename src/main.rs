@@ -687,6 +687,53 @@ fn render_ail_build_agent_requirements_context(agent_start: &AilBuildAgentStart)
     lines.join("\n")
 }
 
+fn run_ail_build_agent_prepare_spec(
+    agent_path: &str,
+    mut agent_start: AilBuildAgentStart,
+    requirements_artifact: &str,
+) -> Result<AilBuildAgentStart, String> {
+    let (agent_bytecode, _) = load_verified_ail_build_agent(agent_path)?;
+    if !agent_bytecode.actions.contains_key("PrepareSpecDraft") {
+        return Err(
+            "ail-build --agent requires a PrepareSpecDraft action for prompt builds".to_string(),
+        );
+    }
+    agent_start.state.insert(
+        "buildrequest.requirements".to_string(),
+        requirements_artifact.to_string(),
+    );
+    let prepare_run =
+        run_ail_bytecode_action(&agent_bytecode, "PrepareSpecDraft", agent_start.state)?;
+    if prepare_run.status != "succeeded" {
+        let mut message = "ail-build agent PrepareSpecDraft failed".to_string();
+        if let Some(failure) = prepare_run.failure {
+            message.push_str(&format!(": {failure}"));
+        }
+        if !prepare_run.trace.is_empty() {
+            message.push_str(&format!("\n{}", prepare_run.trace.join("\n")));
+        }
+        return Err(message);
+    }
+    agent_start.trace.extend(prepare_run.trace);
+    agent_start.state = prepare_run.final_state;
+    Ok(agent_start)
+}
+
+fn render_ail_build_agent_spec_context(agent_start: &AilBuildAgentStart) -> String {
+    let mut lines = vec![
+        "AIL agent PrepareSpecDraft bytecode completed before this base LLM request.".to_string(),
+    ];
+    lines.extend(
+        agent_start
+            .state
+            .iter()
+            .filter(|(key, _)| key.starts_with("buildrequest."))
+            .filter(|(key, _)| key.as_str() != "buildrequest.requirements")
+            .map(|(key, value)| format!("{key}={value}")),
+    );
+    lines.join("\n")
+}
+
 fn run_ail_build_agent(
     agent_path: &str,
     core: &eigl::ail::AilCore,
@@ -904,12 +951,30 @@ fn draft_checked_ail_spec_for_requirements(
     prompt: &str,
     requirements: &str,
     endpoint: &str,
+    agent_spec_context: Option<&str>,
 ) -> Result<eigl::ail::AilDraftResult, String> {
-    let mut draft = draft_ail_spec_from_requirements(package, prompt, requirements, endpoint)?;
+    let grounded_prompt = if let Some(agent_spec_context) =
+        agent_spec_context.filter(|context| !context.trim().is_empty())
+    {
+        format!(
+            concat!(
+                "{}\n\n",
+                "Use this AIL agent preflight state as a spec coverage checklist. ",
+                "Do not restate it by itself; produce a complete AIL-Spec candidate that preserves the checked requirements, domain model, actions, failures, guarantees, traces, secrets, runtime inputs, and bytecode compilation path.\n\n",
+                "AGENT SPEC CONTEXT:\n",
+                "{}"
+            ),
+            prompt, agent_spec_context
+        )
+    } else {
+        prompt.to_string()
+    };
+    let mut draft =
+        draft_ail_spec_from_requirements(package, &grounded_prompt, requirements, endpoint)?;
     if !draft.success() {
         draft = repair_ail_spec_from_diagnostics(
             package,
-            prompt,
+            &grounded_prompt,
             requirements,
             &draft.spec_text,
             &draft.diagnostics,
@@ -1182,8 +1247,13 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
             .llm_endpoint
             .as_deref()
             .unwrap_or(&package.metadata.base_llm_endpoint);
-        let draft =
-            draft_checked_ail_spec_for_requirements(&package, prompt, &requirements, endpoint)?;
+        let draft = draft_checked_ail_spec_for_requirements(
+            &package,
+            prompt,
+            &requirements,
+            endpoint,
+            None,
+        )?;
         if !draft.success() {
             println!("ail-spec diagnostics:");
             for diagnostic in draft.diagnostics {
@@ -1208,7 +1278,8 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
                     .ail_prompt
                     .as_deref()
                     .ok_or_else(|| "ail-build requires --prompt <text>".to_string())?;
-                let agent_start = if let Some(agent_path) = cli_options.ail_build_agent.as_deref()
+                let mut agent_start = if let Some(agent_path) =
+                    cli_options.ail_build_agent.as_deref()
                     && cli_options.ail_requirements_file.is_none()
                 {
                     Some(run_ail_build_agent_capture(
@@ -1248,11 +1319,26 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
                     }
                     return Ok(1);
                 }
+                let agent_spec_context = if let (Some(agent_path), Some(previous_agent_start)) =
+                    (cli_options.ail_build_agent.as_deref(), agent_start.take())
+                {
+                    let prepared_agent_start = run_ail_build_agent_prepare_spec(
+                        agent_path,
+                        previous_agent_start,
+                        &requirements,
+                    )?;
+                    let context = render_ail_build_agent_spec_context(&prepared_agent_start);
+                    agent_start = Some(prepared_agent_start);
+                    Some(context)
+                } else {
+                    None
+                };
                 let draft = draft_checked_ail_spec_for_requirements(
                     &package,
                     prompt,
                     &requirements,
                     endpoint,
+                    agent_spec_context.as_deref(),
                 )?;
                 if !draft.success() {
                     println!("ail-build diagnostics:");
