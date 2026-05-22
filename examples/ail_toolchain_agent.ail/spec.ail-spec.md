@@ -11,6 +11,7 @@ A BuildRequest has:
 - spec: Text
 - core ir: Text
 - bytecode artifact: Text
+- bytecode verification report: Text
 - prompt portability report: Text
 - status: State<PromptReceived, RequirementsCaptured, SpecCaptured, CoreChecked, BytecodeReady, NeedsClarification>
 - target model: Text
@@ -44,6 +45,17 @@ When the toolchain agent compiles a captured application:
 - the system changes the BuildRequest status to BytecodeReady
 - the system guarantees the compiler emits AIL-Bytecode and no Rust or host-language backend source
 - the system records a trace event named ApplicationBytecodeCompiled
+
+Action: Verify bytecode artifact.
+
+When the toolchain agent verifies emitted bytecode:
+
+- the system requires the BuildRequest to exist
+- the system requires the BuildRequest status to be BytecodeReady
+- the system reads the BuildRequest bytecode artifact
+- the system changes the BuildRequest bytecode verification report to Verified
+- the system guarantees the bytecode artifact is AIL-Bytecode and not Rust or host-language backend source
+- the system records a trace event named BytecodeArtifactVerified
 
 Action: Compare agent prompt portability.
 

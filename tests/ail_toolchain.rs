@@ -1880,6 +1880,10 @@ fn ail_toolchain_agent_package_lowers_to_verified_bytecode() {
         "{rendered}"
     );
     assert!(
+        rendered.contains(r#""action":"VerifyBytecodeArtifact""#),
+        "{rendered}"
+    );
+    assert!(
         rendered.contains(r#""value":"BytecodeReady""#),
         "{rendered}"
     );
@@ -1910,6 +1914,34 @@ fn ail_toolchain_agent_package_lowers_to_verified_bytecode() {
     assert!(
         run.trace
             .contains(&"trace ApplicationBytecodeCompiled".to_string())
+    );
+
+    let verify_run = run_ail_bytecode_action(
+        &bytecode,
+        "VerifyBytecodeArtifact",
+        BTreeMap::from([
+            ("buildrequest.id".to_string(), "BR-1".to_string()),
+            (
+                "buildrequest.status".to_string(),
+                "BytecodeReady".to_string(),
+            ),
+            (
+                "buildrequest.bytecode artifact".to_string(),
+                "Verified AIL-Bytecode".to_string(),
+            ),
+        ]),
+    )
+    .unwrap();
+
+    assert_eq!(verify_run.status, "succeeded");
+    assert_eq!(
+        verify_run.final_state["buildrequest.bytecode verification report"],
+        "Verified"
+    );
+    assert!(
+        verify_run
+            .trace
+            .contains(&"trace BytecodeArtifactVerified".to_string())
     );
 }
 
@@ -5168,6 +5200,86 @@ fn cli_ail_build_agent_compares_prompt_portability_before_compile() {
     assert!(agent_trace.contains("write buildrequest.prompt portability report=Compared"));
     assert!(agent_trace.contains("trace AgentPromptPortabilityCompared"));
     assert!(agent_trace.contains("trace ApplicationBytecodeCompiled"));
+
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
+fn cli_ail_build_agent_verifies_bytecode_artifact_after_compile() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("support_ticket.ail");
+    let agent_package = fixture("ail_toolchain_agent.ail");
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "eigl-ail-build-agent-verify-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let requirements = concat!(
+        "AIL-Requirements:\n",
+        "- The application manages support tickets.\n",
+        "- Ticket fields include id, title, status, and secret internal notes.\n",
+        "- The CloseTicket action requires ticket id input and ticket status not to be Closed.\n",
+        "- Failure NotFound happens when ticket id is missing and records TicketNotFound.\n",
+        "- The action guarantees closed tickets do not appear in the open queue.\n",
+        "- The action records trace event TicketClosed.\n"
+    );
+    let requirements_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(requirements)
+    );
+    let response_spec = fs::read_to_string(format!("{package}/spec.ail-spec.md")).unwrap();
+    let spec_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(&format!(
+            "<think>ignore this</think>\n```ail\n{response_spec}\n```"
+        ))
+    );
+    let server = serve_chat_responses(listener, vec![requirements_body, spec_body]);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-build",
+            &package,
+            "--prompt",
+            "Build an AIL support ticket bytecode artifact",
+            "--agent",
+            &agent_package,
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+            "--llm-endpoint",
+            &format!("http://127.0.0.1:{}/v1/chat/completions", addr.port()),
+        ])
+        .output()
+        .unwrap();
+
+    let request_bodies = server.join().unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(request_bodies.len(), 2);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let bytecode = parse_ail_bytecode(&stdout).unwrap();
+    assert_eq!(verify_ail_bytecode(&bytecode), Vec::<String>::new());
+
+    let agent_trace = fs::read_to_string(artifact_dir.join("agent-trace.txt")).unwrap();
+    let compile_index = agent_trace
+        .find("action CompileApplication started")
+        .unwrap_or_else(|| panic!("{agent_trace}"));
+    let verify_index = agent_trace
+        .find("action VerifyBytecodeArtifact started")
+        .unwrap_or_else(|| panic!("{agent_trace}"));
+    assert!(compile_index < verify_index, "{agent_trace}");
+    assert!(agent_trace.contains("read buildrequest.bytecode artifact"));
+    assert!(agent_trace.contains("write buildrequest.bytecode verification report=Verified"));
+    assert!(agent_trace.contains("trace BytecodeArtifactVerified"));
+
+    let agent_bytecode = fs::read_to_string(artifact_dir.join("agent.ailbc.json")).unwrap();
+    assert!(agent_bytecode.contains(r#""action":"VerifyBytecodeArtifact""#));
 
     fs::remove_dir_all(artifact_dir).unwrap();
 }

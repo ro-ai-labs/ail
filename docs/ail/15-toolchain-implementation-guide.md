@@ -397,9 +397,11 @@ its bytecode, and for prompt-driven builds runs its `CaptureRequirements`
 action before the base LLM requirements request. After requirements capture it
 optionally runs `CompareAgentPromptPortability` when `--target-model <name>` is
 supplied, and runs its `CompileApplication` action against the completed build
-state before target bytecode emission. This keeps the developer-facing build
-coordinator in AIL bytecode instead of adding a host-language orchestration
-layer. With `--artifact-dir`, the same command writes
+state before target bytecode emission. After the Rust bootstrap compiler emits
+and verifies the target artifact, the agent runs `VerifyBytecodeArtifact` so
+the final artifact boundary is also represented in AIL bytecode. This keeps the
+developer-facing build coordinator in AIL bytecode instead of adding a
+host-language orchestration layer. With `--artifact-dir`, the same command writes
 `accepted.ail-spec.md`, `checked.ail-core.txt`, and `artifact.ailbc.json`; it
 also writes `requirements.ail-requirements.md` when the build captured or loaded
 requirements, and it writes `accepted.ail-spec.md` only when an AIL-Spec stage
@@ -408,8 +410,8 @@ post-pass IR that was actually lowered, and the artifact directory also includes
 `pass.ailbc.json` plus `pass-trace.txt` for the compiler-pass bytecode and
 execution trace. When a build agent is present, the artifact directory also
 includes `agent.ailbc.json` plus `agent-trace.txt` for the agent bytecode and
-its requirements-capture, prompt-portability, and application-compile trace.
-This lets the developer audit the
+its requirements-capture, prompt-portability, application-compile, and
+bytecode-verification trace. This lets the developer audit the
 requirements-to-spec-to-IR-to-pass-to-agent-to-bytecode chain, a
 saved-spec-to-IR-to-agent-to-bytecode chain, or a
 saved-core-to-agent-to-bytecode chain while stdout remains the parseable

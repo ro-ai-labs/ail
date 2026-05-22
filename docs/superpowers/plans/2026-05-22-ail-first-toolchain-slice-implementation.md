@@ -4008,6 +4008,51 @@ cargo test --test ail_toolchain cli_ail_build_agent_compile_failure_happens_befo
 Expected: the invalid agent fails before the unsupported target profile reaches
 bytecode lowering.
 
+### Task 96: AIL Build Agent Bytecode Verification Stage
+
+**Files:**
+- Modify: `examples/ail_toolchain_agent.ail/spec.ail-spec.md`
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing bytecode-verification test**
+
+Add a prompt-driven `ail-build --agent` CLI test that requires
+`agent-trace.txt` to record `VerifyBytecodeArtifact` after
+`CompileApplication`, read the emitted bytecode artifact, write a bytecode
+verification report, and record `BytecodeArtifactVerified`.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_agent_verifies_bytecode_artifact_after_compile -- --nocapture
+```
+
+Expected: failure because the agent trace currently stops after
+`ApplicationBytecodeCompiled`.
+
+- [x] **Step 3: Implement post-emission verification**
+
+Extend the AIL-authored toolchain agent with `VerifyBytecodeArtifact`, preserve
+the agent bytecode program and state across `CompileApplication`, and after the
+Rust bootstrap compiler emits and verifies the target AIL-Bytecode artifact,
+run `VerifyBytecodeArtifact` and append its trace.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_agent_verifies_bytecode_artifact_after_compile -- --nocapture
+```
+
+Expected: the agent trace records `VerifyBytecodeArtifact` after
+`CompileApplication` and includes `BytecodeArtifactVerified`.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

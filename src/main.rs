@@ -396,6 +396,13 @@ struct AilBuildAgentStart {
     trace: Vec<String>,
 }
 
+struct AilBuildAgentRun {
+    bytecode: eigl::ail::AilBytecodeProgram,
+    bytecode_text: String,
+    state: BTreeMap<String, String>,
+    trace: Vec<String>,
+}
+
 fn write_ail_build_artifacts(
     artifact_dir: &str,
     artifacts: AilBuildArtifactSet<'_>,
@@ -673,7 +680,7 @@ fn run_ail_build_agent(
     capture_prompt: Option<&str>,
     target_model: Option<&str>,
     agent_start: Option<AilBuildAgentStart>,
-) -> Result<(String, Vec<String>), String> {
+) -> Result<AilBuildAgentRun, String> {
     let (agent_bytecode, agent_bytecode_text) = load_verified_ail_build_agent(agent_path)?;
     if !agent_bytecode.actions.contains_key("CompileApplication") {
         return Err("ail-build --agent requires a CompileApplication action".to_string());
@@ -796,7 +803,48 @@ fn run_ail_build_agent(
         return Err(message);
     }
     trace.extend(run.trace);
-    Ok((agent_bytecode_text, trace))
+    Ok(AilBuildAgentRun {
+        bytecode: agent_bytecode,
+        bytecode_text: agent_bytecode_text,
+        state: run.final_state,
+        trace,
+    })
+}
+
+fn run_ail_build_agent_verify_bytecode(
+    agent_run: &mut AilBuildAgentRun,
+    bytecode_text: &str,
+) -> Result<(), String> {
+    if !agent_run
+        .bytecode
+        .actions
+        .contains_key("VerifyBytecodeArtifact")
+    {
+        return Err(
+            "ail-build --agent requires a VerifyBytecodeArtifact action after bytecode emission"
+                .to_string(),
+        );
+    }
+    let mut verify_state = agent_run.state.clone();
+    verify_state.insert(
+        "buildrequest.bytecode artifact".to_string(),
+        format!("Verified AIL-Bytecode ({} bytes)", bytecode_text.len()),
+    );
+    let verify_run =
+        run_ail_bytecode_action(&agent_run.bytecode, "VerifyBytecodeArtifact", verify_state)?;
+    if verify_run.status != "succeeded" {
+        let mut message = "ail-build agent VerifyBytecodeArtifact failed".to_string();
+        if let Some(failure) = verify_run.failure {
+            message.push_str(&format!(": {failure}"));
+        }
+        if !verify_run.trace.is_empty() {
+            message.push_str(&format!("\n{}", verify_run.trace.join("\n")));
+        }
+        return Err(message);
+    }
+    agent_run.trace.extend(verify_run.trace);
+    agent_run.state = verify_run.final_state;
+    Ok(())
 }
 
 fn draft_checked_ail_requirements_for_package(
@@ -915,21 +963,19 @@ fn run_ail_build_from_core(
             return Ok(1);
         }
     }
-    let (agent_bytecode_artifact, agent_trace_artifact) =
-        if let Some(agent_path) = &cli_options.ail_build_agent {
-            let (agent_bytecode_text, agent_trace) = run_ail_build_agent(
-                agent_path,
-                &core,
-                requirements_artifact,
-                spec_text,
-                capture_prompt,
-                cli_options.ail_build_target_model.as_deref(),
-                agent_start,
-            )?;
-            (Some(agent_bytecode_text), Some(agent_trace))
-        } else {
-            (None, None)
-        };
+    let mut agent_run = if let Some(agent_path) = &cli_options.ail_build_agent {
+        Some(run_ail_build_agent(
+            agent_path,
+            &core,
+            requirements_artifact,
+            spec_text,
+            capture_prompt,
+            cli_options.ail_build_target_model.as_deref(),
+            agent_start,
+        )?)
+    } else {
+        None
+    };
     let bytecode = compile_ail_core_bytecode(&core)?;
     let diagnostics = verify_ail_bytecode(&bytecode);
     if !diagnostics.is_empty() {
@@ -940,6 +986,9 @@ fn run_ail_build_from_core(
         return Ok(1);
     }
     let bytecode_text = format!("{}\n", render_ail_bytecode(&bytecode));
+    if let Some(agent_run) = agent_run.as_mut() {
+        run_ail_build_agent_verify_bytecode(agent_run, &bytecode_text)?;
+    }
     if let Some(artifact_dir) = &cli_options.artifact_dir {
         let core_text = format!("{}\n", render_ail_core(&core));
         write_ail_build_artifacts(
@@ -951,8 +1000,8 @@ fn run_ail_build_from_core(
                 bytecode_text: &bytecode_text,
                 pass_bytecode_text: pass_bytecode_artifact.as_deref(),
                 pass_trace: pass_trace_artifact.as_deref(),
-                agent_bytecode_text: agent_bytecode_artifact.as_deref(),
-                agent_trace: agent_trace_artifact.as_deref(),
+                agent_bytecode_text: agent_run.as_ref().map(|run| run.bytecode_text.as_str()),
+                agent_trace: agent_run.as_ref().map(|run| run.trace.as_slice()),
             },
         )?;
     }
