@@ -368,7 +368,11 @@ interpreter, VM, and native executable all materialize the initialized field.
 Copy writes such as `the customer as the ticket customer` lower to
 `COPY_FIELD` from `customer.id` to `ticket.customer.id`; the native backend
 finds the source argv value and writes the copied destination state line without
-generating host-language code. Native code generated from supported
+generating host-language code. Object-field writes such as `the ticket
+assignee` lower to `WRITE_FIELD ticket.assignee`; the native backend emits a
+supplied nested identity value such as `ticket.assignee.id=A-1` on stdout so
+assigned object identity remains visible in the native state-change stream.
+Native code generated from supported
 `REQUIRE_FIELD_NOT_EQUALS` instructions checks that the forbidden `key=value`
 argument is absent. The executable exits `0` when those compiled requirements
 pass and exits `1` when they fail. Native code generated from supported

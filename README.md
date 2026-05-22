@@ -50,8 +50,11 @@ requirements such as `the current time to be later than due_at` lower to
 Copy writes such as `the customer as the ticket customer` lower to `COPY_FIELD`
 from `customer.id` to `ticket.customer.id`. Supported `SET_FIELD` and
 `COPY_FIELD` writes are emitted as `key=value` stdout lines on successful
-execution, and supported Application semantic trace entries are emitted to
-stderr on successful native execution and on supported requirement failures.
+execution. Object-field writes such as `the ticket assignee` emit a supplied
+nested identity value such as `ticket.assignee.id=A-1`, so native stdout
+preserves assigned object identity when the caller supplies it.
+Supported Application semantic trace entries are emitted to stderr on
+successful native execution and on supported requirement failures.
 The first native backend rejects unsupported VM opcodes and unlowered observed
 rules instead of silently dropping them.
 `ail-lower --artifact-dir

@@ -3460,6 +3460,10 @@ fn emit_linux_x86_64_elf_for_action(
             }
             "WRITE_FIELD" => {
                 if let Some(key) = instruction.operands.get("key") {
+                    state_writes.push(NativeStateWrite::Copy {
+                        source_prefix: format!("{key}.id="),
+                        destination_prefix: format!("{key}.id="),
+                    });
                     success_trace_lines.push(format!("write {key}\n"));
                 }
             }

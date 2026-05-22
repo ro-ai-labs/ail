@@ -4001,6 +4001,63 @@ fn cli_ail_compile_native_executable_enforces_field_in_requirements() {
 }
 
 #[test]
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+fn cli_ail_compile_native_executable_emits_nested_object_field_write() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("support_ticket.ail");
+    let executable_path = std::env::temp_dir().join(format!(
+        "eigl-assign-ticket-native-object-write-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_file(&executable_path);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-compile",
+            &package,
+            "--action",
+            "AssignTicket",
+            "--target",
+            "linux-x86_64-elf",
+            "--out",
+            executable_path.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let assigned = Command::new(&executable_path)
+        .args([
+            "ticket.id=T-1",
+            "ticket.status=Open",
+            "ticket.assignee.id=A-1",
+            "ticket.assignee.role=SupportAgent",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        assigned.status.success(),
+        "assignee object write should pass"
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&assigned.stdout),
+        "ticket.assignee.id=A-1\nticket.status=Assigned\n"
+    );
+    assert!(
+        String::from_utf8_lossy(&assigned.stderr).contains("write ticket.assignee"),
+        "{}",
+        String::from_utf8_lossy(&assigned.stderr)
+    );
+
+    fs::remove_file(executable_path).unwrap();
+}
+
+#[test]
 fn cli_ail_run_executes_close_ticket_with_trace() {
     let binary = env!("CARGO_BIN_EXE_eigl");
     let package = fixture("support_ticket.ail");
