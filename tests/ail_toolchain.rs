@@ -9,10 +9,10 @@ use std::time::{Duration, Instant};
 use eigl::ail::{
     DEFAULT_BASE_LLM_ENDPOINT, apply_ail_patch, check_ail_core, check_ail_core_diagnostics,
     compile_ail_bytecode, compile_ail_core_bytecode, elaborate_ail_core, load_ail_package_dir,
-    parse_ail_bytecode, parse_ail_package_document, parse_ail_package_spec_text,
-    parse_ail_patch_text, parse_ail_spec_text, render_ail_bytecode, render_ail_core,
-    render_ail_flow_view, render_ail_spec, run_ail_action, run_ail_bytecode_action,
-    run_ail_compiler_pass_on_core, verify_ail_bytecode,
+    parse_ail_bytecode, parse_ail_core_text, parse_ail_package_document,
+    parse_ail_package_spec_text, parse_ail_patch_text, parse_ail_spec_text, render_ail_bytecode,
+    render_ail_core, render_ail_flow_view, render_ail_spec, run_ail_action,
+    run_ail_bytecode_action, run_ail_compiler_pass_on_core, verify_ail_bytecode,
 };
 use eigl::core_model::json_string;
 
@@ -2425,6 +2425,80 @@ fn cli_ail_core_and_lower_accept_saved_spec_file_artifact() {
     assert_eq!(verify_ail_bytecode(&bytecode), Vec::<String>::new());
 
     fs::remove_file(spec_path).unwrap();
+}
+
+#[test]
+fn cli_ail_lower_accepts_saved_core_file_artifact() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("support_ticket.ail");
+
+    let source_lower = Command::new(binary)
+        .args(["ail-lower", &package])
+        .output()
+        .unwrap();
+    assert!(
+        source_lower.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&source_lower.stdout),
+        String::from_utf8_lossy(&source_lower.stderr)
+    );
+    let source_bytecode = parse_ail_bytecode(&String::from_utf8_lossy(&source_lower.stdout))
+        .expect("source lowering should produce valid bytecode");
+
+    let core_output = Command::new(binary)
+        .args(["ail-core", &package])
+        .output()
+        .unwrap();
+    assert!(
+        core_output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&core_output.stdout),
+        String::from_utf8_lossy(&core_output.stderr)
+    );
+    let core_text = String::from_utf8(core_output.stdout).unwrap();
+    let parsed_core = parse_ail_core_text(&core_text).unwrap();
+    assert_eq!(check_ail_core(&parsed_core), Vec::<String>::new());
+    let parsed_bytecode = compile_ail_core_bytecode(&parsed_core).unwrap();
+    assert_eq!(parsed_bytecode, source_bytecode);
+
+    let core_path = std::env::temp_dir().join(format!(
+        "eigl-support-ticket-checked-{}.ail-core.txt",
+        std::process::id()
+    ));
+    fs::write(&core_path, core_text).unwrap();
+    let missing_source_package = std::env::temp_dir().join(format!(
+        "eigl-missing-source-package-{}",
+        std::process::id()
+    ));
+
+    let lower_output = Command::new(binary)
+        .args([
+            "ail-lower",
+            missing_source_package.to_str().unwrap(),
+            "--core-file",
+            core_path.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        lower_output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&lower_output.stdout),
+        String::from_utf8_lossy(&lower_output.stderr)
+    );
+    let bytecode = parse_ail_bytecode(&String::from_utf8_lossy(&lower_output.stdout)).unwrap();
+    assert_eq!(bytecode, source_bytecode);
+    assert_eq!(verify_ail_bytecode(&bytecode), Vec::<String>::new());
+    let close_ticket = bytecode.actions.get("CloseTicket").unwrap();
+    assert!(close_ticket.instructions.iter().any(|instruction| {
+        instruction.opcode == "SET_FIELD"
+            && instruction
+                .operands
+                .get("text")
+                .is_some_and(|text| text == "the ticket status to Closed")
+    }));
+
+    fs::remove_file(core_path).unwrap();
 }
 
 #[test]

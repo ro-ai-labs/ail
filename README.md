@@ -34,21 +34,24 @@ runs AIL-Core diagnostics, `ail-core` prints deterministic AIL-Core,
 inspection, `ail-lower` compiles checked AIL-Core IR into deterministic
 AIL-Bytecode, and `ail-check`, `ail-core`, `ail-flow`, `ail-lower`, and
 `ail-run` can use `--spec-file <path>` to read a saved generated AIL-Spec
-artifact instead of the package entry spec. `ail-patch <patch-file>` applies a
-checked AIL patch and prints canonical AIL-Spec, `ail-run --action
-<ActionName>` executes through the current AIL bytecode VM, `ail-vm --action
-<ActionName>` verifies and executes a saved AIL-Bytecode artifact directly,
-`ail-pass <compiler-pass-package-or-bytecode> <target-package> --action
-<PassName>` compiles an AIL-Meta compiler pass package, or reads a saved
-Compiler-profile AIL-Bytecode artifact, and applies it to a checked target
-package's AIL-Core, `ail-conformance` checks accepted and rejected fixtures,
-`ail-requirements --prompt <text>` asks the package base LLM endpoint for a
-checked AIL-Requirements artifact and gives the base LLM one diagnostics-guided
-repair pass if required coverage is missing, `ail-spec --requirements-file
-<path> --prompt <text>` turns a checked AIL-Requirements artifact into an
-accepted AIL-Spec candidate with one diagnostics-guided repair pass,
-`ail-draft --prompt <text>` asks the package base LLM endpoint for an AIL-Spec
-candidate before parsing and checking it, and
+artifact instead of the package entry spec. `ail-lower --core-file <path>`
+reads a saved checked AIL-Core artifact and compiles it directly to bytecode,
+without loading the source package spec, including the serialized edge payloads
+used by lowering. `ail-patch
+<patch-file>` applies a checked AIL patch and prints canonical AIL-Spec,
+`ail-run --action <ActionName>` executes through the current AIL bytecode VM,
+`ail-vm --action <ActionName>` verifies and executes a saved AIL-Bytecode
+artifact directly, `ail-pass <compiler-pass-package-or-bytecode>
+<target-package> --action <PassName>` compiles an AIL-Meta compiler pass
+package, or reads a saved Compiler-profile AIL-Bytecode artifact, and applies
+it to a checked target package's AIL-Core, `ail-conformance` checks accepted
+and rejected fixtures, `ail-requirements --prompt <text>` asks the package base
+LLM endpoint for a checked AIL-Requirements artifact and gives the base LLM one
+diagnostics-guided repair pass if required coverage is missing, `ail-spec
+--requirements-file <path> --prompt <text>` turns a checked AIL-Requirements
+artifact into an accepted AIL-Spec candidate with one diagnostics-guided repair
+pass, `ail-draft --prompt <text>` asks the package base LLM endpoint for an
+AIL-Spec candidate before parsing and checking it, and
 `ail-build --prompt <text>` asks the base LLM for requirements, asks it to turn
 those requirements into an AIL-Spec candidate for the package profile, gives
 the base LLM one diagnostics-guided repair pass if requirements coverage or the
@@ -96,6 +99,7 @@ cargo run -- ail-conformance examples/network_driver.ail
 cargo run -- ail-requirements examples/support_ticket.ail --prompt "Capture requirements for a support ticket app" --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
 cargo run -- ail-spec examples/support_ticket.ail --prompt "Draft a support ticket app from captured requirements" --requirements-file /tmp/support-ticket.ail-requirements.md --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
 cargo run -- ail-lower examples/support_ticket.ail --spec-file /tmp/support-ticket.ail-spec.md
+cargo run -- ail-lower examples/support_ticket.ail --core-file /tmp/support-ticket.ail-core.txt
 cargo run -- ail-draft examples/support_ticket.ail --prompt "Draft a support ticket app with private internal notes" --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
 cargo run -- ail-build examples/support_ticket.ail --prompt "Build a support ticket bytecode artifact" --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
 cargo run -- ail-build examples/support_ticket.ail --prompt "Build a support ticket bytecode artifact" --artifact-dir /tmp/support-ticket-ail-build --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions

@@ -334,6 +334,12 @@ then executes through the AIL bytecode VM for supported Application packages.
 `--spec-file <path>` to read a saved generated AIL-Spec artifact instead of the
 package entry spec, preserving the package metadata while making accepted
 AIL-Spec files reusable inputs to IR rendering and bytecode lowering.
+`ail-lower --core-file <path>` reads a saved checked AIL-Core artifact,
+reconstructs the graph from the serialized nodes, edges, and edge attributes,
+runs the core checker, and compiles that IR directly to AIL-Bytecode without
+loading the source package spec. This keeps AIL-Core as a real compiler input
+boundary rather than only a display format, and it preserves lowering payloads
+such as read/write provenance text that affect emitted bytecode instructions.
 `ail-vm` reads a saved AIL-Bytecode artifact and executes it directly without
 reparsing the source AIL package, making bytecode a real artifact boundary
 instead of only a display format. The VM verifier rejects unknown opcodes and

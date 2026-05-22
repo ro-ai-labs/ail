@@ -8,7 +8,7 @@ use std::process::ExitCode;
 use eigl::ail::{
     apply_ail_patch, check_ail_core, check_ail_requirements, compile_ail_core_bytecode,
     draft_ail_requirements, draft_ail_spec, draft_ail_spec_from_requirements, elaborate_ail_core,
-    load_ail_package_dir, parse_ail_bytecode, parse_ail_package_document,
+    load_ail_package_dir, parse_ail_bytecode, parse_ail_core_text, parse_ail_package_document,
     parse_ail_package_spec_text, parse_ail_patch_text, render_ail_bytecode, render_ail_core,
     render_ail_flow_view, render_ail_runtime_state_lines, render_ail_spec,
     repair_ail_requirements_from_diagnostics, repair_ail_spec_from_diagnostics,
@@ -56,6 +56,7 @@ struct CliOptions {
     ail_build_pass: Option<String>,
     ail_requirements_file: Option<String>,
     ail_spec_file: Option<String>,
+    ail_core_file: Option<String>,
 }
 
 struct EndpointExecutionResult {
@@ -373,7 +374,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
 }
 
 fn usage() -> String {
-    "usage: eigl <check|graph|views|simulate|lower|run|dispatch|emit|schedule|dequeue|serve|normalize|patch|llm-roundtrip|view-model|ail-check|ail-core|ail-flow|ail-lower|ail-run|ail-vm|ail-conformance|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-patch> <path> [patch|target-package] [--intent name] [--action name] [--prompt text] [--requirements-file path] [--spec-file path] [--pass path] [--artifact-dir path] [--state-in path] [--state-out path] [--data-in path] [--data-out path] [--operation-output name=value] [--listen addr] [--llm-endpoint url] [method path|trigger] [key=value ...]"
+    "usage: eigl <check|graph|views|simulate|lower|run|dispatch|emit|schedule|dequeue|serve|normalize|patch|llm-roundtrip|view-model|ail-check|ail-core|ail-flow|ail-lower|ail-run|ail-vm|ail-conformance|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-patch> <path> [patch|target-package] [--intent name] [--action name] [--prompt text] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--artifact-dir path] [--state-in path] [--state-out path] [--data-in path] [--data-out path] [--operation-output name=value] [--listen addr] [--llm-endpoint url] [method path|trigger] [key=value ...]"
         .to_string()
 }
 
@@ -615,9 +616,39 @@ fn parse_cli_ail_document(
     parse_ail_package_document(package)
 }
 
+fn parse_cli_ail_core(cli_options: &CliOptions) -> Result<eigl::ail::AilCore, String> {
+    let core_file = cli_options
+        .ail_core_file
+        .as_deref()
+        .ok_or_else(|| "missing --core-file path".to_string())?;
+    let core_text = fs::read_to_string(core_file)
+        .map_err(|error| format!("failed to read {core_file}: {error}"))?;
+    parse_ail_core_text(&core_text)
+}
+
 fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Result<u8, String> {
     if command == "ail-pass" {
         return run_ail_pass_command(path, cli_options);
+    }
+    if command == "ail-lower" && cli_options.ail_core_file.is_some() {
+        let core = parse_cli_ail_core(cli_options)?;
+        let diagnostics = check_ail_core(&core);
+        if !diagnostics.is_empty() {
+            for diagnostic in diagnostics {
+                println!("{diagnostic}");
+            }
+            return Ok(1);
+        }
+        let bytecode = compile_ail_core_bytecode(&core)?;
+        let bytecode_diagnostics = verify_ail_bytecode(&bytecode);
+        if !bytecode_diagnostics.is_empty() {
+            for diagnostic in bytecode_diagnostics {
+                println!("{diagnostic}");
+            }
+            return Ok(1);
+        }
+        println!("{}", render_ail_bytecode(&bytecode));
+        return Ok(0);
     }
     let package = load_ail_package_dir(path)?;
     if command == "ail-conformance" {
@@ -999,6 +1030,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
     let mut ail_build_pass = None;
     let mut ail_requirements_file = None;
     let mut ail_spec_file = None;
+    let mut ail_core_file = None;
     let mut index = 0;
     if command == "patch" || command == "ail-patch" {
         let Some(path) = args.get(index) else {
@@ -1089,6 +1121,17 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
                 return Err("missing value for --spec-file".to_string());
             };
             ail_spec_file = Some(path.clone());
+            index += 2;
+            continue;
+        }
+        if arg == "--core-file" {
+            if command != "ail-lower" {
+                return Err(usage());
+            }
+            let Some(path) = args.get(index + 1) else {
+                return Err("missing value for --core-file".to_string());
+            };
+            ail_core_file = Some(path.clone());
             index += 2;
             continue;
         }
@@ -1243,6 +1286,10 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         index += 1;
     }
 
+    if ail_core_file.is_some() && ail_spec_file.is_some() {
+        return Err("--core-file cannot be combined with --spec-file".to_string());
+    }
+
     Ok(CliOptions {
         selected_intent,
         runtime_state,
@@ -1265,6 +1312,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         ail_build_pass,
         ail_requirements_file,
         ail_spec_file,
+        ail_core_file,
     })
 }
 

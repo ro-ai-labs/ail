@@ -3527,6 +3527,57 @@ cargo test --test ail_toolchain cli_ail_core_and_lower_accept_saved_spec_file_ar
 Expected: saved AIL-Spec artifacts render AIL-Core and lower to verified
 AIL-Bytecode while preserving package metadata.
 
+### Task 86: Saved AIL-Core Artifact Input For Bytecode
+
+**Files:**
+- Modify: `src/ail.rs`
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing saved-core lowering test**
+
+Add a CLI test that renders `ail-core` for `examples/support_ticket.ail`, saves
+that checked AIL-Core text to a temp file, reparses it as AIL-Core, and requires:
+
+```bash
+eigl ail-lower examples/support_ticket.ail --core-file <core-file>
+```
+
+to emit the same verified AIL-Bytecode as direct source-package lowering,
+including write payloads that produce `SET_FIELD` instructions.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_lower_accepts_saved_core_file_artifact -- --nocapture
+```
+
+Expected: compile failure because `parse_ail_core_text` and `--core-file` do
+not exist.
+
+- [x] **Step 3: Serialize and parse compiler-significant core edges**
+
+Expose `parse_ail_core_text`, add edge attributes to `render_ail_core`, keep
+serialized edges in graph order so execution-relevant requirement/read/write
+ordering survives the artifact boundary, and route `ail-lower --core-file`
+through parse, `check_ail_core`, `compile_ail_core_bytecode`, and bytecode
+verification without loading the source package spec.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_lower_accepts_saved_core_file_artifact -- --nocapture
+```
+
+Expected: saved AIL-Core artifacts parse cleanly, check cleanly, and lower to
+the same verified AIL-Bytecode as the source package.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

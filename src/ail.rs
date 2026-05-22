@@ -1953,13 +1953,7 @@ pub fn render_ail_core(core: &AilCore) -> String {
             line.push_str(&format!(" : {type_name}"));
         }
         if !node.attributes.is_empty() {
-            let attrs = node
-                .attributes
-                .iter()
-                .map(|(key, value)| format!("{key}={value}"))
-                .collect::<Vec<_>>()
-                .join(",");
-            line.push_str(&format!(" [{attrs}]"));
+            line.push_str(&format!(" [{}]", render_core_attributes(&node.attributes)));
         }
         lines.push(line);
     }
@@ -1971,14 +1965,7 @@ pub fn render_ail_core(core: &AilCore) -> String {
         .iter()
         .map(|node| (node.id.clone(), format!("{}:{}", node.kind, node.name)))
         .collect::<BTreeMap<_, _>>();
-    let mut edges = core.graph.edges.clone();
-    edges.sort_by(|left, right| {
-        left.kind
-            .cmp(&right.kind)
-            .then(left.source.cmp(&right.source))
-            .then(left.target.cmp(&right.target))
-    });
-    for edge in &edges {
+    for edge in &core.graph.edges {
         let source = node_labels
             .get(&edge.source)
             .map(String::as_str)
@@ -1987,9 +1974,274 @@ pub fn render_ail_core(core: &AilCore) -> String {
             .get(&edge.target)
             .map(String::as_str)
             .unwrap_or(edge.target.as_str());
-        lines.push(format!("edge {} {} -> {}", edge.kind, source, target));
+        let mut line = format!("edge {} {} -> {}", edge.kind, source, target);
+        if !edge.attributes.is_empty() {
+            line.push_str(&format!(" [{}]", render_core_attributes(&edge.attributes)));
+        }
+        lines.push(line);
     }
     lines.join("\n")
+}
+
+pub fn parse_ail_core_text(text: &str) -> Result<AilCore, String> {
+    let mut package_name = None;
+    let mut package_version = None;
+    let mut profile = None;
+    let mut conformance = None;
+    let mut base_llm_endpoint = None;
+    let mut section = "";
+    let mut graph = Graph::default();
+    let mut node_by_label: BTreeMap<String, Node> = BTreeMap::new();
+
+    for (line_index, raw_line) in text.lines().enumerate() {
+        let line_number = line_index + 1;
+        let line = raw_line.trim();
+        if line.is_empty() {
+            continue;
+        }
+        if line == "nodes:" {
+            section = "nodes";
+            continue;
+        }
+        if line == "edges:" {
+            section = "edges";
+            continue;
+        }
+
+        match section {
+            "" => {
+                let Some((key, value)) = line.split_once(':') else {
+                    return Err(format!("AIL-Core line {line_number}: expected metadata"));
+                };
+                let value = value.trim().to_string();
+                match key.trim() {
+                    "package" => package_name = Some(value),
+                    "version" => package_version = Some(value),
+                    "profile" => profile = Some(value),
+                    "conformance" => conformance = Some(value),
+                    "base_llm_endpoint" => base_llm_endpoint = Some(value),
+                    key => {
+                        return Err(format!(
+                            "AIL-Core line {line_number}: unknown metadata key '{key}'"
+                        ));
+                    }
+                }
+            }
+            "nodes" => {
+                let parsed = parse_core_node_line(line, line_number)?;
+                let node = graph.add_node(
+                    parsed.kind,
+                    parsed.name,
+                    parsed.type_name,
+                    parsed.attributes,
+                );
+                let label = core_node_label(&node);
+                if node_by_label.insert(label.clone(), node).is_some() {
+                    return Err(format!(
+                        "AIL-Core line {line_number}: duplicate node label {label}"
+                    ));
+                }
+            }
+            "edges" => {
+                let parsed = parse_core_edge_line(line, line_number)?;
+                let source = node_by_label
+                    .get(&parsed.source_label)
+                    .cloned()
+                    .ok_or_else(|| {
+                        format!(
+                            "AIL-Core line {line_number}: unknown source node {}",
+                            parsed.source_label
+                        )
+                    })?;
+                let target = node_by_label
+                    .get(&parsed.target_label)
+                    .cloned()
+                    .ok_or_else(|| {
+                        format!(
+                            "AIL-Core line {line_number}: unknown target node {}",
+                            parsed.target_label
+                        )
+                    })?;
+                graph.add_edge(parsed.kind, &source, &target, parsed.attributes);
+            }
+            _ => unreachable!("AIL-Core parser only sets known sections"),
+        }
+    }
+
+    let missing_references = graph.validate_edge_references();
+    if !missing_references.is_empty() {
+        return Err(format!(
+            "AIL-Core graph has missing edge references: {}",
+            missing_references.join("; ")
+        ));
+    }
+
+    Ok(AilCore {
+        package: AilPackageMetadata {
+            name: package_name.ok_or_else(|| "AIL-Core missing package metadata".to_string())?,
+            version: package_version
+                .ok_or_else(|| "AIL-Core missing version metadata".to_string())?,
+            profile: profile.ok_or_else(|| "AIL-Core missing profile metadata".to_string())?,
+            entry: String::new(),
+            features: Vec::new(),
+            imports: Vec::new(),
+            conformance: conformance
+                .ok_or_else(|| "AIL-Core missing conformance metadata".to_string())?,
+            base_llm_endpoint: base_llm_endpoint
+                .ok_or_else(|| "AIL-Core missing base_llm_endpoint metadata".to_string())?,
+        },
+        graph,
+    })
+}
+
+fn render_core_attributes(attributes: &BTreeMap<String, String>) -> String {
+    attributes
+        .iter()
+        .map(|(key, value)| format!("{key}={value}"))
+        .collect::<Vec<_>>()
+        .join(",")
+}
+
+struct ParsedCoreNode {
+    kind: String,
+    name: String,
+    type_name: Option<String>,
+    attributes: BTreeMap<String, String>,
+}
+
+struct ParsedCoreEdge {
+    kind: String,
+    source_label: String,
+    target_label: String,
+    attributes: BTreeMap<String, String>,
+}
+
+fn parse_core_node_line(line: &str, line_number: usize) -> Result<ParsedCoreNode, String> {
+    let Some(rest) = line.strip_prefix("node ") else {
+        return Err(format!("AIL-Core line {line_number}: expected node line"));
+    };
+    let Some((kind, rest)) = rest.split_once(' ') else {
+        return Err(format!(
+            "AIL-Core line {line_number}: node is missing a name"
+        ));
+    };
+    let (rest, attributes) = parse_core_attribute_suffix(rest, line_number)?;
+    let (name, type_name) = if let Some((name, type_name)) = rest.rsplit_once(" : ") {
+        (name.trim().to_string(), Some(type_name.trim().to_string()))
+    } else {
+        (rest.trim().to_string(), None)
+    };
+    if name.is_empty() {
+        return Err(format!("AIL-Core line {line_number}: node name is empty"));
+    }
+    Ok(ParsedCoreNode {
+        kind: kind.to_string(),
+        name,
+        type_name,
+        attributes,
+    })
+}
+
+fn parse_core_edge_line(line: &str, line_number: usize) -> Result<ParsedCoreEdge, String> {
+    let Some(rest) = line.strip_prefix("edge ") else {
+        return Err(format!("AIL-Core line {line_number}: expected edge line"));
+    };
+    let Some((kind, rest)) = rest.split_once(' ') else {
+        return Err(format!(
+            "AIL-Core line {line_number}: edge is missing endpoints"
+        ));
+    };
+    let (rest, attributes) = parse_core_attribute_suffix(rest, line_number)?;
+    let Some((source, target)) = rest.split_once(" -> ") else {
+        return Err(format!(
+            "AIL-Core line {line_number}: edge is missing ' -> ' endpoint separator"
+        ));
+    };
+    Ok(ParsedCoreEdge {
+        kind: kind.to_string(),
+        source_label: source.trim().to_string(),
+        target_label: target.trim().to_string(),
+        attributes,
+    })
+}
+
+fn parse_core_attribute_suffix(
+    text: &str,
+    line_number: usize,
+) -> Result<(&str, BTreeMap<String, String>), String> {
+    if !text.ends_with(']') {
+        return Ok((text, BTreeMap::new()));
+    }
+    let Some((prefix, attributes)) = text.rsplit_once(" [") else {
+        return Err(format!(
+            "AIL-Core line {line_number}: malformed attribute suffix"
+        ));
+    };
+    let attributes = attributes
+        .strip_suffix(']')
+        .ok_or_else(|| format!("AIL-Core line {line_number}: malformed attribute suffix"))?;
+    Ok((prefix, parse_core_attributes(attributes, line_number)?))
+}
+
+fn parse_core_attributes(
+    text: &str,
+    line_number: usize,
+) -> Result<BTreeMap<String, String>, String> {
+    let mut attributes = BTreeMap::new();
+    if text.trim().is_empty() {
+        return Ok(attributes);
+    }
+    for entry in split_core_attribute_entries(text) {
+        let Some((key, value)) = entry.split_once('=') else {
+            return Err(format!(
+                "AIL-Core line {line_number}: malformed attribute '{entry}'"
+            ));
+        };
+        let key = key.trim();
+        if key.is_empty() {
+            return Err(format!(
+                "AIL-Core line {line_number}: attribute key is empty"
+            ));
+        }
+        attributes.insert(key.to_string(), value.trim().to_string());
+    }
+    Ok(attributes)
+}
+
+fn split_core_attribute_entries(text: &str) -> Vec<&str> {
+    let mut entries = Vec::new();
+    let mut start = 0;
+    for (index, ch) in text.char_indices() {
+        if ch == ',' && starts_core_attribute_key(&text[index + ch.len_utf8()..]) {
+            entries.push(text[start..index].trim());
+            start = index + ch.len_utf8();
+        }
+    }
+    entries.push(text[start..].trim());
+    entries
+}
+
+fn starts_core_attribute_key(text: &str) -> bool {
+    let mut chars = text.chars();
+    let Some(first) = chars.next() else {
+        return false;
+    };
+    if !(first.is_ascii_alphabetic() || first == '_') {
+        return false;
+    }
+    for ch in chars {
+        if ch == '=' {
+            return true;
+        }
+        if !(ch.is_ascii_alphanumeric() || ch == '_') {
+            return false;
+        }
+    }
+    false
+}
+
+fn core_node_label(node: &Node) -> String {
+    format!("{}:{}", node.kind, node.name)
 }
 
 pub fn render_ail_flow_view(core: &AilCore) -> String {
