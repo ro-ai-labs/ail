@@ -4892,6 +4892,77 @@ fn cli_ail_build_accepts_saved_core_file_artifact() {
 }
 
 #[test]
+fn cli_ail_build_runs_toolchain_agent_bytecode() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("support_ticket.ail");
+    let agent_package = fixture("ail_toolchain_agent.ail");
+    let core_path = std::env::temp_dir().join(format!(
+        "eigl-support-ticket-agent-build-core-{}.ail-core.txt",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "eigl-ail-build-agent-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+    let package_model = load_ail_package_dir(&package).unwrap();
+    let document = parse_ail_package_document(&package_model).unwrap();
+    let core = elaborate_ail_core(&package_model, &document);
+    assert_eq!(check_ail_core(&core), Vec::<String>::new());
+    fs::write(&core_path, render_ail_core(&core)).unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-build",
+            &package,
+            "--core-file",
+            core_path.to_str().unwrap(),
+            "--agent",
+            &agent_package,
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let bytecode = parse_ail_bytecode(&stdout).unwrap();
+    assert_eq!(verify_ail_bytecode(&bytecode), Vec::<String>::new());
+    assert!(bytecode.actions.contains_key("CloseTicket"));
+
+    let agent_bytecode = fs::read_to_string(artifact_dir.join("agent.ailbc.json")).unwrap();
+    assert!(agent_bytecode.contains(r#""package":"ail-toolchain-agent""#));
+    assert!(agent_bytecode.contains(r#""action":"CompileApplication""#));
+    let parsed_agent = parse_ail_bytecode(&agent_bytecode).unwrap();
+    assert_eq!(verify_ail_bytecode(&parsed_agent), Vec::<String>::new());
+
+    let agent_trace = fs::read_to_string(artifact_dir.join("agent-trace.txt")).unwrap();
+    assert!(agent_trace.contains("action CompileApplication started"));
+    assert!(agent_trace.contains("rule passed: the BuildRequest to exist"));
+    assert!(
+        agent_trace
+            .contains("rule passed: the BuildRequest status to be SpecCaptured or CoreChecked")
+    );
+    assert!(agent_trace.contains("write buildrequest.bytecode artifact=Emitted"));
+    assert!(agent_trace.contains("trace ApplicationBytecodeCompiled"));
+    assert!(
+        !artifact_dir
+            .join("requirements.ail-requirements.md")
+            .exists()
+    );
+    assert!(!artifact_dir.join("accepted.ail-spec.md").exists());
+
+    fs::remove_file(core_path).unwrap();
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
 fn cli_ail_build_writes_requirements_spec_core_and_bytecode_artifacts() {
     let binary = env!("CARGO_BIN_EXE_eigl");
     let package = fixture("support_ticket.ail");

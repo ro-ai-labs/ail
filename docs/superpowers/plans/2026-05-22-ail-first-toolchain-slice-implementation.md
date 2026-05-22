@@ -3781,6 +3781,56 @@ Expected: `ail-build --core-file` emits verified bytecode, writes
 `checked.ail-core.txt` and `artifact.ailbc.json`, and does not write
 `requirements.ail-requirements.md` or `accepted.ail-spec.md` for skipped stages.
 
+### Task 91: AIL-Authored Toolchain Agent Build Stage
+
+**Files:**
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing build-agent test**
+
+Add a CLI test that runs:
+
+```bash
+eigl ail-build examples/support_ticket.ail --core-file <core-file> --agent examples/ail_toolchain_agent.ail --artifact-dir <dir>
+```
+
+and requires `ail-build` to compile the AIL-authored toolchain agent into
+AIL-Bytecode, run the `CompileApplication` action, write `agent.ailbc.json` and
+`agent-trace.txt`, and keep stdout as the target package's verified bytecode.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_runs_toolchain_agent_bytecode -- --nocapture
+```
+
+Expected: usage failure because `--agent` is not accepted by `ail-build`.
+
+- [x] **Step 3: Implement build-agent bytecode execution**
+
+Parse `--agent` for `ail-build`, accept an AIL Application-profile package or
+saved bytecode artifact, verify the agent bytecode, require a
+`CompileApplication` action, run that action against the completed build state,
+and write the agent bytecode plus trace artifacts when `--artifact-dir` is
+present.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_runs_toolchain_agent_bytecode -- --nocapture
+```
+
+Expected: `ail-build --agent` emits the target package bytecode, writes verified
+agent bytecode, and records a trace with the agent's
+`ApplicationBytecodeCompiled` event.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

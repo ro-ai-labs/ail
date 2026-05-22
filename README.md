@@ -69,9 +69,12 @@ bytecode lowering. `ail-build --core-file <path>` skips requirements and spec
 stages entirely and resumes from checked AIL-Core IR. Add
 `--artifact-dir <dir>` to also write the captured or loaded requirements when
 present, accepted AIL-Spec when present, checked AIL-Core IR after any build
-pass, and final AIL-Bytecode artifact for review. When
-`ail-build --pass` is used with `--artifact-dir`, it also writes
-`pass.ailbc.json` and `pass-trace.txt`. On `ail-pass`,
+pass, and final AIL-Bytecode artifact for review. `ail-build --agent
+<agent-package-or-bytecode>` compiles or loads an AIL-authored Application
+agent, runs its `CompileApplication` bytecode action over the completed build
+state, and, with `--artifact-dir`, writes `agent.ailbc.json` and
+`agent-trace.txt`. When `ail-build --pass` is used with `--artifact-dir`, it
+also writes `pass.ailbc.json` and `pass-trace.txt`. On `ail-pass`,
 `--artifact-dir <dir>` writes
 `pass.ailbc.json`, `input.ail-core.txt`, `output.ail-core.txt`, and
 `trace.txt` while stdout remains the transformed AIL-Core artifact.
@@ -116,6 +119,7 @@ cargo run -- ail-build examples/support_ticket.ail --prompt "Build a support tic
 cargo run -- ail-build examples/support_ticket.ail --prompt "Build a support ticket bytecode artifact from saved requirements" --requirements-file /tmp/support-ticket.ail-requirements.md --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
 cargo run -- ail-build examples/support_ticket.ail --spec-file /tmp/support-ticket.ail-spec.md --artifact-dir /tmp/support-ticket-ail-build-spec
 cargo run -- ail-build examples/support_ticket.ail --core-file /tmp/support-ticket.ail-core.txt --artifact-dir /tmp/support-ticket-ail-build-core
+cargo run -- ail-build examples/support_ticket.ail --core-file /tmp/support-ticket.ail-core.txt --agent examples/ail_toolchain_agent.ail --artifact-dir /tmp/support-ticket-ail-build-agent
 cargo run -- ail-build examples/support_ticket.ail --prompt "Build a support ticket bytecode artifact" --artifact-dir /tmp/support-ticket-ail-build --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
 cargo run -- ail-build examples/support_ticket.ail --prompt "Build a support ticket bytecode artifact" --pass examples/compiler_pass.ail --artifact-dir /tmp/support-ticket-ail-build-pass --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
 cargo run -- ail-build examples/refund_tool.ail --prompt "Build a refund tool bytecode artifact" --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions

@@ -54,6 +54,7 @@ struct CliOptions {
     ail_prompt: Option<String>,
     ail_pass_target: Option<String>,
     ail_build_pass: Option<String>,
+    ail_build_agent: Option<String>,
     ail_requirements_file: Option<String>,
     ail_spec_file: Option<String>,
     ail_core_file: Option<String>,
@@ -374,46 +375,64 @@ fn run(args: Vec<String>) -> Result<u8, String> {
 }
 
 fn usage() -> String {
-    "usage: eigl <check|graph|views|simulate|lower|run|dispatch|emit|schedule|dequeue|serve|normalize|patch|llm-roundtrip|view-model|ail-check|ail-core|ail-flow|ail-lower|ail-run|ail-vm|ail-conformance|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-patch> <path> [patch|target-package] [--intent name] [--action name] [--prompt text] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--artifact-dir path] [--state-in path] [--state-out path] [--data-in path] [--data-out path] [--operation-output name=value] [--listen addr] [--llm-endpoint url] [method path|trigger] [key=value ...]\nail-pass usage: eigl ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> OR eigl ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName>"
+    "usage: eigl <check|graph|views|simulate|lower|run|dispatch|emit|schedule|dequeue|serve|normalize|patch|llm-roundtrip|view-model|ail-check|ail-core|ail-flow|ail-lower|ail-run|ail-vm|ail-conformance|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-patch> <path> [patch|target-package] [--intent name] [--action name] [--prompt text] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--artifact-dir path] [--state-in path] [--state-out path] [--data-in path] [--data-out path] [--operation-output name=value] [--listen addr] [--llm-endpoint url] [method path|trigger] [key=value ...]\nail-pass usage: eigl ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> OR eigl ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName>"
         .to_string()
+}
+
+struct AilBuildArtifactSet<'a> {
+    requirements: Option<&'a str>,
+    spec_text: Option<&'a str>,
+    core_text: &'a str,
+    bytecode_text: &'a str,
+    pass_bytecode_text: Option<&'a str>,
+    pass_trace: Option<&'a [String]>,
+    agent_bytecode_text: Option<&'a str>,
+    agent_trace: Option<&'a [String]>,
 }
 
 fn write_ail_build_artifacts(
     artifact_dir: &str,
-    requirements: Option<&str>,
-    spec_text: Option<&str>,
-    core_text: &str,
-    bytecode_text: &str,
-    pass_bytecode_text: Option<&str>,
-    pass_trace: Option<&[String]>,
+    artifacts: AilBuildArtifactSet<'_>,
 ) -> Result<(), String> {
     let root = std::path::Path::new(artifact_dir);
     fs::create_dir_all(root).map_err(|error| {
         format!("failed to create ail-build artifact dir {artifact_dir}: {error}")
     })?;
-    if let Some(requirements) = requirements {
+    if let Some(requirements) = artifacts.requirements {
         fs::write(root.join("requirements.ail-requirements.md"), requirements)
             .map_err(|error| format!("failed to write ail-build requirements artifact: {error}"))?;
     }
-    if let Some(spec_text) = spec_text {
+    if let Some(spec_text) = artifacts.spec_text {
         fs::write(root.join("accepted.ail-spec.md"), spec_text)
             .map_err(|error| format!("failed to write ail-build spec artifact: {error}"))?;
     }
-    fs::write(root.join("checked.ail-core.txt"), core_text)
+    fs::write(root.join("checked.ail-core.txt"), artifacts.core_text)
         .map_err(|error| format!("failed to write ail-build core artifact: {error}"))?;
-    fs::write(root.join("artifact.ailbc.json"), bytecode_text)
+    fs::write(root.join("artifact.ailbc.json"), artifacts.bytecode_text)
         .map_err(|error| format!("failed to write ail-build bytecode artifact: {error}"))?;
-    if let Some(pass_bytecode_text) = pass_bytecode_text {
+    if let Some(pass_bytecode_text) = artifacts.pass_bytecode_text {
         fs::write(root.join("pass.ailbc.json"), pass_bytecode_text).map_err(|error| {
             format!("failed to write ail-build pass bytecode artifact: {error}")
         })?;
     }
-    if let Some(pass_trace) = pass_trace {
+    if let Some(pass_trace) = artifacts.pass_trace {
         fs::write(
             root.join("pass-trace.txt"),
             format!("{}\n", pass_trace.join("\n")),
         )
         .map_err(|error| format!("failed to write ail-build pass trace artifact: {error}"))?;
+    }
+    if let Some(agent_bytecode_text) = artifacts.agent_bytecode_text {
+        fs::write(root.join("agent.ailbc.json"), agent_bytecode_text).map_err(|error| {
+            format!("failed to write ail-build agent bytecode artifact: {error}")
+        })?;
+    }
+    if let Some(agent_trace) = artifacts.agent_trace {
+        fs::write(
+            root.join("agent-trace.txt"),
+            format!("{}\n", agent_trace.join("\n")),
+        )
+        .map_err(|error| format!("failed to write ail-build agent trace artifact: {error}"))?;
     }
     Ok(())
 }
@@ -476,7 +495,8 @@ fn run_ail_pass_command(pass_path: &str, cli_options: &CliOptions) -> Result<u8,
         .as_deref()
         .ok_or_else(|| "ail-pass requires --action <name>".to_string())?;
 
-    let (pass_bytecode, pass_bytecode_text) = load_ail_pass_bytecode_or_compile_package(pass_path)?;
+    let (pass_bytecode, pass_bytecode_text) =
+        load_ail_bytecode_or_compile_package(pass_path, "ail-pass compiler pass")?;
     let bytecode_diagnostics = verify_ail_bytecode(&pass_bytecode);
     if !bytecode_diagnostics.is_empty() {
         println!("ail-pass diagnostics:");
@@ -532,8 +552,9 @@ fn load_ail_pass_target_core(cli_options: &CliOptions) -> Result<eigl::ail::AilC
     Ok(elaborate_ail_core(&target_package, &target_document))
 }
 
-fn load_ail_pass_bytecode_or_compile_package(
+fn load_ail_bytecode_or_compile_package(
     path: &str,
+    context: &str,
 ) -> Result<(eigl::ail::AilBytecodeProgram, String), String> {
     if std::path::Path::new(path).is_file() {
         let text =
@@ -555,7 +576,7 @@ fn load_ail_pass_bytecode_or_compile_package(
         for diagnostic in diagnostics {
             println!("{diagnostic}");
         }
-        return Err("ail-pass compiler pass package has diagnostics".to_string());
+        return Err(format!("{context} package has diagnostics"));
     }
     let bytecode = compile_ail_core_bytecode(&core)?;
     let text = format!("{}\n", render_ail_bytecode(&bytecode));
@@ -573,6 +594,69 @@ fn select_single_ail_pass_action(
         "ail-build --pass requires exactly one compiler pass action, found {}",
         action_names.len()
     ))
+}
+
+fn run_ail_build_agent(
+    agent_path: &str,
+    core: &eigl::ail::AilCore,
+    requirements_artifact: Option<&str>,
+    spec_text: Option<&str>,
+) -> Result<(String, Vec<String>), String> {
+    let (agent_bytecode, agent_bytecode_text) =
+        load_ail_bytecode_or_compile_package(agent_path, "ail-build agent")?;
+    let diagnostics = verify_ail_bytecode(&agent_bytecode);
+    if !diagnostics.is_empty() {
+        return Err(format!(
+            "ail-build agent bytecode has diagnostics:\n{}",
+            diagnostics.join("\n")
+        ));
+    }
+    if agent_bytecode.profile != "Application" {
+        return Err(format!(
+            "ail-build --agent requires an Application-profile agent, found {}",
+            agent_bytecode.profile
+        ));
+    }
+    if !agent_bytecode.actions.contains_key("CompileApplication") {
+        return Err("ail-build --agent requires a CompileApplication action".to_string());
+    }
+    let build_status = if spec_text.is_some() {
+        "SpecCaptured"
+    } else {
+        "CoreChecked"
+    };
+    let run = run_ail_bytecode_action(
+        &agent_bytecode,
+        "CompileApplication",
+        BTreeMap::from([
+            ("buildrequest.id".to_string(), core.package.name.clone()),
+            (
+                "buildrequest.requirements".to_string(),
+                requirements_artifact.unwrap_or("skipped").to_string(),
+            ),
+            (
+                "buildrequest.spec".to_string(),
+                spec_text.unwrap_or("skipped").to_string(),
+            ),
+            ("buildrequest.core ir".to_string(), "Checked".to_string()),
+            (
+                "buildrequest.bytecode artifact".to_string(),
+                "Pending".to_string(),
+            ),
+            ("buildrequest.status".to_string(), build_status.to_string()),
+        ]),
+    )?;
+    if run.status != "succeeded" {
+        let mut message = "ail-build agent CompileApplication failed".to_string();
+        if let Some(failure) = run.failure {
+            message.push_str(&format!(": {failure}"));
+        }
+        if !run.trace.is_empty() {
+            message.push_str(&format!("\n{}", run.trace.join("\n")));
+        }
+        return Err(message);
+    }
+    Ok((agent_bytecode_text, run.trace))
 }
 
 fn draft_checked_ail_requirements_for_package(
@@ -666,7 +750,7 @@ fn run_ail_build_from_core(
     let mut pass_trace_artifact = None;
     if let Some(pass_path) = &cli_options.ail_build_pass {
         let (pass_bytecode, pass_bytecode_text) =
-            load_ail_pass_bytecode_or_compile_package(pass_path)?;
+            load_ail_bytecode_or_compile_package(pass_path, "ail-build compiler pass")?;
         let pass_diagnostics = verify_ail_bytecode(&pass_bytecode);
         if !pass_diagnostics.is_empty() {
             println!("ail-build diagnostics:");
@@ -699,16 +783,28 @@ fn run_ail_build_from_core(
         return Ok(1);
     }
     let bytecode_text = format!("{}\n", render_ail_bytecode(&bytecode));
+    let (agent_bytecode_artifact, agent_trace_artifact) =
+        if let Some(agent_path) = &cli_options.ail_build_agent {
+            let (agent_bytecode_text, agent_trace) =
+                run_ail_build_agent(agent_path, &core, requirements_artifact, spec_text)?;
+            (Some(agent_bytecode_text), Some(agent_trace))
+        } else {
+            (None, None)
+        };
     if let Some(artifact_dir) = &cli_options.artifact_dir {
         let core_text = format!("{}\n", render_ail_core(&core));
         write_ail_build_artifacts(
             artifact_dir,
-            requirements_artifact,
-            spec_text,
-            &core_text,
-            &bytecode_text,
-            pass_bytecode_artifact.as_deref(),
-            pass_trace_artifact.as_deref(),
+            AilBuildArtifactSet {
+                requirements: requirements_artifact,
+                spec_text,
+                core_text: &core_text,
+                bytecode_text: &bytecode_text,
+                pass_bytecode_text: pass_bytecode_artifact.as_deref(),
+                pass_trace: pass_trace_artifact.as_deref(),
+                agent_bytecode_text: agent_bytecode_artifact.as_deref(),
+                agent_trace: agent_trace_artifact.as_deref(),
+            },
         )?;
     }
     print!("{bytecode_text}");
@@ -1091,6 +1187,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
     let mut ail_prompt = None;
     let mut ail_pass_target = None;
     let mut ail_build_pass = None;
+    let mut ail_build_agent = None;
     let mut ail_requirements_file = None;
     let mut ail_spec_file = None;
     let mut ail_core_file = None;
@@ -1206,6 +1303,17 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
                 return Err("missing value for --pass".to_string());
             };
             ail_build_pass = Some(path.clone());
+            index += 2;
+            continue;
+        }
+        if arg == "--agent" {
+            if command != "ail-build" {
+                return Err(usage());
+            }
+            let Some(path) = args.get(index + 1) else {
+                return Err("missing value for --agent".to_string());
+            };
+            ail_build_agent = Some(path.clone());
             index += 2;
             continue;
         }
@@ -1382,6 +1490,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         ail_prompt,
         ail_pass_target,
         ail_build_pass,
+        ail_build_agent,
         ail_requirements_file,
         ail_spec_file,
         ail_core_file,
