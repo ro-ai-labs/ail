@@ -400,7 +400,10 @@ requirements capture and checking, it runs `PrepareSpecDraft` and includes the
 agent-produced spec checklist state in the AIL-Spec prompt. Once the checked
 AIL-Spec draft is accepted, it runs `AcceptSpecDraft` before AIL-Core
 elaboration so the `SpecCaptured` transition is also represented in AIL
-bytecode. It optionally runs `CompareAgentPromptPortability` when
+bytecode. For saved `--spec-file` builds, the agent starts from an explicit
+`SpecLoaded` state, loads the checked spec into the `BuildRequest`, and still
+runs `AcceptSpecDraft` before AIL-Core elaboration. It optionally runs
+`CompareAgentPromptPortability` when
 `--target-model <name>` is supplied, runs `AcceptCoreIR` after AIL-Core checking
 and any compiler pass, and then runs its `CompileApplication` action against the
 completed build state before target bytecode emission. For saved

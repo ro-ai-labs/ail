@@ -4285,6 +4285,52 @@ cargo test --test ail_toolchain cli_ail_build_agent_accepts_saved_core_before_co
 Expected: saved-core builds record `AcceptCoreIR`, `CoreChecked`, and
 `CoreIrAccepted` before `CompileApplication`.
 
+### Task 102: AIL Build Agent Accepts Saved AIL-Spec Artifacts
+
+**Files:**
+- Modify: `examples/ail_toolchain_agent.ail/spec.ail-spec.md`
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing saved-spec agent test**
+
+Add an `ail-build --spec-file --agent` CLI test that requires the agent trace
+to record `AcceptSpecDraft` before `AcceptCoreIR` and `CompileApplication`,
+read the loaded `BuildRequest` spec, write
+`buildrequest.spec review report=Accepted`, change status to `SpecCaptured`,
+and record `SpecDraftAccepted`.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_agent_accepts_saved_spec_before_core_lowering -- --nocapture
+```
+
+Expected: failure because saved-spec agent builds currently start agent
+execution at `AcceptCoreIR` after AIL-Core elaboration.
+
+- [x] **Step 3: Implement saved-spec agent acceptance**
+
+Add a `SpecLoaded` status for loaded checked-spec artifacts, allow
+`AcceptSpecDraft` to accept `RequirementsCaptured` or `SpecLoaded`, synthesize
+an agent `BuildRequest` state for saved-spec builds, and run `AcceptSpecDraft`
+before AIL-Core elaboration.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_agent_accepts_saved_spec_before_core_lowering -- --nocapture
+```
+
+Expected: saved-spec builds record `AcceptSpecDraft`, `SpecCaptured`, and
+`SpecDraftAccepted` before `AcceptCoreIR` and `CompileApplication`.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

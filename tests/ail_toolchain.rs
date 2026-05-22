@@ -4912,6 +4912,68 @@ fn cli_ail_build_accepts_saved_spec_file_artifact() {
 }
 
 #[test]
+fn cli_ail_build_agent_accepts_saved_spec_before_core_lowering() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("support_ticket.ail");
+    let agent_package = fixture("ail_toolchain_agent.ail");
+    let spec_path = std::env::temp_dir().join(format!(
+        "eigl-support-ticket-agent-spec-file-{}.ail-spec.md",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "eigl-ail-build-agent-spec-file-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+    let spec_text = fs::read_to_string(format!("{package}/spec.ail-spec.md")).unwrap();
+    fs::write(&spec_path, &spec_text).unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-build",
+            &package,
+            "--spec-file",
+            spec_path.to_str().unwrap(),
+            "--agent",
+            &agent_package,
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let bytecode = parse_ail_bytecode(&stdout).unwrap();
+    assert_eq!(verify_ail_bytecode(&bytecode), Vec::<String>::new());
+
+    let agent_trace = fs::read_to_string(artifact_dir.join("agent-trace.txt")).unwrap();
+    let accept_spec_index = agent_trace
+        .find("action AcceptSpecDraft started")
+        .unwrap_or_else(|| panic!("{agent_trace}"));
+    let accept_core_index = agent_trace
+        .find("action AcceptCoreIR started")
+        .unwrap_or_else(|| panic!("{agent_trace}"));
+    let compile_index = agent_trace
+        .find("action CompileApplication started")
+        .unwrap_or_else(|| panic!("{agent_trace}"));
+    assert!(accept_spec_index < accept_core_index, "{agent_trace}");
+    assert!(accept_core_index < compile_index, "{agent_trace}");
+    assert!(agent_trace.contains("read buildrequest.spec"));
+    assert!(agent_trace.contains("write buildrequest.spec review report=Accepted"));
+    assert!(agent_trace.contains("write buildrequest.status=SpecCaptured"));
+    assert!(agent_trace.contains("trace SpecDraftAccepted"));
+
+    fs::remove_file(spec_path).unwrap();
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
 fn cli_ail_build_accepts_saved_core_file_artifact() {
     let binary = env!("CARGO_BIN_EXE_eigl");
     let package = fixture("support_ticket.ail");

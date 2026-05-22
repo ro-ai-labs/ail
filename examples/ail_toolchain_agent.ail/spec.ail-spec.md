@@ -17,7 +17,7 @@ A BuildRequest has:
 - bytecode artifact: Text
 - bytecode verification report: Text
 - prompt portability report: Text
-- status: State<PromptReceived, RequirementsCaptured, SpecCaptured, CoreLoaded, CoreChecked, BytecodeReady, NeedsClarification>
+- status: State<PromptReceived, RequirementsCaptured, SpecLoaded, SpecCaptured, CoreLoaded, CoreChecked, BytecodeReady, NeedsClarification>
 - target model: Text
 
 The application shows:
@@ -53,12 +53,12 @@ Action: Accept spec draft.
 When the toolchain agent accepts a checked AIL spec draft:
 
 - the system requires the BuildRequest to exist
-- the system requires the BuildRequest status to be RequirementsCaptured
+- the system requires the BuildRequest status to be RequirementsCaptured or SpecLoaded
 - the system reads the BuildRequest requirements
 - the system reads the BuildRequest spec
 - the system changes the BuildRequest spec review report to Accepted
 - the system changes the BuildRequest status to SpecCaptured
-- the system guarantees the accepted spec preserves the checked requirements and remains eligible for AIL-Core lowering and AIL-Bytecode compilation
+- the system guarantees the accepted spec preserves the checked requirements or saved spec artifact boundary and remains eligible for AIL-Core lowering and AIL-Bytecode compilation
 - the system records a trace event named SpecDraftAccepted
 
 Action: Accept core IR.

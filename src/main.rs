@@ -742,9 +742,7 @@ fn run_ail_build_agent_accept_spec(
 ) -> Result<AilBuildAgentStart, String> {
     let (agent_bytecode, _) = load_verified_ail_build_agent(agent_path)?;
     if !agent_bytecode.actions.contains_key("AcceptSpecDraft") {
-        return Err(
-            "ail-build --agent requires an AcceptSpecDraft action for prompt builds".to_string(),
-        );
+        return Err("ail-build --agent requires an AcceptSpecDraft action".to_string());
     }
     agent_start.state.insert(
         "buildrequest.requirements".to_string(),
@@ -768,6 +766,28 @@ fn run_ail_build_agent_accept_spec(
     agent_start.trace.extend(accept_run.trace);
     agent_start.state = accept_run.final_state;
     Ok(agent_start)
+}
+
+fn start_ail_build_agent_from_saved_spec(
+    package: &eigl::ail::AilPackage,
+    spec_text: &str,
+) -> AilBuildAgentStart {
+    AilBuildAgentStart {
+        state: BTreeMap::from([
+            ("buildrequest.id".to_string(), package.metadata.name.clone()),
+            (
+                "buildrequest.developer prompt".to_string(),
+                "skipped".to_string(),
+            ),
+            (
+                "buildrequest.requirements".to_string(),
+                "skipped".to_string(),
+            ),
+            ("buildrequest.spec".to_string(), spec_text.to_string()),
+            ("buildrequest.status".to_string(), "SpecLoaded".to_string()),
+        ]),
+        trace: Vec::new(),
+    }
 }
 
 fn run_ail_build_agent_accept_core(
@@ -1408,9 +1428,20 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
                 let spec_text = fs::read_to_string(spec_file)
                     .map_err(|error| format!("failed to read {spec_file}: {error}"))?;
                 let spec_text = spec_text.trim().to_string();
+                let agent_start = if let Some(agent_path) = cli_options.ail_build_agent.as_deref() {
+                    let agent_start = start_ail_build_agent_from_saved_spec(&package, &spec_text);
+                    Some(run_ail_build_agent_accept_spec(
+                        agent_path,
+                        agent_start,
+                        "skipped",
+                        &spec_text,
+                    )?)
+                } else {
+                    None
+                };
                 let document = parse_ail_package_spec_text(&package, &spec_text)?;
                 let core = elaborate_ail_core(&package, &document);
-                (None, spec_text, core, None, None)
+                (None, spec_text, core, None, agent_start)
             } else {
                 let prompt = cli_options
                     .ail_prompt
