@@ -386,18 +386,19 @@ With `--artifact-dir`, `ail-lower` writes `checked.ail-core.txt`,
 `artifact.ailbc.json`, `artifact.fingerprint.txt`, `manifest.ail-lower.txt`,
 and `manifest.fingerprint.txt`, keeping direct IR-to-VM-instruction lowering
 auditable while stdout remains the parseable VM instruction artifact.
-`ail-check`, `ail-core`, `ail-flow`, `ail-lower`, `ail-run`, and `ail-build`
-can use `--spec-file <path>` to read a saved generated AIL-Spec artifact
-instead of the package entry spec, preserving the package metadata while making
-accepted AIL-Spec files reusable inputs to IR rendering, bytecode lowering, and
-auditable build artifacts.
-`ail-lower --core-file <path>` and `ail-build --core-file <path>` read a saved
-checked AIL-Core artifact, reconstruct the graph from the serialized nodes,
-edges, and edge attributes, run the core checker, and compile that IR directly
-to the VM instruction artifact without loading the source package spec. This keeps AIL-Core as
-a real compiler input boundary rather than only a display format, and it
-preserves lowering payloads such as read/write provenance text that affect
-emitted bytecode instructions.
+`ail-check`, `ail-core`, `ail-flow`, `ail-lower`, `ail-compile`, `ail-run`,
+and `ail-build` can use `--spec-file <path>` to read a saved generated
+AIL-Spec artifact instead of the package entry spec, preserving the package
+metadata while making accepted AIL-Spec files reusable inputs to IR rendering,
+bytecode lowering, native target emission, and auditable build artifacts.
+`ail-lower --core-file <path>`, `ail-compile --core-file <path>`, and
+`ail-build --core-file <path>` read a saved checked AIL-Core artifact,
+reconstruct the graph from the serialized nodes, edges, and edge attributes,
+run the core checker, and compile that IR directly to the VM instruction
+artifact or native target without loading the source package spec. This keeps
+AIL-Core as a real compiler input boundary rather than only a display format,
+and it preserves lowering payloads such as read/write provenance text that
+affect emitted bytecode instructions.
 `ail-vm` reads a saved AIL-Bytecode artifact and executes it directly without
 reparsing the source AIL package, making bytecode a real artifact boundary
 instead of only a display format. The VM verifier rejects unknown opcodes and

@@ -1694,6 +1694,35 @@ fn parse_cli_ail_core(cli_options: &CliOptions) -> Result<eigl::ail::AilCore, St
     parse_ail_core_text(&core_text)
 }
 
+fn run_ail_compile_from_core(
+    core: &eigl::ail::AilCore,
+    cli_options: &CliOptions,
+) -> Result<u8, String> {
+    let diagnostics = check_ail_core(core);
+    if !diagnostics.is_empty() {
+        for diagnostic in diagnostics {
+            println!("{diagnostic}");
+        }
+        return Ok(1);
+    }
+    let action = cli_options
+        .ail_action
+        .as_deref()
+        .ok_or_else(|| "ail-compile requires --action <name>".to_string())?;
+    let target = cli_options
+        .ail_compile_target
+        .as_deref()
+        .ok_or_else(|| "ail-compile requires --target <target>".to_string())?;
+    let out = cli_options
+        .ail_compile_out
+        .as_deref()
+        .ok_or_else(|| "ail-compile requires --out <path>".to_string())?;
+    let executable = compile_ail_core_native_elf(core, action, target)?;
+    write_native_executable(out, &executable)?;
+    println!("ail-compile wrote {target} executable {out}");
+    Ok(0)
+}
+
 fn run_ail_build_from_core(
     mut core: eigl::ail::AilCore,
     cli_options: &CliOptions,
@@ -1889,6 +1918,10 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
     if command == "ail-build" && cli_options.ail_core_file.is_some() {
         let core = parse_cli_ail_core(cli_options)?;
         return run_ail_build_from_core(core, cli_options, None, None, None, None);
+    }
+    if command == "ail-compile" && cli_options.ail_core_file.is_some() {
+        let core = parse_cli_ail_core(cli_options)?;
+        return run_ail_compile_from_core(&core, cli_options);
     }
     if command == "ail-lower" && cli_options.ail_core_file.is_some() {
         let core = parse_cli_ail_core(cli_options)?;
@@ -2252,30 +2285,7 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
             print!("{bytecode_text}");
             Ok(0)
         }
-        "ail-compile" => {
-            if !diagnostics.is_empty() {
-                for diagnostic in diagnostics {
-                    println!("{diagnostic}");
-                }
-                return Ok(1);
-            }
-            let action = cli_options
-                .ail_action
-                .as_deref()
-                .ok_or_else(|| "ail-compile requires --action <name>".to_string())?;
-            let target = cli_options
-                .ail_compile_target
-                .as_deref()
-                .ok_or_else(|| "ail-compile requires --target <target>".to_string())?;
-            let out = cli_options
-                .ail_compile_out
-                .as_deref()
-                .ok_or_else(|| "ail-compile requires --out <path>".to_string())?;
-            let executable = compile_ail_core_native_elf(&core, action, target)?;
-            write_native_executable(out, &executable)?;
-            println!("ail-compile wrote {target} executable {out}");
-            Ok(0)
-        }
+        "ail-compile" => run_ail_compile_from_core(&core, cli_options),
         "ail-run" => {
             if !diagnostics.is_empty() {
                 for diagnostic in diagnostics {
@@ -2470,7 +2480,13 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         if arg == "--spec-file" {
             if !matches!(
                 command,
-                "ail-check" | "ail-core" | "ail-flow" | "ail-lower" | "ail-run" | "ail-build"
+                "ail-check"
+                    | "ail-core"
+                    | "ail-flow"
+                    | "ail-lower"
+                    | "ail-compile"
+                    | "ail-run"
+                    | "ail-build"
             ) {
                 return Err(usage());
             }
@@ -2482,7 +2498,10 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
             continue;
         }
         if arg == "--core-file" {
-            if !matches!(command, "ail-lower" | "ail-pass" | "ail-build") {
+            if !matches!(
+                command,
+                "ail-lower" | "ail-pass" | "ail-compile" | "ail-build"
+            ) {
                 return Err(usage());
             }
             let Some(path) = args.get(index + 1) else {

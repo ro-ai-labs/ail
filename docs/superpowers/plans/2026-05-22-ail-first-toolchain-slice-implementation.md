@@ -5848,6 +5848,52 @@ Expected: `MarksOverdueTickets` compiles to native ELF, succeeds only for
 `current.time > ticket.due_at`, writes `ticket.status=Overdue`, and unsupported
 observed rules remain rejected before target emission.
 
+### Task 135: Direct Native Compile Accepts Saved Artifacts
+
+**Files:**
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing saved-artifact compile tests**
+
+Add native `ail-compile` coverage for saved AIL-Spec and saved checked
+AIL-Core artifacts. Each test emits a `CloseTicket` ELF and executes it to
+prove the direct compiler path is not only argument parsing.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_compile_accepts_saved_spec_file_artifact -- --nocapture
+cargo test --test ail_toolchain cli_ail_compile_accepts_saved_core_file_artifact -- --nocapture
+```
+
+Expected: both commands fail at the CLI boundary because `ail-compile` rejects
+`--spec-file` and `--core-file`.
+
+- [x] **Step 3: Wire saved artifacts into `ail-compile`**
+
+Allow `ail-compile --spec-file <path>` to reuse the package metadata with a
+saved spec artifact, and allow `ail-compile --core-file <path>` to compile a
+saved checked AIL-Core artifact directly to native ELF. Share the native
+compile path so diagnostics, required `--action`, required `--target`, and
+required `--out` handling stay consistent.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_compile_accepts_saved_spec_file_artifact -- --nocapture
+cargo test --test ail_toolchain cli_ail_compile_accepts_saved_core_file_artifact -- --nocapture
+```
+
+Expected: both saved-artifact `ail-compile` commands emit runnable ELF
+executables without requiring an `ail-build` wrapper.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

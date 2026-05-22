@@ -3224,6 +3224,116 @@ fn cli_ail_compile_emits_runnable_linux_x86_64_elf_executable() {
 
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+fn cli_ail_compile_accepts_saved_spec_file_artifact() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("support_ticket.ail");
+    let spec_path = std::env::temp_dir().join(format!(
+        "eigl-ail-compile-saved-spec-{}.ail-spec.md",
+        std::process::id()
+    ));
+    let executable_path = std::env::temp_dir().join(format!(
+        "eigl-ail-compile-saved-spec-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_file(&executable_path);
+    fs::write(
+        &spec_path,
+        fs::read_to_string(format!("{package}/spec.ail-spec.md")).unwrap(),
+    )
+    .unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-compile",
+            &package,
+            "--spec-file",
+            spec_path.to_str().unwrap(),
+            "--action",
+            "CloseTicket",
+            "--target",
+            "linux-x86_64-elf",
+            "--out",
+            executable_path.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let run = Command::new(&executable_path)
+        .args(["ticket.id=T-1", "ticket.status=Open"])
+        .output()
+        .unwrap();
+    assert!(run.status.success());
+    assert_eq!(
+        String::from_utf8_lossy(&run.stdout),
+        "ticket.status=Closed\n"
+    );
+
+    fs::remove_file(spec_path).unwrap();
+    fs::remove_file(executable_path).unwrap();
+}
+
+#[test]
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+fn cli_ail_compile_accepts_saved_core_file_artifact() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
+    let document = parse_ail_package_document(&package).unwrap();
+    let core = elaborate_ail_core(&package, &document);
+    let core_path = std::env::temp_dir().join(format!(
+        "eigl-ail-compile-saved-core-{}.ail-core.txt",
+        std::process::id()
+    ));
+    let executable_path = std::env::temp_dir().join(format!(
+        "eigl-ail-compile-saved-core-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_file(&executable_path);
+    fs::write(&core_path, render_ail_core(&core)).unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-compile",
+            fixture("support_ticket.ail").as_str(),
+            "--core-file",
+            core_path.to_str().unwrap(),
+            "--action",
+            "CloseTicket",
+            "--target",
+            "linux-x86_64-elf",
+            "--out",
+            executable_path.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let run = Command::new(&executable_path)
+        .args(["ticket.id=T-1", "ticket.status=Open"])
+        .output()
+        .unwrap();
+    assert!(run.status.success());
+    assert_eq!(
+        String::from_utf8_lossy(&run.stdout),
+        "ticket.status=Closed\n"
+    );
+
+    fs::remove_file(core_path).unwrap();
+    fs::remove_file(executable_path).unwrap();
+}
+
+#[test]
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_compile_native_rejects_unsupported_system_opcodes() {
     let binary = env!("CARGO_BIN_EXE_eigl");
     let package = fixture("network_driver.ail");

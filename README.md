@@ -58,13 +58,14 @@ rules instead of silently dropping them.
 <dir>` also writes the checked core, VM instruction artifact, deterministic
 fingerprints, and a lower manifest while keeping stdout as the VM artifact.
 `ail-check`, `ail-core`,
-`ail-flow`, `ail-lower`, `ail-run`, and `ail-build` can use `--spec-file
-<path>` to read a saved generated AIL-Spec artifact instead of the package
-entry spec.
-`ail-lower --core-file <path>` and `ail-build --core-file <path>` read a
-saved checked AIL-Core artifact and compile it directly to the VM instruction
-artifact, without loading the source package spec, including the serialized
-edge payloads used by lowering. `ail-patch
+`ail-flow`, `ail-lower`, `ail-compile`, `ail-run`, and `ail-build` can use
+`--spec-file <path>` to read a saved generated AIL-Spec artifact instead of
+the package entry spec.
+`ail-lower --core-file <path>`, `ail-compile --core-file <path>`, and
+`ail-build --core-file <path>` read a saved checked AIL-Core artifact and
+compile it directly to the VM instruction artifact or native target, without
+loading the source package spec, including the serialized edge payloads used by
+lowering. `ail-patch
 <patch-file>` applies a checked AIL patch and prints canonical AIL-Spec,
 `ail-run --action <ActionName>` executes through the current AIL bytecode VM,
 `ail-vm --action <ActionName>` verifies and executes a saved AIL-Bytecode
