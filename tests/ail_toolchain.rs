@@ -6223,6 +6223,7 @@ fn cli_ail_build_agent_accepts_compiler_pass_output_before_core() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     let bytecode = parse_ail_bytecode(&stdout).unwrap();
     assert_eq!(verify_ail_bytecode(&bytecode), Vec::<String>::new());
+    let expected_artifact_fingerprint = fnv64_fingerprint(&stdout);
 
     let pass_trace = fs::read_to_string(artifact_dir.join("pass-trace.txt")).unwrap();
     assert!(pass_trace.contains("core transform infer read permissions"));
@@ -6230,6 +6231,11 @@ fn cli_ail_build_agent_accepts_compiler_pass_output_before_core() {
     let expected_pass_fingerprint = fnv64_fingerprint(&pass_bytecode_artifact);
     let pass_fingerprint = fs::read_to_string(artifact_dir.join("pass.fingerprint.txt")).unwrap();
     assert_eq!(pass_fingerprint.trim(), expected_pass_fingerprint);
+    let agent_bytecode_artifact =
+        fs::read_to_string(artifact_dir.join("agent.ailbc.json")).unwrap();
+    let expected_agent_fingerprint = fnv64_fingerprint(&agent_bytecode_artifact);
+    let agent_fingerprint = fs::read_to_string(artifact_dir.join("agent.fingerprint.txt")).unwrap();
+    assert_eq!(agent_fingerprint.trim(), expected_agent_fingerprint);
 
     let agent_trace = fs::read_to_string(artifact_dir.join("agent-trace.txt")).unwrap();
     let accept_spec_index = agent_trace
@@ -6253,6 +6259,41 @@ fn cli_ail_build_agent_accepts_compiler_pass_output_before_core() {
     assert!(agent_trace.contains("write buildrequest.compiler pass review report=Accepted"));
     assert!(agent_trace.contains("write buildrequest.status=PassApplied"));
     assert!(agent_trace.contains("trace CompilerPassOutputAccepted"));
+
+    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-build.txt")).unwrap();
+    assert!(manifest.contains("AIL-Build-Manifest:"), "{manifest}");
+    assert!(
+        manifest.contains("artifact requirements.ail-requirements.md"),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains("artifact accepted.ail-spec.md"),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains("artifact checked.ail-core.txt"),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "bytecode artifact.ailbc.json {expected_artifact_fingerprint}"
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "compiler-pass pass.ailbc.json {expected_pass_fingerprint}"
+        )),
+        "{manifest}"
+    );
+    assert!(manifest.contains("trace pass-trace.txt"), "{manifest}");
+    assert!(
+        manifest.contains(&format!(
+            "agent agent.ailbc.json {expected_agent_fingerprint}"
+        )),
+        "{manifest}"
+    );
+    assert!(manifest.contains("trace agent-trace.txt"), "{manifest}");
 
     fs::remove_dir_all(&artifact_dir).unwrap();
 }

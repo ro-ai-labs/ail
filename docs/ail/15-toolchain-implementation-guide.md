@@ -436,7 +436,11 @@ deterministic pass fingerprint, and execution trace. When a build agent is
 present, the artifact directory also includes
 `agent.ailbc.json`, `agent.fingerprint.txt`, and `agent-trace.txt` for the
 agent bytecode, deterministic agent fingerprint, and its requirements-capture,
-prompt-portability, application-compile, and bytecode-verification trace. This
+prompt-portability, application-compile, and bytecode-verification trace. The
+artifact directory also includes `manifest.ail-build.txt`, a deterministic
+index tying the emitted requirements, accepted spec, checked core, compiler-pass
+bytecode and trace, agent bytecode and trace, and final bytecode fingerprint
+into one review artifact. This
 lets the developer audit the
 requirements-to-spec-to-IR-to-pass-to-agent-to-bytecode chain, a
 saved-spec-to-IR-to-agent-to-bytecode chain, or a

@@ -4606,6 +4606,50 @@ cargo test --test ail_toolchain cli_ail_build_runs_toolchain_agent_bytecode -- -
 Expected: `agent.fingerprint.txt` matches `agent.ailbc.json`, the agent
 bytecode still verifies, and the agent trace still records `CompileApplication`.
 
+### Task 109: AIL Build Writes Artifact Manifest
+
+**Files:**
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing manifest test**
+
+Extend the `ail-build --pass --agent --artifact-dir` test to require
+`manifest.ail-build.txt`. The manifest must list the requirements, accepted
+spec, checked core, final bytecode fingerprint, compiler-pass bytecode
+fingerprint, compiler-pass trace, agent bytecode fingerprint, and agent trace.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_agent_accepts_compiler_pass_output_before_core -- --nocapture
+```
+
+Expected: failure because `ail-build --artifact-dir` writes individual
+review artifacts and fingerprints but no manifest tying them together.
+
+- [x] **Step 3: Implement manifest output**
+
+Add a deterministic `manifest.ail-build.txt` renderer to the `ail-build`
+artifact writer. Keep stdout unchanged and write the manifest after the
+individual artifacts, using the emitted final fingerprint and deterministic
+fingerprints for pass and agent bytecode artifacts.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_agent_accepts_compiler_pass_output_before_core -- --nocapture
+```
+
+Expected: the manifest lists the review artifacts, traces, and bytecode
+fingerprints while the existing pass and agent acceptance flow still verifies.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

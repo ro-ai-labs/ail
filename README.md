@@ -69,7 +69,8 @@ bytecode lowering. `ail-build --core-file <path>` skips requirements and spec
 stages entirely and resumes from checked AIL-Core IR. Add
 `--artifact-dir <dir>` to also write the captured or loaded requirements when
 present, accepted AIL-Spec when present, checked AIL-Core IR after any build
-pass, and final AIL-Bytecode artifact for review. `ail-build --agent
+pass, final AIL-Bytecode artifact, and `manifest.ail-build.txt` as the
+fingerprinted artifact index for review. `ail-build --agent
 <agent-package-or-bytecode>` compiles or loads an AIL-authored Application
 agent, validates and runs its `CaptureRequirements` bytecode action before the
 base LLM requirements request for prompt-driven requirements capture, threads
@@ -83,7 +84,7 @@ runs `AcceptCoreIR` after AIL-Core is checked and before compilation, runs
 `CompileApplication` over the completed build state before target bytecode
 emission, runs `VerifyBytecodeArtifact` after the emitted bytecode verifies, and,
 with `--artifact-dir`, writes `artifact.fingerprint.txt`, `agent.ailbc.json`,
-`agent.fingerprint.txt`, and `agent-trace.txt`. When
+`agent.fingerprint.txt`, `agent-trace.txt`, and `manifest.ail-build.txt`. When
 `ail-build --requirements-file` is used with `--agent`, the saved checked
 requirements are loaded as an agent-visible `RequirementsLoaded` artifact,
 prepared through `PrepareSpecDraft`, and accepted through `AcceptSpecDraft`

@@ -414,6 +414,43 @@ struct AilBuildPassAcceptance<'a> {
     pass_trace: &'a [String],
 }
 
+fn render_ail_build_manifest(artifacts: &AilBuildArtifactSet<'_>) -> String {
+    let mut lines = vec!["AIL-Build-Manifest:".to_string()];
+    if artifacts.requirements.is_some() {
+        lines.push("artifact requirements.ail-requirements.md".to_string());
+    }
+    if artifacts.spec_text.is_some() {
+        lines.push("artifact accepted.ail-spec.md".to_string());
+    }
+    lines.push("artifact checked.ail-core.txt".to_string());
+    lines.push(format!(
+        "bytecode artifact.ailbc.json {}",
+        artifacts.bytecode_fingerprint
+    ));
+    if let Some(pass_bytecode_text) = artifacts.pass_bytecode_text {
+        let pass_bytecode_fingerprint = artifacts
+            .pass_bytecode_fingerprint
+            .map(str::to_string)
+            .unwrap_or_else(|| ail_artifact_fingerprint(pass_bytecode_text));
+        lines.push(format!(
+            "compiler-pass pass.ailbc.json {pass_bytecode_fingerprint}"
+        ));
+    }
+    if artifacts.pass_trace.is_some() {
+        lines.push("trace pass-trace.txt".to_string());
+    }
+    if let Some(agent_bytecode_text) = artifacts.agent_bytecode_text {
+        lines.push(format!(
+            "agent agent.ailbc.json {}",
+            ail_artifact_fingerprint(agent_bytecode_text)
+        ));
+    }
+    if artifacts.agent_trace.is_some() {
+        lines.push("trace agent-trace.txt".to_string());
+    }
+    format!("{}\n", lines.join("\n"))
+}
+
 fn write_ail_build_artifacts(
     artifact_dir: &str,
     artifacts: AilBuildArtifactSet<'_>,
@@ -479,6 +516,11 @@ fn write_ail_build_artifacts(
         )
         .map_err(|error| format!("failed to write ail-build agent trace artifact: {error}"))?;
     }
+    fs::write(
+        root.join("manifest.ail-build.txt"),
+        render_ail_build_manifest(&artifacts),
+    )
+    .map_err(|error| format!("failed to write ail-build manifest artifact: {error}"))?;
     Ok(())
 }
 
