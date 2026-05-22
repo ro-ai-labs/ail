@@ -36,7 +36,9 @@ deterministic AIL VM instruction artifact, and `ail-compile --target
 linux-x86_64-elf --out <path>` emits a native Linux x86_64 ELF executable
 directly from checked AIL. The first native ABI accepts runtime state as
 `key=value` argv entries and returns a nonzero process status when supported
-compiled existence, allow-list, or forbidden-value requirements fail;
+compiled existence, allow-list, or forbidden-value requirements fail. Allow-list
+requirements can come from `<field> to be <value>` or common LLM wording such
+as `<field> is <value>`;
 supported `SET_FIELD` writes are emitted as
 `key=value` stdout lines on successful execution. `ail-lower --artifact-dir
 <dir>` also writes the checked core, VM instruction artifact, deterministic

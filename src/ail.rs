@@ -6990,8 +6990,9 @@ fn positive_field_requirement(
     if requirement.contains(" not to be ") {
         return None;
     }
-    let marker = " to be ";
-    let (field_text, allowed_text) = requirement.rsplit_once(marker)?;
+    let (field_text, allowed_text) = requirement
+        .rsplit_once(" to be ")
+        .or_else(|| requirement.rsplit_once(" is "))?;
     let key = referenced_runtime_field_key(document, field_text)?;
     let allowed_values = split_allowed_requirement_values(allowed_text);
     (!allowed_values.is_empty()).then_some((key, allowed_values))
@@ -9143,7 +9144,8 @@ fn existence_requirement_reference(rule: &str) -> Option<String> {
 fn requirement_field_reference_text(rule: &str) -> Option<String> {
     let (field_text, _) = rule
         .split_once(" not to be ")
-        .or_else(|| rule.split_once(" to be "))?;
+        .or_else(|| rule.split_once(" to be "))
+        .or_else(|| rule.split_once(" is "))?;
     let field_text = normalized_field_reference_text(field_text);
     (!field_text.is_empty()).then_some(field_text)
 }

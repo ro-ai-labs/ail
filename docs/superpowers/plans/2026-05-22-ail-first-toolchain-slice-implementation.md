@@ -5259,6 +5259,61 @@ cargo test --test ail_toolchain cli_ail_build_writes_requirements_spec_core_and_
 Expected: native builds persist and manifest the target ELF while agent-native
 verification and the existing VM artifact directory path remain unchanged.
 
+### Task 123: LLM-Style Positive Field Requirements Compile
+
+**Files:**
+- Modify: `src/ail.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Probe real Qwen native build behavior**
+
+Run a prompt-driven `ail-build --agent --target linux-x86_64-elf` through
+`http://inteligentia-pro-1:8080/v1/chat/completions`. The generated
+requirements and spec include `the ticket status is Open`, but the bytecode
+lowers it as `OBSERVE_RULE`, so the native executable accepts
+`ticket.status=Closed`.
+
+- [x] **Step 2: Write failing LLM-style requirement test**
+
+Add a saved-spec native build test that rewrites the CloseTicket requirement to
+`the ticket status is Open`. Require CloseTicket bytecode to contain
+`REQUIRE_FIELD_IN` for that rule, require `ticket.status=Open` to succeed, and
+require `ticket.status=Closed` to fail without stdout.
+
+- [x] **Step 3: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_native_executable_enforces_llm_style_is_field_requirement -- --nocapture
+```
+
+Expected: failure because CloseTicket contains `OBSERVE_RULE` for
+`the ticket status is Open`, and native execution accepts `ticket.status=Closed`.
+
+- [x] **Step 4: Compile `is <value>` field requirements**
+
+Extend positive field requirement detection and requirement-field diagnostics to
+recognize `<field> is <value>` as the same allow-list shape as
+`<field> to be <value>`.
+
+- [x] **Step 5: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_native_executable_enforces_llm_style_is_field_requirement -- --nocapture
+cargo test --test ail_toolchain cli_ail_compile_native_executable_emits_close_ticket_state_write -- --nocapture
+cargo test --test ail_toolchain cli_ail_compile_native_executable_enforces_field_in_requirements -- --nocapture
+cargo test --test ail_toolchain ail_core_reports_stable_invalid_fixture_diagnostics -- --nocapture
+```
+
+Expected: LLM-style `is` requirements compile into enforceable
+`REQUIRE_FIELD_IN` bytecode/native checks while existing `to be` and
+`not to be` requirement behavior remains unchanged.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**
