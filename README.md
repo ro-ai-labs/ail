@@ -41,7 +41,9 @@ candidate before parsing and checking it, and `ail-build --prompt <text>` asks
 the base LLM for requirements, asks it to turn those requirements into an
 AIL-Spec candidate for the package profile, gives the base LLM one
 diagnostics-guided repair pass if the checker rejects the candidate, and prints
-verified AIL-Bytecode on success.
+verified AIL-Bytecode on success. Add `--artifact-dir <dir>` to also write the
+captured requirements, accepted AIL-Spec, and final AIL-Bytecode artifact for
+review.
 The default AIL base LLM endpoint is
 `http://inteligentia-pro-1:8080/v1/chat/completions`.
 
@@ -72,6 +74,7 @@ cargo run -- ail-conformance examples/compiler_pass.ail
 cargo run -- ail-conformance examples/network_driver.ail
 cargo run -- ail-draft examples/support_ticket.ail --prompt "Draft a support ticket app with private internal notes" --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
 cargo run -- ail-build examples/support_ticket.ail --prompt "Build a support ticket bytecode artifact" --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
+cargo run -- ail-build examples/support_ticket.ail --prompt "Build a support ticket bytecode artifact" --artifact-dir /tmp/support-ticket-ail-build --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
 cargo run -- ail-build examples/refund_tool.ail --prompt "Build a refund tool bytecode artifact" --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
 cargo run -- check examples/confirm_order.rif.md
 cargo run -- graph examples/confirm_order.rif.md

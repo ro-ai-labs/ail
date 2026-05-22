@@ -3990,6 +3990,71 @@ fn cli_ail_build_repairs_rejected_candidate_before_lowering() {
 }
 
 #[test]
+fn cli_ail_build_writes_requirements_spec_and_bytecode_artifacts() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("support_ticket.ail");
+    let artifact_dir =
+        std::env::temp_dir().join(format!("eigl-ail-build-artifacts-{}", std::process::id()));
+    let _ = fs::remove_dir_all(&artifact_dir);
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let requirements = concat!(
+        "AIL-Requirements:\n",
+        "- The application manages support tickets.\n",
+        "- Closing a ticket changes ticket status to Closed and records TicketClosed.\n"
+    );
+    let requirements_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(requirements)
+    );
+    let response_spec = fs::read_to_string(format!("{package}/spec.ail-spec.md")).unwrap();
+    let spec_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(&format!(
+            "<think>ignore this</think>\n```ail\n{response_spec}\n```"
+        ))
+    );
+    let server = serve_chat_responses(listener, vec![requirements_body, spec_body]);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-build",
+            &package,
+            "--prompt",
+            "Build an AIL support ticket bytecode artifact",
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+            "--llm-endpoint",
+            &format!("http://127.0.0.1:{}/v1/chat/completions", addr.port()),
+        ])
+        .output()
+        .unwrap();
+
+    let request_bodies = server.join().unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(request_bodies.len(), 2);
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stdout_bytecode = parse_ail_bytecode(&stdout).unwrap();
+    assert_eq!(verify_ail_bytecode(&stdout_bytecode), Vec::<String>::new());
+
+    let requirements_artifact =
+        fs::read_to_string(artifact_dir.join("requirements.ail-requirements.md")).unwrap();
+    assert_eq!(requirements_artifact, requirements.trim());
+    let spec_artifact = fs::read_to_string(artifact_dir.join("accepted.ail-spec.md")).unwrap();
+    assert!(spec_artifact.contains("Action: Close ticket."));
+    let bytecode_artifact = fs::read_to_string(artifact_dir.join("artifact.ailbc.json")).unwrap();
+    assert_eq!(bytecode_artifact, stdout);
+    let artifact_bytecode = parse_ail_bytecode(&bytecode_artifact).unwrap();
+    assert_eq!(artifact_bytecode, stdout_bytecode);
+}
+
+#[test]
 fn cli_ail_build_for_agent_tool_profile_prompts_tool_requirements_and_outputs_bytecode() {
     let binary = env!("CARGO_BIN_EXE_eigl");
     let package = fixture("refund_tool.ail");

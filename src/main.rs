@@ -43,6 +43,7 @@ struct CliOptions {
     operation_outputs: BTreeMap<String, String>,
     listen: Option<String>,
     llm_endpoint: Option<String>,
+    artifact_dir: Option<String>,
     patch_path: Option<String>,
     dispatch_method: Option<String>,
     dispatch_path: Option<String>,
@@ -363,8 +364,27 @@ fn run(args: Vec<String>) -> Result<u8, String> {
 }
 
 fn usage() -> String {
-    "usage: eigl <check|graph|views|simulate|lower|run|dispatch|emit|schedule|dequeue|serve|normalize|patch|llm-roundtrip|view-model|ail-check|ail-core|ail-flow|ail-lower|ail-run|ail-vm|ail-conformance|ail-draft|ail-build|ail-patch> <path> [patch] [--intent name] [--action name] [--prompt text] [--state-in path] [--state-out path] [--data-in path] [--data-out path] [--operation-output name=value] [--listen addr] [--llm-endpoint url] [method path|trigger] [key=value ...]"
+    "usage: eigl <check|graph|views|simulate|lower|run|dispatch|emit|schedule|dequeue|serve|normalize|patch|llm-roundtrip|view-model|ail-check|ail-core|ail-flow|ail-lower|ail-run|ail-vm|ail-conformance|ail-draft|ail-build|ail-patch> <path> [patch] [--intent name] [--action name] [--prompt text] [--artifact-dir path] [--state-in path] [--state-out path] [--data-in path] [--data-out path] [--operation-output name=value] [--listen addr] [--llm-endpoint url] [method path|trigger] [key=value ...]"
         .to_string()
+}
+
+fn write_ail_build_artifacts(
+    artifact_dir: &str,
+    requirements: &str,
+    spec_text: &str,
+    bytecode_text: &str,
+) -> Result<(), String> {
+    let root = std::path::Path::new(artifact_dir);
+    fs::create_dir_all(root).map_err(|error| {
+        format!("failed to create ail-build artifact dir {artifact_dir}: {error}")
+    })?;
+    fs::write(root.join("requirements.ail-requirements.md"), requirements)
+        .map_err(|error| format!("failed to write ail-build requirements artifact: {error}"))?;
+    fs::write(root.join("accepted.ail-spec.md"), spec_text)
+        .map_err(|error| format!("failed to write ail-build spec artifact: {error}"))?;
+    fs::write(root.join("artifact.ailbc.json"), bytecode_text)
+        .map_err(|error| format!("failed to write ail-build bytecode artifact: {error}"))?;
+    Ok(())
 }
 
 fn run_ail_vm_command(path: &str, cli_options: &CliOptions) -> Result<u8, String> {
@@ -507,7 +527,16 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
             }
             return Ok(1);
         }
-        println!("{}", render_ail_bytecode(&bytecode));
+        let bytecode_text = format!("{}\n", render_ail_bytecode(&bytecode));
+        if let Some(artifact_dir) = &cli_options.artifact_dir {
+            write_ail_build_artifacts(
+                artifact_dir,
+                &requirements,
+                &draft.spec_text,
+                &bytecode_text,
+            )?;
+        }
+        print!("{bytecode_text}");
         return Ok(0);
     }
     let document = parse_ail_package_document(&package)?;
@@ -666,6 +695,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
     let mut operation_outputs = BTreeMap::new();
     let mut listen = None;
     let mut llm_endpoint = None;
+    let mut artifact_dir = None;
     let mut patch_path = None;
     let mut dispatch_method = None;
     let mut dispatch_path = None;
@@ -824,6 +854,18 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
             continue;
         }
 
+        if arg == "--artifact-dir" {
+            if command != "ail-build" {
+                return Err(usage());
+            }
+            let Some(path) = args.get(index + 1) else {
+                return Err("missing value for --artifact-dir".to_string());
+            };
+            artifact_dir = Some(path.clone());
+            index += 2;
+            continue;
+        }
+
         if !matches!(
             command,
             "run"
@@ -866,6 +908,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         operation_outputs,
         listen,
         llm_endpoint,
+        artifact_dir,
         patch_path,
         dispatch_method,
         dispatch_path,

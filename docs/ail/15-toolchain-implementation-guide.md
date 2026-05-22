@@ -334,7 +334,10 @@ requirements. If the checker rejects the first candidate, `ail-build` sends the
 candidate plus detailed diagnostics and repair suggestions back to the base LLM
 for one repair pass. Only a checked candidate is lowered to AIL-Core and
 verified AIL-Bytecode, so the build path still emits bytecode rather than
-host-language source.
+host-language source. With `--artifact-dir`, the same command writes
+`requirements.ail-requirements.md`, `accepted.ail-spec.md`, and
+`artifact.ailbc.json` so the developer can audit the requirements-to-spec-to-
+bytecode chain while stdout remains the parseable bytecode artifact.
 
 ### Diagnostics
 

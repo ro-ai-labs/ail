@@ -2894,6 +2894,49 @@ cargo test --test ail_toolchain cli_ail_build_repairs_rejected_candidate_before_
 Expected: `ail-build` sends requirements, initial AIL-Spec, and repair prompts,
 then emits verified AIL-Bytecode from the repaired candidate.
 
+### Task 73: `ail-build` Intermediate Artifact Output
+
+**Files:**
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing artifact-output test**
+
+Add an `ail-build --artifact-dir <dir>` test that keeps stdout as parseable
+AIL-Bytecode while writing the captured AIL-Requirements, accepted AIL-Spec, and
+final AIL-Bytecode artifact to deterministic files.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_writes_requirements_spec_and_bytecode_artifacts -- --nocapture
+```
+
+Expected: failure because `--artifact-dir` is not accepted and the command
+never reaches the mock base LLM.
+
+- [x] **Step 3: Implement artifact output**
+
+Parse `--artifact-dir` for `ail-build`, create the directory, write
+`requirements.ail-requirements.md`, `accepted.ail-spec.md`, and
+`artifact.ailbc.json` after the spec checks and bytecode verifies, and keep
+stdout as the same bytecode text for pipeline compatibility.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_writes_requirements_spec_and_bytecode_artifacts -- --nocapture
+```
+
+Expected: the command emits verified bytecode on stdout and writes the three
+reviewable intermediate artifacts.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**
