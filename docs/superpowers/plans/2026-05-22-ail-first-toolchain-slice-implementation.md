@@ -4331,6 +4331,54 @@ cargo test --test ail_toolchain cli_ail_build_agent_accepts_saved_spec_before_co
 Expected: saved-spec builds record `AcceptSpecDraft`, `SpecCaptured`, and
 `SpecDraftAccepted` before `AcceptCoreIR` and `CompileApplication`.
 
+### Task 103: AIL Build Agent Prepares Saved AIL-Requirements Artifacts
+
+**Files:**
+- Modify: `examples/ail_toolchain_agent.ail/spec.ail-spec.md`
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing saved-requirements agent test**
+
+Add an `ail-build --requirements-file --agent` CLI test that requires the
+single base LLM spec prompt to include the AIL agent's spec checklist context,
+then requires the agent trace to record `PrepareSpecDraft` before
+`AcceptSpecDraft`, `AcceptCoreIR`, and `CompileApplication`.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_agent_prepares_saved_requirements_before_spec_drafting -- --nocapture
+```
+
+Expected: failure because saved-requirements agent builds currently pass the
+checked requirements directly to the base LLM spec prompt without running
+`PrepareSpecDraft`.
+
+- [x] **Step 3: Implement saved-requirements agent preparation**
+
+Add a `RequirementsLoaded` status for loaded checked-requirements artifacts,
+allow `PrepareSpecDraft` and `AcceptSpecDraft` to accept that state, synthesize
+an agent `BuildRequest` state for saved-requirements builds, run
+`PrepareSpecDraft` before the base LLM spec prompt, and run `AcceptSpecDraft`
+after the generated spec checks.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_agent_prepares_saved_requirements_before_spec_drafting -- --nocapture
+```
+
+Expected: saved-requirements builds record `PrepareSpecDraft`,
+`SpecDraftPrepared`, `AcceptSpecDraft`, and `SpecDraftAccepted` before
+`AcceptCoreIR` and `CompileApplication`.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

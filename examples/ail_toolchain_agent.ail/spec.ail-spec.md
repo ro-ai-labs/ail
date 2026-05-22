@@ -17,7 +17,7 @@ A BuildRequest has:
 - bytecode artifact: Text
 - bytecode verification report: Text
 - prompt portability report: Text
-- status: State<PromptReceived, RequirementsCaptured, SpecLoaded, SpecCaptured, CoreLoaded, CoreChecked, BytecodeReady, NeedsClarification>
+- status: State<PromptReceived, RequirementsLoaded, RequirementsCaptured, SpecLoaded, SpecCaptured, CoreLoaded, CoreChecked, BytecodeReady, NeedsClarification>
 - target model: Text
 
 The application shows:
@@ -42,10 +42,10 @@ Action: Prepare spec draft.
 When the toolchain agent prepares a checked AIL spec prompt:
 
 - the system requires the BuildRequest to exist
-- the system requires the BuildRequest status to be RequirementsCaptured
+- the system requires the BuildRequest status to be RequirementsCaptured or RequirementsLoaded
 - the system reads the BuildRequest requirements
 - the system changes the BuildRequest spec coverage checklist to Prepared
-- the system guarantees the spec prompt preserves requirements, domain model, actions, failures, guarantees, traces, secrets, runtime inputs, and bytecode compilation path
+- the system guarantees the spec prompt preserves captured or loaded requirements, domain model, actions, failures, guarantees, traces, secrets, runtime inputs, and bytecode compilation path
 - the system records a trace event named SpecDraftPrepared
 
 Action: Accept spec draft.
@@ -53,7 +53,7 @@ Action: Accept spec draft.
 When the toolchain agent accepts a checked AIL spec draft:
 
 - the system requires the BuildRequest to exist
-- the system requires the BuildRequest status to be RequirementsCaptured or SpecLoaded
+- the system requires the BuildRequest status to be RequirementsCaptured or RequirementsLoaded or SpecLoaded
 - the system reads the BuildRequest requirements
 - the system reads the BuildRequest spec
 - the system changes the BuildRequest spec review report to Accepted

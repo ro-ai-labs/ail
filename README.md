@@ -82,6 +82,10 @@ runs `AcceptCoreIR` after AIL-Core is checked and before compilation,
 runs `CompileApplication` over the completed build state before target bytecode
 emission, runs `VerifyBytecodeArtifact` after the emitted bytecode verifies, and,
 with `--artifact-dir`, writes `agent.ailbc.json` and `agent-trace.txt`. When
+`ail-build --requirements-file` is used with `--agent`, the saved checked
+requirements are loaded as an agent-visible `RequirementsLoaded` artifact,
+prepared through `PrepareSpecDraft`, and accepted through `AcceptSpecDraft`
+after the generated spec checks. When
 `ail-build --spec-file` is used with `--agent`, the saved checked spec is loaded
 as an agent-visible `SpecLoaded` artifact and accepted through
 `AcceptSpecDraft` before AIL-Core elaboration. When

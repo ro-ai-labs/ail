@@ -687,6 +687,31 @@ fn render_ail_build_agent_requirements_context(agent_start: &AilBuildAgentStart)
     lines.join("\n")
 }
 
+fn start_ail_build_agent_from_saved_requirements(
+    package: &eigl::ail::AilPackage,
+    prompt: &str,
+    requirements_artifact: &str,
+) -> AilBuildAgentStart {
+    AilBuildAgentStart {
+        state: BTreeMap::from([
+            ("buildrequest.id".to_string(), package.metadata.name.clone()),
+            (
+                "buildrequest.developer prompt".to_string(),
+                prompt.to_string(),
+            ),
+            (
+                "buildrequest.requirements".to_string(),
+                requirements_artifact.to_string(),
+            ),
+            (
+                "buildrequest.status".to_string(),
+                "RequirementsLoaded".to_string(),
+            ),
+        ]),
+        trace: Vec::new(),
+    }
+}
+
 fn run_ail_build_agent_prepare_spec(
     agent_path: &str,
     mut agent_start: AilBuildAgentStart,
@@ -1487,6 +1512,16 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
                         println!("{}", diagnostic.detailed_message());
                     }
                     return Ok(1);
+                }
+                if agent_start.is_none()
+                    && cli_options.ail_build_agent.is_some()
+                    && cli_options.ail_requirements_file.is_some()
+                {
+                    agent_start = Some(start_ail_build_agent_from_saved_requirements(
+                        &package,
+                        prompt,
+                        &requirements,
+                    ));
                 }
                 let agent_spec_context = if let (Some(agent_path), Some(previous_agent_start)) =
                     (cli_options.ail_build_agent.as_deref(), agent_start.take())

@@ -397,12 +397,16 @@ its bytecode, and for prompt-driven builds runs its `CaptureRequirements`
 action before the base LLM requirements request, then includes the
 agent-produced requirements checklist state in that first prompt. After
 requirements capture and checking, it runs `PrepareSpecDraft` and includes the
-agent-produced spec checklist state in the AIL-Spec prompt. Once the checked
-AIL-Spec draft is accepted, it runs `AcceptSpecDraft` before AIL-Core
-elaboration so the `SpecCaptured` transition is also represented in AIL
-bytecode. For saved `--spec-file` builds, the agent starts from an explicit
-`SpecLoaded` state, loads the checked spec into the `BuildRequest`, and still
-runs `AcceptSpecDraft` before AIL-Core elaboration. It optionally runs
+agent-produced spec checklist state in the AIL-Spec prompt. For saved
+`--requirements-file` builds, the agent starts from an explicit
+`RequirementsLoaded` state, loads the checked requirements into the
+`BuildRequest`, and still runs `PrepareSpecDraft` before the base LLM spec
+request. Once the checked AIL-Spec draft is accepted, it runs
+`AcceptSpecDraft` before AIL-Core elaboration so the `SpecCaptured` transition
+is also represented in AIL bytecode. For saved `--spec-file` builds, the agent
+starts from an explicit `SpecLoaded` state, loads the checked spec into the
+`BuildRequest`, and still runs `AcceptSpecDraft` before AIL-Core elaboration.
+It optionally runs
 `CompareAgentPromptPortability` when
 `--target-model <name>` is supplied, runs `AcceptCoreIR` after AIL-Core checking
 and any compiler pass, and then runs its `CompileApplication` action against the

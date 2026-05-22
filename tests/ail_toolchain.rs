@@ -4856,6 +4856,104 @@ fn cli_ail_build_accepts_saved_requirements_file_artifact() {
 }
 
 #[test]
+fn cli_ail_build_agent_prepares_saved_requirements_before_spec_drafting() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("support_ticket.ail");
+    let agent_package = fixture("ail_toolchain_agent.ail");
+    let requirements_path = std::env::temp_dir().join(format!(
+        "eigl-support-ticket-agent-requirements-file-{}.ail-requirements.md",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "eigl-ail-build-agent-requirements-file-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+    let requirements = concat!(
+        "AIL-Requirements:\n",
+        "- The application manages support tickets with Ticket fields id, title, status, and secret internal notes.\n",
+        "- The CloseTicket action requires ticket id input and ticket status not to be Closed.\n",
+        "- Failure NotFound happens when ticket id is missing and records TicketNotFound.\n",
+        "- The action guarantees closed tickets do not appear in the open queue.\n",
+        "- The action records trace event TicketClosed.\n"
+    );
+    fs::write(&requirements_path, requirements).unwrap();
+
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let response_spec = fs::read_to_string(format!("{package}/spec.ail-spec.md")).unwrap();
+    let spec_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(&format!(
+            "<think>ignore this</think>\n```ail\n{response_spec}\n```"
+        ))
+    );
+    let server = serve_chat_responses(listener, vec![spec_body]);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-build",
+            &package,
+            "--prompt",
+            "Build an AIL support ticket bytecode artifact from saved requirements",
+            "--requirements-file",
+            requirements_path.to_str().unwrap(),
+            "--agent",
+            &agent_package,
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+            "--llm-endpoint",
+            &format!("http://127.0.0.1:{}/v1/chat/completions", addr.port()),
+        ])
+        .output()
+        .unwrap();
+
+    let request_bodies = server.join().unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(request_bodies.len(), 1);
+    assert!(request_bodies[0].contains("AGENT SPEC CONTEXT:"));
+    assert!(
+        request_bodies[0].contains("buildrequest.spec coverage checklist=Prepared"),
+        "{}",
+        request_bodies[0]
+    );
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let bytecode = parse_ail_bytecode(&stdout).unwrap();
+    assert_eq!(verify_ail_bytecode(&bytecode), Vec::<String>::new());
+
+    let agent_trace = fs::read_to_string(artifact_dir.join("agent-trace.txt")).unwrap();
+    let prepare_index = agent_trace
+        .find("action PrepareSpecDraft started")
+        .unwrap_or_else(|| panic!("{agent_trace}"));
+    let accept_spec_index = agent_trace
+        .find("action AcceptSpecDraft started")
+        .unwrap_or_else(|| panic!("{agent_trace}"));
+    let accept_core_index = agent_trace
+        .find("action AcceptCoreIR started")
+        .unwrap_or_else(|| panic!("{agent_trace}"));
+    let compile_index = agent_trace
+        .find("action CompileApplication started")
+        .unwrap_or_else(|| panic!("{agent_trace}"));
+    assert!(prepare_index < accept_spec_index, "{agent_trace}");
+    assert!(accept_spec_index < accept_core_index, "{agent_trace}");
+    assert!(accept_core_index < compile_index, "{agent_trace}");
+    assert!(agent_trace.contains("read buildrequest.requirements"));
+    assert!(agent_trace.contains("write buildrequest.spec coverage checklist=Prepared"));
+    assert!(agent_trace.contains("trace SpecDraftPrepared"));
+    assert!(agent_trace.contains("write buildrequest.spec review report=Accepted"));
+    assert!(agent_trace.contains("trace SpecDraftAccepted"));
+
+    fs::remove_file(requirements_path).unwrap();
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
 fn cli_ail_build_accepts_saved_spec_file_artifact() {
     let binary = env!("CARGO_BIN_EXE_eigl");
     let package = fixture("support_ticket.ail");
