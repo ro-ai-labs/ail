@@ -1897,6 +1897,10 @@ fn ail_toolchain_agent_package_lowers_to_verified_bytecode() {
         "{rendered}"
     );
     assert!(
+        rendered.contains(r#""action":"VerifyPassManifest""#),
+        "{rendered}"
+    );
+    assert!(
         rendered.contains(r#""value":"BytecodeReady""#),
         "{rendered}"
     );
@@ -1987,6 +1991,39 @@ fn ail_toolchain_agent_package_lowers_to_verified_bytecode() {
         manifest_run
             .trace
             .contains(&"trace BuildManifestVerified".to_string())
+    );
+
+    let pass_manifest_run = run_ail_bytecode_action(
+        &bytecode,
+        "VerifyPassManifest",
+        BTreeMap::from([
+            ("buildrequest.id".to_string(), "BR-1".to_string()),
+            ("buildrequest.status".to_string(), "PassApplied".to_string()),
+            (
+                "buildrequest.artifact manifest".to_string(),
+                "AIL-Pass-Manifest:\ncompiler-pass pass.ailbc.json fnv64:1234".to_string(),
+            ),
+            (
+                "buildrequest.artifact manifest fingerprint".to_string(),
+                "fnv64:manifest".to_string(),
+            ),
+            (
+                "buildrequest.compiler pass fingerprint".to_string(),
+                "fnv64:pass".to_string(),
+            ),
+        ]),
+    )
+    .unwrap();
+
+    assert_eq!(pass_manifest_run.status, "succeeded");
+    assert_eq!(
+        pass_manifest_run.final_state["buildrequest.artifact manifest verification report"],
+        "Verified"
+    );
+    assert!(
+        pass_manifest_run
+            .trace
+            .contains(&"trace PassManifestVerified".to_string())
     );
 }
 
@@ -2265,6 +2302,19 @@ fn cli_ail_pass_agent_accepts_pass_artifacts() {
     assert!(agent_trace.contains("write buildrequest.compiler pass review report=Accepted"));
     assert!(agent_trace.contains("write buildrequest.status=PassApplied"));
     assert!(agent_trace.contains("trace CompilerPassOutputAccepted"));
+    let accept_index = agent_trace
+        .find("action AcceptCompilerPassOutput started")
+        .unwrap_or_else(|| panic!("{agent_trace}"));
+    let manifest_index = agent_trace
+        .find("action VerifyPassManifest started")
+        .unwrap_or_else(|| panic!("{agent_trace}"));
+    assert!(accept_index < manifest_index, "{agent_trace}");
+    assert!(agent_trace.contains("read buildrequest.artifact manifest"));
+    assert!(agent_trace.contains("read buildrequest.artifact manifest fingerprint"));
+    assert!(
+        agent_trace.contains("write buildrequest.artifact manifest verification report=Verified")
+    );
+    assert!(agent_trace.contains("trace PassManifestVerified"));
 
     let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-pass.txt")).unwrap();
     assert!(manifest.contains("agent agent.ailbc.json"), "{manifest}");
@@ -2272,6 +2322,7 @@ fn cli_ail_pass_agent_accepts_pass_artifacts() {
     let manifest_fingerprint =
         fs::read_to_string(artifact_dir.join("manifest.fingerprint.txt")).unwrap();
     assert_eq!(manifest_fingerprint.trim(), fnv64_fingerprint(&manifest));
+    assert!(agent_bytecode.contains(r#""action":"VerifyPassManifest""#));
 
     fs::remove_dir_all(&artifact_dir).unwrap();
 }

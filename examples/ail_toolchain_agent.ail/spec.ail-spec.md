@@ -139,6 +139,19 @@ When the toolchain agent verifies the build artifact manifest:
 - the system guarantees the build manifest ties requirements, spec, AIL-Core, compiler-pass, agent, and bytecode artifacts with deterministic fingerprints and no Rust or host-language backend source
 - the system records a trace event named BuildManifestVerified
 
+Action: Verify pass manifest.
+
+When the toolchain agent verifies the standalone compiler pass manifest:
+
+- the system requires the BuildRequest to exist
+- the system requires the BuildRequest status to be PassApplied
+- the system reads the BuildRequest artifact manifest
+- the system reads the BuildRequest artifact manifest fingerprint
+- the system reads the BuildRequest compiler pass fingerprint
+- the system changes the BuildRequest artifact manifest verification report to Verified
+- the system guarantees the pass manifest ties compiler-pass bytecode, transformed AIL-Core, pass trace, and agent artifacts with deterministic fingerprints and no Rust or host-language backend source
+- the system records a trace event named PassManifestVerified
+
 Action: Compare agent prompt portability.
 
 When the toolchain agent evaluates a target model:

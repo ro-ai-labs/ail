@@ -4837,6 +4837,57 @@ Expected: `ail-pass --agent` succeeds, stdout remains transformed AIL-Core, the
 agent trace records `AcceptCompilerPassOutput`, and the manifest fingerprints
 the pass-plus-agent artifact set.
 
+### Task 114: AIL Pass Agent Verifies Pass Manifest
+
+**Files:**
+- Modify: `examples/ail_toolchain_agent.ail/spec.ail-spec.md`
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing pass manifest verification tests**
+
+Extend the toolchain-agent bytecode test to require a `VerifyPassManifest`
+action. Extend the `ail-pass --agent --artifact-dir` test to require the agent
+trace to run `VerifyPassManifest` after `AcceptCompilerPassOutput`, read the
+pass manifest and manifest fingerprint, write an accepted manifest verification
+report, and emit `PassManifestVerified`.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain ail_toolchain_agent_package_lowers_to_verified_bytecode -- --nocapture
+cargo test --test ail_toolchain cli_ail_pass_agent_accepts_pass_artifacts -- --nocapture
+```
+
+Expected: the package test first fails because the AIL-authored toolchain agent
+has no `VerifyPassManifest` action; after the agent spec is extended, the CLI
+test fails because standalone `ail-pass --agent` accepts pass output but does
+not verify the pass manifest.
+
+- [x] **Step 3: Implement pass manifest verification**
+
+Add a `Verify pass manifest` action to the AIL-authored toolchain agent. When
+`ail-pass` is run with both `--agent` and `--artifact-dir`, render the pass
+manifest, compute its deterministic fingerprint, run `VerifyPassManifest`, and
+persist the resulting trace through `agent-trace.txt`.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain ail_toolchain_agent_package_lowers_to_verified_bytecode -- --nocapture
+cargo test --test ail_toolchain cli_ail_pass_agent_accepts_pass_artifacts -- --nocapture
+```
+
+Expected: the agent bytecode includes and runs `VerifyPassManifest`, and the
+standalone pass agent trace records manifest verification after pass output
+acceptance.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

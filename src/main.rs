@@ -685,7 +685,7 @@ fn run_ail_pass_command(pass_path: &str, cli_options: &CliOptions) -> Result<u8,
     }
     let input_core_text = format!("{}\n", render_ail_core(&target_core));
     let output_core_text = format!("{}\n", render_ail_core(&result.core));
-    let agent_run = if let Some(agent_path) = &cli_options.ail_build_agent {
+    let mut agent_run = if let Some(agent_path) = &cli_options.ail_build_agent {
         Some(run_ail_pass_agent_accept_pass_output(
             agent_path,
             &output_core_text,
@@ -696,6 +696,17 @@ fn run_ail_pass_command(pass_path: &str, cli_options: &CliOptions) -> Result<u8,
     } else {
         None
     };
+    if let (Some(agent_run), Some(_artifact_dir)) =
+        (agent_run.as_mut(), cli_options.artifact_dir.as_ref())
+    {
+        let manifest_text = render_ail_pass_manifest(
+            &pass_bytecode_text,
+            Some(agent_run.bytecode_text.as_str()),
+            Some(agent_run.trace.as_slice()),
+        );
+        let manifest_fingerprint = ail_artifact_fingerprint(&manifest_text);
+        run_ail_pass_agent_verify_manifest(agent_run, &manifest_text, &manifest_fingerprint)?;
+    }
     if let Some(artifact_dir) = &cli_options.artifact_dir {
         write_ail_pass_artifacts(
             artifact_dir,
@@ -774,6 +785,46 @@ fn run_ail_pass_agent_accept_pass_output(
         state: run.final_state,
         trace: run.trace,
     })
+}
+
+fn run_ail_pass_agent_verify_manifest(
+    agent_run: &mut AilBuildAgentRun,
+    manifest_text: &str,
+    manifest_fingerprint: &str,
+) -> Result<(), String> {
+    if !agent_run
+        .bytecode
+        .actions
+        .contains_key("VerifyPassManifest")
+    {
+        return Err(
+            "ail-pass --agent --artifact-dir requires a VerifyPassManifest action".to_string(),
+        );
+    }
+    let mut verify_state = agent_run.state.clone();
+    verify_state.insert(
+        "buildrequest.artifact manifest".to_string(),
+        manifest_text.to_string(),
+    );
+    verify_state.insert(
+        "buildrequest.artifact manifest fingerprint".to_string(),
+        manifest_fingerprint.to_string(),
+    );
+    let verify_run =
+        run_ail_bytecode_action(&agent_run.bytecode, "VerifyPassManifest", verify_state)?;
+    if verify_run.status != "succeeded" {
+        let mut message = "ail-pass agent VerifyPassManifest failed".to_string();
+        if let Some(failure) = verify_run.failure {
+            message.push_str(&format!(": {failure}"));
+        }
+        if !verify_run.trace.is_empty() {
+            message.push_str(&format!("\n{}", verify_run.trace.join("\n")));
+        }
+        return Err(message);
+    }
+    agent_run.trace.extend(verify_run.trace);
+    agent_run.state = verify_run.final_state;
+    Ok(())
 }
 
 fn load_ail_pass_target_core(cli_options: &CliOptions) -> Result<eigl::ail::AilCore, String> {

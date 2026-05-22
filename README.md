@@ -50,7 +50,9 @@ applies the pass to a saved checked AIL-Core artifact without loading the target
 source package. `ail-pass --agent <agent-package-or-bytecode>` compiles or
 loads an AIL-authored Application agent and runs its
 `AcceptCompilerPassOutput` bytecode action over the standalone pass artifact
-boundary. `ail-conformance` checks accepted and rejected fixtures,
+boundary; with `--artifact-dir`, it also runs `VerifyPassManifest` against the
+pass manifest and manifest fingerprint. `ail-conformance` checks accepted and
+rejected fixtures,
 `ail-requirements --prompt <text>` asks the package base
 LLM endpoint for a checked AIL-Requirements artifact and gives the base LLM one
 diagnostics-guided repair pass if required coverage is missing, `ail-spec

@@ -371,7 +371,10 @@ standalone compiler stage. With `--agent <agent-package-or-bytecode>`,
 `AcceptCompilerPassOutput` bytecode action against the transformed core,
 compiler-pass bytecode fingerprint, and pass execution trace. This gives the
 standalone compiler-pass stage an AIL-bytecode acceptance checkpoint instead of
-leaving it as host orchestration. With
+leaving it as host orchestration. When `--artifact-dir` is present, the agent
+also runs `VerifyPassManifest` with the rendered pass manifest and deterministic
+manifest fingerprint, so the pass artifact set is verified in AIL bytecode too.
+With
 `--artifact-dir`, the same command writes `pass.ailbc.json`,
 `pass.fingerprint.txt`, `input.ail-core.txt`, `output.ail-core.txt`, and
 `trace.txt` plus `manifest.ail-pass.txt`, a deterministic index tying the pass
