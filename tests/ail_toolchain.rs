@@ -6761,6 +6761,77 @@ fn cli_ail_build_native_target_is_in_artifact_manifest() {
 
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+fn cli_ail_build_with_pass_writes_native_pass_artifact() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("support_ticket.ail");
+    let pass_package = fixture("compiler_pass.ail");
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "eigl-support-ticket-build-native-pass-manifest-{}",
+        std::process::id()
+    ));
+    let executable_path = std::env::temp_dir().join(format!(
+        "eigl-support-ticket-build-native-pass-out-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+    let _ = fs::remove_file(&executable_path);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-build",
+            &package,
+            "--spec-file",
+            &format!("{package}/spec.ail-spec.md"),
+            "--pass",
+            &pass_package,
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+            "--action",
+            "AssignTicket",
+            "--target",
+            "linux-x86_64-elf",
+            "--out",
+            executable_path.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let pass_native = fs::read(artifact_dir.join("pass-InferReadPermissions.elf")).unwrap();
+    assert_eq!(&pass_native[0..4], b"\x7fELF");
+    let expected_pass_native_fingerprint = fnv64_fingerprint_bytes(&pass_native);
+    let pass_run = Command::new(artifact_dir.join("pass-InferReadPermissions.elf"))
+        .arg("input graph=checked")
+        .arg("package policy=default")
+        .output()
+        .unwrap();
+    assert!(pass_run.status.success(), "native pass executable failed");
+    assert!(
+        String::from_utf8_lossy(&pass_run.stderr).contains("trace ReadPermissionAdded"),
+        "{}",
+        String::from_utf8_lossy(&pass_run.stderr)
+    );
+
+    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-build.txt")).unwrap();
+    assert!(
+        manifest.contains(&format!(
+            "compiler-pass-target linux-x86_64-elf pass-InferReadPermissions.elf {expected_pass_native_fingerprint}"
+        )),
+        "{manifest}"
+    );
+
+    fs::remove_dir_all(artifact_dir).unwrap();
+    fs::remove_file(executable_path).unwrap();
+}
+
+#[test]
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_build_agent_verifies_native_target_artifact() {
     let binary = env!("CARGO_BIN_EXE_eigl");
     let package = fixture("support_ticket.ail");

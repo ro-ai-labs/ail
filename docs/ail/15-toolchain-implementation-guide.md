@@ -535,10 +535,14 @@ when the build captured or loaded requirements, and it writes
 pass is present, `checked.ail-core.txt` is the post-pass IR that was actually
 lowered, and the artifact directory also includes `pass.ailbc.json`,
 `pass.fingerprint.txt`, and `pass-trace.txt` for the compiler-pass bytecode,
-deterministic pass fingerprint, and execution trace. When a native target is
-selected, the artifact directory also includes `target.elf` and
-`target.fingerprint.txt`, and `manifest.ail-build.txt` indexes the native target
-and fingerprint alongside the VM artifact. When a build agent is
+deterministic pass fingerprint, and execution trace. When the same build
+selects the native `linux-x86_64-elf` target, the artifact directory also
+includes `pass-<ActionName>.elf` for each AIL-authored compiler-pass action,
+and the manifest records each as a `compiler-pass-target` entry with the
+action executable fingerprint. When a native target is selected, the artifact
+directory also includes `target.elf` and `target.fingerprint.txt`, and
+`manifest.ail-build.txt` indexes the native target and fingerprint alongside
+the VM artifact. When a build agent is
 present, the artifact directory also includes
 `agent.ailbc.json`, `agent.fingerprint.txt`, and `agent-trace.txt` for the
 agent bytecode, deterministic agent fingerprint, and its requirements-capture,

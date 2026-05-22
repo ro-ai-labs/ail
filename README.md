@@ -160,7 +160,10 @@ target build also uses `--agent`, it writes `agent-<ActionName>.elf` for each
 AIL-authored agent action and records each executable as an `agent-target`
 manifest entry with its deterministic byte fingerprint. When
 `ail-build --pass` is used with `--artifact-dir`, it also writes `pass.ailbc.json`,
-`pass.fingerprint.txt`, and `pass-trace.txt`. On `ail-pass`,
+`pass.fingerprint.txt`, and `pass-trace.txt`; when that build selects
+`--target linux-x86_64-elf`, it also writes `pass-<ActionName>.elf` for each
+AIL-authored compiler-pass action and records each executable as a
+`compiler-pass-target` manifest entry. On `ail-pass`,
 `--artifact-dir <dir>` writes
 `pass.ailbc.json`, `pass.fingerprint.txt`, `input.ail-core.txt`,
 `output.ail-core.txt`, `trace.txt`, `manifest.ail-pass.txt`, and

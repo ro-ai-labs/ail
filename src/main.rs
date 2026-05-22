@@ -394,6 +394,7 @@ struct AilBuildArtifactSet<'a> {
     pass_bytecode_text: Option<&'a str>,
     pass_bytecode_fingerprint: Option<&'a str>,
     pass_trace: Option<&'a [String]>,
+    pass_native_executables: &'a [AilNativeArtifact],
     agent_bytecode_text: Option<&'a str>,
     agent_trace: Option<&'a [String]>,
     agent_native_executables: &'a [AilNativeArtifact],
@@ -465,6 +466,14 @@ fn render_ail_build_manifest(artifacts: &AilBuildArtifactSet<'_>) -> String {
             .unwrap_or_else(|| ail_artifact_fingerprint(pass_bytecode_text));
         lines.push(format!(
             "compiler-pass pass.ailbc.json {pass_bytecode_fingerprint}"
+        ));
+    }
+    for native_pass in artifacts.pass_native_executables {
+        lines.push(format!(
+            "compiler-pass-target {} {} {}",
+            native_pass.target_name,
+            native_pass.file_name,
+            ail_artifact_fingerprint_bytes(&native_pass.bytes)
         ));
     }
     if artifacts.pass_trace.is_some() {
@@ -548,6 +557,16 @@ fn write_ail_build_artifacts(
             format!("{}\n", pass_trace.join("\n")),
         )
         .map_err(|error| format!("failed to write ail-build pass trace artifact: {error}"))?;
+    }
+    for native_pass in artifacts.pass_native_executables {
+        let artifact_path = root.join(&native_pass.file_name);
+        fs::write(&artifact_path, &native_pass.bytes).map_err(|error| {
+            format!(
+                "failed to write ail-build native compiler-pass artifact {}: {error}",
+                native_pass.file_name
+            )
+        })?;
+        set_native_executable_permissions(&artifact_path.to_string_lossy())?;
     }
     if let Some(agent_bytecode_text) = artifacts.agent_bytecode_text {
         fs::write(root.join("agent.ailbc.json"), agent_bytecode_text).map_err(|error| {
@@ -1876,6 +1895,7 @@ fn run_ail_build_from_core(
     let mut pass_bytecode_artifact = None;
     let mut pass_bytecode_fingerprint_artifact = None;
     let mut pass_trace_artifact = None;
+    let mut pass_native_artifacts = Vec::new();
     if let Some(pass_path) = &cli_options.ail_build_pass {
         let (pass_bytecode, pass_bytecode_text) =
             load_ail_bytecode_or_compile_package(pass_path, "ail-build compiler pass")?;
@@ -1889,6 +1909,11 @@ fn run_ail_build_from_core(
         }
         let pass_action = select_single_ail_pass_action(&pass_bytecode)?;
         let pass_result = run_ail_compiler_pass_on_core(&pass_bytecode, &pass_action, &core)?;
+        if let Some(target) = &cli_options.ail_compile_target
+            && cli_options.artifact_dir.is_some()
+        {
+            pass_native_artifacts = compile_ail_pass_native_artifacts(&pass_bytecode, target)?;
+        }
         core = pass_result.core;
         pass_bytecode_fingerprint_artifact = Some(ail_artifact_fingerprint(&pass_bytecode_text));
         pass_bytecode_artifact = Some(pass_bytecode_text);
@@ -2017,6 +2042,7 @@ fn run_ail_build_from_core(
                 pass_bytecode_text: pass_bytecode_artifact.as_deref(),
                 pass_bytecode_fingerprint: pass_bytecode_fingerprint_artifact.as_deref(),
                 pass_trace: pass_trace_artifact.as_deref(),
+                pass_native_executables: pass_native_artifacts.as_slice(),
                 agent_bytecode_text: Some(agent_run.bytecode_text.as_str()),
                 agent_trace: Some(agent_run.trace.as_slice()),
                 agent_native_executables: agent_native_artifacts.as_slice(),
@@ -2039,6 +2065,7 @@ fn run_ail_build_from_core(
                 pass_bytecode_text: pass_bytecode_artifact.as_deref(),
                 pass_bytecode_fingerprint: pass_bytecode_fingerprint_artifact.as_deref(),
                 pass_trace: pass_trace_artifact.as_deref(),
+                pass_native_executables: pass_native_artifacts.as_slice(),
                 agent_bytecode_text: agent_run.as_ref().map(|run| run.bytecode_text.as_str()),
                 agent_trace: agent_run.as_ref().map(|run| run.trace.as_slice()),
                 agent_native_executables: agent_native_artifacts.as_slice(),
