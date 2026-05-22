@@ -3831,6 +3831,51 @@ Expected: `ail-build --agent` emits the target package bytecode, writes verified
 agent bytecode, and records a trace with the agent's
 `ApplicationBytecodeCompiled` event.
 
+### Task 92: AIL Build Agent Requirements-Capture Stage
+
+**Files:**
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing build-agent capture test**
+
+Add a prompt-driven `ail-build --agent` CLI test where the base LLM returns
+requirements and a valid spec. Require `agent-trace.txt` to record the
+AIL-authored agent's `CaptureRequirements` action before its
+`CompileApplication` action.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_agent_records_requirements_capture_before_compile -- --nocapture
+```
+
+Expected: failure because `ail-build --agent` only runs `CompileApplication`
+after bytecode generation.
+
+- [x] **Step 3: Implement capture action execution**
+
+When `ail-build` captures requirements from a prompt, thread that prompt into
+the agent runner, require `CaptureRequirements`, execute it against the
+developer prompt and build request state, then execute `CompileApplication` over
+the completed build state. Keep saved-requirements, saved-spec, and saved-core
+resumes on the compile-only agent path.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_agent_records_requirements_capture_before_compile -- --nocapture
+```
+
+Expected: the agent trace records `CaptureRequirements`, status
+`RequirementsCaptured`, then `CompileApplication` and status `BytecodeReady`.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**

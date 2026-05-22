@@ -601,6 +601,7 @@ fn run_ail_build_agent(
     core: &eigl::ail::AilCore,
     requirements_artifact: Option<&str>,
     spec_text: Option<&str>,
+    capture_prompt: Option<&str>,
 ) -> Result<(String, Vec<String>), String> {
     let (agent_bytecode, agent_bytecode_text) =
         load_ail_bytecode_or_compile_package(agent_path, "ail-build agent")?;
@@ -620,32 +621,73 @@ fn run_ail_build_agent(
     if !agent_bytecode.actions.contains_key("CompileApplication") {
         return Err("ail-build --agent requires a CompileApplication action".to_string());
     }
+    let mut trace = Vec::new();
+    let mut compile_state = BTreeMap::from([
+        ("buildrequest.id".to_string(), core.package.name.clone()),
+        (
+            "buildrequest.developer prompt".to_string(),
+            capture_prompt.unwrap_or("skipped").to_string(),
+        ),
+        (
+            "buildrequest.status".to_string(),
+            "PromptReceived".to_string(),
+        ),
+    ]);
+    if let Some(capture_prompt) = capture_prompt {
+        if !agent_bytecode.actions.contains_key("CaptureRequirements") {
+            return Err(
+                "ail-build --agent requires a CaptureRequirements action for prompt builds"
+                    .to_string(),
+            );
+        }
+        let capture_run = run_ail_bytecode_action(
+            &agent_bytecode,
+            "CaptureRequirements",
+            BTreeMap::from([
+                ("buildrequest.id".to_string(), core.package.name.clone()),
+                (
+                    "buildrequest.developer prompt".to_string(),
+                    capture_prompt.to_string(),
+                ),
+                (
+                    "buildrequest.status".to_string(),
+                    "PromptReceived".to_string(),
+                ),
+            ]),
+        )?;
+        if capture_run.status != "succeeded" {
+            let mut message = "ail-build agent CaptureRequirements failed".to_string();
+            if let Some(failure) = capture_run.failure {
+                message.push_str(&format!(": {failure}"));
+            }
+            if !capture_run.trace.is_empty() {
+                message.push_str(&format!("\n{}", capture_run.trace.join("\n")));
+            }
+            return Err(message);
+        }
+        trace.extend(capture_run.trace);
+        compile_state = capture_run.final_state;
+    }
     let build_status = if spec_text.is_some() {
         "SpecCaptured"
     } else {
         "CoreChecked"
     };
-    let run = run_ail_bytecode_action(
-        &agent_bytecode,
-        "CompileApplication",
-        BTreeMap::from([
-            ("buildrequest.id".to_string(), core.package.name.clone()),
-            (
-                "buildrequest.requirements".to_string(),
-                requirements_artifact.unwrap_or("skipped").to_string(),
-            ),
-            (
-                "buildrequest.spec".to_string(),
-                spec_text.unwrap_or("skipped").to_string(),
-            ),
-            ("buildrequest.core ir".to_string(), "Checked".to_string()),
-            (
-                "buildrequest.bytecode artifact".to_string(),
-                "Pending".to_string(),
-            ),
-            ("buildrequest.status".to_string(), build_status.to_string()),
-        ]),
-    )?;
+    compile_state.insert(
+        "buildrequest.requirements".to_string(),
+        requirements_artifact.unwrap_or("skipped").to_string(),
+    );
+    compile_state.insert(
+        "buildrequest.spec".to_string(),
+        spec_text.unwrap_or("skipped").to_string(),
+    );
+    compile_state.insert("buildrequest.core ir".to_string(), "Checked".to_string());
+    compile_state.insert(
+        "buildrequest.bytecode artifact".to_string(),
+        "Pending".to_string(),
+    );
+    compile_state.insert("buildrequest.status".to_string(), build_status.to_string());
+    let run = run_ail_bytecode_action(&agent_bytecode, "CompileApplication", compile_state)?;
     if run.status != "succeeded" {
         let mut message = "ail-build agent CompileApplication failed".to_string();
         if let Some(failure) = run.failure {
@@ -656,7 +698,8 @@ fn run_ail_build_agent(
         }
         return Err(message);
     }
-    Ok((agent_bytecode_text, run.trace))
+    trace.extend(run.trace);
+    Ok((agent_bytecode_text, trace))
 }
 
 fn draft_checked_ail_requirements_for_package(
@@ -737,6 +780,7 @@ fn run_ail_build_from_core(
     cli_options: &CliOptions,
     requirements_artifact: Option<&str>,
     spec_text: Option<&str>,
+    capture_prompt: Option<&str>,
 ) -> Result<u8, String> {
     let core_diagnostics = check_ail_core(&core);
     if !core_diagnostics.is_empty() {
@@ -785,8 +829,13 @@ fn run_ail_build_from_core(
     let bytecode_text = format!("{}\n", render_ail_bytecode(&bytecode));
     let (agent_bytecode_artifact, agent_trace_artifact) =
         if let Some(agent_path) = &cli_options.ail_build_agent {
-            let (agent_bytecode_text, agent_trace) =
-                run_ail_build_agent(agent_path, &core, requirements_artifact, spec_text)?;
+            let (agent_bytecode_text, agent_trace) = run_ail_build_agent(
+                agent_path,
+                &core,
+                requirements_artifact,
+                spec_text,
+                capture_prompt,
+            )?;
             (Some(agent_bytecode_text), Some(agent_trace))
         } else {
             (None, None)
@@ -817,7 +866,7 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
     }
     if command == "ail-build" && cli_options.ail_core_file.is_some() {
         let core = parse_cli_ail_core(cli_options)?;
-        return run_ail_build_from_core(core, cli_options, None, None);
+        return run_ail_build_from_core(core, cli_options, None, None, None);
     }
     if command == "ail-lower" && cli_options.ail_core_file.is_some() {
         let core = parse_cli_ail_core(cli_options)?;
@@ -965,7 +1014,7 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
         return Ok(0);
     }
     if command == "ail-build" {
-        let (requirements_artifact, spec_text, core) = if let Some(spec_file) =
+        let (requirements_artifact, spec_text, core, capture_prompt) = if let Some(spec_file) =
             cli_options.ail_spec_file.as_deref()
         {
             let spec_text = fs::read_to_string(spec_file)
@@ -973,7 +1022,7 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
             let spec_text = spec_text.trim().to_string();
             let document = parse_ail_package_spec_text(&package, &spec_text)?;
             let core = elaborate_ail_core(&package, &document);
-            (None, spec_text, core)
+            (None, spec_text, core, None)
         } else {
             let prompt = cli_options
                 .ail_prompt
@@ -989,6 +1038,10 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
                 } else {
                     draft_checked_ail_requirements_for_package(&package, prompt, endpoint)?
                 };
+            let capture_prompt = cli_options
+                .ail_requirements_file
+                .is_none()
+                .then(|| prompt.to_string());
             if !requirements_diagnostics.is_empty() {
                 println!("ail-build requirements diagnostics:");
                 for diagnostic in requirements_diagnostics {
@@ -1007,13 +1060,14 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
             }
             let document = parse_ail_package_spec_text(&package, &draft.spec_text)?;
             let core = elaborate_ail_core(&package, &document);
-            (Some(requirements), draft.spec_text, core)
+            (Some(requirements), draft.spec_text, core, capture_prompt)
         };
         return run_ail_build_from_core(
             core,
             cli_options,
             requirements_artifact.as_deref(),
             Some(&spec_text),
+            capture_prompt.as_deref(),
         );
     }
     let document = parse_cli_ail_document(&package, cli_options)?;

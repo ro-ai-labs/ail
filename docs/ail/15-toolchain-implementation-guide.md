@@ -393,10 +393,11 @@ lowering. The bytecode compiler then consumes the resulting checked IR to emit
 verified AIL-Bytecode, so the build path still emits bytecode rather than
 host-language source. With `--agent <agent-package-or-bytecode>`, `ail-build`
 compiles or loads an AIL-authored Application-profile toolchain agent, verifies
-its bytecode, and runs its `CompileApplication` action against the completed
-build state. This keeps the developer-facing build coordinator in AIL bytecode
-instead of adding a host-language orchestration layer. With `--artifact-dir`,
-the same command writes
+its bytecode, runs its `CaptureRequirements` action for prompt-driven
+requirements capture, and runs its `CompileApplication` action against the
+completed build state. This keeps the developer-facing build coordinator in AIL
+bytecode instead of adding a host-language orchestration layer. With
+`--artifact-dir`, the same command writes
 `accepted.ail-spec.md`, `checked.ail-core.txt`, and `artifact.ailbc.json`; it
 also writes `requirements.ail-requirements.md` when the build captured or loaded
 requirements, and it writes `accepted.ail-spec.md` only when an AIL-Spec stage
@@ -405,8 +406,8 @@ post-pass IR that was actually lowered, and the artifact directory also includes
 `pass.ailbc.json` plus `pass-trace.txt` for the compiler-pass bytecode and
 execution trace. When a build agent is present, the artifact directory also
 includes `agent.ailbc.json` plus `agent-trace.txt` for the agent bytecode and
-its application-compile trace. This lets the developer audit the
-requirements-to-spec-to-IR-to-pass-to-agent-to-bytecode chain, a
+its requirements-capture and application-compile trace. This lets the developer
+audit the requirements-to-spec-to-IR-to-pass-to-agent-to-bytecode chain, a
 saved-spec-to-IR-to-agent-to-bytecode chain, or a
 saved-core-to-agent-to-bytecode chain while stdout remains the parseable
 bytecode artifact.

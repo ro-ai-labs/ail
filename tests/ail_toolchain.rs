@@ -4963,6 +4963,85 @@ fn cli_ail_build_runs_toolchain_agent_bytecode() {
 }
 
 #[test]
+fn cli_ail_build_agent_records_requirements_capture_before_compile() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("support_ticket.ail");
+    let agent_package = fixture("ail_toolchain_agent.ail");
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "eigl-ail-build-agent-capture-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let requirements = concat!(
+        "AIL-Requirements:\n",
+        "- The application manages support tickets.\n",
+        "- Ticket fields include id, title, status, and secret internal notes.\n",
+        "- The CloseTicket action requires ticket id input and ticket status not to be Closed.\n",
+        "- Failure NotFound happens when ticket id is missing and records TicketNotFound.\n",
+        "- The action guarantees closed tickets do not appear in the open queue.\n",
+        "- The action records trace event TicketClosed.\n"
+    );
+    let requirements_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(requirements)
+    );
+    let response_spec = fs::read_to_string(format!("{package}/spec.ail-spec.md")).unwrap();
+    let spec_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(&format!(
+            "<think>ignore this</think>\n```ail\n{response_spec}\n```"
+        ))
+    );
+    let server = serve_chat_responses(listener, vec![requirements_body, spec_body]);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-build",
+            &package,
+            "--prompt",
+            "Build an AIL support ticket bytecode artifact",
+            "--agent",
+            &agent_package,
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+            "--llm-endpoint",
+            &format!("http://127.0.0.1:{}/v1/chat/completions", addr.port()),
+        ])
+        .output()
+        .unwrap();
+
+    let request_bodies = server.join().unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(request_bodies.len(), 2);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let bytecode = parse_ail_bytecode(&stdout).unwrap();
+    assert_eq!(verify_ail_bytecode(&bytecode), Vec::<String>::new());
+    assert!(bytecode.actions.contains_key("CloseTicket"));
+
+    let agent_trace = fs::read_to_string(artifact_dir.join("agent-trace.txt")).unwrap();
+    let capture_index = agent_trace
+        .find("action CaptureRequirements started")
+        .unwrap_or_else(|| panic!("{agent_trace}"));
+    let compile_index = agent_trace
+        .find("action CompileApplication started")
+        .unwrap_or_else(|| panic!("{agent_trace}"));
+    assert!(capture_index < compile_index, "{agent_trace}");
+    assert!(agent_trace.contains("write buildrequest.status=RequirementsCaptured"));
+    assert!(agent_trace.contains("trace RequirementsCaptured"));
+    assert!(agent_trace.contains("write buildrequest.status=BytecodeReady"));
+    assert!(agent_trace.contains("trace ApplicationBytecodeCompiled"));
+
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
 fn cli_ail_build_writes_requirements_spec_core_and_bytecode_artifacts() {
     let binary = env!("CARGO_BIN_EXE_eigl");
     let package = fixture("support_ticket.ail");
