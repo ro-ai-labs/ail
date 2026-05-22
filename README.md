@@ -36,9 +36,11 @@ deterministic AIL VM instruction artifact, and `ail-compile --target
 linux-x86_64-elf --out <path>` emits a native Linux x86_64 ELF executable
 directly from checked AIL. The first native ABI accepts runtime state as
 `key=value` argv entries and returns a nonzero process status when supported
-compiled requirements fail. `ail-lower --artifact-dir <dir>` also writes the
-checked core, VM instruction artifact, deterministic fingerprints, and a lower
-manifest while keeping stdout as the VM artifact. `ail-check`, `ail-core`,
+compiled requirements fail; supported `SET_FIELD` writes are emitted as
+`key=value` stdout lines on successful execution. `ail-lower --artifact-dir
+<dir>` also writes the checked core, VM instruction artifact, deterministic
+fingerprints, and a lower manifest while keeping stdout as the VM artifact.
+`ail-check`, `ail-core`,
 `ail-flow`, `ail-lower`, `ail-run`, and `ail-build` can use `--spec-file
 <path>` to read a saved generated AIL-Spec artifact instead of the package
 entry spec.

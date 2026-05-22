@@ -346,7 +346,9 @@ Native code generated from supported `REQUIRE_EXISTS` instructions checks for a
 matching `key=` argument, and native code generated from supported
 `REQUIRE_FIELD_NOT_EQUALS` instructions checks that the forbidden `key=value`
 argument is absent. The executable exits `0` when those compiled requirements
-pass and exits `1` when they fail.
+pass and exits `1` when they fail. Native code generated from supported
+`SET_FIELD` instructions writes the changed state as `key=value` lines to
+stdout after requirements pass and before process exit.
 With `--artifact-dir`, `ail-lower` writes `checked.ail-core.txt`,
 `artifact.ailbc.json`, `artifact.fingerprint.txt`, `manifest.ail-lower.txt`,
 and `manifest.fingerprint.txt`, keeping direct IR-to-VM-instruction lowering

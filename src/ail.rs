@@ -3259,6 +3259,7 @@ pub fn compile_ail_core_native_elf(
 fn emit_linux_x86_64_elf_for_action(action: &AilBytecodeAction) -> Result<Vec<u8>, String> {
     let mut exists_prefixes = Vec::new();
     let mut forbidden_exact_args = Vec::new();
+    let mut state_write_lines = Vec::new();
     for instruction in &action.instructions {
         match instruction.opcode.as_str() {
             "REQUIRE_EXISTS" => {
@@ -3272,6 +3273,14 @@ fn emit_linux_x86_64_elf_for_action(action: &AilBytecodeAction) -> Result<Vec<u8
                     instruction.operands.get("value"),
                 ) {
                     forbidden_exact_args.push(format!("{key}={value}"));
+                }
+            }
+            "SET_FIELD" => {
+                if let (Some(key), Some(value)) = (
+                    instruction.operands.get("key"),
+                    instruction.operands.get("value"),
+                ) {
+                    state_write_lines.push(format!("{key}={value}\n"));
                 }
             }
             _ => {}
@@ -3301,6 +3310,10 @@ fn emit_linux_x86_64_elf_for_action(action: &AilBytecodeAction) -> Result<Vec<u8
         code.emit(&[0x85, 0xc0]); // test eax, eax
         code.emit_jcc_label(&[0x0f, 0x85], "fail"); // jnz fail
     }
+    for (index, line) in state_write_lines.iter().enumerate() {
+        let label = format!("state_write_{index}");
+        code.emit_write_stdout_label(&label, line.len() as u32);
+    }
     code.label("success")?;
     code.emit_exit(0);
     code.label("fail")?;
@@ -3314,6 +3327,10 @@ fn emit_linux_x86_64_elf_for_action(action: &AilBytecodeAction) -> Result<Vec<u8
     for (index, exact) in forbidden_exact_args.iter().enumerate() {
         code.label(format!("forbidden_arg_{index}"))?;
         code.emit(exact.as_bytes());
+    }
+    for (index, line) in state_write_lines.iter().enumerate() {
+        code.label(format!("state_write_{index}"))?;
+        code.emit(line.as_bytes());
     }
     let code = code.finish()?;
     Ok(wrap_linux_x86_64_elf(&code))
@@ -3410,6 +3427,16 @@ impl X64Code {
     fn emit_mov_edx_imm32(&mut self, value: u32) {
         self.emit(&[0xba]);
         self.emit(&value.to_le_bytes());
+    }
+
+    fn emit_write_stdout_label(&mut self, label: &str, len: u32) {
+        self.emit(&[
+            0xb8, 0x01, 0x00, 0x00, 0x00, // mov eax, 1
+            0xbf, 0x01, 0x00, 0x00, 0x00, // mov edi, 1
+        ]);
+        self.emit_lea_rsi_label(label);
+        self.emit_mov_edx_imm32(len);
+        self.emit(&[0x0f, 0x05]); // syscall
     }
 
     fn emit_call_label(&mut self, label: &str) {

@@ -5024,6 +5024,50 @@ Expected: native `CloseTicket` exits `0` for an open ticket, exits nonzero for
 missing `ticket.id`, exits nonzero for a closed ticket, and remains a valid
 runnable Linux x86_64 ELF executable.
 
+### Task 118: Native ELF Emits First AIL State Writes
+
+**Files:**
+- Modify: `src/ail.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing native state-write test**
+
+Extend native ELF coverage so successful `CloseTicket` execution with
+`ticket.id=T-1 ticket.status=Open` must print `ticket.status=Closed` to
+stdout, while failed requirement execution must print nothing.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_compile_native_executable_emits_close_ticket_state_write -- --nocapture
+```
+
+Expected: failure because the native executable enforces requirements but does
+not yet emit compiled `SET_FIELD` writes.
+
+- [x] **Step 3: Generate native stdout writes**
+
+Translate supported `SET_FIELD` instructions into embedded `key=value\n`
+strings and direct Linux x86_64 `write(1, ...)` syscalls on the success path.
+Keep failure paths silent and keep the ELF writer dependency-free.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_compile_native_executable_emits_close_ticket_state_write -- --nocapture
+cargo test --test ail_toolchain cli_ail_compile_native_executable_enforces_close_ticket_requirements -- --nocapture
+cargo test --test ail_toolchain cli_ail_compile_emits_runnable_linux_x86_64_elf_executable -- --nocapture
+```
+
+Expected: native `CloseTicket` emits `ticket.status=Closed` only on successful
+execution and preserves requirement exit-status behavior and ELF validity.
+
 ### Task 17: Declared Failure Handling Diagnostics
 
 **Files:**
