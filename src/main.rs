@@ -16,6 +16,7 @@ use ail::ail::{
     run_ail_bytecode_action, run_ail_compiler_pass_on_core, run_ail_conformance,
     verify_ail_bytecode,
 };
+use ail::core_model::json_string;
 
 struct CliOptions {
     runtime_state: BTreeMap<String, String>,
@@ -36,6 +37,7 @@ struct CliOptions {
     ail_compile_target: Option<String>,
     ail_compile_out: Option<String>,
     ail_compile_all_actions: bool,
+    diagnostics_json: bool,
 }
 
 struct AilInterviewArtifactSet<'a> {
@@ -105,7 +107,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
 }
 
 fn usage() -> String {
-    "usage: ail <ail-check|ail-core|ail-flow|ail-flow-edit|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-interview|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-bootstrap|ail-patch> <path> [patch|target-package] [--action name] [--prompt text] [--interview-file path] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--base-model name] [--target-model name] [--out path] [--all-actions] [--artifact-dir path] [--llm-endpoint url] [key=value ...]\nsaved-core usage: ail <ail-spec|ail-lower|ail-compile|ail-run|ail-build> --core-file <checked-core> [--action name] [--target target] [--out path] [--artifact-dir path] [key=value ...]\nwasm-contract usage: ail ail-compile <package-or-artifact.ailbc.json> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir> OR ail ail-compile --core-file <checked-core> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir>\ncore-patch usage: ail ail-patch --core-file <checked-core> <ail-core.patch.json>\nflow-edit usage: ail ail-flow-edit --core-file <checked-core> <ail-flow.edit.json>\nail-pass usage: ail ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR ail ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]\nail-bootstrap usage: ail ail-bootstrap <toolchain-agent-package> --pass <compiler-pass-package> --agent <toolchain-agent-package> --target linux-x86_64-elf --artifact-dir <dir>"
+    "usage: ail <ail-check|ail-core|ail-flow|ail-flow-edit|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-interview|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-bootstrap|ail-patch> <path> [patch|target-package] [--action name] [--prompt text] [--interview-file path] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--base-model name] [--target-model name] [--out path] [--all-actions] [--diagnostics-json] [--artifact-dir path] [--llm-endpoint url] [key=value ...]\nsaved-core usage: ail <ail-spec|ail-lower|ail-compile|ail-run|ail-build> --core-file <checked-core> [--action name] [--target target] [--out path] [--artifact-dir path] [key=value ...]\nwasm-contract usage: ail ail-compile <package-or-artifact.ailbc.json> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir> OR ail ail-compile --core-file <checked-core> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir>\ncore-patch usage: ail ail-patch --core-file <checked-core> <ail-core.patch.json>\nflow-edit usage: ail ail-flow-edit --core-file <checked-core> <ail-flow.edit.json>\nail-pass usage: ail ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR ail ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]\nail-bootstrap usage: ail ail-bootstrap <toolchain-agent-package> --pass <compiler-pass-package> --agent <toolchain-agent-package> --target linux-x86_64-elf --artifact-dir <dir>"
         .to_string()
 }
 
@@ -151,6 +153,52 @@ fn write_ail_interview_artifacts(
         format!("failed to write ail-interview manifest fingerprint artifact: {error}")
     })?;
     Ok(())
+}
+
+fn json_optional_string(value: Option<&str>) -> String {
+    value.map(json_string).unwrap_or_else(|| "null".to_string())
+}
+
+fn render_ail_draft_diagnostics_json(
+    candidate_artifact: &str,
+    diagnostics: &[ail::ail::AilDiagnostic],
+) -> String {
+    let diagnostics_json = diagnostics
+        .iter()
+        .map(|diagnostic| {
+            format!(
+                concat!(
+                    "    {{",
+                    "\"code\":{},",
+                    "\"message\":{},",
+                    "\"severity\":{},",
+                    "\"source_provenance\":{},",
+                    "\"affected_graph_item\":{},",
+                    "\"repair_suggestion\":{}",
+                    "}}"
+                ),
+                json_string(&diagnostic.code),
+                json_string(&diagnostic.message),
+                json_string(&diagnostic.severity),
+                json_optional_string(diagnostic.source_provenance.as_deref()),
+                json_optional_string(diagnostic.affected_graph_item.as_deref()),
+                json_optional_string(diagnostic.repair_suggestion.as_deref())
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(",\n");
+    format!(
+        concat!(
+            "{{\n",
+            "  \"candidate_artifact\": {},\n",
+            "  \"diagnostics\": [\n",
+            "{}\n",
+            "  ]\n",
+            "}}\n"
+        ),
+        json_string(candidate_artifact),
+        diagnostics_json
+    )
 }
 
 struct AilBuildArtifactSet<'a> {
@@ -7549,6 +7597,13 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
             .as_deref()
             .unwrap_or(&package.metadata.base_llm_endpoint);
         let result = draft_ail_spec(&package, prompt, endpoint)?;
+        if cli_options.diagnostics_json {
+            print!(
+                "{}",
+                render_ail_draft_diagnostics_json(&result.spec_text, &result.diagnostics)
+            );
+            return if result.success() { Ok(0) } else { Ok(1) };
+        }
         println!("ail-draft candidate:");
         println!("{}", result.spec_text);
         if result.success() {
@@ -7947,6 +8002,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
     let mut ail_compile_target = None;
     let mut ail_compile_out = None;
     let mut ail_compile_all_actions = false;
+    let mut diagnostics_json = false;
     let mut index = 0;
 
     if command == "ail-patch" && args.get(index).is_none_or(|arg| arg != "--core-file") {
@@ -8169,6 +8225,14 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
             index += 2;
             continue;
         }
+        if arg == "--diagnostics-json" {
+            if command != "ail-draft" {
+                return Err(usage());
+            }
+            diagnostics_json = true;
+            index += 1;
+            continue;
+        }
         if arg == "--artifact-dir" {
             if !matches!(
                 command,
@@ -8311,6 +8375,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         ail_compile_target,
         ail_compile_out,
         ail_compile_all_actions,
+        diagnostics_json,
     })
 }
 

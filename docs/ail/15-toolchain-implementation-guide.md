@@ -761,7 +761,11 @@ or compile stages. Malformed envelopes are rejected as `AIL-PROMPT-001`
 prompt protocol errors. For envelope outputs, the CLI validates the requested
 `artifact_kind`, requires `checker_handoff.must_check: true`, and requires
 `checker_handoff.expected_profile` to match the package profile before it
-extracts `artifact_text`.
+extracts `artifact_text`. For IDE repair loops, `ail-draft --diagnostics-json`
+prints a JSON object with `candidate_artifact` and structured `diagnostics`
+entries containing `code`, `message`, `severity`, `source_provenance`,
+`affected_graph_item`, and `repair_suggestion`, avoiding prose scraping while
+preserving the default human-readable diagnostics output.
 `ail-spec` runs the next stage from a saved checked AIL-Requirements artifact:
 it validates the requirements file, asks the package base LLM for an AIL-Spec
 candidate grounded in that artifact, repairs once on checker diagnostics, and

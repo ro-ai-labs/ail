@@ -14489,6 +14489,77 @@ fn cli_ail_draft_prints_structured_candidate_diagnostics() {
 }
 
 #[test]
+fn cli_ail_draft_can_emit_machine_readable_diagnostics() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("support_ticket.ail");
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let response_spec = fs::read_to_string(format!(
+        "{package}/examples/rejected/missing-reference.ail-spec.md"
+    ))
+    .unwrap();
+    let response_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(&format!(
+            "<think>ignore this</think>\n```ail\n{response_spec}\n```"
+        ))
+    );
+    let server = serve_one_chat_response(listener, response_body);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-draft",
+            &package,
+            "--prompt",
+            "Draft an AIL support ticket app with a bad requirement",
+            "--llm-endpoint",
+            &format!("http://127.0.0.1:{}/v1/chat/completions", addr.port()),
+            "--diagnostics-json",
+        ])
+        .output()
+        .unwrap();
+
+    let request_body = server.join().unwrap();
+    assert!(
+        !output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(request_body.contains("bad requirement"));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.starts_with("{\n"), "{stdout}");
+    assert!(stdout.contains(r#""candidate_artifact":"#), "{stdout}");
+    assert!(stdout.contains("Action: Close ticket."), "{stdout}");
+    assert!(stdout.contains(r#""diagnostics":"#), "{stdout}");
+    assert!(stdout.contains(r#""code":"AIL001""#), "{stdout}");
+    assert!(
+        stdout.contains(
+            r#""message":"unknown requirement reference 'account' in action CloseTicket""#
+        ),
+        "{stdout}"
+    );
+    assert!(stdout.contains(r#""severity":"error""#), "{stdout}");
+    assert!(
+        stdout.contains(
+            r#""source_provenance":"action:CloseTicket.requirement:the account to exist""#
+        ),
+        "{stdout}"
+    );
+    assert!(
+        stdout.contains(r#""affected_graph_item":"node:Rule:"#),
+        "{stdout}"
+    );
+    assert!(
+        stdout.contains(
+            r#""repair_suggestion":"Declare a Thing named 'account' or update the requirement to reference an existing thing.""#
+        ),
+        "{stdout}"
+    );
+    assert!(!stdout.contains("ail-draft diagnostics:"), "{stdout}");
+}
+
+#[test]
 fn cli_ail_build_uses_llm_candidate_and_outputs_verified_bytecode() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
