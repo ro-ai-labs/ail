@@ -1561,6 +1561,73 @@ prompt-pack: ail.prompts@0.1
 }
 
 #[test]
+fn ail_core_text_preserves_manifest_target_support() {
+    let unique_suffix = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let root = std::env::temp_dir().join(format!(
+        "ail-target-support-manifest-{}-{unique_suffix}",
+        std::process::id()
+    ));
+    fs::create_dir_all(&root).unwrap();
+    fs::write(
+        root.join("ail-package.md"),
+        r#"name: target-support-app
+version: 0.1.0
+profile: Application
+entry: spec.ail-spec.md
+features: things
+conformance: first-slice
+target-support:
+  x86_64-unknown-linux-syscall-elf: supported
+  wasm32-unknown-sandbox-wasm: supported-with-host-imports
+"#,
+    )
+    .unwrap();
+    fs::write(
+        root.join("spec.ail-spec.md"),
+        "The application Target Support App manages target metadata.\n",
+    )
+    .unwrap();
+
+    let package = load_ail_package_dir(&root).unwrap();
+    assert_eq!(
+        package
+            .metadata
+            .target_support
+            .get("x86_64-unknown-linux-syscall-elf")
+            .map(String::as_str),
+        Some("supported")
+    );
+    assert_eq!(
+        package
+            .metadata
+            .target_support
+            .get("wasm32-unknown-sandbox-wasm")
+            .map(String::as_str),
+        Some("supported-with-host-imports")
+    );
+    let document = parse_ail_package_document(&package).unwrap();
+    let core = elaborate_ail_core(&package, &document);
+    let rendered = render_ail_core(&core);
+    assert!(
+        rendered.contains(
+            "target-support: wasm32-unknown-sandbox-wasm=supported-with-host-imports, x86_64-unknown-linux-syscall-elf=supported"
+        ),
+        "{rendered}"
+    );
+
+    let reparsed = parse_ail_core_text(&rendered).unwrap();
+    assert_eq!(
+        reparsed.package.target_support,
+        package.metadata.target_support
+    );
+
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn ail_core_elaboration_preserves_provenance_for_behavior_bullets() {
     let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
     let document = parse_ail_spec_text(&package.spec_text).unwrap();

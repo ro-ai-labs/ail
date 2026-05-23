@@ -26,6 +26,7 @@ pub struct AilPackageMetadata {
     pub imports: Vec<AilImportSpec>,
     pub conformance: String,
     pub prompt_pack: Option<String>,
+    pub target_support: BTreeMap<String, String>,
     pub base_llm_endpoint: String,
 }
 
@@ -2641,6 +2642,12 @@ pub fn render_ail_core(core: &AilCore) -> String {
     if let Some(prompt_pack) = &core.package.prompt_pack {
         lines.push(format!("prompt-pack: {prompt_pack}"));
     }
+    if !core.package.target_support.is_empty() {
+        lines.push(format!(
+            "target-support: {}",
+            render_target_support_specs(&core.package.target_support)
+        ));
+    }
     lines.extend([
         format!("base_llm_endpoint: {}", core.package.base_llm_endpoint),
         String::new(),
@@ -2704,6 +2711,14 @@ fn render_import_specs(imports: &[AilImportSpec]) -> String {
         .join(", ")
 }
 
+fn render_target_support_specs(target_support: &BTreeMap<String, String>) -> String {
+    target_support
+        .iter()
+        .map(|(target, status)| format!("{target}={status}"))
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
 pub fn parse_ail_core_text(text: &str) -> Result<AilCore, String> {
     let mut package_name = None;
     let mut package_version = None;
@@ -2713,6 +2728,7 @@ pub fn parse_ail_core_text(text: &str) -> Result<AilCore, String> {
     let mut imports = Vec::new();
     let mut conformance = None;
     let mut prompt_pack = None;
+    let mut target_support = BTreeMap::new();
     let mut base_llm_endpoint = None;
     let mut section = "";
     let mut graph = Graph::default();
@@ -2761,6 +2777,7 @@ pub fn parse_ail_core_text(text: &str) -> Result<AilCore, String> {
                     }
                     "conformance" => conformance = Some(value),
                     "prompt-pack" => prompt_pack = Some(value),
+                    "target-support" => target_support = parse_target_support_specs(&value)?,
                     "base_llm_endpoint" => base_llm_endpoint = Some(value),
                     key => {
                         return Err(format!(
@@ -2830,6 +2847,7 @@ pub fn parse_ail_core_text(text: &str) -> Result<AilCore, String> {
             conformance: conformance
                 .ok_or_else(|| "AIL-Core missing conformance metadata".to_string())?,
             prompt_pack,
+            target_support,
             base_llm_endpoint: base_llm_endpoint
                 .ok_or_else(|| "AIL-Core missing base_llm_endpoint metadata".to_string())?,
         },
@@ -8459,14 +8477,45 @@ pub fn run_ail_conformance(package: &AilPackage) -> Result<AilConformanceResult,
 
 fn parse_package_metadata(text: &str) -> Result<AilPackageMetadata, String> {
     let mut values = BTreeMap::new();
-    for line in text.lines().map(str::trim) {
+    let mut target_support = BTreeMap::new();
+    let mut active_block = "";
+    for raw_line in text.lines() {
+        let line = raw_line.trim();
         if line.is_empty() || line.starts_with('#') {
             continue;
         }
+        let is_indented = raw_line.starts_with(' ') || raw_line.starts_with('\t');
+        if is_indented && active_block == "target-support" {
+            let Some((target, status)) = line.split_once(':') else {
+                return Err(format!(
+                    "AIL target-support entry '{line}' must use '<target>: <status>'"
+                ));
+            };
+            let target = target.trim();
+            let status = status.trim();
+            if target.is_empty() || status.is_empty() {
+                return Err(format!(
+                    "AIL target-support entry '{line}' must use '<target>: <status>'"
+                ));
+            }
+            target_support.insert(target.to_string(), status.to_string());
+            continue;
+        }
+        active_block = "";
         let Some((key, value)) = line.split_once(':') else {
             continue;
         };
-        values.insert(key.trim().to_ascii_lowercase(), value.trim().to_string());
+        let key = key.trim().to_ascii_lowercase();
+        let value = value.trim().to_string();
+        if key == "target-support" {
+            if value.is_empty() {
+                active_block = "target-support";
+            } else {
+                target_support = parse_target_support_specs(&value)?;
+            }
+        } else {
+            values.insert(key, value);
+        }
     }
     let name = required_metadata(&values, "name")?;
     let version = values
@@ -8509,6 +8558,7 @@ fn parse_package_metadata(text: &str) -> Result<AilPackageMetadata, String> {
         imports,
         conformance,
         prompt_pack,
+        target_support,
         base_llm_endpoint,
     })
 }
@@ -8550,6 +8600,30 @@ fn parse_import_specs(text: &str) -> Result<Vec<AilImportSpec>, String> {
         });
     }
     Ok(imports)
+}
+
+fn parse_target_support_specs(text: &str) -> Result<BTreeMap<String, String>, String> {
+    let mut target_support = BTreeMap::new();
+    for entry in text
+        .split(',')
+        .map(str::trim)
+        .filter(|entry| !entry.is_empty())
+    {
+        let Some((target, status)) = entry.split_once('=') else {
+            return Err(format!(
+                "AIL target-support entry '{entry}' must use '<target>=<status>'"
+            ));
+        };
+        let target = target.trim();
+        let status = status.trim();
+        if target.is_empty() || status.is_empty() {
+            return Err(format!(
+                "AIL target-support entry '{entry}' must use '<target>=<status>'"
+            ));
+        }
+        target_support.insert(target.to_string(), status.to_string());
+    }
+    Ok(target_support)
 }
 
 fn merge_ail_import(target: &mut AilDocument, imported: AilDocument) {

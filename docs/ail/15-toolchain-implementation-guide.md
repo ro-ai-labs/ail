@@ -136,6 +136,9 @@ imported fragment before checking and rendering.
 When present, `prompt-pack: <package-or-version>` is preserved in package
 metadata and rendered into checked AIL-Core so agent prompt requests can be
 reviewed against the same package identity as the compiler input.
+When present, the `target-support:` manifest block is preserved as deterministic
+target support metadata in checked AIL-Core. Backend target/effect enforcement
+remains a checker and backend conformance responsibility.
 
 Conformance checks must validate the entry spec, every accepted fixture, and
 every rejected fixture. Accepted fixtures pass only when they produce no checker
