@@ -407,6 +407,8 @@ struct AilBuildArtifactSet<'a> {
 }
 
 struct AilCompileArtifactSet<'a> {
+    source_manifest_text: Option<&'a str>,
+    source_spec_text: Option<&'a str>,
     core_text: Option<&'a str>,
     bytecode_text: &'a str,
     action_name: &'a str,
@@ -419,6 +421,8 @@ struct AilCompileArtifactSet<'a> {
 }
 
 struct AilCompileBundleArtifactSet<'a> {
+    source_manifest_text: Option<&'a str>,
+    source_spec_text: Option<&'a str>,
     core_text: Option<&'a str>,
     bytecode_text: &'a str,
     target_name: &'a str,
@@ -646,6 +650,17 @@ fn render_ail_build_manifest(artifacts: &AilBuildArtifactSet<'_>) -> String {
 
 fn render_ail_compile_manifest(artifacts: &AilCompileArtifactSet<'_>) -> String {
     let mut lines = vec!["AIL-Compile-Manifest:".to_string()];
+    if let (Some(source_manifest_text), Some(source_spec_text)) =
+        (artifacts.source_manifest_text, artifacts.source_spec_text)
+    {
+        lines.push(format!(
+            "source-package source.ail-package.md source.ail-spec.md {}",
+            ail_artifact_fingerprint(&ail_bootstrap_source_bundle_text(
+                source_manifest_text,
+                source_spec_text,
+            ))
+        ));
+    }
     if let Some(core_text) = artifacts.core_text {
         lines.push(format!(
             "core checked.ail-core.txt {}",
@@ -688,6 +703,17 @@ fn render_ail_compile_manifest(artifacts: &AilCompileArtifactSet<'_>) -> String 
 
 fn render_ail_compile_bundle_manifest(artifacts: &AilCompileBundleArtifactSet<'_>) -> String {
     let mut lines = vec!["AIL-Compile-Manifest:".to_string()];
+    if let (Some(source_manifest_text), Some(source_spec_text)) =
+        (artifacts.source_manifest_text, artifacts.source_spec_text)
+    {
+        lines.push(format!(
+            "source-package source.ail-package.md source.ail-spec.md {}",
+            ail_artifact_fingerprint(&ail_bootstrap_source_bundle_text(
+                source_manifest_text,
+                source_spec_text,
+            ))
+        ));
+    }
     if let Some(core_text) = artifacts.core_text {
         lines.push(format!(
             "core checked.ail-core.txt {}",
@@ -756,6 +782,30 @@ fn load_ail_source_package_artifacts(
         manifest_text: ensure_trailing_newline(manifest_text),
         spec_text: ensure_trailing_newline(package.spec_text),
     })
+}
+
+fn write_ail_source_package_snapshot(
+    root: &std::path::Path,
+    context: &str,
+    source_manifest_text: &str,
+    source_spec_text: &str,
+) -> Result<(), String> {
+    fs::write(root.join("source.ail-package.md"), source_manifest_text)
+        .map_err(|error| format!("failed to write {context} source manifest: {error}"))?;
+    fs::write(root.join("source.ail-spec.md"), source_spec_text)
+        .map_err(|error| format!("failed to write {context} source spec: {error}"))?;
+    fs::write(
+        root.join("source.fingerprint.txt"),
+        format!(
+            "{}\n",
+            ail_artifact_fingerprint(&ail_bootstrap_source_bundle_text(
+                source_manifest_text,
+                source_spec_text,
+            ))
+        ),
+    )
+    .map_err(|error| format!("failed to write {context} source package fingerprint: {error}"))?;
+    Ok(())
 }
 
 fn render_ail_bootstrap_manifest(artifacts: &AilBootstrapArtifactSet<'_>) -> String {
@@ -864,6 +914,16 @@ fn write_ail_compile_artifacts(
     fs::create_dir_all(root).map_err(|error| {
         format!("failed to create ail-compile artifact dir {artifact_dir}: {error}")
     })?;
+    if let (Some(source_manifest_text), Some(source_spec_text)) =
+        (artifacts.source_manifest_text, artifacts.source_spec_text)
+    {
+        write_ail_source_package_snapshot(
+            root,
+            "ail-compile",
+            source_manifest_text,
+            source_spec_text,
+        )?;
+    }
     if let Some(core_text) = artifacts.core_text {
         fs::write(root.join("checked.ail-core.txt"), core_text)
             .map_err(|error| format!("failed to write ail-compile core artifact: {error}"))?;
@@ -961,6 +1021,16 @@ fn write_ail_compile_bundle_artifacts(
     fs::create_dir_all(root).map_err(|error| {
         format!("failed to create ail-compile artifact dir {artifact_dir}: {error}")
     })?;
+    if let (Some(source_manifest_text), Some(source_spec_text)) =
+        (artifacts.source_manifest_text, artifacts.source_spec_text)
+    {
+        write_ail_source_package_snapshot(
+            root,
+            "ail-compile",
+            source_manifest_text,
+            source_spec_text,
+        )?;
+    }
     if let Some(core_text) = artifacts.core_text {
         fs::write(root.join("checked.ail-core.txt"), core_text)
             .map_err(|error| format!("failed to write ail-compile core artifact: {error}"))?;
@@ -3167,6 +3237,7 @@ struct AilCompileAgentManifestRequest<'a> {
     agent_bytecode_text: String,
     package_name: &'a str,
     bytecode_text: &'a str,
+    source_artifacts: Option<&'a AilSourcePackageArtifacts>,
     target_executable: &'a [u8],
     native_bytecode_report_text: &'a str,
     manifest_text: &'a str,
@@ -3182,6 +3253,7 @@ fn run_ail_compile_agent_verify_manifest(
         agent_bytecode_text,
         package_name,
         bytecode_text,
+        source_artifacts,
         target_executable,
         native_bytecode_report_text,
         manifest_text,
@@ -3194,7 +3266,11 @@ fn run_ail_compile_agent_verify_manifest(
                 .to_string(),
         );
     }
-    let state = BTreeMap::from([
+    let source_package_text = source_artifacts.map(|artifacts| {
+        ail_bootstrap_source_bundle_text(&artifacts.manifest_text, &artifacts.spec_text)
+    });
+    let source_package_fingerprint = source_package_text.as_deref().map(ail_artifact_fingerprint);
+    let mut state = BTreeMap::from([
         (
             "buildrequest.id".to_string(),
             format!("{package_name}-compile"),
@@ -3241,6 +3317,18 @@ fn run_ail_compile_agent_verify_manifest(
             "BytecodeReady".to_string(),
         ),
     ]);
+    if let Some(source_package_text) = source_package_text {
+        state.insert(
+            "buildrequest.source package".to_string(),
+            source_package_text,
+        );
+    }
+    if let Some(source_package_fingerprint) = source_package_fingerprint {
+        state.insert(
+            "buildrequest.source package fingerprint".to_string(),
+            source_package_fingerprint,
+        );
+    }
     let run = run_ail_bytecode_action(&agent_bytecode, "VerifyCompileManifest", state)?;
     if run.status != "succeeded" {
         let mut message = "ail-compile agent VerifyCompileManifest failed".to_string();
@@ -3265,6 +3353,7 @@ struct AilCompileBundleAgentManifestRequest<'a> {
     agent_bytecode_text: String,
     package_name: &'a str,
     bytecode_text: &'a str,
+    source_artifacts: Option<&'a AilSourcePackageArtifacts>,
     target: &'a str,
     target_executables: &'a [AilNativeArtifact],
     native_bytecode_report_text: &'a str,
@@ -3280,6 +3369,7 @@ fn run_ail_compile_bundle_agent_verify_manifest(
         agent_bytecode_text,
         package_name,
         bytecode_text,
+        source_artifacts,
         target,
         target_executables,
         native_bytecode_report_text,
@@ -3297,7 +3387,11 @@ fn run_ail_compile_bundle_agent_verify_manifest(
     }
     let target_fingerprint =
         native_artifact_fingerprint_text(target_executables).unwrap_or_default();
-    let state = BTreeMap::from([
+    let source_package_text = source_artifacts.map(|artifacts| {
+        ail_bootstrap_source_bundle_text(&artifacts.manifest_text, &artifacts.spec_text)
+    });
+    let source_package_fingerprint = source_package_text.as_deref().map(ail_artifact_fingerprint);
+    let mut state = BTreeMap::from([
         (
             "buildrequest.id".to_string(),
             format!("{package_name}-compile-bundle"),
@@ -3344,6 +3438,18 @@ fn run_ail_compile_bundle_agent_verify_manifest(
             "BytecodeReady".to_string(),
         ),
     ]);
+    if let Some(source_package_text) = source_package_text {
+        state.insert(
+            "buildrequest.source package".to_string(),
+            source_package_text,
+        );
+    }
+    if let Some(source_package_fingerprint) = source_package_fingerprint {
+        state.insert(
+            "buildrequest.source package fingerprint".to_string(),
+            source_package_fingerprint,
+        );
+    }
     let run = run_ail_bytecode_action(&agent_bytecode, "VerifyCompileBundleManifest", state)?;
     if run.status != "succeeded" {
         let mut message = "ail-compile agent VerifyCompileBundleManifest failed".to_string();
@@ -3818,6 +3924,7 @@ fn parse_cli_ail_core(cli_options: &CliOptions) -> Result<eigl::ail::AilCore, St
 fn run_ail_compile_from_core(
     core: &eigl::ail::AilCore,
     cli_options: &CliOptions,
+    source_artifacts: Option<&AilSourcePackageArtifacts>,
 ) -> Result<u8, String> {
     let diagnostics = check_ail_core(core);
     if !diagnostics.is_empty() {
@@ -3827,7 +3934,7 @@ fn run_ail_compile_from_core(
         return Ok(1);
     }
     if cli_options.ail_compile_all_actions {
-        return run_ail_compile_bundle_from_core(core, cli_options);
+        return run_ail_compile_bundle_from_core(core, cli_options, source_artifacts);
     }
     let action = cli_options
         .ail_action
@@ -3861,6 +3968,10 @@ fn run_ail_compile_from_core(
                 )?;
                 let empty_agent_trace: &[String] = &[];
                 let manifest_text = render_ail_compile_manifest(&AilCompileArtifactSet {
+                    source_manifest_text: source_artifacts
+                        .map(|artifacts| artifacts.manifest_text.as_str()),
+                    source_spec_text: source_artifacts
+                        .map(|artifacts| artifacts.spec_text.as_str()),
                     core_text: Some(&core_text),
                     bytecode_text: &bytecode_text,
                     action_name: action,
@@ -3877,6 +3988,7 @@ fn run_ail_compile_from_core(
                     agent_bytecode_text,
                     package_name: &core.package.name,
                     bytecode_text: &bytecode_text,
+                    source_artifacts,
                     target_executable: &executable,
                     native_bytecode_report_text: &native_bytecode_report_text,
                     manifest_text: &manifest_text,
@@ -3896,6 +4008,9 @@ fn run_ail_compile_from_core(
         write_ail_compile_artifacts(
             artifact_dir,
             AilCompileArtifactSet {
+                source_manifest_text: source_artifacts
+                    .map(|artifacts| artifacts.manifest_text.as_str()),
+                source_spec_text: source_artifacts.map(|artifacts| artifacts.spec_text.as_str()),
                 core_text: Some(&core_text),
                 bytecode_text: &bytecode_text,
                 action_name: action,
@@ -3915,6 +4030,7 @@ fn run_ail_compile_from_core(
 fn run_ail_compile_bundle_from_core(
     core: &eigl::ail::AilCore,
     cli_options: &CliOptions,
+    source_artifacts: Option<&AilSourcePackageArtifacts>,
 ) -> Result<u8, String> {
     let target = cli_options
         .ail_compile_target
@@ -3941,6 +4057,9 @@ fn run_ail_compile_bundle_from_core(
         )?;
         let empty_agent_trace: &[String] = &[];
         let manifest_text = render_ail_compile_bundle_manifest(&AilCompileBundleArtifactSet {
+            source_manifest_text: source_artifacts
+                .map(|artifacts| artifacts.manifest_text.as_str()),
+            source_spec_text: source_artifacts.map(|artifacts| artifacts.spec_text.as_str()),
             core_text: Some(&core_text),
             bytecode_text: &bytecode_text,
             target_name: target,
@@ -3957,6 +4076,7 @@ fn run_ail_compile_bundle_from_core(
                 agent_bytecode_text,
                 package_name: &core.package.name,
                 bytecode_text: &bytecode_text,
+                source_artifacts,
                 target,
                 target_executables: target_executables.as_slice(),
                 native_bytecode_report_text: &native_bytecode_report_text,
@@ -3979,6 +4099,9 @@ fn run_ail_compile_bundle_from_core(
     write_ail_compile_bundle_artifacts(
         artifact_dir,
         AilCompileBundleArtifactSet {
+            source_manifest_text: source_artifacts
+                .map(|artifacts| artifacts.manifest_text.as_str()),
+            source_spec_text: source_artifacts.map(|artifacts| artifacts.spec_text.as_str()),
             core_text: Some(&core_text),
             bytecode_text: &bytecode_text,
             target_name: target,
@@ -4029,6 +4152,8 @@ fn run_ail_compile_from_bytecode_file(path: &str, cli_options: &CliOptions) -> R
                 let empty_agent_trace: &[String] = &[];
                 let manifest_text =
                     render_ail_compile_bundle_manifest(&AilCompileBundleArtifactSet {
+                        source_manifest_text: None,
+                        source_spec_text: None,
                         core_text: None,
                         bytecode_text: &bytecode_text,
                         target_name: target,
@@ -4045,6 +4170,7 @@ fn run_ail_compile_from_bytecode_file(path: &str, cli_options: &CliOptions) -> R
                         agent_bytecode_text,
                         package_name: &bytecode.package_name,
                         bytecode_text: &bytecode_text,
+                        source_artifacts: None,
                         target,
                         target_executables: target_executables.as_slice(),
                         native_bytecode_report_text: &native_bytecode_report_text,
@@ -4068,6 +4194,8 @@ fn run_ail_compile_from_bytecode_file(path: &str, cli_options: &CliOptions) -> R
         write_ail_compile_bundle_artifacts(
             artifact_dir,
             AilCompileBundleArtifactSet {
+                source_manifest_text: None,
+                source_spec_text: None,
                 core_text: None,
                 bytecode_text: &bytecode_text,
                 target_name: target,
@@ -4106,6 +4234,8 @@ fn run_ail_compile_from_bytecode_file(path: &str, cli_options: &CliOptions) -> R
                 )?;
                 let empty_agent_trace: &[String] = &[];
                 let manifest_text = render_ail_compile_manifest(&AilCompileArtifactSet {
+                    source_manifest_text: None,
+                    source_spec_text: None,
                     core_text: None,
                     bytecode_text: &bytecode_text,
                     action_name: action,
@@ -4122,6 +4252,7 @@ fn run_ail_compile_from_bytecode_file(path: &str, cli_options: &CliOptions) -> R
                     agent_bytecode_text,
                     package_name: &bytecode.package_name,
                     bytecode_text: &bytecode_text,
+                    source_artifacts: None,
                     target_executable: &executable,
                     native_bytecode_report_text: &native_bytecode_report_text,
                     manifest_text: &manifest_text,
@@ -4141,6 +4272,8 @@ fn run_ail_compile_from_bytecode_file(path: &str, cli_options: &CliOptions) -> R
         write_ail_compile_artifacts(
             artifact_dir,
             AilCompileArtifactSet {
+                source_manifest_text: None,
+                source_spec_text: None,
                 core_text: None,
                 bytecode_text: &bytecode_text,
                 action_name: action,
@@ -4733,7 +4866,7 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
     }
     if command == "ail-compile" && cli_options.ail_core_file.is_some() {
         let core = parse_cli_ail_core(cli_options)?;
-        return run_ail_compile_from_core(&core, cli_options);
+        return run_ail_compile_from_core(&core, cli_options, None);
     }
     if command == "ail-compile" && std::path::Path::new(path).is_file() {
         return run_ail_compile_from_bytecode_file(path, cli_options);
@@ -5158,7 +5291,10 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
             print!("{bytecode_text}");
             Ok(0)
         }
-        "ail-compile" => run_ail_compile_from_core(&core, cli_options),
+        "ail-compile" => {
+            let source_artifacts = load_ail_source_package_artifacts(path, "ail-compile")?;
+            run_ail_compile_from_core(&core, cli_options, Some(&source_artifacts))
+        }
         "ail-run" => {
             if !diagnostics.is_empty() {
                 for diagnostic in diagnostics {

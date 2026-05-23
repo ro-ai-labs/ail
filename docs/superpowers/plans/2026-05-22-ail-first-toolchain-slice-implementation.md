@@ -6693,6 +6693,59 @@ AIL-Core IR, and AIL-Bytecode artifacts together with deterministic
 fingerprints before the AIL-authored lower manifest verifier accepts the
 bundle.
 
+### Task 151: Compile Records Source Package Fingerprints
+
+**Files:**
+- Modify: `examples/ail_toolchain_agent.ail/spec.ail-spec.md`
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing compile source fingerprint assertions**
+
+Add a package-backed `ail-compile --agent --artifact-dir --target
+linux-x86_64-elf` test requiring `source.ail-package.md`,
+`source.ail-spec.md`, `source.fingerprint.txt`, a fingerprinted
+`source-package` compile manifest entry, and AIL-authored
+`VerifyCompileManifest` reads for `buildrequest.source package` and
+`buildrequest.source package fingerprint`.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_compile_package_agent_records_source_package_fingerprints -- --nocapture
+```
+
+Expected: the package-backed compile test fails because direct compile
+artifacts do not write source package snapshots and the compile manifest
+verifier does not read the source package fingerprint.
+
+- [x] **Step 3: Generate compile source package snapshots**
+
+When package-backed `ail-compile --artifact-dir` persists native ELF artifacts,
+write the package manifest and entry AIL-Spec snapshot, fingerprint the
+deterministic source bundle, include that fingerprint in
+`manifest.ail-compile.txt`, and pass the source bundle plus fingerprint into
+the AIL-authored `VerifyCompileManifest` and `VerifyCompileBundleManifest`
+states. Saved bytecode and saved-core compile paths remain source-free artifact
+boundaries.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_compile_package_agent_records_source_package_fingerprints -- --nocapture
+```
+
+Expected: package-backed compile artifacts now tie source package, checked
+AIL-Core IR, AIL-Bytecode, native-bytecode report, and Linux ELF executable
+artifacts together with deterministic fingerprints before the AIL-authored
+compile manifest verifier accepts the bundle.
+
 ### Task 18: Declared Failure Trace Coverage Diagnostics
 
 **Files:**

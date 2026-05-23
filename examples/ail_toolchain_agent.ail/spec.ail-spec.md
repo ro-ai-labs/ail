@@ -222,6 +222,8 @@ When the toolchain agent verifies direct compile artifacts:
 - the system reads the BuildRequest artifact manifest
 - the system reads the BuildRequest artifact manifest fingerprint
 - the system reads the BuildRequest bytecode fingerprint
+- the system reads the BuildRequest source package
+- the system reads the BuildRequest source package fingerprint
 - the system reads the BuildRequest target artifact
 - the system reads the BuildRequest target artifact fingerprint
 - the system reads the BuildRequest native bytecode report
@@ -239,6 +241,8 @@ When the toolchain agent verifies direct all-action compile artifacts:
 - the system reads the BuildRequest artifact manifest
 - the system reads the BuildRequest artifact manifest fingerprint
 - the system reads the BuildRequest bytecode fingerprint
+- the system reads the BuildRequest source package
+- the system reads the BuildRequest source package fingerprint
 - the system reads the BuildRequest target artifact
 - the system reads the BuildRequest target artifact fingerprint
 - the system reads the BuildRequest native bytecode report
