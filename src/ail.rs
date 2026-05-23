@@ -2545,10 +2545,7 @@ fn check_package_safety_level(core: &AilCore) -> Vec<AilDiagnostic> {
 fn check_package_target_support_statuses(core: &AilCore) -> Vec<AilDiagnostic> {
     let mut diagnostics = Vec::new();
     for (target, status) in &core.package.target_support {
-        if matches!(
-            status.as_str(),
-            "supported" | "supported-with-host-imports" | "planned-contract"
-        ) {
+        if is_known_target_support_status(status) {
             continue;
         }
         diagnostics.push(
@@ -2566,6 +2563,13 @@ fn check_package_target_support_statuses(core: &AilCore) -> Vec<AilDiagnostic> {
         );
     }
     diagnostics
+}
+
+fn is_known_target_support_status(status: &str) -> bool {
+    matches!(
+        status,
+        "supported" | "supported-with-host-imports" | "planned-contract"
+    )
 }
 
 fn check_core_schema_catalog(core: &AilCore) -> Vec<AilDiagnostic> {
@@ -7330,6 +7334,13 @@ pub fn parse_ail_bytecode(text: &str) -> Result<AilBytecodeProgram, String> {
 
 pub fn verify_ail_bytecode(program: &AilBytecodeProgram) -> Vec<String> {
     let mut diagnostics = Vec::new();
+    for (target, status) in &program.target_support {
+        if !is_known_target_support_status(status) {
+            diagnostics.push(format!(
+                "AIL-BACKEND-002 unknown AIL target-support status '{status}' for target {target}"
+            ));
+        }
+    }
     for action in program.actions.values() {
         let (labels, label_diagnostics) = ail_bytecode_action_labels(action);
         diagnostics.extend(label_diagnostics);

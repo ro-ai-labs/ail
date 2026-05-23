@@ -3465,6 +3465,27 @@ fn ail_bytecode_verifier_rejects_non_integer_add_int_delta() {
 }
 
 #[test]
+fn ail_bytecode_verifier_rejects_unknown_target_support_status() {
+    let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
+    let document = parse_ail_package_document(&package).unwrap();
+    let mut bytecode = compile_ail_bytecode(&package, &document).unwrap();
+    bytecode.target_support = BTreeMap::from([(
+        "x86_64-unknown-linux-syscall-elf".to_string(),
+        "experimental-preview".to_string(),
+    )]);
+
+    let diagnostics = verify_ail_bytecode(&bytecode);
+    assert!(
+        diagnostics.iter().any(|diagnostic| {
+            diagnostic.contains("AIL-BACKEND-002")
+                && diagnostic.contains("x86_64-unknown-linux-syscall-elf")
+                && diagnostic.contains("experimental-preview")
+        }),
+        "{diagnostics:?}"
+    );
+}
+
+#[test]
 fn ail_bytecode_vm_executes_branch_and_jump_control_flow() {
     let bytecode_text = r#"{
   "kind": "AIL-Bytecode",
