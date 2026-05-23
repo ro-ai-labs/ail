@@ -11161,7 +11161,7 @@ fn check_failure_handling(core: &AilCore) -> Vec<AilDiagnostic> {
         .filter(|failure| !has_outgoing_edge(&core.graph, "handles_failure", &failure.id))
         .map(|failure| {
             AilDiagnostic::error(
-                "AIL008",
+                "AIL-FAILURE-001",
                 format!("failure {} is missing declared handling", failure.name),
             )
             .with_source_provenance(node_provenance(core, &failure.id))

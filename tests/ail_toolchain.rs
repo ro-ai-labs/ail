@@ -9734,7 +9734,7 @@ fn ail_core_reports_stable_invalid_fixture_diagnostics() {
     );
     assert!(
         !missing_failure_diagnostics.contains(
-            &"AIL008 failure payment provider rejects the update is missing declared handling"
+            &"AIL-FAILURE-001 failure payment provider rejects the update is missing declared handling"
                 .to_string()
         )
     );
@@ -9748,7 +9748,7 @@ fn ail_core_reports_stable_invalid_fixture_diagnostics() {
     let failure_without_handling_diagnostics = check_ail_core(&failure_without_handling_core);
     assert!(
         failure_without_handling_diagnostics
-            .contains(&"AIL008 failure NotFound is missing declared handling".to_string())
+            .contains(&"AIL-FAILURE-001 failure NotFound is missing declared handling".to_string())
     );
     assert!(
         !failure_without_handling_diagnostics.contains(
@@ -10909,7 +10909,7 @@ fn cli_ail_conformance_checks_valid_and_rejected_fixtures() {
         ),
         "{stdout}"
     );
-    assert!(stdout.contains("rejected: failure-without-handling.ail-spec.md AIL008"));
+    assert!(stdout.contains("rejected: failure-without-handling.ail-spec.md AIL-FAILURE-001"));
     assert!(stdout.contains("source=failure:NotFound"), "{stdout}");
     assert!(
         stdout.contains("repair=Add at least one handling bullet to Failure NotFound."),

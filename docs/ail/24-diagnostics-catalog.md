@@ -111,6 +111,21 @@ severity, blocking behavior, and at least one invalid fixture.
 - invalid fixture:
   `examples/support_ticket.ail/examples/rejected/failure-without-trace.ail-spec.md`
 
+### AIL-FAILURE-001
+
+- condition: declared blocking failure has no handling bullet
+- affected graph item: `Failure`
+- message template: `failure {name} is missing declared handling`
+- non-engineer explanation: the program names a failure case but does not say
+  what the system should do when it happens
+- agent follow-up question: `How should the system handle {name}?`
+- repair suggestion: add at least one handling bullet to the Failure section
+- AIL-Flow highlight: Failure handling section
+- severity: error
+- blocking behavior: blocks acceptance
+- invalid fixture:
+  `examples/support_ticket.ail/examples/rejected/failure-without-handling.ail-spec.md`
+
 ### AIL-SECRET-READ-001
 
 - condition: an action, tool, view, or compiler pass reads a secret without
