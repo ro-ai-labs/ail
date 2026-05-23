@@ -4,14 +4,14 @@ use std::fs;
 use std::process::{Command, ExitCode};
 
 use ail::ail::{
-    DEFAULT_BASE_LLM_ENDPOINT, apply_ail_core_patch_text, apply_ail_flow_edit_text,
-    apply_ail_patch, check_ail_core, check_ail_requirements, compile_ail_bytecode_native_elf,
-    compile_ail_core_bytecode, compile_ail_core_native_elf, draft_ail_interview,
-    draft_ail_requirements, draft_ail_spec, draft_ail_spec_from_requirements, elaborate_ail_core,
-    load_ail_package_dir, parse_ail_bytecode, parse_ail_core_text, parse_ail_package_document,
-    parse_ail_package_spec_text, parse_ail_patch_text, render_ail_bytecode, render_ail_core,
-    render_ail_flow_view, render_ail_runtime_state_lines, render_ail_spec,
-    render_ail_spec_from_core, repair_ail_requirements_from_diagnostics,
+    DEFAULT_BASE_LLM_ENDPOINT, ail_document_from_core, apply_ail_core_patch_text,
+    apply_ail_flow_edit_text, apply_ail_patch, check_ail_core, check_ail_requirements,
+    compile_ail_bytecode_native_elf, compile_ail_core_bytecode, compile_ail_core_native_elf,
+    draft_ail_interview, draft_ail_requirements, draft_ail_spec, draft_ail_spec_from_requirements,
+    elaborate_ail_core, load_ail_package_dir, parse_ail_bytecode, parse_ail_core_text,
+    parse_ail_package_document, parse_ail_package_spec_text, parse_ail_patch_text,
+    render_ail_bytecode, render_ail_core, render_ail_flow_view, render_ail_runtime_state_lines,
+    render_ail_spec, render_ail_spec_from_core, repair_ail_requirements_from_diagnostics,
     repair_ail_spec_from_diagnostics, run_ail_bytecode_action, run_ail_compiler_pass_on_core,
     run_ail_conformance, verify_ail_bytecode,
 };
@@ -55,7 +55,13 @@ fn run(args: Vec<String>) -> Result<u8, String> {
     let pathless_core_file_command = args[1].starts_with("--")
         && matches!(
             command.as_str(),
-            "ail-spec" | "ail-lower" | "ail-compile" | "ail-build" | "ail-patch" | "ail-flow-edit"
+            "ail-spec"
+                | "ail-lower"
+                | "ail-compile"
+                | "ail-build"
+                | "ail-run"
+                | "ail-patch"
+                | "ail-flow-edit"
         );
     let default_path = ".".to_string();
     let (path, option_args): (&String, &[String]) = if pathless_core_file_command {
@@ -92,7 +98,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
 }
 
 fn usage() -> String {
-    "usage: ail <ail-check|ail-core|ail-flow|ail-flow-edit|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-interview|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-bootstrap|ail-patch> <path> [patch|target-package] [--action name] [--prompt text] [--interview-file path] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--base-model name] [--target-model name] [--out path] [--all-actions] [--artifact-dir path] [--llm-endpoint url] [key=value ...]\nsaved-core usage: ail <ail-spec|ail-lower|ail-compile|ail-build> --core-file <checked-core> [--action name] [--target target] [--out path] [--artifact-dir path]\ncore-patch usage: ail ail-patch --core-file <checked-core> <ail-core.patch.json>\nflow-edit usage: ail ail-flow-edit --core-file <checked-core> <ail-flow.edit.json>\nail-pass usage: ail ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR ail ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]\nail-bootstrap usage: ail ail-bootstrap <toolchain-agent-package> --pass <compiler-pass-package> --agent <toolchain-agent-package> --target linux-x86_64-elf --artifact-dir <dir>"
+    "usage: ail <ail-check|ail-core|ail-flow|ail-flow-edit|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-interview|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-bootstrap|ail-patch> <path> [patch|target-package] [--action name] [--prompt text] [--interview-file path] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--base-model name] [--target-model name] [--out path] [--all-actions] [--artifact-dir path] [--llm-endpoint url] [key=value ...]\nsaved-core usage: ail <ail-spec|ail-lower|ail-compile|ail-run|ail-build> --core-file <checked-core> [--action name] [--target target] [--out path] [--artifact-dir path] [key=value ...]\ncore-patch usage: ail ail-patch --core-file <checked-core> <ail-core.patch.json>\nflow-edit usage: ail ail-flow-edit --core-file <checked-core> <ail-flow.edit.json>\nail-pass usage: ail ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR ail ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]\nail-bootstrap usage: ail ail-bootstrap <toolchain-agent-package> --pass <compiler-pass-package> --agent <toolchain-agent-package> --target linux-x86_64-elf --artifact-dir <dir>"
         .to_string()
 }
 
@@ -5162,6 +5168,30 @@ fn parse_cli_ail_core(cli_options: &CliOptions) -> Result<ail::ail::AilCore, Str
     parse_ail_core_text(&core_text)
 }
 
+fn run_ail_core_action(
+    core: &ail::ail::AilCore,
+    document: &ail::ail::AilDocument,
+    cli_options: &CliOptions,
+) -> Result<u8, String> {
+    let action = cli_options
+        .ail_action
+        .as_deref()
+        .ok_or_else(|| "ail-run requires --action <name>".to_string())?;
+    let bytecode = compile_ail_core_bytecode(core)?;
+    let result = run_ail_bytecode_action(&bytecode, action, cli_options.runtime_state.clone())?;
+    println!("ail-run {}", result.status);
+    if let Some(failure) = &result.failure {
+        println!("failure={failure}");
+    }
+    for line in render_ail_runtime_state_lines(document, &result.final_state) {
+        println!("{line}");
+    }
+    if !result.trace.is_empty() {
+        println!("trace={}", result.trace.join(" -> "));
+    }
+    Ok(if result.status == "succeeded" { 0 } else { 1 })
+}
+
 fn run_ail_compile_from_core(
     core: &ail::ail::AilCore,
     cli_options: &CliOptions,
@@ -6239,6 +6269,18 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
         let core = parse_cli_ail_core(cli_options)?;
         return run_ail_compile_from_core(&core, cli_options, None);
     }
+    if command == "ail-run" && cli_options.ail_core_file.is_some() {
+        let core = parse_cli_ail_core(cli_options)?;
+        let diagnostics = check_ail_core(&core);
+        if !diagnostics.is_empty() {
+            for diagnostic in diagnostics {
+                println!("{diagnostic}");
+            }
+            return Ok(1);
+        }
+        let document = ail_document_from_core(&core);
+        return run_ail_core_action(&core, &document, cli_options);
+    }
     if command == "ail-compile" && std::path::Path::new(path).is_file() {
         return run_ail_compile_from_bytecode_file(path, cli_options);
     }
@@ -6810,24 +6852,7 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
                 }
                 return Ok(1);
             }
-            let action = cli_options
-                .ail_action
-                .as_deref()
-                .ok_or_else(|| "ail-run requires --action <name>".to_string())?;
-            let bytecode = compile_ail_core_bytecode(&core)?;
-            let result =
-                run_ail_bytecode_action(&bytecode, action, cli_options.runtime_state.clone())?;
-            println!("ail-run {}", result.status);
-            if let Some(failure) = &result.failure {
-                println!("failure={failure}");
-            }
-            for line in render_ail_runtime_state_lines(&document, &result.final_state) {
-                println!("{line}");
-            }
-            if !result.trace.is_empty() {
-                println!("trace={}", result.trace.join(" -> "));
-            }
-            Ok(if result.status == "succeeded" { 0 } else { 1 })
+            run_ail_core_action(&core, &document, cli_options)
         }
         _ => Err(format!("unknown AIL command '{command}'")),
     }
@@ -6948,6 +6973,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
                     | "ail-pass"
                     | "ail-compile"
                     | "ail-build"
+                    | "ail-run"
                     | "ail-spec"
                     | "ail-patch"
                     | "ail-flow-edit"

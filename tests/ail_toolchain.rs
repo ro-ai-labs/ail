@@ -4543,6 +4543,7 @@ fn cli_ail_vm_executes_saved_bytecode_artifact() {
             "CloseTicket",
             "ticket.id=T-1",
             "ticket.status=Open",
+            "ticket.internal notes=sensitive note",
         ])
         .output()
         .unwrap();
@@ -9477,6 +9478,75 @@ fn cli_ail_run_executes_close_ticket_with_trace() {
     assert!(missing_stdout.contains("ail-run failed"));
     assert!(missing_stdout.contains("failure=NotFound"));
     assert!(missing_stdout.contains("trace=action CloseTicket started -> failure NotFound"));
+}
+
+#[test]
+fn cli_ail_run_accepts_saved_core_file_artifact() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("support_ticket.ail");
+    let core_output = Command::new(binary)
+        .args(["ail-core", &package])
+        .output()
+        .unwrap();
+    assert!(
+        core_output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&core_output.stdout),
+        String::from_utf8_lossy(&core_output.stderr)
+    );
+    let core_path = std::env::temp_dir().join(format!(
+        "ail-run-saved-core-{}.ail-core.txt",
+        std::process::id()
+    ));
+    fs::write(&core_path, core_output.stdout).unwrap();
+
+    let success = Command::new(binary)
+        .args([
+            "ail-run",
+            "--core-file",
+            core_path.to_str().unwrap(),
+            "--action",
+            "CloseTicket",
+            "ticket.id=T-1",
+            "ticket.status=Open",
+            "ticket.internal notes=sensitive note",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        success.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&success.stdout),
+        String::from_utf8_lossy(&success.stderr)
+    );
+    let success_stdout = String::from_utf8_lossy(&success.stdout);
+    assert!(success_stdout.contains("ail-run succeeded"));
+    assert!(success_stdout.contains("ticket.status=Closed"));
+    assert!(success_stdout.contains("ticket.internal notes=<secret>"));
+    assert!(!success_stdout.contains("sensitive note"));
+    assert!(
+        success_stdout
+            .contains("trace=action CloseTicket started -> rule passed: the ticket to exist")
+    );
+
+    let missing = Command::new(binary)
+        .args([
+            "ail-run",
+            "--core-file",
+            core_path.to_str().unwrap(),
+            "--action",
+            "CloseTicket",
+            "ticket.status=Open",
+        ])
+        .output()
+        .unwrap();
+    assert_eq!(missing.status.code(), Some(1));
+    let missing_stdout = String::from_utf8_lossy(&missing.stdout);
+    assert!(missing_stdout.contains("ail-run failed"));
+    assert!(missing_stdout.contains("failure=NotFound"));
+    assert!(missing_stdout.contains("trace=action CloseTicket started -> failure NotFound"));
+
+    fs::remove_file(core_path).unwrap();
 }
 
 #[test]

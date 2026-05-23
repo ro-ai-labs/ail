@@ -547,10 +547,11 @@ bytecode lowering, native target emission, and auditable build artifacts.
 `ail-spec --core-file <path>` reads a saved checked AIL-Core artifact, runs the
 core checker, reconstructs the semantic document, and prints deterministic
 AIL-Spec. `ail-lower --core-file <path>`, `ail-compile --core-file <path>`,
-and `ail-build --core-file <path>` read the same saved checked AIL-Core
-artifact, reconstruct the graph from the serialized nodes, edges, and edge
-attributes, run the core checker, and compile that IR directly to the VM
-instruction artifact or native target without loading the source package spec.
+`ail-run --core-file <path>`, and `ail-build --core-file <path>` read the same
+saved checked AIL-Core artifact, reconstruct the graph from the serialized
+nodes, edges, and edge attributes, run the core checker, and compile that IR
+directly to the VM instruction artifact, VM execution path, or native target
+without loading the source package spec.
 This keeps AIL-Core as a real compiler and review boundary rather than only a
 display format, and it preserves lowering payloads such as read/write
 provenance text that affect emitted bytecode instructions.

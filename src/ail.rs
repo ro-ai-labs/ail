@@ -6082,7 +6082,7 @@ fn compile_ail_document_bytecode(
     })
 }
 
-fn ail_document_from_core(core: &AilCore) -> AilDocument {
+pub fn ail_document_from_core(core: &AilCore) -> AilDocument {
     let node_by_id = graph_node_by_id(core);
     let mut document = AilDocument {
         application: AilApplication::default(),
