@@ -9499,6 +9499,8 @@ fn cli_ail_build_agent_verifies_bytecode_artifact_after_compile() {
     assert!(agent_trace.contains("trace BytecodeArtifactVerified"));
     assert!(agent_trace.contains("read buildrequest.artifact manifest"));
     assert!(agent_trace.contains("read buildrequest.artifact manifest fingerprint"));
+    assert!(agent_trace.contains("read buildrequest.requirements fingerprint"));
+    assert!(agent_trace.contains("read buildrequest.spec fingerprint"));
     assert!(
         agent_trace.contains("write buildrequest.artifact manifest verification report=Verified")
     );
@@ -9720,8 +9722,17 @@ fn cli_ail_build_writes_requirements_spec_core_and_bytecode_artifacts() {
     let requirements_artifact =
         fs::read_to_string(artifact_dir.join("requirements.ail-requirements.md")).unwrap();
     assert_eq!(requirements_artifact, requirements.trim());
+    let requirements_fingerprint =
+        fs::read_to_string(artifact_dir.join("requirements.fingerprint.txt")).unwrap();
+    assert_eq!(
+        requirements_fingerprint.trim(),
+        fnv64_fingerprint(&requirements_artifact)
+    );
     let spec_artifact = fs::read_to_string(artifact_dir.join("accepted.ail-spec.md")).unwrap();
     assert!(spec_artifact.contains("Action: Close ticket."));
+    let spec_fingerprint =
+        fs::read_to_string(artifact_dir.join("accepted.ail-spec.fingerprint.txt")).unwrap();
+    assert_eq!(spec_fingerprint.trim(), fnv64_fingerprint(&spec_artifact));
     let core_artifact = fs::read_to_string(artifact_dir.join("checked.ail-core.txt")).unwrap();
     assert!(core_artifact.contains("package: support-ticket"));
     assert!(core_artifact.contains("node Action CloseTicket"));
@@ -9730,6 +9741,21 @@ fn cli_ail_build_writes_requirements_spec_core_and_bytecode_artifacts() {
     assert_eq!(bytecode_artifact, stdout);
     let artifact_bytecode = parse_ail_bytecode(&bytecode_artifact).unwrap();
     assert_eq!(artifact_bytecode, stdout_bytecode);
+    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-build.txt")).unwrap();
+    assert!(
+        manifest.contains(&format!(
+            "requirements requirements.ail-requirements.md {}",
+            fnv64_fingerprint(&requirements_artifact)
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "spec accepted.ail-spec.md {}",
+            fnv64_fingerprint(&spec_artifact)
+        )),
+        "{manifest}"
+    );
 }
 
 #[test]
@@ -9936,12 +9962,21 @@ fn cli_ail_build_agent_accepts_compiler_pass_output_before_core() {
 
     let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-build.txt")).unwrap();
     assert!(manifest.contains("AIL-Build-Manifest:"), "{manifest}");
+    let requirements_artifact =
+        fs::read_to_string(artifact_dir.join("requirements.ail-requirements.md")).unwrap();
     assert!(
-        manifest.contains("artifact requirements.ail-requirements.md"),
+        manifest.contains(&format!(
+            "requirements requirements.ail-requirements.md {}",
+            fnv64_fingerprint(&requirements_artifact)
+        )),
         "{manifest}"
     );
+    let spec_artifact = fs::read_to_string(artifact_dir.join("accepted.ail-spec.md")).unwrap();
     assert!(
-        manifest.contains("artifact accepted.ail-spec.md"),
+        manifest.contains(&format!(
+            "spec accepted.ail-spec.md {}",
+            fnv64_fingerprint(&spec_artifact)
+        )),
         "{manifest}"
     );
     assert!(

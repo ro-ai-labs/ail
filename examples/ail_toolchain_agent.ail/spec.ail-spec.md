@@ -9,11 +9,13 @@ A BuildRequest has:
 - id: Text
 - developer prompt: Text
 - requirements: Text
+- requirements fingerprint: Text
 - requirements coverage checklist: Text
 - spec coverage checklist: Text
 - source package: Text
 - source package fingerprint: Text
 - spec: Text
+- spec fingerprint: Text
 - spec review report: Text
 - core ir: Text
 - core ir fingerprint: Text
@@ -194,6 +196,8 @@ When the toolchain agent verifies the build artifact manifest:
 - the system requires the BuildRequest status to be BytecodeReady
 - the system reads the BuildRequest artifact manifest
 - the system reads the BuildRequest artifact manifest fingerprint
+- the system reads the BuildRequest requirements fingerprint
+- the system reads the BuildRequest spec fingerprint
 - the system reads the BuildRequest core ir fingerprint
 - the system reads the BuildRequest bytecode fingerprint
 - the system reads the BuildRequest target artifact fingerprint

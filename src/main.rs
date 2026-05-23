@@ -503,6 +503,17 @@ struct AilBuildPassAcceptance<'a> {
     pass_trace: &'a [String],
 }
 
+struct AilBuildAgentManifestVerification<'a> {
+    manifest_text: &'a str,
+    manifest_fingerprint: &'a str,
+    requirements_fingerprint: Option<&'a str>,
+    spec_fingerprint: Option<&'a str>,
+    core_fingerprint: &'a str,
+    compiler_pass_target_fingerprint: Option<&'a str>,
+    prompt_portability_fingerprint: Option<&'a str>,
+    native_bytecode_report_text: Option<&'a str>,
+}
+
 fn render_ail_prompt_portability_report(
     target_model: &str,
     requirements_artifact: Option<&str>,
@@ -531,11 +542,17 @@ fn render_ail_prompt_portability_report(
 
 fn render_ail_build_manifest(artifacts: &AilBuildArtifactSet<'_>) -> String {
     let mut lines = vec!["AIL-Build-Manifest:".to_string()];
-    if artifacts.requirements.is_some() {
-        lines.push("artifact requirements.ail-requirements.md".to_string());
+    if let Some(requirements) = artifacts.requirements {
+        lines.push(format!(
+            "requirements requirements.ail-requirements.md {}",
+            ail_artifact_fingerprint(requirements)
+        ));
     }
-    if artifacts.spec_text.is_some() {
-        lines.push("artifact accepted.ail-spec.md".to_string());
+    if let Some(spec_text) = artifacts.spec_text {
+        lines.push(format!(
+            "spec accepted.ail-spec.md {}",
+            ail_artifact_fingerprint(spec_text)
+        ));
     }
     lines.push(format!(
         "core checked.ail-core.txt {}",
@@ -1287,10 +1304,22 @@ fn write_ail_build_artifacts(
     if let Some(requirements) = artifacts.requirements {
         fs::write(root.join("requirements.ail-requirements.md"), requirements)
             .map_err(|error| format!("failed to write ail-build requirements artifact: {error}"))?;
+        fs::write(
+            root.join("requirements.fingerprint.txt"),
+            format!("{}\n", ail_artifact_fingerprint(requirements)),
+        )
+        .map_err(|error| {
+            format!("failed to write ail-build requirements fingerprint artifact: {error}")
+        })?;
     }
     if let Some(spec_text) = artifacts.spec_text {
         fs::write(root.join("accepted.ail-spec.md"), spec_text)
             .map_err(|error| format!("failed to write ail-build spec artifact: {error}"))?;
+        fs::write(
+            root.join("accepted.ail-spec.fingerprint.txt"),
+            format!("{}\n", ail_artifact_fingerprint(spec_text)),
+        )
+        .map_err(|error| format!("failed to write ail-build spec fingerprint artifact: {error}"))?;
     }
     fs::write(root.join("checked.ail-core.txt"), artifacts.core_text)
         .map_err(|error| format!("failed to write ail-build core artifact: {error}"))?;
@@ -2932,12 +2961,7 @@ fn run_ail_build_agent_verify_target_artifact(
 
 fn run_ail_build_agent_verify_manifest(
     agent_run: &mut AilBuildAgentRun,
-    manifest_text: &str,
-    manifest_fingerprint: &str,
-    core_fingerprint: &str,
-    compiler_pass_target_fingerprint: Option<&str>,
-    prompt_portability_fingerprint: Option<&str>,
-    native_bytecode_report_text: Option<&str>,
+    request: AilBuildAgentManifestVerification<'_>,
 ) -> Result<(), String> {
     if !agent_run
         .bytecode
@@ -2951,29 +2975,41 @@ fn run_ail_build_agent_verify_manifest(
     let mut verify_state = agent_run.state.clone();
     verify_state.insert(
         "buildrequest.artifact manifest".to_string(),
-        manifest_text.to_string(),
+        request.manifest_text.to_string(),
     );
     verify_state.insert(
         "buildrequest.artifact manifest fingerprint".to_string(),
-        manifest_fingerprint.to_string(),
+        request.manifest_fingerprint.to_string(),
     );
+    if let Some(requirements_fingerprint) = request.requirements_fingerprint {
+        verify_state.insert(
+            "buildrequest.requirements fingerprint".to_string(),
+            requirements_fingerprint.to_string(),
+        );
+    }
+    if let Some(spec_fingerprint) = request.spec_fingerprint {
+        verify_state.insert(
+            "buildrequest.spec fingerprint".to_string(),
+            spec_fingerprint.to_string(),
+        );
+    }
     verify_state.insert(
         "buildrequest.core ir fingerprint".to_string(),
-        core_fingerprint.to_string(),
+        request.core_fingerprint.to_string(),
     );
-    if let Some(compiler_pass_target_fingerprint) = compiler_pass_target_fingerprint {
+    if let Some(compiler_pass_target_fingerprint) = request.compiler_pass_target_fingerprint {
         verify_state.insert(
             "buildrequest.compiler pass target artifact fingerprint".to_string(),
             compiler_pass_target_fingerprint.to_string(),
         );
     }
-    if let Some(prompt_portability_fingerprint) = prompt_portability_fingerprint {
+    if let Some(prompt_portability_fingerprint) = request.prompt_portability_fingerprint {
         verify_state.insert(
             "buildrequest.prompt portability report fingerprint".to_string(),
             prompt_portability_fingerprint.to_string(),
         );
     }
-    if let Some(native_bytecode_report_text) = native_bytecode_report_text {
+    if let Some(native_bytecode_report_text) = request.native_bytecode_report_text {
         verify_state.insert(
             "buildrequest.native bytecode report".to_string(),
             native_bytecode_report_text.to_string(),
@@ -4199,6 +4235,8 @@ fn run_ail_build_from_core(
                 agent_native_executables: agent_native_artifacts.as_slice(),
             });
             let manifest_fingerprint = ail_artifact_fingerprint(&manifest_text);
+            let requirements_fingerprint = requirements_artifact.map(ail_artifact_fingerprint);
+            let spec_fingerprint = spec_text.map(ail_artifact_fingerprint);
             let core_fingerprint = ail_artifact_fingerprint(&core_text);
             let pass_target_fingerprint =
                 native_artifact_fingerprint_text(pass_native_artifacts.as_slice());
@@ -4207,12 +4245,16 @@ fn run_ail_build_from_core(
                 .map(ail_artifact_fingerprint);
             run_ail_build_agent_verify_manifest(
                 agent_run,
-                &manifest_text,
-                &manifest_fingerprint,
-                &core_fingerprint,
-                pass_target_fingerprint.as_deref(),
-                prompt_portability_fingerprint.as_deref(),
-                native_bytecode_report_text.as_deref(),
+                AilBuildAgentManifestVerification {
+                    manifest_text: &manifest_text,
+                    manifest_fingerprint: &manifest_fingerprint,
+                    requirements_fingerprint: requirements_fingerprint.as_deref(),
+                    spec_fingerprint: spec_fingerprint.as_deref(),
+                    core_fingerprint: &core_fingerprint,
+                    compiler_pass_target_fingerprint: pass_target_fingerprint.as_deref(),
+                    prompt_portability_fingerprint: prompt_portability_fingerprint.as_deref(),
+                    native_bytecode_report_text: native_bytecode_report_text.as_deref(),
+                },
             )?;
         }
         write_ail_build_artifacts(
