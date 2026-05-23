@@ -1676,6 +1676,30 @@ fn ail_core_patch_rejects_package_mismatch() {
 }
 
 #[test]
+fn ail_core_patch_rejects_non_string_package_guard() {
+    let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
+    let document = parse_ail_spec_text(&package.spec_text).unwrap();
+    let core = elaborate_ail_core(&package, &document);
+    let core_hash = ail_core_hash(&core);
+    let patch = format!(
+        r#"{{
+  "schema": "ail-core.patch.v0",
+  "package": [],
+  "base_hash": "{core_hash}",
+  "ops": []
+}}"#
+    );
+    let Err(error) = apply_ail_core_patch_text(&core, &patch) else {
+        panic!("expected non-string package guard to be rejected");
+    };
+
+    assert!(
+        error.contains("AIL-Core patch field 'package' must be a string"),
+        "{error}"
+    );
+}
+
+#[test]
 fn ail_core_patch_removes_edge_by_core_labels() {
     let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
     let document = parse_ail_spec_text(&package.spec_text).unwrap();

@@ -661,13 +661,14 @@ pub fn apply_ail_core_patch_text(core: &AilCore, patch_text: &str) -> Result<Ail
     if schema != "ail-core.patch.v0" {
         return Err(format!("expected ail-core.patch.v0 patch, got '{schema}'"));
     }
-    if let Some(package_name) = optional_json_string(root, "package")
-        && package_name != core.package.name
-    {
-        return Err(format!(
-            "AIL-Core patch package mismatch: expected {}, got {package_name}",
-            core.package.name
-        ));
+    if root.contains_key("package") {
+        let package_name = required_json_string_for(root, "package", "AIL-Core patch")?;
+        if package_name != core.package.name {
+            return Err(format!(
+                "AIL-Core patch package mismatch: expected {}, got {package_name}",
+                core.package.name
+            ));
+        }
     }
     let base_hash = required_json_string_for(root, "base_hash", "AIL-Core patch")?;
     let actual_hash = ail_core_hash(core);

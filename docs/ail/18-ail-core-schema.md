@@ -281,7 +281,8 @@ Patch operations:
 - `declare_provenance`
 
 `package` is optional for compatibility with early patch fixtures. When present,
-it must match the checked AIL-Core package name before any operation runs.
+it must be a string and must match the checked AIL-Core package name before any
+operation runs.
 `base_hash` is required. It uses the form `ail-core:fnv64:<hex>`, is computed
 from the canonical checked AIL-Core rendering after parsing, and is exposed in
 AIL-Flow as top-level `coreHash`. It is not computed from raw terminal output
