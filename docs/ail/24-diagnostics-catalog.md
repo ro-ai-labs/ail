@@ -22,7 +22,7 @@ severity, blocking behavior, and at least one invalid fixture.
   "blocking": true,
   "condition": "executable action has no records_trace edge",
   "affected": "node:Action",
-  "message": "action {action} is missing trace coverage",
+  "message": "{kind} {name} is missing trace coverage",
   "non_engineer_explanation": "This action can run, but reviewers would not be able to see that it happened.",
   "agent_follow_up": "Which trace event should be recorded when this action runs?",
   "repair": "Add a trace event and attach it with records_trace.",
@@ -68,7 +68,8 @@ severity, blocking behavior, and at least one invalid fixture.
 
 - condition: executable action or tool has no `records_trace` edge
 - affected graph item: `Action` or `Tool`
-- message template: `action {name} is missing trace coverage`
+- message template: `action {name} is missing trace coverage` or
+  `tool {name} is missing audit trace coverage`
 - non-engineer explanation: reviewers cannot tell that the action ran
 - agent follow-up question: `What event should the system record when {name} runs?`
 - repair suggestion: add a named trace event and attach it to the action
@@ -77,6 +78,20 @@ severity, blocking behavior, and at least one invalid fixture.
 - blocking behavior: blocks acceptance
 - invalid fixture:
   `examples/support_ticket.ail/examples/rejected/action-without-trace.ail-spec.md`
+
+### AIL-TRACE-002
+
+- condition: declared failure has no `records_trace` edge
+- affected graph item: `Failure`
+- message template: `failure {name} is missing trace coverage`
+- non-engineer explanation: reviewers cannot tell which failure happened
+- agent follow-up question: `What event should the system record when {name} happens?`
+- repair suggestion: add a trace bullet to the Failure section
+- AIL-Flow highlight: Failure trace section
+- severity: error
+- blocking behavior: blocks acceptance
+- invalid fixture:
+  `examples/support_ticket.ail/examples/rejected/failure-without-trace.ail-spec.md`
 
 ### AIL-SECRET-READ-001
 

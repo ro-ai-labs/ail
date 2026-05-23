@@ -3391,7 +3391,7 @@ fn ail_core_compilers_reject_unchecked_core_ir() {
         .retain(|edge| !(edge.kind == "records_trace" && edge.source == close_ticket_id));
     assert!(
         check_ail_core(&core)
-            .contains(&"AIL010 action CloseTicket is missing trace coverage".to_string())
+            .contains(&"AIL-TRACE-001 action CloseTicket is missing trace coverage".to_string())
     );
 
     let bytecode_error = compile_ail_core_bytecode(&core).unwrap_err();
@@ -3400,7 +3400,7 @@ fn ail_core_compilers_reject_unchecked_core_ir() {
         "{bytecode_error}"
     );
     assert!(
-        bytecode_error.contains("AIL010 action CloseTicket is missing trace coverage"),
+        bytecode_error.contains("AIL-TRACE-001 action CloseTicket is missing trace coverage"),
         "{bytecode_error}"
     );
 
@@ -3411,7 +3411,7 @@ fn ail_core_compilers_reject_unchecked_core_ir() {
         "{native_error}"
     );
     assert!(
-        native_error.contains("AIL010 action CloseTicket is missing trace coverage"),
+        native_error.contains("AIL-TRACE-001 action CloseTicket is missing trace coverage"),
         "{native_error}"
     );
 }
@@ -9763,7 +9763,7 @@ fn ail_core_reports_stable_invalid_fixture_diagnostics() {
     let failure_without_trace_core = elaborate_ail_core(&package, &failure_without_trace_doc);
     assert!(
         check_ail_core(&failure_without_trace_core)
-            .contains(&"AIL009 failure NotFound is missing trace coverage".to_string())
+            .contains(&"AIL-TRACE-002 failure NotFound is missing trace coverage".to_string())
     );
 
     let action_without_trace =
@@ -9772,7 +9772,7 @@ fn ail_core_reports_stable_invalid_fixture_diagnostics() {
     let action_without_trace_core = elaborate_ail_core(&package, &action_without_trace_doc);
     assert!(
         check_ail_core(&action_without_trace_core)
-            .contains(&"AIL010 action CloseTicket is missing trace coverage".to_string())
+            .contains(&"AIL-TRACE-001 action CloseTicket is missing trace coverage".to_string())
     );
 
     let unknown_field =
@@ -9917,11 +9917,11 @@ fn ail_core_reports_agent_tool_missing_trace_coverage() {
     let diagnostic = diagnostics
         .iter()
         .find(|diagnostic| {
-            diagnostic.code == "AIL017"
+            diagnostic.code == "AIL-TRACE-001"
                 && diagnostic.message
                     == "tool RefundCustomerPayment is missing audit trace coverage"
         })
-        .unwrap_or_else(|| panic!("missing AIL017 diagnostic: {diagnostics:?}"));
+        .unwrap_or_else(|| panic!("missing AIL-TRACE-001 diagnostic: {diagnostics:?}"));
 
     assert_eq!(
         diagnostic.source_provenance.as_deref(),
@@ -10914,12 +10914,12 @@ fn cli_ail_conformance_checks_valid_and_rejected_fixtures() {
         stdout.contains("repair=Add at least one handling bullet to Failure NotFound."),
         "{stdout}"
     );
-    assert!(stdout.contains("rejected: failure-without-trace.ail-spec.md AIL009"));
+    assert!(stdout.contains("rejected: failure-without-trace.ail-spec.md AIL-TRACE-002"));
     assert!(
         stdout.contains("repair=Add a 'the trace records ...' bullet to Failure NotFound."),
         "{stdout}"
     );
-    assert!(stdout.contains("rejected: action-without-trace.ail-spec.md AIL010"));
+    assert!(stdout.contains("rejected: action-without-trace.ail-spec.md AIL-TRACE-001"));
     assert!(stdout.contains("rejected: unknown-field.ail-spec.md AIL004"));
     assert!(
         stdout.contains("source=action:ArchiveTicket.read:ticket owner email"),
@@ -11286,7 +11286,7 @@ fn cli_ail_conformance_checks_agent_tool_fixtures() {
     assert!(stdout.contains("rejected: permission-without-rule.ail-spec.md AIL019"));
     assert!(stdout.contains("rejected: secret-output.ail-spec.md AIL020"));
     assert!(stdout.contains("rejected: unknown-input-type.ail-spec.md AIL006"));
-    assert!(stdout.contains("rejected: tool-without-trace.ail-spec.md AIL017"));
+    assert!(stdout.contains("rejected: tool-without-trace.ail-spec.md AIL-TRACE-001"));
     assert!(
         stdout.contains("source=tool:RefundCustomerPayment.input:payment token"),
         "{stdout}"

@@ -2701,7 +2701,7 @@ pub fn check_ail_core_diagnostics(core: &AilCore) -> Vec<AilDiagnostic> {
         if !has_outgoing_edge(&core.graph, "records_trace", &action.id) {
             diagnostics.push(
                 AilDiagnostic::error(
-                    "AIL010",
+                    "AIL-TRACE-001",
                     format!("action {} is missing trace coverage", action.name),
                 )
                 .with_source_provenance(node_provenance(core, &action.id))
@@ -11188,7 +11188,7 @@ fn check_failure_trace_coverage(core: &AilCore) -> Vec<AilDiagnostic> {
         .filter(|failure| !has_outgoing_edge(&core.graph, "records_trace", &failure.id))
         .map(|failure| {
             AilDiagnostic::error(
-                "AIL009",
+                "AIL-TRACE-002",
                 format!("failure {} is missing trace coverage", failure.name),
             )
             .with_source_provenance(node_provenance(core, &failure.id))
@@ -11413,7 +11413,7 @@ fn check_tool_trace_coverage(core: &AilCore) -> Vec<AilDiagnostic> {
         .filter(|tool| !has_outgoing_edge(&core.graph, "records_trace", &tool.id))
         .map(|tool| {
             AilDiagnostic::error(
-                "AIL017",
+                "AIL-TRACE-001",
                 format!("tool {} is missing audit trace coverage", tool.name),
             )
             .with_source_provenance(node_provenance(core, &tool.id))
