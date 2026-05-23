@@ -1700,6 +1700,40 @@ fn ail_core_patch_rejects_non_string_package_guard() {
 }
 
 #[test]
+fn ail_core_patch_rejects_checker_invalid_result() {
+    let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
+    let document = parse_ail_spec_text(&package.spec_text).unwrap();
+    let core = elaborate_ail_core(&package, &document);
+    let core_hash = ail_core_hash(&core);
+    let patch = format!(
+        r#"{{
+  "schema": "ail-core.patch.v0",
+  "base_hash": "{core_hash}",
+  "source_view": "ActionCard:CloseTicket",
+  "ops": [
+    {{
+      "op": "add_node",
+      "kind": "Widget",
+      "name": "Forgotten review state"
+    }}
+  ]
+}}"#
+    );
+    let Err(error) = apply_ail_core_patch_text(&core, &patch) else {
+        panic!("expected checker-invalid patch result to be rejected");
+    };
+
+    assert!(
+        error.contains("AIL-Core patch result failed checker"),
+        "{error}"
+    );
+    assert!(
+        error.contains("unknown AIL-Core node kind 'Widget'"),
+        "{error}"
+    );
+}
+
+#[test]
 fn ail_core_patch_removes_edge_by_core_labels() {
     let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
     let document = parse_ail_spec_text(&package.spec_text).unwrap();

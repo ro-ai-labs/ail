@@ -313,8 +313,9 @@ node, may replace the node `type`, rewrites the target node's stable id when
 attributes change, and rewires existing edges to the updated node before the
 checker runs. `declare_provenance` resolves a checked node label and attaches
 one or more `Provenance` nodes through `has_provenance` edges without changing
-semantic attributes. The CLI prints the patched Core artifact only after the
-resulting graph passes the AIL-Core checker.
+semantic attributes. The patch applier returns the patched Core artifact only
+after the resulting graph passes the AIL-Core checker, and the CLI prints only
+that checked result.
 
 Reserved target operations:
 

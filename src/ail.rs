@@ -697,6 +697,13 @@ pub fn apply_ail_core_patch_text(core: &AilCore, patch_text: &str) -> Result<Ail
             op_name => return Err(format!("unsupported AIL-Core patch op '{op_name}'")),
         }
     }
+    let diagnostics = check_ail_core(&patched);
+    if !diagnostics.is_empty() {
+        return Err(format!(
+            "AIL-Core patch result failed checker: {}",
+            diagnostics.join("; ")
+        ));
+    }
     Ok(patched)
 }
 

@@ -156,8 +156,9 @@ It currently supports `add_node`, `remove_node`, `add_edge`, `remove_edge`,
 canonical checked AIL-Core artifact; stale patches are rejected before any
 operation runs. When the patch includes `package`, it must be a string and
 must match the checked Core package name before any operation runs. The CLI
-then runs the AIL-Core checker before printing the patched Core artifact. Node
-additions reject existing kind and name pairs. Node removals reject nodes with
+uses the patch applier, which runs the AIL-Core checker before returning the
+patched Core artifact for printing. Node additions reject existing kind and name
+pairs. Node removals reject nodes with
 incident edges, so visual editors remove relationships first. Edge additions
 reject existing source, target, and kind triples; edge removals and edge
 attribute edits reject missing source, target, or edge references instead of
