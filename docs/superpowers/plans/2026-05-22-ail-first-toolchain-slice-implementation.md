@@ -7450,6 +7450,53 @@ host-language runtime, dynamic linker, shared-library, library, or linker
 dependency before the AIL-authored conformance manifest verifier accepts the
 manifest.
 
+### Task 165: Native Bytecode Reports Declare ELF Machine-Level Contract
+
+**Files:**
+- Modify: `src/main.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+- Test: `tests/ail_toolchain.rs`
+
+- [x] **Step 1: Write failing native bytecode contract assertions**
+
+Extend representative native artifact tests for direct compile, bootstrap, and
+conformance to require native bytecode reports to declare the bytecode level as
+machine code, the Linux ELF executable container, and the ELF64 little-endian
+x86_64 executable format.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_compile_writes_saved_bytecode_native_artifacts -- --nocapture
+```
+
+Expected: failure because native bytecode reports list per-artifact ELF
+identity but do not yet declare the report-level machine-code ELF contract.
+
+- [x] **Step 3: Render native bytecode contract preambles**
+
+Add a shared native bytecode report preamble for `linux-x86_64-elf` and use it
+from compile, compile-bundle, build, bootstrap, lower, pass, and conformance
+native bytecode report renderers. Document that "native bytecode" means
+machine-level ELF executable code on Linux, while AIL-Bytecode JSON remains an
+auditable compiler intermediate.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_compile_writes_saved_bytecode_native_artifacts -- --nocapture
+cargo test --test ail_toolchain cli_ail_bootstrap_writes_native_toolchain_bundle -- --nocapture
+cargo test --test ail_toolchain cli_ail_conformance_writes_native_agent_artifacts -- --nocapture
+```
+
+Expected: native bytecode reports now state the machine-level Linux ELF
+contract before listing each executable artifact and fingerprint.
+
 ### Task 18: Declared Failure Trace Coverage Diagnostics
 
 **Files:**

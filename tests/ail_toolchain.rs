@@ -4043,6 +4043,18 @@ fn cli_ail_compile_writes_saved_bytecode_native_artifacts() {
         "{native_bytecode_report}"
     );
     assert!(
+        native_bytecode_report.contains("bytecode-level machine"),
+        "{native_bytecode_report}"
+    );
+    assert!(
+        native_bytecode_report.contains("bytecode-container linux-elf-executable"),
+        "{native_bytecode_report}"
+    );
+    assert!(
+        native_bytecode_report.contains("bytecode-format elf64-little-x86_64-executable"),
+        "{native_bytecode_report}"
+    );
+    assert!(
         native_bytecode_report.contains("action CloseTicket"),
         "{native_bytecode_report}"
     );
@@ -5019,6 +5031,18 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
     );
     assert!(
         native_bytecode_report.contains("target linux-x86_64-elf"),
+        "{native_bytecode_report}"
+    );
+    assert!(
+        native_bytecode_report.contains("bytecode-level machine"),
+        "{native_bytecode_report}"
+    );
+    assert!(
+        native_bytecode_report.contains("bytecode-container linux-elf-executable"),
+        "{native_bytecode_report}"
+    );
+    assert!(
+        native_bytecode_report.contains("bytecode-format elf64-little-x86_64-executable"),
         "{native_bytecode_report}"
     );
     assert!(
@@ -7955,6 +7979,18 @@ fn cli_ail_conformance_writes_native_agent_artifacts() {
     );
     assert!(
         native_bytecode_report.contains("target linux-x86_64-elf"),
+        "{native_bytecode_report}"
+    );
+    assert!(
+        native_bytecode_report.contains("bytecode-level machine"),
+        "{native_bytecode_report}"
+    );
+    assert!(
+        native_bytecode_report.contains("bytecode-container linux-elf-executable"),
+        "{native_bytecode_report}"
+    );
+    assert!(
+        native_bytecode_report.contains("bytecode-format elf64-little-x86_64-executable"),
         "{native_bytecode_report}"
     );
     assert!(

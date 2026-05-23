@@ -4263,16 +4263,31 @@ fn native_artifact_fingerprint_text(artifacts: &[AilNativeArtifact]) -> Option<S
     )
 }
 
+fn native_machine_bytecode_report_header(
+    report_title: &str,
+    target_name: &str,
+) -> Result<Vec<String>, String> {
+    let (container, format) = match target_name {
+        "linux-x86_64-elf" => ("linux-elf-executable", "elf64-little-x86_64-executable"),
+        _ => return Err(format!("unsupported native bytecode target {target_name}")),
+    };
+    Ok(vec![
+        report_title.to_string(),
+        format!("target {target_name}"),
+        "bytecode-level machine".to_string(),
+        format!("bytecode-container {container}"),
+        format!("bytecode-format {format}"),
+    ])
+}
+
 fn render_ail_bootstrap_native_bytecode_report(
     target_name: &str,
     toolchain_artifacts: &[AilNativeArtifact],
     compiler_pass_artifacts: &[AilNativeArtifact],
     agent_artifacts: &[AilNativeArtifact],
 ) -> Result<String, String> {
-    let mut lines = vec![
-        "AIL-Bootstrap-Native-Bytecode:".to_string(),
-        format!("target {target_name}"),
-    ];
+    let mut lines =
+        native_machine_bytecode_report_header("AIL-Bootstrap-Native-Bytecode:", target_name)?;
     for (role, artifacts) in [
         ("toolchain-agent-target", toolchain_artifacts),
         ("compiler-pass-target", compiler_pass_artifacts),
@@ -4778,10 +4793,8 @@ fn render_ail_lower_native_bytecode_report(
     target_name: &str,
     agent_artifacts: &[AilNativeArtifact],
 ) -> Result<String, String> {
-    let mut lines = vec![
-        "AIL-Lower-Native-Bytecode:".to_string(),
-        format!("target {target_name}"),
-    ];
+    let mut lines =
+        native_machine_bytecode_report_header("AIL-Lower-Native-Bytecode:", target_name)?;
     for artifact in agent_artifacts {
         if artifact.target_name != target_name {
             return Err(format!(
@@ -4835,10 +4848,8 @@ fn render_ail_conformance_native_bytecode_report(
     target_name: &str,
     agent_artifacts: &[AilNativeArtifact],
 ) -> Result<String, String> {
-    let mut lines = vec![
-        "AIL-Conformance-Native-Bytecode:".to_string(),
-        format!("target {target_name}"),
-    ];
+    let mut lines =
+        native_machine_bytecode_report_header("AIL-Conformance-Native-Bytecode:", target_name)?;
     for artifact in agent_artifacts {
         if artifact.target_name != target_name {
             return Err(format!(
@@ -4894,17 +4905,15 @@ fn render_ail_compile_native_bytecode_report(
     target_executable: &[u8],
     agent_artifacts: &[AilNativeArtifact],
 ) -> Result<String, String> {
-    let mut lines = vec![
-        "AIL-Compile-Native-Bytecode:".to_string(),
-        format!("target {target_name}"),
-        format!("action {action_name}"),
-        format!(
-            "machine-bytecode target {target_name} target.elf {} {} bytes {}",
-            native_machine_bytecode_identity(target_executable)?,
-            ail_artifact_fingerprint_bytes(target_executable),
-            target_executable.len()
-        ),
-    ];
+    let mut lines =
+        native_machine_bytecode_report_header("AIL-Compile-Native-Bytecode:", target_name)?;
+    lines.push(format!("action {action_name}"));
+    lines.push(format!(
+        "machine-bytecode target {target_name} target.elf {} {} bytes {}",
+        native_machine_bytecode_identity(target_executable)?,
+        ail_artifact_fingerprint_bytes(target_executable),
+        target_executable.len()
+    ));
     for artifact in agent_artifacts {
         if artifact.target_name != target_name {
             return Err(format!(
@@ -4966,11 +4975,9 @@ fn render_ail_compile_bundle_native_bytecode_report(
     target_executables: &[AilNativeArtifact],
     agent_artifacts: &[AilNativeArtifact],
 ) -> Result<String, String> {
-    let mut lines = vec![
-        "AIL-Compile-Bundle-Native-Bytecode:".to_string(),
-        format!("target {target_name}"),
-        "bundle all-actions".to_string(),
-    ];
+    let mut lines =
+        native_machine_bytecode_report_header("AIL-Compile-Bundle-Native-Bytecode:", target_name)?;
+    lines.push("bundle all-actions".to_string());
     for (role, artifacts) in [
         ("target", target_executables),
         ("agent-target", agent_artifacts),
@@ -5035,16 +5042,14 @@ fn render_ail_build_native_bytecode_report(
     compiler_pass_artifacts: &[AilNativeArtifact],
     agent_artifacts: &[AilNativeArtifact],
 ) -> Result<String, String> {
-    let mut lines = vec![
-        "AIL-Build-Native-Bytecode:".to_string(),
-        format!("target {target_name}"),
-        format!(
-            "machine-bytecode target {target_name} target.elf {} {} bytes {}",
-            native_machine_bytecode_identity(target_executable)?,
-            ail_artifact_fingerprint_bytes(target_executable),
-            target_executable.len()
-        ),
-    ];
+    let mut lines =
+        native_machine_bytecode_report_header("AIL-Build-Native-Bytecode:", target_name)?;
+    lines.push(format!(
+        "machine-bytecode target {target_name} target.elf {} {} bytes {}",
+        native_machine_bytecode_identity(target_executable)?,
+        ail_artifact_fingerprint_bytes(target_executable),
+        target_executable.len()
+    ));
     for (role, artifacts) in [
         ("compiler-pass-target", compiler_pass_artifacts),
         ("agent-target", agent_artifacts),
@@ -5112,10 +5117,8 @@ fn render_ail_pass_native_bytecode_report(
     compiler_pass_artifacts: &[AilNativeArtifact],
     agent_artifacts: &[AilNativeArtifact],
 ) -> Result<String, String> {
-    let mut lines = vec![
-        "AIL-Pass-Native-Bytecode:".to_string(),
-        format!("target {target_name}"),
-    ];
+    let mut lines =
+        native_machine_bytecode_report_header("AIL-Pass-Native-Bytecode:", target_name)?;
     for (role, artifacts) in [
         ("compiler-pass-target", compiler_pass_artifacts),
         ("agent-target", agent_artifacts),

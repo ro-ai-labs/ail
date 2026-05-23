@@ -319,6 +319,12 @@ The native executable path is the bytecode target in the machine-level sense.
 The VM instruction artifact remains an intermediate representation until the
 native compiler covers the full action ABI, runtime state, traces,
 requirements, and field writes.
+Every native-bytecode report begins with `bytecode-level machine`,
+`bytecode-container linux-elf-executable`, and
+`bytecode-format elf64-little-x86_64-executable` for the Linux target. That
+report-level contract keeps "bytecode" anchored to machine-level ELF
+executables, while AIL-Bytecode JSON remains the auditable compiler
+intermediate used for checking, VM execution, and bootstrap handoff.
 
 The first VM instruction compiler supports Application-profile actions,
 AgentTool-profile tool declarations, Compiler-profile compiler passes, and
