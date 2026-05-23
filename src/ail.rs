@@ -24,6 +24,7 @@ pub struct AilPackageMetadata {
     pub entry: String,
     pub features: Vec<String>,
     pub imports: Vec<AilImportSpec>,
+    pub capability_grants: Vec<AilCapabilityGrant>,
     pub conformance: String,
     pub prompt_pack: Option<String>,
     pub target_support: BTreeMap<String, String>,
@@ -37,6 +38,14 @@ pub struct AilImportSpec {
     pub path: String,
     pub version: Option<String>,
     pub alias: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AilCapabilityGrant {
+    pub package: String,
+    pub capability: String,
+    pub effects: Vec<String>,
+    pub approvals: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -2639,6 +2648,10 @@ pub fn render_ail_core(core: &AilCore) -> String {
         format!("entry: {}", core.package.entry),
         format!("features: {}", core.package.features.join(", ")),
         format!("imports: {}", render_import_specs(&core.package.imports)),
+        format!(
+            "capability-grants: {}",
+            render_capability_grant_specs(&core.package.capability_grants)
+        ),
         format!("conformance: {}", core.package.conformance),
     ];
     if let Some(prompt_pack) = &core.package.prompt_pack {
@@ -2719,6 +2732,22 @@ fn render_import_specs(imports: &[AilImportSpec]) -> String {
         .join(", ")
 }
 
+fn render_capability_grant_specs(grants: &[AilCapabilityGrant]) -> String {
+    grants
+        .iter()
+        .map(|grant| {
+            format!(
+                "package={};capability={};effects={};approvals={}",
+                grant.package,
+                grant.capability,
+                grant.effects.join("|"),
+                grant.approvals.join("|")
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(" || ")
+}
+
 fn render_target_support_specs(target_support: &BTreeMap<String, String>) -> String {
     target_support
         .iter()
@@ -2734,6 +2763,7 @@ pub fn parse_ail_core_text(text: &str) -> Result<AilCore, String> {
     let mut entry = None;
     let mut features = Vec::new();
     let mut imports = Vec::new();
+    let mut capability_grants = Vec::new();
     let mut conformance = None;
     let mut prompt_pack = None;
     let mut target_support = BTreeMap::new();
@@ -2783,6 +2813,13 @@ pub fn parse_ail_core_text(text: &str) -> Result<AilCore, String> {
                             Vec::new()
                         } else {
                             parse_import_specs(&value)?
+                        };
+                    }
+                    "capability-grants" => {
+                        capability_grants = if value.is_empty() {
+                            Vec::new()
+                        } else {
+                            parse_capability_grant_specs(&value)?
                         };
                     }
                     "conformance" => conformance = Some(value),
@@ -2856,6 +2893,7 @@ pub fn parse_ail_core_text(text: &str) -> Result<AilCore, String> {
             entry: entry.unwrap_or_default(),
             features,
             imports,
+            capability_grants,
             conformance: conformance
                 .ok_or_else(|| "AIL-Core missing conformance metadata".to_string())?,
             prompt_pack,
@@ -8489,9 +8527,19 @@ pub fn run_ail_conformance(package: &AilPackage) -> Result<AilConformanceResult,
     })
 }
 
+#[derive(Default)]
+struct AilCapabilityGrantBuilder {
+    package: Option<String>,
+    capability: Option<String>,
+    effects: Vec<String>,
+    approvals: Vec<String>,
+}
+
 fn parse_package_metadata(text: &str) -> Result<AilPackageMetadata, String> {
     let mut values = BTreeMap::new();
     let mut target_support = BTreeMap::new();
+    let mut capability_grants = Vec::new();
+    let mut capability_grant = None;
     let mut active_block = "";
     for raw_line in text.lines() {
         let line = raw_line.trim();
@@ -8515,6 +8563,17 @@ fn parse_package_metadata(text: &str) -> Result<AilPackageMetadata, String> {
             target_support.insert(target.to_string(), status.to_string());
             continue;
         }
+        if is_indented && active_block == "capability-grants" {
+            parse_capability_grant_manifest_line(
+                line,
+                &mut capability_grant,
+                &mut capability_grants,
+            )?;
+            continue;
+        }
+        if active_block == "capability-grants" {
+            finish_capability_grant(capability_grant.take(), &mut capability_grants)?;
+        }
         active_block = "";
         let Some((key, value)) = line.split_once(':') else {
             continue;
@@ -8527,9 +8586,18 @@ fn parse_package_metadata(text: &str) -> Result<AilPackageMetadata, String> {
             } else {
                 target_support = parse_target_support_specs(&value)?;
             }
+        } else if key == "capability-grants" {
+            if value.is_empty() {
+                active_block = "capability-grants";
+            } else {
+                capability_grants = parse_capability_grant_specs(&value)?;
+            }
         } else {
             values.insert(key, value);
         }
+    }
+    if active_block == "capability-grants" {
+        finish_capability_grant(capability_grant.take(), &mut capability_grants)?;
     }
     let name = required_metadata(&values, "name")?;
     let version = values
@@ -8572,6 +8640,7 @@ fn parse_package_metadata(text: &str) -> Result<AilPackageMetadata, String> {
         entry,
         features,
         imports,
+        capability_grants,
         conformance,
         prompt_pack,
         target_support,
@@ -8618,6 +8687,130 @@ fn parse_import_specs(text: &str) -> Result<Vec<AilImportSpec>, String> {
         });
     }
     Ok(imports)
+}
+
+fn parse_capability_grant_manifest_line(
+    line: &str,
+    current: &mut Option<AilCapabilityGrantBuilder>,
+    grants: &mut Vec<AilCapabilityGrant>,
+) -> Result<(), String> {
+    let field = if let Some(field) = line.strip_prefix("- ") {
+        finish_capability_grant(current.take(), grants)?;
+        field.trim()
+    } else {
+        line
+    };
+    let Some((key, value)) = field.split_once(':') else {
+        return Err(format!(
+            "AIL capability-grants entry '{line}' must use '<field>: <value>'"
+        ));
+    };
+    let key = key.trim();
+    let value = value.trim();
+    if value.is_empty() {
+        return Err(format!(
+            "AIL capability-grants entry '{line}' must use '<field>: <value>'"
+        ));
+    }
+    let grant = current.get_or_insert_with(AilCapabilityGrantBuilder::default);
+    match key {
+        "package" => grant.package = Some(value.to_string()),
+        "capability" => grant.capability = Some(value.to_string()),
+        "effects" => grant.effects = parse_metadata_list(value)?,
+        "approvals" => grant.approvals = parse_metadata_list(value)?,
+        key => {
+            return Err(format!("unknown AIL capability-grants field '{key}'"));
+        }
+    }
+    Ok(())
+}
+
+fn finish_capability_grant(
+    grant: Option<AilCapabilityGrantBuilder>,
+    grants: &mut Vec<AilCapabilityGrant>,
+) -> Result<(), String> {
+    let Some(grant) = grant else {
+        return Ok(());
+    };
+    let package = grant
+        .package
+        .ok_or_else(|| "AIL capability-grants entry missing package".to_string())?;
+    let capability = grant
+        .capability
+        .ok_or_else(|| "AIL capability-grants entry missing capability".to_string())?;
+    grants.push(AilCapabilityGrant {
+        package,
+        capability,
+        effects: grant.effects,
+        approvals: grant.approvals,
+    });
+    Ok(())
+}
+
+fn parse_metadata_list(value: &str) -> Result<Vec<String>, String> {
+    let value = value.trim();
+    if value.is_empty() {
+        return Ok(Vec::new());
+    }
+    if value.starts_with('[') || value.ends_with(']') {
+        if !(value.starts_with('[') && value.ends_with(']')) {
+            return Err(format!(
+                "AIL metadata list '{value}' must use '[item, item]'"
+            ));
+        }
+        let inner = value.trim_start_matches('[').trim_end_matches(']');
+        return Ok(inner
+            .split(',')
+            .map(str::trim)
+            .filter(|item| !item.is_empty())
+            .map(ToString::to_string)
+            .collect());
+    }
+    Ok(vec![value.to_string()])
+}
+
+fn parse_capability_grant_specs(text: &str) -> Result<Vec<AilCapabilityGrant>, String> {
+    let mut grants = Vec::new();
+    for entry in text
+        .split(" || ")
+        .map(str::trim)
+        .filter(|entry| !entry.is_empty())
+    {
+        let mut grant = AilCapabilityGrantBuilder::default();
+        for field in entry
+            .split(';')
+            .map(str::trim)
+            .filter(|field| !field.is_empty())
+        {
+            let Some((key, value)) = field.split_once('=') else {
+                return Err(format!(
+                    "AIL capability-grants field '{field}' must use '<field>=<value>'"
+                ));
+            };
+            let key = key.trim();
+            let value = value.trim();
+            match key {
+                "package" => grant.package = Some(value.to_string()),
+                "capability" => grant.capability = Some(value.to_string()),
+                "effects" => grant.effects = parse_pipe_list(value),
+                "approvals" => grant.approvals = parse_pipe_list(value),
+                key => {
+                    return Err(format!("unknown AIL capability-grants field '{key}'"));
+                }
+            }
+        }
+        finish_capability_grant(Some(grant), &mut grants)?;
+    }
+    Ok(grants)
+}
+
+fn parse_pipe_list(value: &str) -> Vec<String> {
+    value
+        .split('|')
+        .map(str::trim)
+        .filter(|item| !item.is_empty())
+        .map(ToString::to_string)
+        .collect()
 }
 
 fn parse_target_support_specs(text: &str) -> Result<BTreeMap<String, String>, String> {

@@ -1683,6 +1683,72 @@ safety-level: standard
 }
 
 #[test]
+fn ail_core_text_preserves_manifest_capability_grants() {
+    let unique_suffix = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let root = std::env::temp_dir().join(format!(
+        "ail-capability-grants-manifest-{}-{unique_suffix}",
+        std::process::id()
+    ));
+    fs::create_dir_all(&root).unwrap();
+    fs::write(
+        root.join("ail-package.md"),
+        r#"name: capability-grant-app
+version: 0.1.0
+profile: Application
+entry: spec.ail-spec.md
+features: imports
+conformance: first-slice
+capability-grants:
+  - package: payments.stripe
+    capability: call external payment provider
+    effects: [network, money]
+    approvals: [manager approval over USD 500]
+"#,
+    )
+    .unwrap();
+    fs::write(
+        root.join("spec.ail-spec.md"),
+        "The application Capability Grant App manages capability metadata.\n",
+    )
+    .unwrap();
+
+    let package = load_ail_package_dir(&root).unwrap();
+    assert_eq!(package.metadata.capability_grants.len(), 1);
+    let grant = &package.metadata.capability_grants[0];
+    assert_eq!(grant.package, "payments.stripe");
+    assert_eq!(grant.capability, "call external payment provider");
+    assert_eq!(
+        grant.effects,
+        vec!["network".to_string(), "money".to_string()]
+    );
+    assert_eq!(
+        grant.approvals,
+        vec!["manager approval over USD 500".to_string()]
+    );
+
+    let document = parse_ail_package_document(&package).unwrap();
+    let core = elaborate_ail_core(&package, &document);
+    let rendered = render_ail_core(&core);
+    assert!(
+        rendered.contains(
+            "capability-grants: package=payments.stripe;capability=call external payment provider;effects=network|money;approvals=manager approval over USD 500"
+        ),
+        "{rendered}"
+    );
+
+    let reparsed = parse_ail_core_text(&rendered).unwrap();
+    assert_eq!(
+        reparsed.package.capability_grants,
+        package.metadata.capability_grants
+    );
+
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn ail_core_elaboration_preserves_provenance_for_behavior_bullets() {
     let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
     let document = parse_ail_spec_text(&package.spec_text).unwrap();
@@ -3337,12 +3403,18 @@ fn ail_native_elf_executes_bytecode_branch_and_jump_control_flow() {
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
         .as_nanos();
-    let executable_path = std::env::temp_dir().join(format!(
+    let executable_dir = std::env::temp_dir().join(format!(
         "ail-branch-bytecode-native-{}-{unique_suffix}",
         std::process::id()
     ));
-    let _ = fs::remove_file(&executable_path);
-    fs::write(&executable_path, executable).unwrap();
+    let _ = fs::remove_dir_all(&executable_dir);
+    fs::create_dir(&executable_dir).unwrap();
+    let executable_path = executable_dir.join("ResolveTicket");
+    {
+        let mut file = fs::File::create(&executable_path).unwrap();
+        file.write_all(&executable).unwrap();
+        file.sync_all().unwrap();
+    }
     let mut permissions = fs::metadata(&executable_path).unwrap().permissions();
     permissions.set_mode(0o755);
     fs::set_permissions(&executable_path, permissions).unwrap();
@@ -3384,7 +3456,7 @@ fn ail_native_elf_executes_bytecode_branch_and_jump_control_flow() {
         )
     );
 
-    fs::remove_file(executable_path).unwrap();
+    fs::remove_dir_all(executable_dir).unwrap();
 }
 
 #[test]

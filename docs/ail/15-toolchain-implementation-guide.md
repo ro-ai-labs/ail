@@ -142,6 +142,10 @@ remains a checker and backend conformance responsibility.
 When present, `schema-version` and `safety-level` are also preserved as package
 metadata in checked AIL-Core. Schema-version rejection and safety policy
 enforcement remain checker responsibilities.
+When present, `capability-grants:` entries are parsed into package metadata and
+rendered into checked AIL-Core as deterministic grant records with package,
+capability, effects, and approvals. Enforcement that imported behavior stays
+inside granted effects remains checker work.
 
 Conformance checks must validate the entry spec, every accepted fixture, and
 every rejected fixture. Accepted fixtures pass only when they produce no checker
