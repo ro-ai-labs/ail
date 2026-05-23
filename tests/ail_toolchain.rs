@@ -3975,9 +3975,46 @@ fn cli_ail_compile_writes_all_action_native_bundle() {
 
     let compile_application = fs::read(artifact_dir.join("target-CompileApplication.elf")).unwrap();
     assert_eq!(&compile_application[0..4], b"\x7fELF");
+    let expected_compile_application_fingerprint = fnv64_fingerprint_bytes(&compile_application);
     let verify_manifest = fs::read(artifact_dir.join("target-VerifyBuildManifest.elf")).unwrap();
     assert_eq!(&verify_manifest[0..4], b"\x7fELF");
     let expected_manifest_fingerprint = fnv64_fingerprint_bytes(&verify_manifest);
+    let native_bytecode_report =
+        fs::read_to_string(artifact_dir.join("native-bytecode-report.txt")).unwrap();
+    assert!(
+        native_bytecode_report.contains("AIL-Compile-Bundle-Native-Bytecode:"),
+        "{native_bytecode_report}"
+    );
+    assert!(
+        native_bytecode_report.contains("target linux-x86_64-elf"),
+        "{native_bytecode_report}"
+    );
+    assert!(
+        native_bytecode_report.contains("bundle all-actions"),
+        "{native_bytecode_report}"
+    );
+    assert!(
+        native_bytecode_report.contains(&format!(
+            "machine-bytecode target linux-x86_64-elf target-CompileApplication.elf elf64-little-x86_64-executable {} bytes {}",
+            expected_compile_application_fingerprint,
+            compile_application.len()
+        )),
+        "{native_bytecode_report}"
+    );
+    assert!(
+        native_bytecode_report.contains(&format!(
+            "machine-bytecode target linux-x86_64-elf target-VerifyBuildManifest.elf elf64-little-x86_64-executable {} bytes {}",
+            expected_manifest_fingerprint,
+            verify_manifest.len()
+        )),
+        "{native_bytecode_report}"
+    );
+    let native_bytecode_report_fingerprint =
+        fs::read_to_string(artifact_dir.join("native-bytecode-report.fingerprint.txt")).unwrap();
+    assert_eq!(
+        native_bytecode_report_fingerprint.trim(),
+        fnv64_fingerprint(&native_bytecode_report)
+    );
 
     let native_run = Command::new(artifact_dir.join("target-VerifyBuildManifest.elf"))
         .args([
@@ -4014,6 +4051,13 @@ fn cli_ail_compile_writes_all_action_native_bundle() {
     assert!(
         manifest.contains(&format!(
             "target linux-x86_64-elf target-VerifyBuildManifest.elf {expected_manifest_fingerprint}"
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "native-bytecode native-bytecode-report.txt {}",
+            fnv64_fingerprint(&native_bytecode_report)
         )),
         "{manifest}"
     );
@@ -4068,6 +4112,8 @@ fn cli_ail_compile_agent_verifies_all_action_native_bundle() {
     assert!(agent_trace.contains("read buildrequest.bytecode fingerprint"));
     assert!(agent_trace.contains("read buildrequest.target artifact"));
     assert!(agent_trace.contains("read buildrequest.target artifact fingerprint"));
+    assert!(agent_trace.contains("read buildrequest.native bytecode report"));
+    assert!(agent_trace.contains("read buildrequest.native bytecode report fingerprint"));
     assert!(agent_trace.contains("read buildrequest.artifact manifest"));
     assert!(agent_trace.contains("read buildrequest.artifact manifest fingerprint"));
     assert!(
@@ -4089,6 +4135,8 @@ fn cli_ail_compile_agent_verifies_all_action_native_bundle() {
             "buildrequest.bytecode fingerprint=fnv64:bytecode",
             "buildrequest.target artifact=bundle",
             "buildrequest.target artifact fingerprint=fnv64:target-bundle",
+            "buildrequest.native bytecode report=ok",
+            "buildrequest.native bytecode report fingerprint=fnv64:native-bytecode",
             "buildrequest.artifact manifest=ok",
             "buildrequest.artifact manifest fingerprint=fnv64:manifest",
         ])
