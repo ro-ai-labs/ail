@@ -103,24 +103,25 @@ No-code views do not perform opaque text edits. They produce graph patches
 against AIL-Core. Each patch declares the nodes, edges, attributes, and
 provenance it adds, changes, or removes.
 
-Every AIL-Flow projection includes a top-level `coreHash` field. Visual editors
-and AI agents copy that value into patch `base_hash` so a stale view cannot
-overwrite a newer checked Core graph. Node-backed Flow objects such as things,
-fields, actions, tools, compiler passes, and system components also include
-`coreLabel`, which is the exact checked Core node label to use in patch
-`source`, `target`, or `target` references. Flow objects that expose graph
-relationships keep their human-readable arrays such as `requires`, `writes`,
-`effects`, and `traces`, and also include `edgeRefs` for the same checked graph
-edges. Each edge reference names the patch `kind`, `source`, `target`, display
-`targetName`, and current edge `attributes`, so a visual editor can construct
-`remove_edge` or `replace_edge_attributes` operations without guessing target
-kinds.
+Every AIL-Flow projection includes top-level `package` and `coreHash` fields.
+Visual editors and AI agents copy those values into patch `package` and
+`base_hash` so an edit cannot target a different package or overwrite a newer
+checked Core graph. Node-backed Flow objects such as things, fields, actions,
+tools, compiler passes, and system components also include `coreLabel`, which
+is the exact checked Core node label to use in patch `source`, `target`, or
+`target` references. Flow objects that expose graph relationships keep their
+human-readable arrays such as `requires`, `writes`, `effects`, and `traces`,
+and also include `edgeRefs` for the same checked graph edges. Each edge
+reference names the patch `kind`, `source`, `target`, display `targetName`, and
+current edge `attributes`, so a visual editor can construct `remove_edge` or
+`replace_edge_attributes` operations without guessing target kinds.
 
 Patch payload:
 
 ```json
 {
   "schema": "ail-core.patch.v0",
+  "package": "support-ticket",
   "base_hash": "ail-core:fnv64:...",
   "source_view": "ActionCard:CloseTicket",
   "ops": [
@@ -153,15 +154,17 @@ It currently supports `add_node`, `remove_node`, `add_edge`, `remove_edge`,
 `replace_edge_attributes`, `replace_node_attributes`, and
 `declare_provenance` operations. The patch must include `base_hash` for the
 canonical checked AIL-Core artifact; stale patches are rejected before any
-operation runs. The CLI then runs the AIL-Core checker before printing the
-patched Core artifact. Node removals reject nodes with incident edges, so
-visual editors remove relationships first. Edge removals and edge attribute
-edits reject missing source, target, or edge references instead of silently
-accepting a no-op. Attribute edits rewire changed stable ids before checking,
-so existing rules, traces, failures, and provenance stay attached to the edited
-node or edge. `declare_provenance` attaches reviewed provenance to an existing
-node without changing semantic attributes. The patched Core can be rendered
-back to AIL-Spec with `ail-spec --core-file`.
+operation runs. When the patch includes `package`, it must match the checked
+Core package name before any operation runs. The CLI then runs the AIL-Core
+checker before printing the patched Core artifact. Node removals reject nodes
+with incident edges, so visual editors remove relationships first. Edge
+removals and edge attribute edits reject missing source, target, or edge
+references instead of silently accepting a no-op. Attribute edits rewire
+changed stable ids before checking, so existing rules, traces, failures, and
+provenance stay attached to the edited node or edge. `declare_provenance`
+attaches reviewed provenance to an existing node without changing semantic
+attributes. The patched Core can be rendered back to AIL-Spec with
+`ail-spec --core-file`.
 
 Direct visual edits are allowed for fields, rules, trace names, form bindings,
 view filters, and declared permissions when all required semantics are present.

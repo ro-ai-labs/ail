@@ -1652,6 +1652,30 @@ fn ail_flow_projection_renders_no_code_view_from_core() {
 }
 
 #[test]
+fn ail_core_patch_rejects_package_mismatch() {
+    let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
+    let document = parse_ail_spec_text(&package.spec_text).unwrap();
+    let core = elaborate_ail_core(&package, &document);
+    let core_hash = ail_core_hash(&core);
+    let patch = format!(
+        r#"{{
+  "schema": "ail-core.patch.v0",
+  "package": "wrong-package",
+  "base_hash": "{core_hash}",
+  "ops": []
+}}"#
+    );
+    let error = apply_ail_core_patch_text(&core, &patch).unwrap_err();
+
+    assert!(
+        error.contains(
+            "AIL-Core patch package mismatch: expected support-ticket, got wrong-package"
+        ),
+        "{error}"
+    );
+}
+
+#[test]
 fn ail_core_patch_removes_edge_by_core_labels() {
     let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
     let document = parse_ail_spec_text(&package.spec_text).unwrap();
