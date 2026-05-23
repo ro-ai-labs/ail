@@ -3133,13 +3133,13 @@ pub fn run_ail_action(
     let mut trace = vec![format!("action {action_name} started")];
 
     for requirement in &action.requirements {
+        let mut handled = false;
         if let Some(subject) = existence_requirement_reference(requirement) {
             let key = existence_requirement_runtime_key(document, &subject);
             if !final_state.contains_key(&key) {
                 return Ok(failed_run(document, final_state, trace, "NotFound"));
             }
-            trace.push(format!("rule passed: {requirement}"));
-            continue;
+            handled = true;
         }
         if let Some(keys) = input_requirement_keys(document, requirement) {
             if keys.iter().any(|key| !final_state.contains_key(key)) {
@@ -3150,8 +3150,7 @@ pub fn run_ail_action(
                     "RequirementFailed",
                 ));
             }
-            trace.push(format!("rule passed: {requirement}"));
-            continue;
+            handled = true;
         }
         if let Some((source, key)) = field_after_requirement(document, requirement) {
             if final_state
@@ -3166,8 +3165,7 @@ pub fn run_ail_action(
                     "RequirementFailed",
                 ));
             }
-            trace.push(format!("rule passed: {requirement}"));
-            continue;
+            handled = true;
         }
         if let Some((key, forbidden)) = negative_field_requirement(document, requirement) {
             if final_state
@@ -3181,8 +3179,7 @@ pub fn run_ail_action(
                     "RequirementFailed",
                 ));
             }
-            trace.push(format!("rule passed: {requirement}"));
-            continue;
+            handled = true;
         }
         if let Some((key, allowed_values)) = positive_field_requirement(document, requirement) {
             if !final_state
@@ -3192,6 +3189,9 @@ pub fn run_ail_action(
                 let failure_name = failed_requirement_name(document, requirement, &key);
                 return Ok(failed_run(document, final_state, trace, &failure_name));
             }
+            handled = true;
+        }
+        if handled {
             trace.push(format!("rule passed: {requirement}"));
             continue;
         }
@@ -5324,6 +5324,7 @@ fn compile_ail_action_bytecode(document: &AilDocument, action: &AilAction) -> Ai
         &[("action", action.name.clone())],
     ));
     for requirement in &action.requirements {
+        let mut emitted = false;
         if let Some(subject) = existence_requirement_reference(requirement) {
             instructions.push(AilBytecodeInstruction::new(
                 "REQUIRE_EXISTS",
@@ -5333,7 +5334,7 @@ fn compile_ail_action_bytecode(document: &AilDocument, action: &AilAction) -> Ai
                     ("failure", "NotFound".to_string()),
                 ],
             ));
-            continue;
+            emitted = true;
         }
         if let Some(keys) = input_requirement_keys(document, requirement) {
             for key in keys {
@@ -5346,7 +5347,7 @@ fn compile_ail_action_bytecode(document: &AilDocument, action: &AilAction) -> Ai
                     ],
                 ));
             }
-            continue;
+            emitted = true;
         }
         if let Some((source, key)) = field_after_requirement(document, requirement) {
             instructions.push(AilBytecodeInstruction::new(
@@ -5358,7 +5359,7 @@ fn compile_ail_action_bytecode(document: &AilDocument, action: &AilAction) -> Ai
                     ("failure", "RequirementFailed".to_string()),
                 ],
             ));
-            continue;
+            emitted = true;
         }
         if let Some((key, forbidden)) = negative_field_requirement(document, requirement) {
             instructions.push(AilBytecodeInstruction::new(
@@ -5370,7 +5371,7 @@ fn compile_ail_action_bytecode(document: &AilDocument, action: &AilAction) -> Ai
                     ("failure", "RequirementFailed".to_string()),
                 ],
             ));
-            continue;
+            emitted = true;
         }
         if let Some((key, allowed_values)) = positive_field_requirement(document, requirement) {
             let failure = failed_requirement_name(document, requirement, &key);
@@ -5383,12 +5384,14 @@ fn compile_ail_action_bytecode(document: &AilDocument, action: &AilAction) -> Ai
                     ("failure", failure),
                 ],
             ));
-            continue;
+            emitted = true;
         }
-        instructions.push(AilBytecodeInstruction::new(
-            "OBSERVE_RULE",
-            &[("rule", requirement.clone())],
-        ));
+        if !emitted {
+            instructions.push(AilBytecodeInstruction::new(
+                "OBSERVE_RULE",
+                &[("rule", requirement.clone())],
+            ));
+        }
     }
     for read in &action.reads {
         if let Some(key) = referenced_runtime_field_key(document, read) {
@@ -10049,8 +10052,12 @@ fn node_provenance(core: &AilCore, node_id: &str) -> Option<String> {
 
 fn existence_requirement_reference(rule: &str) -> Option<String> {
     let lower = rule.to_ascii_lowercase();
-    let marker = " to exist";
-    let end = lower.find(marker)?;
+    let end = lower.find(" to exist").or_else(|| {
+        lower
+            .contains(" and ")
+            .then(|| lower.find(" exists"))
+            .flatten()
+    })?;
     let reference = rule[..end]
         .trim()
         .trim_start_matches("the ")

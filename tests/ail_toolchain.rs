@@ -6220,8 +6220,8 @@ fn cli_ail_build_native_executable_enforces_llm_style_is_not_field_requirement()
     let spec_text = fs::read_to_string(format!("{package}/spec.ail-spec.md"))
         .unwrap()
         .replace(
-            "the system requires the ticket status not to be Closed",
-            "the system requires the ticket status is not Closed",
+            "- the system requires the ticket to exist\n- the system requires the ticket status not to be Closed",
+            "- the system requires the ticket exists and its status is not Closed",
         );
     fs::write(&spec_path, spec_text).unwrap();
 
@@ -6260,14 +6260,34 @@ fn cli_ail_build_native_executable_enforces_llm_style_is_not_field_requirement()
             .iter()
             .any(|instruction| {
                 instruction.opcode == "REQUIRE_FIELD_NOT_EQUALS"
-                    && instruction
-                        .operands
-                        .get("rule")
-                        .is_some_and(|rule| rule == "the ticket status is not Closed")
+                    && instruction.operands.get("rule").is_some_and(|rule| {
+                        rule == "the ticket exists and its status is not Closed"
+                    })
                     && instruction
                         .operands
                         .get("value")
                         .is_some_and(|value| value == "Closed")
+            }),
+        "{bytecode_artifact}"
+    );
+    assert!(
+        parse_ail_bytecode(&bytecode_artifact)
+            .unwrap()
+            .actions
+            .get("CloseTicket")
+            .unwrap()
+            .instructions
+            .iter()
+            .any(|instruction| {
+                instruction.opcode == "REQUIRE_EXISTS"
+                    && instruction
+                        .operands
+                        .get("key")
+                        .is_some_and(|key| key == "ticket.id")
+                    && instruction
+                        .operands
+                        .get("failure")
+                        .is_some_and(|failure| failure == "NotFound")
             }),
         "{bytecode_artifact}"
     );
@@ -6288,6 +6308,23 @@ fn cli_ail_build_native_executable_enforces_llm_style_is_not_field_requirement()
         .unwrap();
     assert!(!failed.status.success(), "Closed ticket should fail");
     assert_eq!(String::from_utf8_lossy(&failed.stdout), "");
+
+    let missing_ticket = Command::new(&executable_path)
+        .arg("ticket.status=Open")
+        .output()
+        .unwrap();
+    assert!(
+        !missing_ticket.status.success(),
+        "missing ticket should fail"
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&missing_ticket.stderr),
+        concat!(
+            "action CloseTicket started\n",
+            "failure NotFound\n",
+            "trace TicketNotFound\n"
+        )
+    );
 
     fs::remove_file(spec_path).unwrap();
     fs::remove_dir_all(artifact_dir).unwrap();

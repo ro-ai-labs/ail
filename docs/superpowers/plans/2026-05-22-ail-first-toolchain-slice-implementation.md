@@ -7688,6 +7688,48 @@ Qwen-backed native build artifact to confirm `ticket.status=Open` now succeeds.
 Expected: both human-authored and live-model phrasing compile to correct native
 ELF requirement checks.
 
+### Task 170: Compound LLM Requirements Lower To Multiple Checks
+
+**Files:**
+- Modify: `src/ail.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing compound requirement test**
+
+Rewrite the Support Ticket close precondition to the live-model sentence
+`the ticket exists and its status is not Closed`. Require bytecode to contain
+both a `REQUIRE_EXISTS` check for `ticket.id` with `NotFound` and a
+`REQUIRE_FIELD_NOT_EQUALS` check for `ticket.status != Closed`, and require the
+generated native ELF to fail with `NotFound` when only `ticket.status=Open` is
+present.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_native_executable_enforces_llm_style_is_not_field_requirement -- --nocapture
+```
+
+Expected: failure because the compiler lowers only the negative field check and
+drops the existence portion of the compound requirement.
+
+- [x] **Step 3: Emit all supported checks for one requirement**
+
+Change runtime and bytecode lowering so one requirement sentence can contribute
+all recognized requirement checks instead of stopping after the first match.
+Accept both `to exist` and LLM-style `exists` existence phrasing.
+
+- [x] **Step 4: Verify GREEN**
+
+Run focused runtime/compiler/native checks, full formatting/linting/test
+validation, and the live Qwen-backed native build that originally produced the
+compound requirement.
+
+Expected: live-model output preserves missing-ticket failure behavior while
+still accepting open tickets and rejecting closed tickets.
+
 ### Task 18: Declared Failure Trace Coverage Diagnostics
 
 **Files:**
