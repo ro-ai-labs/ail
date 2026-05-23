@@ -63,6 +63,14 @@ callee's final state when the callee succeeds. If the callee fails, the caller
 returns the same failure and merged trace. The bytecode verifier rejects calls
 to unknown actions before execution.
 
+The initial integer state-mutation subset includes `ADD_INT_FIELD`. It reads a
+runtime state field as an integer, adds the signed integer `delta`, writes the
+result back to the same field, and records the new value in the trace. The VM
+rejects missing fields, non-integer field values, and non-integer deltas at
+runtime. Together with `LABEL`, `BRANCH_FIELD_EQUALS`, and `JUMP`, this gives
+AIL-Bytecode a finite loop counter primitive without introducing host-language
+execution.
+
 ## Calls And Returns
 
 An `Action` may call another `Action`, a `Function`, an `AgentTool`, an

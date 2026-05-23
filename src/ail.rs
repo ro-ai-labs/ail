@@ -6540,6 +6540,7 @@ fn ail_bytecode_required_operands(opcode: &str) -> Option<&'static [&'static str
         "BRANCH_FIELD_EQUALS" => Some(&["key", "value", "label"]),
         "JUMP" => Some(&["label"]),
         "CALL_ACTION" => Some(&["target"]),
+        "ADD_INT_FIELD" => Some(&["key", "delta", "text"]),
         "REQUIRE_EXISTS" => Some(&["key", "rule", "failure"]),
         "REQUIRE_FIELD_NOT_EQUALS" => Some(&["key", "value", "rule", "failure"]),
         "REQUIRE_FIELD_IN" => Some(&["key", "values", "rule", "failure"]),
@@ -6865,6 +6866,20 @@ fn run_verified_ail_bytecode_action(
                     });
                 }
                 final_state = called.final_state;
+            }
+            "ADD_INT_FIELD" => {
+                let key = ail_bytecode_operand(instruction, "key");
+                let delta = ail_bytecode_operand(instruction, "delta")
+                    .parse::<i64>()
+                    .map_err(|_| format!("ADD_INT_FIELD delta for '{key}' must be an integer"))?;
+                let current = final_state
+                    .get(key)
+                    .ok_or_else(|| format!("ADD_INT_FIELD missing integer state field '{key}'"))?
+                    .parse::<i64>()
+                    .map_err(|_| format!("ADD_INT_FIELD state field '{key}' must be an integer"))?;
+                let next = current + delta;
+                final_state.insert(key.to_string(), next.to_string());
+                trace.push(format!("add {key} by {delta} -> {next}"));
             }
             "REQUIRE_EXISTS" => {
                 let key = ail_bytecode_operand(instruction, "key");

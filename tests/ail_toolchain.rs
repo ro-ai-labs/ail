@@ -3052,6 +3052,65 @@ fn ail_bytecode_vm_executes_action_call_control_flow() {
 }
 
 #[test]
+fn ail_bytecode_vm_executes_integer_loop_state_mutation() {
+    let bytecode_text = r#"{
+  "kind": "AIL-Bytecode",
+  "package": "loop-example",
+  "version": "0.1.0",
+  "profile": "Application",
+  "failures": [],
+  "actions": [
+    {
+      "action": "Countdown",
+      "instructions": [
+        {"opcode":"ACTION_BEGIN","operands":{"action":"Countdown"}},
+        {"opcode":"LABEL","operands":{"name":"loop"}},
+        {"opcode":"BRANCH_FIELD_EQUALS","operands":{"key":"counter","value":"0","label":"done"}},
+        {"opcode":"ADD_INT_FIELD","operands":{"key":"counter","delta":"-1","text":"decrement counter"}},
+        {"opcode":"ADD_INT_FIELD","operands":{"key":"iterations","delta":"1","text":"count iteration"}},
+        {"opcode":"JUMP","operands":{"label":"loop"}},
+        {"opcode":"LABEL","operands":{"name":"done"}},
+        {"opcode":"RETURN_SUCCESS","operands":{}}
+      ]
+    }
+  ]
+}"#;
+    let bytecode = parse_ail_bytecode(bytecode_text).unwrap();
+
+    assert_eq!(verify_ail_bytecode(&bytecode), Vec::<String>::new());
+
+    let run = run_ail_bytecode_action(
+        &bytecode,
+        "Countdown",
+        BTreeMap::from([
+            ("counter".to_string(), "3".to_string()),
+            ("iterations".to_string(), "0".to_string()),
+        ]),
+    )
+    .unwrap();
+
+    assert_eq!(run.status, "succeeded");
+    assert_eq!(
+        run.final_state.get("counter").map(String::as_str),
+        Some("0")
+    );
+    assert_eq!(
+        run.final_state.get("iterations").map(String::as_str),
+        Some("3")
+    );
+    assert!(
+        run.trace.contains(&"add counter by -1 -> 2".to_string()),
+        "{:?}",
+        run.trace
+    );
+    assert!(
+        run.trace.contains(&"add iterations by 1 -> 3".to_string()),
+        "{:?}",
+        run.trace
+    );
+}
+
+#[test]
 fn ail_toolchain_agent_package_lowers_to_verified_bytecode() {
     let package = load_ail_package_dir(fixture("ail_toolchain_agent.ail")).unwrap();
     let document = parse_ail_package_document(&package).unwrap();

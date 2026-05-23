@@ -372,6 +372,8 @@ System-profile components. For applications it emits:
   deterministic branch decisions over runtime state
 - `CALL_ACTION` to invoke another verified bytecode action with shared runtime
   state and merged trace output
+- `ADD_INT_FIELD` for integer runtime-state mutation used by bounded VM loops,
+  counters, and accumulator-style state transitions
 - read, write, field-set, effect, guarantee, trace, and return opcodes
 - declared failure trace tables
 
