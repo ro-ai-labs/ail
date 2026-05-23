@@ -4091,6 +4091,170 @@ fn cli_ail_compile_agent_verifies_all_action_native_bundle() {
 
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let toolchain_package = fixture("ail_toolchain_agent.ail");
+    let compiler_pass = fixture("compiler_pass.ail");
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "eigl-ail-bootstrap-native-bundle-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-bootstrap",
+            &toolchain_package,
+            "--pass",
+            &compiler_pass,
+            "--target",
+            "linux-x86_64-elf",
+            "--agent",
+            &toolchain_package,
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stdout)
+            .contains("ail-bootstrap wrote linux-x86_64-elf bootstrap bundle"),
+        "{}",
+        String::from_utf8_lossy(&output.stdout)
+    );
+
+    let toolchain_bytecode =
+        fs::read_to_string(artifact_dir.join("toolchain-agent.ailbc.json")).unwrap();
+    assert!(toolchain_bytecode.contains(r#""package":"ail-toolchain-agent""#));
+    assert!(toolchain_bytecode.contains(r#""action":"CompileNativeTarget""#));
+    assert!(toolchain_bytecode.contains(r#""action":"VerifyBootstrapManifest""#));
+    let toolchain_fingerprint =
+        fs::read_to_string(artifact_dir.join("toolchain-agent.fingerprint.txt")).unwrap();
+    assert_eq!(
+        toolchain_fingerprint.trim(),
+        fnv64_fingerprint(&toolchain_bytecode)
+    );
+
+    let pass_bytecode = fs::read_to_string(artifact_dir.join("compiler-pass.ailbc.json")).unwrap();
+    assert!(pass_bytecode.contains(r#""package":"ail-meta-permissions""#));
+    assert!(pass_bytecode.contains(r#""action":"InferReadPermissions""#));
+    let pass_fingerprint =
+        fs::read_to_string(artifact_dir.join("compiler-pass.fingerprint.txt")).unwrap();
+    assert_eq!(pass_fingerprint.trim(), fnv64_fingerprint(&pass_bytecode));
+
+    let toolchain_verifier =
+        fs::read(artifact_dir.join("toolchain-agent-VerifyBootstrapManifest.elf")).unwrap();
+    assert_eq!(&toolchain_verifier[0..4], b"\x7fELF");
+    let expected_toolchain_verifier_fingerprint = fnv64_fingerprint_bytes(&toolchain_verifier);
+    let compiler_pass_native =
+        fs::read(artifact_dir.join("compiler-pass-InferReadPermissions.elf")).unwrap();
+    assert_eq!(&compiler_pass_native[0..4], b"\x7fELF");
+    let expected_compiler_pass_fingerprint = fnv64_fingerprint_bytes(&compiler_pass_native);
+
+    let agent_bytecode = fs::read_to_string(artifact_dir.join("agent.ailbc.json")).unwrap();
+    assert_eq!(agent_bytecode, toolchain_bytecode);
+    let agent_trace = fs::read_to_string(artifact_dir.join("agent-trace.txt")).unwrap();
+    assert!(agent_trace.contains("action VerifyBootstrapManifest started"));
+    assert!(agent_trace.contains("read buildrequest.bytecode fingerprint"));
+    assert!(agent_trace.contains("read buildrequest.compiler pass fingerprint"));
+    assert!(agent_trace.contains("read buildrequest.target artifact fingerprint"));
+    assert!(agent_trace.contains("read buildrequest.compiler pass target artifact fingerprint"));
+    assert!(agent_trace.contains("read buildrequest.artifact manifest"));
+    assert!(agent_trace.contains("read buildrequest.artifact manifest fingerprint"));
+    assert!(
+        agent_trace.contains("write buildrequest.artifact manifest verification report=Verified")
+    );
+    assert!(agent_trace.contains("trace BootstrapManifestVerified"));
+
+    let agent_verifier = fs::read(artifact_dir.join("agent-VerifyBootstrapManifest.elf")).unwrap();
+    assert_eq!(&agent_verifier[0..4], b"\x7fELF");
+    let expected_agent_verifier_fingerprint = fnv64_fingerprint_bytes(&agent_verifier);
+    let native_agent_run = Command::new(artifact_dir.join("agent-VerifyBootstrapManifest.elf"))
+        .args([
+            "buildrequest.id=ail-toolchain-agent-bootstrap",
+            "buildrequest.status=BytecodeReady",
+            "buildrequest.bytecode fingerprint=fnv64:toolchain",
+            "buildrequest.compiler pass fingerprint=fnv64:pass",
+            "buildrequest.target artifact fingerprint=fnv64:toolchain-native",
+            "buildrequest.compiler pass target artifact fingerprint=fnv64:pass-native",
+            "buildrequest.artifact manifest=ok",
+            "buildrequest.artifact manifest fingerprint=fnv64:manifest",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        native_agent_run.status.success(),
+        "native bootstrap manifest verifier failed"
+    );
+    assert!(
+        String::from_utf8_lossy(&native_agent_run.stderr)
+            .contains("trace BootstrapManifestVerified"),
+        "{}",
+        String::from_utf8_lossy(&native_agent_run.stderr)
+    );
+
+    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-bootstrap.txt")).unwrap();
+    assert!(manifest.contains("AIL-Bootstrap-Manifest:"), "{manifest}");
+    assert!(manifest.contains("target linux-x86_64-elf"), "{manifest}");
+    assert!(
+        manifest.contains("no-host-backend-source true"),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "toolchain-agent toolchain-agent.ailbc.json {}",
+            fnv64_fingerprint(&toolchain_bytecode)
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "compiler-pass compiler-pass.ailbc.json {}",
+            fnv64_fingerprint(&pass_bytecode)
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "toolchain-agent-target linux-x86_64-elf toolchain-agent-VerifyBootstrapManifest.elf {expected_toolchain_verifier_fingerprint}"
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "compiler-pass-target linux-x86_64-elf compiler-pass-InferReadPermissions.elf {expected_compiler_pass_fingerprint}"
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "agent agent.ailbc.json {}",
+            fnv64_fingerprint(&agent_bytecode)
+        )),
+        "{manifest}"
+    );
+    assert!(manifest.contains("trace agent-trace.txt"), "{manifest}");
+    assert!(
+        manifest.contains(&format!(
+            "agent-target linux-x86_64-elf agent-VerifyBootstrapManifest.elf {expected_agent_verifier_fingerprint}"
+        )),
+        "{manifest}"
+    );
+    let manifest_fingerprint =
+        fs::read_to_string(artifact_dir.join("manifest.fingerprint.txt")).unwrap();
+    assert_eq!(manifest_fingerprint.trim(), fnv64_fingerprint(&manifest));
+
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_compile_accepts_saved_spec_file_artifact() {
     let binary = env!("CARGO_BIN_EXE_eigl");
     let package = fixture("support_ticket.ail");

@@ -106,6 +106,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
             | "ail-draft"
             | "ail-build"
             | "ail-pass"
+            | "ail-bootstrap"
             | "ail-patch"
     ) {
         return run_ail_command(command, path, &cli_options);
@@ -380,7 +381,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
 }
 
 fn usage() -> String {
-    "usage: eigl <check|graph|views|simulate|lower|run|dispatch|emit|schedule|dequeue|serve|normalize|patch|llm-roundtrip|view-model|ail-check|ail-core|ail-flow|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-patch> <path> [patch|target-package] [--intent name] [--action name] [--prompt text] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--target-model name] [--out path] [--all-actions] [--artifact-dir path] [--state-in path] [--state-out path] [--data-in path] [--data-out path] [--operation-output name=value] [--listen addr] [--llm-endpoint url] [method path|trigger] [key=value ...]\nail-pass usage: eigl ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR eigl ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]"
+    "usage: eigl <check|graph|views|simulate|lower|run|dispatch|emit|schedule|dequeue|serve|normalize|patch|llm-roundtrip|view-model|ail-check|ail-core|ail-flow|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-bootstrap|ail-patch> <path> [patch|target-package] [--intent name] [--action name] [--prompt text] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--target-model name] [--out path] [--all-actions] [--artifact-dir path] [--state-in path] [--state-out path] [--data-in path] [--data-out path] [--operation-output name=value] [--listen addr] [--llm-endpoint url] [method path|trigger] [key=value ...]\nail-pass usage: eigl ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR eigl ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]\nail-bootstrap usage: eigl ail-bootstrap <toolchain-agent-package-or-bytecode> --pass <compiler-pass-package-or-bytecode> --agent <toolchain-agent-package-or-bytecode> --target linux-x86_64-elf --artifact-dir <dir>"
         .to_string()
 }
 
@@ -418,6 +419,17 @@ struct AilCompileBundleArtifactSet<'a> {
     bytecode_text: &'a str,
     target_name: &'a str,
     target_executables: &'a [AilNativeArtifact],
+    agent_bytecode_text: Option<&'a str>,
+    agent_trace: Option<&'a [String]>,
+    agent_native_executables: &'a [AilNativeArtifact],
+}
+
+struct AilBootstrapArtifactSet<'a> {
+    target_name: &'a str,
+    toolchain_bytecode_text: &'a str,
+    toolchain_native_executables: &'a [AilNativeArtifact],
+    compiler_pass_bytecode_text: &'a str,
+    compiler_pass_native_executables: &'a [AilNativeArtifact],
     agent_bytecode_text: Option<&'a str>,
     agent_trace: Option<&'a [String]>,
     agent_native_executables: &'a [AilNativeArtifact],
@@ -642,6 +654,56 @@ fn render_ail_compile_bundle_manifest(artifacts: &AilCompileBundleArtifactSet<'_
     format!("{}\n", lines.join("\n"))
 }
 
+fn render_ail_bootstrap_manifest(artifacts: &AilBootstrapArtifactSet<'_>) -> String {
+    let mut lines = vec![
+        "AIL-Bootstrap-Manifest:".to_string(),
+        format!("target {}", artifacts.target_name),
+        "no-host-backend-source true".to_string(),
+        format!(
+            "toolchain-agent toolchain-agent.ailbc.json {}",
+            ail_artifact_fingerprint(artifacts.toolchain_bytecode_text)
+        ),
+        format!(
+            "compiler-pass compiler-pass.ailbc.json {}",
+            ail_artifact_fingerprint(artifacts.compiler_pass_bytecode_text)
+        ),
+    ];
+    for executable in artifacts.toolchain_native_executables {
+        lines.push(format!(
+            "toolchain-agent-target {} {} {}",
+            executable.target_name,
+            executable.file_name,
+            ail_artifact_fingerprint_bytes(&executable.bytes)
+        ));
+    }
+    for executable in artifacts.compiler_pass_native_executables {
+        lines.push(format!(
+            "compiler-pass-target {} {} {}",
+            executable.target_name,
+            executable.file_name,
+            ail_artifact_fingerprint_bytes(&executable.bytes)
+        ));
+    }
+    if let Some(agent_bytecode_text) = artifacts.agent_bytecode_text {
+        lines.push(format!(
+            "agent agent.ailbc.json {}",
+            ail_artifact_fingerprint(agent_bytecode_text)
+        ));
+    }
+    if artifacts.agent_trace.is_some() {
+        lines.push("trace agent-trace.txt".to_string());
+    }
+    for native_agent in artifacts.agent_native_executables {
+        lines.push(format!(
+            "agent-target {} {} {}",
+            native_agent.target_name,
+            native_agent.file_name,
+            ail_artifact_fingerprint_bytes(&native_agent.bytes)
+        ));
+    }
+    format!("{}\n", lines.join("\n"))
+}
+
 fn write_ail_compile_artifacts(
     artifact_dir: &str,
     artifacts: AilCompileArtifactSet<'_>,
@@ -786,6 +848,110 @@ fn write_ail_compile_bundle_artifacts(
     )
     .map_err(|error| {
         format!("failed to write ail-compile manifest fingerprint artifact: {error}")
+    })?;
+    Ok(())
+}
+
+fn write_ail_bootstrap_artifacts(
+    artifact_dir: &str,
+    artifacts: AilBootstrapArtifactSet<'_>,
+) -> Result<(), String> {
+    let root = std::path::Path::new(artifact_dir);
+    fs::create_dir_all(root).map_err(|error| {
+        format!("failed to create ail-bootstrap artifact dir {artifact_dir}: {error}")
+    })?;
+    fs::write(
+        root.join("toolchain-agent.ailbc.json"),
+        artifacts.toolchain_bytecode_text,
+    )
+    .map_err(|error| {
+        format!("failed to write ail-bootstrap toolchain agent bytecode artifact: {error}")
+    })?;
+    fs::write(
+        root.join("toolchain-agent.fingerprint.txt"),
+        format!(
+            "{}\n",
+            ail_artifact_fingerprint(artifacts.toolchain_bytecode_text)
+        ),
+    )
+    .map_err(|error| {
+        format!("failed to write ail-bootstrap toolchain agent fingerprint artifact: {error}")
+    })?;
+    fs::write(
+        root.join("compiler-pass.ailbc.json"),
+        artifacts.compiler_pass_bytecode_text,
+    )
+    .map_err(|error| {
+        format!("failed to write ail-bootstrap compiler pass bytecode artifact: {error}")
+    })?;
+    fs::write(
+        root.join("compiler-pass.fingerprint.txt"),
+        format!(
+            "{}\n",
+            ail_artifact_fingerprint(artifacts.compiler_pass_bytecode_text)
+        ),
+    )
+    .map_err(|error| {
+        format!("failed to write ail-bootstrap compiler pass fingerprint artifact: {error}")
+    })?;
+    for executable in artifacts.toolchain_native_executables {
+        let artifact_path = root.join(&executable.file_name);
+        fs::write(&artifact_path, &executable.bytes).map_err(|error| {
+            format!(
+                "failed to write ail-bootstrap native toolchain artifact {}: {error}",
+                executable.file_name
+            )
+        })?;
+        set_native_executable_permissions(&artifact_path.to_string_lossy())?;
+    }
+    for executable in artifacts.compiler_pass_native_executables {
+        let artifact_path = root.join(&executable.file_name);
+        fs::write(&artifact_path, &executable.bytes).map_err(|error| {
+            format!(
+                "failed to write ail-bootstrap native compiler pass artifact {}: {error}",
+                executable.file_name
+            )
+        })?;
+        set_native_executable_permissions(&artifact_path.to_string_lossy())?;
+    }
+    if let Some(agent_bytecode_text) = artifacts.agent_bytecode_text {
+        fs::write(root.join("agent.ailbc.json"), agent_bytecode_text).map_err(|error| {
+            format!("failed to write ail-bootstrap agent bytecode artifact: {error}")
+        })?;
+        fs::write(
+            root.join("agent.fingerprint.txt"),
+            format!("{}\n", ail_artifact_fingerprint(agent_bytecode_text)),
+        )
+        .map_err(|error| {
+            format!("failed to write ail-bootstrap agent fingerprint artifact: {error}")
+        })?;
+    }
+    if let Some(agent_trace) = artifacts.agent_trace {
+        fs::write(
+            root.join("agent-trace.txt"),
+            format!("{}\n", agent_trace.join("\n")),
+        )
+        .map_err(|error| format!("failed to write ail-bootstrap agent trace artifact: {error}"))?;
+    }
+    for native_agent in artifacts.agent_native_executables {
+        let artifact_path = root.join(&native_agent.file_name);
+        fs::write(&artifact_path, &native_agent.bytes).map_err(|error| {
+            format!(
+                "failed to write ail-bootstrap native agent artifact {}: {error}",
+                native_agent.file_name
+            )
+        })?;
+        set_native_executable_permissions(&artifact_path.to_string_lossy())?;
+    }
+    let manifest_text = render_ail_bootstrap_manifest(&artifacts);
+    fs::write(root.join("manifest.ail-bootstrap.txt"), &manifest_text)
+        .map_err(|error| format!("failed to write ail-bootstrap manifest artifact: {error}"))?;
+    fs::write(
+        root.join("manifest.fingerprint.txt"),
+        format!("{}\n", ail_artifact_fingerprint(&manifest_text)),
+    )
+    .map_err(|error| {
+        format!("failed to write ail-bootstrap manifest fingerprint artifact: {error}")
     })?;
     Ok(())
 }
@@ -2641,6 +2807,91 @@ fn run_ail_compile_bundle_agent_verify_manifest(
     })
 }
 
+struct AilBootstrapAgentManifestRequest<'a> {
+    agent_bytecode: eigl::ail::AilBytecodeProgram,
+    agent_bytecode_text: String,
+    package_name: &'a str,
+    toolchain_bytecode_text: &'a str,
+    compiler_pass_bytecode_text: &'a str,
+    target_artifacts: &'a [AilNativeArtifact],
+    compiler_pass_artifacts: &'a [AilNativeArtifact],
+    manifest_text: &'a str,
+    manifest_fingerprint: &'a str,
+}
+
+fn run_ail_bootstrap_agent_verify_manifest(
+    request: AilBootstrapAgentManifestRequest<'_>,
+) -> Result<AilBuildAgentRun, String> {
+    let AilBootstrapAgentManifestRequest {
+        agent_bytecode,
+        agent_bytecode_text,
+        package_name,
+        toolchain_bytecode_text,
+        compiler_pass_bytecode_text,
+        target_artifacts,
+        compiler_pass_artifacts,
+        manifest_text,
+        manifest_fingerprint,
+    } = request;
+    if !agent_bytecode
+        .actions
+        .contains_key("VerifyBootstrapManifest")
+    {
+        return Err("ail-bootstrap --agent requires a VerifyBootstrapManifest action".to_string());
+    }
+    let state = BTreeMap::from([
+        (
+            "buildrequest.id".to_string(),
+            format!("{package_name}-bootstrap"),
+        ),
+        (
+            "buildrequest.status".to_string(),
+            "BytecodeReady".to_string(),
+        ),
+        (
+            "buildrequest.bytecode fingerprint".to_string(),
+            ail_artifact_fingerprint(toolchain_bytecode_text),
+        ),
+        (
+            "buildrequest.compiler pass fingerprint".to_string(),
+            ail_artifact_fingerprint(compiler_pass_bytecode_text),
+        ),
+        (
+            "buildrequest.target artifact fingerprint".to_string(),
+            native_artifact_fingerprint_text(target_artifacts).unwrap_or_default(),
+        ),
+        (
+            "buildrequest.compiler pass target artifact fingerprint".to_string(),
+            native_artifact_fingerprint_text(compiler_pass_artifacts).unwrap_or_default(),
+        ),
+        (
+            "buildrequest.artifact manifest".to_string(),
+            manifest_text.to_string(),
+        ),
+        (
+            "buildrequest.artifact manifest fingerprint".to_string(),
+            manifest_fingerprint.to_string(),
+        ),
+    ]);
+    let run = run_ail_bytecode_action(&agent_bytecode, "VerifyBootstrapManifest", state)?;
+    if run.status != "succeeded" {
+        let mut message = "ail-bootstrap agent VerifyBootstrapManifest failed".to_string();
+        if let Some(failure) = run.failure {
+            message.push_str(&format!(": {failure}"));
+        }
+        if !run.trace.is_empty() {
+            message.push_str(&format!("\n{}", run.trace.join("\n")));
+        }
+        return Err(message);
+    }
+    Ok(AilBuildAgentRun {
+        bytecode: agent_bytecode,
+        bytecode_text: agent_bytecode_text,
+        state: run.final_state,
+        trace: run.trace,
+    })
+}
+
 fn native_artifact_fingerprint_text(artifacts: &[AilNativeArtifact]) -> Option<String> {
     if artifacts.is_empty() {
         return None;
@@ -3275,7 +3526,106 @@ fn run_ail_build_from_core(
     Ok(0)
 }
 
+fn run_ail_bootstrap_command(path: &str, cli_options: &CliOptions) -> Result<u8, String> {
+    let target = cli_options
+        .ail_compile_target
+        .as_deref()
+        .ok_or_else(|| "ail-bootstrap requires --target <target>".to_string())?;
+    let artifact_dir = cli_options
+        .artifact_dir
+        .as_deref()
+        .ok_or_else(|| "ail-bootstrap requires --artifact-dir <dir>".to_string())?;
+    let pass_path = cli_options
+        .ail_build_pass
+        .as_deref()
+        .ok_or_else(|| "ail-bootstrap requires --pass <compiler-pass>".to_string())?;
+    let agent_path = cli_options
+        .ail_build_agent
+        .as_deref()
+        .ok_or_else(|| "ail-bootstrap requires --agent <agent-package-or-bytecode>".to_string())?;
+
+    let (toolchain_bytecode, toolchain_bytecode_text) =
+        load_ail_bytecode_or_compile_package(path, "ail-bootstrap toolchain agent")?;
+    let toolchain_diagnostics = verify_ail_bytecode(&toolchain_bytecode);
+    if !toolchain_diagnostics.is_empty() {
+        return Err(format!(
+            "ail-bootstrap toolchain bytecode has diagnostics:\n{}",
+            toolchain_diagnostics.join("\n")
+        ));
+    }
+    if toolchain_bytecode.profile != "Application" {
+        return Err(format!(
+            "ail-bootstrap toolchain package must be Application profile, found {}",
+            toolchain_bytecode.profile
+        ));
+    }
+
+    let (compiler_pass_bytecode, compiler_pass_bytecode_text) =
+        load_ail_bytecode_or_compile_package(pass_path, "ail-bootstrap compiler pass")?;
+    let compiler_pass_diagnostics = verify_ail_bytecode(&compiler_pass_bytecode);
+    if !compiler_pass_diagnostics.is_empty() {
+        return Err(format!(
+            "ail-bootstrap compiler pass bytecode has diagnostics:\n{}",
+            compiler_pass_diagnostics.join("\n")
+        ));
+    }
+    if compiler_pass_bytecode.profile != "Compiler" {
+        return Err(format!(
+            "ail-bootstrap --pass requires a Compiler-profile bytecode artifact, found {}",
+            compiler_pass_bytecode.profile
+        ));
+    }
+
+    let toolchain_native_artifacts =
+        compile_ail_native_artifacts(&toolchain_bytecode, target, "toolchain-agent")?;
+    let compiler_pass_native_artifacts =
+        compile_ail_native_artifacts(&compiler_pass_bytecode, target, "compiler-pass")?;
+    let (agent_bytecode, agent_bytecode_text) = load_verified_ail_build_agent(agent_path)?;
+    let agent_native_artifacts = compile_ail_build_agent_native_artifacts(&agent_bytecode, target)?;
+    let empty_agent_trace: &[String] = &[];
+    let manifest_text = render_ail_bootstrap_manifest(&AilBootstrapArtifactSet {
+        target_name: target,
+        toolchain_bytecode_text: &toolchain_bytecode_text,
+        toolchain_native_executables: toolchain_native_artifacts.as_slice(),
+        compiler_pass_bytecode_text: &compiler_pass_bytecode_text,
+        compiler_pass_native_executables: compiler_pass_native_artifacts.as_slice(),
+        agent_bytecode_text: Some(agent_bytecode_text.as_str()),
+        agent_trace: Some(empty_agent_trace),
+        agent_native_executables: agent_native_artifacts.as_slice(),
+    });
+    let manifest_fingerprint = ail_artifact_fingerprint(&manifest_text);
+    let agent_run = run_ail_bootstrap_agent_verify_manifest(AilBootstrapAgentManifestRequest {
+        agent_bytecode,
+        agent_bytecode_text,
+        package_name: &toolchain_bytecode.package_name,
+        toolchain_bytecode_text: &toolchain_bytecode_text,
+        compiler_pass_bytecode_text: &compiler_pass_bytecode_text,
+        target_artifacts: toolchain_native_artifacts.as_slice(),
+        compiler_pass_artifacts: compiler_pass_native_artifacts.as_slice(),
+        manifest_text: &manifest_text,
+        manifest_fingerprint: &manifest_fingerprint,
+    })?;
+    write_ail_bootstrap_artifacts(
+        artifact_dir,
+        AilBootstrapArtifactSet {
+            target_name: target,
+            toolchain_bytecode_text: &toolchain_bytecode_text,
+            toolchain_native_executables: toolchain_native_artifacts.as_slice(),
+            compiler_pass_bytecode_text: &compiler_pass_bytecode_text,
+            compiler_pass_native_executables: compiler_pass_native_artifacts.as_slice(),
+            agent_bytecode_text: Some(agent_run.bytecode_text.as_str()),
+            agent_trace: Some(agent_run.trace.as_slice()),
+            agent_native_executables: agent_native_artifacts.as_slice(),
+        },
+    )?;
+    println!("ail-bootstrap wrote {target} bootstrap bundle {artifact_dir}");
+    Ok(0)
+}
+
 fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Result<u8, String> {
+    if command == "ail-bootstrap" {
+        return run_ail_bootstrap_command(path, cli_options);
+    }
     if command == "ail-pass" {
         return run_ail_pass_command(path, cli_options);
     }
@@ -3929,7 +4279,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
             continue;
         }
         if arg == "--pass" {
-            if command != "ail-build" {
+            if !matches!(command, "ail-build" | "ail-bootstrap") {
                 return Err(usage());
             }
             let Some(path) = args.get(index + 1) else {
@@ -3942,7 +4292,12 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         if arg == "--agent" {
             if !matches!(
                 command,
-                "ail-build" | "ail-pass" | "ail-lower" | "ail-compile" | "ail-conformance"
+                "ail-build"
+                    | "ail-pass"
+                    | "ail-lower"
+                    | "ail-compile"
+                    | "ail-conformance"
+                    | "ail-bootstrap"
             ) {
                 return Err(usage());
             }
@@ -3956,7 +4311,12 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         if arg == "--target" {
             if !matches!(
                 command,
-                "ail-compile" | "ail-build" | "ail-pass" | "ail-lower" | "ail-conformance"
+                "ail-compile"
+                    | "ail-build"
+                    | "ail-pass"
+                    | "ail-lower"
+                    | "ail-conformance"
+                    | "ail-bootstrap"
             ) {
                 return Err(usage());
             }
@@ -4097,7 +4457,12 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         if arg == "--artifact-dir" {
             if !matches!(
                 command,
-                "ail-build" | "ail-pass" | "ail-lower" | "ail-compile" | "ail-conformance"
+                "ail-build"
+                    | "ail-pass"
+                    | "ail-lower"
+                    | "ail-compile"
+                    | "ail-conformance"
+                    | "ail-bootstrap"
             ) {
                 return Err(usage());
             }
@@ -4182,6 +4547,26 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         }
         if !native_requested && ail_action.is_some() {
             return Err("ail-build --action requires --target and --out".to_string());
+        }
+    }
+    if command == "ail-bootstrap" {
+        if ail_build_pass.is_none() {
+            return Err("ail-bootstrap requires --pass <compiler-pass>".to_string());
+        }
+        if ail_build_agent.is_none() {
+            return Err("ail-bootstrap requires --agent <agent-package-or-bytecode>".to_string());
+        }
+        if ail_compile_target.is_none() {
+            return Err("ail-bootstrap requires --target <target>".to_string());
+        }
+        if artifact_dir.is_none() {
+            return Err("ail-bootstrap requires --artifact-dir <dir>".to_string());
+        }
+        if ail_action.is_some() {
+            return Err("ail-bootstrap cannot be combined with --action".to_string());
+        }
+        if ail_compile_out.is_some() {
+            return Err("ail-bootstrap cannot be combined with --out".to_string());
         }
     }
     if command == "ail-pass" && ail_core_file.is_none() && ail_pass_target.is_none() {

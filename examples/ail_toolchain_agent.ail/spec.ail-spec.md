@@ -224,6 +224,22 @@ When the toolchain agent verifies direct all-action compile artifacts:
 - the system guarantees the compile bundle manifest ties verified AIL-Bytecode and all native action target artifacts with deterministic fingerprints and no Rust or host-language backend source
 - the system records a trace event named CompileBundleManifestVerified
 
+Action: Verify bootstrap manifest.
+
+When the toolchain agent verifies an AIL bootstrap bundle:
+
+- the system requires the BuildRequest to exist
+- the system requires the BuildRequest status to be BytecodeReady
+- the system reads the BuildRequest artifact manifest
+- the system reads the BuildRequest artifact manifest fingerprint
+- the system reads the BuildRequest bytecode fingerprint
+- the system reads the BuildRequest compiler pass fingerprint
+- the system reads the BuildRequest target artifact fingerprint
+- the system reads the BuildRequest compiler pass target artifact fingerprint
+- the system changes the BuildRequest artifact manifest verification report to Verified
+- the system guarantees the bootstrap manifest ties the AIL-authored toolchain agent, AIL-Meta compiler pass, and Linux native executable bytes with deterministic fingerprints and no Rust or host-language backend source
+- the system records a trace event named BootstrapManifestVerified
+
 Action: Verify pass manifest.
 
 When the toolchain agent verifies the standalone compiler pass manifest:

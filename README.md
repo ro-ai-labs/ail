@@ -110,6 +110,13 @@ executables and record each executable as a fingerprinted `target` entry in
 the AIL-authored `VerifyCompileBundleManifest` action over the all-action
 bundle manifest and writes `agent.ailbc.json`, `agent.fingerprint.txt`,
 `agent-trace.txt`, and native `agent-<Action>.elf` verifier executables.
+`ail-bootstrap <toolchain-agent-package-or-bytecode> --pass
+<compiler-pass-package-or-bytecode> --agent <toolchain-agent-package-or-bytecode>
+--target linux-x86_64-elf --artifact-dir <dir>` writes a deterministic
+bootstrap bundle containing AIL-Bytecode plus native ELF artifacts for the
+AIL-authored toolchain agent and AIL-Meta compiler pass, then runs the
+AIL-authored `VerifyBootstrapManifest` action and records its trace and native
+verifier executables in `manifest.ail-bootstrap.txt`.
 `ail-pass <compiler-pass-package-or-bytecode>
 <target-package> --action <PassName>` compiles an AIL-Meta compiler pass
 package, or reads a saved Compiler-profile AIL-Bytecode artifact, and applies
@@ -244,6 +251,7 @@ cargo run -- ail-compile /tmp/support-ticket.ailbc.json --action CloseTicket --t
 cargo run -- ail-compile /tmp/support-ticket.ailbc.json --action CloseTicket --target linux-x86_64-elf --out /tmp/close-ticket-from-bytecode --artifact-dir /tmp/support-ticket-ail-compile
 cargo run -- ail-compile /tmp/support-ticket.ailbc.json --action CloseTicket --target linux-x86_64-elf --out /tmp/close-ticket-from-bytecode --agent examples/ail_toolchain_agent.ail --artifact-dir /tmp/support-ticket-ail-compile-agent
 cargo run -- ail-compile examples/ail_toolchain_agent.ail --all-actions --target linux-x86_64-elf --agent examples/ail_toolchain_agent.ail --artifact-dir /tmp/toolchain-agent-native-bundle
+cargo run -- ail-bootstrap examples/ail_toolchain_agent.ail --pass examples/compiler_pass.ail --target linux-x86_64-elf --agent examples/ail_toolchain_agent.ail --artifact-dir /tmp/ail-bootstrap-native-bundle
 cargo run -- ail-lower examples/refund_tool.ail
 cargo run -- ail-lower examples/compiler_pass.ail
 cargo run -- ail-lower examples/network_driver.ail

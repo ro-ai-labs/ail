@@ -5987,6 +5987,56 @@ Expected: the AIL-authored agent bytecode includes and runs
 `CompileNativeTarget`, and native `ail-build --agent` traces the executable-byte
 handoff before verifying the Linux ELF target artifact.
 
+### Task 137: Native Bootstrap Bundle Command
+
+**Files:**
+- Modify: `examples/ail_toolchain_agent.ail/spec.ail-spec.md`
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/13-bootstrap-self-hosting.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing bootstrap bundle test**
+
+Add a Linux x86_64 CLI test for `ail-bootstrap <toolchain-agent> --pass
+<compiler-pass> --target linux-x86_64-elf --agent <toolchain-agent>
+--artifact-dir <dir>`. Require bytecode artifacts, native ELF artifacts for the
+AIL-authored toolchain agent and AIL-Meta compiler pass, an AIL-authored
+`VerifyBootstrapManifest` trace, native agent verifier executable, and a
+fingerprinted `manifest.ail-bootstrap.txt` with `no-host-backend-source true`.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_bootstrap_writes_native_toolchain_bundle -- --nocapture
+```
+
+Expected: failure at the CLI boundary because `ail-bootstrap` is not recognized.
+
+- [x] **Step 3: Implement native bootstrap bundle artifacts**
+
+Add `VerifyBootstrapManifest` to the AIL-authored toolchain agent. Add the
+`ail-bootstrap` command, require `--pass`, `--agent`, `--target`, and
+`--artifact-dir`, compile the toolchain agent and compiler pass to verified
+AIL-Bytecode, emit native Linux ELF artifacts for every action in both packages,
+run the AIL-authored bootstrap manifest verifier, and write deterministic
+bytecode, native, trace, manifest, and fingerprint artifacts.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_bootstrap_writes_native_toolchain_bundle -- --nocapture
+```
+
+Expected: the bootstrap bundle contains AIL-authored toolchain and compiler-pass
+bytecode, native ELF executable bytes, and an AIL-verified bootstrap manifest
+with no host-language backend source entries.
+
 ### Task 18: Declared Failure Trace Coverage Diagnostics
 
 **Files:**

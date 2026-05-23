@@ -41,7 +41,9 @@ before it can be trusted for later stages.
 Native target generation is part of this artifact boundary: for Linux, the
 reviewable output is deterministic ELF executable bytes plus fingerprints and
 AIL-authored agent traces, not generated Rust, C, or other host-language backend
-source.
+source. The bootstrap artifact set should bundle the AIL-authored toolchain
+agent and AIL-Meta compiler passes as checked AIL-Bytecode plus native
+machine-code artifacts, with an AIL-authored verifier accepting the manifest.
 
 ## Stage 4: Self-Hosted Fixed Point
 
