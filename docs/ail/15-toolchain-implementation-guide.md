@@ -563,8 +563,9 @@ compiler-pass bytecode fingerprint, and pass execution trace. This gives the
 standalone compiler-pass stage an AIL-bytecode acceptance checkpoint instead of
 leaving it as host orchestration. When `--artifact-dir` is present, the agent
 also runs `VerifyPassManifest` with the rendered pass manifest and deterministic
-manifest fingerprint plus source fingerprints when present, so the pass artifact
-set is verified in AIL bytecode too.
+manifest fingerprint plus source fingerprints when present and native-bytecode
+report fingerprint when native ELF tools are emitted, so the pass artifact set
+is verified in AIL bytecode too.
 With
 `--artifact-dir`, the same command writes `pass.ailbc.json`,
 `pass.fingerprint.txt`, `input.ail-core.txt`, `output.ail-core.txt`, and
@@ -579,8 +580,12 @@ manifest indexes the agent bytecode and trace. With
 each executable as a `compiler-pass-target` manifest entry. When that native
 pass run also uses `--agent`, the artifact directory includes
 `agent-<ActionName>.elf` for each AIL-authored pass-agent action and records
-each executable as an `agent-target` manifest entry. This keeps pass execution
-auditable while stdout remains the transformed AIL-Core artifact.
+each executable as an `agent-target` manifest entry. It also writes
+`native-bytecode-report.txt` and `native-bytecode-report.fingerprint.txt`,
+records the report in `manifest.ail-pass.txt`, and has the AIL-authored
+`VerifyPassManifest` action read the report fingerprint before accepting the
+manifest. This keeps pass execution auditable while stdout remains the
+transformed AIL-Core artifact.
 `ail-build` composes the LLM draft loop with the same checked IR-to-artifact
 lowering: the base LLM first drafts an AIL-Requirements artifact from a user
 prompt.

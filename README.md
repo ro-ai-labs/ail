@@ -170,7 +170,8 @@ source-free artifact boundaries. `ail-pass --agent <agent-package-or-bytecode>`
 compiles or loads an AIL-authored Application agent and runs its
 `AcceptCompilerPassOutput` bytecode action over the standalone pass artifact
 boundary; with `--artifact-dir`, it also runs `VerifyPassManifest` against the
-pass manifest, source fingerprints when present, and manifest fingerprint.
+pass manifest, source fingerprints when present, native-bytecode report
+fingerprint when native ELF tools are emitted, and manifest fingerprint.
 `ail-conformance` checks accepted and rejected fixtures; with `--artifact-dir`,
 it writes a deterministic conformance
 report, report fingerprint, conformance manifest, and manifest fingerprint for
@@ -289,6 +290,10 @@ remains the transformed AIL-Core artifact. With
 `pass-<ActionName>.elf` for each AIL-authored compiler-pass action, records each
 as a `compiler-pass-target` manifest entry, and, when `--agent` is present,
 writes `agent-<ActionName>.elf` entries for the AIL-authored pass agent.
+It also writes `native-bytecode-report.txt` and
+`native-bytecode-report.fingerprint.txt`, proving the emitted compiler-pass and
+pass-agent tools are ELF64 x86_64 executable bytes before the AIL-authored
+manifest verifier accepts the artifact set.
 The default AIL base LLM endpoint is
 `http://inteligentia-pro-1:8080/v1/chat/completions`.
 

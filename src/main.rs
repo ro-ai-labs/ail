@@ -479,6 +479,7 @@ struct AilPassArtifactSet<'a> {
     input_core_text: &'a str,
     output_core_text: &'a str,
     trace: &'a [String],
+    native_bytecode_report_text: Option<&'a str>,
     pass_native_executables: &'a [AilNativeArtifact],
     agent_bytecode_text: Option<&'a str>,
     agent_trace: Option<&'a [String]>,
@@ -2105,6 +2106,12 @@ fn render_ail_pass_manifest(artifacts: &AilPassArtifactSet<'_>) -> String {
             ail_artifact_fingerprint_bytes(&native_pass.bytes)
         ));
     }
+    if let Some(native_bytecode_report_text) = artifacts.native_bytecode_report_text {
+        lines.push(format!(
+            "native-bytecode native-bytecode-report.txt {}",
+            ail_artifact_fingerprint(native_bytecode_report_text)
+        ));
+    }
     lines.push("core-input input.ail-core.txt".to_string());
     lines.push("core-output output.ail-core.txt".to_string());
     lines.push("trace trace.txt".to_string());
@@ -2183,6 +2190,23 @@ fn write_ail_pass_artifacts(
         format!("{}\n", artifacts.trace.join("\n")),
     )
     .map_err(|error| format!("failed to write ail-pass trace artifact: {error}"))?;
+    if let Some(native_bytecode_report_text) = artifacts.native_bytecode_report_text {
+        fs::write(
+            root.join("native-bytecode-report.txt"),
+            native_bytecode_report_text,
+        )
+        .map_err(|error| format!("failed to write ail-pass native bytecode report: {error}"))?;
+        fs::write(
+            root.join("native-bytecode-report.fingerprint.txt"),
+            format!(
+                "{}\n",
+                ail_artifact_fingerprint(native_bytecode_report_text)
+            ),
+        )
+        .map_err(|error| {
+            format!("failed to write ail-pass native bytecode report fingerprint: {error}")
+        })?;
+    }
     for native_pass in artifacts.pass_native_executables {
         let artifact_path = root.join(&native_pass.file_name);
         fs::write(&artifact_path, &native_pass.bytes).map_err(|error| {
@@ -2326,6 +2350,15 @@ fn run_ail_pass_command(pass_path: &str, cli_options: &CliOptions) -> Result<u8,
     } else {
         Vec::new()
     };
+    let native_bytecode_report_text = if let Some(target) = &cli_options.ail_compile_target {
+        Some(render_ail_pass_native_bytecode_report(
+            target,
+            pass_native_artifacts.as_slice(),
+            agent_native_artifacts.as_slice(),
+        )?)
+    } else {
+        None
+    };
     if let (Some(agent_run), Some(_artifact_dir)) =
         (agent_run.as_mut(), cli_options.artifact_dir.as_ref())
     {
@@ -2346,6 +2379,7 @@ fn run_ail_pass_command(pass_path: &str, cli_options: &CliOptions) -> Result<u8,
             input_core_text: &input_core_text,
             output_core_text: &output_core_text,
             trace: &result.run.trace,
+            native_bytecode_report_text: native_bytecode_report_text.as_deref(),
             pass_native_executables: pass_native_artifacts.as_slice(),
             agent_bytecode_text: Some(agent_run.bytecode_text.as_str()),
             agent_trace: Some(agent_run.trace.as_slice()),
@@ -2358,6 +2392,7 @@ fn run_ail_pass_command(pass_path: &str, cli_options: &CliOptions) -> Result<u8,
             &manifest_fingerprint,
             compiler_pass_source_artifacts.as_ref(),
             target_source_artifacts.as_ref(),
+            native_bytecode_report_text.as_deref(),
         )?;
     }
     if let Some(artifact_dir) = &cli_options.artifact_dir {
@@ -2380,6 +2415,7 @@ fn run_ail_pass_command(pass_path: &str, cli_options: &CliOptions) -> Result<u8,
                 input_core_text: &input_core_text,
                 output_core_text: &output_core_text,
                 trace: &result.run.trace,
+                native_bytecode_report_text: native_bytecode_report_text.as_deref(),
                 pass_native_executables: pass_native_artifacts.as_slice(),
                 agent_bytecode_text: agent_run.as_ref().map(|run| run.bytecode_text.as_str()),
                 agent_trace: agent_run.as_ref().map(|run| run.trace.as_slice()),
@@ -2462,6 +2498,7 @@ fn run_ail_pass_agent_verify_manifest(
     manifest_fingerprint: &str,
     compiler_pass_source_artifacts: Option<&AilSourcePackageArtifacts>,
     target_source_artifacts: Option<&AilSourcePackageArtifacts>,
+    native_bytecode_report_text: Option<&str>,
 ) -> Result<(), String> {
     if !agent_run
         .bytecode
@@ -2507,6 +2544,16 @@ fn run_ail_pass_agent_verify_manifest(
         verify_state.insert(
             "buildrequest.source package fingerprint".to_string(),
             ail_artifact_fingerprint(&source_package_text),
+        );
+    }
+    if let Some(native_bytecode_report_text) = native_bytecode_report_text {
+        verify_state.insert(
+            "buildrequest.native bytecode report".to_string(),
+            native_bytecode_report_text.to_string(),
+        );
+        verify_state.insert(
+            "buildrequest.native bytecode report fingerprint".to_string(),
+            ail_artifact_fingerprint(native_bytecode_report_text),
         );
     }
     let verify_run =
@@ -4415,6 +4462,8 @@ fn bootstrap_handoff_case(action_name: &str) -> Result<BootstrapHandoffCase, Str
                 "buildrequest.compiler pass fingerprint=fnv64:pass",
                 "buildrequest.source package=source",
                 "buildrequest.source package fingerprint=fnv64:source",
+                "buildrequest.native bytecode report=native-bytecode",
+                "buildrequest.native bytecode report fingerprint=fnv64:native-bytecode",
             ],
         }),
         "VerifyTargetArtifact" => Ok(BootstrapHandoffCase {
@@ -4717,6 +4766,39 @@ fn render_ail_build_dependency_report(
                 "machine-bytecode-dependency {} {}",
                 artifact.file_name,
                 native_elf_dependency_identity(&artifact.bytes)?
+            ));
+        }
+    }
+    Ok(format!("{}\n", lines.join("\n")))
+}
+
+fn render_ail_pass_native_bytecode_report(
+    target_name: &str,
+    compiler_pass_artifacts: &[AilNativeArtifact],
+    agent_artifacts: &[AilNativeArtifact],
+) -> Result<String, String> {
+    let mut lines = vec![
+        "AIL-Pass-Native-Bytecode:".to_string(),
+        format!("target {target_name}"),
+    ];
+    for (role, artifacts) in [
+        ("compiler-pass-target", compiler_pass_artifacts),
+        ("agent-target", agent_artifacts),
+    ] {
+        for artifact in artifacts {
+            if artifact.target_name != target_name {
+                return Err(format!(
+                    "native bytecode artifact {} targets {}, expected {target_name}",
+                    artifact.file_name, artifact.target_name
+                ));
+            }
+            lines.push(format!(
+                "machine-bytecode {role} {} {} {} {} bytes {}",
+                artifact.target_name,
+                artifact.file_name,
+                native_machine_bytecode_identity(&artifact.bytes)?,
+                ail_artifact_fingerprint_bytes(&artifact.bytes),
+                artifact.bytes.len()
             ));
         }
     }

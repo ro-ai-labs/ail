@@ -2891,6 +2891,47 @@ fn cli_ail_pass_writes_native_tool_artifacts() {
         )),
         "{manifest}"
     );
+    let native_bytecode_report =
+        fs::read_to_string(artifact_dir.join("native-bytecode-report.txt")).unwrap();
+    assert!(
+        native_bytecode_report.contains("AIL-Pass-Native-Bytecode:"),
+        "{native_bytecode_report}"
+    );
+    assert!(
+        native_bytecode_report.contains("target linux-x86_64-elf"),
+        "{native_bytecode_report}"
+    );
+    assert!(
+        native_bytecode_report.contains(&format!(
+            "machine-bytecode compiler-pass-target linux-x86_64-elf pass-InferReadPermissions.elf elf64-little-x86_64-executable {expected_pass_native_fingerprint} bytes {}",
+            pass_native.len()
+        )),
+        "{native_bytecode_report}"
+    );
+    assert!(
+        native_bytecode_report.contains(&format!(
+            "machine-bytecode agent-target linux-x86_64-elf agent-AcceptCompilerPassOutput.elf elf64-little-x86_64-executable {expected_agent_native_fingerprint} bytes {}",
+            agent_native.len()
+        )),
+        "{native_bytecode_report}"
+    );
+    let native_bytecode_report_fingerprint =
+        fs::read_to_string(artifact_dir.join("native-bytecode-report.fingerprint.txt")).unwrap();
+    assert_eq!(
+        native_bytecode_report_fingerprint.trim(),
+        fnv64_fingerprint(&native_bytecode_report)
+    );
+    assert!(
+        manifest.contains(&format!(
+            "native-bytecode native-bytecode-report.txt {}",
+            fnv64_fingerprint(&native_bytecode_report)
+        )),
+        "{manifest}"
+    );
+    let agent_trace = fs::read_to_string(artifact_dir.join("agent-trace.txt")).unwrap();
+    assert!(agent_trace.contains("action VerifyPassManifest started"));
+    assert!(agent_trace.contains("read buildrequest.native bytecode report"));
+    assert!(agent_trace.contains("read buildrequest.native bytecode report fingerprint"));
 
     fs::remove_dir_all(&artifact_dir).unwrap();
 }

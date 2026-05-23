@@ -7226,6 +7226,57 @@ compiler-pass, and verifier-agent ELFs have no host-language runtime, dynamic
 linker, shared-library, library, or linker dependency before the AIL-authored
 build manifest verifier accepts the manifest.
 
+### Task 161: Standalone Pass Records Native Bytecode Evidence
+
+**Files:**
+- Modify: `examples/ail_toolchain_agent.ail/spec.ail-spec.md`
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing standalone pass native-bytecode assertions**
+
+Extend `ail-pass --target linux-x86_64-elf --agent --artifact-dir` coverage to
+require `native-bytecode-report.txt`, `native-bytecode-report.fingerprint.txt`,
+and a fingerprinted `native-bytecode` entry in `manifest.ail-pass.txt`.
+Require the report to cover native AIL-Meta compiler-pass ELFs and native
+AIL-authored pass-agent ELFs. Extend the AIL-authored `VerifyPassManifest`
+flow to read `BuildRequest native bytecode report` and
+`BuildRequest native bytecode report fingerprint`.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_pass_writes_native_tool_artifacts -- --nocapture
+```
+
+Expected: the standalone native pass test fails because the native-bytecode
+report is not written yet and the AIL-authored pass manifest verifier lacks
+native-bytecode report state.
+
+- [x] **Step 3: Generate the pass native-bytecode report**
+
+Render a deterministic `AIL-Pass-Native-Bytecode` report, fingerprint it,
+include it in `manifest.ail-pass.txt`, write its sidecar fingerprint, and pass
+the report plus fingerprint into the AIL-authored `VerifyPassManifest` state.
+The report inspects native compiler-pass ELFs and native pass-agent ELF
+artifacts for ELF64 little-endian x86_64 executable identity.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_pass_writes_native_tool_artifacts -- --nocapture
+```
+
+Expected: standalone native `ail-pass` artifacts prove the emitted
+compiler-pass and verifier-agent tools are machine-level ELF executable bytes
+before the AIL-authored pass manifest verifier accepts the manifest.
+
 ### Task 18: Declared Failure Trace Coverage Diagnostics
 
 **Files:**

@@ -312,6 +312,8 @@ When the toolchain agent verifies the standalone compiler pass manifest:
 - the system reads the BuildRequest compiler pass fingerprint
 - the system reads the BuildRequest source package
 - the system reads the BuildRequest source package fingerprint
+- the system reads the BuildRequest native bytecode report
+- the system reads the BuildRequest native bytecode report fingerprint
 - the system changes the BuildRequest artifact manifest verification report to Verified
 - the system guarantees the pass manifest ties compiler-pass bytecode, transformed AIL-Core, pass trace, and agent artifacts with deterministic fingerprints and no Rust or host-language backend source
 - the system records a trace event named PassManifestVerified
