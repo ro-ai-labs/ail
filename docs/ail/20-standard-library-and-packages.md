@@ -53,6 +53,18 @@ The checker resolves imports before normalization. Ambiguous package names,
 unbounded major versions, missing capability grants, and conflicting aliases
 are rejected.
 
+The current local package loader implements exact path-version imports:
+
+```text
+imports: ../shared@0.1.0 as Shared
+```
+
+For this implemented form, the loader resolves `../shared` as the package
+directory, checks the loaded package `version` against `0.1.0`, and rejects the
+import before checking if the versions differ. Compatible range resolution and
+registry package names remain package-resolver work, not ambient checker
+behavior.
+
 ## Version Compatibility
 
 Semantic version rules:

@@ -1389,6 +1389,72 @@ fn ail_core_text_preserves_package_entry_features_and_imports() {
 }
 
 #[test]
+fn ail_package_loader_accepts_versioned_imports_and_rejects_mismatches() {
+    let unique_suffix = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let root = std::env::temp_dir().join(format!(
+        "ail-versioned-imports-{}-{unique_suffix}",
+        std::process::id()
+    ));
+    let shared = root.join("shared");
+    let app = root.join("app");
+    fs::create_dir_all(&shared).unwrap();
+    fs::create_dir_all(&app).unwrap();
+    fs::write(
+        shared.join("ail-package.md"),
+        r#"name: shared-lib
+version: 0.1.0
+profile: Application
+entry: spec.ail-spec.md
+features: things
+conformance: first-slice
+"#,
+    )
+    .unwrap();
+    fs::write(shared.join("spec.ail-spec.md"), "Application: Shared.\n").unwrap();
+    fs::write(app.join("spec.ail-spec.md"), "Application: App.\n").unwrap();
+    fs::write(
+        app.join("ail-package.md"),
+        r#"name: app
+version: 0.1.0
+profile: Application
+entry: spec.ail-spec.md
+features: imports
+imports: ../shared@0.1.0 as Shared
+conformance: first-slice
+"#,
+    )
+    .unwrap();
+
+    let package = load_ail_package_dir(&app).unwrap();
+    assert_eq!(package.metadata.imports[0].path, "../shared");
+    assert_eq!(package.metadata.imports[0].alias, "Shared");
+    assert_eq!(package.imports[0].package.metadata.version, "0.1.0");
+
+    fs::write(
+        app.join("ail-package.md"),
+        r#"name: app
+version: 0.1.0
+profile: Application
+entry: spec.ail-spec.md
+features: imports
+imports: ../shared@0.2.0 as Shared
+conformance: first-slice
+"#,
+    )
+    .unwrap();
+    let error = load_ail_package_dir(&app).unwrap_err();
+    assert!(
+        error.contains("requires version 0.2.0") && error.contains("shared-lib"),
+        "{error}"
+    );
+
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn ail_core_elaboration_preserves_provenance_for_behavior_bullets() {
     let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
     let document = parse_ail_spec_text(&package.spec_text).unwrap();

@@ -126,8 +126,11 @@ package.ail/
 
 `ail-package.md` declares package name, version, profile, entry spec, required
 features, imports, and conformance level. Imports use
-`imports: <path> as <Alias>` entries. The alias is a namespace boundary for the
-imported fragment before checking and rendering.
+`imports: <path> as <Alias>` entries, or `imports: <path>@<version> as <Alias>`
+when the importing package requires an exact local package version. The loader
+resolves the path without the version suffix, checks the loaded package
+metadata version before checking, and rejects mismatches. The alias is a
+namespace boundary for the imported fragment before checking and rendering.
 
 Conformance checks must validate the entry spec, every accepted fixture, and
 every rejected fixture. Accepted fixtures pass only when they produce no checker
@@ -950,8 +953,9 @@ rules are preserved.
 11. Render a deterministic no-code AIL-Flow projection from checked AIL-Core.
 12. Apply a checked AIL patch from a no-code or agent edit and prove the
     patched AIL-Spec render reparses to equivalent AIL-Core.
-13. Load imported package fragments under explicit aliases and prove canonical
-    render/reparse equality after namespacing.
+13. Load imported package fragments under explicit aliases, reject exact
+    version mismatches, and prove canonical render/reparse equality after
+    namespacing.
 14. Package the slice as the first conformance fixture.
 15. Lower checked Application-profile AIL-Core to AIL-Bytecode and execute the
     bytecode with the bootstrap VM.
@@ -1005,8 +1009,9 @@ The first slice is ready when:
   operands before VM execution
 - a checked AIL patch applies, renders as deterministic AIL-Spec, and reparses
   to equivalent AIL-Core
-- imported package declarations are namespaced under aliases and preserve
-  canonical render/reparse equivalence
+- imported package declarations are namespaced under aliases, exact local
+  import versions are checked against package metadata, and canonical
+  render/reparse equivalence is preserved
 - conformance validates the entry spec plus accepted and rejected fixture
   directories for Application, AgentTool, Compiler, and System profile packages
 - all artifacts keep provenance back to declarations and source behavior bullets

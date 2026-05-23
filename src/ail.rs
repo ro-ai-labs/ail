@@ -31,6 +31,7 @@ pub struct AilPackageMetadata {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AilImportSpec {
     pub path: String,
+    pub version: Option<String>,
     pub alias: String,
 }
 
@@ -492,6 +493,18 @@ fn load_ail_package_dir_inner(
     for import in &metadata.imports {
         let import_root = root.join(&import.path);
         let package = load_ail_package_dir_inner(&import_root, stack)?;
+        if let Some(required_version) = &import.version
+            && package.metadata.version != *required_version
+        {
+            return Err(format!(
+                "AIL import {} as {} requires version {}, but package {} is version {}",
+                import.path,
+                import.alias,
+                required_version,
+                package.metadata.name,
+                package.metadata.version
+            ));
+        }
         imports.push(AilLoadedImport {
             spec: import.clone(),
             package: Box::new(package),
@@ -2673,7 +2686,14 @@ pub fn render_ail_core(core: &AilCore) -> String {
 fn render_import_specs(imports: &[AilImportSpec]) -> String {
     imports
         .iter()
-        .map(|import| format!("{} as {}", import.path, import.alias))
+        .map(|import| {
+            let version = import
+                .version
+                .as_ref()
+                .map(|version| format!("@{version}"))
+                .unwrap_or_default();
+            format!("{}{} as {}", import.path, version, import.alias)
+        })
         .collect::<Vec<_>>()
         .join(", ")
 }
@@ -8495,8 +8515,20 @@ fn parse_import_specs(text: &str) -> Result<Vec<AilImportSpec>, String> {
             if path.is_empty() || alias.is_empty() {
                 return Err(format!("AIL import '{entry}' must use '<path> as <Alias>'"));
             }
+            let (path, version) = match path.rsplit_once('@') {
+                Some((path, version)) if !path.is_empty() && !version.is_empty() => {
+                    (path, Some(version.to_string()))
+                }
+                Some(_) => {
+                    return Err(format!(
+                        "AIL import '{entry}' must use '<path>@<version> as <Alias>'"
+                    ));
+                }
+                None => (path, None),
+            };
             Ok(AilImportSpec {
                 path: path.to_string(),
+                version,
                 alias: alias.to_string(),
             })
         })
