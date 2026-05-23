@@ -6642,6 +6642,57 @@ accepted spec, checked AIL-Core IR, and bytecode artifacts together with
 deterministic fingerprints before the AIL-authored manifest verifier accepts
 the bundle.
 
+### Task 150: Lower Records Source Package Fingerprints
+
+**Files:**
+- Modify: `examples/ail_toolchain_agent.ail/spec.ail-spec.md`
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing lower source fingerprint assertions**
+
+Extend `ail-lower --agent --artifact-dir` tests to require
+`source.ail-package.md`, `source.ail-spec.md`, `source.fingerprint.txt`, a
+fingerprinted `source-package` lower manifest entry, and AIL-authored
+`VerifyLowerManifest` reads for `buildrequest.source package` and
+`buildrequest.source package fingerprint`.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_lower_agent_verifies_manifest_artifacts -- --nocapture
+```
+
+Expected: the lower-agent test fails because package-backed lower artifacts do
+not write source package snapshots and the lower manifest verifier does not
+read the source package fingerprint.
+
+- [x] **Step 3: Generate lower source package snapshots**
+
+When package-backed `ail-lower --artifact-dir` persists lowering artifacts,
+write the package manifest and entry AIL-Spec snapshot, fingerprint the
+deterministic source bundle, include that fingerprint in
+`manifest.ail-lower.txt`, and pass the source bundle plus fingerprint into the
+AIL-authored `VerifyLowerManifest` state. Saved-core lowering remains a
+source-free artifact boundary.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_lower_agent_verifies_manifest_artifacts -- --nocapture
+```
+
+Expected: package-backed lower artifacts now tie source package, checked
+AIL-Core IR, and AIL-Bytecode artifacts together with deterministic
+fingerprints before the AIL-authored lower manifest verifier accepts the
+bundle.
+
 ### Task 18: Declared Failure Trace Coverage Diagnostics
 
 **Files:**

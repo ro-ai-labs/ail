@@ -410,16 +410,19 @@ interrupts, scheduler tasks, capabilities, effects, guarantees, and explicit
 trace events. Stdout remains reserved for parseable state changes. The first
 native backend rejects future unknown VM opcodes and unlowered
 `OBSERVE_RULE` requirements instead of silently emitting a partial executable.
-With `--artifact-dir`, `ail-lower` writes `checked.ail-core.txt`,
+With `--artifact-dir`, `ail-lower` writes `source.ail-package.md`,
+`source.ail-spec.md`, and `source.fingerprint.txt` when a package source is
+available; it also writes `checked.ail-core.txt`,
 `checked.ail-core.fingerprint.txt`, `artifact.ailbc.json`,
 `artifact.fingerprint.txt`, `manifest.ail-lower.txt`, and
 `manifest.fingerprint.txt`, keeping direct IR-to-VM-instruction lowering
 auditable while stdout remains the parseable VM instruction artifact. With
 `--agent <agent-package-or-bytecode> --artifact-dir`, `ail-lower` must compile
 or load an AIL-authored Application agent and run its `VerifyLowerManifest`
-bytecode action against the checked core, checked-core fingerprint, bytecode
-artifact, bytecode fingerprint, lower manifest, and manifest fingerprint before
-writing `agent.ailbc.json`, `agent.fingerprint.txt`, and `agent-trace.txt`. With
+bytecode action against the checked core, checked-core fingerprint,
+source-package fingerprint when present, bytecode artifact, bytecode
+fingerprint, lower manifest, and manifest fingerprint before writing
+`agent.ailbc.json`, `agent.fingerprint.txt`, and `agent-trace.txt`. With
 `--target linux-x86_64-elf`, it also emits `agent-<ActionName>.elf`
 machine-code ELF executables for the lower verifier and records them as
 `agent-target` entries in `manifest.ail-lower.txt`.

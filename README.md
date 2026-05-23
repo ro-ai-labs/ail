@@ -34,9 +34,11 @@ runs AIL-Core diagnostics, `ail-core` prints deterministic AIL-Core,
 inspection, `ail-lower` compiles checked AIL-Core IR into the current
 deterministic AIL VM instruction artifact, and `ail-compile --target
 linux-x86_64-elf --out <path>` emits a native Linux x86_64 ELF executable
-directly from checked AIL. The first native ABI accepts runtime state as
-`key=value` argv entries and returns a nonzero process status when supported
-compiled existence, allow-list, or forbidden-value requirements fail. Allow-list
+directly from checked AIL. For Linux, that native ELF output is the
+machine-level bytecode target; the saved AIL VM JSON remains an auditable
+intermediate until native coverage is complete. The first native ABI accepts
+runtime state as `key=value` argv entries and returns a nonzero process status
+when compiled existence, allow-list, or forbidden-value requirements fail. Allow-list
 requirements can come from `<field> to be <value>` or common LLM wording such
 as `<field> is <value>`; typed nested field phrases such as `assignee role`
 lower to explicit runtime keys such as `ticket.assignee.role`. Compound input
@@ -68,15 +70,16 @@ effects, guarantees, and explicit trace events.
 The first native backend rejects unsupported VM opcodes and unlowered observed
 rules instead of silently dropping them.
 `ail-lower --artifact-dir
-<dir>` also writes the checked core, checked-core fingerprint, VM instruction
-artifact, deterministic bytecode fingerprint, and a lower manifest while keeping
-stdout as the VM artifact.
+<dir>` also writes the source package snapshot and fingerprint for
+package-backed lowering, the checked core, checked-core fingerprint, VM
+instruction artifact, deterministic bytecode fingerprint, and a lower manifest
+while keeping stdout as the VM artifact.
 `ail-lower --agent <agent-package-or-bytecode> --artifact-dir <dir>` also
 compiles or loads an AIL-authored Application agent, runs its
 `VerifyLowerManifest` bytecode action against the checked core, checked-core
-fingerprint, bytecode artifact, bytecode fingerprint, lower manifest, and
-manifest fingerprint, then writes `agent.ailbc.json`, `agent.fingerprint.txt`,
-and `agent-trace.txt`.
+fingerprint, source-package fingerprint when present, bytecode artifact,
+bytecode fingerprint, lower manifest, and manifest fingerprint, then writes
+`agent.ailbc.json`, `agent.fingerprint.txt`, and `agent-trace.txt`.
 Adding `--target linux-x86_64-elf` emits `agent-<ActionName>.elf` native
 machine-code executables for that lower verifier and records each one as an
 `agent-target` line in the lower manifest.

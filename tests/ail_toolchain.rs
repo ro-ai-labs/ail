@@ -3425,6 +3425,8 @@ fn cli_ail_lower_agent_verifies_manifest_artifacts() {
     assert!(agent_trace.contains("action VerifyLowerManifest started"));
     assert!(agent_trace.contains("read buildrequest.core ir"));
     assert!(agent_trace.contains("read buildrequest.core ir fingerprint"));
+    assert!(agent_trace.contains("read buildrequest.source package"));
+    assert!(agent_trace.contains("read buildrequest.source package fingerprint"));
     assert!(agent_trace.contains("read buildrequest.bytecode artifact"));
     assert!(agent_trace.contains("read buildrequest.bytecode fingerprint"));
     assert!(agent_trace.contains("read buildrequest.artifact manifest"));
@@ -3436,11 +3438,33 @@ fn cli_ail_lower_agent_verifies_manifest_artifacts() {
 
     let bytecode_artifact = fs::read_to_string(artifact_dir.join("artifact.ailbc.json")).unwrap();
     assert_eq!(bytecode_artifact, String::from_utf8_lossy(&output.stdout));
+    let source_manifest = fs::read_to_string(artifact_dir.join("source.ail-package.md")).unwrap();
+    assert_eq!(
+        source_manifest,
+        fs::read_to_string(format!("{package}/ail-package.md")).unwrap()
+    );
+    let source_spec = fs::read_to_string(artifact_dir.join("source.ail-spec.md")).unwrap();
+    assert_eq!(
+        source_spec,
+        fs::read_to_string(format!("{package}/spec.ail-spec.md")).unwrap()
+    );
+    let source_bundle =
+        format!("ail-package.md:\n{source_manifest}\nspec.ail-spec.md:\n{source_spec}");
+    let source_fingerprint =
+        fs::read_to_string(artifact_dir.join("source.fingerprint.txt")).unwrap();
+    assert_eq!(source_fingerprint.trim(), fnv64_fingerprint(&source_bundle));
     let core_artifact = fs::read_to_string(artifact_dir.join("checked.ail-core.txt")).unwrap();
     let core_fingerprint =
         fs::read_to_string(artifact_dir.join("checked.ail-core.fingerprint.txt")).unwrap();
     assert_eq!(core_fingerprint.trim(), fnv64_fingerprint(&core_artifact));
     let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-lower.txt")).unwrap();
+    assert!(
+        manifest.contains(&format!(
+            "source-package source.ail-package.md source.ail-spec.md {}",
+            fnv64_fingerprint(&source_bundle)
+        )),
+        "{manifest}"
+    );
     assert!(
         manifest.contains(&format!(
             "core checked.ail-core.txt {}",

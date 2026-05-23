@@ -470,6 +470,8 @@ struct AilPassArtifactSet<'a> {
 }
 
 struct AilLowerArtifactSet<'a> {
+    source_manifest_text: Option<&'a str>,
+    source_spec_text: Option<&'a str>,
     core_text: &'a str,
     bytecode_text: &'a str,
     agent_bytecode_text: Option<&'a str>,
@@ -1521,8 +1523,19 @@ fn write_ail_build_artifacts(
 }
 
 fn render_ail_lower_manifest(artifacts: &AilLowerArtifactSet<'_>) -> String {
-    let mut lines = vec![
-        "AIL-Lower-Manifest:".to_string(),
+    let mut lines = vec!["AIL-Lower-Manifest:".to_string()];
+    if let (Some(source_manifest_text), Some(source_spec_text)) =
+        (artifacts.source_manifest_text, artifacts.source_spec_text)
+    {
+        lines.push(format!(
+            "source-package source.ail-package.md source.ail-spec.md {}",
+            ail_artifact_fingerprint(&ail_bootstrap_source_bundle_text(
+                source_manifest_text,
+                source_spec_text,
+            ))
+        ));
+    }
+    lines.extend([
         format!(
             "core checked.ail-core.txt {}",
             ail_artifact_fingerprint(artifacts.core_text)
@@ -1531,7 +1544,7 @@ fn render_ail_lower_manifest(artifacts: &AilLowerArtifactSet<'_>) -> String {
             "bytecode artifact.ailbc.json {}",
             ail_artifact_fingerprint(artifacts.bytecode_text)
         ),
-    ];
+    ]);
     if let Some(agent_bytecode_text) = artifacts.agent_bytecode_text {
         lines.push(format!(
             "agent agent.ailbc.json {}",
@@ -1560,6 +1573,27 @@ fn write_ail_lower_artifacts(
     fs::create_dir_all(root).map_err(|error| {
         format!("failed to create ail-lower artifact dir {artifact_dir}: {error}")
     })?;
+    if let (Some(source_manifest_text), Some(source_spec_text)) =
+        (artifacts.source_manifest_text, artifacts.source_spec_text)
+    {
+        fs::write(root.join("source.ail-package.md"), source_manifest_text)
+            .map_err(|error| format!("failed to write ail-lower source manifest: {error}"))?;
+        fs::write(root.join("source.ail-spec.md"), source_spec_text)
+            .map_err(|error| format!("failed to write ail-lower source spec: {error}"))?;
+        fs::write(
+            root.join("source.fingerprint.txt"),
+            format!(
+                "{}\n",
+                ail_artifact_fingerprint(&ail_bootstrap_source_bundle_text(
+                    source_manifest_text,
+                    source_spec_text,
+                ))
+            ),
+        )
+        .map_err(|error| {
+            format!("failed to write ail-lower source package fingerprint: {error}")
+        })?;
+    }
     fs::write(root.join("checked.ail-core.txt"), artifacts.core_text)
         .map_err(|error| format!("failed to write ail-lower core artifact: {error}"))?;
     fs::write(
@@ -2221,6 +2255,7 @@ fn run_ail_lower_agent_verify_manifest(
     core: &eigl::ail::AilCore,
     core_text: &str,
     bytecode_text: &str,
+    source_artifacts: Option<&AilSourcePackageArtifacts>,
     target: Option<&str>,
 ) -> Result<(AilBuildAgentRun, Vec<AilNativeArtifact>), String> {
     let (agent_bytecode, agent_bytecode_text) = load_verified_ail_build_agent(agent_path)?;
@@ -2234,6 +2269,8 @@ fn run_ail_lower_agent_verify_manifest(
     };
     let empty_agent_trace: &[String] = &[];
     let manifest_text = render_ail_lower_manifest(&AilLowerArtifactSet {
+        source_manifest_text: source_artifacts.map(|artifacts| artifacts.manifest_text.as_str()),
+        source_spec_text: source_artifacts.map(|artifacts| artifacts.spec_text.as_str()),
         core_text,
         bytecode_text,
         agent_bytecode_text: Some(agent_bytecode_text.as_str()),
@@ -2241,47 +2278,60 @@ fn run_ail_lower_agent_verify_manifest(
         agent_native_executables: agent_native_artifacts.as_slice(),
     });
     let manifest_fingerprint = ail_artifact_fingerprint(&manifest_text);
-    let run = run_ail_bytecode_action(
-        &agent_bytecode,
-        "VerifyLowerManifest",
-        BTreeMap::from([
-            (
-                "buildrequest.id".to_string(),
-                format!("{}-lower", core.package.name),
-            ),
-            (
-                "buildrequest.developer prompt".to_string(),
-                "skipped".to_string(),
-            ),
-            (
-                "buildrequest.requirements".to_string(),
-                "skipped".to_string(),
-            ),
-            ("buildrequest.spec".to_string(), "skipped".to_string()),
-            ("buildrequest.core ir".to_string(), core_text.to_string()),
-            (
-                "buildrequest.core ir fingerprint".to_string(),
-                ail_artifact_fingerprint(core_text),
-            ),
-            (
-                "buildrequest.bytecode artifact".to_string(),
-                format!("Verified AIL-Bytecode ({} bytes)", bytecode_text.len()),
-            ),
-            (
-                "buildrequest.bytecode fingerprint".to_string(),
-                ail_artifact_fingerprint(bytecode_text),
-            ),
-            ("buildrequest.artifact manifest".to_string(), manifest_text),
-            (
-                "buildrequest.artifact manifest fingerprint".to_string(),
-                manifest_fingerprint,
-            ),
-            (
-                "buildrequest.status".to_string(),
-                "BytecodeReady".to_string(),
-            ),
-        ]),
-    )?;
+    let source_package_text = source_artifacts.map(|artifacts| {
+        ail_bootstrap_source_bundle_text(&artifacts.manifest_text, &artifacts.spec_text)
+    });
+    let source_package_fingerprint = source_package_text.as_deref().map(ail_artifact_fingerprint);
+    let mut state = BTreeMap::from([
+        (
+            "buildrequest.id".to_string(),
+            format!("{}-lower", core.package.name),
+        ),
+        (
+            "buildrequest.developer prompt".to_string(),
+            "skipped".to_string(),
+        ),
+        (
+            "buildrequest.requirements".to_string(),
+            "skipped".to_string(),
+        ),
+        ("buildrequest.spec".to_string(), "skipped".to_string()),
+        ("buildrequest.core ir".to_string(), core_text.to_string()),
+        (
+            "buildrequest.core ir fingerprint".to_string(),
+            ail_artifact_fingerprint(core_text),
+        ),
+        (
+            "buildrequest.bytecode artifact".to_string(),
+            format!("Verified AIL-Bytecode ({} bytes)", bytecode_text.len()),
+        ),
+        (
+            "buildrequest.bytecode fingerprint".to_string(),
+            ail_artifact_fingerprint(bytecode_text),
+        ),
+        ("buildrequest.artifact manifest".to_string(), manifest_text),
+        (
+            "buildrequest.artifact manifest fingerprint".to_string(),
+            manifest_fingerprint,
+        ),
+        (
+            "buildrequest.status".to_string(),
+            "BytecodeReady".to_string(),
+        ),
+    ]);
+    if let Some(source_package_text) = source_package_text {
+        state.insert(
+            "buildrequest.source package".to_string(),
+            source_package_text,
+        );
+    }
+    if let Some(source_package_fingerprint) = source_package_fingerprint {
+        state.insert(
+            "buildrequest.source package fingerprint".to_string(),
+            source_package_fingerprint,
+        );
+    }
+    let run = run_ail_bytecode_action(&agent_bytecode, "VerifyLowerManifest", state)?;
     if run.status != "succeeded" {
         let mut message = "ail-lower agent VerifyLowerManifest failed".to_string();
         if let Some(failure) = run.failure {
@@ -4714,6 +4764,7 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
                     &core,
                     &core_text,
                     &bytecode_text,
+                    None,
                     cli_options.ail_compile_target.as_deref(),
                 )?;
                 (Some(run), native_artifacts)
@@ -4724,6 +4775,8 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
             write_ail_lower_artifacts(
                 artifact_dir,
                 AilLowerArtifactSet {
+                    source_manifest_text: None,
+                    source_spec_text: None,
                     core_text: &core_text,
                     bytecode_text: &bytecode_text,
                     agent_bytecode_text: agent_run.as_ref().map(|run| run.bytecode_text.as_str()),
@@ -5071,6 +5124,7 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
             let bytecode = compile_ail_core_bytecode(&core)?;
             let bytecode_text = format!("{}\n", render_ail_bytecode(&bytecode));
             let core_text = format!("{}\n", render_ail_core(&core));
+            let source_artifacts = load_ail_source_package_artifacts(path, "ail-lower")?;
             let (agent_run, agent_native_artifacts) =
                 if let Some(agent_path) = &cli_options.ail_build_agent {
                     let (run, native_artifacts) = run_ail_lower_agent_verify_manifest(
@@ -5078,6 +5132,7 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
                         &core,
                         &core_text,
                         &bytecode_text,
+                        Some(&source_artifacts),
                         cli_options.ail_compile_target.as_deref(),
                     )?;
                     (Some(run), native_artifacts)
@@ -5088,6 +5143,8 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
                 write_ail_lower_artifacts(
                     artifact_dir,
                     AilLowerArtifactSet {
+                        source_manifest_text: Some(source_artifacts.manifest_text.as_str()),
+                        source_spec_text: Some(source_artifacts.spec_text.as_str()),
                         core_text: &core_text,
                         bytecode_text: &bytecode_text,
                         agent_bytecode_text: agent_run
