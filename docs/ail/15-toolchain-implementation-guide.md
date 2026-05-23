@@ -142,6 +142,8 @@ AIL-Core rejects `--target linux-x86_64-elf` unless the package declares either
 `linux-x86_64-elf: supported` or the canonical
 `x86_64-unknown-linux-syscall-elf: supported` target-support entry. Finer
 target/effect pair enforcement remains checker and backend conformance work.
+Target-support status labels must be `supported`, `supported-with-host-imports`,
+or `planned-contract`.
 When present, `schema-version` and `safety-level` are also preserved as package
 metadata in checked AIL-Core. The checker rejects unknown schema versions;
 safety-level labels must be `standard`, `low`, `medium`, `high`, or `expert`.

@@ -1628,6 +1628,54 @@ target-support:
 }
 
 #[test]
+fn ail_core_reports_unknown_target_support_status_metadata() {
+    let unique_suffix = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let root = std::env::temp_dir().join(format!(
+        "ail-unknown-target-support-status-{}-{unique_suffix}",
+        std::process::id()
+    ));
+    fs::create_dir_all(&root).unwrap();
+    fs::write(
+        root.join("ail-package.md"),
+        r#"name: unknown-target-support-app
+version: 0.1.0
+profile: Application
+entry: spec.ail-spec.md
+features: things
+conformance: first-slice
+target-support:
+  x86_64-unknown-linux-syscall-elf: experimental-preview
+"#,
+    )
+    .unwrap();
+    fs::write(
+        root.join("spec.ail-spec.md"),
+        "The application Unknown Target Support App manages target validation.\n",
+    )
+    .unwrap();
+
+    let package = load_ail_package_dir(&root).unwrap();
+    let document = parse_ail_package_document(&package).unwrap();
+    let core = elaborate_ail_core(&package, &document);
+    let diagnostics = check_ail_core_diagnostics(&core);
+    assert!(
+        diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == "AIL-BACKEND-002"
+                && diagnostic
+                    .message
+                    .contains("x86_64-unknown-linux-syscall-elf")
+                && diagnostic.message.contains("experimental-preview")
+        }),
+        "{diagnostics:?}"
+    );
+
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn ail_core_text_preserves_manifest_schema_version_and_safety_level() {
     let unique_suffix = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)

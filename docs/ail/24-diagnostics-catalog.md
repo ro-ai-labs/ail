@@ -54,6 +54,7 @@ severity, blocking behavior, and at least one invalid fixture.
 | `AIL-SYSTEM-CAP-001` | `ail.system.effect.requires-capability` | system effect lacks matching capability | error | yes | add capability or remove effect |
 | `AIL-SYSTEM-REGION-001` | `ail.system.resource.requires-region` | resource effect lacks region placement | error | yes | declare resource region |
 | `AIL-BACKEND-001` | `ail.backend.effect.supported` | target does not support requested effect | error | yes | choose target support or remove effect |
+| `AIL-BACKEND-002` | `ail.backend.target-support.status-known` | target-support status label is unknown | error | yes | use a known target-support status |
 | `AIL-PROMPT-001` | `ail.prompt.envelope.valid` | agent output violates prompt envelope schema | error | yes | regenerate with required schema |
 | `AILR011` | `ail.spec.requirements.permission-preserved` | spec draft drops a permission-like requirement from AIL-Requirements | error | yes | add an explicit action requirement |
 | `AILR012` | `ail.spec.requirements.failure-preserved` | spec draft drops a required Failure section from AIL-Requirements | error | yes | add the named Failure section |

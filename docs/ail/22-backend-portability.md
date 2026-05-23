@@ -142,6 +142,9 @@ target-support:
   aarch64-apple-darwin-libsystem-macho: planned-contract
 ```
 
+The status vocabulary is closed: `supported`, `supported-with-host-imports`,
+and `planned-contract`.
+
 The checker rejects packages that lower to unsupported target/effect pairs.
 
 ## Capability Mapping Per OS

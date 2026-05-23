@@ -2445,6 +2445,7 @@ pub fn check_ail_core_diagnostics(core: &AilCore) -> Vec<AilDiagnostic> {
         .collect::<Vec<_>>();
     diagnostics.extend(check_core_schema_version(core));
     diagnostics.extend(check_package_safety_level(core));
+    diagnostics.extend(check_package_target_support_statuses(core));
     diagnostics.extend(check_core_schema_catalog(core));
     diagnostics.extend(check_field_types(core));
     diagnostics.extend(check_requirement_reference_diagnostics(core));
@@ -2538,6 +2539,32 @@ fn check_package_safety_level(core: &AilCore) -> Vec<AilDiagnostic> {
             "Use standard, low, medium, high, or expert as the package safety-level.",
         ),
     ]
+}
+
+fn check_package_target_support_statuses(core: &AilCore) -> Vec<AilDiagnostic> {
+    let mut diagnostics = Vec::new();
+    for (target, status) in &core.package.target_support {
+        if matches!(
+            status.as_str(),
+            "supported" | "supported-with-host-imports" | "planned-contract"
+        ) {
+            continue;
+        }
+        diagnostics.push(
+            AilDiagnostic::error(
+                "AIL-BACKEND-002",
+                format!("unknown AIL target-support status '{status}' for target {target}"),
+            )
+            .with_affected_graph_item(format!(
+                "package:{} target-support:{target}",
+                core.package.name
+            ))
+            .with_repair_suggestion(
+                "Use supported, supported-with-host-imports, or planned-contract as the target-support status.",
+            ),
+        );
+    }
+    diagnostics
 }
 
 fn check_core_schema_catalog(core: &AilCore) -> Vec<AilDiagnostic> {
