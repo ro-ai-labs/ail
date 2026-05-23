@@ -8,12 +8,13 @@ use std::time::{Duration, Instant};
 
 use ail::ail::{
     DEFAULT_BASE_LLM_ENDPOINT, ail_core_hash, apply_ail_core_patch_text, apply_ail_patch,
-    check_ail_core, check_ail_core_diagnostics, compile_ail_bytecode, compile_ail_core_bytecode,
-    compile_ail_core_native_elf, elaborate_ail_core, load_ail_package_dir, parse_ail_bytecode,
-    parse_ail_core_text, parse_ail_package_document, parse_ail_package_spec_text,
-    parse_ail_patch_text, parse_ail_spec_text, render_ail_bytecode, render_ail_core,
-    render_ail_flow_view, render_ail_spec, render_ail_spec_from_core, run_ail_action,
-    run_ail_bytecode_action, run_ail_compiler_pass_on_core, verify_ail_bytecode,
+    check_ail_core, check_ail_core_diagnostics, compile_ail_bytecode,
+    compile_ail_bytecode_native_elf, compile_ail_core_bytecode, compile_ail_core_native_elf,
+    elaborate_ail_core, load_ail_package_dir, parse_ail_bytecode, parse_ail_core_text,
+    parse_ail_package_document, parse_ail_package_spec_text, parse_ail_patch_text,
+    parse_ail_spec_text, render_ail_bytecode, render_ail_core, render_ail_flow_view,
+    render_ail_spec, render_ail_spec_from_core, run_ail_action, run_ail_bytecode_action,
+    run_ail_compiler_pass_on_core, verify_ail_bytecode,
 };
 use ail::core_model::json_string;
 
@@ -3005,6 +3006,146 @@ fn ail_bytecode_vm_executes_branch_and_jump_control_flow() {
                 && diagnostic.contains("missing")
         }),
         "{diagnostics:?}"
+    );
+}
+
+#[test]
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+fn ail_native_elf_executes_bytecode_branch_and_jump_control_flow() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let bytecode_text = r#"{
+  "kind": "AIL-Bytecode",
+  "package": "branching-example",
+  "version": "0.1.0",
+  "profile": "Application",
+  "failures": [],
+  "actions": [
+    {
+      "action": "ResolveTicket",
+      "instructions": [
+        {"opcode":"ACTION_BEGIN","operands":{"action":"ResolveTicket"}},
+        {"opcode":"BRANCH_FIELD_EQUALS","operands":{"key":"ticket.priority","value":"High","label":"high_priority"}},
+        {"opcode":"SET_FIELD","operands":{"key":"ticket.queue","value":"standard","text":"standard queue"}},
+        {"opcode":"JUMP","operands":{"label":"done"}},
+        {"opcode":"LABEL","operands":{"name":"high_priority"}},
+        {"opcode":"SET_FIELD","operands":{"key":"ticket.queue","value":"urgent","text":"urgent queue"}},
+        {"opcode":"LABEL","operands":{"name":"done"}},
+        {"opcode":"RETURN_SUCCESS","operands":{}}
+      ]
+    }
+  ]
+}"#;
+    let bytecode = parse_ail_bytecode(bytecode_text).unwrap();
+    let executable =
+        compile_ail_bytecode_native_elf(&bytecode, "ResolveTicket", "linux-x86_64-elf").unwrap();
+    let executable_path =
+        std::env::temp_dir().join(format!("ail-branch-bytecode-native-{}", std::process::id()));
+    let _ = fs::remove_file(&executable_path);
+    fs::write(&executable_path, executable).unwrap();
+    let mut permissions = fs::metadata(&executable_path).unwrap().permissions();
+    permissions.set_mode(0o755);
+    fs::set_permissions(&executable_path, permissions).unwrap();
+
+    let high = Command::new(&executable_path)
+        .arg("ticket.priority=High")
+        .output()
+        .unwrap();
+    assert!(high.status.success(), "high priority branch failed");
+    assert_eq!(
+        String::from_utf8_lossy(&high.stdout),
+        "ticket.queue=urgent\n"
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&high.stderr),
+        concat!(
+            "action ResolveTicket started\n",
+            "branch high_priority taken\n",
+            "write ticket.queue=urgent\n"
+        )
+    );
+
+    let standard = Command::new(&executable_path)
+        .arg("ticket.priority=Low")
+        .output()
+        .unwrap();
+    assert!(standard.status.success(), "standard branch failed");
+    assert_eq!(
+        String::from_utf8_lossy(&standard.stdout),
+        "ticket.queue=standard\n"
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&standard.stderr),
+        concat!(
+            "action ResolveTicket started\n",
+            "branch high_priority skipped\n",
+            "write ticket.queue=standard\n",
+            "jump done\n"
+        )
+    );
+
+    fs::remove_file(executable_path).unwrap();
+}
+
+#[test]
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+fn ail_native_elf_rejects_backward_bytecode_jump() {
+    let bytecode_text = r#"{
+  "kind": "AIL-Bytecode",
+  "package": "looping-example",
+  "version": "0.1.0",
+  "profile": "Application",
+  "failures": [],
+  "actions": [
+    {
+      "action": "LoopForever",
+      "instructions": [
+        {"opcode":"ACTION_BEGIN","operands":{"action":"LoopForever"}},
+        {"opcode":"LABEL","operands":{"name":"loop"}},
+        {"opcode":"JUMP","operands":{"label":"loop"}},
+        {"opcode":"RETURN_SUCCESS","operands":{}}
+      ]
+    }
+  ]
+}"#;
+    let bytecode = parse_ail_bytecode(bytecode_text).unwrap();
+    let error =
+        compile_ail_bytecode_native_elf(&bytecode, "LoopForever", "linux-x86_64-elf").unwrap_err();
+
+    assert!(
+        error.contains("backward JUMP") && error.contains("LoopForever"),
+        "{error}"
+    );
+}
+
+#[test]
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+fn ail_native_elf_rejects_backward_bytecode_branch() {
+    let bytecode_text = r#"{
+  "kind": "AIL-Bytecode",
+  "package": "looping-branch-example",
+  "version": "0.1.0",
+  "profile": "Application",
+  "failures": [],
+  "actions": [
+    {
+      "action": "LoopOnBranch",
+      "instructions": [
+        {"opcode":"ACTION_BEGIN","operands":{"action":"LoopOnBranch"}},
+        {"opcode":"LABEL","operands":{"name":"loop"}},
+        {"opcode":"BRANCH_FIELD_EQUALS","operands":{"key":"counter","value":"1","label":"loop"}},
+        {"opcode":"RETURN_SUCCESS","operands":{}}
+      ]
+    }
+  ]
+}"#;
+    let bytecode = parse_ail_bytecode(bytecode_text).unwrap();
+    let error =
+        compile_ail_bytecode_native_elf(&bytecode, "LoopOnBranch", "linux-x86_64-elf").unwrap_err();
+
+    assert!(
+        error.contains("backward BRANCH_FIELD_EQUALS") && error.contains("LoopOnBranch"),
+        "{error}"
     );
 }
 

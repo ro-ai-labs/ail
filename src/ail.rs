@@ -4193,47 +4193,150 @@ struct NativeFailureBranch {
     trace_lines: Vec<String>,
 }
 
-enum NativeStateWrite {
-    Static(String),
-    Copy {
-        source_prefix: String,
-        destination_prefix: String,
-    },
-}
-
 fn emit_linux_x86_64_elf_for_action(
     action: &AilBytecodeAction,
     failures: &BTreeMap<String, AilBytecodeFailure>,
 ) -> Result<Vec<u8>, String> {
-    let mut exists_prefixes = Vec::new();
-    let mut forbidden_exact_args = Vec::new();
-    let mut required_any_exact_args = Vec::new();
-    let mut required_after_args = Vec::new();
     let mut failure_branches = Vec::new();
-    let mut state_writes = Vec::new();
-    let mut success_trace_lines = Vec::new();
-    for instruction in &action.instructions {
+    let mut data_labels = Vec::new();
+    let mut next_data_label = 0usize;
+    let (bytecode_labels, label_diagnostics) = ail_bytecode_action_labels(action);
+    if !label_diagnostics.is_empty() {
+        return Err(label_diagnostics.join("\n"));
+    }
+    let label_by_instruction = bytecode_labels
+        .iter()
+        .map(|(name, index)| (*index, native_bytecode_label(name)))
+        .collect::<BTreeMap<_, _>>();
+
+    let mut code = X64Code::default();
+    code.emit(&[
+        0x48, 0x8b, 0x1c, 0x24, // mov rbx, [rsp]
+        0x4c, 0x8d, 0x64, 0x24, 0x10, // lea r12, [rsp+16]
+        0x49, 0x89, 0xdd, // mov r13, rbx
+        0x49, 0xff, 0xcd, // dec r13
+    ]);
+
+    for (instruction_index, instruction) in action.instructions.iter().enumerate() {
+        if let Some(label) = label_by_instruction.get(&instruction_index) {
+            code.label(label.clone())?;
+        }
         match instruction.opcode.as_str() {
             "ACTION_BEGIN" => {
                 if let Some(action) = instruction.operands.get("action") {
-                    success_trace_lines.push(format!("action {action} started\n"));
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("action {action} started\n"),
+                    );
+                }
+            }
+            "LABEL" => {}
+            "BRANCH_FIELD_EQUALS" => {
+                if let (Some(key), Some(value), Some(label)) = (
+                    instruction.operands.get("key"),
+                    instruction.operands.get("value"),
+                    instruction.operands.get("label"),
+                ) {
+                    let (target_index, target_label) = native_target_label(
+                        &bytecode_labels,
+                        &label_by_instruction,
+                        label,
+                        &action.name,
+                    )?;
+                    if target_index <= instruction_index {
+                        return Err(format!(
+                            "unsupported native linux-x86_64-elf backward BRANCH_FIELD_EQUALS from instruction {instruction_index} to label {label} in action '{}'",
+                            action.name
+                        ));
+                    }
+                    let exact_label = push_native_data_label(
+                        &mut data_labels,
+                        &mut next_data_label,
+                        "branch_exact",
+                        format!("{key}={value}"),
+                    );
+                    let taken_label = format!("branch_taken_{instruction_index}");
+                    let done_label = format!("branch_done_{instruction_index}");
+                    code.emit_lea_rsi_label(&exact_label);
+                    code.emit_mov_edx_imm32(format!("{key}={value}").len() as u32);
+                    code.emit_call_label("has_exact");
+                    code.emit(&[0x85, 0xc0]); // test eax, eax
+                    code.emit_jcc_label(&[0x0f, 0x85], &taken_label); // jnz taken
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("branch {label} skipped\n"),
+                    );
+                    code.emit_jmp_label(&done_label);
+                    code.label(taken_label)?;
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("branch {label} taken\n"),
+                    );
+                    code.emit_jmp_label(&target_label);
+                    code.label(done_label)?;
+                }
+            }
+            "JUMP" => {
+                if let Some(label) = instruction.operands.get("label") {
+                    let (target_index, target_label) = native_target_label(
+                        &bytecode_labels,
+                        &label_by_instruction,
+                        label,
+                        &action.name,
+                    )?;
+                    if target_index <= instruction_index {
+                        return Err(format!(
+                            "unsupported native linux-x86_64-elf backward JUMP from instruction {instruction_index} to label {label} in action '{}'",
+                            action.name
+                        ));
+                    }
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("jump {label}\n"),
+                    );
+                    code.emit_jmp_label(&target_label);
                 }
             }
             "REQUIRE_EXISTS" => {
                 if let Some(key) = instruction.operands.get("key") {
                     let fail_label = format!("fail_requirement_{}", failure_branches.len());
-                    exists_prefixes.push((format!("{key}="), fail_label.clone()));
+                    let prefix = format!("{key}=");
+                    let prefix_label = push_native_data_label(
+                        &mut data_labels,
+                        &mut next_data_label,
+                        "exists_prefix",
+                        &prefix,
+                    );
                     failure_branches.push(NativeFailureBranch {
                         label: fail_label,
                         trace_lines: native_failure_trace_lines(
-                            &success_trace_lines,
+                            &[],
                             instruction.operands.get("failure"),
                             failures,
                         ),
                     });
+                    code.emit_lea_rsi_label(&prefix_label);
+                    code.emit_mov_edx_imm32(prefix.len() as u32);
+                    code.emit_call_label("has_prefix");
+                    code.emit(&[0x85, 0xc0]); // test eax, eax
+                    code.emit_jcc_label(&[0x0f, 0x84], &failure_branches.last().unwrap().label);
+                    // jz fail
                 }
                 if let Some(rule) = instruction.operands.get("rule") {
-                    success_trace_lines.push(format!("rule passed: {rule}\n"));
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("rule passed: {rule}\n"),
+                    );
                 }
             }
             "REQUIRE_FIELD_NOT_EQUALS" => {
@@ -4242,18 +4345,35 @@ fn emit_linux_x86_64_elf_for_action(
                     instruction.operands.get("value"),
                 ) {
                     let fail_label = format!("fail_requirement_{}", failure_branches.len());
-                    forbidden_exact_args.push((format!("{key}={value}"), fail_label.clone()));
+                    let exact = format!("{key}={value}");
+                    let exact_label = push_native_data_label(
+                        &mut data_labels,
+                        &mut next_data_label,
+                        "forbidden_arg",
+                        &exact,
+                    );
                     failure_branches.push(NativeFailureBranch {
                         label: fail_label,
                         trace_lines: native_failure_trace_lines(
-                            &success_trace_lines,
+                            &[],
                             instruction.operands.get("failure"),
                             failures,
                         ),
                     });
+                    code.emit_lea_rsi_label(&exact_label);
+                    code.emit_mov_edx_imm32(exact.len() as u32);
+                    code.emit_call_label("has_exact");
+                    code.emit(&[0x85, 0xc0]); // test eax, eax
+                    code.emit_jcc_label(&[0x0f, 0x85], &failure_branches.last().unwrap().label);
+                    // jnz fail
                 }
                 if let Some(rule) = instruction.operands.get("rule") {
-                    success_trace_lines.push(format!("rule passed: {rule}\n"));
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("rule passed: {rule}\n"),
+                    );
                 }
             }
             "REQUIRE_FIELD_IN" => {
@@ -4268,19 +4388,39 @@ fn emit_linux_x86_64_elf_for_action(
                         .collect::<Vec<_>>();
                     if !allowed_args.is_empty() {
                         let fail_label = format!("fail_requirement_{}", failure_branches.len());
-                        required_any_exact_args.push((allowed_args, fail_label.clone()));
                         failure_branches.push(NativeFailureBranch {
                             label: fail_label,
                             trace_lines: native_failure_trace_lines(
-                                &success_trace_lines,
+                                &[],
                                 instruction.operands.get("failure"),
                                 failures,
                             ),
                         });
+                        let matched_label = format!("field_in_matched_{instruction_index}");
+                        for exact in allowed_args {
+                            let label = push_native_data_label(
+                                &mut data_labels,
+                                &mut next_data_label,
+                                "field_in_arg",
+                                &exact,
+                            );
+                            code.emit_lea_rsi_label(&label);
+                            code.emit_mov_edx_imm32(exact.len() as u32);
+                            code.emit_call_label("has_exact");
+                            code.emit(&[0x85, 0xc0]); // test eax, eax
+                            code.emit_jcc_label(&[0x0f, 0x85], &matched_label); // jnz matched
+                        }
+                        code.emit_jmp_label(&failure_branches.last().unwrap().label);
+                        code.label(matched_label)?;
                     }
                 }
                 if let Some(rule) = instruction.operands.get("rule") {
-                    success_trace_lines.push(format!("rule passed: {rule}\n"));
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("rule passed: {rule}\n"),
+                    );
                 }
             }
             "REQUIRE_FIELD_AFTER" => {
@@ -4289,22 +4429,54 @@ fn emit_linux_x86_64_elf_for_action(
                     instruction.operands.get("key"),
                 ) {
                     let fail_label = format!("fail_requirement_{}", failure_branches.len());
-                    required_after_args.push((
-                        format!("{source}="),
-                        format!("{key}="),
-                        fail_label.clone(),
-                    ));
+                    let source_prefix = format!("{source}=");
+                    let key_prefix = format!("{key}=");
+                    let source_label = push_native_data_label(
+                        &mut data_labels,
+                        &mut next_data_label,
+                        "field_after_source",
+                        &source_prefix,
+                    );
+                    let key_label = push_native_data_label(
+                        &mut data_labels,
+                        &mut next_data_label,
+                        "field_after_key",
+                        &key_prefix,
+                    );
                     failure_branches.push(NativeFailureBranch {
                         label: fail_label,
                         trace_lines: native_failure_trace_lines(
-                            &success_trace_lines,
+                            &[],
                             instruction.operands.get("failure"),
                             failures,
                         ),
                     });
+                    let fail_label = failure_branches.last().unwrap().label.clone();
+                    code.emit_lea_rsi_label(&source_label);
+                    code.emit_mov_edx_imm32(source_prefix.len() as u32);
+                    code.emit_call_label("find_prefix");
+                    code.emit_test_rax_rax();
+                    code.emit_jcc_label(&[0x0f, 0x84], &fail_label); // jz fail
+                    code.emit_mov_r14_rax();
+                    code.emit_lea_rsi_label(&key_label);
+                    code.emit_mov_edx_imm32(key_prefix.len() as u32);
+                    code.emit_call_label("find_prefix");
+                    code.emit_test_rax_rax();
+                    code.emit_jcc_label(&[0x0f, 0x84], &fail_label); // jz fail
+                    code.emit_mov_r15_rax();
+                    code.emit_mov_rdi_r14();
+                    code.emit_mov_rsi_r15();
+                    code.emit_call_label("cstring_gt");
+                    code.emit(&[0x85, 0xc0]); // test eax, eax
+                    code.emit_jcc_label(&[0x0f, 0x84], &fail_label); // jz fail
                 }
                 if let Some(rule) = instruction.operands.get("rule") {
-                    success_trace_lines.push(format!("rule passed: {rule}\n"));
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("rule passed: {rule}\n"),
+                    );
                 }
             }
             "OBSERVE_RULE" => {
@@ -4320,12 +4492,22 @@ fn emit_linux_x86_64_elf_for_action(
             }
             "READ_FIELD" => {
                 if let Some(key) = instruction.operands.get("key") {
-                    success_trace_lines.push(format!("read {key}\n"));
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("read {key}\n"),
+                    );
                 }
             }
             "READ_EFFECT" => {
                 if let Some(text) = instruction.operands.get("text") {
-                    success_trace_lines.push(format!("read {text}\n"));
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("read {text}\n"),
+                    );
                 }
             }
             "SET_FIELD" => {
@@ -4333,8 +4515,20 @@ fn emit_linux_x86_64_elf_for_action(
                     instruction.operands.get("key"),
                     instruction.operands.get("value"),
                 ) {
-                    state_writes.push(NativeStateWrite::Static(format!("{key}={value}\n")));
-                    success_trace_lines.push(format!("write {key}={value}\n"));
+                    let line = format!("{key}={value}\n");
+                    let label = push_native_data_label(
+                        &mut data_labels,
+                        &mut next_data_label,
+                        "state_write",
+                        &line,
+                    );
+                    code.emit_write_label(1, &label, line.len() as u32);
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("write {key}={value}\n"),
+                    );
                 }
             }
             "COPY_FIELD" => {
@@ -4342,40 +4536,78 @@ fn emit_linux_x86_64_elf_for_action(
                     instruction.operands.get("source"),
                     instruction.operands.get("key"),
                 ) {
-                    state_writes.push(NativeStateWrite::Copy {
-                        source_prefix: format!("{source}="),
-                        destination_prefix: format!("{key}="),
-                    });
-                    success_trace_lines.push(format!("write {key}\n"));
+                    emit_native_copy_state_write(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        instruction_index,
+                        &format!("{source}="),
+                        &format!("{key}="),
+                    )?;
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("write {key}\n"),
+                    );
                 }
             }
             "WRITE_FIELD" => {
                 if let Some(key) = instruction.operands.get("key") {
-                    state_writes.push(NativeStateWrite::Copy {
-                        source_prefix: format!("{key}.id="),
-                        destination_prefix: format!("{key}.id="),
-                    });
-                    success_trace_lines.push(format!("write {key}\n"));
+                    emit_native_copy_state_write(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        instruction_index,
+                        &format!("{key}.id="),
+                        &format!("{key}.id="),
+                    )?;
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("write {key}\n"),
+                    );
                 }
             }
             "EFFECT" => {
                 if let Some(text) = instruction.operands.get("text") {
-                    success_trace_lines.push(format!("effect {text}\n"));
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("effect {text}\n"),
+                    );
                 }
             }
             "ASSERT_GUARANTEE" => {
                 if let Some(text) = instruction.operands.get("text") {
-                    success_trace_lines.push(format!("guarantee checked: {text}\n"));
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("guarantee checked: {text}\n"),
+                    );
                 }
             }
             "TOOL_BEGIN" => {
                 if let Some(label) = instruction.operands.get("label") {
-                    success_trace_lines.push(format!("tool {label} started\n"));
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("tool {label} started\n"),
+                    );
                 }
             }
             "TOOL_REQUIREMENT" => {
                 if let Some(text) = instruction.operands.get("text") {
-                    success_trace_lines.push(format!("tool requirement {text}\n"));
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("tool requirement {text}\n"),
+                    );
                 }
             }
             "TOOL_INPUT" => {
@@ -4383,7 +4615,12 @@ fn emit_linux_x86_64_elf_for_action(
                     instruction.operands.get("name"),
                     instruction.operands.get("type"),
                 ) {
-                    success_trace_lines.push(format!("tool input {name}:{type_name}\n"));
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("tool input {name}:{type_name}\n"),
+                    );
                 }
             }
             "TOOL_OUTPUT" => {
@@ -4391,42 +4628,82 @@ fn emit_linux_x86_64_elf_for_action(
                     instruction.operands.get("name"),
                     instruction.operands.get("type"),
                 ) {
-                    success_trace_lines.push(format!("tool output {name}:{type_name}\n"));
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("tool output {name}:{type_name}\n"),
+                    );
                 }
             }
             "TOOL_READ" => {
                 if let Some(text) = instruction.operands.get("text") {
-                    success_trace_lines.push(format!("tool read {text}\n"));
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("tool read {text}\n"),
+                    );
                 }
             }
             "TOOL_CALL" => {
                 if let Some(target) = instruction.operands.get("target") {
-                    success_trace_lines.push(format!("tool call {target}\n"));
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("tool call {target}\n"),
+                    );
                 }
             }
             "TOOL_WRITE" => {
                 if let Some(text) = instruction.operands.get("text") {
-                    success_trace_lines.push(format!("tool write {text}\n"));
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("tool write {text}\n"),
+                    );
                 }
             }
             "TOOL_PERMISSION" => {
                 if let Some(text) = instruction.operands.get("text") {
-                    success_trace_lines.push(format!("tool permission {text}\n"));
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("tool permission {text}\n"),
+                    );
                 }
             }
             "TOOL_APPROVAL" => {
                 if let Some(text) = instruction.operands.get("text") {
-                    success_trace_lines.push(format!("tool approval {text}\n"));
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("tool approval {text}\n"),
+                    );
                 }
             }
             "TOOL_SECRET_PROTECTION" => {
                 if let Some(text) = instruction.operands.get("text") {
-                    success_trace_lines.push(format!("tool secret protection {text}\n"));
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("tool secret protection {text}\n"),
+                    );
                 }
             }
             "SYSTEM_BEGIN" => {
                 if let Some(label) = instruction.operands.get("label") {
-                    success_trace_lines.push(format!("system component {label} started\n"));
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("system component {label} started\n"),
+                    );
                 }
             }
             "SYSTEM_RESOURCE" => {
@@ -4434,22 +4711,42 @@ fn emit_linux_x86_64_elf_for_action(
                     instruction.operands.get("name"),
                     instruction.operands.get("type"),
                 ) {
-                    success_trace_lines.push(format!("system resource {name}:{type_name}\n"));
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("system resource {name}:{type_name}\n"),
+                    );
                 }
             }
             "SYSTEM_OWNS" => {
                 if let Some(resource) = instruction.operands.get("resource") {
-                    success_trace_lines.push(format!("system owns {resource}\n"));
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("system owns {resource}\n"),
+                    );
                 }
             }
             "SYSTEM_BORROWS" => {
                 if let Some(resource) = instruction.operands.get("resource") {
-                    success_trace_lines.push(format!("system borrows {resource}\n"));
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("system borrows {resource}\n"),
+                    );
                 }
             }
             "SYSTEM_MUTABLY_BORROWS" => {
                 if let Some(resource) = instruction.operands.get("resource") {
-                    success_trace_lines.push(format!("system mutably borrows {resource}\n"));
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("system mutably borrows {resource}\n"),
+                    );
                 }
             }
             "SYSTEM_REGION" => {
@@ -4457,7 +4754,12 @@ fn emit_linux_x86_64_elf_for_action(
                     instruction.operands.get("resource"),
                     instruction.operands.get("region"),
                 ) {
-                    success_trace_lines.push(format!("system places {resource} in {region}\n"));
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("system places {resource} in {region}\n"),
+                    );
                 }
             }
             "SYSTEM_LAYOUT" => {
@@ -4465,7 +4767,12 @@ fn emit_linux_x86_64_elf_for_action(
                     instruction.operands.get("resource"),
                     instruction.operands.get("layout"),
                 ) {
-                    success_trace_lines.push(format!("system layout {resource} {layout}\n"));
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("system layout {resource} {layout}\n"),
+                    );
                 }
             }
             "SYSTEM_ALLOCATION" => {
@@ -4473,7 +4780,12 @@ fn emit_linux_x86_64_elf_for_action(
                     instruction.operands.get("resource"),
                     instruction.operands.get("placement"),
                 ) {
-                    success_trace_lines.push(format!("system allocation {resource} {placement}\n"));
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("system allocation {resource} {placement}\n"),
+                    );
                 }
             }
             "SYSTEM_LOCK_GUARD" => {
@@ -4481,12 +4793,22 @@ fn emit_linux_x86_64_elf_for_action(
                     instruction.operands.get("resource"),
                     instruction.operands.get("lock"),
                 ) {
-                    success_trace_lines.push(format!("system lock guard {resource} with {lock}\n"));
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("system lock guard {resource} with {lock}\n"),
+                    );
                 }
             }
             "SYSTEM_CONTEXT" => {
                 if let Some(name) = instruction.operands.get("name") {
-                    success_trace_lines.push(format!("system context {name}\n"));
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("system context {name}\n"),
+                    );
                 }
             }
             "SYSTEM_INTERRUPT_PRIORITY" => {
@@ -4494,8 +4816,12 @@ fn emit_linux_x86_64_elf_for_action(
                     instruction.operands.get("context"),
                     instruction.operands.get("priority"),
                 ) {
-                    success_trace_lines
-                        .push(format!("system interrupt priority {context} {priority}\n"));
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("system interrupt priority {context} {priority}\n"),
+                    );
                 }
             }
             "SYSTEM_INTERRUPT_MASK" => {
@@ -4503,7 +4829,12 @@ fn emit_linux_x86_64_elf_for_action(
                     instruction.operands.get("context"),
                     instruction.operands.get("mask"),
                 ) {
-                    success_trace_lines.push(format!("system interrupt mask {context} {mask}\n"));
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("system interrupt mask {context} {mask}\n"),
+                    );
                 }
             }
             "SYSTEM_SCHEDULER_TASK" => {
@@ -4511,8 +4842,12 @@ fn emit_linux_x86_64_elf_for_action(
                     instruction.operands.get("task"),
                     instruction.operands.get("context"),
                 ) {
-                    success_trace_lines
-                        .push(format!("system scheduler task {task} in {context}\n"));
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("system scheduler task {task} in {context}\n"),
+                    );
                 }
             }
             "SYSTEM_TASK_PRIORITY" => {
@@ -4520,7 +4855,12 @@ fn emit_linux_x86_64_elf_for_action(
                     instruction.operands.get("task"),
                     instruction.operands.get("priority"),
                 ) {
-                    success_trace_lines.push(format!("system task priority {task} {priority}\n"));
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("system task priority {task} {priority}\n"),
+                    );
                 }
             }
             "SYSTEM_TASK_TIMING" => {
@@ -4529,24 +4869,42 @@ fn emit_linux_x86_64_elf_for_action(
                     instruction.operands.get("deadline"),
                     instruction.operands.get("budget"),
                 ) {
-                    success_trace_lines.push(format!(
-                        "system task timing {task} deadline {deadline} budget {budget}\n"
-                    ));
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("system task timing {task} deadline {deadline} budget {budget}\n"),
+                    );
                 }
             }
             "SYSTEM_CAPABILITY" => {
                 if let Some(text) = instruction.operands.get("text") {
-                    success_trace_lines.push(format!("system capability {text}\n"));
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("system capability {text}\n"),
+                    );
                 }
             }
             "SYSTEM_EFFECT" => {
                 if let Some(text) = instruction.operands.get("text") {
-                    success_trace_lines.push(format!("system effect {text}\n"));
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("system effect {text}\n"),
+                    );
                 }
             }
             "PASS_BEGIN" => {
                 if let Some(label) = instruction.operands.get("label") {
-                    success_trace_lines.push(format!("compiler pass {label} started\n"));
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("compiler pass {label} started\n"),
+                    );
                 }
             }
             "PASS_INPUT" => {
@@ -4554,7 +4912,12 @@ fn emit_linux_x86_64_elf_for_action(
                     instruction.operands.get("name"),
                     instruction.operands.get("type"),
                 ) {
-                    success_trace_lines.push(format!("input {name}:{type_name}\n"));
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("input {name}:{type_name}\n"),
+                    );
                 }
             }
             "PASS_OUTPUT" => {
@@ -4562,33 +4925,65 @@ fn emit_linux_x86_64_elf_for_action(
                     instruction.operands.get("name"),
                     instruction.operands.get("type"),
                 ) {
-                    success_trace_lines.push(format!("output {name}:{type_name}\n"));
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("output {name}:{type_name}\n"),
+                    );
                 }
             }
             "PASS_READ" => {
                 if let Some(text) = instruction.operands.get("text") {
-                    success_trace_lines.push(format!("pass read {text}\n"));
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("pass read {text}\n"),
+                    );
                 }
             }
             "PASS_STEP" => {
                 if let Some(text) = instruction.operands.get("text") {
-                    success_trace_lines.push(format!("pass step {text}\n"));
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("pass step {text}\n"),
+                    );
                 }
             }
             "PASS_WRITE" => {
                 if let Some(text) = instruction.operands.get("text") {
-                    success_trace_lines.push(format!("pass write {text}\n"));
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("pass write {text}\n"),
+                    );
                 }
             }
             "CORE_INFER_READ_PERMISSIONS" => {
-                success_trace_lines.push("core transform infer read permissions\n".to_string());
+                emit_native_trace_line(
+                    &mut code,
+                    &mut data_labels,
+                    &mut next_data_label,
+                    "core transform infer read permissions\n",
+                );
             }
             "EMIT_TRACE" => {
                 if let Some(event) = instruction.operands.get("event") {
-                    success_trace_lines.push(format!("trace {event}\n"));
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("trace {event}\n"),
+                    );
                 }
             }
-            "RETURN_SUCCESS" => {}
+            "RETURN_SUCCESS" => {
+                code.emit_exit(0);
+            }
             opcode => {
                 return Err(format!(
                     "unsupported native linux-x86_64-elf opcode '{opcode}' in action '{}'",
@@ -4598,95 +4993,6 @@ fn emit_linux_x86_64_elf_for_action(
         }
     }
 
-    let mut code = X64Code::default();
-    code.emit(&[
-        0x48, 0x8b, 0x1c, 0x24, // mov rbx, [rsp]
-        0x4c, 0x8d, 0x64, 0x24, 0x10, // lea r12, [rsp+16]
-        0x49, 0x89, 0xdd, // mov r13, rbx
-        0x49, 0xff, 0xcd, // dec r13
-    ]);
-    for (index, (prefix, fail_label)) in exists_prefixes.iter().enumerate() {
-        let label = format!("exists_prefix_{index}");
-        code.emit_lea_rsi_label(&label);
-        code.emit_mov_edx_imm32(prefix.len() as u32);
-        code.emit_call_label("has_prefix");
-        code.emit(&[0x85, 0xc0]); // test eax, eax
-        code.emit_jcc_label(&[0x0f, 0x84], fail_label); // jz fail
-    }
-    for (index, (exact, fail_label)) in forbidden_exact_args.iter().enumerate() {
-        let label = format!("forbidden_arg_{index}");
-        code.emit_lea_rsi_label(&label);
-        code.emit_mov_edx_imm32(exact.len() as u32);
-        code.emit_call_label("has_exact");
-        code.emit(&[0x85, 0xc0]); // test eax, eax
-        code.emit_jcc_label(&[0x0f, 0x85], fail_label); // jnz fail
-    }
-    for (group_index, (allowed_args, fail_label)) in required_any_exact_args.iter().enumerate() {
-        let matched_label = format!("field_in_matched_{group_index}");
-        for (value_index, exact) in allowed_args.iter().enumerate() {
-            let label = format!("field_in_arg_{group_index}_{value_index}");
-            code.emit_lea_rsi_label(&label);
-            code.emit_mov_edx_imm32(exact.len() as u32);
-            code.emit_call_label("has_exact");
-            code.emit(&[0x85, 0xc0]); // test eax, eax
-            code.emit_jcc_label(&[0x0f, 0x85], &matched_label); // jnz matched
-        }
-        code.emit_jmp_label(fail_label);
-        code.label(matched_label)?;
-    }
-    for (index, (_, _, fail_label)) in required_after_args.iter().enumerate() {
-        let source_label = format!("field_after_source_{index}");
-        let key_label = format!("field_after_key_{index}");
-        code.emit_lea_rsi_label(&source_label);
-        code.emit_mov_edx_imm32(required_after_args[index].0.len() as u32);
-        code.emit_call_label("find_prefix");
-        code.emit_test_rax_rax();
-        code.emit_jcc_label(&[0x0f, 0x84], fail_label); // jz fail
-        code.emit_mov_r14_rax();
-        code.emit_lea_rsi_label(&key_label);
-        code.emit_mov_edx_imm32(required_after_args[index].1.len() as u32);
-        code.emit_call_label("find_prefix");
-        code.emit_test_rax_rax();
-        code.emit_jcc_label(&[0x0f, 0x84], fail_label); // jz fail
-        code.emit_mov_r15_rax();
-        code.emit_mov_rdi_r14();
-        code.emit_mov_rsi_r15();
-        code.emit_call_label("cstring_gt");
-        code.emit(&[0x85, 0xc0]); // test eax, eax
-        code.emit_jcc_label(&[0x0f, 0x84], fail_label); // jz fail
-    }
-    for (index, write) in state_writes.iter().enumerate() {
-        match write {
-            NativeStateWrite::Static(line) => {
-                let label = format!("state_write_{index}");
-                code.emit_write_label(1, &label, line.len() as u32);
-            }
-            NativeStateWrite::Copy {
-                source_prefix,
-                destination_prefix,
-            } => {
-                let source_label = format!("state_copy_source_{index}");
-                let destination_label = format!("state_copy_destination_{index}");
-                let done_label = format!("state_copy_done_{index}");
-                code.emit_lea_rsi_label(&source_label);
-                code.emit_mov_edx_imm32(source_prefix.len() as u32);
-                code.emit_call_label("find_prefix");
-                code.emit_test_rax_rax();
-                code.emit_jcc_label(&[0x0f, 0x84], &done_label); // jz done
-                code.emit_mov_r14_rax();
-                code.emit_write_label(1, &destination_label, destination_prefix.len() as u32);
-                code.emit_mov_rdi_r14();
-                code.emit_call_label("cstring_len");
-                code.emit_write_r14_with_rax_len(1);
-                code.emit_write_label(1, "state_copy_newline", 1);
-                code.label(done_label)?;
-            }
-        }
-    }
-    for (index, line) in success_trace_lines.iter().enumerate() {
-        let label = format!("trace_write_{index}");
-        code.emit_write_label(2, &label, line.len() as u32);
-    }
     code.label("success")?;
     code.emit_exit(0);
     for branch in &failure_branches {
@@ -4702,53 +5008,9 @@ fn emit_linux_x86_64_elf_for_action(
     emit_find_prefix(&mut code)?;
     emit_cstring_len(&mut code)?;
     emit_cstring_gt(&mut code)?;
-    for (index, (prefix, _)) in exists_prefixes.iter().enumerate() {
-        code.label(format!("exists_prefix_{index}"))?;
-        code.emit(prefix.as_bytes());
-    }
-    for (index, (exact, _)) in forbidden_exact_args.iter().enumerate() {
-        code.label(format!("forbidden_arg_{index}"))?;
-        code.emit(exact.as_bytes());
-    }
-    for (group_index, (allowed_args, _)) in required_any_exact_args.iter().enumerate() {
-        for (value_index, exact) in allowed_args.iter().enumerate() {
-            code.label(format!("field_in_arg_{group_index}_{value_index}"))?;
-            code.emit(exact.as_bytes());
-        }
-    }
-    for (index, (source, key, _)) in required_after_args.iter().enumerate() {
-        code.label(format!("field_after_source_{index}"))?;
-        code.emit(source.as_bytes());
-        code.label(format!("field_after_key_{index}"))?;
-        code.emit(key.as_bytes());
-    }
-    let has_state_copies = state_writes
-        .iter()
-        .any(|write| matches!(write, NativeStateWrite::Copy { .. }));
-    for (index, write) in state_writes.iter().enumerate() {
-        match write {
-            NativeStateWrite::Static(line) => {
-                code.label(format!("state_write_{index}"))?;
-                code.emit(line.as_bytes());
-            }
-            NativeStateWrite::Copy {
-                source_prefix,
-                destination_prefix,
-            } => {
-                code.label(format!("state_copy_source_{index}"))?;
-                code.emit(source_prefix.as_bytes());
-                code.label(format!("state_copy_destination_{index}"))?;
-                code.emit(destination_prefix.as_bytes());
-            }
-        }
-    }
-    if has_state_copies {
-        code.label("state_copy_newline")?;
-        code.emit(b"\n");
-    }
-    for (index, line) in success_trace_lines.iter().enumerate() {
-        code.label(format!("trace_write_{index}"))?;
-        code.emit(line.as_bytes());
+    for (label, bytes) in &data_labels {
+        code.label(label.clone())?;
+        code.emit(bytes);
     }
     for branch in &failure_branches {
         for (index, line) in branch.trace_lines.iter().enumerate() {
@@ -4776,6 +5038,87 @@ fn native_failure_trace_lines(
         }
     }
     trace_lines
+}
+
+fn native_bytecode_label(name: &str) -> String {
+    format!("bytecode_label_{name}")
+}
+
+fn native_target_label(
+    bytecode_labels: &BTreeMap<String, usize>,
+    label_by_instruction: &BTreeMap<usize, String>,
+    target: &str,
+    action_name: &str,
+) -> Result<(usize, String), String> {
+    let target_index = bytecode_labels.get(target).ok_or_else(|| {
+        format!("unknown native bytecode label '{target}' in action '{action_name}'")
+    })?;
+    let label = label_by_instruction
+        .get(target_index)
+        .cloned()
+        .ok_or_else(|| {
+            format!("unresolved native bytecode label '{target}' in action '{action_name}'")
+        })?;
+    Ok((*target_index, label))
+}
+
+fn push_native_data_label(
+    data_labels: &mut Vec<(String, Vec<u8>)>,
+    next_data_label: &mut usize,
+    prefix: &str,
+    bytes: impl AsRef<[u8]>,
+) -> String {
+    let label = format!("{prefix}_{}", *next_data_label);
+    *next_data_label += 1;
+    data_labels.push((label.clone(), bytes.as_ref().to_vec()));
+    label
+}
+
+fn emit_native_trace_line(
+    code: &mut X64Code,
+    data_labels: &mut Vec<(String, Vec<u8>)>,
+    next_data_label: &mut usize,
+    line: &str,
+) {
+    let label = push_native_data_label(data_labels, next_data_label, "trace_write", line);
+    code.emit_write_label(2, &label, line.len() as u32);
+}
+
+fn emit_native_copy_state_write(
+    code: &mut X64Code,
+    data_labels: &mut Vec<(String, Vec<u8>)>,
+    next_data_label: &mut usize,
+    instruction_index: usize,
+    source_prefix: &str,
+    destination_prefix: &str,
+) -> Result<(), String> {
+    let source_label = push_native_data_label(
+        data_labels,
+        next_data_label,
+        "state_copy_source",
+        source_prefix,
+    );
+    let destination_label = push_native_data_label(
+        data_labels,
+        next_data_label,
+        "state_copy_destination",
+        destination_prefix,
+    );
+    let newline_label =
+        push_native_data_label(data_labels, next_data_label, "state_copy_newline", b"\n");
+    let done_label = format!("state_copy_done_{instruction_index}");
+    code.emit_lea_rsi_label(&source_label);
+    code.emit_mov_edx_imm32(source_prefix.len() as u32);
+    code.emit_call_label("find_prefix");
+    code.emit_test_rax_rax();
+    code.emit_jcc_label(&[0x0f, 0x84], &done_label); // jz done
+    code.emit_mov_r14_rax();
+    code.emit_write_label(1, &destination_label, destination_prefix.len() as u32);
+    code.emit_mov_rdi_r14();
+    code.emit_call_label("cstring_len");
+    code.emit_write_r14_with_rax_len(1);
+    code.emit_write_label(1, &newline_label, 1);
+    code.label(done_label)
 }
 
 fn emit_has_prefix(code: &mut X64Code) -> Result<(), String> {

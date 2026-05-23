@@ -460,10 +460,11 @@ pass and exits `1` when they fail. Native code generated from supported
 `SET_FIELD` instructions writes the changed state as `key=value` lines to
 stdout after requirements pass and before process exit. Native code generated
 from supported Application semantic opcodes writes success-path trace entries
-to stderr in VM trace order, including action start, rule-pass, write, effect,
-guarantee, and explicit trace-event entries. Supported requirement failure
-branches emit the VM-style action prefix, failure name, and any declared
-failure trace events to stderr before exiting `1`. Native code generated from
+to stderr in VM trace order, including action start, rule-pass, branch
+decisions, jumps, write, effect, guarantee, and explicit trace-event entries.
+Supported requirement failure branches emit the trace entries already reached
+by the instruction stream, then the failure name and any declared failure trace
+events to stderr before exiting `1`. Native code generated from
 supported AgentTool opcodes writes the same audit trace entries as the VM,
 including tool start, requirements, typed inputs and outputs, reads, external
 calls, writes, permissions, approvals, secret-protection declarations,
@@ -476,8 +477,12 @@ Native code generated from supported System opcodes writes the same low-level
 component trace entries as the VM, including resources, ownership, borrowing,
 region placement, layout, allocation, lock guards, execution context,
 interrupts, scheduler tasks, capabilities, effects, guarantees, and explicit
-trace events. Stdout remains reserved for parseable state changes. The first
-native backend rejects future unknown VM opcodes and unlowered
+trace events. Native Application code supports `LABEL`,
+`BRANCH_FIELD_EQUALS`, and `JUMP` for deterministic acyclic control flow over
+runtime argv state; unsupported loops and future VM opcodes still fail native
+compilation rather than emitting partial executables. Stdout remains reserved
+for parseable state changes. The first native backend rejects future unknown
+VM opcodes and unlowered
 `OBSERVE_RULE` requirements instead of silently emitting a partial executable.
 With `--artifact-dir`, `ail-lower` writes `source.ail-package.md`,
 `source.ail-spec.md`, and `source.fingerprint.txt` when a package source is
