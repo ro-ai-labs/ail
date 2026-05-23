@@ -196,6 +196,8 @@ When the toolchain agent verifies the build artifact manifest:
 - the system requires the BuildRequest status to be BytecodeReady
 - the system reads the BuildRequest artifact manifest
 - the system reads the BuildRequest artifact manifest fingerprint
+- the system reads the BuildRequest source package
+- the system reads the BuildRequest source package fingerprint
 - the system reads the BuildRequest requirements fingerprint
 - the system reads the BuildRequest spec fingerprint
 - the system reads the BuildRequest core ir fingerprint

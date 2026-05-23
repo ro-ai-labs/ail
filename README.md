@@ -177,11 +177,12 @@ before spec drafting. `ail-build --spec-file <path>` skips all LLM calls and
 resumes from an accepted AIL-Spec artifact before AIL-Core checking and target
 lowering. `ail-build --core-file <path>` skips requirements and spec stages
 entirely and resumes from checked AIL-Core IR. Add
-`--artifact-dir <dir>` to also write the captured or loaded requirements when
+`--artifact-dir <dir>` to also write the source package snapshot and
+fingerprint for package-backed builds, the captured or loaded requirements when
 present, requirements fingerprint, accepted AIL-Spec when present, spec
-fingerprint, checked AIL-Core IR after any build pass, checked-core
-fingerprint, final AIL-Bytecode artifact, and `manifest.ail-build.txt` as the
-fingerprinted artifact index for review.
+fingerprint, checked AIL-Core IR after any build pass, checked-core fingerprint,
+final AIL-Bytecode artifact, and `manifest.ail-build.txt` as the fingerprinted
+artifact index for review.
 `ail-build --agent
 <agent-package-or-bytecode>` compiles or loads an AIL-authored Application
 agent, validates and runs its `CaptureRequirements` bytecode action before the
@@ -198,8 +199,9 @@ emission, runs `VerifyBytecodeArtifact` after the VM artifact verifies, runs
 `CompileNativeTarget` after native Linux x86_64 ELF bytes are emitted, runs
 `VerifyTargetArtifact` after the native target artifact is recorded, and, with
 `--artifact-dir`, runs `VerifyBuildManifest` against the build manifest,
-manifest fingerprint, requirements/spec fingerprints when present, and
-checked-core fingerprint, then writes `artifact.fingerprint.txt`,
+manifest fingerprint, source-package fingerprint when present,
+requirements/spec fingerprints when present, and checked-core fingerprint, then
+writes `artifact.fingerprint.txt`,
 `agent.ailbc.json`, `agent.fingerprint.txt`, `agent-trace.txt`,
 `manifest.ail-build.txt`, and `manifest.fingerprint.txt`. When
 `--target-model` is present with `--artifact-dir`, the artifact set also writes
@@ -225,10 +227,11 @@ and target fingerprint before recording `NativeTargetCompiled`,
 `VerifyTargetArtifact` reads the native target artifact summary and
 deterministic fingerprint when a native target is selected, and
 `VerifyBuildManifest` reads the artifact manifest and its deterministic
-fingerprint, requirements/spec fingerprints when present, checked-core
-fingerprint, native target fingerprint, native bytecode report and fingerprint
-when a native target is selected, and the native compiler-pass executable
-fingerprint when a native build pass is present. When
+fingerprint, source-package fingerprint when present, requirements/spec
+fingerprints when present, checked-core fingerprint, native target fingerprint,
+native bytecode report and fingerprint when a native target is selected, and the
+native compiler-pass executable fingerprint when a native build pass is present.
+When
 `ail-build --target linux-x86_64-elf` is used with `--artifact-dir`, it also
 writes `target.elf`, `target.fingerprint.txt`, `native-bytecode-report.txt`,
 `native-bytecode-report.fingerprint.txt`, and manifest entries for both the

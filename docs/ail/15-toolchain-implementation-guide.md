@@ -611,16 +611,18 @@ deterministic target fingerprint, recording `NativeTargetCompiled` before
 `VerifyTargetArtifact` verifies the final machine-code boundary. When
 `--artifact-dir` is present, the agent also runs
 `VerifyBuildManifest` with the rendered build manifest, deterministic manifest
-fingerprint, requirements and spec fingerprints when those artifacts are
-present, checked-core fingerprint, native target fingerprint when a native
-target is present, the native-bytecode report and fingerprint when native ELF
-artifacts are present, and the native compiler-pass executable fingerprint when
-a native build pass is present, so the whole
+fingerprint, source-package fingerprint when a package source is available,
+requirements and spec fingerprints when those artifacts are present,
+checked-core fingerprint, native target fingerprint when a native target is
+present, the native-bytecode report and fingerprint when native ELF artifacts
+are present, and the native compiler-pass executable fingerprint when a native
+build pass is present, so the whole
 requirements/spec/core/pass/agent/artifact boundary is represented in AIL
 bytecode. This keeps the
 developer-facing build coordinator in AIL bytecode
 instead of adding a host-language orchestration layer. With `--artifact-dir`,
-the same command writes
+the same command writes `source.ail-package.md`, `source.ail-spec.md`, and
+`source.fingerprint.txt` when a package source is available. It writes
 `accepted.ail-spec.md`, `checked.ail-core.txt`,
 `checked.ail-core.fingerprint.txt`, `artifact.ailbc.json`, and
 `artifact.fingerprint.txt`; it also writes `requirements.ail-requirements.md`
@@ -652,9 +654,10 @@ artifact directory includes one `agent-<ActionName>.elf` executable per
 AIL-authored agent action, and the manifest records each as an `agent-target`
 entry with the action executable fingerprint. The
 artifact directory also includes `manifest.ail-build.txt`, a deterministic
-index tying the emitted requirements fingerprint, accepted spec fingerprint,
-checked core, compiler-pass bytecode and trace, agent bytecode and trace, final
-bytecode fingerprint, and native target fingerprint into one review artifact, plus
+index tying the source package fingerprint, emitted requirements fingerprint,
+accepted spec fingerprint, checked core, compiler-pass bytecode and trace,
+agent bytecode and trace, final bytecode fingerprint, and native target
+fingerprint into one review artifact, plus
 `manifest.fingerprint.txt` for that manifest's
 deterministic fingerprint. This
 lets the developer audit the

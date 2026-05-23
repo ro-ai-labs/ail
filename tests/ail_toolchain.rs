@@ -9499,6 +9499,8 @@ fn cli_ail_build_agent_verifies_bytecode_artifact_after_compile() {
     assert!(agent_trace.contains("trace BytecodeArtifactVerified"));
     assert!(agent_trace.contains("read buildrequest.artifact manifest"));
     assert!(agent_trace.contains("read buildrequest.artifact manifest fingerprint"));
+    assert!(agent_trace.contains("read buildrequest.source package"));
+    assert!(agent_trace.contains("read buildrequest.source package fingerprint"));
     assert!(agent_trace.contains("read buildrequest.requirements fingerprint"));
     assert!(agent_trace.contains("read buildrequest.spec fingerprint"));
     assert!(
@@ -9719,6 +9721,21 @@ fn cli_ail_build_writes_requirements_spec_core_and_bytecode_artifacts() {
     let stdout_bytecode = parse_ail_bytecode(&stdout).unwrap();
     assert_eq!(verify_ail_bytecode(&stdout_bytecode), Vec::<String>::new());
 
+    let source_manifest = fs::read_to_string(artifact_dir.join("source.ail-package.md")).unwrap();
+    assert_eq!(
+        source_manifest,
+        fs::read_to_string(format!("{package}/ail-package.md")).unwrap()
+    );
+    let source_spec = fs::read_to_string(artifact_dir.join("source.ail-spec.md")).unwrap();
+    assert_eq!(
+        source_spec,
+        fs::read_to_string(format!("{package}/spec.ail-spec.md")).unwrap()
+    );
+    let source_bundle =
+        format!("ail-package.md:\n{source_manifest}\nspec.ail-spec.md:\n{source_spec}");
+    let source_fingerprint =
+        fs::read_to_string(artifact_dir.join("source.fingerprint.txt")).unwrap();
+    assert_eq!(source_fingerprint.trim(), fnv64_fingerprint(&source_bundle));
     let requirements_artifact =
         fs::read_to_string(artifact_dir.join("requirements.ail-requirements.md")).unwrap();
     assert_eq!(requirements_artifact, requirements.trim());
@@ -9742,6 +9759,13 @@ fn cli_ail_build_writes_requirements_spec_core_and_bytecode_artifacts() {
     let artifact_bytecode = parse_ail_bytecode(&bytecode_artifact).unwrap();
     assert_eq!(artifact_bytecode, stdout_bytecode);
     let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-build.txt")).unwrap();
+    assert!(
+        manifest.contains(&format!(
+            "source-package source.ail-package.md source.ail-spec.md {}",
+            fnv64_fingerprint(&source_bundle)
+        )),
+        "{manifest}"
+    );
     assert!(
         manifest.contains(&format!(
             "requirements requirements.ail-requirements.md {}",

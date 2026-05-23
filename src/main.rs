@@ -386,6 +386,8 @@ fn usage() -> String {
 }
 
 struct AilBuildArtifactSet<'a> {
+    source_manifest_text: Option<&'a str>,
+    source_spec_text: Option<&'a str>,
     requirements: Option<&'a str>,
     spec_text: Option<&'a str>,
     core_text: &'a str,
@@ -482,6 +484,11 @@ struct AilConformanceArtifactSet<'a> {
     agent_native_executables: &'a [AilNativeArtifact],
 }
 
+struct AilSourcePackageArtifacts {
+    manifest_text: String,
+    spec_text: String,
+}
+
 struct AilBuildAgentStart {
     state: BTreeMap<String, String>,
     trace: Vec<String>,
@@ -506,6 +513,8 @@ struct AilBuildPassAcceptance<'a> {
 struct AilBuildAgentManifestVerification<'a> {
     manifest_text: &'a str,
     manifest_fingerprint: &'a str,
+    source_package_text: Option<&'a str>,
+    source_package_fingerprint: Option<&'a str>,
     requirements_fingerprint: Option<&'a str>,
     spec_fingerprint: Option<&'a str>,
     core_fingerprint: &'a str,
@@ -542,6 +551,17 @@ fn render_ail_prompt_portability_report(
 
 fn render_ail_build_manifest(artifacts: &AilBuildArtifactSet<'_>) -> String {
     let mut lines = vec!["AIL-Build-Manifest:".to_string()];
+    if let (Some(source_manifest_text), Some(source_spec_text)) =
+        (artifacts.source_manifest_text, artifacts.source_spec_text)
+    {
+        lines.push(format!(
+            "source-package source.ail-package.md source.ail-spec.md {}",
+            ail_artifact_fingerprint(&ail_bootstrap_source_bundle_text(
+                source_manifest_text,
+                source_spec_text,
+            ))
+        ));
+    }
     if let Some(requirements) = artifacts.requirements {
         lines.push(format!(
             "requirements requirements.ail-requirements.md {}",
@@ -711,6 +731,29 @@ fn render_ail_compile_bundle_manifest(artifacts: &AilCompileBundleArtifactSet<'_
 
 fn ail_bootstrap_source_bundle_text(package_manifest_text: &str, spec_text: &str) -> String {
     format!("ail-package.md:\n{package_manifest_text}\nspec.ail-spec.md:\n{spec_text}")
+}
+
+fn load_ail_source_package_artifacts(
+    path: &str,
+    context: &str,
+) -> Result<AilSourcePackageArtifacts, String> {
+    if std::path::Path::new(path).is_file() {
+        return Err(format!(
+            "{context} requires an AIL package directory so source package evidence can be recorded, found bytecode artifact {path}"
+        ));
+    }
+    let package = load_ail_package_dir(path)?;
+    let manifest_path = package.root.join("ail-package.md");
+    let manifest_text = fs::read_to_string(&manifest_path).map_err(|error| {
+        format!(
+            "{context} failed to read source package manifest {}: {error}",
+            manifest_path.display()
+        )
+    })?;
+    Ok(AilSourcePackageArtifacts {
+        manifest_text: ensure_trailing_newline(manifest_text),
+        spec_text: ensure_trailing_newline(package.spec_text),
+    })
 }
 
 fn render_ail_bootstrap_manifest(artifacts: &AilBootstrapArtifactSet<'_>) -> String {
@@ -1301,6 +1344,27 @@ fn write_ail_build_artifacts(
     fs::create_dir_all(root).map_err(|error| {
         format!("failed to create ail-build artifact dir {artifact_dir}: {error}")
     })?;
+    if let (Some(source_manifest_text), Some(source_spec_text)) =
+        (artifacts.source_manifest_text, artifacts.source_spec_text)
+    {
+        fs::write(root.join("source.ail-package.md"), source_manifest_text)
+            .map_err(|error| format!("failed to write ail-build source manifest: {error}"))?;
+        fs::write(root.join("source.ail-spec.md"), source_spec_text)
+            .map_err(|error| format!("failed to write ail-build source spec: {error}"))?;
+        fs::write(
+            root.join("source.fingerprint.txt"),
+            format!(
+                "{}\n",
+                ail_artifact_fingerprint(&ail_bootstrap_source_bundle_text(
+                    source_manifest_text,
+                    source_spec_text,
+                ))
+            ),
+        )
+        .map_err(|error| {
+            format!("failed to write ail-build source package fingerprint: {error}")
+        })?;
+    }
     if let Some(requirements) = artifacts.requirements {
         fs::write(root.join("requirements.ail-requirements.md"), requirements)
             .map_err(|error| format!("failed to write ail-build requirements artifact: {error}"))?;
@@ -2981,6 +3045,18 @@ fn run_ail_build_agent_verify_manifest(
         "buildrequest.artifact manifest fingerprint".to_string(),
         request.manifest_fingerprint.to_string(),
     );
+    if let Some(source_package_text) = request.source_package_text {
+        verify_state.insert(
+            "buildrequest.source package".to_string(),
+            source_package_text.to_string(),
+        );
+    }
+    if let Some(source_package_fingerprint) = request.source_package_fingerprint {
+        verify_state.insert(
+            "buildrequest.source package fingerprint".to_string(),
+            source_package_fingerprint.to_string(),
+        );
+    }
     if let Some(requirements_fingerprint) = request.requirements_fingerprint {
         verify_state.insert(
             "buildrequest.requirements fingerprint".to_string(),
@@ -4034,6 +4110,7 @@ fn run_ail_compile_from_bytecode_file(path: &str, cli_options: &CliOptions) -> R
 fn run_ail_build_from_core(
     mut core: eigl::ail::AilCore,
     cli_options: &CliOptions,
+    source_artifacts: Option<AilSourcePackageArtifacts>,
     requirements_artifact: Option<&str>,
     spec_text: Option<&str>,
     capture_prompt: Option<&str>,
@@ -4195,6 +4272,7 @@ fn run_ail_build_from_core(
     };
     if let Some(artifact_dir) = &cli_options.artifact_dir {
         let core_text = format!("{}\n", render_ail_core(&core));
+        let source_artifacts = source_artifacts.as_ref();
         let agent_native_artifacts = if let (Some((target, _, _)), Some(agent_run)) =
             (native_build.as_ref(), agent_run.as_ref())
         {
@@ -4215,6 +4293,9 @@ fn run_ail_build_from_core(
             };
         if let Some(agent_run) = agent_run.as_mut() {
             let manifest_text = render_ail_build_manifest(&AilBuildArtifactSet {
+                source_manifest_text: source_artifacts
+                    .map(|artifacts| artifacts.manifest_text.as_str()),
+                source_spec_text: source_artifacts.map(|artifacts| artifacts.spec_text.as_str()),
                 requirements: requirements_artifact,
                 spec_text,
                 core_text: &core_text,
@@ -4235,6 +4316,11 @@ fn run_ail_build_from_core(
                 agent_native_executables: agent_native_artifacts.as_slice(),
             });
             let manifest_fingerprint = ail_artifact_fingerprint(&manifest_text);
+            let source_package_text = source_artifacts.map(|artifacts| {
+                ail_bootstrap_source_bundle_text(&artifacts.manifest_text, &artifacts.spec_text)
+            });
+            let source_package_fingerprint =
+                source_package_text.as_deref().map(ail_artifact_fingerprint);
             let requirements_fingerprint = requirements_artifact.map(ail_artifact_fingerprint);
             let spec_fingerprint = spec_text.map(ail_artifact_fingerprint);
             let core_fingerprint = ail_artifact_fingerprint(&core_text);
@@ -4248,6 +4334,8 @@ fn run_ail_build_from_core(
                 AilBuildAgentManifestVerification {
                     manifest_text: &manifest_text,
                     manifest_fingerprint: &manifest_fingerprint,
+                    source_package_text: source_package_text.as_deref(),
+                    source_package_fingerprint: source_package_fingerprint.as_deref(),
                     requirements_fingerprint: requirements_fingerprint.as_deref(),
                     spec_fingerprint: spec_fingerprint.as_deref(),
                     core_fingerprint: &core_fingerprint,
@@ -4260,6 +4348,9 @@ fn run_ail_build_from_core(
         write_ail_build_artifacts(
             artifact_dir,
             AilBuildArtifactSet {
+                source_manifest_text: source_artifacts
+                    .map(|artifacts| artifacts.manifest_text.as_str()),
+                source_spec_text: source_artifacts.map(|artifacts| artifacts.spec_text.as_str()),
                 requirements: requirements_artifact,
                 spec_text,
                 core_text: &core_text,
@@ -4336,23 +4427,8 @@ fn load_ail_bootstrap_source_artifacts(
     path: &str,
     context: &str,
 ) -> Result<(String, String), String> {
-    if std::path::Path::new(path).is_file() {
-        return Err(format!(
-            "{context} requires an AIL package directory so source package evidence can be recorded, found bytecode artifact {path}"
-        ));
-    }
-    let package = load_ail_package_dir(path)?;
-    let manifest_path = package.root.join("ail-package.md");
-    let manifest_text = fs::read_to_string(&manifest_path).map_err(|error| {
-        format!(
-            "{context} failed to read source package manifest {}: {error}",
-            manifest_path.display()
-        )
-    })?;
-    Ok((
-        ensure_trailing_newline(manifest_text),
-        ensure_trailing_newline(package.spec_text),
-    ))
+    let artifacts = load_ail_source_package_artifacts(path, context)?;
+    Ok((artifacts.manifest_text, artifacts.spec_text))
 }
 
 fn ensure_trailing_newline(text: String) -> String {
@@ -4603,7 +4679,7 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
     }
     if command == "ail-build" && cli_options.ail_core_file.is_some() {
         let core = parse_cli_ail_core(cli_options)?;
-        return run_ail_build_from_core(core, cli_options, None, None, None, None);
+        return run_ail_build_from_core(core, cli_options, None, None, None, None, None);
     }
     if command == "ail-compile" && cli_options.ail_core_file.is_some() {
         let core = parse_cli_ail_core(cli_options)?;
@@ -4793,6 +4869,7 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
         return Ok(0);
     }
     if command == "ail-build" {
+        let source_artifacts = load_ail_source_package_artifacts(path, "ail-build")?;
         let (requirements_artifact, spec_text, core, capture_prompt, agent_start) =
             if let Some(spec_file) = cli_options.ail_spec_file.as_deref() {
                 let spec_text = fs::read_to_string(spec_file)
@@ -4919,6 +4996,7 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
         return run_ail_build_from_core(
             core,
             cli_options,
+            Some(source_artifacts),
             requirements_artifact.as_deref(),
             Some(&spec_text),
             capture_prompt.as_deref(),

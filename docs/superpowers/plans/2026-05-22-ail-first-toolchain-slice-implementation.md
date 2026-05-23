@@ -6590,6 +6590,58 @@ Expected: build artifacts now tie requirements, accepted spec, checked AIL-Core
 IR, and bytecode artifacts together with deterministic fingerprints before the
 AIL-authored manifest verifier accepts the bundle.
 
+### Task 149: Build Records Source Package Fingerprints
+
+**Files:**
+- Modify: `examples/ail_toolchain_agent.ail/spec.ail-spec.md`
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing source package fingerprint assertions**
+
+Extend `ail-build --artifact-dir` tests to require `source.ail-package.md`,
+`source.ail-spec.md`, `source.fingerprint.txt`, a fingerprinted
+`source-package` manifest entry, and AIL-authored build manifest verifier reads
+for `buildrequest.source package` and
+`buildrequest.source package fingerprint`.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_writes_requirements_spec_core_and_bytecode_artifacts -- --nocapture
+cargo test --test ail_toolchain cli_ail_build_agent_verifies_bytecode_artifact_after_compile -- --nocapture
+```
+
+Expected: the non-agent artifact test fails because source package snapshot
+artifacts are missing, and the agent verifier test fails because
+`VerifyBuildManifest` does not read the source package fingerprint.
+
+- [x] **Step 3: Generate source package snapshots**
+
+When `ail-build --artifact-dir` runs from a source package, write the package
+manifest and entry AIL-Spec snapshot, fingerprint the deterministic source
+bundle, include that fingerprint in `manifest.ail-build.txt`, and pass the
+source bundle plus fingerprint into the AIL-authored `VerifyBuildManifest`
+state.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_writes_requirements_spec_core_and_bytecode_artifacts -- --nocapture
+cargo test --test ail_toolchain cli_ail_build_agent_verifies_bytecode_artifact_after_compile -- --nocapture
+```
+
+Expected: package-backed build artifacts now tie source package, requirements,
+accepted spec, checked AIL-Core IR, and bytecode artifacts together with
+deterministic fingerprints before the AIL-authored manifest verifier accepts
+the bundle.
+
 ### Task 18: Declared Failure Trace Coverage Diagnostics
 
 **Files:**
