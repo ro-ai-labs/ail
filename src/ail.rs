@@ -677,6 +677,9 @@ pub fn apply_ail_core_patch_text(core: &AilCore, patch_text: &str) -> Result<Ail
             "add_node" => apply_ail_core_patch_add_node(&mut patched, op)?,
             "add_edge" => apply_ail_core_patch_add_edge(&mut patched, op)?,
             "remove_edge" => apply_ail_core_patch_remove_edge(&mut patched, op)?,
+            "replace_edge_attributes" => {
+                apply_ail_core_patch_replace_edge_attributes(&mut patched, op)?
+            }
             "replace_node_attributes" => {
                 apply_ail_core_patch_replace_node_attributes(&mut patched, op)?
             }
@@ -765,6 +768,44 @@ fn apply_ail_core_patch_remove_edge(
             "AIL-Core patch remove_edge did not find edge {kind} {source_label} -> {target_label}"
         ));
     }
+    Ok(())
+}
+
+fn apply_ail_core_patch_replace_edge_attributes(
+    core: &mut AilCore,
+    op: &BTreeMap<String, AilJsonValue>,
+) -> Result<(), String> {
+    let kind = required_json_string_for(op, "kind", "AIL-Core patch replace_edge_attributes")?;
+    let source_label =
+        required_json_string_for(op, "source", "AIL-Core patch replace_edge_attributes")?;
+    let target_label =
+        required_json_string_for(op, "target", "AIL-Core patch replace_edge_attributes")?;
+    let replacement_attributes =
+        optional_json_string_map(op, "attributes", "AIL-Core patch replace_edge_attributes")?;
+    if replacement_attributes.is_empty() {
+        return Err("AIL-Core patch replace_edge_attributes must provide attributes".to_string());
+    }
+    let source = find_core_patch_node(core, source_label).ok_or_else(|| {
+        format!("AIL-Core patch replace_edge_attributes references unknown source '{source_label}'")
+    })?;
+    let target = find_core_patch_node(core, target_label).ok_or_else(|| {
+        format!("AIL-Core patch replace_edge_attributes references unknown target '{target_label}'")
+    })?;
+    let edge_index = core
+        .graph
+        .edges
+        .iter()
+        .position(|edge| edge.kind == kind && edge.source == source.id && edge.target == target.id)
+        .ok_or_else(|| {
+            format!(
+                "AIL-Core patch replace_edge_attributes did not find edge {kind} {source_label} -> {target_label}"
+            )
+        })?;
+    let mut attributes = core.graph.edges[edge_index].attributes.clone();
+    for (key, value) in replacement_attributes {
+        attributes.insert(key, value);
+    }
+    core.graph.edges[edge_index] = Edge::new(kind.to_string(), &source, &target, attributes);
     Ok(())
 }
 

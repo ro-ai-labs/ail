@@ -1692,6 +1692,86 @@ fn ail_core_patch_remove_edge_rejects_missing_edge() {
 }
 
 #[test]
+fn ail_core_patch_replaces_edge_attributes_by_core_labels() {
+    let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
+    let document = parse_ail_spec_text(&package.spec_text).unwrap();
+    let core = elaborate_ail_core(&package, &document);
+    let core_hash = ail_core_hash(&core);
+    let patch = format!(
+        r#"{{
+  "schema": "ail-core.patch.v0",
+  "base_hash": "{core_hash}",
+  "source_view": "ActionCard:CloseTicket",
+  "ops": [
+    {{
+      "op": "add_node",
+      "kind": "Provenance",
+      "name": "flow:ActionCard:CloseTicket.edge-note"
+    }},
+    {{
+      "op": "add_edge",
+      "kind": "has_provenance",
+      "source": "Action:CloseTicket",
+      "target": "Provenance:flow:ActionCard:CloseTicket.edge-note",
+      "attributes": {{
+        "provenance": "flow:ActionCard:CloseTicket.edge-note.initial"
+      }}
+    }},
+    {{
+      "op": "replace_edge_attributes",
+      "kind": "has_provenance",
+      "source": "Action:CloseTicket",
+      "target": "Provenance:flow:ActionCard:CloseTicket.edge-note",
+      "attributes": {{
+        "provenance": "flow:ActionCard:CloseTicket.edge-note.reviewed",
+        "reviewed": "true"
+      }}
+    }}
+  ]
+}}"#
+    );
+    let patched = apply_ail_core_patch_text(&core, &patch).unwrap();
+    let rendered = render_ail_core(&patched);
+
+    assert_eq!(check_ail_core(&patched), Vec::<String>::new());
+    assert!(
+        rendered.contains(
+            "edge has_provenance Action:CloseTicket -> Provenance:flow:ActionCard:CloseTicket.edge-note [provenance=flow:ActionCard:CloseTicket.edge-note.reviewed,reviewed=true]"
+        ),
+        "{rendered}"
+    );
+}
+
+#[test]
+fn ail_core_patch_replace_edge_attributes_requires_attributes() {
+    let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
+    let document = parse_ail_spec_text(&package.spec_text).unwrap();
+    let core = elaborate_ail_core(&package, &document);
+    let core_hash = ail_core_hash(&core);
+    let patch = format!(
+        r#"{{
+  "schema": "ail-core.patch.v0",
+  "base_hash": "{core_hash}",
+  "source_view": "ActionCard:CloseTicket",
+  "ops": [
+    {{
+      "op": "replace_edge_attributes",
+      "kind": "records_trace",
+      "source": "Action:CloseTicket",
+      "target": "Trace:TicketClosed"
+    }}
+  ]
+}}"#
+    );
+    let error = apply_ail_core_patch_text(&core, &patch).unwrap_err();
+
+    assert!(
+        error.contains("AIL-Core patch replace_edge_attributes must provide attributes"),
+        "{error}"
+    );
+}
+
+#[test]
 fn ail_patch_adds_field_view_and_action_then_round_trips() {
     let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
     let document = parse_ail_spec_text(&package.spec_text).unwrap();

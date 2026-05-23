@@ -237,6 +237,15 @@ AIL-Flow, AIL-Agent, and canonical spec edits use the same graph patch schema:
       "target": "Provenance:flow:action-card:close-ticket.transient-note"
     },
     {
+      "op": "replace_edge_attributes",
+      "kind": "requires",
+      "source": "Action:CloseTicket",
+      "target": "Rule:TicketNotClosed",
+      "attributes": {
+        "provenance": "flow:action-card:close-ticket.reviewed"
+      }
+    },
+    {
       "op": "replace_node_attributes",
       "target": "Action:CloseTicket",
       "attributes": {
@@ -257,6 +266,7 @@ Patch operations:
 - `add_node`
 - `add_edge`
 - `remove_edge`
+- `replace_edge_attributes`
 - `replace_node_attributes`
 
 `base_hash` is required. It uses the form `ail-core:fnv64:<hex>`, is computed
@@ -272,17 +282,18 @@ label syntax from display names. `add_node` writes node provenance as
 `Provenance` nodes plus `has_provenance` edges. `add_edge` stores edge
 provenance as an edge attribute. `remove_edge` resolves the same source and
 target labels, deletes the existing edge of that kind, and rejects missing
-edges instead of treating them as no-ops. `replace_node_attributes` merges the
-listed string attributes into the target node, may replace the node `type`,
-rewrites the target node's stable id when attributes change, and rewires
-existing edges to the updated node before the checker runs. The CLI prints the
-patched Core artifact only after the resulting graph passes the AIL-Core
-checker.
+edges instead of treating them as no-ops. `replace_edge_attributes` merges the
+listed string attributes into the resolved edge, rewrites the stable edge id,
+and rejects missing edges instead of treating them as no-ops.
+`replace_node_attributes` merges the listed string attributes into the target
+node, may replace the node `type`, rewrites the target node's stable id when
+attributes change, and rewires existing edges to the updated node before the
+checker runs. The CLI prints the patched Core artifact only after the resulting
+graph passes the AIL-Core checker.
 
 Reserved target operations:
 
 - `remove_node`
-- `replace_edge_attributes`
 - `move_ordered_child`
 - `declare_provenance`
 
