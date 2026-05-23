@@ -7277,6 +7277,61 @@ Expected: standalone native `ail-pass` artifacts prove the emitted
 compiler-pass and verifier-agent tools are machine-level ELF executable bytes
 before the AIL-authored pass manifest verifier accepts the manifest.
 
+### Task 162: Standalone Pass Records Dependency Evidence
+
+**Files:**
+- Modify: `examples/ail_toolchain_agent.ail/spec.ail-spec.md`
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing standalone pass dependency assertions**
+
+Extend `ail-pass --target linux-x86_64-elf --agent --artifact-dir` coverage to
+require `dependency-report.txt`, `dependency-report.fingerprint.txt`, and a
+fingerprinted `dependencies` entry in `manifest.ail-pass.txt`. Require the
+report to cover native AIL-Meta compiler-pass ELFs and native AIL-authored
+pass-agent ELFs, and to state that host-language runtime, dynamic linker,
+shared libraries, library dependencies, and linker invocation are absent.
+Extend the AIL-authored `VerifyPassManifest` flow to read
+`BuildRequest dependency report` and `BuildRequest dependency report
+fingerprint`.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_pass_writes_native_tool_artifacts -- --nocapture
+```
+
+Expected: the standalone native pass test fails because the dependency report
+is not written yet and the AIL-authored pass manifest verifier lacks dependency
+report state.
+
+- [x] **Step 3: Generate the pass dependency report**
+
+Render a deterministic `AIL-Pass-Dependency-Report`, fingerprint it, include it
+in `manifest.ail-pass.txt`, write its sidecar fingerprint, and pass the report
+plus fingerprint into the AIL-authored `VerifyPassManifest` state. The report
+inspects native compiler-pass ELFs and native pass-agent ELF artifacts for
+standalone Linux syscall ELF identity without dynamic linker or dynamic
+section dependencies.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_pass_writes_native_tool_artifacts -- --nocapture
+```
+
+Expected: standalone native `ail-pass` artifacts prove the emitted
+compiler-pass and verifier-agent ELFs have no host-language runtime, dynamic
+linker, shared-library, library, or linker dependency before the AIL-authored
+pass manifest verifier accepts the manifest.
+
 ### Task 18: Declared Failure Trace Coverage Diagnostics
 
 **Files:**

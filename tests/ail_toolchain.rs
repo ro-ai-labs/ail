@@ -2928,10 +2928,66 @@ fn cli_ail_pass_writes_native_tool_artifacts() {
         )),
         "{manifest}"
     );
+    let dependency_report = fs::read_to_string(artifact_dir.join("dependency-report.txt")).unwrap();
+    assert!(
+        dependency_report.contains("AIL-Pass-Dependency-Report:"),
+        "{dependency_report}"
+    );
+    assert!(
+        dependency_report.contains("target linux-x86_64-elf"),
+        "{dependency_report}"
+    );
+    assert!(
+        dependency_report.contains("host-language-runtime none"),
+        "{dependency_report}"
+    );
+    assert!(
+        dependency_report.contains("dynamic-linker none"),
+        "{dependency_report}"
+    );
+    assert!(
+        dependency_report.contains("shared-libraries none"),
+        "{dependency_report}"
+    );
+    assert!(
+        dependency_report.contains("library-dependencies none"),
+        "{dependency_report}"
+    );
+    assert!(
+        dependency_report.contains("linker-invocation none"),
+        "{dependency_report}"
+    );
+    assert!(
+        dependency_report.contains(
+            "machine-bytecode-dependency pass-InferReadPermissions.elf standalone-linux-syscall-elf"
+        ),
+        "{dependency_report}"
+    );
+    assert!(
+        dependency_report.contains(
+            "machine-bytecode-dependency agent-AcceptCompilerPassOutput.elf standalone-linux-syscall-elf"
+        ),
+        "{dependency_report}"
+    );
+    let dependency_report_fingerprint =
+        fs::read_to_string(artifact_dir.join("dependency-report.fingerprint.txt")).unwrap();
+    assert_eq!(
+        dependency_report_fingerprint.trim(),
+        fnv64_fingerprint(&dependency_report)
+    );
+    assert!(
+        manifest.contains(&format!(
+            "dependencies dependency-report.txt {}",
+            fnv64_fingerprint(&dependency_report)
+        )),
+        "{manifest}"
+    );
     let agent_trace = fs::read_to_string(artifact_dir.join("agent-trace.txt")).unwrap();
     assert!(agent_trace.contains("action VerifyPassManifest started"));
     assert!(agent_trace.contains("read buildrequest.native bytecode report"));
     assert!(agent_trace.contains("read buildrequest.native bytecode report fingerprint"));
+    assert!(agent_trace.contains("read buildrequest.dependency report"));
+    assert!(agent_trace.contains("read buildrequest.dependency report fingerprint"));
 
     fs::remove_dir_all(&artifact_dir).unwrap();
 }
