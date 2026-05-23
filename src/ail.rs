@@ -2682,6 +2682,13 @@ fn core_node_label(node: &Node) -> String {
     format!("{}:{}", node.kind, node.name)
 }
 
+fn flow_core_label(core: &AilCore, kind: &str, name: &str) -> String {
+    core.graph
+        .find_node(kind, name)
+        .map(core_node_label)
+        .unwrap_or_else(|| format!("{kind}:{name}"))
+}
+
 pub fn render_ail_flow_view(core: &AilCore) -> String {
     let application = sorted_node_names(core, "Application")
         .into_iter()
@@ -2755,26 +2762,31 @@ fn render_flow_thing(core: &AilCore, thing: &str) -> String {
                 .get("secret")
                 .is_some_and(|value| value == "true");
             format!(
-                "{{\"name\":{},\"type\":{},\"secret\":{}}}",
+                "{{\"name\":{},\"coreLabel\":{},\"type\":{},\"secret\":{}}}",
                 json_string(field_name),
+                json_string(&core_node_label(field)),
                 json_string(field.type_name.as_deref().unwrap_or("")),
                 secret
             )
         })
         .collect::<Vec<_>>();
     fields.sort();
+    let core_label = flow_core_label(core, "Thing", thing);
     format!(
-        "{{\"name\":{},\"fields\":[{}]}}",
+        "{{\"name\":{},\"coreLabel\":{},\"fields\":[{}]}}",
         json_string(thing),
+        json_string(&core_label),
         fields.join(",")
     )
 }
 
 fn render_flow_action(core: &AilCore, action: &str) -> String {
     let Some(action_node) = core.graph.find_node("Action", action) else {
+        let core_label = flow_core_label(core, "Action", action);
         return format!(
-            "{{\"name\":{},\"label\":\"\",\"trigger\":\"\",\"requires\":[],\"reads\":[],\"writes\":[],\"guarantees\":[],\"traces\":[]}}",
-            json_string(action)
+            "{{\"name\":{},\"coreLabel\":{},\"label\":\"\",\"trigger\":\"\",\"requires\":[],\"reads\":[],\"writes\":[],\"guarantees\":[],\"traces\":[]}}",
+            json_string(action),
+            json_string(&core_label)
         );
     };
     let label = action_node
@@ -2788,8 +2800,9 @@ fn render_flow_action(core: &AilCore, action: &str) -> String {
         .map(String::as_str)
         .unwrap_or("");
     format!(
-        "{{\"name\":{},\"label\":{},\"trigger\":{},\"requires\":{},\"reads\":{},\"writes\":{},\"guarantees\":{},\"traces\":{}}}",
+        "{{\"name\":{},\"coreLabel\":{},\"label\":{},\"trigger\":{},\"requires\":{},\"reads\":{},\"writes\":{},\"guarantees\":{},\"traces\":{}}}",
         json_string(action),
+        json_string(&core_node_label(action_node)),
         json_string(label),
         json_string(trigger),
         render_json_array(edge_target_names(core, &action_node.id, "requires")),
@@ -2802,9 +2815,11 @@ fn render_flow_action(core: &AilCore, action: &str) -> String {
 
 fn render_flow_tool(core: &AilCore, tool: &str) -> String {
     let Some(tool_node) = core.graph.find_node("Tool", tool) else {
+        let core_label = flow_core_label(core, "Tool", tool);
         return format!(
-            "{{\"name\":{},\"label\":\"\",\"requires\":[],\"inputs\":[],\"outputs\":[],\"reads\":[],\"writes\":[],\"calls\":[],\"permissions\":[],\"approvals\":[],\"guarantees\":[],\"traces\":[]}}",
-            json_string(tool)
+            "{{\"name\":{},\"coreLabel\":{},\"label\":\"\",\"requires\":[],\"inputs\":[],\"outputs\":[],\"reads\":[],\"writes\":[],\"calls\":[],\"permissions\":[],\"approvals\":[],\"guarantees\":[],\"traces\":[]}}",
+            json_string(tool),
+            json_string(&core_label)
         );
     };
     let label = tool_node
@@ -2813,8 +2828,9 @@ fn render_flow_tool(core: &AilCore, tool: &str) -> String {
         .map(String::as_str)
         .unwrap_or("");
     format!(
-        "{{\"name\":{},\"label\":{},\"requires\":{},\"inputs\":{},\"outputs\":{},\"reads\":{},\"writes\":{},\"calls\":{},\"permissions\":{},\"approvals\":{},\"guarantees\":{},\"traces\":{}}}",
+        "{{\"name\":{},\"coreLabel\":{},\"label\":{},\"requires\":{},\"inputs\":{},\"outputs\":{},\"reads\":{},\"writes\":{},\"calls\":{},\"permissions\":{},\"approvals\":{},\"guarantees\":{},\"traces\":{}}}",
         json_string(tool),
+        json_string(&core_node_label(tool_node)),
         json_string(label),
         render_json_array(edge_target_names(core, &tool_node.id, "requires")),
         render_json_array(edge_target_names(core, &tool_node.id, "has_input")),
@@ -2836,9 +2852,11 @@ fn render_flow_tool(core: &AilCore, tool: &str) -> String {
 
 fn render_flow_compiler_pass(core: &AilCore, pass: &str) -> String {
     let Some(pass_node) = core.graph.find_node("Action", pass) else {
+        let core_label = flow_core_label(core, "Action", pass);
         return format!(
-            "{{\"name\":{},\"label\":\"\",\"inputs\":[],\"outputs\":[],\"reads\":[],\"writes\":[],\"steps\":[],\"guarantees\":[],\"traces\":[]}}",
-            json_string(pass)
+            "{{\"name\":{},\"coreLabel\":{},\"label\":\"\",\"inputs\":[],\"outputs\":[],\"reads\":[],\"writes\":[],\"steps\":[],\"guarantees\":[],\"traces\":[]}}",
+            json_string(pass),
+            json_string(&core_label)
         );
     };
     let label = pass_node
@@ -2847,8 +2865,9 @@ fn render_flow_compiler_pass(core: &AilCore, pass: &str) -> String {
         .map(String::as_str)
         .unwrap_or("");
     format!(
-        "{{\"name\":{},\"label\":{},\"inputs\":{},\"outputs\":{},\"reads\":{},\"writes\":{},\"steps\":{},\"guarantees\":{},\"traces\":{}}}",
+        "{{\"name\":{},\"coreLabel\":{},\"label\":{},\"inputs\":{},\"outputs\":{},\"reads\":{},\"writes\":{},\"steps\":{},\"guarantees\":{},\"traces\":{}}}",
         json_string(pass),
+        json_string(&core_node_label(pass_node)),
         json_string(label),
         render_json_array(
             edge_target_names(core, &pass_node.id, "reads")
@@ -2872,9 +2891,11 @@ fn render_flow_compiler_pass(core: &AilCore, pass: &str) -> String {
 
 fn render_flow_system_component(core: &AilCore, component: &str) -> String {
     let Some(component_node) = core.graph.find_node("SystemComponent", component) else {
+        let core_label = flow_core_label(core, "SystemComponent", component);
         return format!(
-            "{{\"name\":{},\"label\":\"\",\"resources\":[],\"owns\":[],\"borrows\":[],\"mutablyBorrows\":[],\"regions\":[],\"layouts\":[],\"allocations\":[],\"lockGuards\":[],\"contexts\":[],\"priorities\":[],\"interruptMasks\":[],\"tasks\":[],\"taskPriorities\":[],\"taskTimings\":[],\"capabilities\":[],\"effects\":[],\"guarantees\":[],\"traces\":[]}}",
-            json_string(component)
+            "{{\"name\":{},\"coreLabel\":{},\"label\":\"\",\"resources\":[],\"owns\":[],\"borrows\":[],\"mutablyBorrows\":[],\"regions\":[],\"layouts\":[],\"allocations\":[],\"lockGuards\":[],\"contexts\":[],\"priorities\":[],\"interruptMasks\":[],\"tasks\":[],\"taskPriorities\":[],\"taskTimings\":[],\"capabilities\":[],\"effects\":[],\"guarantees\":[],\"traces\":[]}}",
+            json_string(component),
+            json_string(&core_label)
         );
     };
     let label = component_node
@@ -2883,8 +2904,9 @@ fn render_flow_system_component(core: &AilCore, component: &str) -> String {
         .map(String::as_str)
         .unwrap_or("");
     format!(
-        "{{\"name\":{},\"label\":{},\"resources\":{},\"owns\":{},\"borrows\":{},\"mutablyBorrows\":{},\"regions\":{},\"layouts\":{},\"allocations\":{},\"lockGuards\":{},\"contexts\":{},\"priorities\":{},\"interruptMasks\":{},\"tasks\":{},\"taskPriorities\":{},\"taskTimings\":{},\"capabilities\":{},\"effects\":{},\"guarantees\":{},\"traces\":{}}}",
+        "{{\"name\":{},\"coreLabel\":{},\"label\":{},\"resources\":{},\"owns\":{},\"borrows\":{},\"mutablyBorrows\":{},\"regions\":{},\"layouts\":{},\"allocations\":{},\"lockGuards\":{},\"contexts\":{},\"priorities\":{},\"interruptMasks\":{},\"tasks\":{},\"taskPriorities\":{},\"taskTimings\":{},\"capabilities\":{},\"effects\":{},\"guarantees\":{},\"traces\":{}}}",
         json_string(component),
+        json_string(&core_node_label(component_node)),
         json_string(label),
         render_json_array(edge_target_names(core, &component_node.id, "uses_resource")),
         render_json_array(edge_target_names(core, &component_node.id, "owns_resource")),

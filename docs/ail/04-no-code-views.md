@@ -105,7 +105,10 @@ provenance it adds, changes, or removes.
 
 Every AIL-Flow projection includes a top-level `coreHash` field. Visual editors
 and AI agents copy that value into patch `base_hash` so a stale view cannot
-overwrite a newer checked Core graph.
+overwrite a newer checked Core graph. Node-backed Flow objects such as things,
+fields, actions, tools, compiler passes, and system components also include
+`coreLabel`, which is the exact checked Core node label to use in patch
+`source`, `target`, or `target` references.
 
 Patch payload:
 

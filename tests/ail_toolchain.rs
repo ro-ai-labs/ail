@@ -1608,9 +1608,11 @@ fn ail_flow_projection_renders_no_code_view_from_core() {
         flow.contains(&format!(r#""coreHash":"{expected_core_hash}""#)),
         "{flow}"
     );
-    assert!(flow.contains(r#""name":"Ticket""#));
-    assert!(flow.contains(r#""name":"internal notes","type":"Secret<List<Text>>","secret":true"#));
-    assert!(flow.contains(r#""name":"CloseTicket""#));
+    assert!(flow.contains(r#""name":"Ticket","coreLabel":"Thing:Ticket""#));
+    assert!(flow.contains(
+        r#""name":"internal notes","coreLabel":"Field:Ticket.internal notes","type":"Secret<List<Text>>","secret":true"#
+    ));
+    assert!(flow.contains(r#""name":"CloseTicket","coreLabel":"Action:CloseTicket""#));
     assert!(flow.contains(r#""writes":["Ticket.status","a public update"]"#));
     assert!(flow.contains(r#""traces":["TicketClosed"]"#));
     assert!(flow.contains(
@@ -3499,7 +3501,7 @@ fn cli_ail_check_and_core_use_package_loader() {
         flow_stdout.contains(&format!(r#""coreHash":"{expected_flow_hash}""#)),
         "{flow_stdout}"
     );
-    assert!(flow_stdout.contains(r#""name":"CloseTicket""#));
+    assert!(flow_stdout.contains(r#""name":"CloseTicket","coreLabel":"Action:CloseTicket""#));
 
     let lowered = Command::new(binary)
         .args(["ail-lower", &package])
