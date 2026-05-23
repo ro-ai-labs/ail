@@ -215,7 +215,7 @@ Minimum parser responsibilities:
   trace bullets
 - requirement bullets
 - read/write/effect bullets
-- stage-0 action call bullets as auditable write/effect text
+- stage-0 action call bullets as first-class `calls` Core edges
 - failure bullets
 - guarantee bullets
 - trace bullets

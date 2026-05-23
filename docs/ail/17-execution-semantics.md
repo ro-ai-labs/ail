@@ -62,6 +62,10 @@ merges the callee trace into the caller trace, and resumes the caller with the
 callee's final state when the callee succeeds. If the callee fails, the caller
 returns the same failure and merged trace. The bytecode verifier rejects calls
 to unknown actions before execution.
+Structured AIL-Spec bullets of the form `the system calls <ActionName>` lower
+to Core `calls` edges from the caller action to the callee action, then to
+`CALL_ACTION` bytecode. The source-level interpreter follows the same failure
+propagation and trace merge behavior.
 
 The initial integer state-mutation subset includes `ADD_INT_FIELD`. It reads a
 runtime state field as an integer, adds the signed integer `delta`, writes the

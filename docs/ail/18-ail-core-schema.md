@@ -169,7 +169,7 @@ Required attributes for all edges:
 | `requires` | action, tool, view, component | rule, permission, capability | many | target must be declared |
 | `reads` | action, function, tool, view, pass | field, value, resource | many | read permission or ownership required |
 | `writes` | action, tool, component, pass | field, value, resource, effect | many | write permission required |
-| `calls` | action, function, tool, pass | call, effect, external binding | many | target effects declared |
+| `calls` | action, function, tool, pass | action, call, effect, external binding | many | target action or effects declared |
 | `performs` | component, action, tool | effect | many | capability and target required |
 | `uses_resource` | component | resource | many | resource declared |
 | `targets_resource` | effect | resource | one | resource declared |

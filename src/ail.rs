@@ -343,6 +343,7 @@ pub struct AilAction {
     pub requirements: Vec<String>,
     pub reads: Vec<String>,
     pub writes: Vec<String>,
+    pub calls: Vec<String>,
     pub failures: Vec<String>,
     pub guarantees: Vec<String>,
     pub traces: Vec<String>,
@@ -573,7 +574,7 @@ pub enum AilPatchChange {
         type_name: String,
     },
     AddView(String),
-    AddAction(AilAction),
+    AddAction(Box<AilAction>),
 }
 
 pub fn load_ail_package_dir(path: impl AsRef<Path>) -> Result<AilPackage, String> {
@@ -667,14 +668,14 @@ pub fn parse_ail_patch_text(text: &str) -> Result<AilPatch, String> {
         }
         if line == "target:" {
             if let Some(action) = current_action.take() {
-                changes.push(AilPatchChange::AddAction(action));
+                changes.push(AilPatchChange::AddAction(Box::new(action)));
             }
             section = Some("target");
             continue;
         }
         if line == "change:" {
             if let Some(action) = current_action.take() {
-                changes.push(AilPatchChange::AddAction(action));
+                changes.push(AilPatchChange::AddAction(Box::new(action)));
             }
             section = Some("change");
             continue;
@@ -689,21 +690,21 @@ pub fn parse_ail_patch_text(text: &str) -> Result<AilPatch, String> {
             Some("change") => {
                 if let Some(field) = parse_ail_patch_field(line) {
                     if let Some(action) = current_action.take() {
-                        changes.push(AilPatchChange::AddAction(action));
+                        changes.push(AilPatchChange::AddAction(Box::new(action)));
                     }
                     changes.push(field);
                     continue;
                 }
                 if let Some(view) = line.strip_prefix("add view ") {
                     if let Some(action) = current_action.take() {
-                        changes.push(AilPatchChange::AddAction(action));
+                        changes.push(AilPatchChange::AddAction(Box::new(action)));
                     }
                     changes.push(AilPatchChange::AddView(view.trim().to_string()));
                     continue;
                 }
                 if let Some(label) = line.strip_prefix("add action ") {
                     if let Some(action) = current_action.take() {
-                        changes.push(AilPatchChange::AddAction(action));
+                        changes.push(AilPatchChange::AddAction(Box::new(action)));
                     }
                     let label = label.trim().to_string();
                     let name = action_name_from_label(&label);
@@ -724,7 +725,7 @@ pub fn parse_ail_patch_text(text: &str) -> Result<AilPatch, String> {
     }
 
     if let Some(action) = current_action.take() {
-        changes.push(AilPatchChange::AddAction(action));
+        changes.push(AilPatchChange::AddAction(Box::new(action)));
     }
     let target = target.ok_or_else(|| "AIL patch must declare target".to_string())?;
     if changes.is_empty() {
@@ -765,7 +766,9 @@ pub fn apply_ail_patch(document: &AilDocument, patch: &AilPatch) -> Result<AilDo
                 }
             }
             AilPatchChange::AddAction(action) => {
-                document.actions.insert(action.name.clone(), action.clone());
+                document
+                    .actions
+                    .insert(action.name.clone(), action.as_ref().clone());
             }
         }
     }
@@ -3210,6 +3213,19 @@ pub fn elaborate_ail_core(package: &AilPackage, document: &AilDocument) -> AilCo
                 attach_provenance(&mut graph, &target, provenance);
             }
         }
+        for call in &action.calls {
+            let target = resolve_action_call_target(&graph, document, call).unwrap_or_else(|| {
+                graph.add_node("Effect", format!("call {call}"), None, BTreeMap::new())
+            });
+            graph.add_edge("calls", &action_node, &target, BTreeMap::new());
+            if target.kind == "Effect" {
+                attach_provenance(
+                    &mut graph,
+                    &target,
+                    format!("action:{}.call:{call}", action.name),
+                );
+            }
+        }
         for protection in &action.secret_protections {
             let target = resolve_secret_target(&mut graph, document, protection);
             graph.add_edge("protects_secret", &action_node, &target, BTreeMap::new());
@@ -4131,7 +4147,7 @@ fn render_flow_action(core: &AilCore, action: &str) -> String {
     let Some(action_node) = core.graph.find_node("Action", action) else {
         let core_label = flow_core_label(core, "Action", action);
         return format!(
-            "{{\"name\":{},\"coreLabel\":{},\"label\":\"\",\"trigger\":\"\",\"requires\":[],\"reads\":[],\"writes\":[],\"guarantees\":[],\"traces\":[],\"edgeRefs\":[]}}",
+            "{{\"name\":{},\"coreLabel\":{},\"label\":\"\",\"trigger\":\"\",\"requires\":[],\"reads\":[],\"writes\":[],\"calls\":[],\"guarantees\":[],\"traces\":[],\"edgeRefs\":[]}}",
             json_string(action),
             json_string(&core_label)
         );
@@ -4147,7 +4163,7 @@ fn render_flow_action(core: &AilCore, action: &str) -> String {
         .map(String::as_str)
         .unwrap_or("");
     format!(
-        "{{\"name\":{},\"coreLabel\":{},\"label\":{},\"trigger\":{},\"requires\":{},\"reads\":{},\"writes\":{},\"guarantees\":{},\"traces\":{},\"edgeRefs\":{}}}",
+        "{{\"name\":{},\"coreLabel\":{},\"label\":{},\"trigger\":{},\"requires\":{},\"reads\":{},\"writes\":{},\"calls\":{},\"guarantees\":{},\"traces\":{},\"edgeRefs\":{}}}",
         json_string(action),
         json_string(&core_node_label(action_node)),
         json_string(label),
@@ -4155,12 +4171,20 @@ fn render_flow_action(core: &AilCore, action: &str) -> String {
         render_json_array(edge_target_names(core, &action_node.id, "requires")),
         render_json_array(edge_target_names(core, &action_node.id, "reads")),
         render_json_array(edge_target_names(core, &action_node.id, "writes")),
+        render_json_array(edge_target_names(core, &action_node.id, "calls")),
         render_json_array(edge_target_names(core, &action_node.id, "guarantees")),
         render_json_array(edge_target_names(core, &action_node.id, "records_trace")),
         render_flow_edge_refs(
             core,
             action_node,
-            &["requires", "reads", "writes", "guarantees", "records_trace"]
+            &[
+                "requires",
+                "reads",
+                "writes",
+                "calls",
+                "guarantees",
+                "records_trace"
+            ]
         ),
     )
 }
@@ -5134,6 +5158,9 @@ pub fn render_ail_spec(document: &AilDocument) -> String {
         for read in &action.reads {
             lines.push(format!("- the system reads {read}"));
         }
+        for call in &action.calls {
+            lines.push(format!("- the system calls {call}"));
+        }
         for write in &action.writes {
             lines.push(format!("- the system changes {write}"));
         }
@@ -5176,6 +5203,20 @@ pub fn run_ail_action(
     action_name: &str,
     runtime_state: BTreeMap<String, String>,
 ) -> Result<AilRunResult, String> {
+    run_ail_action_inner(document, action_name, runtime_state, 0)
+}
+
+fn run_ail_action_inner(
+    document: &AilDocument,
+    action_name: &str,
+    runtime_state: BTreeMap<String, String>,
+    call_depth: usize,
+) -> Result<AilRunResult, String> {
+    if call_depth > 64 {
+        return Err(format!(
+            "AIL action call depth exceeded while calling {action_name}"
+        ));
+    }
     let action = document
         .actions
         .get(action_name)
@@ -5283,6 +5324,23 @@ pub fn run_ail_action(
         } else {
             trace.push(format!("read {read}"));
         }
+    }
+
+    for call in &action.calls {
+        let target =
+            action_call_target_name(document, call).unwrap_or_else(|| action_name_from_label(call));
+        trace.push(format!("call action {target}"));
+        let mut called = run_ail_action_inner(document, &target, final_state, call_depth + 1)?;
+        trace.append(&mut called.trace);
+        if called.status != "succeeded" {
+            return Ok(AilRunResult {
+                status: called.status,
+                failure: called.failure,
+                final_state: called.final_state,
+                trace,
+            });
+        }
+        final_state = called.final_state;
     }
 
     for write in &action.writes {
@@ -7539,6 +7597,11 @@ pub fn ail_document_from_core(core: &AilCore) -> AilDocument {
                 .collect(),
             reads: outgoing_edge_payloads(core, &node_by_id, action_node, "reads", "read"),
             writes: outgoing_edge_payloads(core, &node_by_id, action_node, "writes", "write"),
+            calls: outgoing_nodes(core, &node_by_id, action_node, "calls")
+                .into_iter()
+                .filter(|node| node.kind == "Action")
+                .map(|node| node.name)
+                .collect(),
             failures: outgoing_nodes(core, &node_by_id, action_node, "may_fail_with")
                 .into_iter()
                 .filter(|node| node.kind == "Failure")
@@ -8629,6 +8692,14 @@ fn compile_ail_action_bytecode(document: &AilDocument, action: &AilAction) -> Ai
                 &[("text", read.clone())],
             ));
         }
+    }
+    for call in &action.calls {
+        let target =
+            action_call_target_name(document, call).unwrap_or_else(|| action_name_from_label(call));
+        instructions.push(AilBytecodeInstruction::new(
+            "CALL_ACTION",
+            &[("target", target)],
+        ));
     }
     for write in &action.writes {
         if let Some((key, value)) = field_write_assignment(document, write) {
@@ -10903,6 +10974,15 @@ fn namespace_ail_document(document: &AilDocument, alias: &str) -> AilDocument {
                     .writes
                     .iter()
                     .map(|text| qualify_reference_text(text, alias, &thing_names))
+                    .collect(),
+                calls: action
+                    .calls
+                    .iter()
+                    .map(|text| {
+                        action_call_target_name(document, text)
+                            .map(|target| qualify_name(alias, &target))
+                            .unwrap_or_else(|| qualify_reference_text(text, alias, &thing_names))
+                    })
                     .collect(),
                 failures: action
                     .failures
@@ -15637,7 +15717,7 @@ fn parse_action_bullet(document: &mut AilDocument, action_name: &str, bullet: &s
     } else if let Some(text) = bullet.strip_prefix("the system creates ") {
         action.writes.push(trim_sentence(text));
     } else if let Some(text) = bullet.strip_prefix("the system calls ") {
-        action.writes.push(format!("call {}", trim_sentence(text)));
+        action.calls.push(trim_sentence(text));
     } else if let Some(text) = bullet.strip_prefix("the system records a trace event named ") {
         action.traces.push(trim_sentence(text));
     } else if let Some(text) = bullet.strip_prefix("the system records ") {
@@ -15772,6 +15852,32 @@ fn resolve_field_or_effect(
         return field_node;
     }
     graph.add_node("Effect", text, None, BTreeMap::new())
+}
+
+fn resolve_action_call_target(
+    graph: &Graph,
+    document: &AilDocument,
+    text: &str,
+) -> Option<crate::core_model::Node> {
+    let target_name = action_call_target_name(document, text)?;
+    graph.find_node("Action", &target_name).cloned()
+}
+
+fn action_call_target_name(document: &AilDocument, text: &str) -> Option<String> {
+    let trimmed = trim_sentence(text);
+    if document.actions.contains_key(&trimmed) {
+        return Some(trimmed);
+    }
+    let pascal = action_name_from_label(&trimmed);
+    if document.actions.contains_key(&pascal) {
+        return Some(pascal);
+    }
+    let compact = compact_requirement_match_text(&trimmed);
+    document.actions.values().find_map(|action| {
+        let compact_name = compact_requirement_match_text(&action.name);
+        let compact_label = compact_requirement_match_text(&action.label);
+        (compact == compact_name || compact == compact_label).then(|| action.name.clone())
+    })
 }
 
 fn resolve_secret_target(

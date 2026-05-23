@@ -4434,6 +4434,99 @@ fn ail_bytecode_vm_executes_action_call_control_flow() {
 }
 
 #[test]
+fn ail_spec_lowers_action_call_bullets_to_call_action_bytecode() {
+    let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
+    let spec = r#"
+The application Call Example manages ticket actions.
+
+A Ticket has:
+
+- status: State<Open, Closed>
+- resolution: Text
+
+Action: Close ticket.
+
+When close ticket happens:
+
+- the system changes the ticket status to Closed
+- the system records a trace event named TicketClosed
+
+Action: Resolve ticket.
+
+When resolve ticket happens:
+
+- the system calls CloseTicket
+- the system changes the ticket resolution to Resolved
+- the system records a trace event named TicketResolved
+"#;
+    let document = parse_ail_spec_text(spec).unwrap();
+    let core = elaborate_ail_core(&package, &document);
+    assert_eq!(check_ail_core(&core), Vec::<String>::new());
+    let rendered_core = render_ail_core(&core);
+    assert!(
+        rendered_core.contains("edge calls Action:ResolveTicket -> Action:CloseTicket"),
+        "{rendered_core}"
+    );
+
+    let interpreted = run_ail_action(
+        &document,
+        "ResolveTicket",
+        BTreeMap::from([("ticket.status".to_string(), "Open".to_string())]),
+    )
+    .unwrap();
+    assert_eq!(interpreted.status, "succeeded");
+    assert_eq!(
+        interpreted
+            .final_state
+            .get("ticket.status")
+            .map(String::as_str),
+        Some("Closed")
+    );
+    assert_eq!(
+        interpreted
+            .final_state
+            .get("ticket.resolution")
+            .map(String::as_str),
+        Some("Resolved")
+    );
+    assert!(
+        interpreted
+            .trace
+            .contains(&"call action CloseTicket".to_string())
+    );
+
+    let bytecode = compile_ail_core_bytecode(&core).unwrap();
+    assert_eq!(verify_ail_bytecode(&bytecode), Vec::<String>::new());
+    let resolve_ticket = bytecode.actions.get("ResolveTicket").unwrap();
+    assert!(resolve_ticket.instructions.iter().any(|instruction| {
+        instruction.opcode == "CALL_ACTION"
+            && instruction
+                .operands
+                .get("target")
+                .is_some_and(|target| target == "CloseTicket")
+    }));
+
+    let run = run_ail_bytecode_action(
+        &bytecode,
+        "ResolveTicket",
+        BTreeMap::from([("ticket.status".to_string(), "Open".to_string())]),
+    )
+    .unwrap();
+    assert_eq!(run.status, "succeeded");
+    assert_eq!(
+        run.final_state.get("ticket.status").map(String::as_str),
+        Some("Closed")
+    );
+    assert_eq!(
+        run.final_state.get("ticket.resolution").map(String::as_str),
+        Some("Resolved")
+    );
+    assert!(run.trace.contains(&"call action CloseTicket".to_string()));
+    assert!(run.trace.contains(&"trace TicketClosed".to_string()));
+    assert!(run.trace.contains(&"trace TicketResolved".to_string()));
+}
+
+#[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn ail_native_elf_executes_bytecode_action_call_control_flow() {
     use std::os::unix::fs::PermissionsExt;
