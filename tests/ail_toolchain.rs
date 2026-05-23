@@ -2587,6 +2587,47 @@ fn cli_ail_pass_writes_auditable_intermediate_artifacts() {
     );
     let stdout = String::from_utf8_lossy(&output.stdout);
     let pass_bytecode = fs::read_to_string(artifact_dir.join("pass.ailbc.json")).unwrap();
+    let pass_source_manifest =
+        fs::read_to_string(artifact_dir.join("compiler-pass.source.ail-package.md")).unwrap();
+    assert_eq!(
+        pass_source_manifest,
+        fs::read_to_string(format!("{pass_package}/ail-package.md")).unwrap()
+    );
+    let pass_source_spec =
+        fs::read_to_string(artifact_dir.join("compiler-pass.source.ail-spec.md")).unwrap();
+    assert_eq!(
+        pass_source_spec,
+        fs::read_to_string(format!("{pass_package}/spec.ail-spec.md")).unwrap()
+    );
+    let pass_source_bundle =
+        format!("ail-package.md:\n{pass_source_manifest}\nspec.ail-spec.md:\n{pass_source_spec}");
+    let pass_source_fingerprint =
+        fs::read_to_string(artifact_dir.join("compiler-pass.source.fingerprint.txt")).unwrap();
+    assert_eq!(
+        pass_source_fingerprint.trim(),
+        fnv64_fingerprint(&pass_source_bundle)
+    );
+    let target_source_manifest =
+        fs::read_to_string(artifact_dir.join("target.source.ail-package.md")).unwrap();
+    assert_eq!(
+        target_source_manifest,
+        fs::read_to_string(format!("{target_package}/ail-package.md")).unwrap()
+    );
+    let target_source_spec =
+        fs::read_to_string(artifact_dir.join("target.source.ail-spec.md")).unwrap();
+    assert_eq!(
+        target_source_spec,
+        fs::read_to_string(format!("{target_package}/spec.ail-spec.md")).unwrap()
+    );
+    let target_source_bundle = format!(
+        "ail-package.md:\n{target_source_manifest}\nspec.ail-spec.md:\n{target_source_spec}"
+    );
+    let target_source_fingerprint =
+        fs::read_to_string(artifact_dir.join("target.source.fingerprint.txt")).unwrap();
+    assert_eq!(
+        target_source_fingerprint.trim(),
+        fnv64_fingerprint(&target_source_bundle)
+    );
     let pass_fingerprint = fs::read_to_string(artifact_dir.join("pass.fingerprint.txt")).unwrap();
     let input_core = fs::read_to_string(artifact_dir.join("input.ail-core.txt")).unwrap();
     let output_core = fs::read_to_string(artifact_dir.join("output.ail-core.txt")).unwrap();
@@ -2610,6 +2651,20 @@ fn cli_ail_pass_writes_auditable_intermediate_artifacts() {
 
     let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-pass.txt")).unwrap();
     assert!(manifest.contains("AIL-Pass-Manifest:"), "{manifest}");
+    assert!(
+        manifest.contains(&format!(
+            "compiler-pass-source compiler-pass.source.ail-package.md compiler-pass.source.ail-spec.md {}",
+            fnv64_fingerprint(&pass_source_bundle)
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "target-source target.source.ail-package.md target.source.ail-spec.md {}",
+            fnv64_fingerprint(&target_source_bundle)
+        )),
+        "{manifest}"
+    );
     assert!(
         manifest.contains(&format!(
             "compiler-pass pass.ailbc.json {expected_pass_fingerprint}"
@@ -2697,12 +2752,43 @@ fn cli_ail_pass_agent_accepts_pass_artifacts() {
     assert!(accept_index < manifest_index, "{agent_trace}");
     assert!(agent_trace.contains("read buildrequest.artifact manifest"));
     assert!(agent_trace.contains("read buildrequest.artifact manifest fingerprint"));
+    assert!(agent_trace.contains("read buildrequest.compiler pass source package"));
+    assert!(agent_trace.contains("read buildrequest.compiler pass source package fingerprint"));
+    assert!(agent_trace.contains("read buildrequest.source package"));
+    assert!(agent_trace.contains("read buildrequest.source package fingerprint"));
     assert!(
         agent_trace.contains("write buildrequest.artifact manifest verification report=Verified")
     );
     assert!(agent_trace.contains("trace PassManifestVerified"));
 
     let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-pass.txt")).unwrap();
+    let pass_source_manifest =
+        fs::read_to_string(artifact_dir.join("compiler-pass.source.ail-package.md")).unwrap();
+    let pass_source_spec =
+        fs::read_to_string(artifact_dir.join("compiler-pass.source.ail-spec.md")).unwrap();
+    let pass_source_bundle =
+        format!("ail-package.md:\n{pass_source_manifest}\nspec.ail-spec.md:\n{pass_source_spec}");
+    let target_source_manifest =
+        fs::read_to_string(artifact_dir.join("target.source.ail-package.md")).unwrap();
+    let target_source_spec =
+        fs::read_to_string(artifact_dir.join("target.source.ail-spec.md")).unwrap();
+    let target_source_bundle = format!(
+        "ail-package.md:\n{target_source_manifest}\nspec.ail-spec.md:\n{target_source_spec}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "compiler-pass-source compiler-pass.source.ail-package.md compiler-pass.source.ail-spec.md {}",
+            fnv64_fingerprint(&pass_source_bundle)
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "target-source target.source.ail-package.md target.source.ail-spec.md {}",
+            fnv64_fingerprint(&target_source_bundle)
+        )),
+        "{manifest}"
+    );
     assert!(manifest.contains("agent agent.ailbc.json"), "{manifest}");
     assert!(manifest.contains("trace agent-trace.txt"), "{manifest}");
     let manifest_fingerprint =

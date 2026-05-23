@@ -463,6 +463,10 @@ struct AilNativeArtifact {
 }
 
 struct AilPassArtifactSet<'a> {
+    compiler_pass_source_manifest_text: Option<&'a str>,
+    compiler_pass_source_spec_text: Option<&'a str>,
+    target_source_manifest_text: Option<&'a str>,
+    target_source_spec_text: Option<&'a str>,
     pass_bytecode_text: &'a str,
     input_core_text: &'a str,
     output_core_text: &'a str,
@@ -784,18 +788,49 @@ fn load_ail_source_package_artifacts(
     })
 }
 
+fn load_optional_ail_source_package_artifacts(
+    path: &str,
+    context: &str,
+) -> Result<Option<AilSourcePackageArtifacts>, String> {
+    if std::path::Path::new(path).is_file() {
+        Ok(None)
+    } else {
+        load_ail_source_package_artifacts(path, context).map(Some)
+    }
+}
+
 fn write_ail_source_package_snapshot(
     root: &std::path::Path,
     context: &str,
     source_manifest_text: &str,
     source_spec_text: &str,
 ) -> Result<(), String> {
-    fs::write(root.join("source.ail-package.md"), source_manifest_text)
+    write_ail_named_source_package_snapshot(
+        root,
+        context,
+        "source.ail-package.md",
+        "source.ail-spec.md",
+        "source.fingerprint.txt",
+        source_manifest_text,
+        source_spec_text,
+    )
+}
+
+fn write_ail_named_source_package_snapshot(
+    root: &std::path::Path,
+    context: &str,
+    manifest_file_name: &str,
+    spec_file_name: &str,
+    fingerprint_file_name: &str,
+    source_manifest_text: &str,
+    source_spec_text: &str,
+) -> Result<(), String> {
+    fs::write(root.join(manifest_file_name), source_manifest_text)
         .map_err(|error| format!("failed to write {context} source manifest: {error}"))?;
-    fs::write(root.join("source.ail-spec.md"), source_spec_text)
+    fs::write(root.join(spec_file_name), source_spec_text)
         .map_err(|error| format!("failed to write {context} source spec: {error}"))?;
     fs::write(
-        root.join("source.fingerprint.txt"),
+        root.join(fingerprint_file_name),
         format!(
             "{}\n",
             ail_artifact_fingerprint(&ail_bootstrap_source_bundle_text(
@@ -1908,10 +1943,32 @@ fn write_ail_conformance_artifacts(
 
 fn render_ail_pass_manifest(artifacts: &AilPassArtifactSet<'_>) -> String {
     let pass_fingerprint = ail_artifact_fingerprint(artifacts.pass_bytecode_text);
-    let mut lines = vec![
-        "AIL-Pass-Manifest:".to_string(),
-        format!("compiler-pass pass.ailbc.json {pass_fingerprint}"),
-    ];
+    let mut lines = vec!["AIL-Pass-Manifest:".to_string()];
+    if let (Some(source_manifest_text), Some(source_spec_text)) = (
+        artifacts.compiler_pass_source_manifest_text,
+        artifacts.compiler_pass_source_spec_text,
+    ) {
+        lines.push(format!(
+            "compiler-pass-source compiler-pass.source.ail-package.md compiler-pass.source.ail-spec.md {}",
+            ail_artifact_fingerprint(&ail_bootstrap_source_bundle_text(
+                source_manifest_text,
+                source_spec_text,
+            ))
+        ));
+    }
+    if let (Some(source_manifest_text), Some(source_spec_text)) = (
+        artifacts.target_source_manifest_text,
+        artifacts.target_source_spec_text,
+    ) {
+        lines.push(format!(
+            "target-source target.source.ail-package.md target.source.ail-spec.md {}",
+            ail_artifact_fingerprint(&ail_bootstrap_source_bundle_text(
+                source_manifest_text,
+                source_spec_text,
+            ))
+        ));
+    }
+    lines.push(format!("compiler-pass pass.ailbc.json {pass_fingerprint}"));
     for native_pass in artifacts.pass_native_executables {
         lines.push(format!(
             "compiler-pass-target {} {} {}",
@@ -1951,6 +2008,34 @@ fn write_ail_pass_artifacts(
     fs::create_dir_all(root).map_err(|error| {
         format!("failed to create ail-pass artifact dir {artifact_dir}: {error}")
     })?;
+    if let (Some(source_manifest_text), Some(source_spec_text)) = (
+        artifacts.compiler_pass_source_manifest_text,
+        artifacts.compiler_pass_source_spec_text,
+    ) {
+        write_ail_named_source_package_snapshot(
+            root,
+            "ail-pass compiler pass",
+            "compiler-pass.source.ail-package.md",
+            "compiler-pass.source.ail-spec.md",
+            "compiler-pass.source.fingerprint.txt",
+            source_manifest_text,
+            source_spec_text,
+        )?;
+    }
+    if let (Some(source_manifest_text), Some(source_spec_text)) = (
+        artifacts.target_source_manifest_text,
+        artifacts.target_source_spec_text,
+    ) {
+        write_ail_named_source_package_snapshot(
+            root,
+            "ail-pass target",
+            "target.source.ail-package.md",
+            "target.source.ail-spec.md",
+            "target.source.fingerprint.txt",
+            source_manifest_text,
+            source_spec_text,
+        )?;
+    }
     fs::write(root.join("pass.ailbc.json"), artifacts.pass_bytecode_text)
         .map_err(|error| format!("failed to write ail-pass bytecode artifact: {error}"))?;
     fs::write(
@@ -2056,6 +2141,8 @@ fn run_ail_pass_command(pass_path: &str, cli_options: &CliOptions) -> Result<u8,
         .as_deref()
         .ok_or_else(|| "ail-pass requires --action <name>".to_string())?;
 
+    let compiler_pass_source_artifacts =
+        load_optional_ail_source_package_artifacts(pass_path, "ail-pass compiler pass")?;
     let (pass_bytecode, pass_bytecode_text) =
         load_ail_bytecode_or_compile_package(pass_path, "ail-pass compiler pass")?;
     let bytecode_diagnostics = verify_ail_bytecode(&pass_bytecode);
@@ -2068,6 +2155,7 @@ fn run_ail_pass_command(pass_path: &str, cli_options: &CliOptions) -> Result<u8,
     }
 
     let target_core = load_ail_pass_target_core(cli_options)?;
+    let target_source_artifacts = load_ail_pass_target_source_artifacts(cli_options)?;
     let target_diagnostics = check_ail_core(&target_core);
     if !target_diagnostics.is_empty() {
         for diagnostic in target_diagnostics {
@@ -2114,6 +2202,18 @@ fn run_ail_pass_command(pass_path: &str, cli_options: &CliOptions) -> Result<u8,
         (agent_run.as_mut(), cli_options.artifact_dir.as_ref())
     {
         let manifest_text = render_ail_pass_manifest(&AilPassArtifactSet {
+            compiler_pass_source_manifest_text: compiler_pass_source_artifacts
+                .as_ref()
+                .map(|artifacts| artifacts.manifest_text.as_str()),
+            compiler_pass_source_spec_text: compiler_pass_source_artifacts
+                .as_ref()
+                .map(|artifacts| artifacts.spec_text.as_str()),
+            target_source_manifest_text: target_source_artifacts
+                .as_ref()
+                .map(|artifacts| artifacts.manifest_text.as_str()),
+            target_source_spec_text: target_source_artifacts
+                .as_ref()
+                .map(|artifacts| artifacts.spec_text.as_str()),
             pass_bytecode_text: &pass_bytecode_text,
             input_core_text: &input_core_text,
             output_core_text: &output_core_text,
@@ -2124,12 +2224,30 @@ fn run_ail_pass_command(pass_path: &str, cli_options: &CliOptions) -> Result<u8,
             agent_native_executables: agent_native_artifacts.as_slice(),
         });
         let manifest_fingerprint = ail_artifact_fingerprint(&manifest_text);
-        run_ail_pass_agent_verify_manifest(agent_run, &manifest_text, &manifest_fingerprint)?;
+        run_ail_pass_agent_verify_manifest(
+            agent_run,
+            &manifest_text,
+            &manifest_fingerprint,
+            compiler_pass_source_artifacts.as_ref(),
+            target_source_artifacts.as_ref(),
+        )?;
     }
     if let Some(artifact_dir) = &cli_options.artifact_dir {
         write_ail_pass_artifacts(
             artifact_dir,
             AilPassArtifactSet {
+                compiler_pass_source_manifest_text: compiler_pass_source_artifacts
+                    .as_ref()
+                    .map(|artifacts| artifacts.manifest_text.as_str()),
+                compiler_pass_source_spec_text: compiler_pass_source_artifacts
+                    .as_ref()
+                    .map(|artifacts| artifacts.spec_text.as_str()),
+                target_source_manifest_text: target_source_artifacts
+                    .as_ref()
+                    .map(|artifacts| artifacts.manifest_text.as_str()),
+                target_source_spec_text: target_source_artifacts
+                    .as_ref()
+                    .map(|artifacts| artifacts.spec_text.as_str()),
                 pass_bytecode_text: &pass_bytecode_text,
                 input_core_text: &input_core_text,
                 output_core_text: &output_core_text,
@@ -2214,6 +2332,8 @@ fn run_ail_pass_agent_verify_manifest(
     agent_run: &mut AilBuildAgentRun,
     manifest_text: &str,
     manifest_fingerprint: &str,
+    compiler_pass_source_artifacts: Option<&AilSourcePackageArtifacts>,
+    target_source_artifacts: Option<&AilSourcePackageArtifacts>,
 ) -> Result<(), String> {
     if !agent_run
         .bytecode
@@ -2233,6 +2353,34 @@ fn run_ail_pass_agent_verify_manifest(
         "buildrequest.artifact manifest fingerprint".to_string(),
         manifest_fingerprint.to_string(),
     );
+    if let Some(compiler_pass_source_artifacts) = compiler_pass_source_artifacts {
+        let source_package_text = ail_bootstrap_source_bundle_text(
+            &compiler_pass_source_artifacts.manifest_text,
+            &compiler_pass_source_artifacts.spec_text,
+        );
+        verify_state.insert(
+            "buildrequest.compiler pass source package".to_string(),
+            source_package_text.clone(),
+        );
+        verify_state.insert(
+            "buildrequest.compiler pass source package fingerprint".to_string(),
+            ail_artifact_fingerprint(&source_package_text),
+        );
+    }
+    if let Some(target_source_artifacts) = target_source_artifacts {
+        let source_package_text = ail_bootstrap_source_bundle_text(
+            &target_source_artifacts.manifest_text,
+            &target_source_artifacts.spec_text,
+        );
+        verify_state.insert(
+            "buildrequest.source package".to_string(),
+            source_package_text.clone(),
+        );
+        verify_state.insert(
+            "buildrequest.source package fingerprint".to_string(),
+            ail_artifact_fingerprint(&source_package_text),
+        );
+    }
     let verify_run =
         run_ail_bytecode_action(&agent_run.bytecode, "VerifyPassManifest", verify_state)?;
     if verify_run.status != "succeeded" {
@@ -2434,6 +2582,19 @@ fn load_ail_pass_target_core(cli_options: &CliOptions) -> Result<eigl::ail::AilC
     let target_package = load_ail_package_dir(target_path)?;
     let target_document = parse_ail_package_document(&target_package)?;
     Ok(elaborate_ail_core(&target_package, &target_document))
+}
+
+fn load_ail_pass_target_source_artifacts(
+    cli_options: &CliOptions,
+) -> Result<Option<AilSourcePackageArtifacts>, String> {
+    if cli_options.ail_core_file.is_some() {
+        return Ok(None);
+    }
+    let target_path = cli_options
+        .ail_pass_target
+        .as_deref()
+        .ok_or_else(|| "ail-pass requires a target package or --core-file <path>".to_string())?;
+    load_ail_source_package_artifacts(target_path, "ail-pass target").map(Some)
 }
 
 fn load_ail_bytecode_or_compile_package(

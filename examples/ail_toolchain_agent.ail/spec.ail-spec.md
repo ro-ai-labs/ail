@@ -22,6 +22,8 @@ A BuildRequest has:
 - core review report: Text
 - compiler pass artifact: Text
 - compiler pass fingerprint: Text
+- compiler pass source package: Text
+- compiler pass source package fingerprint: Text
 - compiler pass target artifact fingerprint: Text
 - compiler pass trace: Text
 - compiler pass review report: Text
@@ -286,7 +288,11 @@ When the toolchain agent verifies the standalone compiler pass manifest:
 - the system requires the BuildRequest status to be PassApplied
 - the system reads the BuildRequest artifact manifest
 - the system reads the BuildRequest artifact manifest fingerprint
+- the system reads the BuildRequest compiler pass source package
+- the system reads the BuildRequest compiler pass source package fingerprint
 - the system reads the BuildRequest compiler pass fingerprint
+- the system reads the BuildRequest source package
+- the system reads the BuildRequest source package fingerprint
 - the system changes the BuildRequest artifact manifest verification report to Verified
 - the system guarantees the pass manifest ties compiler-pass bytecode, transformed AIL-Core, pass trace, and agent artifacts with deterministic fingerprints and no Rust or host-language backend source
 - the system records a trace event named PassManifestVerified

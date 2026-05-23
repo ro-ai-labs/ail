@@ -528,14 +528,22 @@ bytecode artifacts without generating Rust or other host-language source. With
 `--core-file <path>`, `ail-pass` reads the checked target AIL-Core artifact
 directly instead of loading the target source package, so a saved
 Compiler-profile bytecode artifact can transform a saved IR artifact as a
-standalone compiler stage. With `--agent <agent-package-or-bytecode>`,
+standalone compiler stage. With `--artifact-dir`, package-backed pass runs
+also write `compiler-pass.source.ail-package.md`,
+`compiler-pass.source.ail-spec.md`, `compiler-pass.source.fingerprint.txt`,
+`target.source.ail-package.md`, `target.source.ail-spec.md`, and
+`target.source.fingerprint.txt`, and include fingerprinted `compiler-pass-source`
+and `target-source` manifest entries. Saved compiler-pass bytecode and saved
+target core inputs remain source-free artifact boundaries. With
+`--agent <agent-package-or-bytecode>`,
 `ail-pass` compiles or loads an AIL-authored Application agent and runs its
 `AcceptCompilerPassOutput` bytecode action against the transformed core,
 compiler-pass bytecode fingerprint, and pass execution trace. This gives the
 standalone compiler-pass stage an AIL-bytecode acceptance checkpoint instead of
 leaving it as host orchestration. When `--artifact-dir` is present, the agent
 also runs `VerifyPassManifest` with the rendered pass manifest and deterministic
-manifest fingerprint, so the pass artifact set is verified in AIL bytecode too.
+manifest fingerprint plus source fingerprints when present, so the pass artifact
+set is verified in AIL bytecode too.
 With
 `--artifact-dir`, the same command writes `pass.ailbc.json`,
 `pass.fingerprint.txt`, `input.ail-core.txt`, `output.ail-core.txt`, and

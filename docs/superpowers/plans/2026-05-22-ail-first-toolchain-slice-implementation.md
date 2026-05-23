@@ -6746,6 +6746,60 @@ AIL-Core IR, AIL-Bytecode, native-bytecode report, and Linux ELF executable
 artifacts together with deterministic fingerprints before the AIL-authored
 compile manifest verifier accepts the bundle.
 
+### Task 152: Pass Records Source Package Fingerprints
+
+**Files:**
+- Modify: `examples/ail_toolchain_agent.ail/spec.ail-spec.md`
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing pass source fingerprint assertions**
+
+Extend package-backed `ail-pass --artifact-dir` and
+`ail-pass --agent --artifact-dir` tests to require compiler-pass source
+snapshots, target source snapshots, deterministic fingerprint sidecars,
+fingerprinted `compiler-pass-source` and `target-source` manifest entries, and
+AIL-authored `VerifyPassManifest` reads for compiler-pass source and target
+source package fingerprints.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_pass_writes_auditable_intermediate_artifacts -- --nocapture
+cargo test --test ail_toolchain cli_ail_pass_agent_accepts_pass_artifacts -- --nocapture
+```
+
+Expected: the non-agent pass artifact test fails because source package
+snapshots are missing, and the agent pass test fails because
+`VerifyPassManifest` does not read source package fingerprints.
+
+- [x] **Step 3: Generate pass source package snapshots**
+
+When package-backed `ail-pass --artifact-dir` persists compiler-pass artifacts,
+write source snapshots and fingerprints for the compiler pass package and the
+target package, include those fingerprints in `manifest.ail-pass.txt`, and pass
+the source bundles plus fingerprints into the AIL-authored `VerifyPassManifest`
+state. Saved compiler-pass bytecode and saved target core inputs remain
+source-free artifact boundaries.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_pass_writes_auditable_intermediate_artifacts -- --nocapture
+cargo test --test ail_toolchain cli_ail_pass_agent_accepts_pass_artifacts -- --nocapture
+```
+
+Expected: package-backed pass artifacts now tie compiler-pass source, target
+source, pass bytecode, input AIL-Core IR, transformed AIL-Core IR, and pass
+trace artifacts together with deterministic fingerprints before the
+AIL-authored pass manifest verifier accepts the bundle.
+
 ### Task 18: Declared Failure Trace Coverage Diagnostics
 
 **Files:**

@@ -148,12 +148,16 @@ package, or reads a saved Compiler-profile AIL-Bytecode artifact, and applies
 it to a checked target package's AIL-Core. `ail-pass
 <compiler-pass-package-or-bytecode> --core-file <path> --action <PassName>`
 applies the pass to a saved checked AIL-Core artifact without loading the target
-source package. `ail-pass --agent <agent-package-or-bytecode>` compiles or
-loads an AIL-authored Application agent and runs its
+source package. With `--artifact-dir`, package-backed pass runs write source
+package snapshots and fingerprints for both the compiler pass package and the
+target package; saved compiler-pass bytecode and saved target core inputs remain
+source-free artifact boundaries. `ail-pass --agent <agent-package-or-bytecode>`
+compiles or loads an AIL-authored Application agent and runs its
 `AcceptCompilerPassOutput` bytecode action over the standalone pass artifact
 boundary; with `--artifact-dir`, it also runs `VerifyPassManifest` against the
-pass manifest and manifest fingerprint. `ail-conformance` checks accepted and
-rejected fixtures; with `--artifact-dir`, it writes a deterministic conformance
+pass manifest, source fingerprints when present, and manifest fingerprint.
+`ail-conformance` checks accepted and rejected fixtures; with `--artifact-dir`,
+it writes a deterministic conformance
 report, report fingerprint, conformance manifest, and manifest fingerprint for
 audit. `ail-conformance --agent <agent-package-or-bytecode> --artifact-dir
 <dir>` also compiles or loads an AIL-authored Application agent, runs its
