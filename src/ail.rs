@@ -11049,7 +11049,7 @@ fn check_field_types(core: &AilCore) -> Vec<AilDiagnostic> {
             (!is_known_ail_type(type_name, &declared_types)).then(|| {
                 let kind = typed_node_diagnostic_kind(&node.kind);
                 AilDiagnostic::error(
-                    "AIL006",
+                    "AIL-TYPE-001",
                     format!("{} {} has unknown type '{}'", kind, node.name, type_name),
                 )
                 .with_source_provenance(node_provenance(core, &node.id))

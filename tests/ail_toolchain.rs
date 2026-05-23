@@ -6104,7 +6104,7 @@ fn cli_ail_spec_rejects_unchecked_core_file_artifact() {
     let stdout = String::from_utf8_lossy(&spec_output.stdout);
     assert!(stdout.contains("ail-spec core diagnostics:"), "{stdout}");
     assert!(
-        stdout.contains("AIL006 field Ticket.status has unknown type 'MysteryStatus'"),
+        stdout.contains("AIL-TYPE-001 field Ticket.status has unknown type 'MysteryStatus'"),
         "{stdout}"
     );
     assert!(!stdout.contains("The application Support Tickets manages"));
@@ -9807,8 +9807,9 @@ fn ail_core_reports_stable_invalid_fixture_diagnostics() {
     let unknown_type_doc = parse_ail_spec_text(&unknown_type).unwrap();
     let unknown_type_core = elaborate_ail_core(&package, &unknown_type_doc);
     assert!(
-        check_ail_core(&unknown_type_core)
-            .contains(&"AIL006 field Ticket.metadata has unknown type 'MysteryBox'".to_string())
+        check_ail_core(&unknown_type_core).contains(
+            &"AIL-TYPE-001 field Ticket.metadata has unknown type 'MysteryBox'".to_string()
+        )
     );
 
     let unknown_requirement_field = fs::read_to_string(format!(
@@ -9840,18 +9841,18 @@ fn ail_core_reports_unknown_profile_value_types() {
     let tool_core = elaborate_ail_core(&tool_package, &tool_doc);
     let tool_diagnostics = check_ail_core(&tool_core);
     assert!(tool_diagnostics.contains(
-        &"AIL006 input RefundCustomerPayment.payment token has unknown type 'Secret<MysteryCredential>'"
+        &"AIL-TYPE-001 input RefundCustomerPayment.payment token has unknown type 'Secret<MysteryCredential>'"
             .to_string()
     ));
     assert!(
         tool_diagnostics.contains(
-            &"AIL006 output RefundCustomerPayment.refund id has unknown type 'MysteryReceipt'"
+            &"AIL-TYPE-001 output RefundCustomerPayment.refund id has unknown type 'MysteryReceipt'"
                 .to_string()
         )
     );
     let detailed_tool = detailed_ail_diagnostic(
         &tool_core,
-        "AIL006",
+        "AIL-TYPE-001",
         "input RefundCustomerPayment.payment token has unknown type 'Secret<MysteryCredential>'",
     );
     assert!(
@@ -9879,17 +9880,17 @@ fn ail_core_reports_unknown_profile_value_types() {
     let compiler_diagnostics = check_ail_core(&compiler_core);
     assert!(
         compiler_diagnostics.contains(
-            &"AIL006 value InferReadPermissions.input graph has unknown type 'MysteryGraph'"
+            &"AIL-TYPE-001 value InferReadPermissions.input graph has unknown type 'MysteryGraph'"
                 .to_string()
         )
     );
     assert!(compiler_diagnostics.contains(
-        &"AIL006 value InferReadPermissions.diagnostics has unknown type 'List<MysteryDiagnostic>'"
+        &"AIL-TYPE-001 value InferReadPermissions.diagnostics has unknown type 'List<MysteryDiagnostic>'"
             .to_string()
     ));
     let detailed_value = detailed_ail_diagnostic(
         &compiler_core,
-        "AIL006",
+        "AIL-TYPE-001",
         "value InferReadPermissions.diagnostics has unknown type 'List<MysteryDiagnostic>'",
     );
     assert!(
@@ -10941,7 +10942,7 @@ fn cli_ail_conformance_checks_valid_and_rejected_fixtures() {
         ),
         "{stdout}"
     );
-    assert!(stdout.contains("rejected: unknown-field-type.ail-spec.md AIL006"));
+    assert!(stdout.contains("rejected: unknown-field-type.ail-spec.md AIL-TYPE-001"));
     assert!(stdout.contains("source=field:Ticket.metadata"), "{stdout}");
     assert!(
         stdout.contains(
@@ -11285,7 +11286,7 @@ fn cli_ail_conformance_checks_agent_tool_fixtures() {
     assert!(stdout.contains("rejected: approval-without-rule.ail-spec.md AIL018"));
     assert!(stdout.contains("rejected: permission-without-rule.ail-spec.md AIL019"));
     assert!(stdout.contains("rejected: secret-output.ail-spec.md AIL020"));
-    assert!(stdout.contains("rejected: unknown-input-type.ail-spec.md AIL006"));
+    assert!(stdout.contains("rejected: unknown-input-type.ail-spec.md AIL-TYPE-001"));
     assert!(stdout.contains("rejected: tool-without-trace.ail-spec.md AIL-TRACE-001"));
     assert!(
         stdout.contains("source=tool:RefundCustomerPayment.input:payment token"),
@@ -11319,7 +11320,7 @@ fn cli_ail_conformance_checks_compiler_profile_fixtures() {
     assert!(stdout.contains("ail conformance: package ail-meta-permissions"));
     assert!(stdout.contains("valid: spec.ail-spec.md"));
     assert!(stdout.contains("accepted: infer-read-permissions-minimal.ail-spec.md"));
-    assert!(stdout.contains("rejected: unknown-value-type.ail-spec.md AIL006"));
+    assert!(stdout.contains("rejected: unknown-value-type.ail-spec.md AIL-TYPE-001"));
     assert!(
         stdout.contains("source=compiler_pass:InferReadPermissions.output:diagnostics"),
         "{stdout}"

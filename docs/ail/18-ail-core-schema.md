@@ -448,7 +448,7 @@ Node Field Ticket.score : UnknownScore
 Expected diagnostic:
 
 ```text
-AIL-TYPE-001 type UnknownScore is not declared or imported
+AIL-TYPE-001 field Ticket.score has unknown type 'UnknownScore'
 ```
 
 ## Compatibility Rules

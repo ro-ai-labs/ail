@@ -64,6 +64,24 @@ severity, blocking behavior, and at least one invalid fixture.
 
 ## Detailed Entries
 
+### AIL-TYPE-001
+
+- condition: field, input, output, value, or resource type is not known
+- affected graph item: typed node
+- message template: `{kind} {name} has unknown type '{type}'`
+- non-engineer explanation: the program names a data type that AIL cannot
+  validate or carry through the compiler
+- agent follow-up question: `Should {type} be declared as a Thing, imported
+  from a package, or replaced with a supported type?`
+- repair suggestion: use a supported AIL type or declare/import the missing
+  type
+- AIL-Flow highlight: Data Table field, Tool input/output, Compiler value, or
+  System resource type
+- severity: error
+- blocking behavior: blocks acceptance
+- invalid fixture:
+  `examples/support_ticket.ail/examples/rejected/unknown-field-type.ail-spec.md`
+
 ### AIL-TRACE-001
 
 - condition: executable action or tool has no `records_trace` edge
