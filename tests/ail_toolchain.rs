@@ -3286,6 +3286,68 @@ fn ail_bytecode_vm_executes_integer_loop_state_mutation() {
 }
 
 #[test]
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+fn ail_native_elf_executes_bytecode_integer_state_mutation() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let bytecode_text = r#"{
+  "kind": "AIL-Bytecode",
+  "package": "counter-example",
+  "version": "0.1.0",
+  "profile": "Application",
+  "failures": [],
+  "actions": [
+    {
+      "action": "IncrementCounter",
+      "instructions": [
+        {"opcode":"ACTION_BEGIN","operands":{"action":"IncrementCounter"}},
+        {"opcode":"ADD_INT_FIELD","operands":{"key":"counter","delta":"2","text":"increment counter"}},
+        {"opcode":"RETURN_SUCCESS","operands":{}}
+      ]
+    }
+  ]
+}"#;
+    let bytecode = parse_ail_bytecode(bytecode_text).unwrap();
+    let executable =
+        compile_ail_bytecode_native_elf(&bytecode, "IncrementCounter", "linux-x86_64-elf").unwrap();
+    let executable_path = std::env::temp_dir().join(format!(
+        "ail-add-int-bytecode-native-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_file(&executable_path);
+    fs::write(&executable_path, executable).unwrap();
+    let mut permissions = fs::metadata(&executable_path).unwrap().permissions();
+    permissions.set_mode(0o755);
+    fs::set_permissions(&executable_path, permissions).unwrap();
+
+    let run = Command::new(&executable_path)
+        .arg("counter=3")
+        .output()
+        .unwrap();
+    assert!(run.status.success(), "native ADD_INT_FIELD failed");
+    assert_eq!(String::from_utf8_lossy(&run.stdout), "counter=5\n");
+    assert_eq!(
+        String::from_utf8_lossy(&run.stderr),
+        concat!(
+            "action IncrementCounter started\n",
+            "add counter by 2 -> 5\n"
+        )
+    );
+
+    let invalid = Command::new(&executable_path)
+        .arg("counter=abc")
+        .output()
+        .unwrap();
+    assert!(
+        !invalid.status.success(),
+        "native ADD_INT_FIELD accepted text"
+    );
+    assert_eq!(String::from_utf8_lossy(&invalid.stdout), "");
+
+    fs::remove_file(executable_path).unwrap();
+}
+
+#[test]
 fn ail_toolchain_agent_package_lowers_to_verified_bytecode() {
     let package = load_ail_package_dir(fixture("ail_toolchain_agent.ail")).unwrap();
     let document = parse_ail_package_document(&package).unwrap();

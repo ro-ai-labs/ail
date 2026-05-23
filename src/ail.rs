@@ -4305,6 +4305,73 @@ fn emit_linux_x86_64_elf_for_action(
                     code.emit_jmp_label(&target_label);
                 }
             }
+            "ADD_INT_FIELD" => {
+                if let (Some(key), Some(delta)) = (
+                    instruction.operands.get("key"),
+                    instruction.operands.get("delta"),
+                ) {
+                    let delta = delta.parse::<i64>().map_err(|_| {
+                        format!(
+                            "unsupported native linux-x86_64-elf ADD_INT_FIELD delta '{delta}' in action '{}'",
+                            action.name
+                        )
+                    })?;
+                    let key_prefix = format!("{key}=");
+                    let key_label = push_native_data_label(
+                        &mut data_labels,
+                        &mut next_data_label,
+                        "add_int_key",
+                        &key_prefix,
+                    );
+                    let stdout_prefix_label = push_native_data_label(
+                        &mut data_labels,
+                        &mut next_data_label,
+                        "add_int_stdout_prefix",
+                        &key_prefix,
+                    );
+                    let trace_prefix = format!("add {key} by {delta} -> ");
+                    let trace_prefix_label = push_native_data_label(
+                        &mut data_labels,
+                        &mut next_data_label,
+                        "add_int_trace_prefix",
+                        &trace_prefix,
+                    );
+                    let newline_label = push_native_data_label(
+                        &mut data_labels,
+                        &mut next_data_label,
+                        "newline",
+                        b"\n",
+                    );
+                    let fail_label = format!("add_int_fail_{instruction_index}");
+                    let done_label = format!("add_int_done_{instruction_index}");
+                    code.emit_lea_rsi_label(&key_label);
+                    code.emit_mov_edx_imm32(key_prefix.len() as u32);
+                    code.emit_call_label("find_prefix");
+                    code.emit_test_rax_rax();
+                    code.emit_jcc_label(&[0x0f, 0x84], &fail_label); // jz fail
+                    code.emit_mov_rdi_rax();
+                    code.emit_call_label("parse_i64");
+                    code.emit_test_edx_edx();
+                    code.emit_jcc_label(&[0x0f, 0x84], &fail_label); // jz fail
+                    code.emit_mov_r14_rax();
+                    code.emit_mov_r15_imm64(delta as u64);
+                    code.emit_add_r14_r15();
+                    code.emit_write_label(1, &stdout_prefix_label, key_prefix.len() as u32);
+                    code.emit_mov_rdi_r14();
+                    code.emit_mov_esi_imm32(1);
+                    code.emit_call_label("write_i64");
+                    code.emit_write_label(1, &newline_label, 1);
+                    code.emit_write_label(2, &trace_prefix_label, trace_prefix.len() as u32);
+                    code.emit_mov_rdi_r14();
+                    code.emit_mov_esi_imm32(2);
+                    code.emit_call_label("write_i64");
+                    code.emit_write_label(2, &newline_label, 1);
+                    code.emit_jmp_label(&done_label);
+                    code.label(fail_label)?;
+                    code.emit_exit(1);
+                    code.label(done_label)?;
+                }
+            }
             "REQUIRE_EXISTS" => {
                 if let Some(key) = instruction.operands.get("key") {
                     let fail_label = format!("fail_requirement_{}", failure_branches.len());
@@ -5008,6 +5075,8 @@ fn emit_linux_x86_64_elf_for_action(
     emit_find_prefix(&mut code)?;
     emit_cstring_len(&mut code)?;
     emit_cstring_gt(&mut code)?;
+    emit_parse_i64(&mut code)?;
+    emit_write_i64(&mut code)?;
     for (label, bytes) in &data_labels {
         code.label(label.clone())?;
         code.emit(bytes);
@@ -5249,6 +5318,112 @@ fn emit_cstring_gt(code: &mut X64Code) -> Result<(), String> {
     Ok(())
 }
 
+fn emit_parse_i64(code: &mut X64Code) -> Result<(), String> {
+    code.label("parse_i64")?;
+    code.emit(&[
+        0x48, 0x31, 0xc0, // xor rax, rax
+        0x45, 0x31, 0xc0, // xor r8d, r8d
+        0x45, 0x31, 0xd2, // xor r10d, r10d
+        0x80, 0x3f, 0x2d, // cmp byte [rdi], '-'
+    ]);
+    code.emit_jcc_label(&[0x0f, 0x85], "parse_i64_loop"); // jne loop
+    code.emit(&[
+        0x41, 0xb8, 0x01, 0x00, 0x00, 0x00, // mov r8d, 1
+        0x48, 0xff, 0xc7, // inc rdi
+    ]);
+    code.label("parse_i64_loop")?;
+    code.emit(&[
+        0x44, 0x8a, 0x0f, // mov r9b, [rdi]
+        0x41, 0x80, 0xf9, 0x30, // cmp r9b, '0'
+    ]);
+    code.emit_jcc_label(&[0x0f, 0x82], "parse_i64_done"); // jb done
+    code.emit(&[0x41, 0x80, 0xf9, 0x39]); // cmp r9b, '9'
+    code.emit_jcc_label(&[0x0f, 0x87], "parse_i64_done"); // ja done
+    code.emit(&[
+        0x48, 0x6b, 0xc0, 0x0a, // imul rax, rax, 10
+        0x49, 0x0f, 0xb6, 0xc9, // movzx rcx, r9b
+        0x48, 0x83, 0xe9, 0x30, // sub rcx, '0'
+        0x48, 0x01, 0xc8, // add rax, rcx
+        0x49, 0xff, 0xc2, // inc r10
+        0x48, 0xff, 0xc7, // inc rdi
+    ]);
+    code.emit_jmp_label("parse_i64_loop");
+    code.label("parse_i64_done")?;
+    code.emit(&[
+        0x31, 0xd2, // xor edx, edx
+        0x45, 0x85, 0xd2, // test r10d, r10d
+    ]);
+    code.emit_jcc_label(&[0x0f, 0x84], "parse_i64_ret"); // jz ret
+    code.emit(&[0x45, 0x84, 0xc9]); // test r9b, r9b
+    code.emit_jcc_label(&[0x0f, 0x85], "parse_i64_ret"); // jnz ret
+    code.emit(&[
+        0xba, 0x01, 0x00, 0x00, 0x00, // mov edx, 1
+    ]);
+    code.emit(&[0x45, 0x85, 0xc0]); // test r8d, r8d
+    code.emit_jcc_label(&[0x0f, 0x84], "parse_i64_ret"); // jz ret
+    code.emit(&[0x48, 0xf7, 0xd8]); // neg rax
+    code.label("parse_i64_ret")?;
+    code.emit(&[0xc3]); // ret
+    Ok(())
+}
+
+fn emit_write_i64(code: &mut X64Code) -> Result<(), String> {
+    code.label("write_i64")?;
+    code.emit(&[
+        0x48, 0x83, 0xec, 0x28, // sub rsp, 40
+        0x48, 0x89, 0xf8, // mov rax, rdi
+        0x41, 0x89, 0xf3, // mov r11d, esi
+        0x45, 0x31, 0xc9, // xor r9d, r9d
+        0x48, 0x85, 0xc0, // test rax, rax
+    ]);
+    code.emit_jcc_label(&[0x0f, 0x8d], "write_i64_positive"); // jge positive
+    code.emit(&[
+        0x48, 0xf7, 0xd8, // neg rax
+        0x41, 0xb9, 0x01, 0x00, 0x00, 0x00, // mov r9d, 1
+    ]);
+    code.label("write_i64_positive")?;
+    code.emit(&[
+        0x4c, 0x8d, 0x54, 0x24, 0x28, // lea r10, [rsp+40]
+        0x48, 0x85, 0xc0, // test rax, rax
+    ]);
+    code.emit_jcc_label(&[0x0f, 0x85], "write_i64_digit_loop"); // jne digit_loop
+    code.emit(&[
+        0x49, 0xff, 0xca, // dec r10
+        0x41, 0xc6, 0x02, 0x30, // mov byte [r10], '0'
+    ]);
+    code.emit_jmp_label("write_i64_sign");
+    code.label("write_i64_digit_loop")?;
+    code.emit(&[
+        0x31, 0xd2, // xor edx, edx
+        0xb9, 0x0a, 0x00, 0x00, 0x00, // mov ecx, 10
+        0x48, 0xf7, 0xf1, // div rcx
+        0x80, 0xc2, 0x30, // add dl, '0'
+        0x49, 0xff, 0xca, // dec r10
+        0x41, 0x88, 0x12, // mov [r10], dl
+        0x48, 0x85, 0xc0, // test rax, rax
+    ]);
+    code.emit_jcc_label(&[0x0f, 0x85], "write_i64_digit_loop"); // jne digit_loop
+    code.label("write_i64_sign")?;
+    code.emit(&[0x45, 0x85, 0xc9]); // test r9d, r9d
+    code.emit_jcc_label(&[0x0f, 0x84], "write_i64_write"); // jz write
+    code.emit(&[
+        0x49, 0xff, 0xca, // dec r10
+        0x41, 0xc6, 0x02, 0x2d, // mov byte [r10], '-'
+    ]);
+    code.label("write_i64_write")?;
+    code.emit(&[
+        0xb8, 0x01, 0x00, 0x00, 0x00, // mov eax, 1
+        0x44, 0x89, 0xdf, // mov edi, r11d
+        0x4c, 0x89, 0xd6, // mov rsi, r10
+        0x48, 0x8d, 0x54, 0x24, 0x28, // lea rdx, [rsp+40]
+        0x4c, 0x29, 0xd2, // sub rdx, r10
+        0x0f, 0x05, // syscall
+        0x48, 0x83, 0xc4, 0x28, // add rsp, 40
+        0xc3, // ret
+    ]);
+    Ok(())
+}
+
 #[derive(Default)]
 struct X64Code {
     bytes: Vec<u8>,
@@ -5283,6 +5458,10 @@ impl X64Code {
         self.emit(&[0x48, 0x85, 0xc0]);
     }
 
+    fn emit_test_edx_edx(&mut self) {
+        self.emit(&[0x85, 0xd2]);
+    }
+
     fn emit_mov_r14_rax(&mut self) {
         self.emit(&[0x49, 0x89, 0xc6]);
     }
@@ -5293,6 +5472,24 @@ impl X64Code {
 
     fn emit_mov_rdi_r14(&mut self) {
         self.emit(&[0x4c, 0x89, 0xf7]);
+    }
+
+    fn emit_mov_rdi_rax(&mut self) {
+        self.emit(&[0x48, 0x89, 0xc7]);
+    }
+
+    fn emit_mov_esi_imm32(&mut self, value: u32) {
+        self.emit(&[0xbe]);
+        self.emit(&value.to_le_bytes());
+    }
+
+    fn emit_mov_r15_imm64(&mut self, value: u64) {
+        self.emit(&[0x49, 0xbf]);
+        self.emit(&value.to_le_bytes());
+    }
+
+    fn emit_add_r14_r15(&mut self) {
+        self.emit(&[0x4d, 0x01, 0xfe]);
     }
 
     fn emit_mov_rsi_r15(&mut self) {

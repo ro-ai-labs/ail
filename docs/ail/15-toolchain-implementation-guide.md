@@ -479,10 +479,12 @@ region placement, layout, allocation, lock guards, execution context,
 interrupts, scheduler tasks, capabilities, effects, guarantees, and explicit
 trace events. Native Application code supports `LABEL`,
 `BRANCH_FIELD_EQUALS`, and `JUMP` for deterministic acyclic control flow over
-runtime argv state; unsupported loops and future VM opcodes still fail native
-compilation rather than emitting partial executables. Stdout remains reserved
-for parseable state changes. The first native backend rejects future unknown
-VM opcodes and unlowered
+runtime argv state. It also supports straight-line `ADD_INT_FIELD` integer
+updates, writing the updated `key=value` state line to stdout and the matching
+VM-style add trace to stderr; missing or non-integer runtime fields exit
+nonzero. Unsupported loops and future VM opcodes still fail native compilation
+rather than emitting partial executables. Stdout remains reserved for parseable
+state changes. The first native backend rejects future unknown VM opcodes and unlowered
 `OBSERVE_RULE` requirements instead of silently emitting a partial executable.
 With `--artifact-dir`, `ail-lower` writes `source.ail-package.md`,
 `source.ail-spec.md`, and `source.fingerprint.txt` when a package source is
