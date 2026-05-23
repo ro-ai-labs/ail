@@ -8199,6 +8199,19 @@ fn qualify_reference_text(text: &str, alias: &str, thing_names: &[String]) -> St
     qualified
 }
 
+fn prompt_envelope_instruction(artifact_kind: &str, expected_profile: &str) -> String {
+    format!(
+        concat!(
+            "Prefer the prompt-pack JSON envelope with ",
+            "\"artifact_kind\":\"{}\", \"artifact_text\":\"<artifact>\", ",
+            "\"questions\":[], \"assumptions\":[], \"provenance\":[], and ",
+            "\"checker_handoff\":{{\"must_check\":true,\"expected_profile\":\"{}\",\"expected_features\":[]}}. ",
+            "If required semantics are missing, return an empty artifact_text and focused blocking questions instead of guessing."
+        ),
+        artifact_kind, expected_profile
+    )
+}
+
 fn build_ail_requirements_prompt(package: &AilPackage, user_prompt: &str) -> String {
     let coverage = ail_requirements_prompt_coverage(&package.metadata.profile);
     format!(
@@ -8209,6 +8222,7 @@ fn build_ail_requirements_prompt(package: &AilPackage, user_prompt: &str) -> Str
             "Output only an AIL-Requirements artifact with concise bullet points. Do not include code fences, AIL-Spec, implementation code, backend source, or reasoning.\n",
             "The first line must be exactly AIL-Requirements:. Return at least six requirement bullets, and every requirement bullet must start with \"- \"; do not use \"*\" bullets, numbered lists, tables, or Markdown emphasis.\n",
             "{}\n",
+            "{}\n",
             "These requirements are an intermediate artifact. The next compiler step will transform them into AIL-Spec, then AIL-Core, then AIL-Bytecode.\n\n",
             "HUMAN REQUEST:\n",
             "{}\n"
@@ -8217,6 +8231,7 @@ fn build_ail_requirements_prompt(package: &AilPackage, user_prompt: &str) -> Str
         package.metadata.profile,
         package.metadata.conformance,
         package.metadata.features.join(", "),
+        prompt_envelope_instruction("AIL-Requirements", &package.metadata.profile),
         coverage,
         user_prompt
     )
@@ -8256,6 +8271,7 @@ fn build_ail_requirements_repair_prompt(
             "Use the {} profile and conformance level {}.\n",
             "Return only an AIL-Requirements artifact with concise bullet points. Do not include code fences, AIL-Spec, implementation code, backend source, or reasoning.\n",
             "The first line must be exactly AIL-Requirements:. Return at least six requirement bullets, and every requirement bullet must start with \"- \"; do not use \"*\" bullets, numbered lists, tables, or Markdown emphasis.\n",
+            "{}\n",
             "The repaired requirements must be sufficient for the next toolchain step to draft checked AIL-Spec, lower it to AIL-Core, and compile AIL-Bytecode.\n\n",
             "ORIGINAL HUMAN REQUEST:\n",
             "{}\n\n",
@@ -8267,6 +8283,7 @@ fn build_ail_requirements_repair_prompt(
         package.metadata.name,
         package.metadata.profile,
         package.metadata.conformance,
+        prompt_envelope_instruction("AIL-Requirements", &package.metadata.profile),
         user_prompt,
         previous_requirements_text,
         diagnostics_text
@@ -8595,6 +8612,7 @@ fn build_ail_draft_prompt(package: &AilPackage, user_prompt: &str) -> String {
             "Use the {} profile and conformance level {}.\n",
             "Package features: {}.\n",
             "Output only parseable AIL-Spec structured English. Do not include code fences, Markdown commentary, labels like Application:, or reasoning.\n",
+            "{}\n",
             "The checker will decide whether the candidate is accepted, so preserve explicit things, fields, tools, actions, system components, capabilities, failures, guarantees, traces, and secret handling.\n\n",
             "Use canonical AIL type spellings: Text, State<Open, Closed>, List<Text>, Option<Text>, and Secret<List<Text>> for a secret list of text values.\n\n",
             "{}\n\n",
@@ -8605,6 +8623,7 @@ fn build_ail_draft_prompt(package: &AilPackage, user_prompt: &str) -> String {
         package.metadata.profile,
         package.metadata.conformance,
         package.metadata.features.join(", "),
+        prompt_envelope_instruction("AIL-Spec Canonical", &package.metadata.profile),
         surface_shape,
         user_prompt
     )

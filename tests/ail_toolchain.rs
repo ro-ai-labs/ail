@@ -10005,6 +10005,10 @@ fn cli_ail_draft_uses_llm_endpoint_and_checks_candidate_spec() {
     assert!(request_body.contains("Action: <human label>."));
     assert!(request_body.contains("Failure <Name> happens when <condition>:"));
     assert!(request_body.contains("Secret<List<Text>>"));
+    assert!(request_body.contains("artifact_kind"));
+    assert!(request_body.contains("AIL-Spec Canonical"));
+    assert!(request_body.contains("checker_handoff"));
+    assert!(request_body.contains("expected_profile"));
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("ail-draft candidate:"));
     assert!(stdout.contains("Action: Close ticket."));
@@ -10052,6 +10056,10 @@ fn cli_ail_requirements_root_llm_endpoint_uses_completion_api() {
     assert!(request_body.contains(r#""prompt":"#), "{request_body}");
     assert!(!request_body.contains(r#""messages":"#), "{request_body}");
     assert!(request_body.contains("Capture support ticket requirements through the AI IDE"));
+    assert!(request_body.contains("artifact_kind"));
+    assert!(request_body.contains("AIL-Requirements"));
+    assert!(request_body.contains("checker_handoff"));
+    assert!(request_body.contains("expected_profile"));
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("AIL-Requirements:"));
     assert!(stdout.contains("TicketClosed"));
