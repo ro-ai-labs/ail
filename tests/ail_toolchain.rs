@@ -7,8 +7,8 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use ail::ail::{
-    DEFAULT_BASE_LLM_ENDPOINT, ail_core_hash, apply_ail_patch, check_ail_core,
-    check_ail_core_diagnostics, compile_ail_bytecode, compile_ail_core_bytecode,
+    DEFAULT_BASE_LLM_ENDPOINT, ail_core_hash, apply_ail_core_patch_text, apply_ail_patch,
+    check_ail_core, check_ail_core_diagnostics, compile_ail_bytecode, compile_ail_core_bytecode,
     compile_ail_core_native_elf, elaborate_ail_core, load_ail_package_dir, parse_ail_bytecode,
     parse_ail_core_text, parse_ail_package_document, parse_ail_package_spec_text,
     parse_ail_patch_text, parse_ail_spec_text, render_ail_bytecode, render_ail_core,
@@ -1618,6 +1618,77 @@ fn ail_flow_projection_renders_no_code_view_from_core() {
     assert!(flow.contains(
         r#""views":["a customer-visible ticket history that includes public updates and never includes internal notes","an Overdue tickets view for support managers","an open ticket queue for support agents"]"#
     ));
+}
+
+#[test]
+fn ail_core_patch_removes_edge_by_core_labels() {
+    let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
+    let document = parse_ail_spec_text(&package.spec_text).unwrap();
+    let core = elaborate_ail_core(&package, &document);
+    let core_hash = ail_core_hash(&core);
+    let patch = format!(
+        r#"{{
+  "schema": "ail-core.patch.v0",
+  "base_hash": "{core_hash}",
+  "source_view": "ActionCard:CloseTicket",
+  "ops": [
+    {{
+      "op": "add_node",
+      "kind": "Provenance",
+      "name": "flow:ActionCard:CloseTicket.transient-note"
+    }},
+    {{
+      "op": "add_edge",
+      "kind": "has_provenance",
+      "source": "Action:CloseTicket",
+      "target": "Provenance:flow:ActionCard:CloseTicket.transient-note"
+    }},
+    {{
+      "op": "remove_edge",
+      "kind": "has_provenance",
+      "source": "Action:CloseTicket",
+      "target": "Provenance:flow:ActionCard:CloseTicket.transient-note"
+    }}
+  ]
+}}"#
+    );
+    let patched = apply_ail_core_patch_text(&core, &patch).unwrap();
+
+    assert_eq!(check_ail_core(&patched), Vec::<String>::new());
+    assert!(!render_ail_core(&patched).contains(
+        "edge has_provenance Action:CloseTicket -> Provenance:flow:ActionCard:CloseTicket.transient-note"
+    ));
+}
+
+#[test]
+fn ail_core_patch_remove_edge_rejects_missing_edge() {
+    let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
+    let document = parse_ail_spec_text(&package.spec_text).unwrap();
+    let core = elaborate_ail_core(&package, &document);
+    let core_hash = ail_core_hash(&core);
+    let patch = format!(
+        r#"{{
+  "schema": "ail-core.patch.v0",
+  "base_hash": "{core_hash}",
+  "source_view": "ActionCard:CloseTicket",
+  "ops": [
+    {{
+      "op": "remove_edge",
+      "kind": "requires",
+      "source": "Action:CloseTicket",
+      "target": "Trace:TicketClosed"
+    }}
+  ]
+}}"#
+    );
+    let error = apply_ail_core_patch_text(&core, &patch).unwrap_err();
+
+    assert!(
+        error.contains(
+            "AIL-Core patch remove_edge did not find edge requires Action:CloseTicket -> Trace:TicketClosed"
+        ),
+        "{error}"
+    );
 }
 
 #[test]

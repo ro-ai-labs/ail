@@ -676,6 +676,7 @@ pub fn apply_ail_core_patch_text(core: &AilCore, patch_text: &str) -> Result<Ail
         match required_json_string_for(op, "op", "AIL-Core patch op")? {
             "add_node" => apply_ail_core_patch_add_node(&mut patched, op)?,
             "add_edge" => apply_ail_core_patch_add_edge(&mut patched, op)?,
+            "remove_edge" => apply_ail_core_patch_remove_edge(&mut patched, op)?,
             "replace_node_attributes" => {
                 apply_ail_core_patch_replace_node_attributes(&mut patched, op)?
             }
@@ -739,6 +740,31 @@ fn apply_ail_core_patch_add_edge(
     }
     core.graph
         .add_edge(kind.to_string(), &source, &target, attributes);
+    Ok(())
+}
+
+fn apply_ail_core_patch_remove_edge(
+    core: &mut AilCore,
+    op: &BTreeMap<String, AilJsonValue>,
+) -> Result<(), String> {
+    let kind = required_json_string_for(op, "kind", "AIL-Core patch remove_edge")?;
+    let source_label = required_json_string_for(op, "source", "AIL-Core patch remove_edge")?;
+    let target_label = required_json_string_for(op, "target", "AIL-Core patch remove_edge")?;
+    let source = find_core_patch_node(core, source_label).ok_or_else(|| {
+        format!("AIL-Core patch remove_edge references unknown source '{source_label}'")
+    })?;
+    let target = find_core_patch_node(core, target_label).ok_or_else(|| {
+        format!("AIL-Core patch remove_edge references unknown target '{target_label}'")
+    })?;
+    let original_edge_count = core.graph.edges.len();
+    core.graph.edges.retain(|edge| {
+        !(edge.kind == kind && edge.source == source.id && edge.target == target.id)
+    });
+    if core.graph.edges.len() == original_edge_count {
+        return Err(format!(
+            "AIL-Core patch remove_edge did not find edge {kind} {source_label} -> {target_label}"
+        ));
+    }
     Ok(())
 }
 
