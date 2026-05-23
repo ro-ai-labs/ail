@@ -6468,6 +6468,8 @@ pub fn parse_ail_bytecode(text: &str) -> Result<AilBytecodeProgram, String> {
 pub fn verify_ail_bytecode(program: &AilBytecodeProgram) -> Vec<String> {
     let mut diagnostics = Vec::new();
     for action in program.actions.values() {
+        let (labels, label_diagnostics) = ail_bytecode_action_labels(action);
+        diagnostics.extend(label_diagnostics);
         for (index, instruction) in action.instructions.iter().enumerate() {
             let Some(required_operands) =
                 ail_bytecode_required_operands(instruction.opcode.as_str())
@@ -6486,14 +6488,48 @@ pub fn verify_ail_bytecode(program: &AilBytecodeProgram) -> Vec<String> {
                     ));
                 }
             }
+            if matches!(instruction.opcode.as_str(), "BRANCH_FIELD_EQUALS" | "JUMP")
+                && let Some(label) = instruction.operands.get("label")
+                && !labels.contains_key(label)
+            {
+                diagnostics.push(format!(
+                    "AILBC003 action {} instruction {} targets unknown label {}",
+                    action.name, index, label
+                ));
+            }
         }
     }
     diagnostics
 }
 
+fn ail_bytecode_action_labels(
+    action: &AilBytecodeAction,
+) -> (BTreeMap<String, usize>, Vec<String>) {
+    let mut labels = BTreeMap::new();
+    let mut diagnostics = Vec::new();
+    for (index, instruction) in action.instructions.iter().enumerate() {
+        if instruction.opcode != "LABEL" {
+            continue;
+        }
+        let Some(name) = instruction.operands.get("name") else {
+            continue;
+        };
+        if labels.insert(name.clone(), index).is_some() {
+            diagnostics.push(format!(
+                "AILBC004 action {} instruction {} duplicates label {}",
+                action.name, index, name
+            ));
+        }
+    }
+    (labels, diagnostics)
+}
+
 fn ail_bytecode_required_operands(opcode: &str) -> Option<&'static [&'static str]> {
     match opcode {
         "ACTION_BEGIN" => Some(&["action"]),
+        "LABEL" => Some(&["name"]),
+        "BRANCH_FIELD_EQUALS" => Some(&["key", "value", "label"]),
+        "JUMP" => Some(&["label"]),
         "REQUIRE_EXISTS" => Some(&["key", "rule", "failure"]),
         "REQUIRE_FIELD_NOT_EQUALS" => Some(&["key", "value", "rule", "failure"]),
         "REQUIRE_FIELD_IN" => Some(&["key", "values", "rule", "failure"]),
@@ -6751,11 +6787,44 @@ pub fn run_ail_bytecode_action(
         .ok_or_else(|| format!("unknown AIL bytecode action '{action_name}'"))?;
     let mut final_state = runtime_state;
     let mut trace = Vec::new();
-    for instruction in &action.instructions {
+    let (labels, _) = ail_bytecode_action_labels(action);
+    let mut instruction_pointer = 0usize;
+    let mut steps = 0usize;
+    let step_limit = action.instructions.len().saturating_mul(1024).max(1024);
+    while instruction_pointer < action.instructions.len() {
+        steps += 1;
+        if steps > step_limit {
+            return Err(format!(
+                "AIL bytecode execution step limit exceeded in action {action_name}"
+            ));
+        }
+        let instruction = &action.instructions[instruction_pointer];
         match instruction.opcode.as_str() {
             "ACTION_BEGIN" => {
                 let action = ail_bytecode_operand(instruction, "action");
                 trace.push(format!("action {action} started"));
+            }
+            "LABEL" => {}
+            "BRANCH_FIELD_EQUALS" => {
+                let key = ail_bytecode_operand(instruction, "key");
+                let value = ail_bytecode_operand(instruction, "value");
+                let label = ail_bytecode_operand(instruction, "label");
+                if final_state.get(key).is_some_and(|current| current == value) {
+                    trace.push(format!("branch {label} taken"));
+                    instruction_pointer = *labels
+                        .get(label)
+                        .ok_or_else(|| format!("unknown AIL bytecode label '{label}'"))?;
+                    continue;
+                }
+                trace.push(format!("branch {label} skipped"));
+            }
+            "JUMP" => {
+                let label = ail_bytecode_operand(instruction, "label");
+                trace.push(format!("jump {label}"));
+                instruction_pointer = *labels
+                    .get(label)
+                    .ok_or_else(|| format!("unknown AIL bytecode label '{label}'"))?;
+                continue;
             }
             "REQUIRE_EXISTS" => {
                 let key = ail_bytecode_operand(instruction, "key");
@@ -7098,6 +7167,7 @@ pub fn run_ail_bytecode_action(
             }
             opcode => return Err(format!("unknown AIL bytecode opcode '{opcode}'")),
         }
+        instruction_pointer += 1;
     }
     Ok(AilRunResult {
         status: "succeeded".to_string(),

@@ -2883,6 +2883,98 @@ fn ail_bytecode_verifier_rejects_invalid_opcodes_and_operands() {
 }
 
 #[test]
+fn ail_bytecode_vm_executes_branch_and_jump_control_flow() {
+    let bytecode_text = r#"{
+  "kind": "AIL-Bytecode",
+  "package": "branching-example",
+  "version": "0.1.0",
+  "profile": "Application",
+  "failures": [],
+  "actions": [
+    {
+      "action": "ResolveTicket",
+      "instructions": [
+        {"opcode":"ACTION_BEGIN","operands":{"action":"ResolveTicket"}},
+        {"opcode":"BRANCH_FIELD_EQUALS","operands":{"key":"ticket.priority","value":"High","label":"high_priority"}},
+        {"opcode":"SET_FIELD","operands":{"key":"ticket.queue","value":"standard","text":"standard queue"}},
+        {"opcode":"JUMP","operands":{"label":"done"}},
+        {"opcode":"LABEL","operands":{"name":"high_priority"}},
+        {"opcode":"SET_FIELD","operands":{"key":"ticket.queue","value":"urgent","text":"urgent queue"}},
+        {"opcode":"LABEL","operands":{"name":"done"}},
+        {"opcode":"RETURN_SUCCESS","operands":{}}
+      ]
+    }
+  ]
+}"#;
+    let bytecode = parse_ail_bytecode(bytecode_text).unwrap();
+
+    assert_eq!(verify_ail_bytecode(&bytecode), Vec::<String>::new());
+
+    let high_priority = run_ail_bytecode_action(
+        &bytecode,
+        "ResolveTicket",
+        BTreeMap::from([("ticket.priority".to_string(), "High".to_string())]),
+    )
+    .unwrap();
+    assert_eq!(high_priority.status, "succeeded");
+    assert_eq!(
+        high_priority
+            .final_state
+            .get("ticket.queue")
+            .map(String::as_str),
+        Some("urgent")
+    );
+    assert!(
+        high_priority
+            .trace
+            .contains(&"branch high_priority taken".to_string()),
+        "{:?}",
+        high_priority.trace
+    );
+
+    let standard = run_ail_bytecode_action(
+        &bytecode,
+        "ResolveTicket",
+        BTreeMap::from([("ticket.priority".to_string(), "Low".to_string())]),
+    )
+    .unwrap();
+    assert_eq!(standard.status, "succeeded");
+    assert_eq!(
+        standard.final_state.get("ticket.queue").map(String::as_str),
+        Some("standard")
+    );
+    assert!(
+        standard
+            .trace
+            .contains(&"branch high_priority skipped".to_string()),
+        "{:?}",
+        standard.trace
+    );
+    assert!(standard.trace.contains(&"jump done".to_string()));
+
+    let mut missing_label = bytecode.clone();
+    missing_label
+        .actions
+        .get_mut("ResolveTicket")
+        .unwrap()
+        .instructions
+        .iter_mut()
+        .find(|instruction| instruction.opcode == "JUMP")
+        .unwrap()
+        .operands
+        .insert("label".to_string(), "missing".to_string());
+    let diagnostics = verify_ail_bytecode(&missing_label);
+    assert!(
+        diagnostics.iter().any(|diagnostic| {
+            diagnostic.contains("AILBC003")
+                && diagnostic.contains("ResolveTicket")
+                && diagnostic.contains("missing")
+        }),
+        "{diagnostics:?}"
+    );
+}
+
+#[test]
 fn ail_toolchain_agent_package_lowers_to_verified_bytecode() {
     let package = load_ail_package_dir(fixture("ail_toolchain_agent.ail")).unwrap();
     let document = parse_ail_package_document(&package).unwrap();

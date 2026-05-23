@@ -368,6 +368,8 @@ System-profile components. For applications it emits:
 - one bytecode action per checked AIL action
 - requirement opcodes for existence checks, positive field requirements, and
   negative field requirements
+- `LABEL`, `BRANCH_FIELD_EQUALS`, and `JUMP` control-flow opcodes for
+  deterministic branch decisions over runtime state
 - read, write, field-set, effect, guarantee, trace, and return opcodes
 - declared failure trace tables
 

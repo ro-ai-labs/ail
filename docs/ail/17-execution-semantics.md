@@ -49,6 +49,13 @@ Execution is deterministic.
 Canonical edge order is the stable serialization order defined in
 `18-ail-core-schema.md`.
 
+The AIL VM's initial executable control-flow subset includes `LABEL`,
+`BRANCH_FIELD_EQUALS`, and `JUMP`. `BRANCH_FIELD_EQUALS` compares a runtime
+state field with a literal value, records whether the branch label was taken or
+skipped, and transfers control to a verified label when it is taken. `JUMP`
+records the target label and transfers control unconditionally. The bytecode
+verifier rejects missing branch or jump labels before execution.
+
 ## Calls And Returns
 
 An `Action` may call another `Action`, a `Function`, an `AgentTool`, an
