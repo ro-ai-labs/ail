@@ -467,18 +467,20 @@ executable. Adding `--agent <agent-package-or-bytecode>` runs the AIL-authored
 agent bytecode, trace, and native verifier executables into the same artifact
 directory, making the multi-action native package reviewable through AIL
 bytecode rather than host orchestration alone.
-`ail-bootstrap <toolchain-agent-package-or-bytecode> --pass
-<compiler-pass-package-or-bytecode> --agent <toolchain-agent-package-or-bytecode>
+`ail-bootstrap <toolchain-agent-package> --pass
+<compiler-pass-package> --agent <toolchain-agent-package>
 --target linux-x86_64-elf --artifact-dir <dir>` packages the AIL-authored
 toolchain agent and an AIL-Meta compiler pass into one bootstrap artifact set.
 It writes `toolchain-agent.ailbc.json`, `compiler-pass.ailbc.json`, native ELF
-executables for every action in both packages, `agent.ailbc.json`,
-`agent-trace.txt`, and `manifest.ail-bootstrap.txt`. The manifest records
-`no-host-backend-source true` and deterministic fingerprints for the bytecode
-and native executable bytes. The AIL-authored `VerifyBootstrapManifest` action
-checks that manifest before the bundle is accepted, so the bootstrap boundary is
-reviewable as AIL bytecode plus machine-level ELF artifacts rather than a Rust
-or host-language backend source tree.
+executables for every action in both packages, package conformance reports,
+`agent.ailbc.json`, `agent-trace.txt`, and `manifest.ail-bootstrap.txt`. The
+manifest records `no-host-backend-source true` and deterministic fingerprints
+for bytecode, conformance reports, and native executable bytes. The
+AIL-authored `VerifyBootstrapManifest` action reads the conformance report
+fingerprint plus bytecode and native target fingerprints before the bundle is
+accepted, so the bootstrap boundary is reviewable as AIL bytecode plus
+machine-level ELF artifacts rather than a Rust or host-language backend source
+tree.
 `ail-requirements` runs the first developer-facing agent capture stage by asking
 the package base LLM for an AIL-Requirements artifact, checking profile-specific
 coverage, and sending diagnostics back for one repair pass when the artifact is

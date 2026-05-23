@@ -110,13 +110,16 @@ executables and record each executable as a fingerprinted `target` entry in
 the AIL-authored `VerifyCompileBundleManifest` action over the all-action
 bundle manifest and writes `agent.ailbc.json`, `agent.fingerprint.txt`,
 `agent-trace.txt`, and native `agent-<Action>.elf` verifier executables.
-`ail-bootstrap <toolchain-agent-package-or-bytecode> --pass
-<compiler-pass-package-or-bytecode> --agent <toolchain-agent-package-or-bytecode>
+`ail-bootstrap <toolchain-agent-package> --pass
+<compiler-pass-package> --agent <toolchain-agent-package>
 --target linux-x86_64-elf --artifact-dir <dir>` writes a deterministic
 bootstrap bundle containing AIL-Bytecode plus native ELF artifacts for the
 AIL-authored toolchain agent and AIL-Meta compiler pass, then runs the
 AIL-authored `VerifyBootstrapManifest` action and records its trace and native
-verifier executables in `manifest.ail-bootstrap.txt`.
+verifier executables in `manifest.ail-bootstrap.txt`. The bundle also writes
+conformance reports and fingerprints for both AIL packages and feeds those
+fingerprints into the AIL-authored bootstrap verifier before accepting the
+manifest.
 `ail-pass <compiler-pass-package-or-bytecode>
 <target-package> --action <PassName>` compiles an AIL-Meta compiler pass
 package, or reads a saved Compiler-profile AIL-Bytecode artifact, and applies

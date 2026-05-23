@@ -4148,6 +4148,38 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
         fs::read_to_string(artifact_dir.join("compiler-pass.fingerprint.txt")).unwrap();
     assert_eq!(pass_fingerprint.trim(), fnv64_fingerprint(&pass_bytecode));
 
+    let toolchain_conformance =
+        fs::read_to_string(artifact_dir.join("toolchain-agent-conformance-report.txt")).unwrap();
+    assert!(
+        toolchain_conformance.contains("ail conformance: package ail-toolchain-agent"),
+        "{toolchain_conformance}"
+    );
+    assert!(
+        toolchain_conformance.contains("ail conformance: ok"),
+        "{toolchain_conformance}"
+    );
+    let toolchain_conformance_fingerprint =
+        fs::read_to_string(artifact_dir.join("toolchain-agent-conformance-report.fingerprint.txt"))
+            .unwrap();
+    assert_eq!(
+        toolchain_conformance_fingerprint.trim(),
+        fnv64_fingerprint(&toolchain_conformance)
+    );
+    let pass_conformance =
+        fs::read_to_string(artifact_dir.join("compiler-pass-conformance-report.txt")).unwrap();
+    assert!(
+        pass_conformance.contains("ail conformance: package ail-meta-permissions"),
+        "{pass_conformance}"
+    );
+    assert!(pass_conformance.contains("ail conformance: ok"));
+    let pass_conformance_fingerprint =
+        fs::read_to_string(artifact_dir.join("compiler-pass-conformance-report.fingerprint.txt"))
+            .unwrap();
+    assert_eq!(
+        pass_conformance_fingerprint.trim(),
+        fnv64_fingerprint(&pass_conformance)
+    );
+
     let toolchain_verifier =
         fs::read(artifact_dir.join("toolchain-agent-VerifyBootstrapManifest.elf")).unwrap();
     assert_eq!(&toolchain_verifier[0..4], b"\x7fELF");
@@ -4163,6 +4195,8 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
     assert!(agent_trace.contains("action VerifyBootstrapManifest started"));
     assert!(agent_trace.contains("read buildrequest.bytecode fingerprint"));
     assert!(agent_trace.contains("read buildrequest.compiler pass fingerprint"));
+    assert!(agent_trace.contains("read buildrequest.conformance report"));
+    assert!(agent_trace.contains("read buildrequest.conformance report fingerprint"));
     assert!(agent_trace.contains("read buildrequest.target artifact fingerprint"));
     assert!(agent_trace.contains("read buildrequest.compiler pass target artifact fingerprint"));
     assert!(agent_trace.contains("read buildrequest.artifact manifest"));
@@ -4181,6 +4215,8 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
             "buildrequest.status=BytecodeReady",
             "buildrequest.bytecode fingerprint=fnv64:toolchain",
             "buildrequest.compiler pass fingerprint=fnv64:pass",
+            "buildrequest.conformance report=ok",
+            "buildrequest.conformance report fingerprint=fnv64:conformance",
             "buildrequest.target artifact fingerprint=fnv64:toolchain-native",
             "buildrequest.compiler pass target artifact fingerprint=fnv64:pass-native",
             "buildrequest.artifact manifest=ok",
@@ -4217,6 +4253,20 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
         manifest.contains(&format!(
             "compiler-pass compiler-pass.ailbc.json {}",
             fnv64_fingerprint(&pass_bytecode)
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "toolchain-agent-conformance toolchain-agent-conformance-report.txt {}",
+            fnv64_fingerprint(&toolchain_conformance)
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "compiler-pass-conformance compiler-pass-conformance-report.txt {}",
+            fnv64_fingerprint(&pass_conformance)
         )),
         "{manifest}"
     );

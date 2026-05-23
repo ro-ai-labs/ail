@@ -6037,6 +6037,56 @@ Expected: the bootstrap bundle contains AIL-authored toolchain and compiler-pass
 bytecode, native ELF executable bytes, and an AIL-verified bootstrap manifest
 with no host-language backend source entries.
 
+### Task 138: Bootstrap Bundle Includes Conformance Evidence
+
+**Files:**
+- Modify: `examples/ail_toolchain_agent.ail/spec.ail-spec.md`
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/13-bootstrap-self-hosting.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing bootstrap conformance assertions**
+
+Extend the native `ail-bootstrap` bundle test to require
+`toolchain-agent-conformance-report.txt`,
+`compiler-pass-conformance-report.txt`, their fingerprint files, manifest
+entries for both reports, and AIL agent trace reads for
+`buildrequest.conformance report` and
+`buildrequest.conformance report fingerprint`.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_bootstrap_writes_native_toolchain_bundle -- --nocapture
+```
+
+Expected: failure because the bootstrap bundle does not yet write conformance
+report artifacts.
+
+- [x] **Step 3: Generate and verify bootstrap conformance reports**
+
+Run `run_ail_conformance` for the AIL-authored toolchain agent package and the
+AIL-Meta compiler pass package during `ail-bootstrap`. Fail the command if
+either conformance report fails. Write both reports and fingerprints, include
+them in `manifest.ail-bootstrap.txt`, and pass a combined conformance report
+fingerprint into `VerifyBootstrapManifest`.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_bootstrap_writes_native_toolchain_bundle -- --nocapture
+```
+
+Expected: the bootstrap bundle carries conformance evidence for both bundled
+AIL packages and the AIL-authored manifest verifier reads that evidence before
+acceptance.
+
 ### Task 18: Declared Failure Trace Coverage Diagnostics
 
 **Files:**
