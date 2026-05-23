@@ -737,7 +737,11 @@ completion requests use `messages` and disable model thinking with
 `AIL-Interview` envelope and prints either the model's interview artifact or
 an `AIL-Interview:` list of blocking questions. It does not repair, check,
 lower, or compile anything; answered questions are intended to become
-human-confirmed inputs to the requirements stage.
+human-confirmed inputs to the requirements stage. With
+`--artifact-dir <dir>`, it also writes `interview.ail-interview.md`,
+`interview.fingerprint.txt`, `manifest.ail-interview.txt`, and
+`manifest.fingerprint.txt` so the AI-IDE handoff can be reviewed, resumed, and
+fed into `ail-requirements --interview-file` without copying stdout.
 Generated requirements and spec-draft prompts ask for the prompt-pack JSON
 envelope with `artifact_kind`, `artifact_text`, `questions`, provenance, and
 `checker_handoff`, including the expected package profile. They instruct the

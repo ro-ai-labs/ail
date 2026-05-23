@@ -14284,6 +14284,9 @@ fn cli_ail_interview_surfaces_prompt_envelope_questions_as_artifact() {
     let package = fixture("support_ticket.ail");
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = listener.local_addr().unwrap();
+    let artifact_dir =
+        std::env::temp_dir().join(format!("ail-interview-artifacts-{}", std::process::id()));
+    let _ = fs::remove_dir_all(&artifact_dir);
     let envelope = concat!(
         "{",
         "\"artifact_kind\":\"AIL-Interview\",",
@@ -14308,6 +14311,8 @@ fn cli_ail_interview_surfaces_prompt_envelope_questions_as_artifact() {
             "Build a support ticket app",
             "--llm-endpoint",
             &format!("http://127.0.0.1:{}/v1/chat/completions", addr.port()),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
         ])
         .output()
         .unwrap();
@@ -14341,6 +14346,34 @@ fn cli_ail_interview_surfaces_prompt_envelope_questions_as_artifact() {
         "{stdout}"
     );
     assert!(!stdout.contains("AIL-Requirements:"), "{stdout}");
+
+    let interview_artifact =
+        fs::read_to_string(artifact_dir.join("interview.ail-interview.md")).unwrap();
+    assert_eq!(interview_artifact, stdout);
+    let interview_fingerprint =
+        fs::read_to_string(artifact_dir.join("interview.fingerprint.txt")).unwrap();
+    assert_eq!(
+        interview_fingerprint.trim(),
+        fnv64_fingerprint(&interview_artifact)
+    );
+    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-interview.txt")).unwrap();
+    assert!(manifest.contains("AIL-Interview-Manifest:"), "{manifest}");
+    assert!(
+        manifest.contains("package support-ticket 0.1.0"),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "interview interview.ail-interview.md {}",
+            fnv64_fingerprint(&interview_artifact)
+        )),
+        "{manifest}"
+    );
+    let manifest_fingerprint =
+        fs::read_to_string(artifact_dir.join("manifest.fingerprint.txt")).unwrap();
+    assert_eq!(manifest_fingerprint.trim(), fnv64_fingerprint(&manifest));
+
+    fs::remove_dir_all(artifact_dir).unwrap();
 }
 
 #[test]

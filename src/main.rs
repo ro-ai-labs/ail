@@ -38,6 +38,12 @@ struct CliOptions {
     ail_compile_all_actions: bool,
 }
 
+struct AilInterviewArtifactSet<'a> {
+    package_name: &'a str,
+    package_version: &'a str,
+    interview_text: &'a str,
+}
+
 fn main() -> ExitCode {
     match run(env::args().skip(1).collect()) {
         Ok(code) => ExitCode::from(code),
@@ -101,6 +107,50 @@ fn run(args: Vec<String>) -> Result<u8, String> {
 fn usage() -> String {
     "usage: ail <ail-check|ail-core|ail-flow|ail-flow-edit|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-interview|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-bootstrap|ail-patch> <path> [patch|target-package] [--action name] [--prompt text] [--interview-file path] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--base-model name] [--target-model name] [--out path] [--all-actions] [--artifact-dir path] [--llm-endpoint url] [key=value ...]\nsaved-core usage: ail <ail-spec|ail-lower|ail-compile|ail-run|ail-build> --core-file <checked-core> [--action name] [--target target] [--out path] [--artifact-dir path] [key=value ...]\nwasm-contract usage: ail ail-compile <package-or-artifact.ailbc.json> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir> OR ail ail-compile --core-file <checked-core> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir>\ncore-patch usage: ail ail-patch --core-file <checked-core> <ail-core.patch.json>\nflow-edit usage: ail ail-flow-edit --core-file <checked-core> <ail-flow.edit.json>\nail-pass usage: ail ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR ail ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]\nail-bootstrap usage: ail ail-bootstrap <toolchain-agent-package> --pass <compiler-pass-package> --agent <toolchain-agent-package> --target linux-x86_64-elf --artifact-dir <dir>"
         .to_string()
+}
+
+fn render_ail_interview_manifest(artifacts: &AilInterviewArtifactSet<'_>) -> String {
+    format!(
+        concat!(
+            "AIL-Interview-Manifest:\n",
+            "package {} {}\n",
+            "interview interview.ail-interview.md {}\n"
+        ),
+        artifacts.package_name,
+        artifacts.package_version,
+        ail_artifact_fingerprint(artifacts.interview_text)
+    )
+}
+
+fn write_ail_interview_artifacts(
+    artifact_dir: &str,
+    artifacts: AilInterviewArtifactSet<'_>,
+) -> Result<(), String> {
+    let root = std::path::Path::new(artifact_dir);
+    fs::create_dir_all(root).map_err(|error| {
+        format!("failed to create ail-interview artifact dir {artifact_dir}: {error}")
+    })?;
+    fs::write(
+        root.join("interview.ail-interview.md"),
+        artifacts.interview_text,
+    )
+    .map_err(|error| format!("failed to write ail-interview artifact: {error}"))?;
+    fs::write(
+        root.join("interview.fingerprint.txt"),
+        format!("{}\n", ail_artifact_fingerprint(artifacts.interview_text)),
+    )
+    .map_err(|error| format!("failed to write ail-interview fingerprint artifact: {error}"))?;
+    let manifest_text = render_ail_interview_manifest(&artifacts);
+    fs::write(root.join("manifest.ail-interview.txt"), &manifest_text)
+        .map_err(|error| format!("failed to write ail-interview manifest artifact: {error}"))?;
+    fs::write(
+        root.join("manifest.fingerprint.txt"),
+        format!("{}\n", ail_artifact_fingerprint(&manifest_text)),
+    )
+    .map_err(|error| {
+        format!("failed to write ail-interview manifest fingerprint artifact: {error}")
+    })?;
+    Ok(())
 }
 
 struct AilBuildArtifactSet<'a> {
@@ -7544,7 +7594,18 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
             .as_deref()
             .unwrap_or(&package.metadata.base_llm_endpoint);
         let interview = draft_ail_interview(&package, prompt, endpoint)?;
-        println!("{interview}");
+        let interview_text = format!("{interview}\n");
+        if let Some(artifact_dir) = &cli_options.artifact_dir {
+            write_ail_interview_artifacts(
+                artifact_dir,
+                AilInterviewArtifactSet {
+                    package_name: &package.metadata.name,
+                    package_version: &package.metadata.version,
+                    interview_text: &interview_text,
+                },
+            )?;
+        }
+        print!("{interview_text}");
         return Ok(0);
     }
     if command == "ail-spec" {
@@ -8111,7 +8172,8 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         if arg == "--artifact-dir" {
             if !matches!(
                 command,
-                "ail-build"
+                "ail-interview"
+                    | "ail-build"
                     | "ail-pass"
                     | "ail-lower"
                     | "ail-compile"
