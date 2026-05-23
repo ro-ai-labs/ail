@@ -615,7 +615,11 @@ Generated requirements and spec-draft prompts ask for the prompt-pack JSON
 envelope with `artifact_kind`, `artifact_text`, `questions`, provenance, and
 `checker_handoff`, including the expected package profile. They instruct the
 model to return blocking questions with empty `artifact_text` rather than
-guessing missing semantics.
+guessing missing semantics. The executable prompt builders embed the versioned
+prompt-pack source from `docs/ail/prompts/requirements.system.md` or
+`docs/ail/prompts/spec-draft.system.md` into the request before adding
+stage-specific package context, so the documented prompt artifact is also the
+LLM request source.
 LLM output may be either the deterministic artifact text directly or the
 prompt-pack JSON envelope with `artifact_text`. When the envelope contains
 blocking `questions` and no artifact, the CLI prints the questions as a

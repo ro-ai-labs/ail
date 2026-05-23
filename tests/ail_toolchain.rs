@@ -10000,6 +10000,9 @@ fn cli_ail_draft_uses_llm_endpoint_and_checks_candidate_spec() {
     assert!(request_body.contains("Draft an AIL support ticket app"));
     assert!(request_body.contains("package support-ticket"));
     assert!(request_body.contains("AIL-Spec"));
+    assert!(request_body.contains("# Prompt: spec-draft.system"));
+    assert!(request_body.contains("version: 0.1.0"));
+    assert!(request_body.contains("target artifact: AIL-Spec Canonical"));
     assert!(request_body.contains("The application <Name> manages <purpose>."));
     assert!(request_body.contains("A <Thing> has:"));
     assert!(request_body.contains("Action: <human label>."));
@@ -10056,6 +10059,9 @@ fn cli_ail_requirements_root_llm_endpoint_uses_completion_api() {
     assert!(request_body.contains(r#""prompt":"#), "{request_body}");
     assert!(!request_body.contains(r#""messages":"#), "{request_body}");
     assert!(request_body.contains("Capture support ticket requirements through the AI IDE"));
+    assert!(request_body.contains("# Prompt: requirements.system"));
+    assert!(request_body.contains("version: 0.1.0"));
+    assert!(request_body.contains("target artifact: AIL-Requirements"));
     assert!(request_body.contains("artifact_kind"));
     assert!(request_body.contains("AIL-Requirements"));
     assert!(request_body.contains("checker_handoff"));

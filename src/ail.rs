@@ -8212,13 +8212,23 @@ fn prompt_envelope_instruction(artifact_kind: &str, expected_profile: &str) -> S
     )
 }
 
+const REQUIREMENTS_SYSTEM_PROMPT: &str = include_str!("../docs/ail/prompts/requirements.system.md");
+const SPEC_DRAFT_SYSTEM_PROMPT: &str = include_str!("../docs/ail/prompts/spec-draft.system.md");
+
+fn prompt_pack_source_block(file_name: &str, prompt_text: &str) -> String {
+    format!("PROMPT PACK SOURCE {file_name}:\n{prompt_text}\n")
+}
+
 fn build_ail_requirements_prompt(package: &AilPackage, user_prompt: &str) -> String {
     let coverage = ail_requirements_prompt_coverage(&package.metadata.profile);
+    let prompt_pack_source =
+        prompt_pack_source_block("requirements.system.md", REQUIREMENTS_SYSTEM_PROMPT);
     format!(
         concat!(
             "Draft AIL requirements for package {}.\n",
             "Use the {} profile and conformance level {}.\n",
             "Package features: {}.\n",
+            "{}\n",
             "Output only an AIL-Requirements artifact with concise bullet points. Do not include code fences, AIL-Spec, implementation code, backend source, or reasoning.\n",
             "The first line must be exactly AIL-Requirements:. Return at least six requirement bullets, and every requirement bullet must start with \"- \"; do not use \"*\" bullets, numbered lists, tables, or Markdown emphasis.\n",
             "{}\n",
@@ -8231,6 +8241,7 @@ fn build_ail_requirements_prompt(package: &AilPackage, user_prompt: &str) -> Str
         package.metadata.profile,
         package.metadata.conformance,
         package.metadata.features.join(", "),
+        prompt_pack_source,
         prompt_envelope_instruction("AIL-Requirements", &package.metadata.profile),
         coverage,
         user_prompt
@@ -8265,10 +8276,13 @@ fn build_ail_requirements_repair_prompt(
         .map(AilDiagnostic::detailed_message)
         .collect::<Vec<_>>()
         .join("\n");
+    let prompt_pack_source =
+        prompt_pack_source_block("requirements.system.md", REQUIREMENTS_SYSTEM_PROMPT);
     format!(
         concat!(
             "Repair AIL requirements for package {}.\n",
             "Use the {} profile and conformance level {}.\n",
+            "{}\n",
             "Return only an AIL-Requirements artifact with concise bullet points. Do not include code fences, AIL-Spec, implementation code, backend source, or reasoning.\n",
             "The first line must be exactly AIL-Requirements:. Return at least six requirement bullets, and every requirement bullet must start with \"- \"; do not use \"*\" bullets, numbered lists, tables, or Markdown emphasis.\n",
             "{}\n",
@@ -8283,6 +8297,7 @@ fn build_ail_requirements_repair_prompt(
         package.metadata.name,
         package.metadata.profile,
         package.metadata.conformance,
+        prompt_pack_source,
         prompt_envelope_instruction("AIL-Requirements", &package.metadata.profile),
         user_prompt,
         previous_requirements_text,
@@ -8478,6 +8493,8 @@ fn build_ail_repair_prompt(
 }
 
 fn build_ail_draft_prompt(package: &AilPackage, user_prompt: &str) -> String {
+    let prompt_pack_source =
+        prompt_pack_source_block("spec-draft.system.md", SPEC_DRAFT_SYSTEM_PROMPT);
     let surface_shape = if package.metadata.profile == "System"
         || package
             .metadata
@@ -8611,6 +8628,7 @@ fn build_ail_draft_prompt(package: &AilPackage, user_prompt: &str) -> String {
             "Draft an AIL-Spec candidate for package {}.\n",
             "Use the {} profile and conformance level {}.\n",
             "Package features: {}.\n",
+            "{}\n",
             "Output only parseable AIL-Spec structured English. Do not include code fences, Markdown commentary, labels like Application:, or reasoning.\n",
             "{}\n",
             "The checker will decide whether the candidate is accepted, so preserve explicit things, fields, tools, actions, system components, capabilities, failures, guarantees, traces, and secret handling.\n\n",
@@ -8623,6 +8641,7 @@ fn build_ail_draft_prompt(package: &AilPackage, user_prompt: &str) -> String {
         package.metadata.profile,
         package.metadata.conformance,
         package.metadata.features.join(", "),
+        prompt_pack_source,
         prompt_envelope_instruction("AIL-Spec Canonical", &package.metadata.profile),
         surface_shape,
         user_prompt
