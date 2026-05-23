@@ -249,7 +249,22 @@ edge calls Function:factorial -> Call:factorial.factorial with n minus 1
 edge records_trace Function:factorial -> Trace:FactorialCalled
 ```
 
-Trace excerpt for `factorial(3)`:
+Current bootstrap VM bytecode trace for this function surface records the
+checked structure that will drive full Turing Core execution:
+
+```text
+function factorial started
+function input n:Int
+function output result:Int
+function branch n is 0
+function call factorial
+function return 1
+function return n multiplied by the recursive result
+trace FactorialCalled
+```
+
+Target recursive execution trace for `factorial(3)` after recursive arithmetic
+semantics are enabled:
 
 ```text
 trace FunctionEntered factorial n=3

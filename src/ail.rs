@@ -5006,6 +5006,72 @@ fn emit_linux_x86_64_elf_for_action(
                     );
                 }
             }
+            "FUNCTION_BEGIN" => {
+                if let Some(label) = instruction.operands.get("label") {
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("function {label} started\n"),
+                    );
+                }
+            }
+            "FUNCTION_INPUT" => {
+                if let (Some(name), Some(type_name)) = (
+                    instruction.operands.get("name"),
+                    instruction.operands.get("type"),
+                ) {
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("function input {name}:{type_name}\n"),
+                    );
+                }
+            }
+            "FUNCTION_OUTPUT" => {
+                if let (Some(name), Some(type_name)) = (
+                    instruction.operands.get("name"),
+                    instruction.operands.get("type"),
+                ) {
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("function output {name}:{type_name}\n"),
+                    );
+                }
+            }
+            "FUNCTION_BRANCH" => {
+                if let Some(condition) = instruction.operands.get("condition") {
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("function branch {condition}\n"),
+                    );
+                }
+            }
+            "FUNCTION_CALL" => {
+                if let Some(target) = instruction.operands.get("target") {
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("function call {target}\n"),
+                    );
+                }
+            }
+            "FUNCTION_RETURN" => {
+                if let Some(value) = instruction.operands.get("value") {
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("function return {value}\n"),
+                    );
+                }
+            }
             "NATIVE_TRACE_LINE" => {
                 if let Some(text) = instruction.operands.get("text") {
                     emit_native_trace_line(
@@ -6412,11 +6478,19 @@ fn compile_ail_document_bytecode(
     document: &AilDocument,
 ) -> Result<AilBytecodeProgram, String> {
     let actions = match package.metadata.profile.as_str() {
-        "Application" => document
-            .actions
-            .iter()
-            .map(|(name, action)| (name.clone(), compile_ail_action_bytecode(document, action)))
-            .collect(),
+        "Application" => {
+            let mut actions = document
+                .actions
+                .iter()
+                .map(|(name, action)| (name.clone(), compile_ail_action_bytecode(document, action)))
+                .collect::<BTreeMap<_, _>>();
+            for (name, function) in &document.functions {
+                actions
+                    .entry(name.clone())
+                    .or_insert_with(|| compile_ail_function_bytecode(function));
+            }
+            actions
+        }
         "AgentTool" => document
             .tools
             .iter()
@@ -7592,6 +7666,64 @@ fn compile_ail_tool_bytecode(tool: &AilTool) -> AilBytecodeAction {
     }
 }
 
+fn compile_ail_function_bytecode(function: &AilFunction) -> AilBytecodeAction {
+    let mut instructions = Vec::new();
+    instructions.push(AilBytecodeInstruction::new(
+        "FUNCTION_BEGIN",
+        &[
+            ("function", function.name.clone()),
+            ("label", function.label.clone()),
+        ],
+    ));
+    for input in function.inputs.values() {
+        instructions.push(AilBytecodeInstruction::new(
+            "FUNCTION_INPUT",
+            &[
+                ("name", input.name.clone()),
+                ("type", input.type_name.clone()),
+            ],
+        ));
+    }
+    for output in function.outputs.values() {
+        instructions.push(AilBytecodeInstruction::new(
+            "FUNCTION_OUTPUT",
+            &[
+                ("name", output.name.clone()),
+                ("type", output.type_name.clone()),
+            ],
+        ));
+    }
+    for branch in &function.branches {
+        instructions.push(AilBytecodeInstruction::new(
+            "FUNCTION_BRANCH",
+            &[("condition", branch.clone())],
+        ));
+    }
+    for call in &function.calls {
+        instructions.push(AilBytecodeInstruction::new(
+            "FUNCTION_CALL",
+            &[("target", call.target.clone()), ("text", call.text.clone())],
+        ));
+    }
+    for return_value in &function.returns {
+        instructions.push(AilBytecodeInstruction::new(
+            "FUNCTION_RETURN",
+            &[("value", return_value.clone())],
+        ));
+    }
+    for event in &function.traces {
+        instructions.push(AilBytecodeInstruction::new(
+            "EMIT_TRACE",
+            &[("event", event.clone())],
+        ));
+    }
+    instructions.push(AilBytecodeInstruction::new("RETURN_SUCCESS", &[]));
+    AilBytecodeAction {
+        name: function.name.clone(),
+        instructions,
+    }
+}
+
 fn compile_ail_action_bytecode(document: &AilDocument, action: &AilAction) -> AilBytecodeAction {
     let mut instructions = Vec::new();
     instructions.push(AilBytecodeInstruction::new(
@@ -8039,6 +8171,12 @@ fn ail_bytecode_required_operands(opcode: &str) -> Option<&'static [&'static str
         "COPY_FIELD" => Some(&["source", "key", "text"]),
         "WRITE_FIELD" => Some(&["key", "text"]),
         "EFFECT" => Some(&["text"]),
+        "FUNCTION_BEGIN" => Some(&["function", "label"]),
+        "FUNCTION_INPUT" => Some(&["name", "type"]),
+        "FUNCTION_OUTPUT" => Some(&["name", "type"]),
+        "FUNCTION_BRANCH" => Some(&["condition"]),
+        "FUNCTION_CALL" => Some(&["target", "text"]),
+        "FUNCTION_RETURN" => Some(&["value"]),
         "TOOL_BEGIN" => Some(&["tool", "label"]),
         "TOOL_REQUIREMENT" => Some(&["text"]),
         "TOOL_INPUT" => Some(&["name", "type", "secret"]),
@@ -8315,6 +8453,44 @@ fn run_verified_ail_bytecode_action(
             "ACTION_BEGIN" => {
                 let action = ail_bytecode_operand(instruction, "action");
                 trace.push(format!("action {action} started"));
+            }
+            "FUNCTION_BEGIN" => {
+                trace.push(format!(
+                    "function {} started",
+                    ail_bytecode_operand(instruction, "label")
+                ));
+            }
+            "FUNCTION_INPUT" => {
+                trace.push(format!(
+                    "function input {}:{}",
+                    ail_bytecode_operand(instruction, "name"),
+                    ail_bytecode_operand(instruction, "type")
+                ));
+            }
+            "FUNCTION_OUTPUT" => {
+                trace.push(format!(
+                    "function output {}:{}",
+                    ail_bytecode_operand(instruction, "name"),
+                    ail_bytecode_operand(instruction, "type")
+                ));
+            }
+            "FUNCTION_BRANCH" => {
+                trace.push(format!(
+                    "function branch {}",
+                    ail_bytecode_operand(instruction, "condition")
+                ));
+            }
+            "FUNCTION_CALL" => {
+                trace.push(format!(
+                    "function call {}",
+                    ail_bytecode_operand(instruction, "target")
+                ));
+            }
+            "FUNCTION_RETURN" => {
+                trace.push(format!(
+                    "function return {}",
+                    ail_bytecode_operand(instruction, "value")
+                ));
             }
             "LABEL" => {}
             "BRANCH_FIELD_EQUALS" => {

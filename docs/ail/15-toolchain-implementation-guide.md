@@ -507,7 +507,13 @@ Native code generated from supported System opcodes writes the same low-level
 component trace entries as the VM, including resources, ownership, borrowing,
 region placement, layout, allocation, lock guards, execution context,
 interrupts, scheduler tasks, capabilities, effects, guarantees, and explicit
-trace events. Native Application code supports `LABEL`,
+trace events. Function declarations in Application packages lower to runnable
+AIL-Bytecode entries that preserve function start, typed inputs and outputs,
+branch conditions, call declarations, returns, and explicit trace events as
+straight-line structural trace opcodes. The bootstrap VM and native backend
+execute those function entries as auditable structure traces; recursive
+arithmetic evaluation remains a later Turing Core execution step. Native
+Application code supports `LABEL`,
 `BRANCH_FIELD_EQUALS`, and `JUMP` for deterministic acyclic control flow over
 runtime argv state. `CALL_ACTION` is lowered by inlining the verified callee
 body at the call site, emitting the VM-style call trace before the callee action
@@ -1002,6 +1008,9 @@ rules are preserved.
     bytecode with the bootstrap VM.
 16. Parse the first Turing Core `Function:` surface into checked AIL-Core and
     prove deterministic function render/reparse equivalence.
+17. Lower parsed `Function:` declarations into runnable structural
+    AIL-Bytecode entries and execute their function input, output, branch,
+    call, return, and trace records with the bootstrap VM.
 
 ## Out Of Scope For The First Slice
 

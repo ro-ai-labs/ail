@@ -866,6 +866,90 @@ When factorial runs:
 }
 
 #[test]
+fn ail_spec_lowers_function_surface_into_runnable_bytecode() {
+    let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
+    let spec = r#"The application Calculator manages arithmetic workflows.
+
+Function: factorial.
+
+The function needs:
+
+- n: Int
+
+The function produces:
+
+- result: Int
+
+When factorial runs:
+
+- if n is 0, the function returns 1
+- otherwise the function calls factorial with n minus 1
+- the function returns n multiplied by the recursive result
+- the function records a trace event named FactorialCalled
+"#;
+
+    let document = parse_ail_spec_text(spec).unwrap();
+    let bytecode = compile_ail_bytecode(&package, &document).unwrap();
+
+    assert!(bytecode.actions.contains_key("factorial"));
+    let rendered = render_ail_bytecode(&bytecode);
+    assert!(
+        rendered.contains(r#""opcode":"FUNCTION_BEGIN""#),
+        "{rendered}"
+    );
+    assert!(
+        rendered.contains(r#""opcode":"FUNCTION_INPUT""#),
+        "{rendered}"
+    );
+    assert!(
+        rendered.contains(r#""opcode":"FUNCTION_OUTPUT""#),
+        "{rendered}"
+    );
+    assert!(
+        rendered.contains(r#""opcode":"FUNCTION_BRANCH""#),
+        "{rendered}"
+    );
+    assert!(
+        rendered.contains(r#""opcode":"FUNCTION_CALL""#),
+        "{rendered}"
+    );
+    assert!(
+        rendered.contains(r#""opcode":"FUNCTION_RETURN""#),
+        "{rendered}"
+    );
+    assert!(rendered.contains("FactorialCalled"), "{rendered}");
+
+    let parsed = parse_ail_bytecode(&rendered).unwrap();
+    assert_eq!(verify_ail_bytecode(&parsed), Vec::<String>::new());
+
+    let run = run_ail_bytecode_action(
+        &parsed,
+        "factorial",
+        BTreeMap::from([("n".to_string(), "3".to_string())]),
+    )
+    .unwrap();
+
+    assert_eq!(run.status, "succeeded");
+    assert!(
+        run.trace
+            .contains(&"function factorial started".to_string())
+    );
+    assert!(run.trace.contains(&"function input n:Int".to_string()));
+    assert!(
+        run.trace
+            .contains(&"function output result:Int".to_string())
+    );
+    assert!(run.trace.contains(&"function branch n is 0".to_string()));
+    assert!(run.trace.contains(&"function call factorial".to_string()));
+    assert!(run.trace.contains(&"function return 1".to_string()));
+    assert!(
+        run.trace
+            .contains(&"function return n multiplied by the recursive result".to_string())
+    );
+    assert!(run.trace.contains(&"trace FactorialCalled".to_string()));
+}
+
+#[test]
 fn ail_system_profile_accepts_mutable_borrowed_resources() {
     let package = load_ail_package_dir(fixture("network_driver.ail")).unwrap();
     let spec = fs::read_to_string(format!(
