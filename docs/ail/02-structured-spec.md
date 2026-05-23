@@ -246,11 +246,12 @@ The library imports function <symbol>.
 - <parameter>: <type and ownership>
 
 <symbol> maps errno or status codes:
+- <success-code> maps to success
 - <code> maps to Failure.<name>
 ```
 
-Every external call requires an effect, permission or capability, failure
-mapping, secret-redaction rule when relevant, and trace event.
+Every external call requires an effect, permission or capability, explicit
+status mapping, secret-redaction rule when relevant, and trace event.
 
 ## Library Imports And Standard Library Usage
 

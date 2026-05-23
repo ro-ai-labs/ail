@@ -119,13 +119,16 @@ fingerprint. It intentionally does not write `target.elf` or an executable
 `.wasm` module yet. The contract report records `bytecode-level
 portable-vm-contract`, `bytecode-container wasm-sandbox-contract`,
 `bytecode-format wasm32-contract-report`, `host-boundary
-saved-bytecode-contract`, `host-import-metadata
-not-present-in-saved-bytecode`, selected action, target-support status, and
-trace preservation requirements across the selected action's reachable
-`CALL_ACTION` graph. Saved bytecode does not preserve `ExternalBinding` or
-host-import declarations yet, so this first report does not enumerate host
-imports. Reusing an artifact directory that still contains executable outputs
-such as `target.elf`, `target.wasm`, or native bytecode reports is rejected.
+declared-imports-only`, `host-import-metadata present-in-saved-bytecode`,
+selected action, target-support status, and trace preservation requirements
+across the selected action's reachable `CALL_ACTION` graph. Saved bytecode
+preserves `ExternalBinding` declarations, so the report enumerates each
+declared host import with library, symbol, ABI, input, output, status-map,
+capability, and trace metadata. Reusing an artifact directory that still
+contains executable outputs such as `target.elf`, `target.wasm`, or native
+bytecode reports is rejected. Older saved bytecode without the
+`external_bindings` field remains loadable, but the report marks host-import
+metadata as absent and does not enumerate import dependencies.
 
 ## Additional OS Target Plan
 

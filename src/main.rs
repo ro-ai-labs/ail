@@ -4939,7 +4939,7 @@ fn render_ail_compile_wasm_contract_report(
     } else {
         "not-required-by-action"
     };
-    let lines = vec![
+    let mut lines = vec![
         "AIL-Wasm-Contract-Report:".to_string(),
         format!(
             "package {} {}",
@@ -4950,13 +4950,76 @@ fn render_ail_compile_wasm_contract_report(
         "bytecode-level portable-vm-contract".to_string(),
         "bytecode-container wasm-sandbox-contract".to_string(),
         "bytecode-format wasm32-contract-report".to_string(),
-        "host-boundary saved-bytecode-contract".to_string(),
-        "host-import-metadata not-present-in-saved-bytecode".to_string(),
+        format!(
+            "host-boundary {}",
+            if program.external_bindings_metadata_present {
+                "declared-imports-only"
+            } else {
+                "saved-bytecode-contract"
+            }
+        ),
+        format!(
+            "host-import-metadata {}",
+            if program.external_bindings_metadata_present {
+                "present-in-saved-bytecode"
+            } else {
+                "not-present-in-saved-bytecode"
+            }
+        ),
         format!("action {action_name}"),
         "trace-scope reachable-action-call-graph".to_string(),
         format!("trace-preservation {trace_preservation}"),
         "executable-wasm-module none".to_string(),
     ];
+    if program.external_bindings.is_empty() {
+        lines.push(if program.external_bindings_metadata_present {
+            "host-imports none".to_string()
+        } else {
+            "host-imports not-enumerated-in-saved-bytecode".to_string()
+        });
+    } else {
+        for binding in program.external_bindings.values() {
+            lines.push(format!(
+                "host-import {} library {} symbol {} binding-kind {} calling-convention {}",
+                binding.name,
+                binding.library,
+                binding.symbol,
+                binding.binding_kind,
+                binding.calling_convention
+            ));
+            for input in binding.inputs.values() {
+                lines.push(format!(
+                    "host-import-input {} {} {}",
+                    binding.name,
+                    input.name,
+                    ail_wasm_contract_value_signature(input)
+                ));
+            }
+            for output in binding.outputs.values() {
+                lines.push(format!(
+                    "host-import-output {} {} {}",
+                    binding.name,
+                    output.name,
+                    ail_wasm_contract_value_signature(output)
+                ));
+            }
+            for status_map in &binding.status_maps {
+                lines.push(format!(
+                    "host-import-status {} {} {}",
+                    binding.name, status_map.code, status_map.target
+                ));
+            }
+            for capability in &binding.capabilities {
+                lines.push(format!(
+                    "host-import-capability {} {}",
+                    binding.name, capability
+                ));
+            }
+            for trace in &binding.traces {
+                lines.push(format!("host-import-trace {} {}", binding.name, trace));
+            }
+        }
+    }
     Ok(format!("{}\n", lines.join("\n")))
 }
 
@@ -5005,6 +5068,7 @@ fn render_ail_compile_wasm_contract_dependency_report(
     if !program.actions.contains_key(action_name) {
         return Err(format!("unknown AIL action '{action_name}'"));
     }
+    let library_dependencies = ail_bytecode_wasm_contract_library_dependencies(program);
     let lines = vec![
         "AIL-Compile-Dependency-Report:".to_string(),
         format!("target {target_name}"),
@@ -5012,12 +5076,47 @@ fn render_ail_compile_wasm_contract_dependency_report(
         "host-language-runtime none".to_string(),
         "dynamic-linker none".to_string(),
         "shared-libraries none".to_string(),
-        "library-dependencies not-enumerated-in-saved-bytecode".to_string(),
+        format!("library-dependencies {library_dependencies}"),
         "linker-invocation none".to_string(),
         "runtime-abi wasm32-declared-host-imports".to_string(),
         "machine-bytecode-dependency wasm-contract-report.txt portable-vm-contract".to_string(),
     ];
+    let mut lines = lines;
+    for binding in program.external_bindings.values() {
+        lines.push(format!(
+            "host-import-dependency {} library {} symbol {} binding-kind {} calling-convention {}",
+            binding.name,
+            binding.library,
+            binding.symbol,
+            binding.binding_kind,
+            binding.calling_convention
+        ));
+    }
     Ok(format!("{}\n", lines.join("\n")))
+}
+
+fn ail_bytecode_wasm_contract_library_dependencies(program: &AilBytecodeProgram) -> String {
+    if !program.external_bindings_metadata_present {
+        return "not-enumerated-in-saved-bytecode".to_string();
+    }
+    let libraries = program
+        .external_bindings
+        .values()
+        .map(|binding| binding.library.clone())
+        .collect::<BTreeSet<_>>();
+    if libraries.is_empty() {
+        "none".to_string()
+    } else {
+        libraries.into_iter().collect::<Vec<_>>().join(",")
+    }
+}
+
+fn ail_wasm_contract_value_signature(value: &ail::ail::AilExternalBindingValue) -> String {
+    if value.ownership.is_empty() {
+        value.type_name.clone()
+    } else {
+        format!("{} {}", value.type_name, value.ownership)
+    }
 }
 
 fn render_ail_compile_bundle_native_bytecode_report(

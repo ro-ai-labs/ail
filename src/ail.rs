@@ -372,6 +372,8 @@ pub struct AilBytecodeProgram {
     pub profile: String,
     pub capability_grants: Vec<AilCapabilityGrant>,
     pub target_support: BTreeMap<String, String>,
+    pub external_bindings_metadata_present: bool,
+    pub external_bindings: BTreeMap<String, AilExternalBinding>,
     pub actions: BTreeMap<String, AilBytecodeAction>,
     pub failures: BTreeMap<String, AilBytecodeFailure>,
 }
@@ -2477,17 +2479,30 @@ pub fn elaborate_ail_core(package: &AilPackage, document: &AilDocument) -> AilCo
             attach_provenance(&mut graph, &output_node, &output.provenance);
         }
         for status_map in &binding.status_maps {
-            let Some(failure_name) = external_status_map_failure(&status_map.target) else {
-                continue;
-            };
-            let failure_node = graph.add_node("Failure", failure_name, None, BTreeMap::new());
-            graph.add_edge(
-                "may_fail_with",
-                &binding_node,
-                &failure_node,
-                attr(&[("code", &status_map.code)]),
-            );
-            attach_provenance(&mut graph, &failure_node, &status_map.provenance);
+            if let Some(failure_name) = external_status_map_failure(&status_map.target) {
+                let failure_node = graph.add_node("Failure", failure_name, None, BTreeMap::new());
+                graph.add_edge(
+                    "may_fail_with",
+                    &binding_node,
+                    &failure_node,
+                    attr(&[("code", &status_map.code)]),
+                );
+                attach_provenance(&mut graph, &failure_node, &status_map.provenance);
+            } else {
+                let status_node = graph.add_node(
+                    "StatusMap",
+                    format!("{}.{}", binding.name, status_map.code),
+                    Some(status_map.target.clone()),
+                    attr(&[("code", &status_map.code)]),
+                );
+                graph.add_edge(
+                    "maps_status",
+                    &binding_node,
+                    &status_node,
+                    attr(&[("code", &status_map.code)]),
+                );
+                attach_provenance(&mut graph, &status_node, &status_map.provenance);
+            }
         }
         for capability in &binding.capabilities {
             let capability_node = graph.add_node("Capability", capability, None, BTreeMap::new());
@@ -3513,6 +3528,7 @@ fn is_known_core_node_kind(kind: &str) -> bool {
             | "SchedulerTaskPriority"
             | "SchedulerTaskTiming"
             | "Secret"
+            | "StatusMap"
             | "Step"
             | "SystemComponent"
             | "Thing"
@@ -3547,6 +3563,7 @@ fn is_known_core_edge_kind(kind: &str) -> bool {
             | "in_region"
             | "layouts_resource"
             | "lowers_to"
+            | "maps_status"
             | "masks_context"
             | "may_fail_with"
             | "mutably_borrows_resource"
@@ -7081,6 +7098,8 @@ fn compile_ail_document_bytecode(
         profile: package.metadata.profile.clone(),
         capability_grants: package.metadata.capability_grants.clone(),
         target_support: package.metadata.target_support.clone(),
+        external_bindings_metadata_present: true,
+        external_bindings: document.external_bindings.clone(),
         actions,
         failures,
     })
@@ -7398,6 +7417,26 @@ pub fn ail_document_from_core(core: &AilCore) -> AilDocument {
                 })
             })
             .collect();
+        binding.status_maps.extend(
+            outgoing_edges(core, binding_node, "maps_status")
+                .into_iter()
+                .filter_map(|edge| {
+                    let status = node_by_id.get(&edge.target)?;
+                    (status.kind == "StatusMap").then(|| AilExternalStatusMap {
+                        code: edge
+                            .attributes
+                            .get("code")
+                            .cloned()
+                            .or_else(|| status.attributes.get("code").cloned())
+                            .unwrap_or_default(),
+                        target: status
+                            .type_name
+                            .clone()
+                            .unwrap_or_else(|| status.name.clone()),
+                        provenance: node_provenance(core, &status.id).unwrap_or_default(),
+                    })
+                }),
+        );
         binding.capabilities = outgoing_nodes(core, &node_by_id, binding_node, "requires")
             .into_iter()
             .filter(|node| node.kind == "Capability")
@@ -8619,12 +8658,13 @@ fn compile_ail_action_bytecode(document: &AilDocument, action: &AilAction) -> Ai
 
 pub fn render_ail_bytecode(program: &AilBytecodeProgram) -> String {
     format!(
-        "{{\"kind\":\"AIL-Bytecode\",\"package\":{},\"version\":{},\"profile\":{},\"capability_grants\":{},\"target_support\":{},\"actions\":[{}],\"failures\":[{}]}}",
+        "{{\"kind\":\"AIL-Bytecode\",\"package\":{},\"version\":{},\"profile\":{},\"capability_grants\":{},\"target_support\":{},\"external_bindings\":{},\"actions\":[{}],\"failures\":[{}]}}",
         json_string(&program.package_name),
         json_string(&program.package_version),
         json_string(&program.profile),
         render_ail_bytecode_capability_grants(&program.capability_grants),
         render_json_string_map(&program.target_support),
+        render_ail_bytecode_external_bindings(&program.external_bindings),
         program
             .actions
             .values()
@@ -8635,6 +8675,75 @@ pub fn render_ail_bytecode(program: &AilBytecodeProgram) -> String {
             .failures
             .values()
             .map(render_ail_bytecode_failure)
+            .collect::<Vec<_>>()
+            .join(",")
+    )
+}
+
+fn render_ail_bytecode_external_bindings(
+    bindings: &BTreeMap<String, AilExternalBinding>,
+) -> String {
+    format!(
+        "[{}]",
+        bindings
+            .values()
+            .map(render_ail_bytecode_external_binding)
+            .collect::<Vec<_>>()
+            .join(",")
+    )
+}
+
+fn render_ail_bytecode_external_binding(binding: &AilExternalBinding) -> String {
+    format!(
+        "{{\"name\":{},\"library\":{},\"symbol\":{},\"binding_kind\":{},\"calling_convention\":{},\"inputs\":{},\"outputs\":{},\"status_maps\":{},\"capabilities\":{},\"traces\":{},\"provenance\":{}}}",
+        json_string(&binding.name),
+        json_string(&binding.library),
+        json_string(&binding.symbol),
+        json_string(&binding.binding_kind),
+        json_string(&binding.calling_convention),
+        render_ail_bytecode_external_binding_values(&binding.inputs),
+        render_ail_bytecode_external_binding_values(&binding.outputs),
+        render_ail_bytecode_external_status_maps(&binding.status_maps),
+        render_json_array(binding.capabilities.clone()),
+        render_json_array(binding.traces.clone()),
+        json_string(&binding.provenance)
+    )
+}
+
+fn render_ail_bytecode_external_binding_values(
+    values: &BTreeMap<String, AilExternalBindingValue>,
+) -> String {
+    format!(
+        "[{}]",
+        values
+            .values()
+            .map(|value| {
+                format!(
+                    "{{\"name\":{},\"type\":{},\"ownership\":{},\"provenance\":{}}}",
+                    json_string(&value.name),
+                    json_string(&value.type_name),
+                    json_string(&value.ownership),
+                    json_string(&value.provenance)
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(",")
+    )
+}
+
+fn render_ail_bytecode_external_status_maps(status_maps: &[AilExternalStatusMap]) -> String {
+    format!(
+        "[{}]",
+        status_maps
+            .iter()
+            .map(|status_map| {
+                format!(
+                    "{{\"code\":{},\"target\":{},\"provenance\":{}}}",
+                    json_string(&status_map.code),
+                    json_string(&status_map.target),
+                    json_string(&status_map.provenance)
+                )
+            })
             .collect::<Vec<_>>()
             .join(",")
     )
@@ -8761,9 +8870,92 @@ pub fn parse_ail_bytecode(text: &str) -> Result<AilBytecodeProgram, String> {
         profile: required_json_string(root, "profile")?.to_string(),
         capability_grants: optional_ail_bytecode_capability_grants(root)?,
         target_support: optional_json_string_map(root, "target_support", "AIL-Bytecode")?,
+        external_bindings_metadata_present: root.contains_key("external_bindings"),
+        external_bindings: optional_ail_bytecode_external_bindings(root)?,
         actions,
         failures,
     })
+}
+
+fn optional_ail_bytecode_external_bindings(
+    root: &BTreeMap<String, AilJsonValue>,
+) -> Result<BTreeMap<String, AilExternalBinding>, String> {
+    let Some(value) = root.get("external_bindings") else {
+        return Ok(BTreeMap::new());
+    };
+    let bindings = value
+        .as_array()
+        .ok_or_else(|| "AIL-Bytecode field 'external_bindings' must be an array".to_string())?;
+    let mut parsed = BTreeMap::new();
+    for binding_value in bindings {
+        let binding_object = binding_value
+            .as_object()
+            .ok_or_else(|| "AIL-Bytecode external binding must be an object".to_string())?;
+        let name = required_json_string(binding_object, "name")?.to_string();
+        parsed.insert(
+            name.clone(),
+            AilExternalBinding {
+                name,
+                library: required_json_string(binding_object, "library")?.to_string(),
+                symbol: required_json_string(binding_object, "symbol")?.to_string(),
+                binding_kind: required_json_string(binding_object, "binding_kind")?.to_string(),
+                calling_convention: required_json_string(binding_object, "calling_convention")?
+                    .to_string(),
+                inputs: required_ail_bytecode_external_binding_values(binding_object, "inputs")?,
+                outputs: required_ail_bytecode_external_binding_values(binding_object, "outputs")?,
+                status_maps: required_ail_bytecode_external_status_maps(
+                    binding_object,
+                    "status_maps",
+                )?,
+                capabilities: required_ail_bytecode_string_array(binding_object, "capabilities")?,
+                traces: required_ail_bytecode_string_array(binding_object, "traces")?,
+                provenance: required_json_string(binding_object, "provenance")?.to_string(),
+            },
+        );
+    }
+    Ok(parsed)
+}
+
+fn required_ail_bytecode_external_binding_values(
+    object: &BTreeMap<String, AilJsonValue>,
+    key: &str,
+) -> Result<BTreeMap<String, AilExternalBindingValue>, String> {
+    let mut values = BTreeMap::new();
+    for value in required_json_array(object, key)? {
+        let value_object = value.as_object().ok_or_else(|| {
+            format!("AIL-Bytecode external binding field '{key}' entry must be an object")
+        })?;
+        let name = required_json_string(value_object, "name")?.to_string();
+        values.insert(
+            name.clone(),
+            AilExternalBindingValue {
+                name,
+                type_name: required_json_string(value_object, "type")?.to_string(),
+                ownership: required_json_string(value_object, "ownership")?.to_string(),
+                provenance: required_json_string(value_object, "provenance")?.to_string(),
+            },
+        );
+    }
+    Ok(values)
+}
+
+fn required_ail_bytecode_external_status_maps(
+    object: &BTreeMap<String, AilJsonValue>,
+    key: &str,
+) -> Result<Vec<AilExternalStatusMap>, String> {
+    required_json_array(object, key)?
+        .iter()
+        .map(|value| {
+            let status_object = value.as_object().ok_or_else(|| {
+                format!("AIL-Bytecode external binding field '{key}' entry must be an object")
+            })?;
+            Ok(AilExternalStatusMap {
+                code: required_json_string(status_object, "code")?.to_string(),
+                target: required_json_string(status_object, "target")?.to_string(),
+                provenance: required_json_string(status_object, "provenance")?.to_string(),
+            })
+        })
+        .collect()
 }
 
 fn optional_ail_bytecode_capability_grants(

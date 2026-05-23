@@ -997,10 +997,14 @@ compress2 records trace event named ForeignCallCompress2
     assert!(rendered_core.contains("node Input zlib.compress2.dest : Pointer<UInt8>"));
     assert!(rendered_core.contains("node Input zlib.compress2.dest_len : Pointer<UInt64>"));
     assert!(rendered_core.contains("node Output zlib.compress2.status : CInt"));
+    assert!(rendered_core.contains("node StatusMap zlib.compress2.Z_OK : success [code=Z_OK]"));
     assert!(rendered_core.contains("node Capability call zlib compress2"));
     assert!(rendered_core.contains("node Failure OutOfMemory"));
     assert!(rendered_core.contains(
         "edge requires ExternalBinding:zlib.compress2 -> Capability:call zlib compress2"
+    ));
+    assert!(rendered_core.contains(
+        "edge maps_status ExternalBinding:zlib.compress2 -> StatusMap:zlib.compress2.Z_OK [code=Z_OK]"
     ));
     assert!(
         rendered_core
@@ -7230,11 +7234,15 @@ When emit trace happens:
         "{contract_report}"
     );
     assert!(
-        contract_report.contains("host-boundary saved-bytecode-contract"),
+        contract_report.contains("host-boundary declared-imports-only"),
         "{contract_report}"
     );
     assert!(
-        contract_report.contains("host-import-metadata not-present-in-saved-bytecode"),
+        contract_report.contains("host-import-metadata present-in-saved-bytecode"),
+        "{contract_report}"
+    );
+    assert!(
+        contract_report.contains("host-imports none"),
         "{contract_report}"
     );
     assert!(
@@ -7274,7 +7282,7 @@ When emit trace happens:
         "{dependency_report}"
     );
     assert!(
-        dependency_report.contains("library-dependencies not-enumerated-in-saved-bytecode"),
+        dependency_report.contains("library-dependencies none"),
         "{dependency_report}"
     );
     let dependency_report_fingerprint =
@@ -7315,6 +7323,178 @@ When emit trace happens:
     let manifest_fingerprint =
         fs::read_to_string(artifact_dir.join("manifest.fingerprint.txt")).unwrap();
     assert_eq!(manifest_fingerprint.trim(), fnv64_fingerprint(&manifest));
+
+    fs::remove_dir_all(root).unwrap();
+    fs::remove_file(bytecode_path).unwrap();
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
+fn cli_ail_compile_wasm_contract_enumerates_external_bindings() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let unique_suffix = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let root = std::env::temp_dir().join(format!(
+        "ail-wasm-contract-import-package-{}-{unique_suffix}",
+        std::process::id()
+    ));
+    let bytecode_path = std::env::temp_dir().join(format!(
+        "ail-wasm-contract-import-bytecode-{}-{unique_suffix}.ailbc.json",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-wasm-contract-import-artifacts-{}-{unique_suffix}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&root);
+    let _ = fs::remove_file(&bytecode_path);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&root).unwrap();
+    fs::write(
+        root.join("ail-package.md"),
+        r#"name: wasm-import-contract-app
+version: 0.1.0
+profile: Application
+entry: spec.ail-spec.md
+features: actions, traces, c-interop
+conformance: first-slice
+target-support:
+  wasm32-unknown-sandbox-wasm: supported-with-host-imports
+"#,
+    )
+    .unwrap();
+    fs::write(
+        root.join("spec.ail-spec.md"),
+        r#"The application Wasm Import Contract App manages portable compression.
+
+C library: zlib.
+
+The library imports function compress2.
+
+compress2 needs:
+
+- dest: Pointer<UInt8> borrowed mutable
+- dest_len: Pointer<UInt64> borrowed mutable
+- source: Pointer<UInt8> borrowed
+- source_len: UInt64
+- level: Int
+
+compress2 produces:
+
+- status: CInt
+
+compress2 maps errno or status codes:
+
+- Z_OK maps to success
+- Z_MEM_ERROR maps to Failure.OutOfMemory
+- Z_BUF_ERROR maps to Failure.OutputBufferTooSmall
+
+compress2 requires capability:
+
+- call zlib compress2
+
+compress2 records trace event named ForeignCallCompress2
+
+Action: Compress payload.
+
+When compress payload happens:
+
+- the system records a trace event named PayloadCompressed
+"#,
+    )
+    .unwrap();
+
+    let lowered = Command::new(binary)
+        .args(["ail-lower", root.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(
+        lowered.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&lowered.stdout),
+        String::from_utf8_lossy(&lowered.stderr)
+    );
+    let lowered_bytecode = String::from_utf8(lowered.stdout).unwrap();
+    assert!(
+        lowered_bytecode.contains(r#""external_bindings":[{"#),
+        "{lowered_bytecode}"
+    );
+    assert!(lowered_bytecode.contains(r#""name":"zlib.compress2""#));
+    assert!(lowered_bytecode.contains(r#""symbol":"compress2""#));
+    assert!(lowered_bytecode.contains(r#""capabilities":["call zlib compress2"]"#));
+    fs::write(&bytecode_path, &lowered_bytecode).unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-compile",
+            bytecode_path.to_str().unwrap(),
+            "--action",
+            "CompressPayload",
+            "--target",
+            "wasm32-unknown-sandbox-wasm",
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let contract_report =
+        fs::read_to_string(artifact_dir.join("wasm-contract-report.txt")).unwrap();
+    assert!(
+        contract_report.contains("host-boundary declared-imports-only"),
+        "{contract_report}"
+    );
+    assert!(
+        contract_report.contains("host-import-metadata present-in-saved-bytecode"),
+        "{contract_report}"
+    );
+    assert!(
+        contract_report.contains("host-import zlib.compress2 library zlib symbol compress2 binding-kind CFunction calling-convention cdecl"),
+        "{contract_report}"
+    );
+    assert!(
+        contract_report
+            .contains("host-import-input zlib.compress2 dest Pointer<UInt8> borrowed mutable"),
+        "{contract_report}"
+    );
+    assert!(
+        contract_report.contains("host-import-output zlib.compress2 status CInt"),
+        "{contract_report}"
+    );
+    assert!(
+        contract_report
+            .contains("host-import-status zlib.compress2 Z_MEM_ERROR Failure.OutOfMemory"),
+        "{contract_report}"
+    );
+    assert!(
+        contract_report.contains("host-import-status zlib.compress2 Z_OK success"),
+        "{contract_report}"
+    );
+    assert!(
+        contract_report.contains("host-import-capability zlib.compress2 call zlib compress2"),
+        "{contract_report}"
+    );
+    assert!(
+        contract_report.contains("host-import-trace zlib.compress2 ForeignCallCompress2"),
+        "{contract_report}"
+    );
+    let dependency_report = fs::read_to_string(artifact_dir.join("dependency-report.txt")).unwrap();
+    assert!(
+        dependency_report.contains("library-dependencies zlib"),
+        "{dependency_report}"
+    );
+    assert!(
+        dependency_report.contains("host-import-dependency zlib.compress2 library zlib symbol compress2 binding-kind CFunction calling-convention cdecl"),
+        "{dependency_report}"
+    );
 
     fs::remove_dir_all(root).unwrap();
     fs::remove_file(bytecode_path).unwrap();
@@ -7395,6 +7575,23 @@ fn cli_ail_compile_wasm_contract_marks_reachable_call_trace_required() {
     assert!(
         contract_report.contains("trace-preservation required"),
         "{contract_report}"
+    );
+    assert!(
+        contract_report.contains("host-boundary saved-bytecode-contract"),
+        "{contract_report}"
+    );
+    assert!(
+        contract_report.contains("host-import-metadata not-present-in-saved-bytecode"),
+        "{contract_report}"
+    );
+    assert!(
+        contract_report.contains("host-imports not-enumerated-in-saved-bytecode"),
+        "{contract_report}"
+    );
+    let dependency_report = fs::read_to_string(artifact_dir.join("dependency-report.txt")).unwrap();
+    assert!(
+        dependency_report.contains("library-dependencies not-enumerated-in-saved-bytecode"),
+        "{dependency_report}"
     );
 
     fs::remove_file(bytecode_path).unwrap();

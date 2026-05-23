@@ -52,22 +52,27 @@ node Input zlib.compress2.source : Pointer<UInt8> [ownership=borrowed]
 node Input zlib.compress2.source_len : UInt64
 node Input zlib.compress2.level : Int
 node Output zlib.compress2.status : CInt
+node StatusMap zlib.compress2.Z_OK : success [code=Z_OK]
 node Capability call zlib compress2
 node Failure OutOfMemory
 node Failure OutputBufferTooSmall
 edge uses_layout ExternalBinding:zlib.compress2 -> Layout:zlib.compress2.signature
 edge has_input ExternalBinding:zlib.compress2 -> Input:zlib.compress2.dest
 edge has_output ExternalBinding:zlib.compress2 -> Output:zlib.compress2.status
+edge maps_status ExternalBinding:zlib.compress2 -> StatusMap:zlib.compress2.Z_OK [code=Z_OK]
 edge requires ExternalBinding:zlib.compress2 -> Capability:call zlib compress2
 edge may_fail_with ExternalBinding:zlib.compress2 -> Failure:OutOfMemory [code=Z_MEM_ERROR]
 edge records_trace ExternalBinding:zlib.compress2 -> Trace:ForeignCallCompress2
 ```
 
 Current implementation status: the bootstrap parser accepts imported C function
-declarations, typed inputs and outputs, status-code failure maps, required
-capabilities, and trace events, then lowers them into checked AIL-Core
-`ExternalBinding` graphs. The VM and native backends do not yet call or link
-foreign symbols; executable FFI calls remain a later backend step.
+declarations, typed inputs and outputs, status-code success/failure maps,
+required capabilities, and trace events, then lowers them into checked AIL-Core
+`ExternalBinding` graphs. Non-failure maps use `StatusMap` nodes and
+`maps_status` edges; failure maps use `may_fail_with` edges. AIL-Bytecode
+preserves the external binding metadata so the Wasm sandbox contract report can
+enumerate declared host imports. The VM and native backends do not yet call or
+link foreign symbols; executable FFI calls remain a later backend step.
 
 ## Supported C Surface
 

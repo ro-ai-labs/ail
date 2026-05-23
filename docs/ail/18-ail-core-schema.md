@@ -133,6 +133,7 @@ Optional attributes for all nodes:
 | `Diagnostic` | `code`, `severity` | checker package | code must be stable |
 | `Package` | `name`, `version` | package root | import compatibility checked |
 | `ExternalBinding` | `binding_kind`, `target` | package root | sandbox or ABI contract required |
+| `StatusMap` | `code`, target status type | external binding | success and non-failure status mappings preserved |
 | `Prompt` | `name`, `version` | agent package | output schema required |
 | `CorpusFixture` | `fixture_kind`, `expected_result` | conformance package | expected diagnostics declared |
 
@@ -196,6 +197,7 @@ Required attributes for all edges:
 | `times_task` | scheduler task timing | scheduler task | one | task declared |
 | `emits` | action, function, loop, failure | event | many | event payload typed |
 | `may_fail_with` | action, tool, external binding | failure | many | handler required when blocking |
+| `maps_status` | external binding | status map | many | non-failure status mapping preserved |
 | `handles_failure` | action, tool, component | failure | many | handler side effects declared |
 | `guarantees` | action, tool, component, package | guarantee | many | guarantee has check boundary |
 | `requires_approval` | action, tool | approval | many | approval has rule and trace |

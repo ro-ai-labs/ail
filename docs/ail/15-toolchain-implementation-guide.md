@@ -147,10 +147,11 @@ or `planned-contract`. AIL-Bytecode lowering carries the same target-support
 map so saved bytecode artifacts keep backend target contracts. Saved bytecode
 that declares `wasm32-unknown-sandbox-wasm: supported-with-host-imports` can
 now produce a Wasm sandbox contract artifact. That artifact is a reviewable
-portability boundary for saved-bytecode trace preservation; saved bytecode does
-not carry external binding or host-import metadata yet, so host imports are not
-enumerated in this first report. It is not an executable WebAssembly module
-yet.
+portability boundary for saved-bytecode trace preservation and declared host
+imports. AIL-Bytecode lowering also carries `ExternalBinding` metadata so the
+contract report can enumerate external library, symbol, ABI, input, output,
+status-map, capability, and trace declarations. It is not an executable
+WebAssembly module yet.
 When present, `schema-version` and `safety-level` are also preserved as package
 metadata in checked AIL-Core. The checker rejects unknown schema versions;
 safety-level labels must be `standard`, `low`, `medium`, `high`, or `expert`.
@@ -589,13 +590,22 @@ deterministic Wasm sandbox contract report instead of `target.elf`. The report
 records `bytecode-level portable-vm-contract`,
 `bytecode-container wasm-sandbox-contract`,
 `bytecode-format wasm32-contract-report`,
-`host-boundary saved-bytecode-contract`, `host-import-metadata
-not-present-in-saved-bytecode`, the target-support status, selected action, and
+`host-boundary declared-imports-only`, `host-import-metadata
+present-in-saved-bytecode`, the target-support status, selected action, and
 whether trace preservation is required across the selected action's reachable
-`CALL_ACTION` graph. The matching dependency report records
+`CALL_ACTION` graph. When the saved bytecode contains `ExternalBinding`
+metadata, the report emits deterministic `host-import`,
+`host-import-input`, `host-import-output`, `host-import-status`,
+`host-import-capability`, and `host-import-trace` lines. The matching dependency
+report records
 `host-language-runtime none`, `dynamic-linker none`, `shared-libraries none`,
-`library-dependencies not-enumerated-in-saved-bytecode`, and `runtime-abi
-wasm32-declared-host-imports`. If the selected artifact directory already
+`library-dependencies <comma-separated-libraries-or-none>`, `runtime-abi
+wasm32-declared-host-imports`, and one `host-import-dependency` line per
+external binding. Older saved bytecode without the `external_bindings` field is
+still accepted, but its report uses `host-boundary saved-bytecode-contract`,
+`host-import-metadata not-present-in-saved-bytecode`, `host-imports
+not-enumerated-in-saved-bytecode`, and `library-dependencies
+not-enumerated-in-saved-bytecode`. If the selected artifact directory already
 contains stale executable outputs such as `target.elf`, `target.wasm`, or native
 bytecode reports, the command fails rather than leaving misleading executable
 artifacts beside a contract-only manifest.
