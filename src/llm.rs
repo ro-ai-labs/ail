@@ -4,8 +4,38 @@ use std::net::TcpStream;
 use crate::core_model::json_string;
 
 pub fn invoke_llm_text(endpoint: &str, prompt: &str) -> Result<String, String> {
+    invoke_llm_text_with_expectation(endpoint, prompt, None)
+}
+
+pub fn invoke_llm_text_for_artifact(
+    endpoint: &str,
+    prompt: &str,
+    expected_artifact_kind: &str,
+    expected_profile: &str,
+) -> Result<String, String> {
+    let expectation = PromptEnvelopeExpectation {
+        artifact_kind: expected_artifact_kind,
+        expected_profile,
+    };
+    invoke_llm_text_with_expectation(endpoint, prompt, Some(&expectation))
+}
+
+fn invoke_llm_text_with_expectation(
+    endpoint: &str,
+    prompt: &str,
+    expectation: Option<&PromptEnvelopeExpectation<'_>>,
+) -> Result<String, String> {
     let response = invoke_completion(endpoint, prompt)?;
-    Ok(sanitize_model_text(&response))
+    let text = sanitize_model_text(&response);
+    match extract_prompt_envelope(&text, expectation) {
+        Some(PromptEnvelope::Artifact(artifact_text)) => Ok(artifact_text),
+        Some(PromptEnvelope::Questions(questions)) => Err(format!(
+            "model returned blocking questions:\n- {}",
+            questions.join("\n- ")
+        )),
+        Some(PromptEnvelope::Invalid(message)) => Err(message),
+        None => Ok(text),
+    }
 }
 
 fn invoke_completion(endpoint: &str, prompt: &str) -> Result<String, String> {
@@ -119,12 +149,176 @@ fn strip_code_fences(text: &str) -> String {
     text.to_string()
 }
 
+enum PromptEnvelope {
+    Artifact(String),
+    Questions(Vec<String>),
+    Invalid(String),
+}
+
+struct PromptEnvelopeExpectation<'a> {
+    artifact_kind: &'a str,
+    expected_profile: &'a str,
+}
+
+fn extract_prompt_envelope(
+    text: &str,
+    expectation: Option<&PromptEnvelopeExpectation<'_>>,
+) -> Option<PromptEnvelope> {
+    let trimmed = text.trim();
+    if !(trimmed.starts_with('{') && trimmed.ends_with('}')) {
+        return None;
+    }
+    if !looks_like_prompt_envelope(trimmed) {
+        return None;
+    }
+    if let Some(expectation) = expectation
+        && let Some(message) = validate_prompt_envelope_handoff(trimmed, expectation)
+    {
+        return Some(PromptEnvelope::Invalid(message));
+    }
+    let artifact_text = extract_json_string_field(trimmed, "artifact_text").unwrap_or_default();
+    let questions = extract_json_string_array_field(trimmed, "questions");
+    if artifact_text.trim().is_empty() {
+        if questions.is_empty() {
+            return Some(PromptEnvelope::Invalid(
+                "AIL-PROMPT-001 prompt envelope must contain artifact_text or questions"
+                    .to_string(),
+            ));
+        }
+        return Some(PromptEnvelope::Questions(questions));
+    }
+    if !questions.is_empty() {
+        return Some(PromptEnvelope::Invalid(
+            "AIL-PROMPT-001 prompt envelope cannot contain both artifact_text and questions"
+                .to_string(),
+        ));
+    }
+    Some(PromptEnvelope::Artifact(artifact_text.trim().to_string()))
+}
+
+fn validate_prompt_envelope_handoff(
+    text: &str,
+    expectation: &PromptEnvelopeExpectation<'_>,
+) -> Option<String> {
+    let artifact_kind = extract_json_string_field(text, "artifact_kind").unwrap_or_default();
+    if artifact_kind != expectation.artifact_kind {
+        return Some(format!(
+            "AIL-PROMPT-001 prompt envelope artifact_kind must be {}",
+            expectation.artifact_kind
+        ));
+    }
+    if extract_json_bool_field(text, "must_check") != Some(true) {
+        return Some(
+            "AIL-PROMPT-001 prompt envelope checker_handoff.must_check must be true".to_string(),
+        );
+    }
+    let expected_profile = extract_json_string_field(text, "expected_profile");
+    if expected_profile.as_deref() != Some(expectation.expected_profile) {
+        return Some(format!(
+            "AIL-PROMPT-001 prompt envelope checker_handoff.expected_profile must be {}",
+            expectation.expected_profile
+        ));
+    }
+    None
+}
+
+fn looks_like_prompt_envelope(text: &str) -> bool {
+    field_exists(text, "artifact_kind")
+        || field_exists(text, "artifact_text")
+        || field_exists(text, "questions")
+        || field_exists(text, "checker_handoff")
+}
+
+fn field_exists(text: &str, field: &str) -> bool {
+    json_field_value_start(text, field).is_some()
+}
+
+fn extract_json_string_array_field(text: &str, field: &str) -> Vec<String> {
+    let Some(mut start) = json_field_value_start(text, field) else {
+        return Vec::new();
+    };
+    let bytes = text.as_bytes();
+    if bytes.get(start) != Some(&b'[') {
+        return Vec::new();
+    }
+    start += 1;
+    let mut chars = text[start..].chars().peekable();
+    let mut values = Vec::new();
+    loop {
+        while chars
+            .peek()
+            .is_some_and(|ch| ch.is_ascii_whitespace() || *ch == ',')
+        {
+            chars.next();
+        }
+        match chars.peek().copied() {
+            Some(']') | None => break,
+            Some('"') => {
+                let Some(value) = parse_json_string(&mut chars) else {
+                    break;
+                };
+                values.push(value);
+            }
+            Some(_) => break,
+        }
+    }
+    values
+}
+
 fn extract_json_string_field(text: &str, field: &str) -> Option<String> {
-    let needle = format!("\"{field}\":\"");
-    let start = text.find(&needle)? + needle.len();
+    let start = json_field_value_start(text, field)?;
+    let mut chars = text[start..].chars().peekable();
+    parse_json_string(&mut chars)
+}
+
+fn extract_json_bool_field(text: &str, field: &str) -> Option<bool> {
+    let start = json_field_value_start(text, field)?;
+    let rest = &text[start..];
+    if rest.starts_with("true") {
+        return Some(true);
+    }
+    if rest.starts_with("false") {
+        return Some(false);
+    }
+    None
+}
+
+fn json_field_value_start(text: &str, field: &str) -> Option<usize> {
+    let needle = format!("\"{field}\"");
+    let mut search_start = 0;
+    while search_start < text.len() {
+        let field_start = search_start + text[search_start..].find(&needle)?;
+        let mut index = field_start + needle.len();
+        index = skip_json_whitespace(text, index);
+        if text.as_bytes().get(index) == Some(&b':') {
+            return Some(skip_json_whitespace(text, index + 1));
+        }
+        search_start = field_start + needle.len();
+    }
+    None
+}
+
+fn skip_json_whitespace(text: &str, mut index: usize) -> usize {
+    while text
+        .as_bytes()
+        .get(index)
+        .is_some_and(u8::is_ascii_whitespace)
+    {
+        index += 1;
+    }
+    index
+}
+
+fn parse_json_string<I>(chars: &mut std::iter::Peekable<I>) -> Option<String>
+where
+    I: Iterator<Item = char>,
+{
+    if chars.next()? != '"' {
+        return None;
+    }
     let mut output = String::new();
     let mut escaped = false;
-    for ch in text[start..].chars() {
+    for ch in chars.by_ref() {
         if escaped {
             output.push(match ch {
                 'n' => '\n',

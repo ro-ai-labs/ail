@@ -50,6 +50,21 @@ cargo run -- ail-lower examples/support_ticket.ail
 cargo run -- ail-run examples/support_ticket.ail --action CloseTicket ticket.status=Open
 ```
 
+Checked AIL-Core can also render back to deterministic AIL-Spec for review or
+agent handoff:
+
+```bash
+cargo run -- ail-core examples/support_ticket.ail > /tmp/support-ticket.ail-core.txt
+cargo run -- ail-spec --core-file /tmp/support-ticket.ail-core.txt
+```
+
+AIL-Flow and agent graph patches can apply directly to a saved checked
+AIL-Core artifact:
+
+```bash
+cargo run -- ail-patch --core-file /tmp/support-ticket.ail-core.txt /path/to/edit.ail-core.patch.json
+```
+
 ## Machine Bytecode
 
 For Linux, the machine-level bytecode target is a native ELF executable.
@@ -98,6 +113,14 @@ cargo run -- ail-build examples/support_ticket.ail \
 The agent and base LLM are untrusted proposal mechanisms. The trusted boundary
 is checked AIL-Core plus the compiler, verifier, manifests, reports, and
 fingerprints generated from deterministic artifacts.
+
+LLM responses may be raw deterministic artifacts or the prompt-pack JSON
+envelope with `artifact_text`. If the envelope contains blocking `questions`
+instead of an artifact, the command surfaces those questions and stops before
+checker, repair, or compile stages. Malformed envelopes are rejected as
+`AIL-PROMPT-001` prompt protocol errors. Envelope metadata must match the
+requested artifact kind and package profile, and must keep checker handoff
+enabled.
 
 ## Examples
 

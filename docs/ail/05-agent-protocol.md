@@ -119,6 +119,10 @@ Every prompt output uses a structured envelope:
 ```
 
 Outputs that violate the envelope are rejected with `AIL-PROMPT-001`.
+For envelope outputs, `artifact_kind` must match the prompt stage,
+`checker_handoff.must_check` must be `true`, and
+`checker_handoff.expected_profile` must match the package profile. The agent
+returns either `artifact_text` or blocking `questions`, never both.
 
 ## Prompt Versioning
 

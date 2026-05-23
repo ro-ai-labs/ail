@@ -6,6 +6,19 @@ runtime traces, prompt outputs, round-trip fixtures, interop fixtures,
 self-hosting fixtures, and human-review artifacts before the feature is
 accepted.
 
+Fixture metadata:
+
+- `language_reference`: `ail-reference.draft` unless overridden
+- `core_schema`: `ail-core.schema.v0` unless overridden
+- `prompt_pack`: draft prompt-pack with `AIL-PROMPT-001` when prompt output is
+  present
+- `bytecode`: stage-0 VM JSON plus native Linux x86_64 ELF target when
+  executable
+- `conformance_suite`: `first-slice` package fixtures and profile fixtures
+
+Each fixture added after the reference-style guide must carry this metadata in
+the fixture file, companion manifest, or inventory row.
+
 Directory contract:
 
 - `interviews/`: user intent and agent question transcripts

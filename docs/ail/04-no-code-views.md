@@ -122,6 +122,16 @@ Patch payload:
 }
 ```
 
+The stage-0 CLI accepts this JSON patch subset with:
+
+```bash
+ail ail-patch --core-file checked.ail-core.txt edit.ail-core.patch.json
+```
+
+It currently supports `add_node` and `add_edge` operations, then runs the
+AIL-Core checker before printing the patched Core artifact. The patched Core
+can be rendered back to AIL-Spec with `ail-spec --core-file`.
+
 Direct visual edits are allowed for fields, rules, trace names, form bindings,
 view filters, and declared permissions when all required semantics are present.
 Edits that add external calls, secret access, money movement, unsafe interop,

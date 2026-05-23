@@ -54,39 +54,110 @@ When <actor/event> <action>:
 Every paragraph that introduces behavior receives stable provenance so the
 derived AIL-Core nodes can point back to the human-reviewed source.
 
-## Canonical Grammar
+## Stage-0 Source Text And Lexical Rules
+
+Authority: Normative for `first-slice` AIL-Spec source parsing.
+
+AIL-Spec Canonical source is UTF-8 text. A file that cannot be read as UTF-8 is
+rejected before parsing. The stage-0 parser treats the source as an ordered
+sequence of physical lines.
+
+Stage-0 lexical rules:
+
+- leading and trailing whitespace on each physical line is ignored
+- blank lines are ignored
+- a line whose trimmed text starts with `#` is a comment and is ignored
+- bullet lines must start with the exact marker `- `
+- structural headings and section sentences are matched after trimming
+- non-structural continuation lines are valid only in parser-owned continuation
+  slots; they extend the current slot instead of creating new behavior
+- the canonical renderer emits `\n` line endings
+
+The parser does not infer semantics from Markdown formatting, numbered lists,
+tables, emphasis, indentation, or arbitrary prose. Anything that is not one of
+the accepted stage-0 forms must either elaborate through a profile-specific
+parser rule or produce a diagnostic.
+
+## Stage-0 Accepted Canonical Grammar
+
+Authority: Normative for `first-slice` package parsing and rendering.
+
+The stage-0 parser accepts the following canonical headings and section
+sentences. These are the forms used by `render_ail_spec` and accepted by
+`parse_ail_spec_text`.
 
 Canonical headings:
 
 ```text
-Package: <package name>.
-Application: <name>.
+The application <name> manages <purpose>.
+A <thing> has:
+An <thing> has:
 Tool: <name>.
 System component: <name>.
 Compiler pass: <name>.
-Function: <name>.
 Action: <name>.
 Failure <name> happens when <condition>:
-Route: <name>.
-Form: <name>.
-C library: <name>.
-Import package: <package>@<version> as <alias>.
 ```
 
-Canonical bullets use one verb phrase per semantic operation:
+Stage-0 action bullets use one verb phrase per semantic operation:
 
 ```text
 - the system requires <rule>
 - the system reads <thing.field>
 - the system changes <thing.field> to <value>
 - the system calls <action or function> with <arguments>
-- the system calls external binding <binding>
-- the system returns <value>
 - the system records a trace event named <TraceName>
 - the system guarantees <guarantee>
 ```
 
+Normative rule `ail.spec.action.call-as-effect`: in `first-slice`, an action
+call bullet is preserved as an auditable write/effect text in AIL-Core. It is
+not yet a first-class function-call or return-value edge.
+
+Tool, compiler-pass, and system-profile sections use their profile-specific
+headings from `06-agent-tools.md`, `10-meta-profile.md`, and
+`09-system-profile.md`.
+
+## Target Reference Forms Under Evolution
+
+Authority: Implementation note.
+
+The broader AIL reference expects additional headings such as:
+
+```text
+Package: <package name>.
+Application: <name>.
+Function: <name>.
+Route: <name>.
+Form: <name>.
+C library: <name>.
+Import package: <package>@<version> as <alias>.
+```
+
+It also expects first-class external binding calls and return values. These
+forms are reserved for later profile work and are not accepted by the stage-0
+parser unless a profile-specific document and conformance fixture says so.
+
 Friendly renderers may paraphrase these forms only outside the parser boundary.
+
+## Requirement Preservation Rules
+
+Normative rule `ail.spec.requirements.failure-preserved`: when an accepted
+AIL-Requirements artifact contains a canonical failure sentence of the form
+`Failure <name> happens when <condition>`, the derived AIL-Spec Canonical
+document must contain a `Failure <name> happens when <condition>:` section
+before it can elaborate to accepted AIL-Core.
+
+If the section is missing, the checker emits `AILR012`. The agent may repair
+the draft only by adding an explicit Failure section with handling and trace
+bullets, or by asking a blocking question when the requirement is ambiguous.
+
+Normative rule `ail.spec.requirements.permission-preserved`: when an
+AIL-Requirements artifact states that an action requires permission, role,
+approval, access, or forbidden-state enforcement, the derived AIL-Spec
+Canonical action must contain an explicit requirement bullet that preserves
+that enforcement. If the action drops the requirement, the checker emits
+`AILR011`.
 
 ## Control Flow Forms
 

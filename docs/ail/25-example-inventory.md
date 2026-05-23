@@ -6,15 +6,29 @@ This inventory makes referenced examples visible as part of the active
 specification suite. Each example lists its source package, status, covered
 artifacts, fixtures, and verification command.
 
+## Version Surface
+
+Unless a row states otherwise, examples in this inventory target:
+
+- language reference: `ail-reference.draft`
+- AIL-Core schema: `ail-core.schema.v0`
+- prompt pack: draft prompt-pack with `AIL-PROMPT-001`
+- bytecode: stage-0 VM JSON plus native Linux x86_64 ELF target where
+  executable
+- conformance suite: `first-slice` package fixtures and profile fixtures
+
+When an example is updated to cover a newer language feature, its row or
+section must name the changed version surface.
+
 ## Inventory
 
-| Example | Profile | Source | Status | Coverage |
-| --- | --- | --- | --- | --- |
-| Support Ticket | Application | `examples/support_ticket.ail/` | accepted first executable target | AIL-Spec, docs AIL-Core, AIL-Flow renderer, trace runtime, accepted/rejected fixtures, patch fixture |
-| Refund Tool | AgentTool | `examples/refund_tool.ail/` | accepted agent-tool target | AIL-Spec, docs AIL-Core, AIL-Flow renderer, trace runtime, accepted/rejected fixtures |
-| Compiler Pass | Compiler | `examples/compiler_pass.ail/` | accepted AIL-Meta compiler-pass target | AIL-Spec, docs AIL-Core, bytecode pass runtime, accepted/rejected fixtures |
-| Network Driver | System | `examples/network_driver.ail/` | accepted system target | AIL-Spec package, docs AIL-Core, AIL-Flow renderer, trace runtime, accepted/rejected fixtures |
-| Toolchain Agent | Application | `examples/ail_toolchain_agent.ail/` | accepted self-hosting path target | requirements capture, spec drafting, core lowering, pass execution, bytecode, native backend, prompt portability reports |
+| Example | Profile | Version surface | Source | Status | Coverage |
+| --- | --- | --- | --- | --- | --- |
+| Support Ticket | Application | draft/default | `examples/support_ticket.ail/` | accepted first executable target | AIL-Spec, docs AIL-Core, AIL-Flow renderer, trace runtime, accepted/rejected fixtures, patch fixture |
+| Refund Tool | AgentTool | draft/default | `examples/refund_tool.ail/` | accepted agent-tool target | AIL-Spec, docs AIL-Core, AIL-Flow renderer, trace runtime, accepted/rejected fixtures |
+| Compiler Pass | Compiler | draft/default | `examples/compiler_pass.ail/` | accepted AIL-Meta compiler-pass target | AIL-Spec, docs AIL-Core, bytecode pass runtime, accepted/rejected fixtures |
+| Network Driver | System | draft/default | `examples/network_driver.ail/` | accepted system target | AIL-Spec package, docs AIL-Core, AIL-Flow renderer, trace runtime, accepted/rejected fixtures |
+| Toolchain Agent | Application | draft/default | `examples/ail_toolchain_agent.ail/` | accepted self-hosting path target | requirements capture, spec drafting, core lowering, pass execution, bytecode, native backend, prompt portability reports |
 
 ## Support Ticket
 

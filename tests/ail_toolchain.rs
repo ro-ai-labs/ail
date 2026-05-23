@@ -8,11 +8,12 @@ use std::time::{Duration, Instant};
 
 use ail::ail::{
     DEFAULT_BASE_LLM_ENDPOINT, apply_ail_patch, check_ail_core, check_ail_core_diagnostics,
-    compile_ail_bytecode, compile_ail_core_bytecode, elaborate_ail_core, load_ail_package_dir,
-    parse_ail_bytecode, parse_ail_core_text, parse_ail_package_document,
-    parse_ail_package_spec_text, parse_ail_patch_text, parse_ail_spec_text, render_ail_bytecode,
-    render_ail_core, render_ail_flow_view, render_ail_spec, run_ail_action,
-    run_ail_bytecode_action, run_ail_compiler_pass_on_core, verify_ail_bytecode,
+    compile_ail_bytecode, compile_ail_core_bytecode, compile_ail_core_native_elf,
+    elaborate_ail_core, load_ail_package_dir, parse_ail_bytecode, parse_ail_core_text,
+    parse_ail_package_document, parse_ail_package_spec_text, parse_ail_patch_text,
+    parse_ail_spec_text, render_ail_bytecode, render_ail_core, render_ail_flow_view,
+    render_ail_spec, render_ail_spec_from_core, run_ail_action, run_ail_bytecode_action,
+    run_ail_compiler_pass_on_core, verify_ail_bytecode,
 };
 use ail::core_model::json_string;
 
@@ -1295,6 +1296,24 @@ fn ail_core_elaboration_serializes_support_ticket_graph() {
 }
 
 #[test]
+fn ail_core_text_preserves_package_entry_features_and_imports() {
+    let package = load_ail_package_dir(fixture("support_composed.ail")).unwrap();
+    let document = parse_ail_package_document(&package).unwrap();
+    let core = elaborate_ail_core(&package, &document);
+    assert_eq!(check_ail_core(&core), Vec::<String>::new());
+
+    let rendered = render_ail_core(&core);
+    assert!(rendered.contains("entry: spec.ail-spec.md"));
+    assert!(rendered.contains("features: imports, things, actions, failures, guarantees, traces"));
+    assert!(rendered.contains("imports: ../support_shared.ail as Shared"));
+
+    let reparsed = parse_ail_core_text(&rendered).unwrap();
+    assert_eq!(reparsed.package.entry, package.metadata.entry);
+    assert_eq!(reparsed.package.features, package.metadata.features);
+    assert_eq!(reparsed.package.imports, package.metadata.imports);
+}
+
+#[test]
 fn ail_core_elaboration_preserves_provenance_for_behavior_bullets() {
     let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
     let document = parse_ail_spec_text(&package.spec_text).unwrap();
@@ -1362,6 +1381,53 @@ fn ail_core_reports_missing_provenance_for_semantic_nodes() {
     assert!(
         detailed.contains("repair=Attach provenance to rule 'the ticket to exist'."),
         "{detailed}"
+    );
+}
+
+#[test]
+fn ail_core_checker_rejects_unknown_schema_items() {
+    let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
+    let document = parse_ail_spec_text(&package.spec_text).unwrap();
+    let mut core = elaborate_ail_core(&package, &document);
+    let close_ticket = core
+        .graph
+        .find_node("Action", "CloseTicket")
+        .unwrap()
+        .clone();
+    let provenance =
+        core.graph
+            .add_node("Provenance", "test:unknown-widget", None, BTreeMap::new());
+    let widget = core
+        .graph
+        .add_node("Widget", "Forgotten review state", None, BTreeMap::new());
+    core.graph
+        .add_edge("has_provenance", &widget, &provenance, BTreeMap::new());
+    core.graph
+        .add_edge("forgets_semantics", &close_ticket, &widget, BTreeMap::new());
+
+    let diagnostics = check_ail_core(&core);
+
+    assert!(
+        diagnostics.contains(&"AIL-SCHEMA-001 unknown AIL-Core node kind 'Widget'".to_string()),
+        "{diagnostics:?}"
+    );
+    assert!(
+        diagnostics
+            .contains(&"AIL-SCHEMA-002 unknown AIL-Core edge kind 'forgets_semantics'".to_string()),
+        "{diagnostics:?}"
+    );
+    let detailed_node = detailed_ail_diagnostic(
+        &core,
+        "AIL-SCHEMA-001",
+        "unknown AIL-Core node kind 'Widget'",
+    );
+    assert!(
+        detailed_node.contains("graph=node:Widget:"),
+        "{detailed_node}"
+    );
+    assert!(
+        detailed_node.contains("repair=Use a node kind declared in ail-core.schema.v0"),
+        "{detailed_node}"
     );
 }
 
@@ -1611,6 +1677,55 @@ fn ail_spec_render_reparse_preserves_core_equivalence() {
     let original_core = render_ail_core(&elaborate_ail_core(&package, &document));
     let reparsed_core = render_ail_core(&elaborate_ail_core(&package, &reparsed));
     assert_eq!(reparsed_core, original_core);
+}
+
+#[test]
+fn ail_spec_renders_from_checked_core_and_round_trips_equivalent() {
+    let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
+    let document = parse_ail_spec_text(&package.spec_text).unwrap();
+    let original_core = elaborate_ail_core(&package, &document);
+    assert_eq!(check_ail_core(&original_core), Vec::<String>::new());
+    let checked_core_text = render_ail_core(&original_core);
+    let checked_core = parse_ail_core_text(&checked_core_text).unwrap();
+
+    let rendered_spec = render_ail_spec_from_core(&checked_core);
+
+    assert!(rendered_spec.contains("The application Support Tickets manages"));
+    assert!(rendered_spec.contains("Action: Close ticket."));
+    assert!(rendered_spec.contains("- the system changes the ticket status to Closed"));
+    assert!(rendered_spec.contains("Failure PermissionDenied happens when"));
+
+    let reparsed = parse_ail_package_spec_text(&package, &rendered_spec).unwrap();
+    let reparsed_core = elaborate_ail_core(&package, &reparsed);
+    assert_eq!(check_ail_core(&reparsed_core), Vec::<String>::new());
+    assert_eq!(render_ail_core(&reparsed_core), checked_core_text);
+}
+
+#[test]
+fn ail_spec_renders_from_checked_core_for_non_application_profiles() {
+    for fixture_name in ["refund_tool.ail", "compiler_pass.ail", "network_driver.ail"] {
+        let package = load_ail_package_dir(fixture(fixture_name)).unwrap();
+        let document = parse_ail_package_document(&package).unwrap();
+        let original_core = elaborate_ail_core(&package, &document);
+        assert_eq!(check_ail_core(&original_core), Vec::<String>::new());
+        let checked_core_text = render_ail_core(&original_core);
+        let checked_core = parse_ail_core_text(&checked_core_text).unwrap();
+
+        let rendered_spec = render_ail_spec_from_core(&checked_core);
+        let reparsed = parse_ail_package_spec_text(&package, &rendered_spec).unwrap();
+        let reparsed_core = elaborate_ail_core(&package, &reparsed);
+
+        assert_eq!(
+            check_ail_core(&reparsed_core),
+            Vec::<String>::new(),
+            "{fixture_name}\n{rendered_spec}"
+        );
+        assert_eq!(
+            render_ail_core(&reparsed_core),
+            checked_core_text,
+            "{fixture_name}\n{rendered_spec}"
+        );
+    }
 }
 
 #[test]
@@ -1884,6 +1999,49 @@ fn ail_compiler_lowers_checked_core_ir_to_bytecode() {
     assert_eq!(run.status, "succeeded");
     assert_eq!(run.final_state["ticket.status"], "Closed");
     assert!(run.trace.contains(&"trace TicketClosed".to_string()));
+}
+
+#[test]
+fn ail_core_compilers_reject_unchecked_core_ir() {
+    let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
+    let document = parse_ail_package_document(&package).unwrap();
+    let mut core = elaborate_ail_core(&package, &document);
+    assert_eq!(check_ail_core(&core), Vec::<String>::new());
+
+    let close_ticket_id = core
+        .graph
+        .find_node("Action", "CloseTicket")
+        .unwrap()
+        .id
+        .clone();
+    core.graph
+        .edges
+        .retain(|edge| !(edge.kind == "records_trace" && edge.source == close_ticket_id));
+    assert!(
+        check_ail_core(&core)
+            .contains(&"AIL010 action CloseTicket is missing trace coverage".to_string())
+    );
+
+    let bytecode_error = compile_ail_core_bytecode(&core).unwrap_err();
+    assert!(
+        bytecode_error.contains("cannot compile unchecked AIL-Core"),
+        "{bytecode_error}"
+    );
+    assert!(
+        bytecode_error.contains("AIL010 action CloseTicket is missing trace coverage"),
+        "{bytecode_error}"
+    );
+
+    let native_error =
+        compile_ail_core_native_elf(&core, "CloseTicket", "linux-x86_64-elf").unwrap_err();
+    assert!(
+        native_error.contains("cannot compile unchecked AIL-Core"),
+        "{native_error}"
+    );
+    assert!(
+        native_error.contains("AIL010 action CloseTicket is missing trace coverage"),
+        "{native_error}"
+    );
 }
 
 #[test]
@@ -3362,6 +3520,75 @@ fn cli_ail_check_and_core_use_package_loader() {
     assert!(patched_stdout.contains("Action: Escalate ticket."));
     assert!(patched_stdout.contains("TicketEscalated"));
 
+    let core_patch_path = std::env::temp_dir().join(format!(
+        "ail-flow-require-open-status-{}.ail-core.patch.json",
+        std::process::id()
+    ));
+    let core_path = std::env::temp_dir().join(format!(
+        "ail-flow-require-open-status-{}.ail-core.txt",
+        std::process::id()
+    ));
+    fs::write(
+        &core_patch_path,
+        r#"{
+  "schema": "ail-core.patch.v0",
+  "source_view": "ActionCard:CloseTicket",
+  "ops": [
+    {
+      "op": "add_node",
+      "kind": "Rule",
+      "name": "the ticket status to be Open",
+      "provenance": ["flow:ActionCard:CloseTicket.requirement:open-status"]
+    },
+    {
+      "op": "add_edge",
+      "kind": "requires",
+      "source": "Action:CloseTicket",
+      "target": "Rule:the ticket status to be Open",
+      "provenance": ["flow:ActionCard:CloseTicket.requirement:open-status"]
+    }
+  ]
+}"#,
+    )
+    .unwrap();
+    let core_output = Command::new(binary)
+        .args(["ail-core", &package])
+        .output()
+        .unwrap();
+    assert!(
+        core_output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&core_output.stderr)
+    );
+    fs::write(&core_path, core_output.stdout).unwrap();
+
+    let patched_core = Command::new(binary)
+        .args([
+            "ail-patch",
+            "--core-file",
+            core_path.to_str().unwrap(),
+            core_patch_path.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        patched_core.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&patched_core.stdout),
+        String::from_utf8_lossy(&patched_core.stderr)
+    );
+    let patched_core_text = String::from_utf8(patched_core.stdout).unwrap();
+    let patched_core_artifact = parse_ail_core_text(&patched_core_text).unwrap();
+    assert_eq!(check_ail_core(&patched_core_artifact), Vec::<String>::new());
+    let patched_spec = render_ail_spec_from_core(&patched_core_artifact);
+    assert!(
+        patched_spec.contains("- the system requires the ticket status to be Open"),
+        "{patched_spec}"
+    );
+
+    fs::remove_file(core_patch_path).unwrap();
+    fs::remove_file(core_path).unwrap();
+
     let composed = fixture("support_composed.ail");
     let composed_core = Command::new(binary)
         .args(["ail-core", &composed])
@@ -3591,6 +3818,223 @@ fn cli_ail_lower_accepts_saved_core_file_artifact() {
 
     fs::remove_file(core_path).unwrap();
     fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
+fn cli_ail_spec_accepts_saved_core_file_artifact() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("support_ticket.ail");
+
+    let core_output = Command::new(binary)
+        .args(["ail-core", &package])
+        .output()
+        .unwrap();
+    assert!(
+        core_output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&core_output.stdout),
+        String::from_utf8_lossy(&core_output.stderr)
+    );
+    let core_text = String::from_utf8(core_output.stdout).unwrap();
+    let source_core = parse_ail_core_text(&core_text).unwrap();
+
+    let core_path = std::env::temp_dir().join(format!(
+        "ail-support-ticket-spec-from-core-{}.ail-core.txt",
+        std::process::id()
+    ));
+    fs::write(&core_path, &core_text).unwrap();
+    let missing_source_package =
+        std::env::temp_dir().join(format!("ail-missing-source-package-{}", std::process::id()));
+
+    let spec_output = Command::new(binary)
+        .args([
+            "ail-spec",
+            missing_source_package.to_str().unwrap(),
+            "--core-file",
+            core_path.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        spec_output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&spec_output.stdout),
+        String::from_utf8_lossy(&spec_output.stderr)
+    );
+    let spec_stdout = String::from_utf8(spec_output.stdout).unwrap();
+    assert!(spec_stdout.contains("The application Support Tickets manages"));
+    assert!(spec_stdout.contains("Action: Close ticket."));
+    assert!(spec_stdout.contains("Failure PermissionDenied happens when"));
+
+    let reparsed = parse_ail_spec_text(&spec_stdout).unwrap();
+    let reparsed_core = elaborate_ail_core(
+        &ail::ail::AilPackage {
+            metadata: source_core.package.clone(),
+            root: std::path::PathBuf::new(),
+            spec_path: std::path::PathBuf::new(),
+            spec_text: String::new(),
+            imports: Vec::new(),
+        },
+        &reparsed,
+    );
+    assert_eq!(render_ail_core(&reparsed_core), core_text.trim_end());
+
+    fs::remove_file(core_path).unwrap();
+}
+
+#[test]
+fn cli_ail_spec_core_file_does_not_require_dummy_package_path() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("support_ticket.ail");
+
+    let core_output = Command::new(binary)
+        .args(["ail-core", &package])
+        .output()
+        .unwrap();
+    assert!(
+        core_output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&core_output.stdout),
+        String::from_utf8_lossy(&core_output.stderr)
+    );
+    let core_path = std::env::temp_dir().join(format!(
+        "ail-support-ticket-spec-pathless-core-{}.ail-core.txt",
+        std::process::id()
+    ));
+    fs::write(&core_path, core_output.stdout).unwrap();
+
+    let spec_output = Command::new(binary)
+        .args(["ail-spec", "--core-file", core_path.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert!(
+        spec_output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&spec_output.stdout),
+        String::from_utf8_lossy(&spec_output.stderr)
+    );
+    let spec_stdout = String::from_utf8(spec_output.stdout).unwrap();
+    assert!(spec_stdout.contains("The application Support Tickets manages"));
+    assert!(spec_stdout.contains("Action: Close ticket."));
+
+    fs::remove_file(core_path).unwrap();
+}
+
+#[test]
+fn cli_ail_spec_rejects_unchecked_core_file_artifact() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("support_ticket.ail");
+
+    let core_output = Command::new(binary)
+        .args(["ail-core", &package])
+        .output()
+        .unwrap();
+    assert!(
+        core_output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&core_output.stdout),
+        String::from_utf8_lossy(&core_output.stderr)
+    );
+    let core_text = String::from_utf8(core_output.stdout).unwrap();
+    let unchecked_core_text = core_text.replace(
+        "node Field Ticket.status : State<New, Open, Assigned, Closed, Overdue> [secret=false]",
+        "node Field Ticket.status : MysteryStatus [secret=false]",
+    );
+    let core_path = std::env::temp_dir().join(format!(
+        "ail-support-ticket-spec-unchecked-core-{}.ail-core.txt",
+        std::process::id()
+    ));
+    fs::write(&core_path, unchecked_core_text).unwrap();
+    let missing_source_package =
+        std::env::temp_dir().join(format!("ail-missing-source-package-{}", std::process::id()));
+
+    let spec_output = Command::new(binary)
+        .args([
+            "ail-spec",
+            missing_source_package.to_str().unwrap(),
+            "--core-file",
+            core_path.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    assert!(
+        !spec_output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&spec_output.stdout),
+        String::from_utf8_lossy(&spec_output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&spec_output.stdout);
+    assert!(stdout.contains("ail-spec core diagnostics:"), "{stdout}");
+    assert!(
+        stdout.contains("AIL006 field Ticket.status has unknown type 'MysteryStatus'"),
+        "{stdout}"
+    );
+    assert!(!stdout.contains("The application Support Tickets manages"));
+
+    fs::remove_file(core_path).unwrap();
+}
+
+#[test]
+fn cli_ail_spec_rejects_unknown_core_schema_items() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("support_ticket.ail");
+
+    let core_output = Command::new(binary)
+        .args(["ail-core", &package])
+        .output()
+        .unwrap();
+    assert!(
+        core_output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&core_output.stdout),
+        String::from_utf8_lossy(&core_output.stderr)
+    );
+    let core_text = String::from_utf8(core_output.stdout).unwrap();
+    let mut unchecked_core_text = core_text.replace(
+        "\nedges:\n",
+        "\nnode Widget Forgotten review state\n\nedges:\n",
+    );
+    unchecked_core_text
+        .push_str("edge forgets_semantics Action:CloseTicket -> Widget:Forgotten review state\n");
+    let core_path = std::env::temp_dir().join(format!(
+        "ail-support-ticket-spec-unknown-schema-{}.ail-core.txt",
+        std::process::id()
+    ));
+    fs::write(&core_path, unchecked_core_text).unwrap();
+    let missing_source_package =
+        std::env::temp_dir().join(format!("ail-missing-source-package-{}", std::process::id()));
+
+    let spec_output = Command::new(binary)
+        .args([
+            "ail-spec",
+            missing_source_package.to_str().unwrap(),
+            "--core-file",
+            core_path.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    assert!(
+        !spec_output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&spec_output.stdout),
+        String::from_utf8_lossy(&spec_output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&spec_output.stdout);
+    assert!(stdout.contains("ail-spec core diagnostics:"), "{stdout}");
+    assert!(
+        stdout.contains("AIL-SCHEMA-001 unknown AIL-Core node kind 'Widget'"),
+        "{stdout}"
+    );
+    assert!(
+        stdout.contains("AIL-SCHEMA-002 unknown AIL-Core edge kind 'forgets_semantics'"),
+        "{stdout}"
+    );
+    assert!(!stdout.contains("The application Support Tickets manages"));
+
+    fs::remove_file(core_path).unwrap();
 }
 
 #[test]
@@ -8938,6 +9382,59 @@ fn cli_ail_draft_uses_llm_endpoint_and_checks_candidate_spec() {
 }
 
 #[test]
+fn cli_ail_draft_accepts_prompt_envelope_artifact_text() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("support_ticket.ail");
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let response_spec = fs::read_to_string(format!("{package}/spec.ail-spec.md")).unwrap();
+    let envelope = format!(
+        concat!(
+            "{{",
+            "\"artifact_kind\":\"AIL-Spec Canonical\",",
+            "\"artifact_text\":{},",
+            "\"questions\":[],",
+            "\"assumptions\":[],",
+            "\"provenance\":[\"mock:0\"],",
+            "\"checker_handoff\":{{\"must_check\":true,\"expected_profile\":\"Application\",\"expected_features\":[]}}",
+            "}}"
+        ),
+        json_string(&response_spec)
+    );
+    let response_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(&format!("```json\n{envelope}\n```"))
+    );
+    let server = serve_one_chat_response(listener, response_body);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-draft",
+            &package,
+            "--prompt",
+            "Draft an AIL support ticket app with an envelope response",
+            "--llm-endpoint",
+            &format!("http://127.0.0.1:{}/v1/chat/completions", addr.port()),
+        ])
+        .output()
+        .unwrap();
+
+    let request_body = server.join().unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(request_body.contains("Draft an AIL support ticket app with an envelope response"));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("ail-draft candidate:"));
+    assert!(stdout.contains("Action: Close ticket."));
+    assert!(stdout.contains("ail-draft diagnostics: none"));
+    assert!(!stdout.contains("artifact_text"), "{stdout}");
+}
+
+#[test]
 fn cli_ail_draft_prints_structured_candidate_diagnostics() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
@@ -9237,6 +9734,81 @@ fn cli_ail_build_repairs_spec_that_drops_permission_requirement() {
 }
 
 #[test]
+fn cli_ail_build_repairs_spec_that_drops_failure_requirement() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("support_ticket.ail");
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let requirements = concat!(
+        "AIL-Requirements:\n",
+        "- The application manages support tickets.\n",
+        "- Ticket fields include id, title, status, and secret internal notes.\n",
+        "- The CloseTicket action requires ticket id input and ticket status not to be Closed.\n",
+        "- Failure ProviderRejected happens when payment provider rejects the ticket closure and records ProviderRejected.\n",
+        "- The action guarantees closed tickets do not appear in the open queue.\n",
+        "- The action records trace event TicketClosed.\n"
+    );
+    let requirements_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(requirements)
+    );
+    let dropped_failure_spec = fs::read_to_string(format!("{package}/spec.ail-spec.md")).unwrap();
+    let dropped_failure_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(&format!(
+            "<think>ignore this</think>\n```ail\n{dropped_failure_spec}\n```"
+        ))
+    );
+    let repaired_spec = format!(
+        "{}\n\n{}",
+        dropped_failure_spec.trim_end(),
+        concat!(
+            "Failure ProviderRejected happens when payment provider rejects the ticket closure:\n\n",
+            "- the caller sees \"Provider rejected\"\n",
+            "- the trace records ProviderRejected\n"
+        )
+    );
+    let repaired_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(&format!(
+            "<think>ignore this</think>\n```ail\n{repaired_spec}\n```"
+        ))
+    );
+    let server = serve_chat_responses(
+        listener,
+        vec![requirements_body, dropped_failure_body, repaired_body],
+    );
+
+    let output = Command::new(binary)
+        .args([
+            "ail-build",
+            &package,
+            "--prompt",
+            "Build an AIL support ticket bytecode artifact",
+            "--llm-endpoint",
+            &format!("http://127.0.0.1:{}/v1/chat/completions", addr.port()),
+        ])
+        .output()
+        .unwrap();
+
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let request_bodies = server.join().unwrap();
+    assert_eq!(request_bodies.len(), 3);
+    assert!(request_bodies[2].contains("Repair an AIL-Spec candidate"));
+    assert!(request_bodies[2].contains("AILR012"));
+    assert!(request_bodies[2].contains("Failure ProviderRejected"));
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let bytecode = parse_ail_bytecode(&stdout).unwrap();
+    assert!(bytecode.failures.contains_key("ProviderRejected"));
+}
+
+#[test]
 fn cli_ail_build_repairs_incomplete_requirements_before_spec_drafting() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
@@ -9361,6 +9933,329 @@ fn cli_ail_requirements_repairs_incomplete_capture_before_printing() {
     assert!(stdout.contains("Failure NotFound happens when ticket id is missing"));
     assert!(stdout.contains("trace event TicketClosed"));
     assert!(!stdout.contains("Action: Close ticket."), "{stdout}");
+}
+
+#[test]
+fn cli_ail_requirements_accepts_prompt_envelope_artifact_text() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("support_ticket.ail");
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let requirements = concat!(
+        "AIL-Requirements:\n",
+        "- The application manages support tickets with Ticket fields id, title, status, and secret internal notes.\n",
+        "- The CloseTicket action requires ticket id input and ticket status not to be Closed.\n",
+        "- Failure NotFound happens when ticket id is missing and records TicketNotFound.\n",
+        "- The action guarantees closed tickets do not appear in the open queue.\n",
+        "- The action records trace event TicketClosed.\n",
+        "- Runtime inputs include ticket.id and ticket.status.\n"
+    );
+    let envelope = format!(
+        concat!(
+            "{{",
+            "\"artifact_kind\":\"AIL-Requirements\",",
+            "\"artifact_text\":{},",
+            "\"questions\":[],",
+            "\"assumptions\":[],",
+            "\"provenance\":[\"mock:0\"],",
+            "\"checker_handoff\":{{\"must_check\":true,\"expected_profile\":\"Application\",\"expected_features\":[]}}",
+            "}}"
+        ),
+        json_string(requirements)
+    );
+    let response_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(&format!("```json\n{envelope}\n```"))
+    );
+    let server = serve_one_chat_response(listener, response_body);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-requirements",
+            &package,
+            "--prompt",
+            "Capture requirements for a support ticket app with an envelope response",
+            "--llm-endpoint",
+            &format!("http://127.0.0.1:{}/v1/chat/completions", addr.port()),
+        ])
+        .output()
+        .unwrap();
+
+    let request_body = server.join().unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        request_body
+            .contains("Capture requirements for a support ticket app with an envelope response")
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.starts_with("AIL-Requirements:\n"), "{stdout}");
+    assert!(stdout.contains("Ticket fields id, title, status, and secret internal notes"));
+    assert!(!stdout.contains("artifact_text"), "{stdout}");
+}
+
+#[test]
+fn cli_ail_requirements_rejects_prompt_envelope_wrong_artifact_kind() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("support_ticket.ail");
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let requirements = concat!(
+        "AIL-Requirements:\n",
+        "- The application manages support tickets with Ticket fields id, title, status, and secret internal notes.\n",
+        "- The CloseTicket action requires ticket id input and ticket status not to be Closed.\n",
+        "- Failure NotFound happens when ticket id is missing and records TicketNotFound.\n",
+        "- The action guarantees closed tickets do not appear in the open queue.\n",
+        "- The action records trace event TicketClosed.\n",
+        "- Runtime inputs include ticket.id and ticket.status.\n"
+    );
+    let envelope = format!(
+        concat!(
+            "{{",
+            "\"artifact_kind\":\"AIL-Spec Canonical\",",
+            "\"artifact_text\":{},",
+            "\"questions\":[],",
+            "\"assumptions\":[],",
+            "\"provenance\":[\"mock:0\"],",
+            "\"checker_handoff\":{{\"must_check\":true,\"expected_profile\":\"Application\",\"expected_features\":[]}}",
+            "}}"
+        ),
+        json_string(requirements)
+    );
+    let response_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(&envelope)
+    );
+    let server = serve_one_chat_response(listener, response_body);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-requirements",
+            &package,
+            "--prompt",
+            "Capture requirements with a wrong artifact kind",
+            "--llm-endpoint",
+            &format!("http://127.0.0.1:{}/v1/chat/completions", addr.port()),
+        ])
+        .output()
+        .unwrap();
+
+    let request_body = server.join().unwrap();
+    assert_eq!(output.status.code(), Some(2));
+    assert!(request_body.contains("wrong artifact kind"));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stdout.is_empty(), "{stdout}");
+    assert!(
+        stderr.contains("AIL-PROMPT-001 prompt envelope artifact_kind must be AIL-Requirements"),
+        "{stderr}"
+    );
+}
+
+#[test]
+fn cli_ail_requirements_surfaces_prompt_envelope_questions() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("support_ticket.ail");
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let envelope = concat!(
+        "{",
+        "\"artifact_kind\":\"AIL-Requirements\",",
+        "\"artifact_text\":\"\",",
+        "\"questions\":[\"Which user roles may close tickets?\",\"Which trace events must be emitted?\"],",
+        "\"assumptions\":[],",
+        "\"provenance\":[\"mock:0\"],",
+        "\"checker_handoff\":{\"must_check\":true,\"expected_profile\":\"Application\",\"expected_features\":[]}",
+        "}"
+    );
+    let response_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(envelope)
+    );
+    let server = serve_one_chat_response(listener, response_body);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-requirements",
+            &package,
+            "--prompt",
+            "Capture requirements for an underspecified support ticket app",
+            "--llm-endpoint",
+            &format!("http://127.0.0.1:{}/v1/chat/completions", addr.port()),
+        ])
+        .output()
+        .unwrap();
+
+    let request_body = server.join().unwrap();
+    assert_eq!(output.status.code(), Some(2));
+    assert!(request_body.contains("Capture requirements for an underspecified support ticket app"));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stdout.is_empty(), "{stdout}");
+    assert!(
+        stderr.contains("model returned blocking questions"),
+        "{stderr}"
+    );
+    assert!(
+        stderr.contains("Which user roles may close tickets?"),
+        "{stderr}"
+    );
+    assert!(
+        stderr.contains("Which trace events must be emitted?"),
+        "{stderr}"
+    );
+    assert!(!stderr.contains("failed to connect"), "{stderr}");
+}
+
+#[test]
+fn cli_ail_draft_rejects_malformed_prompt_envelope() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("support_ticket.ail");
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let envelope = concat!(
+        "{",
+        "\"artifact_kind\":\"AIL-Spec Canonical\",",
+        "\"assumptions\":[],",
+        "\"provenance\":[\"mock:0\"],",
+        "\"checker_handoff\":{\"must_check\":true,\"expected_profile\":\"Application\",\"expected_features\":[]}",
+        "}"
+    );
+    let response_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(envelope)
+    );
+    let server = serve_one_chat_response(listener, response_body);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-draft",
+            &package,
+            "--prompt",
+            "Draft an AIL support ticket app with a malformed prompt envelope",
+            "--llm-endpoint",
+            &format!("http://127.0.0.1:{}/v1/chat/completions", addr.port()),
+        ])
+        .output()
+        .unwrap();
+
+    let request_body = server.join().unwrap();
+    assert_eq!(output.status.code(), Some(2));
+    assert!(request_body.contains("malformed prompt envelope"));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stdout.is_empty(), "{stdout}");
+    assert!(
+        stderr.contains("AIL-PROMPT-001 prompt envelope must contain artifact_text or questions"),
+        "{stderr}"
+    );
+    assert!(!stderr.contains("AIL000 parse error"), "{stderr}");
+}
+
+#[test]
+fn cli_ail_draft_rejects_prompt_envelope_without_checker_handoff_must_check() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("support_ticket.ail");
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let response_spec = fs::read_to_string(format!("{package}/spec.ail-spec.md")).unwrap();
+    let envelope = format!(
+        concat!(
+            "{{",
+            "\"artifact_kind\":\"AIL-Spec Canonical\",",
+            "\"artifact_text\":{},",
+            "\"questions\":[],",
+            "\"assumptions\":[],",
+            "\"provenance\":[\"mock:0\"],",
+            "\"checker_handoff\":{{\"must_check\":false,\"expected_profile\":\"Application\",\"expected_features\":[]}}",
+            "}}"
+        ),
+        json_string(&response_spec)
+    );
+    let response_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(&envelope)
+    );
+    let server = serve_one_chat_response(listener, response_body);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-draft",
+            &package,
+            "--prompt",
+            "Draft an AIL support ticket app without checker handoff",
+            "--llm-endpoint",
+            &format!("http://127.0.0.1:{}/v1/chat/completions", addr.port()),
+        ])
+        .output()
+        .unwrap();
+
+    let request_body = server.join().unwrap();
+    assert_eq!(output.status.code(), Some(2));
+    assert!(request_body.contains("without checker handoff"));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stdout.is_empty(), "{stdout}");
+    assert!(
+        stderr.contains("AIL-PROMPT-001 prompt envelope checker_handoff.must_check must be true"),
+        "{stderr}"
+    );
+}
+
+#[test]
+fn cli_ail_draft_rejects_prompt_envelope_profile_mismatch() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("support_ticket.ail");
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let response_spec = fs::read_to_string(format!("{package}/spec.ail-spec.md")).unwrap();
+    let envelope = format!(
+        concat!(
+            "{{",
+            "\"artifact_kind\":\"AIL-Spec Canonical\",",
+            "\"artifact_text\":{},",
+            "\"questions\":[],",
+            "\"assumptions\":[],",
+            "\"provenance\":[\"mock:0\"],",
+            "\"checker_handoff\":{{\"must_check\":true,\"expected_profile\":\"System\",\"expected_features\":[]}}",
+            "}}"
+        ),
+        json_string(&response_spec)
+    );
+    let response_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(&envelope)
+    );
+    let server = serve_one_chat_response(listener, response_body);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-draft",
+            &package,
+            "--prompt",
+            "Draft an AIL support ticket app with a profile mismatch",
+            "--llm-endpoint",
+            &format!("http://127.0.0.1:{}/v1/chat/completions", addr.port()),
+        ])
+        .output()
+        .unwrap();
+
+    let request_body = server.join().unwrap();
+    assert_eq!(output.status.code(), Some(2));
+    assert!(request_body.contains("profile mismatch"));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stdout.is_empty(), "{stdout}");
+    assert!(
+        stderr.contains(
+            "AIL-PROMPT-001 prompt envelope checker_handoff.expected_profile must be Application"
+        ),
+        "{stderr}"
+    );
 }
 
 #[test]
@@ -10283,6 +11178,49 @@ fn cli_ail_build_agent_accepts_saved_spec_before_core_lowering() {
 
     fs::remove_file(spec_path).unwrap();
     fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
+fn cli_ail_build_saved_spec_checks_before_agent_acceptance() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("support_ticket.ail");
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-ail-build-agent-invalid-spec-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+    let invalid_spec = format!("{package}/examples/rejected/missing-reference.ail-spec.md");
+
+    let output = Command::new(binary)
+        .args([
+            "ail-build",
+            &package,
+            "--spec-file",
+            &invalid_spec,
+            "--agent",
+            &package,
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(1));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stdout.contains("ail-build diagnostics:"),
+        "stdout:\n{stdout}\nstderr:\n{stderr}"
+    );
+    assert!(
+        stdout.contains("AIL001 unknown requirement reference 'account' in action CloseTicket"),
+        "stdout:\n{stdout}\nstderr:\n{stderr}"
+    );
+    assert!(
+        !stderr.contains("AcceptSpecDraft"),
+        "saved spec must be checked before the build agent accepts it:\n{stderr}"
+    );
+    assert!(!artifact_dir.exists());
 }
 
 #[test]

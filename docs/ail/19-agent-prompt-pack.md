@@ -76,6 +76,14 @@ Agent outputs use this envelope:
 If information is missing, the agent returns questions instead of inventing
 semantics.
 
+Normative rule `ail.prompt.envelope.handoff-matches-request`: when an output
+uses the prompt-pack envelope, `artifact_kind` must match the requested
+artifact, `checker_handoff.must_check` must be `true`, and
+`checker_handoff.expected_profile` must match the package profile. An envelope
+must contain either non-empty `artifact_text` or non-empty blocking
+`questions`, not both. Violations are rejected with `AIL-PROMPT-001` before
+artifact parsing, repair, checking, lowering, or compilation.
+
 ## Prompt Portability Harness
 
 Prompt portability tests run the same task through at least two model

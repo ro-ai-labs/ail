@@ -16,8 +16,8 @@ are internally consistent:
   self-sovereign direction
 - `01-language-architecture.md`: pipeline, source of truth, projections, trust
   boundary, compiler boundary, and runtime boundary
-- `02-structured-spec.md`: deterministic English shape and required semantic
-  slots
+- `02-structured-spec.md`: source text rules, deterministic English shape,
+  accepted grammar, and required semantic slots
 - `03-semantic-ir.md`: graph model, stable identity, node kinds, edge kinds,
   provenance, normalization, and serialization expectations
 - `04-no-code-views.md`: view types and graph-patch editing model
@@ -69,6 +69,9 @@ are internally consistent:
   expert mode, agent refusal, UI review, and audit traces
 - `27-desired-outcome-traceability.md`: matrix from desired outcomes to
   docs, artifacts, examples, diagnostics, and conformance boundaries
+- `28-language-reference-style.md`: reference scope boundaries, authority
+  levels, rule identifiers, source/lexical/grammar separation, versioning,
+  implementation notes, and conformance links
 
 ## Examples Required For Development Start
 
@@ -117,6 +120,22 @@ Before starting implementation, review the active spec suite and confirm:
   equivalence, and runtime tests.
 - Long-term systems, meta, training, and self-hosting requirements remain
   represented even though they are not in the first vertical slice.
+
+## Reference Conformance Readiness Gate
+
+Before promoting a draft rule into the active AIL reference, confirm:
+
+- the rule has an authority label
+- the rule has a stable rule identifier when diagnostics, tests, prompts, or
+  evolution notes need to cite it
+- the rule names the AIL surface it applies to
+- accepted grammar is separated from future target forms
+- source text and lexical assumptions are explicit for textual surfaces
+- the rule maps to a checker, parser, verifier, renderer, or conformance
+  fixture
+- diagnostics cite the same primary rule identifier used by the reference
+- examples and corpus fixtures name the version surface they target
+- version and migration impact is recorded or explicitly not applicable
 
 ## Development Start Decision
 

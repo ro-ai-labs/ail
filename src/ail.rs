@@ -647,6 +647,159 @@ pub fn apply_ail_patch(document: &AilDocument, patch: &AilPatch) -> Result<AilDo
     Ok(document)
 }
 
+pub fn apply_ail_core_patch_text(core: &AilCore, patch_text: &str) -> Result<AilCore, String> {
+    let mut parser = AilJsonParser::new(patch_text);
+    let value = parser.parse_value()?;
+    parser.skip_whitespace();
+    if !parser.is_finished() {
+        return Err("unexpected trailing content in AIL-Core patch artifact".to_string());
+    }
+    let root = value
+        .as_object()
+        .ok_or_else(|| "AIL-Core patch artifact must be a JSON object".to_string())?;
+    let schema = required_json_string_for(root, "schema", "AIL-Core patch")?;
+    if schema != "ail-core.patch.v0" {
+        return Err(format!("expected ail-core.patch.v0 patch, got '{schema}'"));
+    }
+    let mut patched = core.clone();
+    for op_value in required_json_array_for(root, "ops", "AIL-Core patch")? {
+        let op = op_value
+            .as_object()
+            .ok_or_else(|| "AIL-Core patch op must be an object".to_string())?;
+        match required_json_string_for(op, "op", "AIL-Core patch op")? {
+            "add_node" => apply_ail_core_patch_add_node(&mut patched, op)?,
+            "add_edge" => apply_ail_core_patch_add_edge(&mut patched, op)?,
+            op_name => return Err(format!("unsupported AIL-Core patch op '{op_name}'")),
+        }
+    }
+    Ok(patched)
+}
+
+fn apply_ail_core_patch_add_node(
+    core: &mut AilCore,
+    op: &BTreeMap<String, AilJsonValue>,
+) -> Result<(), String> {
+    let kind = required_json_string_for(op, "kind", "AIL-Core patch add_node")?;
+    let name = required_json_string_for(op, "name", "AIL-Core patch add_node")?;
+    let type_name = optional_json_string(op, "type").map(ToString::to_string);
+    let attributes = optional_json_string_map(op, "attributes", "AIL-Core patch add_node")?;
+    let node = core
+        .graph
+        .add_node(kind.to_string(), name.to_string(), type_name, attributes);
+    for provenance in optional_json_string_array(op, "provenance", "AIL-Core patch add_node")? {
+        attach_provenance(&mut core.graph, &node, provenance);
+    }
+    Ok(())
+}
+
+fn apply_ail_core_patch_add_edge(
+    core: &mut AilCore,
+    op: &BTreeMap<String, AilJsonValue>,
+) -> Result<(), String> {
+    let kind = required_json_string_for(op, "kind", "AIL-Core patch add_edge")?;
+    let source_label = required_json_string_for(op, "source", "AIL-Core patch add_edge")?;
+    let target_label = required_json_string_for(op, "target", "AIL-Core patch add_edge")?;
+    let source = find_core_patch_node(core, source_label).ok_or_else(|| {
+        format!("AIL-Core patch add_edge references unknown source '{source_label}'")
+    })?;
+    let target = find_core_patch_node(core, target_label).ok_or_else(|| {
+        format!("AIL-Core patch add_edge references unknown target '{target_label}'")
+    })?;
+    let mut attributes = optional_json_string_map(op, "attributes", "AIL-Core patch add_edge")?;
+    if !attributes.contains_key("provenance")
+        && let Some(provenance) =
+            optional_json_string_array(op, "provenance", "AIL-Core patch add_edge")?
+                .into_iter()
+                .next()
+    {
+        attributes.insert("provenance".to_string(), provenance);
+    }
+    core.graph
+        .add_edge(kind.to_string(), &source, &target, attributes);
+    Ok(())
+}
+
+fn find_core_patch_node(core: &AilCore, label: &str) -> Option<Node> {
+    core.graph
+        .nodes
+        .iter()
+        .find(|node| node.id == label || core_node_label(node) == label)
+        .cloned()
+}
+
+fn required_json_string_for<'a>(
+    object: &'a BTreeMap<String, AilJsonValue>,
+    key: &str,
+    context: &str,
+) -> Result<&'a str, String> {
+    object
+        .get(key)
+        .and_then(AilJsonValue::as_string)
+        .ok_or_else(|| format!("{context} field '{key}' must be a string"))
+}
+
+fn required_json_array_for<'a>(
+    object: &'a BTreeMap<String, AilJsonValue>,
+    key: &str,
+    context: &str,
+) -> Result<&'a [AilJsonValue], String> {
+    object
+        .get(key)
+        .and_then(AilJsonValue::as_array)
+        .ok_or_else(|| format!("{context} field '{key}' must be an array"))
+}
+
+fn optional_json_string<'a>(
+    object: &'a BTreeMap<String, AilJsonValue>,
+    key: &str,
+) -> Option<&'a str> {
+    object.get(key).and_then(AilJsonValue::as_string)
+}
+
+fn optional_json_string_array(
+    object: &BTreeMap<String, AilJsonValue>,
+    key: &str,
+    context: &str,
+) -> Result<Vec<String>, String> {
+    let Some(value) = object.get(key) else {
+        return Ok(Vec::new());
+    };
+    let array = value
+        .as_array()
+        .ok_or_else(|| format!("{context} field '{key}' must be an array"))?;
+    array
+        .iter()
+        .map(|value| {
+            value
+                .as_string()
+                .map(ToString::to_string)
+                .ok_or_else(|| format!("{context} field '{key}' entries must be strings"))
+        })
+        .collect()
+}
+
+fn optional_json_string_map(
+    object: &BTreeMap<String, AilJsonValue>,
+    key: &str,
+    context: &str,
+) -> Result<BTreeMap<String, String>, String> {
+    let Some(value) = object.get(key) else {
+        return Ok(BTreeMap::new());
+    };
+    let object = value
+        .as_object()
+        .ok_or_else(|| format!("{context} field '{key}' must be an object"))?;
+    object
+        .iter()
+        .map(|(key, value)| {
+            value
+                .as_string()
+                .map(|value| (key.clone(), value.to_string()))
+                .ok_or_else(|| format!("{context} field '{key}' values must be strings"))
+        })
+        .collect()
+}
+
 pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
     let mut document = AilDocument {
         application: AilApplication::default(),
@@ -1883,6 +2036,7 @@ pub fn check_ail_core_diagnostics(core: &AilCore) -> Vec<AilDiagnostic> {
         .into_iter()
         .map(AilDiagnostic::from_message)
         .collect::<Vec<_>>();
+    diagnostics.extend(check_core_schema_catalog(core));
     diagnostics.extend(check_field_types(core));
     diagnostics.extend(check_requirement_reference_diagnostics(core));
     diagnostics.extend(check_requirement_field_references(core));
@@ -1938,11 +2092,155 @@ pub fn check_ail_core_diagnostics(core: &AilCore) -> Vec<AilDiagnostic> {
     diagnostics
 }
 
+fn check_core_schema_catalog(core: &AilCore) -> Vec<AilDiagnostic> {
+    let mut diagnostics = Vec::new();
+    for node in &core.graph.nodes {
+        if !is_known_core_node_kind(&node.kind) {
+            diagnostics.push(
+                AilDiagnostic::error(
+                    "AIL-SCHEMA-001",
+                    format!("unknown AIL-Core node kind '{}'", node.kind),
+                )
+                .with_source_provenance(node_provenance(core, &node.id))
+                .with_affected_graph_item(format!("node:{}", node.id))
+                .with_repair_suggestion(format!(
+                    "Use a node kind declared in ail-core.schema.v0 instead of '{}'.",
+                    node.kind
+                )),
+            );
+        }
+    }
+    for edge in &core.graph.edges {
+        if !is_known_core_edge_kind(&edge.kind) {
+            diagnostics.push(
+                AilDiagnostic::error(
+                    "AIL-SCHEMA-002",
+                    format!("unknown AIL-Core edge kind '{}'", edge.kind),
+                )
+                .with_affected_graph_item(format!("edge:{}", edge.id))
+                .with_repair_suggestion(format!(
+                    "Use an edge kind declared in ail-core.schema.v0 instead of '{}'.",
+                    edge.kind
+                )),
+            );
+        }
+    }
+    diagnostics
+}
+
+fn is_known_core_node_kind(kind: &str) -> bool {
+    matches!(
+        kind,
+        "Action"
+            | "Allocation"
+            | "Application"
+            | "Approval"
+            | "Branch"
+            | "Call"
+            | "Capability"
+            | "CorpusFixture"
+            | "Diagnostic"
+            | "Effect"
+            | "Event"
+            | "ExecutionContext"
+            | "ExternalBinding"
+            | "Failure"
+            | "Field"
+            | "Function"
+            | "Guarantee"
+            | "Input"
+            | "InterruptMask"
+            | "InterruptPriority"
+            | "Layout"
+            | "LockGuard"
+            | "Loop"
+            | "Lowering"
+            | "Match"
+            | "Output"
+            | "Package"
+            | "Permission"
+            | "Prompt"
+            | "Provenance"
+            | "Region"
+            | "Resource"
+            | "Return"
+            | "Rule"
+            | "SchedulerTask"
+            | "SchedulerTaskPriority"
+            | "SchedulerTaskTiming"
+            | "Secret"
+            | "Step"
+            | "SystemComponent"
+            | "Thing"
+            | "Tool"
+            | "Trace"
+            | "User"
+            | "Value"
+            | "View"
+    )
+}
+
+fn is_known_core_edge_kind(kind: &str) -> bool {
+    matches!(
+        kind,
+        "allocates_resource"
+            | "authorizes_resource"
+            | "borrows_resource"
+            | "calls"
+            | "contains"
+            | "depends_on"
+            | "emits"
+            | "grants_permission"
+            | "guards_resource"
+            | "guarantees"
+            | "handles_failure"
+            | "has_field"
+            | "has_input"
+            | "has_output"
+            | "has_provenance"
+            | "in_region"
+            | "layouts_resource"
+            | "lowers_to"
+            | "masks_context"
+            | "may_fail_with"
+            | "mutably_borrows_resource"
+            | "owns_resource"
+            | "performs"
+            | "prioritizes_context"
+            | "prioritizes_task"
+            | "projects_to"
+            | "protects_secret"
+            | "reads"
+            | "records_trace"
+            | "requires"
+            | "requires_approval"
+            | "runs_in_context"
+            | "schedules_task"
+            | "targets_resource"
+            | "task_runs_in_context"
+            | "times_task"
+            | "uses_allocation"
+            | "uses_interrupt_mask"
+            | "uses_interrupt_priority"
+            | "uses_layout"
+            | "uses_lock_guard"
+            | "uses_lock_resource"
+            | "uses_region"
+            | "uses_resource"
+            | "uses_task_priority"
+            | "uses_task_timing"
+            | "writes"
+    )
+}
+
 pub fn render_ail_core(core: &AilCore) -> String {
     let mut lines = vec![
         format!("package: {}", core.package.name),
         format!("version: {}", core.package.version),
         format!("profile: {}", core.package.profile),
+        format!("entry: {}", core.package.entry),
+        format!("features: {}", core.package.features.join(", ")),
+        format!("imports: {}", render_import_specs(&core.package.imports)),
         format!("conformance: {}", core.package.conformance),
         format!("base_llm_endpoint: {}", core.package.base_llm_endpoint),
         String::new(),
@@ -1991,10 +2289,21 @@ pub fn render_ail_core(core: &AilCore) -> String {
     lines.join("\n")
 }
 
+fn render_import_specs(imports: &[AilImportSpec]) -> String {
+    imports
+        .iter()
+        .map(|import| format!("{} as {}", import.path, import.alias))
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
 pub fn parse_ail_core_text(text: &str) -> Result<AilCore, String> {
     let mut package_name = None;
     let mut package_version = None;
     let mut profile = None;
+    let mut entry = None;
+    let mut features = Vec::new();
+    let mut imports = Vec::new();
     let mut conformance = None;
     let mut base_llm_endpoint = None;
     let mut section = "";
@@ -2026,6 +2335,22 @@ pub fn parse_ail_core_text(text: &str) -> Result<AilCore, String> {
                     "package" => package_name = Some(value),
                     "version" => package_version = Some(value),
                     "profile" => profile = Some(value),
+                    "entry" => entry = Some(value),
+                    "features" => {
+                        features = value
+                            .split(',')
+                            .map(str::trim)
+                            .filter(|feature| !feature.is_empty())
+                            .map(ToString::to_string)
+                            .collect();
+                    }
+                    "imports" => {
+                        imports = if value.is_empty() {
+                            Vec::new()
+                        } else {
+                            parse_import_specs(&value)?
+                        };
+                    }
                     "conformance" => conformance = Some(value),
                     "base_llm_endpoint" => base_llm_endpoint = Some(value),
                     key => {
@@ -2090,9 +2415,9 @@ pub fn parse_ail_core_text(text: &str) -> Result<AilCore, String> {
             version: package_version
                 .ok_or_else(|| "AIL-Core missing version metadata".to_string())?,
             profile: profile.ok_or_else(|| "AIL-Core missing profile metadata".to_string())?,
-            entry: String::new(),
-            features: Vec::new(),
-            imports: Vec::new(),
+            entry: entry.unwrap_or_default(),
+            features,
+            imports,
             conformance: conformance
                 .ok_or_else(|| "AIL-Core missing conformance metadata".to_string())?,
             base_llm_endpoint: base_llm_endpoint
@@ -3120,6 +3445,11 @@ pub fn render_ail_spec(document: &AilDocument) -> String {
     lines.join("\n")
 }
 
+pub fn render_ail_spec_from_core(core: &AilCore) -> String {
+    let document = ail_document_from_core(core);
+    render_ail_spec(&document)
+}
+
 pub fn run_ail_action(
     document: &AilDocument,
     action_name: &str,
@@ -3289,6 +3619,13 @@ pub fn compile_ail_bytecode(
 }
 
 pub fn compile_ail_core_bytecode(core: &AilCore) -> Result<AilBytecodeProgram, String> {
+    let diagnostics = check_ail_core(core);
+    if !diagnostics.is_empty() {
+        return Err(format!(
+            "cannot compile unchecked AIL-Core:\n{}",
+            diagnostics.join("\n")
+        ));
+    }
     let package = AilPackage {
         metadata: core.package.clone(),
         root: PathBuf::new(),
@@ -6421,7 +6758,12 @@ pub fn draft_ail_spec(
     endpoint: &str,
 ) -> Result<AilDraftResult, String> {
     let prompt = build_ail_draft_prompt(package, user_prompt);
-    let spec_text = crate::llm::invoke_llm_text(endpoint, &prompt)?;
+    let spec_text = crate::llm::invoke_llm_text_for_artifact(
+        endpoint,
+        &prompt,
+        "AIL-Spec Canonical",
+        package.metadata.profile.as_str(),
+    )?;
     Ok(check_ail_draft_spec(package, spec_text))
 }
 
@@ -6431,7 +6773,12 @@ pub fn draft_ail_requirements(
     endpoint: &str,
 ) -> Result<String, String> {
     let prompt = build_ail_requirements_prompt(package, user_prompt);
-    crate::llm::invoke_llm_text(endpoint, &prompt)
+    crate::llm::invoke_llm_text_for_artifact(
+        endpoint,
+        &prompt,
+        "AIL-Requirements",
+        package.metadata.profile.as_str(),
+    )
 }
 
 pub fn repair_ail_requirements_from_diagnostics(
@@ -6447,7 +6794,12 @@ pub fn repair_ail_requirements_from_diagnostics(
         previous_requirements_text,
         diagnostics,
     );
-    crate::llm::invoke_llm_text(endpoint, &prompt)
+    crate::llm::invoke_llm_text_for_artifact(
+        endpoint,
+        &prompt,
+        "AIL-Requirements",
+        package.metadata.profile.as_str(),
+    )
 }
 
 pub fn check_ail_requirements(package: &AilPackage, requirements_text: &str) -> Vec<AilDiagnostic> {
@@ -6501,7 +6853,12 @@ pub fn draft_ail_spec_from_requirements(
 ) -> Result<AilDraftResult, String> {
     let grounded_prompt = format!("{user_prompt}\n\nDRAFT REQUIREMENTS:\n{requirements_text}");
     let prompt = build_ail_draft_prompt(package, &grounded_prompt);
-    let spec_text = crate::llm::invoke_llm_text(endpoint, &prompt)?;
+    let spec_text = crate::llm::invoke_llm_text_for_artifact(
+        endpoint,
+        &prompt,
+        "AIL-Spec Canonical",
+        package.metadata.profile.as_str(),
+    )?;
     Ok(check_ail_draft_spec_with_requirements(
         package,
         spec_text,
@@ -6524,7 +6881,12 @@ pub fn repair_ail_spec_from_diagnostics(
         previous_spec_text,
         diagnostics,
     );
-    let spec_text = crate::llm::invoke_llm_text(endpoint, &prompt)?;
+    let spec_text = crate::llm::invoke_llm_text_for_artifact(
+        endpoint,
+        &prompt,
+        "AIL-Spec Canonical",
+        package.metadata.profile.as_str(),
+    )?;
     Ok(check_ail_draft_spec_with_requirements(
         package,
         spec_text,
@@ -6547,6 +6909,10 @@ fn check_ail_draft_spec_with_requirements(
                 check_ail_core_diagnostics(&elaborate_ail_core(package, &document));
             if let Some(requirements_text) = requirements_text {
                 diagnostics.extend(check_ail_spec_preserves_requirement_permissions(
+                    &document,
+                    requirements_text,
+                ));
+                diagnostics.extend(check_ail_spec_preserves_requirement_failures(
                     &document,
                     requirements_text,
                 ));
@@ -6601,6 +6967,40 @@ fn check_ail_spec_preserves_requirement_permissions(
             ))
         })
         .collect()
+}
+
+fn check_ail_spec_preserves_requirement_failures(
+    document: &AilDocument,
+    requirements_text: &str,
+) -> Vec<AilDiagnostic> {
+    let mut missing_failures = BTreeSet::new();
+    for failure_name in requirements_text
+        .lines()
+        .map(str::trim)
+        .filter_map(requirement_failure_name)
+    {
+        if !document.failures.contains_key(&failure_name) {
+            missing_failures.insert(failure_name);
+        }
+    }
+    missing_failures
+        .into_iter()
+        .map(|failure_name| {
+            AilDiagnostic::error(
+                "AILR012",
+                format!("spec is missing required Failure {failure_name}"),
+            )
+            .with_repair_suggestion(format!(
+                "Add a 'Failure {failure_name} happens when ...' section with handling and trace bullets."
+            ))
+        })
+        .collect()
+}
+
+fn requirement_failure_name(line: &str) -> Option<String> {
+    let bullet = line.strip_prefix("- ")?.trim();
+    let (failure_name, _) = parse_failure_header(bullet)?;
+    Some(failure_name)
 }
 
 fn action_preserves_permission_requirement(action: &AilAction) -> bool {

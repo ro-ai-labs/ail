@@ -10,7 +10,9 @@ backends.
 
 ## Canonical Package Envelope
 
-Every serialized AIL-Core package uses this envelope:
+Authority: Target schema.
+
+The target schema envelope for serialized AIL-Core packages is:
 
 ```json
 {
@@ -35,6 +37,21 @@ Every serialized AIL-Core package uses this envelope:
 All keys are sorted lexicographically during canonical serialization. Arrays
 are sorted by the stable ordering rules below unless their schema says order is
 semantic, such as `Step` sequence or branch outcomes.
+
+## Stage-0 Text Artifact
+
+Authority: Normative for the bootstrap implementation.
+
+The current toolchain serializes checked AIL-Core as deterministic
+line-oriented text with package metadata, sorted `nodes:`, and sorted `edges:`.
+That text artifact is the accepted compiler and review boundary for
+`ail-core`, `ail-spec --core-file`, `ail-lower --core-file`,
+`ail-compile --core-file`, and `ail-build --core-file`.
+
+The line-oriented artifact must preserve the same package metadata, node
+catalog, edge catalog, attributes, and provenance described by this schema.
+Promoting the JSON envelope to the default serialized artifact requires a
+versioned migration note and equivalent render/reparse conformance fixtures.
 
 ## Node Schema
 
@@ -74,6 +91,7 @@ Optional attributes for all nodes:
 | Node kind | Required attributes | Allowed parents | Checker rule |
 | --- | --- | --- | --- |
 | `Application` | `name`, `profile` | package root | one per Application package |
+| `User` | `name` | `Application`, package root | user role name stable |
 | `Thing` | `name` | `Application`, package root | fields use `has_field` |
 | `Field` | `name`, `type` | `Thing` | type must resolve |
 | `Action` | `name` | `Application`, package root | executable action needs trace |
@@ -108,6 +126,9 @@ Optional attributes for all nodes:
 | `InterruptPriority` | `priority` | system component | targets context |
 | `InterruptMask` | `mask` | system component | targets context |
 | `SchedulerTask` | `name`, `task_kind` | system component | runs in context |
+| `SchedulerTaskPriority` | `priority` | system component | targets task |
+| `SchedulerTaskTiming` | `deadline`, `budget` | system component | targets task |
+| `LockGuard` | `resource`, `lock` | system component | targets protected resource and lock |
 | `Lowering` | `target` | package root | backend must support target |
 | `Diagnostic` | `code`, `severity` | checker package | code must be stable |
 | `Package` | `name`, `version` | package root | import compatibility checked |
@@ -149,6 +170,7 @@ Required attributes for all edges:
 | `writes` | action, tool, component, pass | field, value, resource, effect | many | write permission required |
 | `calls` | action, function, tool, pass | call, effect, external binding | many | target effects declared |
 | `performs` | component, action, tool | effect | many | capability and target required |
+| `uses_resource` | component | resource | many | resource declared |
 | `targets_resource` | effect | resource | one | resource declared |
 | `authorizes_resource` | capability | resource | many | capability grants effect target |
 | `owns_resource` | component | resource | many | one owner at a time |
@@ -160,7 +182,18 @@ Required attributes for all edges:
 | `layouts_resource` | layout | resource | one | `repr` and alignment valid |
 | `uses_allocation` | component | allocation | many | linked to resource |
 | `allocates_resource` | allocation | resource | one | placement valid for target |
+| `uses_lock_guard` | component | lock guard | many | protected resource and lock declared |
+| `guards_resource` | lock guard | resource | one | guarded resource declared |
+| `uses_lock_resource` | lock guard | resource | one | lock resource declared |
 | `runs_in_context` | action, component, task | execution context | one | effects legal in context |
+| `prioritizes_context` | interrupt priority | execution context | one | context declared |
+| `masks_context` | interrupt mask | execution context | one | context declared |
+| `schedules_task` | component | scheduler task | many | context declared |
+| `task_runs_in_context` | scheduler task | execution context | one | context declared |
+| `uses_task_priority` | component | scheduler task priority | many | task declared |
+| `prioritizes_task` | scheduler task priority | scheduler task | one | task declared |
+| `uses_task_timing` | component | scheduler task timing | many | task declared |
+| `times_task` | scheduler task timing | scheduler task | one | task declared |
 | `emits` | action, function, loop, failure | event | many | event payload typed |
 | `may_fail_with` | action, tool, external binding | failure | many | handler required when blocking |
 | `handles_failure` | action, tool, component | failure | many | handler side effects declared |
@@ -186,12 +219,16 @@ AIL-Flow, AIL-Agent, and canonical spec edits use the same graph patch schema:
   "ops": [
     {
       "op": "add_node",
-      "node": {
-        "id": "Rule:support-ticket/TicketNotClosed",
-        "kind": "Rule",
-        "name": "TicketNotClosed",
-        "provenance": ["flow:action-card:close-ticket"]
-      }
+      "kind": "Rule",
+      "name": "TicketNotClosed",
+      "provenance": ["flow:action-card:close-ticket"]
+    },
+    {
+      "op": "add_edge",
+      "kind": "requires",
+      "source": "Action:CloseTicket",
+      "target": "Rule:TicketNotClosed",
+      "provenance": ["flow:action-card:close-ticket"]
     }
   ],
   "review": {
@@ -204,9 +241,18 @@ AIL-Flow, AIL-Agent, and canonical spec edits use the same graph patch schema:
 Patch operations:
 
 - `add_node`
+- `add_edge`
+
+The stage-0 patch applier accepts only `add_node` and `add_edge`. It resolves
+node labels such as `Action:CloseTicket` against the checked Core graph, writes
+node provenance as `Provenance` nodes plus `has_provenance` edges, stores edge
+provenance as an edge attribute, and runs the AIL-Core checker before the CLI
+prints the patched Core artifact.
+
+Reserved target operations:
+
 - `remove_node`
 - `replace_node_attributes`
-- `add_edge`
 - `remove_edge`
 - `replace_edge_attributes`
 - `move_ordered_child`

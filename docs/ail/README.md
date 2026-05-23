@@ -8,6 +8,13 @@ toolchain normalizes accepted programs into canonical AIL-Core IR, and checked
 artifacts can render back into structured English, no-code views, diagnostics,
 traces, bytecode, native executables, and low-level explanations.
 
+## Reference Conventions
+
+Read `28-language-reference-style.md` as the conventions document for the
+numbered reference. It defines authority labels, rule identifiers, notation,
+version blocks, implementation-note boundaries, and conformance links used by
+the rest of the suite.
+
 ## Read Order
 
 1. `00-foundation.md`
@@ -38,6 +45,7 @@ traces, bytecode, native executables, and low-level explanations.
 26. `25-example-inventory.md`
 27. `26-semantic-safety-model.md`
 28. `27-desired-outcome-traceability.md`
+29. `28-language-reference-style.md`
 
 ## Specification Contract
 
@@ -54,6 +62,22 @@ human English
 The compiler accepts checked deterministic artifacts, not free-form
 conversation. The AI agent may draft, repair, and explain those artifacts, but
 the trusted checker is the authority for acceptance.
+
+## Reference Status / Versions
+
+| Surface | Current status |
+| --- | --- |
+| Language reference | draft `ail-reference.draft` |
+| AIL-Core schema | target `ail-core.schema.v0`; stage-0 text artifact is normative for the bootstrap compiler |
+| Prompt pack | draft prompt-pack with JSON envelope and `AIL-PROMPT-001` protocol checks |
+| Bytecode | stage-0 VM JSON plus native Linux x86_64 ELF target |
+| Standard library | not yet versioned; package/import rules are specified for later conformance |
+| Conformance suite | `first-slice` package fixtures and profile fixtures |
+
+This table is the draft version heading for the active reference. Any
+normative feature added after `28-language-reference-style.md` must either fit
+one of these version surfaces or add a versioned surface through
+`14-evolution-protocol.md`.
 
 ## Examples
 
@@ -75,6 +99,8 @@ the trusted checker is the authority for acceptance.
 - `corpus/`: conformance and training fixtures
 - `24-diagnostics-catalog.md`: stable diagnostic IDs
 - `27-desired-outcome-traceability.md`: outcome-to-artifact matrix
+- `28-language-reference-style.md`: normative rule style, grammar notation,
+  versioning, and conformance-link rules
 
 ## Implementation Start
 

@@ -180,7 +180,8 @@ Minimum parser responsibilities:
 - tool requirements, reads, writes, calls, secret protections, guarantees, and
   trace bullets
 - requirement bullets
-- read/write/call/effect bullets
+- read/write/effect bullets
+- stage-0 action call bullets as auditable write/effect text
 - failure bullets
 - guarantee bullets
 - trace bullets
@@ -400,6 +401,10 @@ package loading, parsing, elaboration, and checker gate as `ail-core` and
 the parsed AIL-Spec document. `ail-run` uses the same checked AIL-Core-to-VM
 instruction path and then executes through the AIL VM for supported Application
 packages.
+The public AIL-Core compiler entry points also enforce this boundary. Calling
+the bytecode or native compiler API with unchecked AIL-Core returns checker
+diagnostics instead of producing an artifact, even when the caller is not using
+the CLI path.
 `ail-compile --target linux-x86_64-elf --out <path>` uses the same checked
 AIL-Core gate, validates the selected action, and writes a native executable
 ELF file with direct Linux x86_64 syscall code as the first native compiler
@@ -496,14 +501,16 @@ and `ail-build` can use `--spec-file <path>` to read a saved generated
 AIL-Spec artifact instead of the package entry spec, preserving the package
 metadata while making accepted AIL-Spec files reusable inputs to IR rendering,
 bytecode lowering, native target emission, and auditable build artifacts.
-`ail-lower --core-file <path>`, `ail-compile --core-file <path>`, and
-`ail-build --core-file <path>` read a saved checked AIL-Core artifact,
-reconstruct the graph from the serialized nodes, edges, and edge attributes,
-run the core checker, and compile that IR directly to the VM instruction
-artifact or native target without loading the source package spec. This keeps
-AIL-Core as a real compiler input boundary rather than only a display format,
-and it preserves lowering payloads such as read/write provenance text that
-affect emitted bytecode instructions.
+`ail-spec --core-file <path>` reads a saved checked AIL-Core artifact, runs the
+core checker, reconstructs the semantic document, and prints deterministic
+AIL-Spec. `ail-lower --core-file <path>`, `ail-compile --core-file <path>`,
+and `ail-build --core-file <path>` read the same saved checked AIL-Core
+artifact, reconstruct the graph from the serialized nodes, edges, and edge
+attributes, run the core checker, and compile that IR directly to the VM
+instruction artifact or native target without loading the source package spec.
+This keeps AIL-Core as a real compiler and review boundary rather than only a
+display format, and it preserves lowering payloads such as read/write
+provenance text that affect emitted bytecode instructions.
 `ail-vm` reads a saved AIL-Bytecode artifact and executes it directly without
 reparsing the source AIL package, making bytecode a real artifact boundary
 instead of only a display format. The VM verifier rejects unknown opcodes and
@@ -599,11 +606,28 @@ coverage, and sending diagnostics back for one repair pass when the artifact is
 too thin. It prints only the checked requirements artifact, so developers can
 review or compare model-specific capture behavior before committing to AIL-Spec
 and bytecode generation.
+LLM output may be either the deterministic artifact text directly or the
+prompt-pack JSON envelope with `artifact_text`. When the envelope contains
+blocking `questions` and no artifact, the CLI prints the questions as a
+blocking model response and does not continue into repair, checking, lowering,
+or compile stages. Malformed envelopes are rejected as `AIL-PROMPT-001`
+prompt protocol errors. For envelope outputs, the CLI validates the requested
+`artifact_kind`, requires `checker_handoff.must_check: true`, and requires
+`checker_handoff.expected_profile` to match the package profile before it
+extracts `artifact_text`.
 `ail-spec` runs the next stage from a saved checked AIL-Requirements artifact:
 it validates the requirements file, asks the package base LLM for an AIL-Spec
 candidate grounded in that artifact, repairs once on checker diagnostics, and
-prints only the accepted AIL-Spec. This makes requirements-to-spec conversion a
-reviewable artifact boundary instead of an internal `ail-build` detail.
+prints only the accepted AIL-Spec. With `--core-file`, it skips the LLM and
+renders checked AIL-Core back into canonical AIL-Spec. This makes
+requirements-to-spec and core-to-spec conversion reviewable artifact boundaries
+instead of internal `ail-build` details.
+`ail-patch --core-file <path> <patch.json>` reads a saved checked AIL-Core
+artifact and a stage-0 `ail-core.patch.v0` JSON patch, applies supported
+`add_node` and `add_edge` graph operations, runs the AIL-Core checker on the
+patched graph, and prints the patched Core artifact. This is the first concrete
+AIL-Flow / agent-edit path that edits Core directly before rendering back to
+AIL-Spec.
 `ail-pass` compiles an AIL-Meta compiler pass package into verified
 AIL-Bytecode, or reads a saved Compiler-profile AIL-Bytecode artifact, checks a
 target package into AIL-Core, executes the selected pass bytecode over that
@@ -704,8 +728,11 @@ agent-produced spec checklist state in the AIL-Spec prompt. For saved
 request. Once the checked AIL-Spec draft is accepted, it runs
 `AcceptSpecDraft` before AIL-Core elaboration so the `SpecCaptured` transition
 is also represented in AIL bytecode. For saved `--spec-file` builds, the agent
-starts from an explicit `SpecLoaded` state, loads the checked spec into the
-`BuildRequest`, and still runs `AcceptSpecDraft` before AIL-Core elaboration.
+starts only after the saved spec has parsed, elaborated to AIL-Core, and passed
+the checker. It then starts from an explicit `SpecLoaded` state, loads the
+checked spec into the `BuildRequest`, and runs `AcceptSpecDraft`. A rejected
+saved spec produces deterministic `ail-build diagnostics` before any build
+agent action is run.
 It optionally runs
 `CompareAgentPromptPortability` when
 `--target-model <name>` is supplied, using `--base-model <name>` or the active

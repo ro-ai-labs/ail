@@ -4,12 +4,13 @@ use std::fs;
 use std::process::{Command, ExitCode};
 
 use ail::ail::{
-    DEFAULT_BASE_LLM_ENDPOINT, apply_ail_patch, check_ail_core, check_ail_requirements,
-    compile_ail_bytecode_native_elf, compile_ail_core_bytecode, compile_ail_core_native_elf,
-    draft_ail_requirements, draft_ail_spec, draft_ail_spec_from_requirements, elaborate_ail_core,
-    load_ail_package_dir, parse_ail_bytecode, parse_ail_core_text, parse_ail_package_document,
-    parse_ail_package_spec_text, parse_ail_patch_text, render_ail_bytecode, render_ail_core,
-    render_ail_flow_view, render_ail_runtime_state_lines, render_ail_spec,
+    DEFAULT_BASE_LLM_ENDPOINT, apply_ail_core_patch_text, apply_ail_patch, check_ail_core,
+    check_ail_requirements, compile_ail_bytecode_native_elf, compile_ail_core_bytecode,
+    compile_ail_core_native_elf, draft_ail_requirements, draft_ail_spec,
+    draft_ail_spec_from_requirements, elaborate_ail_core, load_ail_package_dir, parse_ail_bytecode,
+    parse_ail_core_text, parse_ail_package_document, parse_ail_package_spec_text,
+    parse_ail_patch_text, render_ail_bytecode, render_ail_core, render_ail_flow_view,
+    render_ail_runtime_state_lines, render_ail_spec, render_ail_spec_from_core,
     repair_ail_requirements_from_diagnostics, repair_ail_spec_from_diagnostics,
     run_ail_bytecode_action, run_ail_compiler_pass_on_core, run_ail_conformance,
     verify_ail_bytecode,
@@ -50,8 +51,18 @@ fn run(args: Vec<String>) -> Result<u8, String> {
         return Err(usage());
     }
     let command = &args[0];
-    let path = &args[1];
-    let cli_options = parse_cli_options(command, &args[2..])?;
+    let pathless_core_file_command = args[1].starts_with("--")
+        && matches!(
+            command.as_str(),
+            "ail-spec" | "ail-lower" | "ail-compile" | "ail-build" | "ail-patch"
+        );
+    let default_path = ".".to_string();
+    let (path, option_args): (&String, &[String]) = if pathless_core_file_command {
+        (&default_path, &args[1..])
+    } else {
+        (&args[1], &args[2..])
+    };
+    let cli_options = parse_cli_options(command, option_args)?;
     if command == "ail-vm" {
         return run_ail_vm_command(path, &cli_options);
     }
@@ -78,7 +89,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
 }
 
 fn usage() -> String {
-    "usage: ail <ail-check|ail-core|ail-flow|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-bootstrap|ail-patch> <path> [patch|target-package] [--action name] [--prompt text] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--base-model name] [--target-model name] [--out path] [--all-actions] [--artifact-dir path] [--llm-endpoint url] [key=value ...]\nail-pass usage: ail ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR ail ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]\nail-bootstrap usage: ail ail-bootstrap <toolchain-agent-package> --pass <compiler-pass-package> --agent <toolchain-agent-package> --target linux-x86_64-elf --artifact-dir <dir>"
+    "usage: ail <ail-check|ail-core|ail-flow|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-bootstrap|ail-patch> <path> [patch|target-package] [--action name] [--prompt text] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--base-model name] [--target-model name] [--out path] [--all-actions] [--artifact-dir path] [--llm-endpoint url] [key=value ...]\nsaved-core usage: ail <ail-spec|ail-lower|ail-compile|ail-build> --core-file <checked-core> [--action name] [--target target] [--out path] [--artifact-dir path]\ncore-patch usage: ail ail-patch --core-file <checked-core> <ail-core.patch.json>\nail-pass usage: ail ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR ail ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]\nail-bootstrap usage: ail ail-bootstrap <toolchain-agent-package> --pass <compiler-pass-package> --agent <toolchain-agent-package> --target linux-x86_64-elf --artifact-dir <dir>"
         .to_string()
 }
 
@@ -6270,6 +6281,46 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
         print!("{bytecode_text}");
         return Ok(0);
     }
+    if command == "ail-spec" && cli_options.ail_core_file.is_some() {
+        let core = parse_cli_ail_core(cli_options)?;
+        let diagnostics = check_ail_core(&core);
+        if !diagnostics.is_empty() {
+            println!("ail-spec core diagnostics:");
+            for diagnostic in diagnostics {
+                println!("{diagnostic}");
+            }
+            return Ok(1);
+        }
+        println!("{}", render_ail_spec_from_core(&core));
+        return Ok(0);
+    }
+    if command == "ail-patch" && cli_options.ail_core_file.is_some() {
+        let core = parse_cli_ail_core(cli_options)?;
+        let diagnostics = check_ail_core(&core);
+        if !diagnostics.is_empty() {
+            println!("ail-patch core diagnostics:");
+            for diagnostic in diagnostics {
+                println!("{diagnostic}");
+            }
+            return Ok(1);
+        }
+        let Some(patch_path) = cli_options.patch_path.as_ref() else {
+            return Err("ail-patch --core-file requires a patch file".to_string());
+        };
+        let patch_text = fs::read_to_string(patch_path)
+            .map_err(|error| format!("failed to read {patch_path}: {error}"))?;
+        let patched = apply_ail_core_patch_text(&core, &patch_text)?;
+        let diagnostics = check_ail_core(&patched);
+        if !diagnostics.is_empty() {
+            println!("ail-patch diagnostics:");
+            for diagnostic in diagnostics {
+                println!("{diagnostic}");
+            }
+            return Ok(1);
+        }
+        println!("{}", render_ail_core(&patched));
+        return Ok(0);
+    }
     let package = load_ail_package_dir(path)?;
     if command == "ail-conformance" {
         let result = run_ail_conformance(&package)?;
@@ -6428,6 +6479,16 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
                 let spec_text = fs::read_to_string(spec_file)
                     .map_err(|error| format!("failed to read {spec_file}: {error}"))?;
                 let spec_text = spec_text.trim().to_string();
+                let document = parse_ail_package_spec_text(&package, &spec_text)?;
+                let core = elaborate_ail_core(&package, &document);
+                let core_diagnostics = check_ail_core(&core);
+                if !core_diagnostics.is_empty() {
+                    println!("ail-build diagnostics:");
+                    for diagnostic in core_diagnostics {
+                        println!("{diagnostic}");
+                    }
+                    return Ok(1);
+                }
                 let agent_start = if let Some(agent_path) = cli_options.ail_build_agent.as_deref() {
                     let agent_start = start_ail_build_agent_from_saved_spec(&package, &spec_text);
                     Some(run_ail_build_agent_accept_spec(
@@ -6439,8 +6500,6 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
                 } else {
                     None
                 };
-                let document = parse_ail_package_spec_text(&package, &spec_text)?;
-                let core = elaborate_ail_core(&package, &document);
                 (None, spec_text, core, None, agent_start)
             } else {
                 let prompt = cli_options
@@ -6723,7 +6782,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
     let mut ail_compile_all_actions = false;
     let mut index = 0;
 
-    if command == "ail-patch" {
+    if command == "ail-patch" && args.get(index).is_none_or(|arg| arg != "--core-file") {
         let Some(path) = args.get(index) else {
             return Err("ail-patch requires a patch file".to_string());
         };
@@ -6802,7 +6861,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         if arg == "--core-file" {
             if !matches!(
                 command,
-                "ail-lower" | "ail-pass" | "ail-compile" | "ail-build"
+                "ail-lower" | "ail-pass" | "ail-compile" | "ail-build" | "ail-spec" | "ail-patch"
             ) {
                 return Err(usage());
             }
@@ -6811,6 +6870,14 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
             };
             ail_core_file = Some(path.clone());
             index += 2;
+            continue;
+        }
+        if command == "ail-patch" {
+            if patch_path.is_some() {
+                return Err(usage());
+            }
+            patch_path = Some(arg.clone());
+            index += 1;
             continue;
         }
         if arg == "--pass" {
@@ -6950,6 +7017,9 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         return Err("--requirements-file cannot be combined with --spec-file".to_string());
     }
     if command == "ail-build" && ail_requirements_file.is_some() && ail_core_file.is_some() {
+        return Err("--requirements-file cannot be combined with --core-file".to_string());
+    }
+    if command == "ail-spec" && ail_requirements_file.is_some() && ail_core_file.is_some() {
         return Err("--requirements-file cannot be combined with --core-file".to_string());
     }
     if command == "ail-build" && ail_build_target_model.is_some() && ail_build_agent.is_none() {
