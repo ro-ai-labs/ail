@@ -82,7 +82,11 @@ bytecode fingerprint, lower manifest, and manifest fingerprint, then writes
 `agent.ailbc.json`, `agent.fingerprint.txt`, and `agent-trace.txt`.
 Adding `--target linux-x86_64-elf` emits `agent-<ActionName>.elf` native
 machine-code executables for that lower verifier and records each one as an
-`agent-target` line in the lower manifest.
+`agent-target` line in the lower manifest. The same native lower-agent run
+writes `native-bytecode-report.txt`, `dependency-report.txt`, and their
+fingerprints, proving the verifier-agent ELFs are ELF64 x86_64 executable
+bytes that use the standalone Linux syscall ABI with no host-language runtime,
+dynamic linker, shared libraries, library dependencies, or linker invocation.
 `ail-check`, `ail-core`,
 `ail-flow`, `ail-lower`, `ail-compile`, `ail-run`, and `ail-build` can use
 `--spec-file <path>` to read a saved generated AIL-Spec artifact instead of

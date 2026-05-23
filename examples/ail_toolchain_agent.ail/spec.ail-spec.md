@@ -183,6 +183,10 @@ When the toolchain agent verifies AIL-Core lowering artifacts:
 - the system reads the BuildRequest bytecode fingerprint
 - the system reads the BuildRequest artifact manifest
 - the system reads the BuildRequest artifact manifest fingerprint
+- the system reads the BuildRequest native bytecode report
+- the system reads the BuildRequest native bytecode report fingerprint
+- the system reads the BuildRequest dependency report
+- the system reads the BuildRequest dependency report fingerprint
 - the system changes the BuildRequest artifact manifest verification report to Verified
 - the system guarantees the lower manifest ties checked AIL-Core and AIL-Bytecode with deterministic fingerprints and no Rust or host-language backend source
 - the system records a trace event named LowerManifestVerified

@@ -492,6 +492,8 @@ struct AilLowerArtifactSet<'a> {
     source_spec_text: Option<&'a str>,
     core_text: &'a str,
     bytecode_text: &'a str,
+    native_bytecode_report_text: Option<&'a str>,
+    dependency_report_text: Option<&'a str>,
     agent_bytecode_text: Option<&'a str>,
     agent_trace: Option<&'a [String]>,
     agent_native_executables: &'a [AilNativeArtifact],
@@ -502,6 +504,13 @@ struct AilConformanceArtifactSet<'a> {
     agent_bytecode_text: Option<&'a str>,
     agent_trace: Option<&'a [String]>,
     agent_native_executables: &'a [AilNativeArtifact],
+}
+
+struct AilLowerAgentManifestRun {
+    agent_run: AilBuildAgentRun,
+    agent_native_artifacts: Vec<AilNativeArtifact>,
+    native_bytecode_report_text: Option<String>,
+    dependency_report_text: Option<String>,
 }
 
 struct AilSourcePackageArtifacts {
@@ -1789,6 +1798,18 @@ fn render_ail_lower_manifest(artifacts: &AilLowerArtifactSet<'_>) -> String {
     if artifacts.agent_trace.is_some() {
         lines.push("trace agent-trace.txt".to_string());
     }
+    if let Some(native_bytecode_report_text) = artifacts.native_bytecode_report_text {
+        lines.push(format!(
+            "native-bytecode native-bytecode-report.txt {}",
+            ail_artifact_fingerprint(native_bytecode_report_text)
+        ));
+    }
+    if let Some(dependency_report_text) = artifacts.dependency_report_text {
+        lines.push(format!(
+            "dependencies dependency-report.txt {}",
+            ail_artifact_fingerprint(dependency_report_text)
+        ));
+    }
     for native_agent in artifacts.agent_native_executables {
         lines.push(format!(
             "agent-target {} {} {}",
@@ -1862,6 +1883,34 @@ fn write_ail_lower_artifacts(
             format!("{}\n", agent_trace.join("\n")),
         )
         .map_err(|error| format!("failed to write ail-lower agent trace artifact: {error}"))?;
+    }
+    if let Some(native_bytecode_report_text) = artifacts.native_bytecode_report_text {
+        fs::write(
+            root.join("native-bytecode-report.txt"),
+            native_bytecode_report_text,
+        )
+        .map_err(|error| format!("failed to write ail-lower native bytecode report: {error}"))?;
+        fs::write(
+            root.join("native-bytecode-report.fingerprint.txt"),
+            format!(
+                "{}\n",
+                ail_artifact_fingerprint(native_bytecode_report_text)
+            ),
+        )
+        .map_err(|error| {
+            format!("failed to write ail-lower native bytecode report fingerprint: {error}")
+        })?;
+    }
+    if let Some(dependency_report_text) = artifacts.dependency_report_text {
+        fs::write(root.join("dependency-report.txt"), dependency_report_text)
+            .map_err(|error| format!("failed to write ail-lower dependency report: {error}"))?;
+        fs::write(
+            root.join("dependency-report.fingerprint.txt"),
+            format!("{}\n", ail_artifact_fingerprint(dependency_report_text)),
+        )
+        .map_err(|error| {
+            format!("failed to write ail-lower dependency report fingerprint: {error}")
+        })?;
     }
     for native_agent in artifacts.agent_native_executables {
         let artifact_path = root.join(&native_agent.file_name);
@@ -2691,7 +2740,7 @@ fn run_ail_lower_agent_verify_manifest(
     bytecode_text: &str,
     source_artifacts: Option<&AilSourcePackageArtifacts>,
     target: Option<&str>,
-) -> Result<(AilBuildAgentRun, Vec<AilNativeArtifact>), String> {
+) -> Result<AilLowerAgentManifestRun, String> {
     let (agent_bytecode, agent_bytecode_text) = load_verified_ail_build_agent(agent_path)?;
     if !agent_bytecode.actions.contains_key("VerifyLowerManifest") {
         return Err("ail-lower --agent requires a VerifyLowerManifest action".to_string());
@@ -2701,12 +2750,30 @@ fn run_ail_lower_agent_verify_manifest(
     } else {
         Vec::new()
     };
+    let native_bytecode_report_text = if let Some(target) = target {
+        Some(render_ail_lower_native_bytecode_report(
+            target,
+            agent_native_artifacts.as_slice(),
+        )?)
+    } else {
+        None
+    };
+    let dependency_report_text = if let Some(target) = target {
+        Some(render_ail_lower_dependency_report(
+            target,
+            agent_native_artifacts.as_slice(),
+        )?)
+    } else {
+        None
+    };
     let empty_agent_trace: &[String] = &[];
     let manifest_text = render_ail_lower_manifest(&AilLowerArtifactSet {
         source_manifest_text: source_artifacts.map(|artifacts| artifacts.manifest_text.as_str()),
         source_spec_text: source_artifacts.map(|artifacts| artifacts.spec_text.as_str()),
         core_text,
         bytecode_text,
+        native_bytecode_report_text: native_bytecode_report_text.as_deref(),
+        dependency_report_text: dependency_report_text.as_deref(),
         agent_bytecode_text: Some(agent_bytecode_text.as_str()),
         agent_trace: Some(empty_agent_trace),
         agent_native_executables: agent_native_artifacts.as_slice(),
@@ -2765,6 +2832,26 @@ fn run_ail_lower_agent_verify_manifest(
             source_package_fingerprint,
         );
     }
+    if let Some(native_bytecode_report_text) = native_bytecode_report_text.as_deref() {
+        state.insert(
+            "buildrequest.native bytecode report".to_string(),
+            native_bytecode_report_text.to_string(),
+        );
+        state.insert(
+            "buildrequest.native bytecode report fingerprint".to_string(),
+            ail_artifact_fingerprint(native_bytecode_report_text),
+        );
+    }
+    if let Some(dependency_report_text) = dependency_report_text.as_deref() {
+        state.insert(
+            "buildrequest.dependency report".to_string(),
+            dependency_report_text.to_string(),
+        );
+        state.insert(
+            "buildrequest.dependency report fingerprint".to_string(),
+            ail_artifact_fingerprint(dependency_report_text),
+        );
+    }
     let run = run_ail_bytecode_action(&agent_bytecode, "VerifyLowerManifest", state)?;
     if run.status != "succeeded" {
         let mut message = "ail-lower agent VerifyLowerManifest failed".to_string();
@@ -2776,15 +2863,17 @@ fn run_ail_lower_agent_verify_manifest(
         }
         return Err(message);
     }
-    Ok((
-        AilBuildAgentRun {
+    Ok(AilLowerAgentManifestRun {
+        agent_run: AilBuildAgentRun {
             bytecode: agent_bytecode,
             bytecode_text: agent_bytecode_text,
             state: run.final_state,
             trace: run.trace,
         },
         agent_native_artifacts,
-    ))
+        native_bytecode_report_text,
+        dependency_report_text,
+    })
 }
 
 fn load_ail_pass_target_core(cli_options: &CliOptions) -> Result<eigl::ail::AilCore, String> {
@@ -4489,6 +4578,10 @@ fn bootstrap_handoff_case(action_name: &str) -> Result<BootstrapHandoffCase, Str
                 "buildrequest.bytecode fingerprint=fnv64:bytecode",
                 "buildrequest.artifact manifest=manifest",
                 "buildrequest.artifact manifest fingerprint=fnv64:manifest",
+                "buildrequest.native bytecode report=native-bytecode",
+                "buildrequest.native bytecode report fingerprint=fnv64:native-bytecode",
+                "buildrequest.dependency report=dependencies",
+                "buildrequest.dependency report fingerprint=fnv64:dependencies",
             ],
         }),
         "VerifyPassManifest" => Ok(BootstrapHandoffCase {
@@ -4594,6 +4687,63 @@ fn run_bootstrap_handoff_native_action(
         ));
     }
     Ok((stdout, stderr))
+}
+
+fn render_ail_lower_native_bytecode_report(
+    target_name: &str,
+    agent_artifacts: &[AilNativeArtifact],
+) -> Result<String, String> {
+    let mut lines = vec![
+        "AIL-Lower-Native-Bytecode:".to_string(),
+        format!("target {target_name}"),
+    ];
+    for artifact in agent_artifacts {
+        if artifact.target_name != target_name {
+            return Err(format!(
+                "native bytecode artifact {} targets {}, expected {target_name}",
+                artifact.file_name, artifact.target_name
+            ));
+        }
+        lines.push(format!(
+            "machine-bytecode agent-target {} {} {} {} bytes {}",
+            artifact.target_name,
+            artifact.file_name,
+            native_machine_bytecode_identity(&artifact.bytes)?,
+            ail_artifact_fingerprint_bytes(&artifact.bytes),
+            artifact.bytes.len()
+        ));
+    }
+    Ok(format!("{}\n", lines.join("\n")))
+}
+
+fn render_ail_lower_dependency_report(
+    target_name: &str,
+    agent_artifacts: &[AilNativeArtifact],
+) -> Result<String, String> {
+    let mut lines = vec![
+        "AIL-Lower-Dependency-Report:".to_string(),
+        format!("target {target_name}"),
+        "host-language-runtime none".to_string(),
+        "dynamic-linker none".to_string(),
+        "shared-libraries none".to_string(),
+        "library-dependencies none".to_string(),
+        "linker-invocation none".to_string(),
+        "runtime-abi linux-syscall-argv-key-value".to_string(),
+    ];
+    for artifact in agent_artifacts {
+        if artifact.target_name != target_name {
+            return Err(format!(
+                "dependency artifact {} targets {}, expected {target_name}",
+                artifact.file_name, artifact.target_name
+            ));
+        }
+        lines.push(format!(
+            "machine-bytecode-dependency {} {}",
+            artifact.file_name,
+            native_elf_dependency_identity(&artifact.bytes)?
+        ));
+    }
+    Ok(format!("{}\n", lines.join("\n")))
 }
 
 fn render_ail_compile_native_bytecode_report(
@@ -6143,20 +6293,29 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
         }
         let bytecode_text = format!("{}\n", render_ail_bytecode(&bytecode));
         let core_text = format!("{}\n", render_ail_core(&core));
-        let (agent_run, agent_native_artifacts) =
-            if let Some(agent_path) = &cli_options.ail_build_agent {
-                let (run, native_artifacts) = run_ail_lower_agent_verify_manifest(
-                    agent_path,
-                    &core,
-                    &core_text,
-                    &bytecode_text,
-                    None,
-                    cli_options.ail_compile_target.as_deref(),
-                )?;
-                (Some(run), native_artifacts)
-            } else {
-                (None, Vec::new())
-            };
+        let (
+            agent_run,
+            agent_native_artifacts,
+            native_bytecode_report_text,
+            dependency_report_text,
+        ) = if let Some(agent_path) = &cli_options.ail_build_agent {
+            let lower_agent = run_ail_lower_agent_verify_manifest(
+                agent_path,
+                &core,
+                &core_text,
+                &bytecode_text,
+                None,
+                cli_options.ail_compile_target.as_deref(),
+            )?;
+            (
+                Some(lower_agent.agent_run),
+                lower_agent.agent_native_artifacts,
+                lower_agent.native_bytecode_report_text,
+                lower_agent.dependency_report_text,
+            )
+        } else {
+            (None, Vec::new(), None, None)
+        };
         if let Some(artifact_dir) = &cli_options.artifact_dir {
             write_ail_lower_artifacts(
                 artifact_dir,
@@ -6165,6 +6324,8 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
                     source_spec_text: None,
                     core_text: &core_text,
                     bytecode_text: &bytecode_text,
+                    native_bytecode_report_text: native_bytecode_report_text.as_deref(),
+                    dependency_report_text: dependency_report_text.as_deref(),
                     agent_bytecode_text: agent_run.as_ref().map(|run| run.bytecode_text.as_str()),
                     agent_trace: agent_run.as_ref().map(|run| run.trace.as_slice()),
                     agent_native_executables: agent_native_artifacts.as_slice(),
@@ -6511,20 +6672,29 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
             let bytecode_text = format!("{}\n", render_ail_bytecode(&bytecode));
             let core_text = format!("{}\n", render_ail_core(&core));
             let source_artifacts = load_ail_source_package_artifacts(path, "ail-lower")?;
-            let (agent_run, agent_native_artifacts) =
-                if let Some(agent_path) = &cli_options.ail_build_agent {
-                    let (run, native_artifacts) = run_ail_lower_agent_verify_manifest(
-                        agent_path,
-                        &core,
-                        &core_text,
-                        &bytecode_text,
-                        Some(&source_artifacts),
-                        cli_options.ail_compile_target.as_deref(),
-                    )?;
-                    (Some(run), native_artifacts)
-                } else {
-                    (None, Vec::new())
-                };
+            let (
+                agent_run,
+                agent_native_artifacts,
+                native_bytecode_report_text,
+                dependency_report_text,
+            ) = if let Some(agent_path) = &cli_options.ail_build_agent {
+                let lower_agent = run_ail_lower_agent_verify_manifest(
+                    agent_path,
+                    &core,
+                    &core_text,
+                    &bytecode_text,
+                    Some(&source_artifacts),
+                    cli_options.ail_compile_target.as_deref(),
+                )?;
+                (
+                    Some(lower_agent.agent_run),
+                    lower_agent.agent_native_artifacts,
+                    lower_agent.native_bytecode_report_text,
+                    lower_agent.dependency_report_text,
+                )
+            } else {
+                (None, Vec::new(), None, None)
+            };
             if let Some(artifact_dir) = &cli_options.artifact_dir {
                 write_ail_lower_artifacts(
                     artifact_dir,
@@ -6533,6 +6703,8 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
                         source_spec_text: Some(source_artifacts.spec_text.as_str()),
                         core_text: &core_text,
                         bytecode_text: &bytecode_text,
+                        native_bytecode_report_text: native_bytecode_report_text.as_deref(),
+                        dependency_report_text: dependency_report_text.as_deref(),
                         agent_bytecode_text: agent_run
                             .as_ref()
                             .map(|run| run.bytecode_text.as_str()),

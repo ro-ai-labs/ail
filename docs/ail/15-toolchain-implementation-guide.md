@@ -422,11 +422,18 @@ auditable while stdout remains the parseable VM instruction artifact. With
 or load an AIL-authored Application agent and run its `VerifyLowerManifest`
 bytecode action against the checked core, checked-core fingerprint,
 source-package fingerprint when present, bytecode artifact, bytecode
-fingerprint, lower manifest, and manifest fingerprint before writing
-`agent.ailbc.json`, `agent.fingerprint.txt`, and `agent-trace.txt`. With
+fingerprint, lower manifest, manifest fingerprint, and native-bytecode and
+dependency report fingerprints when native verifier agents are emitted before
+writing `agent.ailbc.json`, `agent.fingerprint.txt`, and `agent-trace.txt`. With
 `--target linux-x86_64-elf`, it also emits `agent-<ActionName>.elf`
 machine-code ELF executables for the lower verifier and records them as
-`agent-target` entries in `manifest.ail-lower.txt`.
+`agent-target` entries in `manifest.ail-lower.txt`. That native lower-agent run
+also writes `native-bytecode-report.txt`,
+`native-bytecode-report.fingerprint.txt`, `dependency-report.txt`, and
+`dependency-report.fingerprint.txt`; the reports prove the verifier-agent ELFs
+are ELF64 little-endian x86_64 executable bytes and record
+`host-language-runtime none`, `dynamic-linker none`, `shared-libraries none`,
+`library-dependencies none`, and `linker-invocation none`.
 `ail-check`, `ail-core`, `ail-flow`, `ail-lower`, `ail-compile`, `ail-run`,
 and `ail-build` can use `--spec-file <path>` to read a saved generated
 AIL-Spec artifact instead of the package entry spec, preserving the package

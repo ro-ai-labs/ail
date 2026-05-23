@@ -7332,6 +7332,64 @@ compiler-pass and verifier-agent ELFs have no host-language runtime, dynamic
 linker, shared-library, library, or linker dependency before the AIL-authored
 pass manifest verifier accepts the manifest.
 
+### Task 163: Lower Records Native Agent Evidence
+
+**Files:**
+- Modify: `examples/ail_toolchain_agent.ail/spec.ail-spec.md`
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing lower native evidence assertions**
+
+Extend `ail-lower --target linux-x86_64-elf --agent --artifact-dir` coverage to
+require `native-bytecode-report.txt`, `native-bytecode-report.fingerprint.txt`,
+`dependency-report.txt`, `dependency-report.fingerprint.txt`, and fingerprinted
+`native-bytecode` and `dependencies` entries in `manifest.ail-lower.txt`.
+Require the reports to cover native AIL-authored lower verifier ELFs, and
+require the dependency report to state that host-language runtime, dynamic
+linker, shared libraries, library dependencies, and linker invocation are
+absent. Extend the AIL-authored `VerifyLowerManifest` flow to read
+`BuildRequest native bytecode report`, `BuildRequest native bytecode report
+fingerprint`, `BuildRequest dependency report`, and `BuildRequest dependency
+report fingerprint`.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_lower_writes_native_agent_artifacts -- --nocapture
+```
+
+Expected: the native lower-agent test fails because the native-bytecode and
+dependency reports are not written yet and the AIL-authored lower manifest
+verifier lacks native report state.
+
+- [x] **Step 3: Generate lower native and dependency reports**
+
+Render deterministic `AIL-Lower-Native-Bytecode` and
+`AIL-Lower-Dependency-Report` artifacts, fingerprint them, include them in
+`manifest.ail-lower.txt`, write their sidecar fingerprints, and pass the
+reports plus fingerprints into the AIL-authored `VerifyLowerManifest` state.
+The reports inspect native lower-agent ELF artifacts for ELF64 little-endian
+x86_64 executable identity and standalone Linux syscall ELF dependency
+identity.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_lower_writes_native_agent_artifacts -- --nocapture
+```
+
+Expected: native `ail-lower` artifacts prove the emitted lower verifier-agent
+ELF is machine-level executable bytecode and has no host-language runtime,
+dynamic linker, shared-library, library, or linker dependency before the
+AIL-authored lower manifest verifier accepts the manifest.
+
 ### Task 18: Declared Failure Trace Coverage Diagnostics
 
 **Files:**
