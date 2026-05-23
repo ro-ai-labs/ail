@@ -63,6 +63,7 @@ pub struct AilDocument {
     pub system_components: BTreeMap<String, AilSystemComponent>,
     pub functions: BTreeMap<String, AilFunction>,
     pub types: BTreeMap<String, AilType>,
+    pub routes: BTreeMap<String, AilRoute>,
     pub external_bindings: BTreeMap<String, AilExternalBinding>,
     pub actions: BTreeMap<String, AilAction>,
     pub failures: BTreeMap<String, AilFailure>,
@@ -218,6 +219,17 @@ pub struct AilExternalBindingValue {
 pub struct AilExternalStatusMap {
     pub code: String,
     pub target: String,
+    pub provenance: String,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct AilRoute {
+    pub name: String,
+    pub label: String,
+    pub path: String,
+    pub reads: Vec<String>,
+    pub permissions: Vec<String>,
+    pub traces: Vec<String>,
     pub provenance: String,
 }
 
@@ -1511,6 +1523,7 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
         system_components: BTreeMap::new(),
         functions: BTreeMap::new(),
         types: BTreeMap::new(),
+        routes: BTreeMap::new(),
         external_bindings: BTreeMap::new(),
         actions: BTreeMap::new(),
         failures: BTreeMap::new(),
@@ -1526,6 +1539,8 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
     let mut current_function_section: Option<FunctionSection> = None;
     let mut current_type: Option<String> = None;
     let mut current_type_section: Option<TypeSection> = None;
+    let mut current_route: Option<String> = None;
+    let mut current_route_section: Option<RouteSection> = None;
     let mut current_c_library: Option<String> = None;
     let mut current_external_binding: Option<String> = None;
     let mut current_external_binding_section: Option<ExternalBindingSection> = None;
@@ -1727,6 +1742,53 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
             current_type_section = Some(TypeSection::Variants);
             current_external_binding = None;
             current_external_binding_section = None;
+            current_thing = None;
+            current_tool = None;
+            current_tool_section = None;
+            current_compiler_pass = None;
+            current_compiler_pass_section = None;
+            current_system_component = None;
+            current_system_section = None;
+            current_function = None;
+            current_function_section = None;
+            current_action = None;
+            current_failure = None;
+            current_list = None;
+            action_header_waiting_for_when = false;
+            continue;
+        }
+        if let Some(label) = parse_route_header(line) {
+            let name = action_name_from_label(&label);
+            document
+                .routes
+                .entry(name.clone())
+                .or_insert_with(|| AilRoute {
+                    name: name.clone(),
+                    label,
+                    provenance: format!("route:{name}"),
+                    ..AilRoute::default()
+                });
+            current_route = Some(name);
+            current_route_section = None;
+            current_thing = None;
+            current_tool = None;
+            current_tool_section = None;
+            current_compiler_pass = None;
+            current_compiler_pass_section = None;
+            current_system_component = None;
+            current_system_section = None;
+            current_function = None;
+            current_function_section = None;
+            current_action = None;
+            current_failure = None;
+            current_list = None;
+            action_header_waiting_for_when = false;
+            continue;
+        }
+        if let Some(section) = parse_route_section(line)
+            && current_route.is_some()
+        {
+            current_route_section = Some(section);
             current_thing = None;
             current_tool = None;
             current_tool_section = None;
@@ -2093,6 +2155,10 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
                 parse_type_bullet(&mut document, type_name, section, bullet, line_number)?;
                 continue;
             }
+            if let (Some(route_name), Some(section)) = (&current_route, current_route_section) {
+                parse_route_bullet(&mut document, route_name, section, bullet, line_number)?;
+                continue;
+            }
             if let (Some(binding_name), Some(section)) =
                 (&current_external_binding, current_external_binding_section)
             {
@@ -2133,10 +2199,11 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
         && document.system_components.is_empty()
         && document.functions.is_empty()
         && document.types.is_empty()
+        && document.routes.is_empty()
         && document.external_bindings.is_empty()
     {
         return Err(
-            "AIL-Spec missing application, tool, compiler pass, system component, function, type, or external binding declaration"
+            "AIL-Spec missing application, tool, compiler pass, system component, function, type, route, or external binding declaration"
                 .to_string(),
         );
     }
@@ -2230,6 +2297,53 @@ pub fn elaborate_ail_core(package: &AilPackage, document: &AilDocument) -> AilCo
                 graph.add_edge("has_field", &variant_node, &field_node, BTreeMap::new());
                 attach_provenance(&mut graph, &field_node, &field.provenance);
             }
+        }
+    }
+
+    for route in document.routes.values() {
+        let route_node = graph.add_node(
+            "Route",
+            &route.name,
+            None,
+            attr(&[("label", &route.label), ("path", &route.path)]),
+        );
+        attach_provenance(&mut graph, &route_node, &route.provenance);
+        for read in &route.reads {
+            let value_node = graph.add_node(
+                "Value",
+                format!("{}.{}", route.name, read),
+                None,
+                BTreeMap::new(),
+            );
+            graph.add_edge(
+                "reads",
+                &route_node,
+                &value_node,
+                attr(&[("provenance", &format!("route:{}.read:{read}", route.name))]),
+            );
+            attach_provenance(
+                &mut graph,
+                &value_node,
+                format!("route:{}.read:{read}", route.name),
+            );
+        }
+        for permission in &route.permissions {
+            let permission_node = graph.add_node("Permission", permission, None, BTreeMap::new());
+            graph.add_edge("requires", &route_node, &permission_node, BTreeMap::new());
+            attach_provenance(
+                &mut graph,
+                &permission_node,
+                format!("route:{}.permission:{permission}", route.name),
+            );
+        }
+        for trace in &route.traces {
+            let trace_node = graph.add_node("Trace", trace, None, BTreeMap::new());
+            graph.add_edge("records_trace", &route_node, &trace_node, BTreeMap::new());
+            attach_provenance(
+                &mut graph,
+                &trace_node,
+                format!("route:{}.trace:{trace}", route.name),
+            );
         }
     }
 
@@ -3394,6 +3508,7 @@ fn is_known_core_node_kind(kind: &str) -> bool {
             | "Resource"
             | "Return"
             | "Rule"
+            | "Route"
             | "SchedulerTask"
             | "SchedulerTaskPriority"
             | "SchedulerTaskTiming"
@@ -4544,6 +4659,40 @@ pub fn render_ail_spec(document: &AilDocument) -> String {
             lines.push(String::new());
             for variant in type_decl.variants.values() {
                 lines.push(format!("- {}", render_variant_spec(variant)));
+            }
+            lines.push(String::new());
+        }
+    }
+    for route in document.routes.values() {
+        lines.push(format!("Route: {}.", route.label));
+        lines.push(String::new());
+        if !route.path.is_empty() {
+            lines.push("The route path is:".to_string());
+            lines.push(String::new());
+            lines.push(format!("- {}", route.path));
+            lines.push(String::new());
+        }
+        if !route.reads.is_empty() {
+            lines.push("The route reads:".to_string());
+            lines.push(String::new());
+            for read in &route.reads {
+                lines.push(format!("- {read}"));
+            }
+            lines.push(String::new());
+        }
+        if !route.permissions.is_empty() {
+            lines.push("The route requires permission:".to_string());
+            lines.push(String::new());
+            for permission in &route.permissions {
+                lines.push(format!("- {permission}"));
+            }
+            lines.push(String::new());
+        }
+        if !route.traces.is_empty() {
+            lines.push("The route records trace:".to_string());
+            lines.push(String::new());
+            for trace in &route.traces {
+                lines.push(format!("- {trace}"));
             }
             lines.push(String::new());
         }
@@ -6947,6 +7096,7 @@ pub fn ail_document_from_core(core: &AilCore) -> AilDocument {
         system_components: BTreeMap::new(),
         functions: BTreeMap::new(),
         types: BTreeMap::new(),
+        routes: BTreeMap::new(),
         external_bindings: BTreeMap::new(),
         actions: BTreeMap::new(),
         failures: BTreeMap::new(),
@@ -7022,6 +7172,39 @@ pub fn ail_document_from_core(core: &AilCore) -> AilDocument {
             type_decl.variants.insert(variant.name.clone(), variant);
         }
         document.types.insert(type_decl.name.clone(), type_decl);
+    }
+
+    for route_node in core.graph.nodes.iter().filter(|node| node.kind == "Route") {
+        let route = AilRoute {
+            name: route_node.name.clone(),
+            label: route_node
+                .attributes
+                .get("label")
+                .cloned()
+                .unwrap_or_else(|| route_node.name.clone()),
+            path: route_node
+                .attributes
+                .get("path")
+                .cloned()
+                .unwrap_or_default(),
+            reads: outgoing_nodes(core, &node_by_id, route_node, "reads")
+                .into_iter()
+                .filter(|node| node.kind == "Value")
+                .map(|node| local_core_name(&node.name, &route_node.name))
+                .collect(),
+            permissions: outgoing_nodes(core, &node_by_id, route_node, "requires")
+                .into_iter()
+                .filter(|node| node.kind == "Permission")
+                .map(|node| node.name)
+                .collect(),
+            traces: outgoing_nodes(core, &node_by_id, route_node, "records_trace")
+                .into_iter()
+                .filter(|node| node.kind == "Trace")
+                .map(|node| node.name)
+                .collect(),
+            provenance: node_provenance(core, &route_node.id).unwrap_or_default(),
+        };
+        document.routes.insert(route.name.clone(), route);
     }
 
     for thing_node in core.graph.nodes.iter().filter(|node| node.kind == "Thing") {
@@ -10460,6 +10643,7 @@ fn namespace_ail_document(document: &AilDocument, alias: &str) -> AilDocument {
         system_components: BTreeMap::new(),
         functions: BTreeMap::new(),
         types: BTreeMap::new(),
+        routes: BTreeMap::new(),
         external_bindings: BTreeMap::new(),
         actions: BTreeMap::new(),
         failures: BTreeMap::new(),
@@ -10542,6 +10726,30 @@ fn namespace_ail_document(document: &AilDocument, alias: &str) -> AilDocument {
                 label: qualify_name(alias, &type_decl.label),
                 variants: namespace_variants(alias, &type_name, &type_decl.variants, &thing_names),
                 provenance: format!("type:{type_name}"),
+            },
+        );
+    }
+
+    for route in document.routes.values() {
+        let route_name = qualify_name(alias, &route.name);
+        namespaced.routes.insert(
+            route_name.clone(),
+            AilRoute {
+                name: route_name.clone(),
+                label: format!("{alias}.{}", route.label),
+                path: route.path.clone(),
+                reads: route
+                    .reads
+                    .iter()
+                    .map(|read| qualify_reference_text(read, alias, &thing_names))
+                    .collect(),
+                permissions: route.permissions.clone(),
+                traces: route
+                    .traces
+                    .iter()
+                    .map(|trace| qualify_name(alias, trace))
+                    .collect(),
+                provenance: format!("route:{route_name}"),
             },
         );
     }
@@ -12521,6 +12729,7 @@ fn check_trace_attachment(core: &AilCore) -> Vec<AilDiagnostic> {
                                 | "ExternalBinding"
                                 | "Failure"
                                 | "Function"
+                                | "Route"
                                 | "Tool"
                                 | "SystemComponent"
                         )
@@ -14333,6 +14542,21 @@ fn type_base_name(type_name: &str) -> &str {
         .map_or(type_name, |(base, _)| base)
 }
 
+fn parse_route_header(line: &str) -> Option<String> {
+    let label = line.strip_prefix("Route: ")?;
+    Some(label.trim().trim_end_matches('.').to_string())
+}
+
+fn parse_route_section(line: &str) -> Option<RouteSection> {
+    match line {
+        "The route path is:" => Some(RouteSection::Path),
+        "The route reads:" => Some(RouteSection::Reads),
+        "The route requires permission:" => Some(RouteSection::Permissions),
+        "The route records trace:" => Some(RouteSection::Traces),
+        _ => None,
+    }
+}
+
 fn parse_function_section(line: &str) -> Option<FunctionSection> {
     match line {
         "The function needs:" => Some(FunctionSection::Inputs),
@@ -14666,6 +14890,26 @@ fn parse_type_bullet(
             let variant = parse_variant_bullet(type_name, bullet, line_number)?;
             type_decl.variants.insert(variant.name.clone(), variant);
         }
+    }
+    Ok(())
+}
+
+fn parse_route_bullet(
+    document: &mut AilDocument,
+    route_name: &str,
+    section: RouteSection,
+    bullet: &str,
+    line_number: usize,
+) -> Result<(), String> {
+    let route = document
+        .routes
+        .get_mut(route_name)
+        .ok_or_else(|| format!("line {line_number}: unknown route {route_name}"))?;
+    match section {
+        RouteSection::Path => route.path = trim_sentence(bullet),
+        RouteSection::Reads => route.reads.push(trim_sentence(bullet)),
+        RouteSection::Permissions => route.permissions.push(trim_sentence(bullet)),
+        RouteSection::Traces => route.traces.push(trim_sentence(bullet)),
     }
     Ok(())
 }
@@ -15560,6 +15804,14 @@ enum TypeSection {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum RouteSection {
+    Path,
+    Reads,
+    Permissions,
+    Traces,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum SystemSection {
     Resources,
     Ownership,
@@ -15600,6 +15852,9 @@ fn is_structural_line(line: &str) -> bool {
         || parse_function_header(line).is_some()
         || parse_function_section(line).is_some()
         || parse_function_body_header(line).is_some()
+        || parse_type_header(line).is_some()
+        || parse_route_header(line).is_some()
+        || parse_route_section(line).is_some()
         || parse_system_component_header(line).is_some()
         || parse_system_section(line).is_some()
         || parse_action_header(line).is_some()

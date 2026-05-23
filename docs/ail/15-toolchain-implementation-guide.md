@@ -1017,6 +1017,8 @@ rules are preserved.
 19. Parse standard-library `Type:` declarations with finite variants into
     checked AIL-Core `Type`, `Variant`, and payload `Field` nodes, including
     the first `Option<T>` package fixture surface.
+20. Parse UI `Route:` declarations with path, reads, permission requirements,
+    and trace events into checked AIL-Core route graphs.
 
 ## Out Of Scope For The First Slice
 

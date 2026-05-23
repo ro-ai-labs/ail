@@ -46,6 +46,13 @@ Route nodes declare:
 - failure views
 - trace events
 
+Current implementation status: the bootstrap parser accepts `Route:`
+declarations with path, reads, permission requirements, and trace events, then
+lowers them into checked AIL-Core `Route`, `Value`, `Permission`, and `Trace`
+nodes with deterministic render/reparse. Components, forms, workflow blocks,
+responsive constraints, and accessibility diagnostics remain future UI-profile
+implementation slices.
+
 ## Views And Components
 
 View nodes render state from AIL-Core declarations. Component nodes are reusable

@@ -1081,6 +1081,65 @@ When Option.map runs:
 }
 
 #[test]
+fn ail_ui_route_surface_parses_into_core() {
+    let mut package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
+    package.metadata.profile = "UI".to_string();
+    let spec = r#"Route: Ticket detail.
+
+The route path is:
+
+- /tickets/:ticket_id
+
+The route reads:
+
+- Ticket.id
+- Ticket.status
+- Ticket.public_updates
+
+The route requires permission:
+
+- requester may read ticket
+
+The route records trace:
+
+- RouteTicketDetailViewed
+"#;
+
+    let document = parse_ail_spec_text(spec).unwrap();
+    let core = elaborate_ail_core(&package, &document);
+    assert_eq!(check_ail_core(&core), Vec::<String>::new());
+    let rendered_core = render_ail_core(&core);
+
+    assert!(
+        rendered_core
+            .contains("node Route TicketDetail [label=Ticket detail,path=/tickets/:ticket_id]")
+    );
+    assert!(rendered_core.contains("node Value TicketDetail.Ticket.id"));
+    assert!(rendered_core.contains("node Permission requester may read ticket"));
+    assert!(
+        rendered_core.contains("edge reads Route:TicketDetail -> Value:TicketDetail.Ticket.id")
+    );
+    assert!(
+        rendered_core
+            .contains("edge requires Route:TicketDetail -> Permission:requester may read ticket")
+    );
+    assert!(
+        rendered_core
+            .contains("edge records_trace Route:TicketDetail -> Trace:RouteTicketDetailViewed")
+    );
+
+    let rendered_spec = render_ail_spec(&document);
+    assert!(rendered_spec.contains("Route: Ticket detail."));
+    assert!(rendered_spec.contains("- /tickets/:ticket_id"));
+    assert!(rendered_spec.contains("- Ticket.public_updates"));
+    let reparsed = parse_ail_spec_text(&rendered_spec).unwrap();
+    assert_eq!(
+        render_ail_core(&elaborate_ail_core(&package, &reparsed)),
+        rendered_core
+    );
+}
+
+#[test]
 fn ail_system_profile_accepts_mutable_borrowed_resources() {
     let package = load_ail_package_dir(fixture("network_driver.ail")).unwrap();
     let spec = fs::read_to_string(format!(
