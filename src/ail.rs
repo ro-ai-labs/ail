@@ -6497,6 +6497,15 @@ pub fn verify_ail_bytecode(program: &AilBytecodeProgram) -> Vec<String> {
                     action.name, index, label
                 ));
             }
+            if instruction.opcode == "CALL_ACTION"
+                && let Some(target) = instruction.operands.get("target")
+                && !program.actions.contains_key(target)
+            {
+                diagnostics.push(format!(
+                    "AILBC005 action {} instruction {} calls unknown action {}",
+                    action.name, index, target
+                ));
+            }
         }
     }
     diagnostics
@@ -6530,6 +6539,7 @@ fn ail_bytecode_required_operands(opcode: &str) -> Option<&'static [&'static str
         "LABEL" => Some(&["name"]),
         "BRANCH_FIELD_EQUALS" => Some(&["key", "value", "label"]),
         "JUMP" => Some(&["label"]),
+        "CALL_ACTION" => Some(&["target"]),
         "REQUIRE_EXISTS" => Some(&["key", "rule", "failure"]),
         "REQUIRE_FIELD_NOT_EQUALS" => Some(&["key", "value", "rule", "failure"]),
         "REQUIRE_FIELD_IN" => Some(&["key", "values", "rule", "failure"]),
@@ -6781,6 +6791,20 @@ pub fn run_ail_bytecode_action(
     if !diagnostics.is_empty() {
         return Err(format!("invalid AIL bytecode:\n{}", diagnostics.join("\n")));
     }
+    run_verified_ail_bytecode_action(program, action_name, runtime_state, 0)
+}
+
+fn run_verified_ail_bytecode_action(
+    program: &AilBytecodeProgram,
+    action_name: &str,
+    runtime_state: BTreeMap<String, String>,
+    call_depth: usize,
+) -> Result<AilRunResult, String> {
+    if call_depth > 64 {
+        return Err(format!(
+            "AIL bytecode action call depth exceeded while calling {action_name}"
+        ));
+    }
     let action = program
         .actions
         .get(action_name)
@@ -6825,6 +6849,22 @@ pub fn run_ail_bytecode_action(
                     .get(label)
                     .ok_or_else(|| format!("unknown AIL bytecode label '{label}'"))?;
                 continue;
+            }
+            "CALL_ACTION" => {
+                let target = ail_bytecode_operand(instruction, "target");
+                trace.push(format!("call action {target}"));
+                let mut called =
+                    run_verified_ail_bytecode_action(program, target, final_state, call_depth + 1)?;
+                trace.append(&mut called.trace);
+                if called.status != "succeeded" {
+                    return Ok(AilRunResult {
+                        status: called.status,
+                        failure: called.failure,
+                        final_state: called.final_state,
+                        trace,
+                    });
+                }
+                final_state = called.final_state;
             }
             "REQUIRE_EXISTS" => {
                 let key = ail_bytecode_operand(instruction, "key");

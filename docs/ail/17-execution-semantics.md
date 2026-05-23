@@ -56,6 +56,13 @@ skipped, and transfers control to a verified label when it is taken. `JUMP`
 records the target label and transfers control unconditionally. The bytecode
 verifier rejects missing branch or jump labels before execution.
 
+The initial action-invocation subset includes `CALL_ACTION`. It records the
+target action, executes the target with the caller's current runtime state,
+merges the callee trace into the caller trace, and resumes the caller with the
+callee's final state when the callee succeeds. If the callee fails, the caller
+returns the same failure and merged trace. The bytecode verifier rejects calls
+to unknown actions before execution.
+
 ## Calls And Returns
 
 An `Action` may call another `Action`, a `Function`, an `AgentTool`, an

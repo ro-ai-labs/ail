@@ -2975,6 +2975,83 @@ fn ail_bytecode_vm_executes_branch_and_jump_control_flow() {
 }
 
 #[test]
+fn ail_bytecode_vm_executes_action_call_control_flow() {
+    let bytecode_text = r#"{
+  "kind": "AIL-Bytecode",
+  "package": "call-example",
+  "version": "0.1.0",
+  "profile": "Application",
+  "failures": [],
+  "actions": [
+    {
+      "action": "ResolveTicket",
+      "instructions": [
+        {"opcode":"ACTION_BEGIN","operands":{"action":"ResolveTicket"}},
+        {"opcode":"CALL_ACTION","operands":{"target":"CloseTicket"}},
+        {"opcode":"SET_FIELD","operands":{"key":"ticket.resolution","value":"Resolved","text":"resolution note"}},
+        {"opcode":"RETURN_SUCCESS","operands":{}}
+      ]
+    },
+    {
+      "action": "CloseTicket",
+      "instructions": [
+        {"opcode":"ACTION_BEGIN","operands":{"action":"CloseTicket"}},
+        {"opcode":"SET_FIELD","operands":{"key":"ticket.status","value":"Closed","text":"close ticket"}},
+        {"opcode":"EMIT_TRACE","operands":{"event":"TicketClosed"}},
+        {"opcode":"RETURN_SUCCESS","operands":{}}
+      ]
+    }
+  ]
+}"#;
+    let bytecode = parse_ail_bytecode(bytecode_text).unwrap();
+
+    assert_eq!(verify_ail_bytecode(&bytecode), Vec::<String>::new());
+
+    let run = run_ail_bytecode_action(
+        &bytecode,
+        "ResolveTicket",
+        BTreeMap::from([("ticket.status".to_string(), "Open".to_string())]),
+    )
+    .unwrap();
+    assert_eq!(run.status, "succeeded");
+    assert_eq!(
+        run.final_state.get("ticket.status").map(String::as_str),
+        Some("Closed")
+    );
+    assert_eq!(
+        run.final_state.get("ticket.resolution").map(String::as_str),
+        Some("Resolved")
+    );
+    assert!(run.trace.contains(&"call action CloseTicket".to_string()));
+    assert!(
+        run.trace
+            .contains(&"action CloseTicket started".to_string())
+    );
+    assert!(run.trace.contains(&"trace TicketClosed".to_string()));
+
+    let mut missing_target = bytecode.clone();
+    missing_target
+        .actions
+        .get_mut("ResolveTicket")
+        .unwrap()
+        .instructions
+        .iter_mut()
+        .find(|instruction| instruction.opcode == "CALL_ACTION")
+        .unwrap()
+        .operands
+        .insert("target".to_string(), "MissingAction".to_string());
+    let diagnostics = verify_ail_bytecode(&missing_target);
+    assert!(
+        diagnostics.iter().any(|diagnostic| {
+            diagnostic.contains("AILBC005")
+                && diagnostic.contains("ResolveTicket")
+                && diagnostic.contains("MissingAction")
+        }),
+        "{diagnostics:?}"
+    );
+}
+
+#[test]
 fn ail_toolchain_agent_package_lowers_to_verified_bytecode() {
     let package = load_ail_package_dir(fixture("ail_toolchain_agent.ail")).unwrap();
     let document = parse_ail_package_document(&package).unwrap();
