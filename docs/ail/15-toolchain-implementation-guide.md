@@ -129,8 +129,9 @@ features, imports, and conformance level. Imports use
 `imports: <path> as <Alias>` entries, or `imports: <path>@<version> as <Alias>`
 when the importing package requires an exact local package version. The loader
 resolves the path without the version suffix, checks the loaded package
-metadata version before checking, and rejects mismatches. The alias is a
-namespace boundary for the imported fragment before checking and rendering.
+metadata version before checking, and rejects mismatches. Import aliases must
+be unique within the manifest. The alias is a namespace boundary for the
+imported fragment before checking and rendering.
 
 Conformance checks must validate the entry spec, every accepted fixture, and
 every rejected fixture. Accepted fixtures pass only when they produce no checker

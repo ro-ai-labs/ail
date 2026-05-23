@@ -1455,6 +1455,56 @@ conformance: first-slice
 }
 
 #[test]
+fn ail_package_loader_rejects_duplicate_import_aliases() {
+    let unique_suffix = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let root = std::env::temp_dir().join(format!(
+        "ail-duplicate-import-aliases-{}-{unique_suffix}",
+        std::process::id()
+    ));
+    let shared_a = root.join("shared-a");
+    let shared_b = root.join("shared-b");
+    let app = root.join("app");
+    fs::create_dir_all(&shared_a).unwrap();
+    fs::create_dir_all(&shared_b).unwrap();
+    fs::create_dir_all(&app).unwrap();
+    for (package_root, package_name) in [(&shared_a, "shared-a"), (&shared_b, "shared-b")] {
+        fs::write(
+            package_root.join("ail-package.md"),
+            format!(
+                "name: {package_name}\nversion: 0.1.0\nprofile: Application\nentry: spec.ail-spec.md\nfeatures: things\nconformance: first-slice\n"
+            ),
+        )
+        .unwrap();
+        fs::write(
+            package_root.join("spec.ail-spec.md"),
+            "Application: Shared.\n",
+        )
+        .unwrap();
+    }
+    fs::write(app.join("spec.ail-spec.md"), "Application: App.\n").unwrap();
+    fs::write(
+        app.join("ail-package.md"),
+        r#"name: app
+version: 0.1.0
+profile: Application
+entry: spec.ail-spec.md
+features: imports
+imports: ../shared-a@0.1.0 as Shared, ../shared-b@0.1.0 as Shared
+conformance: first-slice
+"#,
+    )
+    .unwrap();
+
+    let error = load_ail_package_dir(&app).unwrap_err();
+    assert!(error.contains("duplicate import alias Shared"), "{error}");
+
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn ail_core_elaboration_preserves_provenance_for_behavior_bullets() {
     let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
     let document = parse_ail_spec_text(&package.spec_text).unwrap();

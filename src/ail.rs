@@ -8503,36 +8503,42 @@ fn parse_package_metadata(text: &str) -> Result<AilPackageMetadata, String> {
 }
 
 fn parse_import_specs(text: &str) -> Result<Vec<AilImportSpec>, String> {
-    text.split(',')
+    let mut aliases = BTreeSet::new();
+    let mut imports = Vec::new();
+    for entry in text
+        .split(',')
         .map(str::trim)
         .filter(|entry| !entry.is_empty())
-        .map(|entry| {
-            let Some((path, alias)) = entry.split_once(" as ") else {
-                return Err(format!("AIL import '{entry}' must use '<path> as <Alias>'"));
-            };
-            let path = path.trim();
-            let alias = alias.trim();
-            if path.is_empty() || alias.is_empty() {
-                return Err(format!("AIL import '{entry}' must use '<path> as <Alias>'"));
+    {
+        let Some((path, alias)) = entry.split_once(" as ") else {
+            return Err(format!("AIL import '{entry}' must use '<path> as <Alias>'"));
+        };
+        let path = path.trim();
+        let alias = alias.trim();
+        if path.is_empty() || alias.is_empty() {
+            return Err(format!("AIL import '{entry}' must use '<path> as <Alias>'"));
+        }
+        if !aliases.insert(alias.to_string()) {
+            return Err(format!("AIL import duplicate import alias {alias}"));
+        }
+        let (path, version) = match path.rsplit_once('@') {
+            Some((path, version)) if !path.is_empty() && !version.is_empty() => {
+                (path, Some(version.to_string()))
             }
-            let (path, version) = match path.rsplit_once('@') {
-                Some((path, version)) if !path.is_empty() && !version.is_empty() => {
-                    (path, Some(version.to_string()))
-                }
-                Some(_) => {
-                    return Err(format!(
-                        "AIL import '{entry}' must use '<path>@<version> as <Alias>'"
-                    ));
-                }
-                None => (path, None),
-            };
-            Ok(AilImportSpec {
-                path: path.to_string(),
-                version,
-                alias: alias.to_string(),
-            })
-        })
-        .collect()
+            Some(_) => {
+                return Err(format!(
+                    "AIL import '{entry}' must use '<path>@<version> as <Alias>'"
+                ));
+            }
+            None => (path, None),
+        };
+        imports.push(AilImportSpec {
+            path: path.to_string(),
+            version,
+            alias: alias.to_string(),
+        });
+    }
+    Ok(imports)
 }
 
 fn merge_ail_import(target: &mut AilDocument, imported: AilDocument) {
