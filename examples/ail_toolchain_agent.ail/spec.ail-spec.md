@@ -197,8 +197,10 @@ When the toolchain agent verifies the build artifact manifest:
 - the system reads the BuildRequest target artifact fingerprint
 - the system reads the BuildRequest compiler pass target artifact fingerprint
 - the system reads the BuildRequest prompt portability report fingerprint
+- the system reads the BuildRequest native bytecode report
+- the system reads the BuildRequest native bytecode report fingerprint
 - the system changes the BuildRequest artifact manifest verification report to Verified
-- the system guarantees the build manifest ties requirements, spec, AIL-Core, compiler-pass, agent, prompt-portability, bytecode, and native target artifacts with deterministic fingerprints and no Rust or host-language backend source
+- the system guarantees the build manifest ties requirements, spec, AIL-Core, compiler-pass, agent, prompt-portability, bytecode, native bytecode report, and native target artifacts with deterministic fingerprints and no Rust or host-language backend source
 - the system records a trace event named BuildManifestVerified
 
 Action: Verify compile manifest.

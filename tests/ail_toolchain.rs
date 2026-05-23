@@ -8268,11 +8268,43 @@ fn cli_ail_build_native_target_is_in_artifact_manifest() {
     let target_fingerprint =
         fs::read_to_string(artifact_dir.join("target.fingerprint.txt")).unwrap();
     assert_eq!(target_fingerprint.trim(), expected_target_fingerprint);
+    assert_eq!(&target_artifact[0..4], b"\x7fELF");
+
+    let native_bytecode_report =
+        fs::read_to_string(artifact_dir.join("native-bytecode-report.txt")).unwrap();
+    assert!(
+        native_bytecode_report.contains("AIL-Build-Native-Bytecode:"),
+        "{native_bytecode_report}"
+    );
+    assert!(
+        native_bytecode_report.contains("target linux-x86_64-elf"),
+        "{native_bytecode_report}"
+    );
+    assert!(
+        native_bytecode_report.contains(&format!(
+            "machine-bytecode target linux-x86_64-elf target.elf elf64-little-x86_64-executable {expected_target_fingerprint} bytes {}",
+            target_artifact.len()
+        )),
+        "{native_bytecode_report}"
+    );
+    let native_bytecode_report_fingerprint =
+        fs::read_to_string(artifact_dir.join("native-bytecode-report.fingerprint.txt")).unwrap();
+    assert_eq!(
+        native_bytecode_report_fingerprint.trim(),
+        fnv64_fingerprint(&native_bytecode_report)
+    );
 
     let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-build.txt")).unwrap();
     assert!(
         manifest.contains(&format!(
             "target linux-x86_64-elf target.elf {expected_target_fingerprint}"
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "native-bytecode native-bytecode-report.txt {}",
+            fnv64_fingerprint(&native_bytecode_report)
         )),
         "{manifest}"
     );
@@ -8503,6 +8535,15 @@ fn cli_ail_build_agent_verifies_native_target_artifact() {
     assert!(
         agent_trace[manifest_verify_index..]
             .contains("read buildrequest.target artifact fingerprint"),
+        "{agent_trace}"
+    );
+    assert!(
+        agent_trace[manifest_verify_index..].contains("read buildrequest.native bytecode report"),
+        "{agent_trace}"
+    );
+    assert!(
+        agent_trace[manifest_verify_index..]
+            .contains("read buildrequest.native bytecode report fingerprint"),
         "{agent_trace}"
     );
     let bytecode_verify_index = agent_trace

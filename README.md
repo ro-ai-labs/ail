@@ -218,15 +218,18 @@ artifact, bytecode fingerprint, target platform, native target artifact summary,
 and target fingerprint before recording `NativeTargetCompiled`,
 `VerifyTargetArtifact` reads the native target artifact summary and
 deterministic fingerprint when a native target is selected, and
-`VerifyBuildManifest` reads the artifact manifest and its
-deterministic fingerprint, plus the native target fingerprint when a native
-target is selected and the native compiler-pass executable fingerprint when a
-native build pass is present. When `ail-build --target linux-x86_64-elf` is used with
-`--artifact-dir`, it also writes `target.elf`, `target.fingerprint.txt`, and a
-manifest target entry for the native executable bytes. When the same native
+`VerifyBuildManifest` reads the artifact manifest and its deterministic
+fingerprint, plus the native target fingerprint, native bytecode report and
+fingerprint when a native target is selected, and the native compiler-pass
+executable fingerprint when a native build pass is present. When
+`ail-build --target linux-x86_64-elf` is used with `--artifact-dir`, it also
+writes `target.elf`, `target.fingerprint.txt`, `native-bytecode-report.txt`,
+`native-bytecode-report.fingerprint.txt`, and manifest entries for both the
+native executable bytes and the native-bytecode report. When the same native
 target build also uses `--agent`, it writes `agent-<ActionName>.elf` for each
-AIL-authored agent action and records each executable as an `agent-target`
-manifest entry with its deterministic byte fingerprint. When
+AIL-authored agent action, records each executable as an `agent-target` manifest
+entry with its deterministic byte fingerprint, and includes each agent ELF in
+the native-bytecode report. When
 `ail-build --pass` is used with `--artifact-dir`, it also writes `pass.ailbc.json`,
 `pass.fingerprint.txt`, and `pass-trace.txt`; when that build selects
 `--target linux-x86_64-elf`, it also writes `pass-<ActionName>.elf` for each

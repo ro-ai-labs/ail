@@ -609,8 +609,9 @@ deterministic target fingerprint, recording `NativeTargetCompiled` before
 `VerifyTargetArtifact` verifies the final machine-code boundary. When
 `--artifact-dir` is present, the agent also runs
 `VerifyBuildManifest` with the rendered build manifest, deterministic manifest
-fingerprint, native target fingerprint when a native target is present, and the
-native compiler-pass executable fingerprint when a native build pass is
+fingerprint, native target fingerprint when a native target is present, the
+native-bytecode report and fingerprint when native ELF artifacts are present,
+and the native compiler-pass executable fingerprint when a native build pass is
 present, so the whole requirements/spec/core/pass/agent/artifact boundary is
 represented in AIL bytecode. This keeps the
 developer-facing build coordinator in AIL bytecode
@@ -628,13 +629,17 @@ selects the native `linux-x86_64-elf` target, the artifact directory also
 includes `pass-<ActionName>.elf` for each AIL-authored compiler-pass action,
 and the manifest records each as a `compiler-pass-target` entry with the
 action executable fingerprint. When a native target is selected, the artifact
-directory also includes `target.elf` and `target.fingerprint.txt`, and
-`manifest.ail-build.txt` indexes the native target and fingerprint alongside
-the VM artifact. When a build agent is
-present, the artifact directory also includes
-`agent.ailbc.json`, `agent.fingerprint.txt`, and `agent-trace.txt` for the
-agent bytecode, deterministic agent fingerprint, and its requirements-capture,
-prompt-portability, application-compile, and bytecode-verification trace. When
+directory also includes `target.elf`, `target.fingerprint.txt`,
+`native-bytecode-report.txt`, and `native-bytecode-report.fingerprint.txt`.
+The native-bytecode report records the `target.elf` machine identity as
+ELF64 little-endian x86_64 executable bytes and includes native compiler-pass
+and agent executables when they are emitted. `manifest.ail-build.txt` indexes
+the native target, native-bytecode report, and fingerprints alongside the VM
+artifact. When a build agent is present, the artifact directory also includes
+`agent.ailbc.json`, `agent.fingerprint.txt`, and `agent-trace.txt` for the agent
+bytecode, deterministic agent fingerprint, and its requirements-capture,
+prompt-portability, application-compile, native-bytecode-report, and
+bytecode-verification trace. When
 that agent build also selects the native `linux-x86_64-elf` target, the
 artifact directory includes one `agent-<ActionName>.elf` executable per
 AIL-authored agent action, and the manifest records each as an `agent-target`

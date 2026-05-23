@@ -394,6 +394,7 @@ struct AilBuildArtifactSet<'a> {
     prompt_portability_report: Option<&'a str>,
     target_name: Option<&'a str>,
     target_executable: Option<&'a [u8]>,
+    native_bytecode_report_text: Option<&'a str>,
     pass_bytecode_text: Option<&'a str>,
     pass_bytecode_fingerprint: Option<&'a str>,
     pass_trace: Option<&'a [String]>,
@@ -553,6 +554,12 @@ fn render_ail_build_manifest(artifacts: &AilBuildArtifactSet<'_>) -> String {
         lines.push(format!(
             "target {target_name} target.elf {}",
             ail_artifact_fingerprint_bytes(target_executable)
+        ));
+    }
+    if let Some(native_bytecode_report_text) = artifacts.native_bytecode_report_text {
+        lines.push(format!(
+            "native-bytecode native-bytecode-report.txt {}",
+            ail_artifact_fingerprint(native_bytecode_report_text)
         ));
     }
     if let Some(pass_bytecode_text) = artifacts.pass_bytecode_text {
@@ -1298,6 +1305,27 @@ fn write_ail_build_artifacts(
         )
         .map_err(|error| {
             format!("failed to write ail-build target fingerprint artifact: {error}")
+        })?;
+    }
+    if let Some(native_bytecode_report_text) = artifacts.native_bytecode_report_text {
+        fs::write(
+            root.join("native-bytecode-report.txt"),
+            native_bytecode_report_text,
+        )
+        .map_err(|error| {
+            format!("failed to write ail-build native bytecode report artifact: {error}")
+        })?;
+        fs::write(
+            root.join("native-bytecode-report.fingerprint.txt"),
+            format!(
+                "{}\n",
+                ail_artifact_fingerprint(native_bytecode_report_text)
+            ),
+        )
+        .map_err(|error| {
+            format!(
+                "failed to write ail-build native bytecode report fingerprint artifact: {error}"
+            )
         })?;
     }
     if let Some(pass_bytecode_text) = artifacts.pass_bytecode_text {
@@ -2868,6 +2896,7 @@ fn run_ail_build_agent_verify_manifest(
     manifest_fingerprint: &str,
     compiler_pass_target_fingerprint: Option<&str>,
     prompt_portability_fingerprint: Option<&str>,
+    native_bytecode_report_text: Option<&str>,
 ) -> Result<(), String> {
     if !agent_run
         .bytecode
@@ -2897,6 +2926,16 @@ fn run_ail_build_agent_verify_manifest(
         verify_state.insert(
             "buildrequest.prompt portability report fingerprint".to_string(),
             prompt_portability_fingerprint.to_string(),
+        );
+    }
+    if let Some(native_bytecode_report_text) = native_bytecode_report_text {
+        verify_state.insert(
+            "buildrequest.native bytecode report".to_string(),
+            native_bytecode_report_text.to_string(),
+        );
+        verify_state.insert(
+            "buildrequest.native bytecode report fingerprint".to_string(),
+            ail_artifact_fingerprint(native_bytecode_report_text),
         );
     }
     let verify_run =
@@ -3380,6 +3419,46 @@ fn render_ail_compile_bundle_native_bytecode_report(
     ];
     for (role, artifacts) in [
         ("target", target_executables),
+        ("agent-target", agent_artifacts),
+    ] {
+        for artifact in artifacts {
+            if artifact.target_name != target_name {
+                return Err(format!(
+                    "native bytecode artifact {} targets {}, expected {target_name}",
+                    artifact.file_name, artifact.target_name
+                ));
+            }
+            lines.push(format!(
+                "machine-bytecode {role} {} {} {} {} bytes {}",
+                artifact.target_name,
+                artifact.file_name,
+                native_machine_bytecode_identity(&artifact.bytes)?,
+                ail_artifact_fingerprint_bytes(&artifact.bytes),
+                artifact.bytes.len()
+            ));
+        }
+    }
+    Ok(format!("{}\n", lines.join("\n")))
+}
+
+fn render_ail_build_native_bytecode_report(
+    target_name: &str,
+    target_executable: &[u8],
+    compiler_pass_artifacts: &[AilNativeArtifact],
+    agent_artifacts: &[AilNativeArtifact],
+) -> Result<String, String> {
+    let mut lines = vec![
+        "AIL-Build-Native-Bytecode:".to_string(),
+        format!("target {target_name}"),
+        format!(
+            "machine-bytecode target {target_name} target.elf {} {} bytes {}",
+            native_machine_bytecode_identity(target_executable)?,
+            ail_artifact_fingerprint_bytes(target_executable),
+            target_executable.len()
+        ),
+    ];
+    for (role, artifacts) in [
+        ("compiler-pass-target", compiler_pass_artifacts),
         ("agent-target", agent_artifacts),
     ] {
         for artifact in artifacts {
@@ -4042,6 +4121,17 @@ fn run_ail_build_from_core(
         } else {
             Vec::new()
         };
+        let native_bytecode_report_text =
+            if let Some((target, _, executable)) = native_build.as_ref() {
+                Some(render_ail_build_native_bytecode_report(
+                    target,
+                    executable,
+                    pass_native_artifacts.as_slice(),
+                    agent_native_artifacts.as_slice(),
+                )?)
+            } else {
+                None
+            };
         if let Some(agent_run) = agent_run.as_mut() {
             let manifest_text = render_ail_build_manifest(&AilBuildArtifactSet {
                 requirements: requirements_artifact,
@@ -4054,6 +4144,7 @@ fn run_ail_build_from_core(
                 target_executable: native_build
                     .as_ref()
                     .map(|(_, _, executable)| executable.as_slice()),
+                native_bytecode_report_text: native_bytecode_report_text.as_deref(),
                 pass_bytecode_text: pass_bytecode_artifact.as_deref(),
                 pass_bytecode_fingerprint: pass_bytecode_fingerprint_artifact.as_deref(),
                 pass_trace: pass_trace_artifact.as_deref(),
@@ -4074,6 +4165,7 @@ fn run_ail_build_from_core(
                 &manifest_fingerprint,
                 pass_target_fingerprint.as_deref(),
                 prompt_portability_fingerprint.as_deref(),
+                native_bytecode_report_text.as_deref(),
             )?;
         }
         write_ail_build_artifacts(
@@ -4089,6 +4181,7 @@ fn run_ail_build_from_core(
                 target_executable: native_build
                     .as_ref()
                     .map(|(_, _, executable)| executable.as_slice()),
+                native_bytecode_report_text: native_bytecode_report_text.as_deref(),
                 pass_bytecode_text: pass_bytecode_artifact.as_deref(),
                 pass_bytecode_fingerprint: pass_bytecode_fingerprint_artifact.as_deref(),
                 pass_trace: pass_trace_artifact.as_deref(),
