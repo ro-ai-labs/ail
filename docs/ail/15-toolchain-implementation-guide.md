@@ -789,7 +789,10 @@ requirements capture scopes the coverage instruction to the package profile:
 Application prompts ask for application domain objects and actions, AgentTool
 prompts ask for tool capability and inputs/outputs, Compiler prompts ask for
 compiler-pass transformations, and System prompts ask for components,
-resources, and effects. During requirements-grounded spec drafting, the checker
+resources, and effects. With `--interview-file <path>`, prompt-driven
+`ail-build` includes saved `AIL-Interview:` answers in the requirements-capture
+prompt only; the later spec-draft prompt is grounded in the checked
+AIL-Requirements artifact. During requirements-grounded spec drafting, the checker
 also compares permission-bearing requirement bullets against the corresponding
 action in the accepted spec; if a requirement says an action needs permission,
 approval, authorization, access control, a role, or a forbidden-state guard, the

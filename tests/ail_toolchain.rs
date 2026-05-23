@@ -11743,6 +11743,100 @@ fn cli_ail_build_uses_llm_candidate_and_outputs_verified_bytecode() {
 }
 
 #[test]
+fn cli_ail_build_includes_saved_interview_answers_in_requirements_prompt() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("support_ticket.ail");
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let interview_path = std::env::temp_dir().join(format!(
+        "ail-build-interview-answers-{}.ail-interview.md",
+        std::process::id()
+    ));
+    fs::write(
+        &interview_path,
+        concat!(
+            "AIL-Interview:\n",
+            "- Q: Which user roles may close tickets?\n",
+            "  A: SupportAgent and SupportManager.\n",
+            "- Q: Which trace events must be emitted?\n",
+            "  A: TicketClosed and TicketNotFound.\n"
+        ),
+    )
+    .unwrap();
+    let requirements = concat!(
+        "AIL-Requirements:\n",
+        "- The application manages support tickets.\n",
+        "- A ticket has fields id, title, status, and secret internal notes.\n",
+        "- The CloseTicket action requires ticket id input and ticket status not to be Closed.\n",
+        "- SupportAgent and SupportManager may close tickets.\n",
+        "- Failure NotFound happens when ticket id is missing and records TicketNotFound.\n",
+        "- The action guarantees closed tickets do not appear in the open queue.\n",
+        "- The action records trace event TicketClosed.\n"
+    );
+    let requirements_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(requirements)
+    );
+    let response_spec = fs::read_to_string(format!("{package}/spec.ail-spec.md")).unwrap();
+    let spec_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(&format!(
+            "<think>ignore this</think>\n```ail\n{response_spec}\n```"
+        ))
+    );
+    let server = serve_chat_responses(listener, vec![requirements_body, spec_body]);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-build",
+            &package,
+            "--prompt",
+            "Build an AIL support ticket bytecode artifact after interview",
+            "--interview-file",
+            interview_path.to_str().unwrap(),
+            "--llm-endpoint",
+            &format!("http://127.0.0.1:{}/v1/chat/completions", addr.port()),
+        ])
+        .output()
+        .unwrap();
+
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let request_bodies = server.join().unwrap();
+    assert_eq!(request_bodies.len(), 2);
+    assert!(
+        request_bodies[0].contains("SAVED INTERVIEW ANSWERS:"),
+        "{}",
+        request_bodies[0]
+    );
+    assert!(
+        request_bodies[0].contains("SupportAgent and SupportManager"),
+        "{}",
+        request_bodies[0]
+    );
+    assert!(
+        request_bodies[0].contains("TicketClosed and TicketNotFound"),
+        "{}",
+        request_bodies[0]
+    );
+    assert!(
+        !request_bodies[1].contains("SAVED INTERVIEW ANSWERS:"),
+        "{}",
+        request_bodies[1]
+    );
+    assert!(request_bodies[1].contains("DRAFT REQUIREMENTS:"));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let bytecode = parse_ail_bytecode(&stdout).unwrap();
+    assert_eq!(verify_ail_bytecode(&bytecode), Vec::<String>::new());
+
+    fs::remove_file(interview_path).unwrap();
+}
+
+#[test]
 fn cli_ail_build_repairs_rejected_candidate_before_lowering() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");

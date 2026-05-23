@@ -6573,6 +6573,10 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
                     .ail_prompt
                     .as_deref()
                     .ok_or_else(|| "ail-build requires --prompt <text>".to_string())?;
+                let requirements_prompt = prompt_with_saved_interview_answers(
+                    prompt,
+                    cli_options.ail_interview_file.as_deref(),
+                )?;
                 let mut agent_start = if let Some(agent_path) =
                     cli_options.ail_build_agent.as_deref()
                     && cli_options.ail_requirements_file.is_none()
@@ -6580,7 +6584,7 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
                     Some(run_ail_build_agent_capture(
                         agent_path,
                         &package.metadata.name,
-                        prompt,
+                        &requirements_prompt,
                     )?)
                 } else {
                     None
@@ -6598,7 +6602,7 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
                     } else {
                         draft_checked_ail_requirements_for_package(
                             &package,
-                            prompt,
+                            &requirements_prompt,
                             endpoint,
                             agent_requirements_context.as_deref(),
                         )?
@@ -6606,7 +6610,7 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
                 let capture_prompt = cli_options
                     .ail_requirements_file
                     .is_none()
-                    .then(|| prompt.to_string());
+                    .then(|| requirements_prompt.clone());
                 if !requirements_diagnostics.is_empty() {
                     println!("ail-build requirements diagnostics:");
                     for diagnostic in requirements_diagnostics {
@@ -6907,7 +6911,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
             continue;
         }
         if arg == "--interview-file" {
-            if command != "ail-requirements" {
+            if !matches!(command, "ail-requirements" | "ail-build") {
                 return Err(usage());
             }
             let Some(path) = args.get(index + 1) else {
