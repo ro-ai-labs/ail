@@ -1014,6 +1014,9 @@ rules are preserved.
 18. Parse C interop `ExternalBinding` declarations for imported functions into
     checked AIL-Core, including pointer ownership annotations, status-code
     failure maps, required capabilities, and foreign-call traces.
+19. Parse standard-library `Type:` declarations with finite variants into
+    checked AIL-Core `Type`, `Variant`, and payload `Field` nodes, including
+    the first `Option<T>` package fixture surface.
 
 ## Out Of Scope For The First Slice
 

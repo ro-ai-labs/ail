@@ -1025,6 +1025,62 @@ compress2 records trace event named ForeignCallCompress2
 }
 
 #[test]
+fn ail_standard_library_option_type_parses_into_core() {
+    let mut package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
+    package.metadata.name = "ail.std.collections".to_string();
+    package.metadata.profile = "Meta".to_string();
+    let spec = r#"Package: ail.std.collections.
+
+Type: Option<T>.
+
+Option has variants:
+
+- Some(value: T)
+- None
+
+Function: Option.map.
+
+When Option.map runs:
+
+- if the option is Some(value), the function calls mapper with value
+- the function returns Some(mapped value)
+- if the option is None, the function returns None
+- the function records a trace event named OptionMapEvaluated
+"#;
+
+    let document = parse_ail_spec_text(spec).unwrap();
+    let core = elaborate_ail_core(&package, &document);
+    assert_eq!(check_ail_core(&core), Vec::<String>::new());
+    let rendered_core = render_ail_core(&core);
+
+    assert!(rendered_core.contains("node Type Option<T>"));
+    assert!(rendered_core.contains("node Variant Option<T>.Some [label=Some]"));
+    assert!(rendered_core.contains("node Variant Option<T>.None [label=None]"));
+    assert!(rendered_core.contains("node Field Option<T>.Some.value : T"));
+    assert!(rendered_core.contains("edge contains Type:Option<T> -> Variant:Option<T>.Some"));
+    assert!(
+        rendered_core
+            .contains("edge has_field Variant:Option<T>.Some -> Field:Option<T>.Some.value")
+    );
+    assert!(rendered_core.contains("node Function Option.map"));
+    assert!(
+        rendered_core
+            .contains("edge records_trace Function:Option.map -> Trace:OptionMapEvaluated")
+    );
+
+    let rendered_spec = render_ail_spec(&document);
+    assert!(rendered_spec.contains("Type: Option<T>."));
+    assert!(rendered_spec.contains("Option has variants:"));
+    assert!(rendered_spec.contains("- Some(value: T)"));
+    assert!(rendered_spec.contains("- None"));
+    let reparsed = parse_ail_spec_text(&rendered_spec).unwrap();
+    assert_eq!(
+        render_ail_core(&elaborate_ail_core(&package, &reparsed)),
+        rendered_core
+    );
+}
+
+#[test]
 fn ail_system_profile_accepts_mutable_borrowed_resources() {
     let package = load_ail_package_dir(fixture("network_driver.ail")).unwrap();
     let spec = fs::read_to_string(format!(

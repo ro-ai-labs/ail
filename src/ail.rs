@@ -62,6 +62,7 @@ pub struct AilDocument {
     pub compiler_passes: BTreeMap<String, AilCompilerPass>,
     pub system_components: BTreeMap<String, AilSystemComponent>,
     pub functions: BTreeMap<String, AilFunction>,
+    pub types: BTreeMap<String, AilType>,
     pub external_bindings: BTreeMap<String, AilExternalBinding>,
     pub actions: BTreeMap<String, AilAction>,
     pub failures: BTreeMap<String, AilFailure>,
@@ -164,6 +165,29 @@ pub struct AilFunctionValue {
 pub struct AilFunctionCall {
     pub text: String,
     pub target: String,
+    pub provenance: String,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct AilType {
+    pub name: String,
+    pub label: String,
+    pub variants: BTreeMap<String, AilVariant>,
+    pub provenance: String,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct AilVariant {
+    pub name: String,
+    pub label: String,
+    pub fields: BTreeMap<String, AilVariantField>,
+    pub provenance: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AilVariantField {
+    pub name: String,
+    pub type_name: String,
     pub provenance: String,
 }
 
@@ -1486,6 +1510,7 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
         compiler_passes: BTreeMap::new(),
         system_components: BTreeMap::new(),
         functions: BTreeMap::new(),
+        types: BTreeMap::new(),
         external_bindings: BTreeMap::new(),
         actions: BTreeMap::new(),
         failures: BTreeMap::new(),
@@ -1499,6 +1524,8 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
     let mut current_system_section: Option<SystemSection> = None;
     let mut current_function: Option<String> = None;
     let mut current_function_section: Option<FunctionSection> = None;
+    let mut current_type: Option<String> = None;
+    let mut current_type_section: Option<TypeSection> = None;
     let mut current_c_library: Option<String> = None;
     let mut current_external_binding: Option<String> = None;
     let mut current_external_binding_section: Option<ExternalBindingSection> = None;
@@ -1649,6 +1676,56 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
                 binding.traces.push(trace);
             }
             current_external_binding = Some(binding_name);
+            current_external_binding_section = None;
+            current_thing = None;
+            current_tool = None;
+            current_tool_section = None;
+            current_compiler_pass = None;
+            current_compiler_pass_section = None;
+            current_system_component = None;
+            current_system_section = None;
+            current_function = None;
+            current_function_section = None;
+            current_action = None;
+            current_failure = None;
+            current_list = None;
+            action_header_waiting_for_when = false;
+            continue;
+        }
+        if let Some(label) = parse_type_header(line) {
+            let name = label.clone();
+            document
+                .types
+                .entry(name.clone())
+                .or_insert_with(|| AilType {
+                    name: name.clone(),
+                    label,
+                    provenance: format!("type:{name}"),
+                    ..AilType::default()
+                });
+            current_type = Some(name);
+            current_type_section = None;
+            current_external_binding = None;
+            current_external_binding_section = None;
+            current_thing = None;
+            current_tool = None;
+            current_tool_section = None;
+            current_compiler_pass = None;
+            current_compiler_pass_section = None;
+            current_system_component = None;
+            current_system_section = None;
+            current_function = None;
+            current_function_section = None;
+            current_action = None;
+            current_failure = None;
+            current_list = None;
+            action_header_waiting_for_when = false;
+            continue;
+        }
+        if let Some(type_name) = parse_type_variants_header(&document, line) {
+            current_type = Some(type_name);
+            current_type_section = Some(TypeSection::Variants);
+            current_external_binding = None;
             current_external_binding_section = None;
             current_thing = None;
             current_tool = None;
@@ -2012,6 +2089,10 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
                 parse_function_bullet(&mut document, function_name, section, bullet, line_number)?;
                 continue;
             }
+            if let (Some(type_name), Some(section)) = (&current_type, current_type_section) {
+                parse_type_bullet(&mut document, type_name, section, bullet, line_number)?;
+                continue;
+            }
             if let (Some(binding_name), Some(section)) =
                 (&current_external_binding, current_external_binding_section)
             {
@@ -2051,10 +2132,11 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
         && document.compiler_passes.is_empty()
         && document.system_components.is_empty()
         && document.functions.is_empty()
+        && document.types.is_empty()
         && document.external_bindings.is_empty()
     {
         return Err(
-            "AIL-Spec missing application, tool, compiler pass, system component, function, or external binding declaration"
+            "AIL-Spec missing application, tool, compiler pass, system component, function, type, or external binding declaration"
                 .to_string(),
         );
     }
@@ -2119,6 +2201,36 @@ pub fn elaborate_ail_core(package: &AilPackage, document: &AilDocument) -> AilCo
             graph.add_edge("contains", application, &view_node, BTreeMap::new());
         }
         attach_provenance(&mut graph, &view_node, format!("application.view:{view}"));
+    }
+
+    for type_decl in document.types.values() {
+        let type_node = graph.add_node(
+            "Type",
+            &type_decl.name,
+            None,
+            attr(&[("label", &type_decl.label)]),
+        );
+        attach_provenance(&mut graph, &type_node, &type_decl.provenance);
+        for variant in type_decl.variants.values() {
+            let variant_node = graph.add_node(
+                "Variant",
+                format!("{}.{}", type_decl.name, variant.name),
+                None,
+                attr(&[("label", &variant.label)]),
+            );
+            graph.add_edge("contains", &type_node, &variant_node, BTreeMap::new());
+            attach_provenance(&mut graph, &variant_node, &variant.provenance);
+            for field in variant.fields.values() {
+                let field_node = graph.add_node(
+                    "Field",
+                    format!("{}.{}.{}", type_decl.name, variant.name, field.name),
+                    Some(field.type_name.clone()),
+                    BTreeMap::new(),
+                );
+                graph.add_edge("has_field", &variant_node, &field_node, BTreeMap::new());
+                attach_provenance(&mut graph, &field_node, &field.provenance);
+            }
+        }
     }
 
     for function in document.functions.values() {
@@ -3291,8 +3403,10 @@ fn is_known_core_node_kind(kind: &str) -> bool {
             | "Thing"
             | "Tool"
             | "Trace"
+            | "Type"
             | "User"
             | "Value"
+            | "Variant"
             | "View"
     )
 }
@@ -4418,6 +4532,21 @@ pub fn render_ail_spec(document: &AilDocument) -> String {
             lines.push(format!("- {view}"));
         }
         lines.push(String::new());
+    }
+    for type_decl in document.types.values() {
+        lines.push(format!("Type: {}.", type_decl.label));
+        lines.push(String::new());
+        if !type_decl.variants.is_empty() {
+            lines.push(format!(
+                "{} has variants:",
+                type_base_name(&type_decl.label)
+            ));
+            lines.push(String::new());
+            for variant in type_decl.variants.values() {
+                lines.push(format!("- {}", render_variant_spec(variant)));
+            }
+            lines.push(String::new());
+        }
     }
     for function in document.functions.values() {
         lines.push(format!("Function: {}.", function.label));
@@ -6817,6 +6946,7 @@ pub fn ail_document_from_core(core: &AilCore) -> AilDocument {
         compiler_passes: BTreeMap::new(),
         system_components: BTreeMap::new(),
         functions: BTreeMap::new(),
+        types: BTreeMap::new(),
         external_bindings: BTreeMap::new(),
         actions: BTreeMap::new(),
         failures: BTreeMap::new(),
@@ -6847,6 +6977,51 @@ pub fn ail_document_from_core(core: &AilCore) -> AilDocument {
                 .map(|node| node.name)
                 .collect(),
         };
+    }
+
+    for type_node in core.graph.nodes.iter().filter(|node| node.kind == "Type") {
+        let mut type_decl = AilType {
+            name: type_node.name.clone(),
+            label: type_node
+                .attributes
+                .get("label")
+                .cloned()
+                .unwrap_or_else(|| type_node.name.clone()),
+            provenance: node_provenance(core, &type_node.id).unwrap_or_default(),
+            ..AilType::default()
+        };
+        for variant_node in outgoing_nodes(core, &node_by_id, type_node, "contains")
+            .into_iter()
+            .filter(|node| node.kind == "Variant")
+        {
+            let variant_name = local_core_name(&variant_node.name, &type_decl.name);
+            let mut variant = AilVariant {
+                name: variant_name.clone(),
+                label: variant_node
+                    .attributes
+                    .get("label")
+                    .cloned()
+                    .unwrap_or_else(|| variant_name.clone()),
+                provenance: node_provenance(core, &variant_node.id).unwrap_or_default(),
+                ..AilVariant::default()
+            };
+            for field_node in outgoing_nodes(core, &node_by_id, &variant_node, "has_field")
+                .into_iter()
+                .filter(|node| node.kind == "Field")
+            {
+                let field_name = local_core_name(&field_node.name, &variant_node.name);
+                variant.fields.insert(
+                    field_name.clone(),
+                    AilVariantField {
+                        name: field_name,
+                        type_name: field_node.type_name.clone().unwrap_or_default(),
+                        provenance: node_provenance(core, &field_node.id).unwrap_or_default(),
+                    },
+                );
+            }
+            type_decl.variants.insert(variant.name.clone(), variant);
+        }
+        document.types.insert(type_decl.name.clone(), type_decl);
     }
 
     for thing_node in core.graph.nodes.iter().filter(|node| node.kind == "Thing") {
@@ -10284,6 +10459,7 @@ fn namespace_ail_document(document: &AilDocument, alias: &str) -> AilDocument {
         compiler_passes: BTreeMap::new(),
         system_components: BTreeMap::new(),
         functions: BTreeMap::new(),
+        types: BTreeMap::new(),
         external_bindings: BTreeMap::new(),
         actions: BTreeMap::new(),
         failures: BTreeMap::new(),
@@ -10353,6 +10529,19 @@ fn namespace_ail_document(document: &AilDocument, alias: &str) -> AilDocument {
                     .map(|text| qualify_reference_text(text, alias, &thing_names))
                     .collect(),
                 provenance: format!("action:{action_name}"),
+            },
+        );
+    }
+
+    for type_decl in document.types.values() {
+        let type_name = qualify_name(alias, &type_decl.name);
+        namespaced.types.insert(
+            type_name.clone(),
+            AilType {
+                name: type_name.clone(),
+                label: qualify_name(alias, &type_decl.label),
+                variants: namespace_variants(alias, &type_name, &type_decl.variants, &thing_names),
+                provenance: format!("type:{type_name}"),
             },
         );
     }
@@ -10873,6 +11062,53 @@ fn namespace_function_values(
                     name: value.name.clone(),
                     type_name: qualify_type_name(&value.type_name, alias, thing_names),
                     provenance: format!("function:{function_name}.value:{}", value.name),
+                },
+            )
+        })
+        .collect()
+}
+
+fn namespace_variants(
+    alias: &str,
+    type_name: &str,
+    variants: &BTreeMap<String, AilVariant>,
+    thing_names: &[String],
+) -> BTreeMap<String, AilVariant> {
+    variants
+        .values()
+        .map(|variant| {
+            (
+                variant.name.clone(),
+                AilVariant {
+                    name: variant.name.clone(),
+                    label: variant.label.clone(),
+                    fields: namespace_variant_fields(alias, type_name, variant, thing_names),
+                    provenance: format!("type:{type_name}.variant:{}", variant.name),
+                },
+            )
+        })
+        .collect()
+}
+
+fn namespace_variant_fields(
+    alias: &str,
+    type_name: &str,
+    variant: &AilVariant,
+    thing_names: &[String],
+) -> BTreeMap<String, AilVariantField> {
+    variant
+        .fields
+        .values()
+        .map(|field| {
+            (
+                field.name.clone(),
+                AilVariantField {
+                    name: field.name.clone(),
+                    type_name: qualify_type_name(&field.type_name, alias, thing_names),
+                    provenance: format!(
+                        "type:{type_name}.variant:{}.field:{}",
+                        variant.name, field.name
+                    ),
                 },
             )
         })
@@ -12045,7 +12281,7 @@ fn check_field_types(core: &AilCore) -> Vec<AilDiagnostic> {
         .graph
         .nodes
         .iter()
-        .filter(|node| node.kind == "Thing")
+        .filter(|node| matches!(node.kind.as_str(), "Thing" | "Type"))
         .map(|node| node.name.as_str())
         .collect::<BTreeSet<_>>();
     core.graph
@@ -14017,6 +14253,14 @@ fn is_known_ail_type(type_name: &str, declared_types: &BTreeSet<&str>) -> bool {
     if declared_types.contains(type_name) {
         return true;
     }
+    if type_name.len() == 1
+        && type_name
+            .chars()
+            .next()
+            .is_some_and(|ch| ch.is_ascii_uppercase())
+    {
+        return true;
+    }
     if let Some(values) = generic_inner(type_name, "State") {
         return values
             .split(',')
@@ -14067,6 +14311,26 @@ fn parse_compiler_pass_header(line: &str) -> Option<String> {
 fn parse_function_header(line: &str) -> Option<String> {
     let label = line.strip_prefix("Function: ")?;
     Some(label.trim().trim_end_matches('.').to_string())
+}
+
+fn parse_type_header(line: &str) -> Option<String> {
+    let label = line.strip_prefix("Type: ")?;
+    Some(label.trim().trim_end_matches('.').to_string())
+}
+
+fn parse_type_variants_header(document: &AilDocument, line: &str) -> Option<String> {
+    let subject = line.strip_suffix(" has variants:")?;
+    document
+        .types
+        .values()
+        .find(|type_decl| type_base_name(&type_decl.name) == subject.trim())
+        .map(|type_decl| type_decl.name.clone())
+}
+
+fn type_base_name(type_name: &str) -> &str {
+    type_name
+        .split_once('<')
+        .map_or(type_name, |(base, _)| base)
 }
 
 fn parse_function_section(line: &str) -> Option<FunctionSection> {
@@ -14386,6 +14650,64 @@ fn parse_function_bullet(
     Ok(())
 }
 
+fn parse_type_bullet(
+    document: &mut AilDocument,
+    type_name: &str,
+    section: TypeSection,
+    bullet: &str,
+    line_number: usize,
+) -> Result<(), String> {
+    let type_decl = document
+        .types
+        .get_mut(type_name)
+        .ok_or_else(|| format!("line {line_number}: unknown type {type_name}"))?;
+    match section {
+        TypeSection::Variants => {
+            let variant = parse_variant_bullet(type_name, bullet, line_number)?;
+            type_decl.variants.insert(variant.name.clone(), variant);
+        }
+    }
+    Ok(())
+}
+
+fn parse_variant_bullet(
+    type_name: &str,
+    bullet: &str,
+    line_number: usize,
+) -> Result<AilVariant, String> {
+    let bullet = trim_sentence(bullet);
+    let (label, fields) = if let Some((label, payloads)) = bullet.split_once('(') {
+        let payloads = payloads
+            .strip_suffix(')')
+            .ok_or_else(|| format!("line {line_number}: malformed variant payload list"))?;
+        let fields = payloads
+            .split(',')
+            .map(str::trim)
+            .filter(|payload| !payload.is_empty())
+            .map(|payload| {
+                let (name, field_type_name) = parse_typed_bullet(payload, line_number)?;
+                Ok((
+                    name.clone(),
+                    AilVariantField {
+                        name: name.clone(),
+                        type_name: normalize_type_name(&field_type_name),
+                        provenance: format!("type:{type_name}.variant:{label}.field:{name}"),
+                    },
+                ))
+            })
+            .collect::<Result<BTreeMap<_, _>, String>>()?;
+        (label.trim().to_string(), fields)
+    } else {
+        (bullet, BTreeMap::new())
+    };
+    Ok(AilVariant {
+        name: label.clone(),
+        label: label.clone(),
+        fields,
+        provenance: format!("type:{type_name}.variant:{label}"),
+    })
+}
+
 fn parse_function_body_bullet(function: &mut AilFunction, bullet: &str) {
     if let Some(text) = bullet.strip_prefix("if ") {
         let text = trim_sentence(text);
@@ -14493,6 +14815,19 @@ fn render_external_binding_value_type(value: &AilExternalBindingValue) -> String
     } else {
         format!("{} {}", value.type_name, value.ownership)
     }
+}
+
+fn render_variant_spec(variant: &AilVariant) -> String {
+    if variant.fields.is_empty() {
+        return variant.label.clone();
+    }
+    let fields = variant
+        .fields
+        .values()
+        .map(|field| format!("{}: {}", field.name, field.type_name))
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!("{}({fields})", variant.label)
 }
 
 fn external_binding_value_attributes(value: &AilExternalBindingValue) -> BTreeMap<String, String> {
@@ -15217,6 +15552,11 @@ enum ExternalBindingSection {
     StatusMaps,
     Capabilities,
     Traces,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TypeSection {
+    Variants,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

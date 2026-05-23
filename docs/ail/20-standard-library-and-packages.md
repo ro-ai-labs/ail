@@ -177,6 +177,14 @@ When Option.map runs:
 - the function records a trace event named OptionMapEvaluated
 ```
 
+Current implementation status: the bootstrap parser accepts `Type: Option<T>.`
+and variant bullets such as `Some(value: T)` and `None`, lowers them into
+checked `Type`, `Variant`, and variant payload `Field` nodes, and preserves the
+standard-library function surface through deterministic render/reparse. The
+checker recognizes single-letter generic parameters in this context. Exhaustive
+`Match` checking and executable `Option.map` evaluation remain later standard
+library semantics.
+
 Checker obligations:
 
 - `Match` over `Option<T>` must cover `Some` and `None`
