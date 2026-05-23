@@ -675,6 +675,7 @@ pub fn apply_ail_core_patch_text(core: &AilCore, patch_text: &str) -> Result<Ail
             .ok_or_else(|| "AIL-Core patch op must be an object".to_string())?;
         match required_json_string_for(op, "op", "AIL-Core patch op")? {
             "add_node" => apply_ail_core_patch_add_node(&mut patched, op)?,
+            "remove_node" => apply_ail_core_patch_remove_node(&mut patched, op)?,
             "add_edge" => apply_ail_core_patch_add_edge(&mut patched, op)?,
             "remove_edge" => apply_ail_core_patch_remove_edge(&mut patched, op)?,
             "replace_edge_attributes" => {
@@ -716,6 +717,25 @@ fn apply_ail_core_patch_add_node(
     for provenance in optional_json_string_array(op, "provenance", "AIL-Core patch add_node")? {
         attach_provenance(&mut core.graph, &node, provenance);
     }
+    Ok(())
+}
+
+fn apply_ail_core_patch_remove_node(
+    core: &mut AilCore,
+    op: &BTreeMap<String, AilJsonValue>,
+) -> Result<(), String> {
+    let target_label = required_json_string_for(op, "target", "AIL-Core patch remove_node")?;
+    let target = find_core_patch_node(core, target_label).ok_or_else(|| {
+        format!("AIL-Core patch remove_node references unknown target '{target_label}'")
+    })?;
+    let incident_edges = core_patch_incident_edge_descriptions(core, &target.id);
+    if !incident_edges.is_empty() {
+        return Err(format!(
+            "AIL-Core patch remove_node refuses to remove {target_label} because it has incident edges; remove edges first: {}",
+            incident_edges.join(", ")
+        ));
+    }
+    core.graph.nodes.retain(|node| node.id != target.id);
     Ok(())
 }
 
@@ -807,6 +827,29 @@ fn apply_ail_core_patch_replace_edge_attributes(
     }
     core.graph.edges[edge_index] = Edge::new(kind.to_string(), &source, &target, attributes);
     Ok(())
+}
+
+fn core_patch_incident_edge_descriptions(core: &AilCore, target_id: &str) -> Vec<String> {
+    let node_by_id = graph_node_by_id(core);
+    let mut descriptions = core
+        .graph
+        .edges
+        .iter()
+        .filter(|edge| edge.source == target_id || edge.target == target_id)
+        .map(|edge| {
+            let source = node_by_id
+                .get(&edge.source)
+                .map(core_node_label)
+                .unwrap_or_else(|| edge.source.clone());
+            let target = node_by_id
+                .get(&edge.target)
+                .map(core_node_label)
+                .unwrap_or_else(|| edge.target.clone());
+            format!("{} {} -> {}", edge.kind, source, target)
+        })
+        .collect::<Vec<_>>();
+    descriptions.sort();
+    descriptions
 }
 
 fn apply_ail_core_patch_replace_node_attributes(

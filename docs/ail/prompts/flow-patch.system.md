@@ -26,6 +26,8 @@ Use the common prompt envelope with `artifact_kind` set to `AIL-Core Patch`.
 
 - Do not edit opaque text.
 - Do not create patch operations outside `ail-core.patch.v0`.
+- Do not remove a node until the visual edit has removed or reviewed every
+  incident edge; detached-node removal is explicit.
 - Do not bypass review for high-risk changes.
 
 ## Provenance And Handoff

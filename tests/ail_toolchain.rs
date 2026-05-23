@@ -1723,6 +1723,69 @@ fn ail_core_patch_remove_edge_rejects_missing_edge() {
 }
 
 #[test]
+fn ail_core_patch_removes_detached_node_by_core_label() {
+    let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
+    let document = parse_ail_spec_text(&package.spec_text).unwrap();
+    let core = elaborate_ail_core(&package, &document);
+    let core_hash = ail_core_hash(&core);
+    let patch = format!(
+        r#"{{
+  "schema": "ail-core.patch.v0",
+  "base_hash": "{core_hash}",
+  "source_view": "ActionCard:CloseTicket",
+  "ops": [
+    {{
+      "op": "add_node",
+      "kind": "Rule",
+      "name": "temporary review note"
+    }},
+    {{
+      "op": "remove_node",
+      "target": "Rule:temporary review note"
+    }}
+  ]
+}}"#
+    );
+    let patched = apply_ail_core_patch_text(&core, &patch).unwrap();
+    let rendered = render_ail_core(&patched);
+
+    assert_eq!(check_ail_core(&patched), Vec::<String>::new());
+    assert!(
+        !rendered.contains("node Rule temporary review note"),
+        "{rendered}"
+    );
+}
+
+#[test]
+fn ail_core_patch_remove_node_rejects_incident_edges() {
+    let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
+    let document = parse_ail_spec_text(&package.spec_text).unwrap();
+    let core = elaborate_ail_core(&package, &document);
+    let core_hash = ail_core_hash(&core);
+    let patch = format!(
+        r#"{{
+  "schema": "ail-core.patch.v0",
+  "base_hash": "{core_hash}",
+  "source_view": "ActionCard:CloseTicket",
+  "ops": [
+    {{
+      "op": "remove_node",
+      "target": "Rule:the ticket to exist"
+    }}
+  ]
+}}"#
+    );
+    let error = apply_ail_core_patch_text(&core, &patch).unwrap_err();
+
+    assert!(
+        error.contains(
+            "AIL-Core patch remove_node refuses to remove Rule:the ticket to exist because it has incident edges"
+        ),
+        "{error}"
+    );
+}
+
+#[test]
 fn ail_core_patch_replaces_edge_attributes_by_core_labels() {
     let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
     let document = parse_ail_spec_text(&package.spec_text).unwrap();

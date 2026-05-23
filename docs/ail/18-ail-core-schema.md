@@ -224,6 +224,10 @@ AIL-Flow, AIL-Agent, and canonical spec edits use the same graph patch schema:
       "provenance": ["flow:action-card:close-ticket"]
     },
     {
+      "op": "remove_node",
+      "target": "Rule:TemporaryReviewNote"
+    },
+    {
       "op": "add_edge",
       "kind": "requires",
       "source": "Action:CloseTicket",
@@ -264,6 +268,7 @@ AIL-Flow, AIL-Agent, and canonical spec edits use the same graph patch schema:
 Patch operations:
 
 - `add_node`
+- `remove_node`
 - `add_edge`
 - `remove_edge`
 - `replace_edge_attributes`
@@ -283,12 +288,14 @@ relationships expose checked edge references as `edgeRefs`; each entry carries
 the patch `kind`, `source`, `target`, display `targetName`, and edge
 `attributes` for the current graph edge. `add_node` writes node provenance as
 `Provenance` nodes plus
-`has_provenance` edges. `add_edge` stores edge provenance as an edge attribute.
-`remove_edge` resolves the same source and target labels, deletes the existing
-edge of that kind, and rejects missing edges instead of treating them as
-no-ops. `replace_edge_attributes` merges the listed string attributes into the
-resolved edge, rewrites the stable edge id, and rejects missing edges instead
-of treating them as no-ops.
+`has_provenance` edges. `remove_node` resolves a checked node label, deletes
+only detached nodes, and rejects nodes with incident edges so the patch must
+remove relationships explicitly first. `add_edge` stores edge provenance as an
+edge attribute. `remove_edge` resolves the same source and target labels,
+deletes the existing edge of that kind, and rejects missing edges instead of
+treating them as no-ops. `replace_edge_attributes` merges the listed string
+attributes into the resolved edge, rewrites the stable edge id, and rejects
+missing edges instead of treating them as no-ops.
 `replace_node_attributes` merges the listed string attributes into the target
 node, may replace the node `type`, rewrites the target node's stable id when
 attributes change, and rewires existing edges to the updated node before the
@@ -297,7 +304,6 @@ graph passes the AIL-Core checker.
 
 Reserved target operations:
 
-- `remove_node`
 - `move_ordered_child`
 - `declare_provenance`
 
