@@ -399,6 +399,7 @@ struct AilBuildArtifactSet<'a> {
     target_name: Option<&'a str>,
     target_executable: Option<&'a [u8]>,
     native_bytecode_report_text: Option<&'a str>,
+    dependency_report_text: Option<&'a str>,
     pass_bytecode_text: Option<&'a str>,
     pass_bytecode_fingerprint: Option<&'a str>,
     pass_trace: Option<&'a [String]>,
@@ -543,6 +544,7 @@ struct AilBuildAgentManifestVerification<'a> {
     compiler_pass_target_fingerprint: Option<&'a str>,
     prompt_portability_fingerprint: Option<&'a str>,
     native_bytecode_report_text: Option<&'a str>,
+    dependency_report_text: Option<&'a str>,
 }
 
 fn render_ail_prompt_portability_report(
@@ -624,6 +626,12 @@ fn render_ail_build_manifest(artifacts: &AilBuildArtifactSet<'_>) -> String {
         lines.push(format!(
             "native-bytecode native-bytecode-report.txt {}",
             ail_artifact_fingerprint(native_bytecode_report_text)
+        ));
+    }
+    if let Some(dependency_report_text) = artifacts.dependency_report_text {
+        lines.push(format!(
+            "dependencies dependency-report.txt {}",
+            ail_artifact_fingerprint(dependency_report_text)
         ));
     }
     if let Some(pass_bytecode_text) = artifacts.pass_bytecode_text {
@@ -1663,6 +1671,17 @@ fn write_ail_build_artifacts(
             format!(
                 "failed to write ail-build native bytecode report fingerprint artifact: {error}"
             )
+        })?;
+    }
+    if let Some(dependency_report_text) = artifacts.dependency_report_text {
+        fs::write(root.join("dependency-report.txt"), dependency_report_text)
+            .map_err(|error| format!("failed to write ail-build dependency report: {error}"))?;
+        fs::write(
+            root.join("dependency-report.fingerprint.txt"),
+            format!("{}\n", ail_artifact_fingerprint(dependency_report_text)),
+        )
+        .map_err(|error| {
+            format!("failed to write ail-build dependency report fingerprint: {error}")
         })?;
     }
     if let Some(pass_bytecode_text) = artifacts.pass_bytecode_text {
@@ -3492,6 +3511,16 @@ fn run_ail_build_agent_verify_manifest(
             ail_artifact_fingerprint(native_bytecode_report_text),
         );
     }
+    if let Some(dependency_report_text) = request.dependency_report_text {
+        verify_state.insert(
+            "buildrequest.dependency report".to_string(),
+            dependency_report_text.to_string(),
+        );
+        verify_state.insert(
+            "buildrequest.dependency report fingerprint".to_string(),
+            ail_artifact_fingerprint(dependency_report_text),
+        );
+    }
     let verify_run =
         run_ail_bytecode_action(&agent_run.bytecode, "VerifyBuildManifest", verify_state)?;
     if verify_run.status != "succeeded" {
@@ -4656,6 +4685,44 @@ fn render_ail_build_native_bytecode_report(
     Ok(format!("{}\n", lines.join("\n")))
 }
 
+fn render_ail_build_dependency_report(
+    target_name: &str,
+    target_executable: &[u8],
+    compiler_pass_artifacts: &[AilNativeArtifact],
+    agent_artifacts: &[AilNativeArtifact],
+) -> Result<String, String> {
+    let mut lines = vec![
+        "AIL-Build-Dependency-Report:".to_string(),
+        format!("target {target_name}"),
+        "host-language-runtime none".to_string(),
+        "dynamic-linker none".to_string(),
+        "shared-libraries none".to_string(),
+        "library-dependencies none".to_string(),
+        "linker-invocation none".to_string(),
+        "runtime-abi linux-syscall-argv-key-value".to_string(),
+        format!(
+            "machine-bytecode-dependency target.elf {}",
+            native_elf_dependency_identity(target_executable)?
+        ),
+    ];
+    for artifacts in [compiler_pass_artifacts, agent_artifacts] {
+        for artifact in artifacts {
+            if artifact.target_name != target_name {
+                return Err(format!(
+                    "dependency artifact {} targets {}, expected {target_name}",
+                    artifact.file_name, artifact.target_name
+                ));
+            }
+            lines.push(format!(
+                "machine-bytecode-dependency {} {}",
+                artifact.file_name,
+                native_elf_dependency_identity(&artifact.bytes)?
+            ));
+        }
+    }
+    Ok(format!("{}\n", lines.join("\n")))
+}
+
 fn native_machine_bytecode_identity(bytes: &[u8]) -> Result<&'static str, String> {
     if bytes.len() < 20 {
         return Err("native bytecode artifact is too small to contain an ELF header".to_string());
@@ -5462,6 +5529,16 @@ fn run_ail_build_from_core(
             } else {
                 None
             };
+        let dependency_report_text = if let Some((target, _, executable)) = native_build.as_ref() {
+            Some(render_ail_build_dependency_report(
+                target,
+                executable,
+                pass_native_artifacts.as_slice(),
+                agent_native_artifacts.as_slice(),
+            )?)
+        } else {
+            None
+        };
         if let Some(agent_run) = agent_run.as_mut() {
             let manifest_text = render_ail_build_manifest(&AilBuildArtifactSet {
                 source_manifest_text: source_artifacts
@@ -5478,6 +5555,7 @@ fn run_ail_build_from_core(
                     .as_ref()
                     .map(|(_, _, executable)| executable.as_slice()),
                 native_bytecode_report_text: native_bytecode_report_text.as_deref(),
+                dependency_report_text: dependency_report_text.as_deref(),
                 pass_bytecode_text: pass_bytecode_artifact.as_deref(),
                 pass_bytecode_fingerprint: pass_bytecode_fingerprint_artifact.as_deref(),
                 pass_trace: pass_trace_artifact.as_deref(),
@@ -5513,6 +5591,7 @@ fn run_ail_build_from_core(
                     compiler_pass_target_fingerprint: pass_target_fingerprint.as_deref(),
                     prompt_portability_fingerprint: prompt_portability_fingerprint.as_deref(),
                     native_bytecode_report_text: native_bytecode_report_text.as_deref(),
+                    dependency_report_text: dependency_report_text.as_deref(),
                 },
             )?;
         }
@@ -5533,6 +5612,7 @@ fn run_ail_build_from_core(
                     .as_ref()
                     .map(|(_, _, executable)| executable.as_slice()),
                 native_bytecode_report_text: native_bytecode_report_text.as_deref(),
+                dependency_report_text: dependency_report_text.as_deref(),
                 pass_bytecode_text: pass_bytecode_artifact.as_deref(),
                 pass_bytecode_fingerprint: pass_bytecode_fingerprint_artifact.as_deref(),
                 pass_trace: pass_trace_artifact.as_deref(),

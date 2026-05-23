@@ -677,16 +677,21 @@ includes `pass-<ActionName>.elf` for each AIL-authored compiler-pass action,
 and the manifest records each as a `compiler-pass-target` entry with the
 action executable fingerprint. When a native target is selected, the artifact
 directory also includes `target.elf`, `target.fingerprint.txt`,
-`native-bytecode-report.txt`, and `native-bytecode-report.fingerprint.txt`.
+`native-bytecode-report.txt`, `native-bytecode-report.fingerprint.txt`,
+`dependency-report.txt`, and `dependency-report.fingerprint.txt`.
 The native-bytecode report records the `target.elf` machine identity as
 ELF64 little-endian x86_64 executable bytes and includes native compiler-pass
-and agent executables when they are emitted. `manifest.ail-build.txt` indexes
-the native target, native-bytecode report, and fingerprints alongside the VM
-artifact. When a build agent is present, the artifact directory also includes
+and agent executables when they are emitted. The dependency report records
+`host-language-runtime none`, `dynamic-linker none`, `shared-libraries none`,
+`library-dependencies none`, and `linker-invocation none` for the target,
+native compiler-pass, and native verifier-agent ELF artifacts.
+`manifest.ail-build.txt` indexes the native target, native-bytecode report,
+dependency report, and fingerprints alongside the VM artifact. When a build
+agent is present, the artifact directory also includes
 `agent.ailbc.json`, `agent.fingerprint.txt`, and `agent-trace.txt` for the agent
 bytecode, deterministic agent fingerprint, and its requirements-capture,
-prompt-portability, application-compile, native-bytecode-report, and
-bytecode-verification trace. When
+prompt-portability, application-compile, native-bytecode-report,
+dependency-report, and bytecode-verification trace. When
 that agent build also selects the native `linux-x86_64-elf` target, the
 artifact directory includes one `agent-<ActionName>.elf` executable per
 AIL-authored agent action, and the manifest records each as an `agent-target`
@@ -695,7 +700,8 @@ artifact directory also includes `manifest.ail-build.txt`, a deterministic
 index tying the source package fingerprint, emitted requirements fingerprint,
 accepted spec fingerprint, checked core, compiler-pass bytecode and trace,
 agent bytecode and trace, final bytecode fingerprint, and native target
-fingerprint into one review artifact, plus
+fingerprint into one review artifact, plus native-bytecode and dependency
+report fingerprints when a native target is selected, plus
 `manifest.fingerprint.txt` for that manifest's
 deterministic fingerprint. This
 lets the developer audit the

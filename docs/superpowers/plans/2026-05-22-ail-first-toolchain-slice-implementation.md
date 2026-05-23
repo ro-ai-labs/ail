@@ -7169,6 +7169,63 @@ verifier-agent ELF has no host-language runtime, dynamic linker,
 shared-library, library, or linker dependency before the AIL-authored compile
 bundle manifest verifier accepts the bundle.
 
+### Task 160: Native Build Records Dependency Evidence
+
+**Files:**
+- Modify: `examples/ail_toolchain_agent.ail/spec.ail-spec.md`
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing native build dependency assertions**
+
+Extend `ail-build --target linux-x86_64-elf --artifact-dir` coverage to
+require `dependency-report.txt`, `dependency-report.fingerprint.txt`, and a
+fingerprinted `dependencies` entry in `manifest.ail-build.txt`. Require the
+report to cover the emitted `target.elf`, native compiler-pass ELFs, and native
+AIL verifier-agent ELFs when present. Extend the AIL-authored
+`VerifyBuildManifest` flow to read `BuildRequest dependency report` and
+`BuildRequest dependency report fingerprint`.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_native_target_is_in_artifact_manifest -- --nocapture
+cargo test --test ail_toolchain cli_ail_build_with_pass_writes_native_pass_artifact -- --nocapture
+cargo test --test ail_toolchain cli_ail_build_agent_verifies_native_target_artifact -- --nocapture
+```
+
+Expected: native build artifact tests fail because the dependency report is not
+written yet, and the AIL-authored build manifest verifier lacks dependency
+report state.
+
+- [x] **Step 3: Generate the native build dependency report**
+
+Render a deterministic `AIL-Build-Dependency-Report`, fingerprint it, include
+it in `manifest.ail-build.txt`, write its sidecar fingerprint, and pass the
+report plus fingerprint into the AIL-authored `VerifyBuildManifest` state. The
+report inspects the emitted `target.elf`, native compiler-pass ELFs, and native
+verifier-agent ELF artifacts for standalone Linux syscall ELF identity with no
+dynamic linker, shared libraries, host-language runtime, or linker invocation.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_native_target_is_in_artifact_manifest -- --nocapture
+cargo test --test ail_toolchain cli_ail_build_with_pass_writes_native_pass_artifact -- --nocapture
+cargo test --test ail_toolchain cli_ail_build_agent_verifies_native_target_artifact -- --nocapture
+```
+
+Expected: native `ail-build` artifacts prove the emitted target,
+compiler-pass, and verifier-agent ELFs have no host-language runtime, dynamic
+linker, shared-library, library, or linker dependency before the AIL-authored
+build manifest verifier accepts the manifest.
+
 ### Task 18: Declared Failure Trace Coverage Diagnostics
 
 **Files:**

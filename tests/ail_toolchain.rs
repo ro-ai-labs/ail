@@ -4389,6 +4389,8 @@ fn cli_ail_compile_writes_all_action_native_bundle() {
             "buildrequest.target artifact fingerprint=fnv64:target",
             "buildrequest.compiler pass target artifact fingerprint=fnv64:pass-target",
             "buildrequest.prompt portability report fingerprint=fnv64:prompt-portability",
+            "buildrequest.dependency report=ok",
+            "buildrequest.dependency report fingerprint=fnv64:dependencies",
             "buildrequest.artifact manifest=ok",
             "buildrequest.artifact manifest fingerprint=fnv64:manifest",
         ])
@@ -8884,6 +8886,46 @@ fn cli_ail_build_native_target_is_in_artifact_manifest() {
         native_bytecode_report_fingerprint.trim(),
         fnv64_fingerprint(&native_bytecode_report)
     );
+    let dependency_report = fs::read_to_string(artifact_dir.join("dependency-report.txt")).unwrap();
+    assert!(
+        dependency_report.contains("AIL-Build-Dependency-Report:"),
+        "{dependency_report}"
+    );
+    assert!(
+        dependency_report.contains("target linux-x86_64-elf"),
+        "{dependency_report}"
+    );
+    assert!(
+        dependency_report.contains("host-language-runtime none"),
+        "{dependency_report}"
+    );
+    assert!(
+        dependency_report.contains("dynamic-linker none"),
+        "{dependency_report}"
+    );
+    assert!(
+        dependency_report.contains("shared-libraries none"),
+        "{dependency_report}"
+    );
+    assert!(
+        dependency_report.contains("library-dependencies none"),
+        "{dependency_report}"
+    );
+    assert!(
+        dependency_report.contains("linker-invocation none"),
+        "{dependency_report}"
+    );
+    assert!(
+        dependency_report
+            .contains("machine-bytecode-dependency target.elf standalone-linux-syscall-elf"),
+        "{dependency_report}"
+    );
+    let dependency_report_fingerprint =
+        fs::read_to_string(artifact_dir.join("dependency-report.fingerprint.txt")).unwrap();
+    assert_eq!(
+        dependency_report_fingerprint.trim(),
+        fnv64_fingerprint(&dependency_report)
+    );
 
     let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-build.txt")).unwrap();
     assert!(
@@ -8896,6 +8938,13 @@ fn cli_ail_build_native_target_is_in_artifact_manifest() {
         manifest.contains(&format!(
             "native-bytecode native-bytecode-report.txt {}",
             fnv64_fingerprint(&native_bytecode_report)
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "dependencies dependency-report.txt {}",
+            fnv64_fingerprint(&dependency_report)
         )),
         "{manifest}"
     );
@@ -8970,6 +9019,20 @@ fn cli_ail_build_with_pass_writes_native_pass_artifact() {
     assert!(
         manifest.contains(&format!(
             "compiler-pass-target linux-x86_64-elf pass-InferReadPermissions.elf {expected_pass_native_fingerprint}"
+        )),
+        "{manifest}"
+    );
+    let dependency_report = fs::read_to_string(artifact_dir.join("dependency-report.txt")).unwrap();
+    assert!(
+        dependency_report.contains(
+            "machine-bytecode-dependency pass-InferReadPermissions.elf standalone-linux-syscall-elf"
+        ),
+        "{dependency_report}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "dependencies dependency-report.txt {}",
+            fnv64_fingerprint(&dependency_report)
         )),
         "{manifest}"
     );
@@ -9137,6 +9200,15 @@ fn cli_ail_build_agent_verifies_native_target_artifact() {
             .contains("read buildrequest.native bytecode report fingerprint"),
         "{agent_trace}"
     );
+    assert!(
+        agent_trace[manifest_verify_index..].contains("read buildrequest.dependency report"),
+        "{agent_trace}"
+    );
+    assert!(
+        agent_trace[manifest_verify_index..]
+            .contains("read buildrequest.dependency report fingerprint"),
+        "{agent_trace}"
+    );
     let bytecode_verify_index = agent_trace
         .find("action VerifyBytecodeArtifact started")
         .unwrap_or_else(|| panic!("{agent_trace}"));
@@ -9178,6 +9250,20 @@ fn cli_ail_build_agent_verifies_native_target_artifact() {
     assert!(
         manifest.contains(&format!(
             "agent-target linux-x86_64-elf agent-CompileApplication.elf {expected_agent_native_fingerprint}"
+        )),
+        "{manifest}"
+    );
+    let dependency_report = fs::read_to_string(artifact_dir.join("dependency-report.txt")).unwrap();
+    assert!(
+        dependency_report.contains(
+            "machine-bytecode-dependency agent-CompileApplication.elf standalone-linux-syscall-elf"
+        ),
+        "{dependency_report}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "dependencies dependency-report.txt {}",
+            fnv64_fingerprint(&dependency_report)
         )),
         "{manifest}"
     );
