@@ -7114,6 +7114,61 @@ verifier-agent ELFs have no host-language runtime, dynamic linker,
 shared-library, library, or linker dependency before the AIL-authored compile
 manifest verifier accepts the manifest.
 
+### Task 159: All-Action Native Compile Records Dependency Evidence
+
+**Files:**
+- Modify: `examples/ail_toolchain_agent.ail/spec.ail-spec.md`
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing all-action dependency assertions**
+
+Extend direct `ail-compile --all-actions --target linux-x86_64-elf
+--artifact-dir` bundle coverage to require `dependency-report.txt`,
+`dependency-report.fingerprint.txt`, and a fingerprinted `dependencies` entry
+in `manifest.ail-compile.txt`. Extend the AIL-authored
+`VerifyCompileBundleManifest` flow to read `BuildRequest dependency report`
+and `BuildRequest dependency report fingerprint`.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_compile_writes_all_action_native_bundle -- --nocapture
+cargo test --test ail_toolchain cli_ail_compile_agent_verifies_all_action_native_bundle -- --nocapture
+```
+
+Expected: the first test fails because the all-action bundle does not yet write
+the dependency report, and the second test fails because the AIL-authored
+bundle verifier does not receive dependency report state.
+
+- [x] **Step 3: Generate the all-action dependency report**
+
+Render a deterministic `AIL-Compile-Bundle-Dependency-Report`, fingerprint it,
+include it in `manifest.ail-compile.txt`, write its sidecar fingerprint, and
+pass the report plus fingerprint into the AIL-authored
+`VerifyCompileBundleManifest` state. The report inspects every generated
+`target-<Action>.elf` and native verifier-agent ELF artifact for standalone
+Linux syscall ELF identity with no dynamic linker, shared libraries,
+host-language runtime, or linker invocation.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_compile_writes_all_action_native_bundle -- --nocapture
+cargo test --test ail_toolchain cli_ail_compile_agent_verifies_all_action_native_bundle -- --nocapture
+```
+
+Expected: all-action native compile bundles prove every emitted target and
+verifier-agent ELF has no host-language runtime, dynamic linker,
+shared-library, library, or linker dependency before the AIL-authored compile
+bundle manifest verifier accepts the bundle.
+
 ### Task 18: Declared Failure Trace Coverage Diagnostics
 
 **Files:**

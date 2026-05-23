@@ -102,33 +102,37 @@ without loading the source package. Adding `--artifact-dir <dir>` to
 `ail-compile` writes the source package snapshot and fingerprint for
 package-backed compiles, `artifact.ailbc.json`, `artifact.fingerprint.txt`,
 `target.elf`, `target.fingerprint.txt`, `native-bytecode-report.txt`,
-`native-bytecode-report.fingerprint.txt`, `manifest.ail-compile.txt`, and
+`native-bytecode-report.fingerprint.txt`, `dependency-report.txt`,
+`dependency-report.fingerprint.txt`, `manifest.ail-compile.txt`, and
 `manifest.fingerprint.txt`; compiles from checked AIL-Core also include
 `checked.ail-core.txt` and `checked.ail-core.fingerprint.txt`. The
-native-bytecode report records the target as
-ELF64 x86_64 executable bytes. With `--agent <agent-package-or-bytecode>`,
+native-bytecode report records the target as ELF64 x86_64 executable bytes.
+The dependency report proves the emitted target and native verifier ELFs use
+the standalone Linux syscall ABI with no dynamic linker, shared libraries,
+host-language runtime, or linker invocation. With
+`--agent <agent-package-or-bytecode>`,
 `ail-compile --artifact-dir` also runs the AIL-authored
 `VerifyCompileManifest` action, writes `agent.ailbc.json`,
 `agent.fingerprint.txt`, `agent-trace.txt`, and `agent-<ActionName>.elf`, and
 records each native agent executable as an `agent-target` manifest entry; the
 AIL verifier reads the source package fingerprint when present and the
 native-bytecode and dependency report fingerprints before accepting the
-manifest. The dependency report proves the emitted target and native verifier
-ELFs use the standalone Linux syscall ABI with no dynamic linker, shared
-libraries, host-language runtime, or linker invocation.
+manifest.
 Use `ail-compile <package-or-bytecode> --all-actions --target
 linux-x86_64-elf --artifact-dir <dir>` to compile every action in an
 AIL-authored package or saved bytecode artifact into native `target-<Action>.elf`
 executables and record each executable as a fingerprinted `target` entry in
 `manifest.ail-compile.txt`. Package-backed bundles also include the source
 package snapshot and fingerprint. The bundle writes
-`native-bytecode-report.txt` and its fingerprint, proving each emitted target is
-ELF64 x86_64 executable bytes. Adding `--agent <agent-package-or-bytecode>`
-runs the AIL-authored `VerifyCompileBundleManifest` action over the all-action
-bundle manifest and writes `agent.ailbc.json`, `agent.fingerprint.txt`,
+`native-bytecode-report.txt`, `dependency-report.txt`, and their fingerprints,
+proving each emitted target is ELF64 x86_64 executable bytes with no dynamic
+linker, shared libraries, host-language runtime, library dependencies, or
+linker invocation. Adding `--agent <agent-package-or-bytecode>` runs the
+AIL-authored `VerifyCompileBundleManifest` action over the all-action bundle
+manifest and writes `agent.ailbc.json`, `agent.fingerprint.txt`,
 `agent-trace.txt`, and native `agent-<ActionName>.elf` verifier executables;
 the verifier reads the source package fingerprint when present and the
-native-bytecode report fingerprint before accepting the bundle.
+native-bytecode and dependency report fingerprints before accepting the bundle.
 `ail-bootstrap <toolchain-agent-package> --pass
 <compiler-pass-package> --agent <toolchain-agent-package>
 --target linux-x86_64-elf --artifact-dir <dir>` writes a deterministic

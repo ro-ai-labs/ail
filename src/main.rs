@@ -431,6 +431,7 @@ struct AilCompileBundleArtifactSet<'a> {
     target_name: &'a str,
     target_executables: &'a [AilNativeArtifact],
     native_bytecode_report_text: &'a str,
+    dependency_report_text: &'a str,
     agent_bytecode_text: Option<&'a str>,
     agent_trace: Option<&'a [String]>,
     agent_native_executables: &'a [AilNativeArtifact],
@@ -757,6 +758,10 @@ fn render_ail_compile_bundle_manifest(artifacts: &AilCompileBundleArtifactSet<'_
     lines.push(format!(
         "native-bytecode native-bytecode-report.txt {}",
         ail_artifact_fingerprint(artifacts.native_bytecode_report_text)
+    ));
+    lines.push(format!(
+        "dependencies dependency-report.txt {}",
+        ail_artifact_fingerprint(artifacts.dependency_report_text)
     ));
     if let Some(agent_bytecode_text) = artifacts.agent_bytecode_text {
         lines.push(format!(
@@ -1156,6 +1161,21 @@ fn write_ail_compile_bundle_artifacts(
     )
     .map_err(|error| {
         format!("failed to write ail-compile bundle native bytecode report fingerprint: {error}")
+    })?;
+    fs::write(
+        root.join("dependency-report.txt"),
+        artifacts.dependency_report_text,
+    )
+    .map_err(|error| format!("failed to write ail-compile bundle dependency report: {error}"))?;
+    fs::write(
+        root.join("dependency-report.fingerprint.txt"),
+        format!(
+            "{}\n",
+            ail_artifact_fingerprint(artifacts.dependency_report_text)
+        ),
+    )
+    .map_err(|error| {
+        format!("failed to write ail-compile bundle dependency report fingerprint: {error}")
     })?;
     if let Some(agent_bytecode_text) = artifacts.agent_bytecode_text {
         fs::write(root.join("agent.ailbc.json"), agent_bytecode_text).map_err(|error| {
@@ -3624,6 +3644,7 @@ struct AilCompileBundleAgentManifestRequest<'a> {
     target: &'a str,
     target_executables: &'a [AilNativeArtifact],
     native_bytecode_report_text: &'a str,
+    dependency_report_text: &'a str,
     manifest_text: &'a str,
     manifest_fingerprint: &'a str,
 }
@@ -3640,6 +3661,7 @@ fn run_ail_compile_bundle_agent_verify_manifest(
         target,
         target_executables,
         native_bytecode_report_text,
+        dependency_report_text,
         manifest_text,
         manifest_fingerprint,
     } = request;
@@ -3691,6 +3713,14 @@ fn run_ail_compile_bundle_agent_verify_manifest(
         (
             "buildrequest.native bytecode report fingerprint".to_string(),
             ail_artifact_fingerprint(native_bytecode_report_text),
+        ),
+        (
+            "buildrequest.dependency report".to_string(),
+            dependency_report_text.to_string(),
+        ),
+        (
+            "buildrequest.dependency report fingerprint".to_string(),
+            ail_artifact_fingerprint(dependency_report_text),
         ),
         (
             "buildrequest.artifact manifest".to_string(),
@@ -4552,6 +4582,40 @@ fn render_ail_compile_bundle_native_bytecode_report(
     Ok(format!("{}\n", lines.join("\n")))
 }
 
+fn render_ail_compile_bundle_dependency_report(
+    target_name: &str,
+    target_executables: &[AilNativeArtifact],
+    agent_artifacts: &[AilNativeArtifact],
+) -> Result<String, String> {
+    let mut lines = vec![
+        "AIL-Compile-Bundle-Dependency-Report:".to_string(),
+        format!("target {target_name}"),
+        "bundle all-actions".to_string(),
+        "host-language-runtime none".to_string(),
+        "dynamic-linker none".to_string(),
+        "shared-libraries none".to_string(),
+        "library-dependencies none".to_string(),
+        "linker-invocation none".to_string(),
+        "runtime-abi linux-syscall-argv-key-value".to_string(),
+    ];
+    for artifacts in [target_executables, agent_artifacts] {
+        for artifact in artifacts {
+            if artifact.target_name != target_name {
+                return Err(format!(
+                    "dependency artifact {} targets {}, expected {target_name}",
+                    artifact.file_name, artifact.target_name
+                ));
+            }
+            lines.push(format!(
+                "machine-bytecode-dependency {} {}",
+                artifact.file_name,
+                native_elf_dependency_identity(&artifact.bytes)?
+            ));
+        }
+    }
+    Ok(format!("{}\n", lines.join("\n")))
+}
+
 fn render_ail_build_native_bytecode_report(
     target_name: &str,
     target_executable: &[u8],
@@ -4897,58 +4961,76 @@ fn run_ail_compile_bundle_from_core(
     let bytecode_text = format!("{}\n", render_ail_bytecode(&bytecode));
     let core_text = format!("{}\n", render_ail_core(core));
     let target_executables = compile_ail_native_artifacts(&bytecode, target, "target")?;
-    let (agent_run, agent_native_artifacts, native_bytecode_report_text) = if let Some(agent_path) =
-        &cli_options.ail_build_agent
-    {
-        let (agent_bytecode, agent_bytecode_text) = load_verified_ail_build_agent(agent_path)?;
-        let agent_native_artifacts =
-            compile_ail_build_agent_native_artifacts(&agent_bytecode, target)?;
-        let native_bytecode_report_text = render_ail_compile_bundle_native_bytecode_report(
-            target,
-            target_executables.as_slice(),
-            agent_native_artifacts.as_slice(),
-        )?;
-        let empty_agent_trace: &[String] = &[];
-        let manifest_text = render_ail_compile_bundle_manifest(&AilCompileBundleArtifactSet {
-            source_manifest_text: source_artifacts
-                .map(|artifacts| artifacts.manifest_text.as_str()),
-            source_spec_text: source_artifacts.map(|artifacts| artifacts.spec_text.as_str()),
-            core_text: Some(&core_text),
-            bytecode_text: &bytecode_text,
-            target_name: target,
-            target_executables: target_executables.as_slice(),
-            native_bytecode_report_text: &native_bytecode_report_text,
-            agent_bytecode_text: Some(agent_bytecode_text.as_str()),
-            agent_trace: Some(empty_agent_trace),
-            agent_native_executables: agent_native_artifacts.as_slice(),
-        });
-        let manifest_fingerprint = ail_artifact_fingerprint(&manifest_text);
-        let run =
-            run_ail_compile_bundle_agent_verify_manifest(AilCompileBundleAgentManifestRequest {
-                agent_bytecode,
-                agent_bytecode_text,
-                package_name: &core.package.name,
-                bytecode_text: &bytecode_text,
-                source_artifacts,
+    let (agent_run, agent_native_artifacts, native_bytecode_report_text, dependency_report_text) =
+        if let Some(agent_path) = &cli_options.ail_build_agent {
+            let (agent_bytecode, agent_bytecode_text) = load_verified_ail_build_agent(agent_path)?;
+            let agent_native_artifacts =
+                compile_ail_build_agent_native_artifacts(&agent_bytecode, target)?;
+            let native_bytecode_report_text = render_ail_compile_bundle_native_bytecode_report(
                 target,
+                target_executables.as_slice(),
+                agent_native_artifacts.as_slice(),
+            )?;
+            let dependency_report_text = render_ail_compile_bundle_dependency_report(
+                target,
+                target_executables.as_slice(),
+                agent_native_artifacts.as_slice(),
+            )?;
+            let empty_agent_trace: &[String] = &[];
+            let manifest_text = render_ail_compile_bundle_manifest(&AilCompileBundleArtifactSet {
+                source_manifest_text: source_artifacts
+                    .map(|artifacts| artifacts.manifest_text.as_str()),
+                source_spec_text: source_artifacts.map(|artifacts| artifacts.spec_text.as_str()),
+                core_text: Some(&core_text),
+                bytecode_text: &bytecode_text,
+                target_name: target,
                 target_executables: target_executables.as_slice(),
                 native_bytecode_report_text: &native_bytecode_report_text,
-                manifest_text: &manifest_text,
-                manifest_fingerprint: &manifest_fingerprint,
-            })?;
-        (
-            Some(run),
-            agent_native_artifacts,
-            native_bytecode_report_text,
-        )
-    } else {
-        let native_bytecode_report_text = render_ail_compile_bundle_native_bytecode_report(
-            target,
-            target_executables.as_slice(),
-            &[],
-        )?;
-        (None, Vec::new(), native_bytecode_report_text)
-    };
+                dependency_report_text: &dependency_report_text,
+                agent_bytecode_text: Some(agent_bytecode_text.as_str()),
+                agent_trace: Some(empty_agent_trace),
+                agent_native_executables: agent_native_artifacts.as_slice(),
+            });
+            let manifest_fingerprint = ail_artifact_fingerprint(&manifest_text);
+            let run = run_ail_compile_bundle_agent_verify_manifest(
+                AilCompileBundleAgentManifestRequest {
+                    agent_bytecode,
+                    agent_bytecode_text,
+                    package_name: &core.package.name,
+                    bytecode_text: &bytecode_text,
+                    source_artifacts,
+                    target,
+                    target_executables: target_executables.as_slice(),
+                    native_bytecode_report_text: &native_bytecode_report_text,
+                    dependency_report_text: &dependency_report_text,
+                    manifest_text: &manifest_text,
+                    manifest_fingerprint: &manifest_fingerprint,
+                },
+            )?;
+            (
+                Some(run),
+                agent_native_artifacts,
+                native_bytecode_report_text,
+                dependency_report_text,
+            )
+        } else {
+            let native_bytecode_report_text = render_ail_compile_bundle_native_bytecode_report(
+                target,
+                target_executables.as_slice(),
+                &[],
+            )?;
+            let dependency_report_text = render_ail_compile_bundle_dependency_report(
+                target,
+                target_executables.as_slice(),
+                &[],
+            )?;
+            (
+                None,
+                Vec::new(),
+                native_bytecode_report_text,
+                dependency_report_text,
+            )
+        };
     write_ail_compile_bundle_artifacts(
         artifact_dir,
         AilCompileBundleArtifactSet {
@@ -4960,6 +5042,7 @@ fn run_ail_compile_bundle_from_core(
             target_name: target,
             target_executables: target_executables.as_slice(),
             native_bytecode_report_text: &native_bytecode_report_text,
+            dependency_report_text: &dependency_report_text,
             agent_bytecode_text: agent_run.as_ref().map(|run| run.bytecode_text.as_str()),
             agent_trace: agent_run.as_ref().map(|run| run.trace.as_slice()),
             agent_native_executables: agent_native_artifacts.as_slice(),
@@ -4991,59 +5074,79 @@ fn run_ail_compile_from_bytecode_file(path: &str, cli_options: &CliOptions) -> R
             .as_deref()
             .ok_or_else(|| "ail-compile --all-actions requires --artifact-dir <dir>".to_string())?;
         let target_executables = compile_ail_native_artifacts(&bytecode, target, "target")?;
-        let (agent_run, agent_native_artifacts, native_bytecode_report_text) =
-            if let Some(agent_path) = &cli_options.ail_build_agent {
-                let (agent_bytecode, agent_bytecode_text) =
-                    load_verified_ail_build_agent(agent_path)?;
-                let agent_native_artifacts =
-                    compile_ail_build_agent_native_artifacts(&agent_bytecode, target)?;
-                let native_bytecode_report_text = render_ail_compile_bundle_native_bytecode_report(
+        let (
+            agent_run,
+            agent_native_artifacts,
+            native_bytecode_report_text,
+            dependency_report_text,
+        ) = if let Some(agent_path) = &cli_options.ail_build_agent {
+            let (agent_bytecode, agent_bytecode_text) = load_verified_ail_build_agent(agent_path)?;
+            let agent_native_artifacts =
+                compile_ail_build_agent_native_artifacts(&agent_bytecode, target)?;
+            let native_bytecode_report_text = render_ail_compile_bundle_native_bytecode_report(
+                target,
+                target_executables.as_slice(),
+                agent_native_artifacts.as_slice(),
+            )?;
+            let dependency_report_text = render_ail_compile_bundle_dependency_report(
+                target,
+                target_executables.as_slice(),
+                agent_native_artifacts.as_slice(),
+            )?;
+            let empty_agent_trace: &[String] = &[];
+            let manifest_text = render_ail_compile_bundle_manifest(&AilCompileBundleArtifactSet {
+                source_manifest_text: None,
+                source_spec_text: None,
+                core_text: None,
+                bytecode_text: &bytecode_text,
+                target_name: target,
+                target_executables: target_executables.as_slice(),
+                native_bytecode_report_text: &native_bytecode_report_text,
+                dependency_report_text: &dependency_report_text,
+                agent_bytecode_text: Some(agent_bytecode_text.as_str()),
+                agent_trace: Some(empty_agent_trace),
+                agent_native_executables: agent_native_artifacts.as_slice(),
+            });
+            let manifest_fingerprint = ail_artifact_fingerprint(&manifest_text);
+            let run = run_ail_compile_bundle_agent_verify_manifest(
+                AilCompileBundleAgentManifestRequest {
+                    agent_bytecode,
+                    agent_bytecode_text,
+                    package_name: &bytecode.package_name,
+                    bytecode_text: &bytecode_text,
+                    source_artifacts: None,
                     target,
-                    target_executables.as_slice(),
-                    agent_native_artifacts.as_slice(),
-                )?;
-                let empty_agent_trace: &[String] = &[];
-                let manifest_text =
-                    render_ail_compile_bundle_manifest(&AilCompileBundleArtifactSet {
-                        source_manifest_text: None,
-                        source_spec_text: None,
-                        core_text: None,
-                        bytecode_text: &bytecode_text,
-                        target_name: target,
-                        target_executables: target_executables.as_slice(),
-                        native_bytecode_report_text: &native_bytecode_report_text,
-                        agent_bytecode_text: Some(agent_bytecode_text.as_str()),
-                        agent_trace: Some(empty_agent_trace),
-                        agent_native_executables: agent_native_artifacts.as_slice(),
-                    });
-                let manifest_fingerprint = ail_artifact_fingerprint(&manifest_text);
-                let run = run_ail_compile_bundle_agent_verify_manifest(
-                    AilCompileBundleAgentManifestRequest {
-                        agent_bytecode,
-                        agent_bytecode_text,
-                        package_name: &bytecode.package_name,
-                        bytecode_text: &bytecode_text,
-                        source_artifacts: None,
-                        target,
-                        target_executables: target_executables.as_slice(),
-                        native_bytecode_report_text: &native_bytecode_report_text,
-                        manifest_text: &manifest_text,
-                        manifest_fingerprint: &manifest_fingerprint,
-                    },
-                )?;
-                (
-                    Some(run),
-                    agent_native_artifacts,
-                    native_bytecode_report_text,
-                )
-            } else {
-                let native_bytecode_report_text = render_ail_compile_bundle_native_bytecode_report(
-                    target,
-                    target_executables.as_slice(),
-                    &[],
-                )?;
-                (None, Vec::new(), native_bytecode_report_text)
-            };
+                    target_executables: target_executables.as_slice(),
+                    native_bytecode_report_text: &native_bytecode_report_text,
+                    dependency_report_text: &dependency_report_text,
+                    manifest_text: &manifest_text,
+                    manifest_fingerprint: &manifest_fingerprint,
+                },
+            )?;
+            (
+                Some(run),
+                agent_native_artifacts,
+                native_bytecode_report_text,
+                dependency_report_text,
+            )
+        } else {
+            let native_bytecode_report_text = render_ail_compile_bundle_native_bytecode_report(
+                target,
+                target_executables.as_slice(),
+                &[],
+            )?;
+            let dependency_report_text = render_ail_compile_bundle_dependency_report(
+                target,
+                target_executables.as_slice(),
+                &[],
+            )?;
+            (
+                None,
+                Vec::new(),
+                native_bytecode_report_text,
+                dependency_report_text,
+            )
+        };
         write_ail_compile_bundle_artifacts(
             artifact_dir,
             AilCompileBundleArtifactSet {
@@ -5054,6 +5157,7 @@ fn run_ail_compile_from_bytecode_file(path: &str, cli_options: &CliOptions) -> R
                 target_name: target,
                 target_executables: target_executables.as_slice(),
                 native_bytecode_report_text: &native_bytecode_report_text,
+                dependency_report_text: &dependency_report_text,
                 agent_bytecode_text: agent_run.as_ref().map(|run| run.bytecode_text.as_str()),
                 agent_trace: agent_run.as_ref().map(|run| run.trace.as_slice()),
                 agent_native_executables: agent_native_artifacts.as_slice(),

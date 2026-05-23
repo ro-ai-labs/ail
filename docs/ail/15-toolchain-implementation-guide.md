@@ -480,14 +480,17 @@ without generating Rust or another host-language backend. The compile manifest
 records a source package snapshot and fingerprint when package source is
 available, `bundle all-actions`, and one fingerprinted `target` entry per
 emitted executable, plus a native-bytecode report fingerprint proving every
-target entry is ELF64 x86_64 executable bytes. Adding
+target entry is ELF64 x86_64 executable bytes, and a dependency report
+fingerprint proving every target entry is a standalone Linux syscall ELF with
+no dynamic linker, shared libraries, host-language runtime, library
+dependencies, or linker invocation. Adding
 `--agent <agent-package-or-bytecode>` runs the AIL-authored
 `VerifyCompileBundleManifest` action over the bundle manifest and writes the
 agent bytecode, trace, and native verifier executables into the same artifact
 directory, making the multi-action native package reviewable through AIL
 bytecode rather than host orchestration alone. The verifier reads the source
-package fingerprint when present and the native-bytecode report and fingerprint
-before accepting the bundle manifest.
+package fingerprint when present and the native-bytecode and dependency reports
+and fingerprints before accepting the bundle manifest.
 `ail-bootstrap <toolchain-agent-package> --pass
 <compiler-pass-package> --agent <toolchain-agent-package>
 --target linux-x86_64-elf --artifact-dir <dir>` packages the AIL-authored
