@@ -6800,6 +6800,54 @@ source, pass bytecode, input AIL-Core IR, transformed AIL-Core IR, and pass
 trace artifacts together with deterministic fingerprints before the
 AIL-authored pass manifest verifier accepts the bundle.
 
+### Task 153: Prompt Portability Records Base Model
+
+**Files:**
+- Modify: `examples/ail_toolchain_agent.ail/spec.ail-spec.md`
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing base-model portability assertions**
+
+Extend the prompt-driven `ail-build --agent --target-model <name>` test to
+also pass `--base-model <name>`, require the AIL-authored
+`CompareAgentPromptPortability` action to read `BuildRequest base model`, and
+require `prompt-portability.txt` to record both base and target model labels.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_agent_compares_prompt_portability_before_compile -- --nocapture
+```
+
+Expected: failure before the LLM request because `--base-model` is not accepted
+by `ail-build`.
+
+- [x] **Step 3: Thread source model evidence through the agent**
+
+Parse `--base-model` for `ail-build`, require it to be paired with
+`--target-model`, insert the base model into the AIL-authored portability
+comparison state, make `CompareAgentPromptPortability` read it, and include
+both base and target model labels in the deterministic portability report. When
+`--base-model` is omitted, use the active LLM endpoint label as the source side
+of the comparison.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_agent_compares_prompt_portability_before_compile -- --nocapture
+```
+
+Expected: the agent trace records base-model and target-model reads before
+compile, and `prompt-portability.txt` fingerprints the source and target model
+labels alongside the portability status.
+
 ### Task 18: Declared Failure Trace Coverage Diagnostics
 
 **Files:**

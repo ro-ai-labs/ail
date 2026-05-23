@@ -46,6 +46,7 @@ A BuildRequest has:
 - artifact manifest verification report: Text
 - prompt portability report: Text
 - prompt portability report fingerprint: Text
+- base model: Text
 - status: State<PromptReceived, RequirementsLoaded, RequirementsCaptured, SpecLoaded, SpecCaptured, CoreLoaded, PassApplied, CoreChecked, BytecodeReady, NeedsClarification>
 - target model: Text
 
@@ -316,6 +317,7 @@ Action: Compare agent prompt portability.
 When the toolchain agent evaluates a target model:
 
 - the system requires the BuildRequest to exist
+- the system reads the BuildRequest base model
 - the system reads the BuildRequest target model
 - the system reads the BuildRequest requirements
 - the system changes the BuildRequest prompt portability report to Compared

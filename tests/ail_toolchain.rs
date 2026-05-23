@@ -9590,8 +9590,10 @@ fn cli_ail_build_agent_compares_prompt_portability_before_compile() {
             "Build an AIL support ticket bytecode artifact",
             "--agent",
             &agent_package,
-            "--target-model",
+            "--base-model",
             "unsloth/Qwen3.6-35B-A3B-GGUF:UD-Q4_K_XL",
+            "--target-model",
+            "future/local-ail-toolchain-model",
             "--artifact-dir",
             artifact_dir.to_str().unwrap(),
             "--llm-endpoint",
@@ -9624,6 +9626,7 @@ fn cli_ail_build_agent_compares_prompt_portability_before_compile() {
         .unwrap_or_else(|| panic!("{agent_trace}"));
     assert!(capture_index < compare_index, "{agent_trace}");
     assert!(compare_index < compile_index, "{agent_trace}");
+    assert!(agent_trace.contains("read buildrequest.base model"));
     assert!(agent_trace.contains("read buildrequest.target model"));
     assert!(agent_trace.contains("read buildrequest.requirements"));
     assert!(agent_trace.contains("write buildrequest.prompt portability report=Compared"));
@@ -9638,7 +9641,11 @@ fn cli_ail_build_agent_compares_prompt_portability_before_compile() {
         "{portability_report}"
     );
     assert!(
-        portability_report.contains("target-model unsloth/Qwen3.6-35B-A3B-GGUF:UD-Q4_K_XL"),
+        portability_report.contains("base-model unsloth/Qwen3.6-35B-A3B-GGUF:UD-Q4_K_XL"),
+        "{portability_report}"
+    );
+    assert!(
+        portability_report.contains("target-model future/local-ail-toolchain-model"),
         "{portability_report}"
     );
     assert!(

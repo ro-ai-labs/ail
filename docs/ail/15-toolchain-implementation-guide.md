@@ -58,7 +58,8 @@ calls, secret protection, failures, guarantees, and provenance.
 The AIL Toolchain Agent Application example is the first AIL-authored toolchain
 agent. It models the agent that interviews an application developer, captures
 requirements, turns checked specs into AIL-Core IR, compiles verified
-AIL-Bytecode, and compares prompt portability across target LLMs. Because it is
+AIL-Bytecode, and compares prompt portability from a named base model to a
+target LLM. Because it is
 an Application-profile package, it lowers through the same AIL-Bytecode
 compiler as user applications instead of living as host-language code.
 
@@ -602,11 +603,13 @@ starts from an explicit `SpecLoaded` state, loads the checked spec into the
 `BuildRequest`, and still runs `AcceptSpecDraft` before AIL-Core elaboration.
 It optionally runs
 `CompareAgentPromptPortability` when
-`--target-model <name>` is supplied. With `--artifact-dir`, that comparison is
-persisted as `prompt-portability.txt` with
-`prompt-portability.fingerprint.txt`; `manifest.ail-build.txt` records a
-`prompt-portability` entry, and the AIL-authored `VerifyBuildManifest` action
-reads the prompt-portability fingerprint before accepting the manifest. When
+`--target-model <name>` is supplied, using `--base-model <name>` or the active
+LLM endpoint as the source model label. With `--artifact-dir`, that comparison
+is persisted as `prompt-portability.txt` with
+`prompt-portability.fingerprint.txt`; the report records both the base and
+target model labels, `manifest.ail-build.txt` records a `prompt-portability`
+entry, and the AIL-authored `VerifyBuildManifest` action reads the
+prompt-portability fingerprint before accepting the manifest. When
 `--pass` is supplied, it runs
 `AcceptCompilerPassOutput` after the AIL-authored compiler pass bytecode
 transforms the checked AIL-Core, passing the pass bytecode boundary and VM trace

@@ -6,14 +6,15 @@ use std::net::TcpListener;
 use std::process::ExitCode;
 
 use eigl::ail::{
-    apply_ail_patch, check_ail_core, check_ail_requirements, compile_ail_bytecode_native_elf,
-    compile_ail_core_bytecode, compile_ail_core_native_elf, draft_ail_requirements, draft_ail_spec,
-    draft_ail_spec_from_requirements, elaborate_ail_core, load_ail_package_dir, parse_ail_bytecode,
-    parse_ail_core_text, parse_ail_package_document, parse_ail_package_spec_text,
-    parse_ail_patch_text, render_ail_bytecode, render_ail_core, render_ail_flow_view,
-    render_ail_runtime_state_lines, render_ail_spec, repair_ail_requirements_from_diagnostics,
-    repair_ail_spec_from_diagnostics, run_ail_bytecode_action, run_ail_compiler_pass_on_core,
-    run_ail_conformance, verify_ail_bytecode,
+    DEFAULT_BASE_LLM_ENDPOINT, apply_ail_patch, check_ail_core, check_ail_requirements,
+    compile_ail_bytecode_native_elf, compile_ail_core_bytecode, compile_ail_core_native_elf,
+    draft_ail_requirements, draft_ail_spec, draft_ail_spec_from_requirements, elaborate_ail_core,
+    load_ail_package_dir, parse_ail_bytecode, parse_ail_core_text, parse_ail_package_document,
+    parse_ail_package_spec_text, parse_ail_patch_text, render_ail_bytecode, render_ail_core,
+    render_ail_flow_view, render_ail_runtime_state_lines, render_ail_spec,
+    repair_ail_requirements_from_diagnostics, repair_ail_spec_from_diagnostics,
+    run_ail_bytecode_action, run_ail_compiler_pass_on_core, run_ail_conformance,
+    verify_ail_bytecode,
 };
 use eigl::apply_rif_patch;
 use eigl::checker::check_document;
@@ -55,6 +56,7 @@ struct CliOptions {
     ail_pass_target: Option<String>,
     ail_build_pass: Option<String>,
     ail_build_agent: Option<String>,
+    ail_build_base_model: Option<String>,
     ail_build_target_model: Option<String>,
     ail_requirements_file: Option<String>,
     ail_spec_file: Option<String>,
@@ -381,7 +383,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
 }
 
 fn usage() -> String {
-    "usage: eigl <check|graph|views|simulate|lower|run|dispatch|emit|schedule|dequeue|serve|normalize|patch|llm-roundtrip|view-model|ail-check|ail-core|ail-flow|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-bootstrap|ail-patch> <path> [patch|target-package] [--intent name] [--action name] [--prompt text] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--target-model name] [--out path] [--all-actions] [--artifact-dir path] [--state-in path] [--state-out path] [--data-in path] [--data-out path] [--operation-output name=value] [--listen addr] [--llm-endpoint url] [method path|trigger] [key=value ...]\nail-pass usage: eigl ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR eigl ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]\nail-bootstrap usage: eigl ail-bootstrap <toolchain-agent-package> --pass <compiler-pass-package> --agent <toolchain-agent-package> --target linux-x86_64-elf --artifact-dir <dir>"
+    "usage: eigl <check|graph|views|simulate|lower|run|dispatch|emit|schedule|dequeue|serve|normalize|patch|llm-roundtrip|view-model|ail-check|ail-core|ail-flow|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-bootstrap|ail-patch> <path> [patch|target-package] [--intent name] [--action name] [--prompt text] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--base-model name] [--target-model name] [--out path] [--all-actions] [--artifact-dir path] [--state-in path] [--state-out path] [--data-in path] [--data-out path] [--operation-output name=value] [--listen addr] [--llm-endpoint url] [method path|trigger] [key=value ...]\nail-pass usage: eigl ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR eigl ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]\nail-bootstrap usage: eigl ail-bootstrap <toolchain-agent-package> --pass <compiler-pass-package> --agent <toolchain-agent-package> --target linux-x86_64-elf --artifact-dir <dir>"
         .to_string()
 }
 
@@ -511,6 +513,11 @@ struct AilBuildAgentRun {
     trace: Vec<String>,
 }
 
+struct AilBuildPromptPortability<'a> {
+    base_model: Option<&'a str>,
+    target_model: Option<&'a str>,
+}
+
 struct AilBuildPassAcceptance<'a> {
     requirements_artifact: Option<&'a str>,
     spec_text: Option<&'a str>,
@@ -534,6 +541,7 @@ struct AilBuildAgentManifestVerification<'a> {
 }
 
 fn render_ail_prompt_portability_report(
+    base_model: &str,
     target_model: &str,
     requirements_artifact: Option<&str>,
     agent_run: &AilBuildAgentRun,
@@ -545,6 +553,7 @@ fn render_ail_prompt_portability_report(
         .unwrap_or("NotCompared");
     let mut lines = vec![
         "AIL-Prompt-Portability-Report:".to_string(),
+        format!("base-model {base_model}"),
         format!("target-model {target_model}"),
         "agent-action CompareAgentPromptPortability".to_string(),
         format!("status {status}"),
@@ -3039,7 +3048,7 @@ fn run_ail_build_agent(
     requirements_artifact: Option<&str>,
     spec_text: Option<&str>,
     capture_prompt: Option<&str>,
-    target_model: Option<&str>,
+    prompt_portability: AilBuildPromptPortability<'_>,
     agent_start: Option<AilBuildAgentStart>,
 ) -> Result<AilBuildAgentRun, String> {
     let (agent_bytecode, agent_bytecode_text) = load_verified_ail_build_agent(agent_path)?;
@@ -3105,7 +3114,10 @@ fn run_ail_build_agent(
         "buildrequest.requirements".to_string(),
         requirements_artifact.unwrap_or("skipped").to_string(),
     );
-    if let Some(target_model) = target_model {
+    if let Some(target_model) = prompt_portability.target_model {
+        let base_model = prompt_portability
+            .base_model
+            .unwrap_or(DEFAULT_BASE_LLM_ENDPOINT);
         if !agent_bytecode
             .actions
             .contains_key("CompareAgentPromptPortability")
@@ -3115,6 +3127,10 @@ fn run_ail_build_agent(
                     .to_string(),
             );
         }
+        compile_state.insert(
+            "buildrequest.base model".to_string(),
+            base_model.to_string(),
+        );
         compile_state.insert(
             "buildrequest.target model".to_string(),
             target_model.to_string(),
@@ -4550,7 +4566,13 @@ fn run_ail_build_from_core(
             requirements_artifact,
             spec_text,
             capture_prompt,
-            cli_options.ail_build_target_model.as_deref(),
+            AilBuildPromptPortability {
+                base_model: cli_options
+                    .ail_build_base_model
+                    .as_deref()
+                    .or(cli_options.llm_endpoint.as_deref()),
+                target_model: cli_options.ail_build_target_model.as_deref(),
+            },
             agent_start,
         )?)
     } else {
@@ -4607,6 +4629,11 @@ fn run_ail_build_from_core(
         agent_run.as_ref(),
     ) {
         Some(render_ail_prompt_portability_report(
+            cli_options
+                .ail_build_base_model
+                .as_deref()
+                .or(cli_options.llm_endpoint.as_deref())
+                .unwrap_or(DEFAULT_BASE_LLM_ENDPOINT),
             target_model,
             requirements_artifact,
             agent_run,
@@ -5559,6 +5586,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
     let mut ail_pass_target = None;
     let mut ail_build_pass = None;
     let mut ail_build_agent = None;
+    let mut ail_build_base_model = None;
     let mut ail_build_target_model = None;
     let mut ail_requirements_file = None;
     let mut ail_spec_file = None;
@@ -5742,6 +5770,17 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
             index += 2;
             continue;
         }
+        if arg == "--base-model" {
+            if command != "ail-build" {
+                return Err(usage());
+            }
+            let Some(model) = args.get(index + 1) else {
+                return Err("missing value for --base-model".to_string());
+            };
+            ail_build_base_model = Some(model.clone());
+            index += 2;
+            continue;
+        }
         if arg == "--out" {
             if !matches!(command, "ail-compile" | "ail-build") {
                 return Err(usage());
@@ -5921,6 +5960,10 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
     if command == "ail-build" && ail_build_target_model.is_some() && ail_build_agent.is_none() {
         return Err("--target-model requires --agent".to_string());
     }
+    if command == "ail-build" && ail_build_base_model.is_some() && ail_build_target_model.is_none()
+    {
+        return Err("--base-model requires --target-model".to_string());
+    }
     if command == "ail-compile" && ail_build_agent.is_some() && artifact_dir.is_none() {
         return Err("ail-compile --agent requires --artifact-dir <dir>".to_string());
     }
@@ -6019,6 +6062,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         ail_pass_target,
         ail_build_pass,
         ail_build_agent,
+        ail_build_base_model,
         ail_build_target_model,
         ail_requirements_file,
         ail_spec_file,

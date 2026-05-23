@@ -202,6 +202,8 @@ the agent-produced requirements checklist state into that first LLM prompt, runs
 spec checklist state into the AIL-Spec prompt, runs `AcceptSpecDraft` after the
 checked AIL-Spec draft is accepted and before AIL-Core elaboration, optionally
 runs `CompareAgentPromptPortability` when `--target-model <name>` is supplied,
+using `--base-model <name>` or the active LLM endpoint as the source model
+label for the comparison,
 runs `AcceptCompilerPassOutput` after an AIL-authored compiler pass is applied,
 runs `AcceptCoreIR` after AIL-Core is checked and before compilation, runs
 `CompileApplication` over the completed build state before target artifact
@@ -215,9 +217,10 @@ writes `artifact.fingerprint.txt`,
 `agent.ailbc.json`, `agent.fingerprint.txt`, `agent-trace.txt`,
 `manifest.ail-build.txt`, and `manifest.fingerprint.txt`. When
 `--target-model` is present with `--artifact-dir`, the artifact set also writes
-`prompt-portability.txt` and `prompt-portability.fingerprint.txt`, and the
-build manifest records a `prompt-portability` fingerprint entry that is read by
-the AIL-authored manifest verifier.
+`prompt-portability.txt` and `prompt-portability.fingerprint.txt`; that report
+records both the base and target model labels, and the build manifest records a
+`prompt-portability` fingerprint entry that is read by the AIL-authored
+manifest verifier.
 `ail-build --requirements-file` is used with `--agent`, the saved checked
 requirements are loaded as an agent-visible `RequirementsLoaded` artifact,
 prepared through `PrepareSpecDraft`, and accepted through `AcceptSpecDraft`
@@ -322,7 +325,7 @@ cargo run -- ail-build examples/support_ticket.ail --spec-file /tmp/support-tick
 /tmp/assign-ticket ticket.id=T-1 ticket.status=Open
 cargo run -- ail-build examples/support_ticket.ail --core-file /tmp/support-ticket.ail-core.txt --artifact-dir /tmp/support-ticket-ail-build-core
 cargo run -- ail-build examples/support_ticket.ail --core-file /tmp/support-ticket.ail-core.txt --agent examples/ail_toolchain_agent.ail --artifact-dir /tmp/support-ticket-ail-build-agent
-cargo run -- ail-build examples/support_ticket.ail --prompt "Build a support ticket bytecode artifact" --artifact-dir /tmp/support-ticket-ail-build --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
+cargo run -- ail-build examples/support_ticket.ail --prompt "Build a support ticket bytecode artifact" --agent examples/ail_toolchain_agent.ail --base-model unsloth/Qwen3.6-35B-A3B-GGUF:UD-Q4_K_XL --target-model future/local-ail-toolchain-model --artifact-dir /tmp/support-ticket-ail-build --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
 cargo run -- ail-build examples/support_ticket.ail --prompt "Build a support ticket bytecode artifact" --pass examples/compiler_pass.ail --artifact-dir /tmp/support-ticket-ail-build-pass --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
 cargo run -- ail-build examples/refund_tool.ail --prompt "Build a refund tool bytecode artifact" --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
 cargo run -- check examples/confirm_order.rif.md
