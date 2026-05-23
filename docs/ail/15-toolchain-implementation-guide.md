@@ -635,21 +635,22 @@ package source writes `source.ail-package.md`, `source.ail-spec.md`,
 written, but the compile manifest records `bundle all-actions` and a
 fingerprinted `wasm-contract` report instead of native `target` entries. The
 same Wasm contract command from saved bytecode omits the source and
-checked-core snapshots. For single-action Wasm contracts, adding
-`--agent <agent-package-or-bytecode>` runs the AIL-authored
-`VerifyCompileManifest` action in the bytecode VM over the contract manifest
-and writes `agent.ailbc.json`, `agent.fingerprint.txt`, and `agent-trace.txt`.
-The manifest records `agent` and `trace` entries, but no `agent-target` native
-executable entry. Wasm `--all-actions --agent` remains unsupported until the
-bundle verifier can consume contract-bundle reports without native target
-executables. The
-native-bytecode report records the selected action target as ELF64 x86_64
-executable bytes. The dependency report records `host-language-runtime none`,
-`dynamic-linker none`, `shared-libraries none`, `library-dependencies none`,
-and `linker-invocation none` for standalone Linux syscall ELF artifacts. The
-compile manifest ties the source package when present, selected action,
-verified bytecode artifact, native-bytecode report, dependency report, and
-native target executable fingerprint into a reviewable artifact boundary. With
+checked-core snapshots. Adding `--agent <agent-package-or-bytecode>` runs the
+AIL-authored `VerifyCompileManifest` action for single-action Wasm contracts or
+`VerifyCompileBundleManifest` for Wasm contract bundles in the bytecode VM over
+the contract manifest and writes `agent.ailbc.json`, `agent.fingerprint.txt`,
+and `agent-trace.txt`. The manifest records `agent` and `trace` entries, but
+no `agent-target` native executable entry.
+
+For native `linux-x86_64-elf` compilation, the native-bytecode report records
+the selected action target as ELF64 x86_64 executable bytes. The dependency
+report records `host-language-runtime none`, `dynamic-linker none`,
+`shared-libraries none`, `library-dependencies none`, and
+`linker-invocation none` for standalone Linux syscall ELF artifacts. The
+compile manifest ties
+the source package when present, selected action, verified bytecode artifact,
+native-bytecode report, dependency report, and native target executable
+fingerprint into a reviewable artifact boundary. With
 `--agent <agent-package-or-bytecode>`, `ail-compile --artifact-dir` also runs
 the AIL-authored `VerifyCompileManifest` action over that manifest and writes
 `agent.ailbc.json`, `agent.fingerprint.txt`, `agent-trace.txt`, and native

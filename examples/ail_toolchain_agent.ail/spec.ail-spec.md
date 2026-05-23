@@ -266,7 +266,7 @@ When the toolchain agent verifies direct all-action compile artifacts:
 - the system requires the BuildRequest to exist
 - the system requires the BuildRequest status to be BytecodeReady
 - the system requires the BuildRequest machine bytecode contract to exist
-- the system requires the BuildRequest machine bytecode contract to be machine-bytecode-contract linux-x86_64-elf bytecode-level machine bytecode-container linux-elf-executable bytecode-format elf64-little-x86_64-executable or none
+- the system requires the BuildRequest machine bytecode contract to be machine-bytecode-contract linux-x86_64-elf bytecode-level machine bytecode-container linux-elf-executable bytecode-format elf64-little-x86_64-executable or machine-bytecode-contract wasm32-unknown-sandbox-wasm bytecode-level portable-vm-contract bytecode-container wasm-sandbox-contract bytecode-format wasm32-contract-report or none
 - the system reads the BuildRequest artifact manifest
 - the system reads the BuildRequest artifact manifest fingerprint
 - the system reads the BuildRequest bytecode fingerprint
@@ -280,7 +280,7 @@ When the toolchain agent verifies direct all-action compile artifacts:
 - the system reads the BuildRequest dependency report
 - the system reads the BuildRequest dependency report fingerprint
 - the system changes the BuildRequest artifact manifest verification report to Verified
-- the system guarantees the compile bundle manifest ties verified AIL-Bytecode and all native action target artifacts with deterministic fingerprints and no Rust or host-language backend source
+- the system guarantees the compile bundle manifest ties verified AIL-Bytecode and all native action target artifacts or the Wasm contract bundle report with deterministic fingerprints and no Rust or host-language backend source
 - the system records a trace event named CompileBundleManifestVerified
 
 Action: Verify bootstrap manifest.

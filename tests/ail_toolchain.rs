@@ -8950,7 +8950,7 @@ When emit trace happens:
 }
 
 #[test]
-fn cli_ail_compile_wasm_contract_all_actions_agent_is_rejected() {
+fn cli_ail_compile_wasm_contract_all_actions_agent_verifies_bundle_manifest() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let agent_package = fixture("ail_toolchain_agent.ail");
     let unique_suffix = std::time::SystemTime::now()
@@ -8979,7 +8979,7 @@ fn cli_ail_compile_wasm_contract_all_actions_agent_is_rejected() {
       "action": "EmitTrace",
       "instructions": [
         {"opcode":"ACTION_BEGIN","operands":{"action":"EmitTrace"}},
-        {"opcode":"EMIT_TRACE","operands":{"event":"WasmAllActionsAgentRejected"}},
+        {"opcode":"EMIT_TRACE","operands":{"event":"WasmAllActionsAgentVerified"}},
         {"opcode":"RETURN_SUCCESS","operands":{}}
       ]
     }
@@ -9002,20 +9002,397 @@ fn cli_ail_compile_wasm_contract_all_actions_agent_is_rejected() {
         .output()
         .unwrap();
     assert!(
-        !output.status.success(),
+        output.status.success(),
         "stdout:\n{}\nstderr:\n{}",
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
     assert!(
-        String::from_utf8_lossy(&output.stderr)
-            .contains("ail-compile wasm contract target does not support --agent verification yet"),
+        String::from_utf8_lossy(&output.stdout)
+            .contains("ail-compile wrote wasm32-unknown-sandbox-wasm contract bundle"),
         "{}",
-        String::from_utf8_lossy(&output.stderr)
+        String::from_utf8_lossy(&output.stdout)
     );
-    assert!(!artifact_dir.exists());
+    let contract_report =
+        fs::read_to_string(artifact_dir.join("wasm-contract-report.txt")).unwrap();
+    assert!(contract_report.contains("bundle all-actions"));
+    assert!(
+        contract_report.contains("action EmitTrace trace-preservation required"),
+        "{contract_report}"
+    );
+    let agent_bytecode = fs::read_to_string(artifact_dir.join("agent.ailbc.json")).unwrap();
+    assert!(agent_bytecode.contains(r#""action":"VerifyCompileBundleManifest""#));
+    let agent_fingerprint = fs::read_to_string(artifact_dir.join("agent.fingerprint.txt")).unwrap();
+    assert_eq!(agent_fingerprint.trim(), fnv64_fingerprint(&agent_bytecode));
+    let agent_trace = fs::read_to_string(artifact_dir.join("agent-trace.txt")).unwrap();
+    assert!(agent_trace.contains("action VerifyCompileBundleManifest started"));
+    assert!(agent_trace.contains("read buildrequest.target artifact"));
+    assert!(agent_trace.contains("read buildrequest.target artifact fingerprint"));
+    assert!(agent_trace.contains("read buildrequest.machine bytecode contract"));
+    assert!(agent_trace.contains("trace CompileBundleManifestVerified"));
+    let wasm_machine_contract_rule = "rule passed: the BuildRequest machine bytecode contract to be machine-bytecode-contract linux-x86_64-elf bytecode-level machine bytecode-container linux-elf-executable bytecode-format elf64-little-x86_64-executable or machine-bytecode-contract wasm32-unknown-sandbox-wasm bytecode-level portable-vm-contract bytecode-container wasm-sandbox-contract bytecode-format wasm32-contract-report or none";
+    assert!(agent_trace.contains(wasm_machine_contract_rule));
+    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-compile.txt")).unwrap();
+    assert!(manifest.contains("bundle all-actions"), "{manifest}");
+    assert!(
+        manifest.contains(&format!(
+            "agent agent.ailbc.json {}",
+            fnv64_fingerprint(&agent_bytecode)
+        )),
+        "{manifest}"
+    );
+    assert!(manifest.contains("trace agent-trace.txt"), "{manifest}");
+    assert!(!manifest.contains("agent-target"));
+    assert!(!manifest.contains("native-bytecode native-bytecode-report.txt"));
+    assert!(
+        !artifact_dir
+            .join("agent-VerifyCompileBundleManifest.elf")
+            .exists()
+    );
+    assert!(!artifact_dir.join("target-EmitTrace.elf").exists());
+    assert!(!artifact_dir.join("native-bytecode-report.txt").exists());
 
     fs::remove_file(bytecode_path).unwrap();
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
+fn cli_ail_compile_wasm_contract_all_actions_agent_accepts_package_and_core_routes() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let agent_package = fixture("ail_toolchain_agent.ail");
+    let unique_suffix = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let root = std::env::temp_dir().join(format!(
+        "ail-wasm-contract-all-actions-agent-routes-package-{}-{unique_suffix}",
+        std::process::id()
+    ));
+    let core_path = std::env::temp_dir().join(format!(
+        "ail-wasm-contract-all-actions-agent-routes-core-{}-{unique_suffix}.ail-core.txt",
+        std::process::id()
+    ));
+    let package_artifact_dir = std::env::temp_dir().join(format!(
+        "ail-wasm-contract-all-actions-agent-routes-package-artifacts-{}-{unique_suffix}",
+        std::process::id()
+    ));
+    let core_artifact_dir = std::env::temp_dir().join(format!(
+        "ail-wasm-contract-all-actions-agent-routes-core-artifacts-{}-{unique_suffix}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&root);
+    let _ = fs::remove_file(&core_path);
+    let _ = fs::remove_dir_all(&package_artifact_dir);
+    let _ = fs::remove_dir_all(&core_artifact_dir);
+    fs::create_dir_all(&root).unwrap();
+    fs::write(
+        root.join("ail-package.md"),
+        r#"name: wasm-all-actions-agent-routes-app
+version: 0.1.0
+profile: Application
+entry: spec.ail-spec.md
+features: actions, traces
+conformance: first-slice
+target-support:
+  wasm32-unknown-sandbox-wasm: supported-with-host-imports
+"#,
+    )
+    .unwrap();
+    fs::write(
+        root.join("spec.ail-spec.md"),
+        r#"The application Wasm All Actions Agent Routes App manages portable bundles.
+
+Action: Emit first trace.
+
+When emit first trace happens:
+
+- the system records a trace event named WasmAllActionsAgentRouteFirst
+
+Action: Emit second trace.
+
+When emit second trace happens:
+
+- the system records a trace event named WasmAllActionsAgentRouteSecond
+"#,
+    )
+    .unwrap();
+
+    let core_output = Command::new(binary)
+        .args(["ail-core", root.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(
+        core_output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&core_output.stdout),
+        String::from_utf8_lossy(&core_output.stderr)
+    );
+    let core_text = String::from_utf8(core_output.stdout).unwrap();
+    fs::write(&core_path, &core_text).unwrap();
+
+    for (input_args, artifact_dir) in [
+        (
+            vec![
+                "ail-compile".to_string(),
+                root.to_string_lossy().into_owned(),
+            ],
+            package_artifact_dir.clone(),
+        ),
+        (
+            vec![
+                "ail-compile".to_string(),
+                "--core-file".to_string(),
+                core_path.to_string_lossy().into_owned(),
+            ],
+            core_artifact_dir.clone(),
+        ),
+    ] {
+        let mut args = input_args;
+        args.extend([
+            "--all-actions".to_string(),
+            "--target".to_string(),
+            "wasm32-unknown-sandbox-wasm".to_string(),
+            "--agent".to_string(),
+            agent_package.clone(),
+            "--artifact-dir".to_string(),
+            artifact_dir.to_string_lossy().into_owned(),
+        ]);
+        let output = Command::new(binary).args(args).output().unwrap();
+        assert!(
+            output.status.success(),
+            "stdout:\n{}\nstderr:\n{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert!(
+            String::from_utf8_lossy(&output.stdout)
+                .contains("ail-compile wrote wasm32-unknown-sandbox-wasm contract bundle"),
+            "{}",
+            String::from_utf8_lossy(&output.stdout)
+        );
+
+        let contract_report =
+            fs::read_to_string(artifact_dir.join("wasm-contract-report.txt")).unwrap();
+        assert!(contract_report.contains("bundle all-actions"));
+        assert!(
+            contract_report.contains("action EmitFirstTrace trace-preservation required"),
+            "{contract_report}"
+        );
+        assert!(
+            contract_report.contains("action EmitSecondTrace trace-preservation required"),
+            "{contract_report}"
+        );
+        let agent_bytecode = fs::read_to_string(artifact_dir.join("agent.ailbc.json")).unwrap();
+        assert!(agent_bytecode.contains(r#""action":"VerifyCompileBundleManifest""#));
+        let agent_trace = fs::read_to_string(artifact_dir.join("agent-trace.txt")).unwrap();
+        assert!(agent_trace.contains("action VerifyCompileBundleManifest started"));
+        assert!(agent_trace.contains("read buildrequest.target artifact"));
+        assert!(agent_trace.contains("read buildrequest.target artifact fingerprint"));
+        assert!(agent_trace.contains("trace CompileBundleManifestVerified"));
+        let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-compile.txt")).unwrap();
+        assert!(manifest.contains("bundle all-actions"), "{manifest}");
+        assert!(
+            manifest.contains(&format!(
+                "agent agent.ailbc.json {}",
+                fnv64_fingerprint(&agent_bytecode)
+            )),
+            "{manifest}"
+        );
+        assert!(manifest.contains("trace agent-trace.txt"), "{manifest}");
+        assert!(!manifest.contains("agent-target"));
+        assert!(!manifest.contains("native-bytecode native-bytecode-report.txt"));
+        assert!(
+            !artifact_dir
+                .join("agent-VerifyCompileBundleManifest.elf")
+                .exists()
+        );
+        assert!(!artifact_dir.join("target-EmitFirstTrace.elf").exists());
+        assert!(!artifact_dir.join("native-bytecode-report.txt").exists());
+    }
+
+    let source_manifest =
+        fs::read_to_string(package_artifact_dir.join("source.ail-package.md")).unwrap();
+    assert_eq!(
+        source_manifest,
+        fs::read_to_string(root.join("ail-package.md")).unwrap()
+    );
+    let source_spec = fs::read_to_string(package_artifact_dir.join("source.ail-spec.md")).unwrap();
+    assert_eq!(
+        source_spec,
+        fs::read_to_string(root.join("spec.ail-spec.md")).unwrap()
+    );
+    let source_bundle =
+        format!("ail-package.md:\n{source_manifest}\nspec.ail-spec.md:\n{source_spec}");
+    let package_manifest =
+        fs::read_to_string(package_artifact_dir.join("manifest.ail-compile.txt")).unwrap();
+    assert!(
+        package_manifest.contains(&format!(
+            "source-package source.ail-package.md source.ail-spec.md {}",
+            fnv64_fingerprint(&source_bundle)
+        )),
+        "{package_manifest}"
+    );
+    let package_trace = fs::read_to_string(package_artifact_dir.join("agent-trace.txt")).unwrap();
+    assert!(package_trace.contains("read buildrequest.source package"));
+    assert!(package_trace.contains("read buildrequest.source package fingerprint"));
+
+    let core_checked_core =
+        fs::read_to_string(core_artifact_dir.join("checked.ail-core.txt")).unwrap();
+    assert_eq!(core_checked_core, core_text);
+    let core_manifest =
+        fs::read_to_string(core_artifact_dir.join("manifest.ail-compile.txt")).unwrap();
+    assert!(!core_manifest.contains("source-package"));
+    assert!(!core_artifact_dir.join("source.ail-package.md").exists());
+
+    fs::remove_dir_all(root).unwrap();
+    fs::remove_file(core_path).unwrap();
+    fs::remove_dir_all(package_artifact_dir).unwrap();
+    fs::remove_dir_all(core_artifact_dir).unwrap();
+}
+
+#[test]
+fn cli_ail_compile_wasm_contract_all_actions_agent_receives_contract_report_as_target_artifact() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let unique_suffix = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let bytecode_path = std::env::temp_dir().join(format!(
+        "ail-wasm-contract-all-actions-agent-target-bytecode-{}-{unique_suffix}.ailbc.json",
+        std::process::id()
+    ));
+    let baseline_artifact_dir = std::env::temp_dir().join(format!(
+        "ail-wasm-contract-all-actions-agent-target-baseline-{}-{unique_suffix}",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-wasm-contract-all-actions-agent-target-artifacts-{}-{unique_suffix}",
+        std::process::id()
+    ));
+    let agent_bytecode_path = std::env::temp_dir().join(format!(
+        "ail-wasm-contract-all-actions-target-agent-{}-{unique_suffix}.ailbc.json",
+        std::process::id()
+    ));
+    let _ = fs::remove_file(&bytecode_path);
+    let _ = fs::remove_dir_all(&baseline_artifact_dir);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    let _ = fs::remove_file(&agent_bytecode_path);
+    let bytecode_text = r#"{
+  "kind": "AIL-Bytecode",
+  "package": "wasm-all-actions-target-agent-example",
+  "version": "0.1.0",
+  "profile": "Application",
+  "target_support": {"wasm32-unknown-sandbox-wasm":"supported-with-host-imports"},
+  "failures": [],
+  "actions": [
+    {
+      "action": "EmitTrace",
+      "instructions": [
+        {"opcode":"ACTION_BEGIN","operands":{"action":"EmitTrace"}},
+        {"opcode":"EMIT_TRACE","operands":{"event":"WasmAllActionsTargetAgentVerified"}},
+        {"opcode":"RETURN_SUCCESS","operands":{}}
+      ]
+    }
+  ]
+}"#;
+    fs::write(&bytecode_path, bytecode_text).unwrap();
+
+    let baseline_output = Command::new(binary)
+        .args([
+            "ail-compile",
+            bytecode_path.to_str().unwrap(),
+            "--all-actions",
+            "--target",
+            "wasm32-unknown-sandbox-wasm",
+            "--artifact-dir",
+            baseline_artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        baseline_output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&baseline_output.stdout),
+        String::from_utf8_lossy(&baseline_output.stderr)
+    );
+    let expected_contract_report =
+        fs::read_to_string(baseline_artifact_dir.join("wasm-contract-report.txt")).unwrap();
+    let expected_contract_fingerprint = fnv64_fingerprint(&expected_contract_report);
+    let expected_contract_line = "machine-bytecode-contract wasm32-unknown-sandbox-wasm bytecode-level portable-vm-contract bytecode-container wasm-sandbox-contract bytecode-format wasm32-contract-report";
+    let agent_bytecode = format!(
+        r#"{{
+  "kind": "AIL-Bytecode",
+  "package": "wasm-contract-bundle-target-agent",
+  "version": "0.1.0",
+  "profile": "Application",
+  "target_support": {{}},
+  "failures": [],
+  "actions": [
+    {{
+      "action": "VerifyCompileBundleManifest",
+      "instructions": [
+        {{"opcode":"ACTION_BEGIN","operands":{{"action":"VerifyCompileBundleManifest"}}}},
+        {{"opcode":"REQUIRE_EXISTS","operands":{{"key":"buildrequest.id","rule":"the BuildRequest to exist","failure":"NotFound"}}}},
+        {{"opcode":"REQUIRE_FIELD_IN","operands":{{"key":"buildrequest.status","values":"BytecodeReady","rule":"the BuildRequest status to be BytecodeReady","failure":"RequirementFailed"}}}},
+        {{"opcode":"REQUIRE_FIELD_IN","operands":{{"key":"buildrequest.target artifact","values":{},"rule":"the BuildRequest target artifact to be the Wasm contract bundle report","failure":"RequirementFailed"}}}},
+        {{"opcode":"REQUIRE_FIELD_IN","operands":{{"key":"buildrequest.target artifact fingerprint","values":{},"rule":"the BuildRequest target artifact fingerprint to match the Wasm contract bundle report","failure":"RequirementFailed"}}}},
+        {{"opcode":"REQUIRE_FIELD_IN","operands":{{"key":"buildrequest.machine bytecode contract","values":{},"rule":"the BuildRequest machine bytecode contract to be the Wasm contract report contract","failure":"RequirementFailed"}}}},
+        {{"opcode":"READ_FIELD","operands":{{"key":"buildrequest.target artifact","text":"the BuildRequest target artifact"}}}},
+        {{"opcode":"READ_FIELD","operands":{{"key":"buildrequest.target artifact fingerprint","text":"the BuildRequest target artifact fingerprint"}}}},
+        {{"opcode":"SET_FIELD","operands":{{"key":"buildrequest.artifact manifest verification report","text":"the BuildRequest artifact manifest verification report to Verified","value":"Verified"}}}},
+        {{"opcode":"EMIT_TRACE","operands":{{"event":"CompileBundleManifestVerified"}}}},
+        {{"opcode":"RETURN_SUCCESS","operands":{{}}}}
+      ]
+    }}
+  ]
+}}"#,
+        json_string(&expected_contract_report),
+        json_string(&expected_contract_fingerprint),
+        json_string(expected_contract_line),
+    );
+    fs::write(&agent_bytecode_path, &agent_bytecode).unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-compile",
+            bytecode_path.to_str().unwrap(),
+            "--all-actions",
+            "--target",
+            "wasm32-unknown-sandbox-wasm",
+            "--agent",
+            agent_bytecode_path.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let agent_trace = fs::read_to_string(artifact_dir.join("agent-trace.txt")).unwrap();
+    assert!(
+        agent_trace.contains(
+            "rule passed: the BuildRequest target artifact to be the Wasm contract bundle report"
+        ),
+        "{agent_trace}"
+    );
+    assert!(
+        agent_trace
+            .contains("rule passed: the BuildRequest target artifact fingerprint to match the Wasm contract bundle report"),
+        "{agent_trace}"
+    );
+    assert!(
+        agent_trace.contains("trace CompileBundleManifestVerified"),
+        "{agent_trace}"
+    );
+
+    fs::remove_file(bytecode_path).unwrap();
+    fs::remove_dir_all(baseline_artifact_dir).unwrap();
+    fs::remove_dir_all(artifact_dir).unwrap();
+    fs::remove_file(agent_bytecode_path).unwrap();
 }
 
 #[test]
