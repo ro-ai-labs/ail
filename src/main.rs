@@ -439,6 +439,7 @@ struct AilBootstrapArtifactSet<'a> {
     toolchain_pass_output_core_text: &'a str,
     toolchain_pass_trace_text: &'a str,
     fixed_point_report_text: &'a str,
+    native_bytecode_report_text: &'a str,
     compiler_pass_conformance_report: &'a str,
     compiler_pass_native_executables: &'a [AilNativeArtifact],
     agent_bytecode_text: Option<&'a str>,
@@ -717,6 +718,10 @@ fn render_ail_bootstrap_manifest(artifacts: &AilBootstrapArtifactSet<'_>) -> Str
         format!(
             "bootstrap-fixed-point bootstrap-fixed-point-report.txt {}",
             ail_artifact_fingerprint(artifacts.fixed_point_report_text)
+        ),
+        format!(
+            "bootstrap-native-bytecode bootstrap-native-bytecode-report.txt {}",
+            ail_artifact_fingerprint(artifacts.native_bytecode_report_text)
         ),
         format!(
             "toolchain-agent-conformance toolchain-agent-conformance-report.txt {}",
@@ -1087,6 +1092,21 @@ fn write_ail_bootstrap_artifacts(
     )
     .map_err(|error| {
         format!("failed to write ail-bootstrap fixed point report fingerprint: {error}")
+    })?;
+    fs::write(
+        root.join("bootstrap-native-bytecode-report.txt"),
+        artifacts.native_bytecode_report_text,
+    )
+    .map_err(|error| format!("failed to write ail-bootstrap native bytecode report: {error}"))?;
+    fs::write(
+        root.join("bootstrap-native-bytecode-report.fingerprint.txt"),
+        format!(
+            "{}\n",
+            ail_artifact_fingerprint(artifacts.native_bytecode_report_text)
+        ),
+    )
+    .map_err(|error| {
+        format!("failed to write ail-bootstrap native bytecode report fingerprint: {error}")
     })?;
     fs::write(
         root.join("toolchain-agent-conformance-report.txt"),
@@ -3050,6 +3070,7 @@ struct AilBootstrapAgentManifestRequest<'a> {
     toolchain_pass_output_core_text: &'a str,
     toolchain_pass_trace_text: &'a str,
     fixed_point_report_text: &'a str,
+    native_bytecode_report_text: &'a str,
     toolchain_conformance_report: &'a str,
     compiler_pass_conformance_report: &'a str,
     target_artifacts: &'a [AilNativeArtifact],
@@ -3076,6 +3097,7 @@ fn run_ail_bootstrap_agent_verify_manifest(
         toolchain_pass_output_core_text,
         toolchain_pass_trace_text,
         fixed_point_report_text,
+        native_bytecode_report_text,
         toolchain_conformance_report,
         compiler_pass_conformance_report,
         target_artifacts,
@@ -3149,6 +3171,14 @@ fn run_ail_bootstrap_agent_verify_manifest(
             ail_artifact_fingerprint(fixed_point_report_text),
         ),
         (
+            "buildrequest.native bytecode report".to_string(),
+            native_bytecode_report_text.to_string(),
+        ),
+        (
+            "buildrequest.native bytecode report fingerprint".to_string(),
+            ail_artifact_fingerprint(native_bytecode_report_text),
+        ),
+        (
             "buildrequest.conformance report".to_string(),
             conformance_report.clone(),
         ),
@@ -3203,6 +3233,60 @@ fn native_artifact_fingerprint_text(artifacts: &[AilNativeArtifact]) -> Option<S
             .collect::<Vec<_>>()
             .join("\n"),
     )
+}
+
+fn render_ail_bootstrap_native_bytecode_report(
+    target_name: &str,
+    toolchain_artifacts: &[AilNativeArtifact],
+    compiler_pass_artifacts: &[AilNativeArtifact],
+    agent_artifacts: &[AilNativeArtifact],
+) -> Result<String, String> {
+    let mut lines = vec![
+        "AIL-Bootstrap-Native-Bytecode:".to_string(),
+        format!("target {target_name}"),
+    ];
+    for (role, artifacts) in [
+        ("toolchain-agent-target", toolchain_artifacts),
+        ("compiler-pass-target", compiler_pass_artifacts),
+        ("agent-target", agent_artifacts),
+    ] {
+        for artifact in artifacts {
+            if artifact.target_name != target_name {
+                return Err(format!(
+                    "native bytecode artifact {} targets {}, expected {target_name}",
+                    artifact.file_name, artifact.target_name
+                ));
+            }
+            lines.push(format!(
+                "machine-bytecode {role} {} {} {} {} bytes {}",
+                artifact.target_name,
+                artifact.file_name,
+                native_machine_bytecode_identity(&artifact.bytes)?,
+                ail_artifact_fingerprint_bytes(&artifact.bytes),
+                artifact.bytes.len()
+            ));
+        }
+    }
+    Ok(format!("{}\n", lines.join("\n")))
+}
+
+fn native_machine_bytecode_identity(bytes: &[u8]) -> Result<&'static str, String> {
+    if bytes.len() < 20 {
+        return Err("native bytecode artifact is too small to contain an ELF header".to_string());
+    }
+    if &bytes[0..4] != b"\x7fELF" {
+        return Err("native bytecode artifact is not an ELF executable".to_string());
+    }
+    let elf_class = bytes[4];
+    let elf_data = bytes[5];
+    let elf_type = u16::from_le_bytes([bytes[16], bytes[17]]);
+    let elf_machine = u16::from_le_bytes([bytes[18], bytes[19]]);
+    match (elf_class, elf_data, elf_type, elf_machine) {
+        (2, 1, 2, 0x3e) => Ok("elf64-little-x86_64-executable"),
+        _ => Err(format!(
+            "unsupported native bytecode ELF identity class={elf_class} data={elf_data} type={elf_type} machine={elf_machine}"
+        )),
+    }
 }
 
 fn draft_checked_ail_requirements_for_package(
@@ -4048,6 +4132,12 @@ fn run_ail_bootstrap_command(path: &str, cli_options: &CliOptions) -> Result<u8,
         compile_ail_native_artifacts(&compiler_pass_bytecode, target, "compiler-pass")?;
     let (agent_bytecode, agent_bytecode_text) = load_verified_ail_build_agent(agent_path)?;
     let agent_native_artifacts = compile_ail_build_agent_native_artifacts(&agent_bytecode, target)?;
+    let native_bytecode_report_text = render_ail_bootstrap_native_bytecode_report(
+        target,
+        toolchain_native_artifacts.as_slice(),
+        compiler_pass_native_artifacts.as_slice(),
+        agent_native_artifacts.as_slice(),
+    )?;
     let empty_agent_trace: &[String] = &[];
     let manifest_text = render_ail_bootstrap_manifest(&AilBootstrapArtifactSet {
         target_name: target,
@@ -4064,6 +4154,7 @@ fn run_ail_bootstrap_command(path: &str, cli_options: &CliOptions) -> Result<u8,
         toolchain_pass_output_core_text: &toolchain_pass_output_core_text,
         toolchain_pass_trace_text: &toolchain_pass_trace_text,
         fixed_point_report_text: &fixed_point_report_text,
+        native_bytecode_report_text: &native_bytecode_report_text,
         compiler_pass_conformance_report: &compiler_pass_conformance_report,
         compiler_pass_native_executables: compiler_pass_native_artifacts.as_slice(),
         agent_bytecode_text: Some(agent_bytecode_text.as_str()),
@@ -4086,6 +4177,7 @@ fn run_ail_bootstrap_command(path: &str, cli_options: &CliOptions) -> Result<u8,
         toolchain_pass_output_core_text: &toolchain_pass_output_core_text,
         toolchain_pass_trace_text: &toolchain_pass_trace_text,
         fixed_point_report_text: &fixed_point_report_text,
+        native_bytecode_report_text: &native_bytecode_report_text,
         toolchain_conformance_report: &toolchain_conformance_report,
         compiler_pass_conformance_report: &compiler_pass_conformance_report,
         target_artifacts: toolchain_native_artifacts.as_slice(),
@@ -4110,6 +4202,7 @@ fn run_ail_bootstrap_command(path: &str, cli_options: &CliOptions) -> Result<u8,
             toolchain_pass_output_core_text: &toolchain_pass_output_core_text,
             toolchain_pass_trace_text: &toolchain_pass_trace_text,
             fixed_point_report_text: &fixed_point_report_text,
+            native_bytecode_report_text: &native_bytecode_report_text,
             compiler_pass_conformance_report: &compiler_pass_conformance_report,
             compiler_pass_native_executables: compiler_pass_native_artifacts.as_slice(),
             agent_bytecode_text: Some(agent_run.bytecode_text.as_str()),

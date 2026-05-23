@@ -27,6 +27,8 @@ A BuildRequest has:
 - conformance report fingerprint: Text
 - fixed point report: Text
 - fixed point report fingerprint: Text
+- native bytecode report: Text
+- native bytecode report fingerprint: Text
 - bytecode artifact: Text
 - bytecode fingerprint: Text
 - bytecode verification report: Text
@@ -248,6 +250,8 @@ When the toolchain agent verifies an AIL bootstrap bundle:
 - the system reads the BuildRequest fixed point report fingerprint
 - the system reads the BuildRequest conformance report
 - the system reads the BuildRequest conformance report fingerprint
+- the system reads the BuildRequest native bytecode report
+- the system reads the BuildRequest native bytecode report fingerprint
 - the system reads the BuildRequest target artifact fingerprint
 - the system reads the BuildRequest compiler pass target artifact fingerprint
 - the system changes the BuildRequest artifact manifest verification report to Verified

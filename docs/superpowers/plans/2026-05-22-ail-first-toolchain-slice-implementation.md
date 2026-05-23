@@ -6283,6 +6283,57 @@ cargo test --test ail_toolchain cli_ail_bootstrap_writes_native_toolchain_bundle
 Expected: the bootstrap bundle proves the AIL-Meta compiler pass reaches a
 stable output before bytecode and native ELF emission.
 
+### Task 143: Bootstrap Bundle Records Native Machine Bytecode Evidence
+
+**Files:**
+- Modify: `examples/ail_toolchain_agent.ail/spec.ail-spec.md`
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/13-bootstrap-self-hosting.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing native-bytecode evidence assertions**
+
+Extend the native `ail-bootstrap` bundle test to require
+`bootstrap-native-bytecode-report.txt`, its fingerprint file, a manifest entry
+for the native-bytecode report, and AIL verifier trace reads for
+`buildrequest.native bytecode report` and
+`buildrequest.native bytecode report fingerprint`. Require the report to show
+that the toolchain agent, compiler pass, and AIL verifier target artifacts are
+Linux x86_64 ELF executable bytes.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_bootstrap_writes_native_toolchain_bundle -- --nocapture
+```
+
+Expected: failure because the bootstrap bundle does not yet write a
+native-bytecode report.
+
+- [x] **Step 3: Generate the native-bytecode report**
+
+After compiling the toolchain agent, compiler pass, and bootstrap verifier to
+native artifacts, inspect each emitted byte buffer for ELF magic, ELFCLASS64,
+little-endian encoding, executable type, and x86_64 machine identity. Write a
+deterministic native-bytecode report, fingerprint it, include it in the
+bootstrap manifest, and add the report plus fingerprint to the AIL-authored
+bootstrap verifier state.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_bootstrap_writes_native_toolchain_bundle -- --nocapture
+```
+
+Expected: the bootstrap bundle proves the emitted Linux target artifacts are
+machine-level ELF executable bytes before accepting the manifest.
+
 ### Task 18: Declared Failure Trace Coverage Diagnostics
 
 **Files:**

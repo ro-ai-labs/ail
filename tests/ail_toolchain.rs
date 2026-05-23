@@ -4328,6 +4328,50 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
         fs::read(artifact_dir.join("compiler-pass-InferReadPermissions.elf")).unwrap();
     assert_eq!(&compiler_pass_native[0..4], b"\x7fELF");
     let expected_compiler_pass_fingerprint = fnv64_fingerprint_bytes(&compiler_pass_native);
+    let agent_verifier = fs::read(artifact_dir.join("agent-VerifyBootstrapManifest.elf")).unwrap();
+    assert_eq!(&agent_verifier[0..4], b"\x7fELF");
+    let expected_agent_verifier_fingerprint = fnv64_fingerprint_bytes(&agent_verifier);
+    let native_bytecode_report =
+        fs::read_to_string(artifact_dir.join("bootstrap-native-bytecode-report.txt")).unwrap();
+    assert!(
+        native_bytecode_report.contains("AIL-Bootstrap-Native-Bytecode:"),
+        "{native_bytecode_report}"
+    );
+    assert!(
+        native_bytecode_report.contains("target linux-x86_64-elf"),
+        "{native_bytecode_report}"
+    );
+    assert!(
+        native_bytecode_report.contains(&format!(
+            "machine-bytecode toolchain-agent-target linux-x86_64-elf toolchain-agent-VerifyBootstrapManifest.elf elf64-little-x86_64-executable {} bytes {}",
+            expected_toolchain_verifier_fingerprint,
+            toolchain_verifier.len()
+        )),
+        "{native_bytecode_report}"
+    );
+    assert!(
+        native_bytecode_report.contains(&format!(
+            "machine-bytecode compiler-pass-target linux-x86_64-elf compiler-pass-InferReadPermissions.elf elf64-little-x86_64-executable {} bytes {}",
+            expected_compiler_pass_fingerprint,
+            compiler_pass_native.len()
+        )),
+        "{native_bytecode_report}"
+    );
+    assert!(
+        native_bytecode_report.contains(&format!(
+            "machine-bytecode agent-target linux-x86_64-elf agent-VerifyBootstrapManifest.elf elf64-little-x86_64-executable {} bytes {}",
+            expected_agent_verifier_fingerprint,
+            agent_verifier.len()
+        )),
+        "{native_bytecode_report}"
+    );
+    let native_bytecode_report_fingerprint =
+        fs::read_to_string(artifact_dir.join("bootstrap-native-bytecode-report.fingerprint.txt"))
+            .unwrap();
+    assert_eq!(
+        native_bytecode_report_fingerprint.trim(),
+        fnv64_fingerprint(&native_bytecode_report)
+    );
 
     let agent_bytecode = fs::read_to_string(artifact_dir.join("agent.ailbc.json")).unwrap();
     assert_eq!(agent_bytecode, toolchain_bytecode);
@@ -4344,6 +4388,8 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
     assert!(agent_trace.contains("read buildrequest.fixed point report fingerprint"));
     assert!(agent_trace.contains("read buildrequest.conformance report"));
     assert!(agent_trace.contains("read buildrequest.conformance report fingerprint"));
+    assert!(agent_trace.contains("read buildrequest.native bytecode report"));
+    assert!(agent_trace.contains("read buildrequest.native bytecode report fingerprint"));
     assert!(agent_trace.contains("read buildrequest.target artifact fingerprint"));
     assert!(agent_trace.contains("read buildrequest.compiler pass target artifact fingerprint"));
     assert!(agent_trace.contains("read buildrequest.artifact manifest"));
@@ -4353,9 +4399,6 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
     );
     assert!(agent_trace.contains("trace BootstrapManifestVerified"));
 
-    let agent_verifier = fs::read(artifact_dir.join("agent-VerifyBootstrapManifest.elf")).unwrap();
-    assert_eq!(&agent_verifier[0..4], b"\x7fELF");
-    let expected_agent_verifier_fingerprint = fnv64_fingerprint_bytes(&agent_verifier);
     let native_agent_run = Command::new(artifact_dir.join("agent-VerifyBootstrapManifest.elf"))
         .args([
             "buildrequest.id=ail-toolchain-agent-bootstrap",
@@ -4371,6 +4414,8 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
             "buildrequest.fixed point report fingerprint=fnv64:fixed-point",
             "buildrequest.conformance report=ok",
             "buildrequest.conformance report fingerprint=fnv64:conformance",
+            "buildrequest.native bytecode report=ok",
+            "buildrequest.native bytecode report fingerprint=fnv64:native-bytecode",
             "buildrequest.target artifact fingerprint=fnv64:toolchain-native",
             "buildrequest.compiler pass target artifact fingerprint=fnv64:pass-native",
             "buildrequest.artifact manifest=ok",
@@ -4456,6 +4501,13 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
         manifest.contains(&format!(
             "bootstrap-fixed-point bootstrap-fixed-point-report.txt {}",
             fnv64_fingerprint(&fixed_point_report)
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "bootstrap-native-bytecode bootstrap-native-bytecode-report.txt {}",
+            fnv64_fingerprint(&native_bytecode_report)
         )),
         "{manifest}"
     );
