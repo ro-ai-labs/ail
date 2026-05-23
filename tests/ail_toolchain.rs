@@ -1683,6 +1683,50 @@ safety-level: standard
 }
 
 #[test]
+fn ail_core_reports_unknown_schema_version_metadata() {
+    let unique_suffix = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let root = std::env::temp_dir().join(format!(
+        "ail-unknown-schema-version-{}-{unique_suffix}",
+        std::process::id()
+    ));
+    fs::create_dir_all(&root).unwrap();
+    fs::write(
+        root.join("ail-package.md"),
+        r#"name: unknown-schema-app
+version: 0.1.0
+profile: Application
+entry: spec.ail-spec.md
+features: things
+conformance: first-slice
+schema-version: ail-core.schema.v99
+"#,
+    )
+    .unwrap();
+    fs::write(
+        root.join("spec.ail-spec.md"),
+        "The application Unknown Schema App manages schema validation.\n",
+    )
+    .unwrap();
+
+    let package = load_ail_package_dir(&root).unwrap();
+    let document = parse_ail_package_document(&package).unwrap();
+    let core = elaborate_ail_core(&package, &document);
+    let diagnostics = check_ail_core_diagnostics(&core);
+    assert!(
+        diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == "AIL-SCHEMA-003"
+                && diagnostic.message.contains("ail-core.schema.v99")
+        }),
+        "{diagnostics:?}"
+    );
+
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn ail_core_text_preserves_manifest_capability_grants() {
     let unique_suffix = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)

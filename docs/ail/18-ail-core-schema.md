@@ -327,7 +327,8 @@ against this schema, and the resulting graph passes the checker.
 
 ## Normalization Algorithm
 
-1. Parse the package envelope and reject unknown schema versions.
+1. Parse the package envelope and reject unknown schema versions with
+   `AIL-SCHEMA-003`.
 2. Resolve imports and package aliases to canonical package IDs.
 3. Normalize type aliases through the package dependency graph.
 4. Expand profile defaults into explicit nodes and edges with package-default

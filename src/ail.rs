@@ -2443,6 +2443,7 @@ pub fn check_ail_core_diagnostics(core: &AilCore) -> Vec<AilDiagnostic> {
         .into_iter()
         .map(AilDiagnostic::from_message)
         .collect::<Vec<_>>();
+    diagnostics.extend(check_core_schema_version(core));
     diagnostics.extend(check_core_schema_catalog(core));
     diagnostics.extend(check_field_types(core));
     diagnostics.extend(check_requirement_reference_diagnostics(core));
@@ -2497,6 +2498,23 @@ pub fn check_ail_core_diagnostics(core: &AilCore) -> Vec<AilDiagnostic> {
     }
     diagnostics.sort_by_key(|diagnostic| diagnostic.to_string());
     diagnostics
+}
+
+fn check_core_schema_version(core: &AilCore) -> Vec<AilDiagnostic> {
+    let Some(schema_version) = &core.package.schema_version else {
+        return Vec::new();
+    };
+    if schema_version == "ail-core.schema.v0" {
+        return Vec::new();
+    }
+    vec![
+        AilDiagnostic::error(
+            "AIL-SCHEMA-003",
+            format!("unknown AIL-Core schema version '{schema_version}'"),
+        )
+        .with_affected_graph_item(format!("package:{}", core.package.name))
+        .with_repair_suggestion("Use ail-core.schema.v0 or migrate the package before checking."),
+    ]
 }
 
 fn check_core_schema_catalog(core: &AilCore) -> Vec<AilDiagnostic> {

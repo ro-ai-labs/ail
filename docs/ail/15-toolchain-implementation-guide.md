@@ -140,8 +140,8 @@ When present, the `target-support:` manifest block is preserved as deterministic
 target support metadata in checked AIL-Core. Backend target/effect enforcement
 remains a checker and backend conformance responsibility.
 When present, `schema-version` and `safety-level` are also preserved as package
-metadata in checked AIL-Core. Schema-version rejection and safety policy
-enforcement remain checker responsibilities.
+metadata in checked AIL-Core. The checker rejects unknown schema versions;
+safety policy enforcement remains checker work.
 When present, `capability-grants:` entries are parsed into package metadata and
 rendered into checked AIL-Core as deterministic grant records with package,
 capability, effects, and approvals. Enforcement that imported behavior stays
