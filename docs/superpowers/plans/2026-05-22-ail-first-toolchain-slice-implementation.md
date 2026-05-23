@@ -4,7 +4,7 @@
 
 **Goal:** Implement the first AIL toolchain slice: package loading, structured-English parsing, AIL-Core elaboration, deterministic serialization, and base LLM endpoint wiring.
 
-**Architecture:** Add a focused `src/ail.rs` module that owns AIL package metadata, parsed AIL-Spec structures, AIL-Core graph construction, deterministic rendering, and simple core diagnostics. Reuse the existing `core_model::Graph` primitives for graph storage so the AIL path aligns with the current prototype instead of creating an unrelated IR stack.
+**Architecture:** Add a focused `src/ail.rs` module that owns AIL package metadata, parsed AIL-Spec structures, AIL-Core graph construction, deterministic rendering, and simple core diagnostics. Reuse the existing `core_model::Graph` primitives for graph storage so the AIL path aligns with the current compiler instead of creating an unrelated IR stack.
 
 **Tech Stack:** Rust 2024, existing standard-library-only codebase, `cargo test`, current docs under `docs/ail`, llama.cpp-compatible endpoint at `http://inteligentia-pro-1:8080/v1/chat/completions`.
 
@@ -104,8 +104,8 @@ Expected: AIL-Core tests pass.
 
 Add tests for:
 
-- `eigl ail-check examples/support_ticket.ail` prints `ail diagnostics: none`
-- `eigl ail-core examples/support_ticket.ail` prints deterministic AIL-Core
+- `ail ail-check examples/support_ticket.ail` prints `ail diagnostics: none`
+- `ail ail-core examples/support_ticket.ail` prints deterministic AIL-Core
 - package metadata output includes the base LLM endpoint
 
 - [x] **Step 2: Verify RED**
@@ -187,7 +187,7 @@ Expected: targeted tests, full suite, and clippy pass.
 
 - [x] **Step 1: Write failing conformance test**
 
-Add a CLI test requiring `eigl ail-conformance examples/support_ticket.ail`
+Add a CLI test requiring `ail ail-conformance examples/support_ticket.ail`
 to accept `spec.ail-spec.md`, reject each fixture under `examples/rejected`,
 print the stable diagnostic code for each rejected fixture, and finish with
 `ail conformance: ok`.
@@ -230,7 +230,7 @@ Expected: the conformance CLI test passes.
 - [x] **Step 1: Write failing LLM draft CLI test**
 
 Add a mock llama.cpp chat-completions server test requiring
-`eigl ail-draft examples/support_ticket.ail --prompt ... --llm-endpoint ...`
+`ail ail-draft examples/support_ticket.ail --prompt ... --llm-endpoint ...`
 to send a chat request with thinking disabled, include package and AIL-Spec
 drafting instructions, sanitize fenced/thinking model text, parse/check the
 candidate, and print `ail-draft diagnostics: none` for a valid candidate.
@@ -319,7 +319,7 @@ Expected: the invalid-fixture diagnostic test passes.
 Add tests requiring checked AIL-Core to render a deterministic AIL-Flow JSON
 projection with package/application identity, things, fields, views, action
 cards, requirements, reads, writes, guarantees, and trace events. Add CLI
-coverage for `eigl ail-flow examples/support_ticket.ail`.
+coverage for `ail ail-flow examples/support_ticket.ail`.
 
 - [x] **Step 2: Verify RED**
 
@@ -716,7 +716,7 @@ cargo test --test ail_toolchain cli_ail_conformance_checks_valid_and_rejected_fi
 ```
 
 Expected: focused conformance output includes metadata for both secret write
-and secret read violations while the legacy plain checker messages remain
+and secret read violations while the plain checker messages remain
 unchanged.
 
 ### Task 30: Structured Failure Lifecycle Diagnostics
@@ -762,7 +762,7 @@ cargo test --test ail_toolchain ail_core_reports_stable_invalid_fixture_diagnost
 ```
 
 Expected: focused conformance output includes metadata for failure declaration,
-handling, and trace coverage violations while legacy plain checker messages
+handling, and trace coverage violations while plain checker messages
 remain unchanged.
 
 ### Task 31: Structured Unknown Field Diagnostics
@@ -806,7 +806,7 @@ cargo test --test ail_toolchain ail_core_reports_stable_invalid_fixture_diagnost
 ```
 
 Expected: focused conformance output includes metadata for both unknown field
-read and write violations while legacy plain checker messages remain unchanged.
+read and write violations while plain checker messages remain unchanged.
 
 ### Task 32: Structured Field Validation Diagnostics
 
@@ -849,7 +849,7 @@ cargo test --test ail_toolchain ail_core_reports_stable_invalid_fixture_diagnost
 ```
 
 Expected: focused conformance output includes metadata for unknown field types
-and unknown requirement fields while legacy plain checker messages remain
+and unknown requirement fields while plain checker messages remain
 unchanged.
 
 ### Task 33: Structured Semantic Integrity Diagnostics
@@ -893,7 +893,7 @@ cargo test --test ail_toolchain ail_core_reports_stable_invalid_fixture_diagnost
 ```
 
 Expected: focused semantic integrity diagnostics include graph metadata and
-repairs while legacy plain checker messages remain unchanged.
+repairs while plain checker messages remain unchanged.
 
 ### Task 34: Structured AIL Draft Diagnostics
 
@@ -906,7 +906,7 @@ repairs while legacy plain checker messages remain unchanged.
 - [x] **Step 1: Write failing draft diagnostic CLI test**
 
 Mock the LLM chat endpoint with a rejected Support Ticket candidate and require
-`eigl ail-draft ...` to return non-zero while printing the same structured
+`ail ail-draft ...` to return non-zero while printing the same structured
 diagnostic metadata used by conformance output.
 
 - [x] **Step 2: Verify RED**
@@ -2539,7 +2539,7 @@ successful execution state.
 - [x] **Step 1: Write failing prompt-to-bytecode CLI test**
 
 Add a mock llama.cpp chat-completions server test requiring
-`eigl ail-build examples/support_ticket.ail --prompt ... --llm-endpoint ...`
+`ail ail-build examples/support_ticket.ail --prompt ... --llm-endpoint ...`
 to send the user prompt through the AIL draft prompt, accept the returned
 AIL-Spec candidate, lower it to AIL-Bytecode, verify it, and print a parseable
 bytecode artifact on stdout.
@@ -3143,7 +3143,7 @@ Compiler-profile bytecode verification still passes.
 Add a CLI test that runs:
 
 ```bash
-eigl ail-pass examples/compiler_pass.ail examples/support_ticket.ail --action InferReadPermissions
+ail ail-pass examples/compiler_pass.ail examples/support_ticket.ail --action InferReadPermissions
 ```
 
 Require stdout to be transformed Support Ticket AIL-Core containing
@@ -3236,13 +3236,13 @@ permission insertion.
 Add a CLI test that first runs:
 
 ```bash
-eigl ail-lower examples/compiler_pass.ail
+ail ail-lower examples/compiler_pass.ail
 ```
 
 Save stdout as a `.ailbc.json` artifact, then run:
 
 ```bash
-eigl ail-pass <saved-pass.ailbc.json> examples/support_ticket.ail --action InferReadPermissions
+ail ail-pass <saved-pass.ailbc.json> examples/support_ticket.ail --action InferReadPermissions
 ```
 
 Require stdout to contain transformed Support Ticket AIL-Core with
@@ -3292,7 +3292,7 @@ Add an `ail-build` test that uses the mock llama.cpp chat endpoint to produce
 requirements and an accepted Support Ticket AIL-Spec, runs:
 
 ```bash
-eigl ail-build examples/support_ticket.ail --prompt "Build an AIL support ticket bytecode artifact" --pass examples/compiler_pass.ail --artifact-dir <dir> --llm-endpoint <mock>
+ail ail-build examples/support_ticket.ail --prompt "Build an AIL support ticket bytecode artifact" --pass examples/compiler_pass.ail --artifact-dir <dir> --llm-endpoint <mock>
 ```
 
 Require stdout to remain verified AIL-Bytecode while
@@ -3386,7 +3386,7 @@ and permission insertion.
 Add a CLI test that runs:
 
 ```bash
-eigl ail-requirements examples/support_ticket.ail --prompt "Capture requirements for a support ticket app" --llm-endpoint <mock>
+ail ail-requirements examples/support_ticket.ail --prompt "Capture requirements for a support ticket app" --llm-endpoint <mock>
 ```
 
 The mock base LLM first returns incomplete requirements, then repaired
@@ -3437,7 +3437,7 @@ Add a CLI test that writes a checked AIL-Requirements artifact to a temp file
 and runs:
 
 ```bash
-eigl ail-spec examples/support_ticket.ail --prompt "Draft a support ticket app from captured requirements" --requirements-file <requirements-file> --llm-endpoint <mock>
+ail ail-spec examples/support_ticket.ail --prompt "Draft a support ticket app from captured requirements" --requirements-file <requirements-file> --llm-endpoint <mock>
 ```
 
 The mock base LLM first returns a rejected AIL-Spec and then a repaired
@@ -3490,8 +3490,8 @@ Add a CLI test that writes a valid generated AIL-Spec artifact to a temp file
 and requires:
 
 ```bash
-eigl ail-core examples/support_ticket.ail --spec-file <spec-file>
-eigl ail-lower examples/support_ticket.ail --spec-file <spec-file>
+ail ail-core examples/support_ticket.ail --spec-file <spec-file>
+ail ail-lower examples/support_ticket.ail --spec-file <spec-file>
 ```
 
 to render checked AIL-Core and verified AIL-Bytecode from that saved spec file
@@ -3542,7 +3542,7 @@ Add a CLI test that renders `ail-core` for `examples/support_ticket.ail`, saves
 that checked AIL-Core text to a temp file, reparses it as AIL-Core, and requires:
 
 ```bash
-eigl ail-lower examples/support_ticket.ail --core-file <core-file>
+ail ail-lower examples/support_ticket.ail --core-file <core-file>
 ```
 
 to emit the same verified AIL-Bytecode as direct source-package lowering,
@@ -3593,7 +3593,7 @@ Compiler-profile AIL-Bytecode artifact, renders `examples/support_ticket.ail`
 to a saved checked AIL-Core artifact, and requires:
 
 ```bash
-eigl ail-pass <saved-pass.ailbc.json> --core-file <core-file> --action InferReadPermissions
+ail ail-pass <saved-pass.ailbc.json> --core-file <core-file> --action InferReadPermissions
 ```
 
 to run the pass over the saved IR artifact without requiring a target source
@@ -3643,7 +3643,7 @@ Add a CLI test that writes a checked AIL-Requirements artifact to a temp file
 and requires:
 
 ```bash
-eigl ail-build examples/support_ticket.ail --prompt "Build from saved requirements" --requirements-file <requirements-file> --artifact-dir <dir> --llm-endpoint <mock>
+ail ail-build examples/support_ticket.ail --prompt "Build from saved requirements" --requirements-file <requirements-file> --artifact-dir <dir> --llm-endpoint <mock>
 ```
 
 to skip requirements capture, send exactly one requirements-grounded AIL-Spec
@@ -3694,7 +3694,7 @@ Add a CLI test that writes a checked AIL-Spec artifact to a temp file and
 requires:
 
 ```bash
-eigl ail-build examples/support_ticket.ail --spec-file <spec-file> --artifact-dir <dir>
+ail ail-build examples/support_ticket.ail --spec-file <spec-file> --artifact-dir <dir>
 ```
 
 to skip requirements capture and spec drafting, emit verified AIL-Bytecode, and
@@ -3745,7 +3745,7 @@ Add a CLI test that writes a checked AIL-Core artifact to a temp file and
 requires:
 
 ```bash
-eigl ail-build examples/support_ticket.ail --core-file <core-file> --artifact-dir <dir>
+ail ail-build examples/support_ticket.ail --core-file <core-file> --artifact-dir <dir>
 ```
 
 to skip requirements capture and spec drafting, emit verified AIL-Bytecode, and
@@ -3794,7 +3794,7 @@ Expected: `ail-build --core-file` emits verified bytecode, writes
 Add a CLI test that runs:
 
 ```bash
-eigl ail-build examples/support_ticket.ail --core-file <core-file> --agent examples/ail_toolchain_agent.ail --artifact-dir <dir>
+ail ail-build examples/support_ticket.ail --core-file <core-file> --agent examples/ail_toolchain_agent.ail --artifact-dir <dir>
 ```
 
 and requires `ail-build` to compile the AIL-authored toolchain agent into

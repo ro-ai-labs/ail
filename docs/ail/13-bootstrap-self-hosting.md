@@ -2,13 +2,14 @@
 
 ## Purpose
 
-AIL bootstrap and self-hosting rules describe how the language moves from the
-current prototype to a self-sovereign toolchain.
+AIL bootstrap and self-hosting rules describe how the language reaches a
+self-sovereign toolchain.
 
 ## Bootstrap Allowance
 
 Rust, C, C++, Python, JavaScript, TypeScript, Go, LLVM, Wasm, and other systems
-may be used as scaffolding. The rule is that legacy languages may bootstrap AIL but must not own AIL.
+may be used as stage-0 scaffolding. The rule is that bootstrap implementation
+languages may start AIL but must not own AIL.
 
 ## Self-Sovereign Toolchain Principle
 
@@ -16,10 +17,11 @@ The mature AIL toolchain must define its required compiler, runtime, standard
 library, package system, debugger, agent protocol, build system, and conformance
 suite in AIL itself.
 
-## Stage 0: Bootstrap Prototype
+## Stage 0: Bootstrap Compiler
 
-Use the current prototype to explore parsing, checking, semantic graph
-construction, views, traces, execution, and round-trip tests.
+Use the current compiler to explore parsing, checking, semantic graph
+construction, views, traces, execution, native ELF output, and round-trip
+tests.
 
 ## Stage 1: AIL Foundation Specs
 
@@ -61,12 +63,12 @@ Compiler N compiles the AIL toolchain spec into Compiler N+1. Compiler N+1
 compiles the same spec into Compiler N+2. The outputs are equivalent under the
 defined fixed-point check.
 
-## Stage 5: Legacy Independence
+## Stage 5: Bootstrap Independence
 
 AIL can rebuild its required compiler, runtime, standard library, agent tooling,
-package system, and build system from AIL sources. Legacy artifacts may remain
-as optional backends, historical bootstrap artifacts, or interoperability
-targets.
+package system, and build system from AIL sources. Stage-0 artifacts may remain
+as optional backends or interoperability targets, but not as required language
+authority.
 
 ## Fixed-Point Checks
 

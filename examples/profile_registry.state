@@ -1,5 +1,0 @@
-profiles.P1.email=alice@example.com
-profiles.P1.age=30
-profiles.P2.email=bob@example.com
-profiles.P2.age=22
-report.count=0

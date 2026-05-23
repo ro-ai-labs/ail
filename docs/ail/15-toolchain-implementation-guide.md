@@ -782,7 +782,7 @@ Diagnostics must be stable enough for tests and agent explanations.
 Conformance output and LLM draft candidate checks use the structured diagnostic
 representation so rejected fixtures and invalid `ail-draft` candidates can
 expose the stable code/message plus source provenance, affected graph item, and
-repair guidance without changing the legacy plain-message checker API.
+repair guidance without changing the plain-message checker API.
 Diagnostics that come from action reads or writes use the behavior bullet as
 source provenance and the corresponding semantic graph edge as the affected
 graph item. Diagnostics that come from failure declarations distinguish the

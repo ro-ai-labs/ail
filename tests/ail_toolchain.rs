@@ -6,7 +6,7 @@ use std::process::Command;
 use std::thread;
 use std::time::{Duration, Instant};
 
-use eigl::ail::{
+use ail::ail::{
     DEFAULT_BASE_LLM_ENDPOINT, apply_ail_patch, check_ail_core, check_ail_core_diagnostics,
     compile_ail_bytecode, compile_ail_core_bytecode, elaborate_ail_core, load_ail_package_dir,
     parse_ail_bytecode, parse_ail_core_text, parse_ail_package_document,
@@ -14,7 +14,7 @@ use eigl::ail::{
     render_ail_core, render_ail_flow_view, render_ail_spec, run_ail_action,
     run_ail_bytecode_action, run_ail_compiler_pass_on_core, verify_ail_bytecode,
 };
-use eigl::core_model::json_string;
+use ail::core_model::json_string;
 
 fn fixture(name: &str) -> String {
     format!("{}/examples/{name}", env!("CARGO_MANIFEST_DIR"))
@@ -33,7 +33,7 @@ fn fnv64_fingerprint_bytes(bytes: &[u8]) -> String {
     format!("fnv64:{hash:016x}")
 }
 
-fn detailed_ail_diagnostic(core: &eigl::ail::AilCore, code: &str, message: &str) -> String {
+fn detailed_ail_diagnostic(core: &ail::ail::AilCore, code: &str, message: &str) -> String {
     check_ail_core_diagnostics(core)
         .into_iter()
         .find(|diagnostic| diagnostic.code == code && diagnostic.message == message)
@@ -2442,7 +2442,7 @@ fn ail_toolchain_agent_package_lowers_to_verified_bytecode() {
 
 #[test]
 fn cli_ail_vm_executes_saved_bytecode_artifact() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let lowered = Command::new(binary)
         .args(["ail-lower", &package])
@@ -2499,7 +2499,7 @@ fn cli_ail_vm_executes_saved_bytecode_artifact() {
 
 #[test]
 fn cli_ail_vm_rejects_invalid_bytecode_before_execution() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let lowered = Command::new(binary)
         .args(["ail-lower", &package])
@@ -2543,7 +2543,7 @@ fn cli_ail_vm_rejects_invalid_bytecode_before_execution() {
 
 #[test]
 fn cli_ail_pass_runs_compiler_pass_over_checked_package_core() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let pass_package = fixture("compiler_pass.ail");
     let target_package = fixture("support_ticket.ail");
 
@@ -2586,11 +2586,11 @@ fn cli_ail_pass_runs_compiler_pass_over_checked_package_core() {
 
 #[test]
 fn cli_ail_pass_writes_auditable_intermediate_artifacts() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let pass_package = fixture("compiler_pass.ail");
     let target_package = fixture("support_ticket.ail");
     let artifact_dir =
-        std::env::temp_dir().join(format!("eigl-ail-pass-artifacts-{}", std::process::id()));
+        std::env::temp_dir().join(format!("ail-ail-pass-artifacts-{}", std::process::id()));
     let _ = fs::remove_dir_all(&artifact_dir);
 
     let output = Command::new(binary)
@@ -2716,12 +2716,12 @@ fn cli_ail_pass_writes_auditable_intermediate_artifacts() {
 
 #[test]
 fn cli_ail_pass_agent_accepts_pass_artifacts() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let pass_package = fixture("compiler_pass.ail");
     let target_package = fixture("support_ticket.ail");
     let agent_package = fixture("ail_toolchain_agent.ail");
     let artifact_dir = std::env::temp_dir().join(format!(
-        "eigl-ail-pass-agent-artifacts-{}",
+        "ail-ail-pass-agent-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&artifact_dir);
@@ -2829,12 +2829,12 @@ fn cli_ail_pass_agent_accepts_pass_artifacts() {
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_pass_writes_native_tool_artifacts() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let pass_package = fixture("compiler_pass.ail");
     let target_package = fixture("support_ticket.ail");
     let agent_package = fixture("ail_toolchain_agent.ail");
     let artifact_dir = std::env::temp_dir().join(format!(
-        "eigl-ail-pass-native-tool-artifacts-{}",
+        "ail-ail-pass-native-tool-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&artifact_dir);
@@ -3022,7 +3022,7 @@ fn cli_ail_pass_writes_native_tool_artifacts() {
 
 #[test]
 fn cli_ail_pass_accepts_saved_compiler_pass_bytecode_artifact() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let pass_package = fixture("compiler_pass.ail");
     let target_package = fixture("support_ticket.ail");
 
@@ -3037,7 +3037,7 @@ fn cli_ail_pass_accepts_saved_compiler_pass_bytecode_artifact() {
     );
 
     let bytecode_path = std::env::temp_dir().join(format!(
-        "eigl-compiler-pass-{}.ailbc.json",
+        "ail-compiler-pass-{}.ailbc.json",
         std::process::id()
     ));
     fs::write(&bytecode_path, lowered.stdout).unwrap();
@@ -3076,11 +3076,11 @@ fn cli_ail_pass_accepts_saved_compiler_pass_bytecode_artifact() {
 
 #[test]
 fn cli_ail_pass_accepts_saved_core_file_artifact() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let pass_package = fixture("compiler_pass.ail");
     let target_package = fixture("support_ticket.ail");
     let artifact_dir = std::env::temp_dir().join(format!(
-        "eigl-ail-pass-core-artifacts-{}",
+        "ail-ail-pass-core-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&artifact_dir);
@@ -3095,7 +3095,7 @@ fn cli_ail_pass_accepts_saved_core_file_artifact() {
         String::from_utf8_lossy(&lowered.stderr)
     );
     let bytecode_path = std::env::temp_dir().join(format!(
-        "eigl-compiler-pass-core-target-{}.ailbc.json",
+        "ail-compiler-pass-core-target-{}.ailbc.json",
         std::process::id()
     ));
     fs::write(&bytecode_path, lowered.stdout).unwrap();
@@ -3110,7 +3110,7 @@ fn cli_ail_pass_accepts_saved_core_file_artifact() {
         String::from_utf8_lossy(&target_core.stderr)
     );
     let core_path = std::env::temp_dir().join(format!(
-        "eigl-support-ticket-pass-input-{}.ail-core.txt",
+        "ail-support-ticket-pass-input-{}.ail-core.txt",
         std::process::id()
     ));
     fs::write(&core_path, target_core.stdout).unwrap();
@@ -3289,7 +3289,7 @@ fn ail_runtime_enforces_positive_field_requirements_and_read_traces() {
 
 #[test]
 fn cli_ail_check_and_core_use_package_loader() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
 
     let check = Command::new(binary)
@@ -3423,10 +3423,10 @@ fn cli_ail_check_and_core_use_package_loader() {
 
 #[test]
 fn cli_ail_core_and_lower_accept_saved_spec_file_artifact() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let spec_path = std::env::temp_dir().join(format!(
-        "eigl-support-ticket-generated-{}.ail-spec.md",
+        "ail-support-ticket-generated-{}.ail-spec.md",
         std::process::id()
     ));
     fs::write(
@@ -3479,7 +3479,7 @@ fn cli_ail_core_and_lower_accept_saved_spec_file_artifact() {
 
 #[test]
 fn cli_ail_lower_accepts_saved_core_file_artifact() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
 
     let source_lower = Command::new(binary)
@@ -3512,16 +3512,14 @@ fn cli_ail_lower_accepts_saved_core_file_artifact() {
     assert_eq!(parsed_bytecode, source_bytecode);
 
     let core_path = std::env::temp_dir().join(format!(
-        "eigl-support-ticket-checked-{}.ail-core.txt",
+        "ail-support-ticket-checked-{}.ail-core.txt",
         std::process::id()
     ));
     fs::write(&core_path, core_text).unwrap();
-    let missing_source_package = std::env::temp_dir().join(format!(
-        "eigl-missing-source-package-{}",
-        std::process::id()
-    ));
+    let missing_source_package =
+        std::env::temp_dir().join(format!("ail-missing-source-package-{}", std::process::id()));
     let artifact_dir = std::env::temp_dir().join(format!(
-        "eigl-ail-lower-core-artifacts-{}",
+        "ail-ail-lower-core-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&artifact_dir);
@@ -3597,11 +3595,11 @@ fn cli_ail_lower_accepts_saved_core_file_artifact() {
 
 #[test]
 fn cli_ail_lower_agent_verifies_manifest_artifacts() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let agent_package = fixture("ail_toolchain_agent.ail");
     let artifact_dir = std::env::temp_dir().join(format!(
-        "eigl-ail-lower-agent-artifacts-{}",
+        "ail-ail-lower-agent-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&artifact_dir);
@@ -3708,11 +3706,11 @@ fn cli_ail_lower_agent_verifies_manifest_artifacts() {
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_lower_writes_native_agent_artifacts() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let agent_package = fixture("ail_toolchain_agent.ail");
     let artifact_dir = std::env::temp_dir().join(format!(
-        "eigl-ail-lower-native-agent-artifacts-{}",
+        "ail-ail-lower-native-agent-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&artifact_dir);
@@ -3865,10 +3863,10 @@ fn cli_ail_lower_writes_native_agent_artifacts() {
 fn cli_ail_compile_emits_runnable_linux_x86_64_elf_executable() {
     use std::os::unix::fs::PermissionsExt;
 
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let executable_path =
-        std::env::temp_dir().join(format!("eigl-close-ticket-native-{}", std::process::id()));
+        std::env::temp_dir().join(format!("ail-close-ticket-native-{}", std::process::id()));
     let _ = fs::remove_file(&executable_path);
 
     let output = Command::new(binary)
@@ -3918,14 +3916,14 @@ fn cli_ail_compile_emits_runnable_linux_x86_64_elf_executable() {
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_compile_accepts_saved_bytecode_artifact_for_native_elf() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let bytecode_path = std::env::temp_dir().join(format!(
-        "eigl-ail-compile-saved-bytecode-{}.ailbc.json",
+        "ail-ail-compile-saved-bytecode-{}.ailbc.json",
         std::process::id()
     ));
     let executable_path = std::env::temp_dir().join(format!(
-        "eigl-ail-compile-saved-bytecode-{}",
+        "ail-ail-compile-saved-bytecode-{}",
         std::process::id()
     ));
     let _ = fs::remove_file(&bytecode_path);
@@ -3992,18 +3990,18 @@ fn cli_ail_compile_accepts_saved_bytecode_artifact_for_native_elf() {
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_compile_writes_saved_bytecode_native_artifacts() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let bytecode_path = std::env::temp_dir().join(format!(
-        "eigl-ail-compile-bytecode-artifacts-{}.ailbc.json",
+        "ail-ail-compile-bytecode-artifacts-{}.ailbc.json",
         std::process::id()
     ));
     let executable_path = std::env::temp_dir().join(format!(
-        "eigl-ail-compile-bytecode-artifacts-{}",
+        "ail-ail-compile-bytecode-artifacts-{}",
         std::process::id()
     ));
     let artifact_dir = std::env::temp_dir().join(format!(
-        "eigl-ail-compile-bytecode-artifacts-dir-{}",
+        "ail-ail-compile-bytecode-artifacts-dir-{}",
         std::process::id()
     ));
     let _ = fs::remove_file(&bytecode_path);
@@ -4201,19 +4199,19 @@ fn cli_ail_compile_writes_saved_bytecode_native_artifacts() {
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_compile_agent_verifies_manifest_artifacts() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let agent_package = fixture("ail_toolchain_agent.ail");
     let bytecode_path = std::env::temp_dir().join(format!(
-        "eigl-ail-compile-agent-manifest-{}.ailbc.json",
+        "ail-ail-compile-agent-manifest-{}.ailbc.json",
         std::process::id()
     ));
     let executable_path = std::env::temp_dir().join(format!(
-        "eigl-ail-compile-agent-manifest-{}",
+        "ail-ail-compile-agent-manifest-{}",
         std::process::id()
     ));
     let artifact_dir = std::env::temp_dir().join(format!(
-        "eigl-ail-compile-agent-manifest-dir-{}",
+        "ail-ail-compile-agent-manifest-dir-{}",
         std::process::id()
     ));
     let _ = fs::remove_file(&bytecode_path);
@@ -4387,15 +4385,15 @@ fn cli_ail_compile_agent_verifies_manifest_artifacts() {
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_compile_package_agent_records_source_package_fingerprints() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let agent_package = fixture("ail_toolchain_agent.ail");
     let executable_path = std::env::temp_dir().join(format!(
-        "eigl-ail-compile-package-source-{}",
+        "ail-ail-compile-package-source-{}",
         std::process::id()
     ));
     let artifact_dir = std::env::temp_dir().join(format!(
-        "eigl-ail-compile-package-source-dir-{}",
+        "ail-ail-compile-package-source-dir-{}",
         std::process::id()
     ));
     let _ = fs::remove_file(&executable_path);
@@ -4491,10 +4489,10 @@ fn cli_ail_compile_package_agent_records_source_package_fingerprints() {
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_compile_writes_all_action_native_bundle() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("ail_toolchain_agent.ail");
     let artifact_dir = std::env::temp_dir().join(format!(
-        "eigl-ail-compile-all-actions-dir-{}",
+        "ail-ail-compile-all-actions-dir-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&artifact_dir);
@@ -4717,10 +4715,10 @@ fn cli_ail_compile_writes_all_action_native_bundle() {
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_compile_agent_verifies_all_action_native_bundle() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("ail_toolchain_agent.ail");
     let artifact_dir = std::env::temp_dir().join(format!(
-        "eigl-ail-compile-all-actions-agent-dir-{}",
+        "ail-ail-compile-all-actions-agent-dir-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&artifact_dir);
@@ -4858,11 +4856,11 @@ fn cli_ail_compile_agent_verifies_all_action_native_bundle() {
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let toolchain_package = fixture("ail_toolchain_agent.ail");
     let compiler_pass = fixture("compiler_pass.ail");
     let artifact_dir = std::env::temp_dir().join(format!(
-        "eigl-ail-bootstrap-native-bundle-{}",
+        "ail-ail-bootstrap-native-bundle-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&artifact_dir);
@@ -5526,16 +5524,14 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_compile_accepts_saved_spec_file_artifact() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let spec_path = std::env::temp_dir().join(format!(
-        "eigl-ail-compile-saved-spec-{}.ail-spec.md",
+        "ail-ail-compile-saved-spec-{}.ail-spec.md",
         std::process::id()
     ));
-    let executable_path = std::env::temp_dir().join(format!(
-        "eigl-ail-compile-saved-spec-{}",
-        std::process::id()
-    ));
+    let executable_path =
+        std::env::temp_dir().join(format!("ail-ail-compile-saved-spec-{}", std::process::id()));
     let _ = fs::remove_file(&executable_path);
     fs::write(
         &spec_path,
@@ -5582,18 +5578,16 @@ fn cli_ail_compile_accepts_saved_spec_file_artifact() {
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_compile_accepts_saved_core_file_artifact() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
     let document = parse_ail_package_document(&package).unwrap();
     let core = elaborate_ail_core(&package, &document);
     let core_path = std::env::temp_dir().join(format!(
-        "eigl-ail-compile-saved-core-{}.ail-core.txt",
+        "ail-ail-compile-saved-core-{}.ail-core.txt",
         std::process::id()
     ));
-    let executable_path = std::env::temp_dir().join(format!(
-        "eigl-ail-compile-saved-core-{}",
-        std::process::id()
-    ));
+    let executable_path =
+        std::env::temp_dir().join(format!("ail-ail-compile-saved-core-{}", std::process::id()));
     let _ = fs::remove_file(&executable_path);
     fs::write(&core_path, render_ail_core(&core)).unwrap();
 
@@ -5636,10 +5630,10 @@ fn cli_ail_compile_accepts_saved_core_file_artifact() {
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_compile_native_system_component_emits_resource_trace() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("network_driver.ail");
     let executable_path =
-        std::env::temp_dir().join(format!("eigl-network-driver-native-{}", std::process::id()));
+        std::env::temp_dir().join(format!("ail-network-driver-native-{}", std::process::id()));
     let _ = fs::remove_file(&executable_path);
 
     let output = Command::new(binary)
@@ -5694,14 +5688,14 @@ fn cli_ail_compile_native_system_component_emits_resource_trace() {
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_compile_native_rejects_unlowered_observed_requirements() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let spec_path = std::env::temp_dir().join(format!(
-        "eigl-manual-approval-native-unlowered-{}.ail-spec.md",
+        "ail-manual-approval-native-unlowered-{}.ail-spec.md",
         std::process::id()
     ));
     let executable_path = std::env::temp_dir().join(format!(
-        "eigl-manual-approval-native-unlowered-{}",
+        "ail-manual-approval-native-unlowered-{}",
         std::process::id()
     ));
     let spec_text = fs::read_to_string(format!("{package}/spec.ail-spec.md"))
@@ -5748,10 +5742,10 @@ fn cli_ail_compile_native_rejects_unlowered_observed_requirements() {
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_compile_native_executable_enforces_overdue_time_requirement() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let executable_path = std::env::temp_dir().join(format!(
-        "eigl-overdue-ticket-native-time-{}",
+        "ail-overdue-ticket-native-time-{}",
         std::process::id()
     ));
     let _ = fs::remove_file(&executable_path);
@@ -5828,10 +5822,10 @@ fn cli_ail_compile_native_executable_enforces_overdue_time_requirement() {
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_compile_native_executable_enforces_create_ticket_inputs() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let executable_path = std::env::temp_dir().join(format!(
-        "eigl-create-ticket-native-inputs-{}",
+        "ail-create-ticket-native-inputs-{}",
         std::process::id()
     ));
     let _ = fs::remove_file(&executable_path);
@@ -5900,10 +5894,10 @@ fn cli_ail_compile_native_executable_enforces_create_ticket_inputs() {
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_compile_native_executable_enforces_close_ticket_requirements() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let executable_path = std::env::temp_dir().join(format!(
-        "eigl-close-ticket-native-abi-{}",
+        "ail-close-ticket-native-abi-{}",
         std::process::id()
     ));
     let _ = fs::remove_file(&executable_path);
@@ -5961,10 +5955,10 @@ fn cli_ail_compile_native_executable_enforces_close_ticket_requirements() {
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_compile_native_executable_emits_close_ticket_state_write() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let executable_path = std::env::temp_dir().join(format!(
-        "eigl-close-ticket-native-write-{}",
+        "ail-close-ticket-native-write-{}",
         std::process::id()
     ));
     let _ = fs::remove_file(&executable_path);
@@ -6016,10 +6010,10 @@ fn cli_ail_compile_native_executable_emits_close_ticket_state_write() {
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_compile_native_executable_emits_trace_to_stderr() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let executable_path = std::env::temp_dir().join(format!(
-        "eigl-close-ticket-native-trace-{}",
+        "ail-close-ticket-native-trace-{}",
         std::process::id()
     ));
     let _ = fs::remove_file(&executable_path);
@@ -6109,18 +6103,18 @@ fn cli_ail_compile_native_executable_emits_trace_to_stderr() {
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_build_native_executable_enforces_llm_style_is_field_requirement() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let spec_path = std::env::temp_dir().join(format!(
-        "eigl-support-ticket-is-requirement-{}.ail-spec.md",
+        "ail-support-ticket-is-requirement-{}.ail-spec.md",
         std::process::id()
     ));
     let artifact_dir = std::env::temp_dir().join(format!(
-        "eigl-support-ticket-is-requirement-artifacts-{}",
+        "ail-support-ticket-is-requirement-artifacts-{}",
         std::process::id()
     ));
     let executable_path = std::env::temp_dir().join(format!(
-        "eigl-support-ticket-is-requirement-{}",
+        "ail-support-ticket-is-requirement-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&artifact_dir);
@@ -6201,18 +6195,18 @@ fn cli_ail_build_native_executable_enforces_llm_style_is_field_requirement() {
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_build_native_executable_enforces_llm_style_is_not_field_requirement() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let spec_path = std::env::temp_dir().join(format!(
-        "eigl-support-ticket-is-not-requirement-{}.ail-spec.md",
+        "ail-support-ticket-is-not-requirement-{}.ail-spec.md",
         std::process::id()
     ));
     let artifact_dir = std::env::temp_dir().join(format!(
-        "eigl-support-ticket-is-not-requirement-artifacts-{}",
+        "ail-support-ticket-is-not-requirement-artifacts-{}",
         std::process::id()
     ));
     let executable_path = std::env::temp_dir().join(format!(
-        "eigl-support-ticket-is-not-requirement-{}",
+        "ail-support-ticket-is-not-requirement-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&artifact_dir);
@@ -6334,18 +6328,18 @@ fn cli_ail_build_native_executable_enforces_llm_style_is_not_field_requirement()
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_build_native_executable_enforces_llm_style_has_role_requirement() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let spec_path = std::env::temp_dir().join(format!(
-        "eigl-support-ticket-has-role-requirement-{}.ail-spec.md",
+        "ail-support-ticket-has-role-requirement-{}.ail-spec.md",
         std::process::id()
     ));
     let artifact_dir = std::env::temp_dir().join(format!(
-        "eigl-support-ticket-has-role-requirement-artifacts-{}",
+        "ail-support-ticket-has-role-requirement-artifacts-{}",
         std::process::id()
     ));
     let executable_path = std::env::temp_dir().join(format!(
-        "eigl-support-ticket-has-role-requirement-{}",
+        "ail-support-ticket-has-role-requirement-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&artifact_dir);
@@ -6437,18 +6431,18 @@ fn cli_ail_build_native_executable_enforces_llm_style_has_role_requirement() {
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_build_native_executable_enforces_llm_style_trailing_role_requirement() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let spec_path = std::env::temp_dir().join(format!(
-        "eigl-support-ticket-trailing-role-requirement-{}.ail-spec.md",
+        "ail-support-ticket-trailing-role-requirement-{}.ail-spec.md",
         std::process::id()
     ));
     let artifact_dir = std::env::temp_dir().join(format!(
-        "eigl-support-ticket-trailing-role-requirement-artifacts-{}",
+        "ail-support-ticket-trailing-role-requirement-artifacts-{}",
         std::process::id()
     ));
     let executable_path = std::env::temp_dir().join(format!(
-        "eigl-support-ticket-trailing-role-requirement-{}",
+        "ail-support-ticket-trailing-role-requirement-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&artifact_dir);
@@ -6557,18 +6551,18 @@ fn cli_ail_build_native_executable_enforces_llm_style_trailing_role_requirement(
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_build_native_executable_enforces_llm_style_has_permission_requirement() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let spec_path = std::env::temp_dir().join(format!(
-        "eigl-support-ticket-has-permission-requirement-{}.ail-spec.md",
+        "ail-support-ticket-has-permission-requirement-{}.ail-spec.md",
         std::process::id()
     ));
     let artifact_dir = std::env::temp_dir().join(format!(
-        "eigl-support-ticket-has-permission-requirement-artifacts-{}",
+        "ail-support-ticket-has-permission-requirement-artifacts-{}",
         std::process::id()
     ));
     let executable_path = std::env::temp_dir().join(format!(
-        "eigl-support-ticket-has-permission-requirement-{}",
+        "ail-support-ticket-has-permission-requirement-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&artifact_dir);
@@ -6664,10 +6658,10 @@ fn cli_ail_build_native_executable_enforces_llm_style_has_permission_requirement
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_compile_native_executable_enforces_field_in_requirements() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let executable_path = std::env::temp_dir().join(format!(
-        "eigl-assign-ticket-native-field-in-{}",
+        "ail-assign-ticket-native-field-in-{}",
         std::process::id()
     ));
     let _ = fs::remove_file(&executable_path);
@@ -6787,10 +6781,10 @@ fn cli_ail_compile_native_executable_enforces_field_in_requirements() {
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_compile_native_executable_emits_nested_object_field_write() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let executable_path = std::env::temp_dir().join(format!(
-        "eigl-assign-ticket-native-object-write-{}",
+        "ail-assign-ticket-native-object-write-{}",
         std::process::id()
     ));
     let _ = fs::remove_file(&executable_path);
@@ -6844,10 +6838,10 @@ fn cli_ail_compile_native_executable_emits_nested_object_field_write() {
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_compile_native_agent_tool_emits_audit_trace() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("refund_tool.ail");
     let executable_path =
-        std::env::temp_dir().join(format!("eigl-refund-tool-native-{}", std::process::id()));
+        std::env::temp_dir().join(format!("ail-refund-tool-native-{}", std::process::id()));
     let _ = fs::remove_file(&executable_path);
 
     let output = Command::new(binary)
@@ -6906,10 +6900,10 @@ fn cli_ail_compile_native_agent_tool_emits_audit_trace() {
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_compile_native_compiler_pass_emits_transform_trace() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("compiler_pass.ail");
     let executable_path =
-        std::env::temp_dir().join(format!("eigl-compiler-pass-native-{}", std::process::id()));
+        std::env::temp_dir().join(format!("ail-compiler-pass-native-{}", std::process::id()));
     let _ = fs::remove_file(&executable_path);
 
     let output = Command::new(binary)
@@ -6962,7 +6956,7 @@ fn cli_ail_compile_native_compiler_pass_emits_transform_trace() {
 
 #[test]
 fn cli_ail_run_executes_close_ticket_with_trace() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
 
     let success = Command::new(binary)
@@ -7008,7 +7002,7 @@ fn cli_ail_run_executes_close_ticket_with_trace() {
 
 #[test]
 fn cli_ail_run_redacts_secret_runtime_state() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
 
     let success = Command::new(binary)
@@ -8205,7 +8199,7 @@ fn ail_core_reports_system_use_after_move() {
 
 #[test]
 fn cli_ail_conformance_checks_valid_and_rejected_fixtures() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
 
     let output = Command::new(binary)
@@ -8322,10 +8316,10 @@ fn cli_ail_conformance_checks_valid_and_rejected_fixtures() {
 
 #[test]
 fn cli_ail_conformance_writes_auditable_artifacts() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let artifact_dir = std::env::temp_dir().join(format!(
-        "eigl-ail-conformance-artifacts-{}",
+        "ail-ail-conformance-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&artifact_dir);
@@ -8381,11 +8375,11 @@ fn cli_ail_conformance_writes_auditable_artifacts() {
 
 #[test]
 fn cli_ail_conformance_agent_verifies_manifest_artifacts() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let agent_package = fixture("ail_toolchain_agent.ail");
     let artifact_dir = std::env::temp_dir().join(format!(
-        "eigl-ail-conformance-agent-artifacts-{}",
+        "ail-ail-conformance-agent-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&artifact_dir);
@@ -8454,11 +8448,11 @@ fn cli_ail_conformance_agent_verifies_manifest_artifacts() {
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_conformance_writes_native_agent_artifacts() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let agent_package = fixture("ail_toolchain_agent.ail");
     let artifact_dir = std::env::temp_dir().join(format!(
-        "eigl-ail-conformance-native-agent-artifacts-{}",
+        "ail-ail-conformance-native-agent-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&artifact_dir);
@@ -8622,7 +8616,7 @@ fn cli_ail_conformance_writes_native_agent_artifacts() {
 
 #[test]
 fn cli_ail_conformance_checks_agent_tool_fixtures() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("refund_tool.ail");
 
     let output = Command::new(binary)
@@ -8659,7 +8653,7 @@ fn cli_ail_conformance_checks_agent_tool_fixtures() {
 
 #[test]
 fn cli_ail_conformance_checks_compiler_profile_fixtures() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("compiler_pass.ail");
 
     let output = Command::new(binary)
@@ -8692,7 +8686,7 @@ fn cli_ail_conformance_checks_compiler_profile_fixtures() {
 
 #[test]
 fn cli_ail_conformance_checks_system_profile_fixtures() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("network_driver.ail");
 
     let output = Command::new(binary)
@@ -8895,7 +8889,7 @@ fn cli_ail_conformance_checks_system_profile_fixtures() {
 
 #[test]
 fn cli_ail_draft_uses_llm_endpoint_and_checks_candidate_spec() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = listener.local_addr().unwrap();
@@ -8945,7 +8939,7 @@ fn cli_ail_draft_uses_llm_endpoint_and_checks_candidate_spec() {
 
 #[test]
 fn cli_ail_draft_prints_structured_candidate_diagnostics() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = listener.local_addr().unwrap();
@@ -9004,7 +8998,7 @@ fn cli_ail_draft_prints_structured_candidate_diagnostics() {
 
 #[test]
 fn cli_ail_build_uses_llm_candidate_and_outputs_verified_bytecode() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = listener.local_addr().unwrap();
@@ -9081,7 +9075,7 @@ fn cli_ail_build_uses_llm_candidate_and_outputs_verified_bytecode() {
 
 #[test]
 fn cli_ail_build_repairs_rejected_candidate_before_lowering() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = listener.local_addr().unwrap();
@@ -9162,7 +9156,7 @@ fn cli_ail_build_repairs_rejected_candidate_before_lowering() {
 
 #[test]
 fn cli_ail_build_repairs_spec_that_drops_permission_requirement() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = listener.local_addr().unwrap();
@@ -9244,7 +9238,7 @@ fn cli_ail_build_repairs_spec_that_drops_permission_requirement() {
 
 #[test]
 fn cli_ail_build_repairs_incomplete_requirements_before_spec_drafting() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = listener.local_addr().unwrap();
@@ -9312,7 +9306,7 @@ fn cli_ail_build_repairs_incomplete_requirements_before_spec_drafting() {
 
 #[test]
 fn cli_ail_requirements_repairs_incomplete_capture_before_printing() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = listener.local_addr().unwrap();
@@ -9371,10 +9365,10 @@ fn cli_ail_requirements_repairs_incomplete_capture_before_printing() {
 
 #[test]
 fn cli_ail_spec_drafts_and_repairs_from_checked_requirements_file() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let requirements_path = std::env::temp_dir().join(format!(
-        "eigl-support-ticket-requirements-{}.ail-requirements.md",
+        "ail-support-ticket-requirements-{}.ail-requirements.md",
         std::process::id()
     ));
     let requirements = concat!(
@@ -9452,14 +9446,14 @@ fn cli_ail_spec_drafts_and_repairs_from_checked_requirements_file() {
 
 #[test]
 fn cli_ail_build_accepts_saved_requirements_file_artifact() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let requirements_path = std::env::temp_dir().join(format!(
-        "eigl-support-ticket-build-requirements-{}.ail-requirements.md",
+        "ail-support-ticket-build-requirements-{}.ail-requirements.md",
         std::process::id()
     ));
     let artifact_dir = std::env::temp_dir().join(format!(
-        "eigl-ail-build-requirements-artifacts-{}",
+        "ail-ail-build-requirements-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&artifact_dir);
@@ -9531,15 +9525,15 @@ fn cli_ail_build_accepts_saved_requirements_file_artifact() {
 
 #[test]
 fn cli_ail_build_agent_prepares_saved_requirements_before_spec_drafting() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let agent_package = fixture("ail_toolchain_agent.ail");
     let requirements_path = std::env::temp_dir().join(format!(
-        "eigl-support-ticket-agent-requirements-file-{}.ail-requirements.md",
+        "ail-support-ticket-agent-requirements-file-{}.ail-requirements.md",
         std::process::id()
     ));
     let artifact_dir = std::env::temp_dir().join(format!(
-        "eigl-ail-build-agent-requirements-file-artifacts-{}",
+        "ail-ail-build-agent-requirements-file-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&artifact_dir);
@@ -9629,14 +9623,14 @@ fn cli_ail_build_agent_prepares_saved_requirements_before_spec_drafting() {
 
 #[test]
 fn cli_ail_build_accepts_saved_spec_file_artifact() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let spec_path = std::env::temp_dir().join(format!(
-        "eigl-support-ticket-build-spec-{}.ail-spec.md",
+        "ail-support-ticket-build-spec-{}.ail-spec.md",
         std::process::id()
     ));
     let artifact_dir = std::env::temp_dir().join(format!(
-        "eigl-ail-build-spec-artifacts-{}",
+        "ail-ail-build-spec-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&artifact_dir);
@@ -9686,14 +9680,14 @@ fn cli_ail_build_accepts_saved_spec_file_artifact() {
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_build_saved_spec_can_emit_native_linux_x86_64_elf() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let spec_path = std::env::temp_dir().join(format!(
-        "eigl-support-ticket-build-native-spec-{}.ail-spec.md",
+        "ail-support-ticket-build-native-spec-{}.ail-spec.md",
         std::process::id()
     ));
     let executable_path = std::env::temp_dir().join(format!(
-        "eigl-support-ticket-build-native-{}",
+        "ail-support-ticket-build-native-{}",
         std::process::id()
     ));
     let _ = fs::remove_file(&executable_path);
@@ -9751,14 +9745,14 @@ fn cli_ail_build_saved_spec_can_emit_native_linux_x86_64_elf() {
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_build_native_target_is_in_artifact_manifest() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let artifact_dir = std::env::temp_dir().join(format!(
-        "eigl-support-ticket-build-native-manifest-{}",
+        "ail-support-ticket-build-native-manifest-{}",
         std::process::id()
     ));
     let executable_path = std::env::temp_dir().join(format!(
-        "eigl-support-ticket-build-native-manifest-out-{}",
+        "ail-support-ticket-build-native-manifest-out-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&artifact_dir);
@@ -9894,15 +9888,15 @@ fn cli_ail_build_native_target_is_in_artifact_manifest() {
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_build_with_pass_writes_native_pass_artifact() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let pass_package = fixture("compiler_pass.ail");
     let artifact_dir = std::env::temp_dir().join(format!(
-        "eigl-support-ticket-build-native-pass-manifest-{}",
+        "ail-support-ticket-build-native-pass-manifest-{}",
         std::process::id()
     ));
     let executable_path = std::env::temp_dir().join(format!(
-        "eigl-support-ticket-build-native-pass-out-{}",
+        "ail-support-ticket-build-native-pass-out-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&artifact_dir);
@@ -9979,16 +9973,16 @@ fn cli_ail_build_with_pass_writes_native_pass_artifact() {
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_build_agent_reads_native_pass_fingerprint() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let pass_package = fixture("compiler_pass.ail");
     let agent_package = fixture("ail_toolchain_agent.ail");
     let artifact_dir = std::env::temp_dir().join(format!(
-        "eigl-ail-build-agent-native-pass-fingerprint-{}",
+        "ail-ail-build-agent-native-pass-fingerprint-{}",
         std::process::id()
     ));
     let executable_path = std::env::temp_dir().join(format!(
-        "eigl-ail-build-agent-native-pass-out-{}",
+        "ail-ail-build-agent-native-pass-out-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&artifact_dir);
@@ -10047,17 +10041,15 @@ fn cli_ail_build_agent_reads_native_pass_fingerprint() {
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_build_agent_verifies_native_target_artifact() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let agent_package = fixture("ail_toolchain_agent.ail");
     let artifact_dir = std::env::temp_dir().join(format!(
-        "eigl-ail-build-agent-native-artifacts-{}",
+        "ail-ail-build-agent-native-artifacts-{}",
         std::process::id()
     ));
-    let executable_path = std::env::temp_dir().join(format!(
-        "eigl-ail-build-agent-native-{}",
-        std::process::id()
-    ));
+    let executable_path =
+        std::env::temp_dir().join(format!("ail-ail-build-agent-native-{}", std::process::id()));
     let _ = fs::remove_dir_all(&artifact_dir);
     let _ = fs::remove_file(&executable_path);
 
@@ -10233,15 +10225,15 @@ fn cli_ail_build_agent_verifies_native_target_artifact() {
 
 #[test]
 fn cli_ail_build_agent_accepts_saved_spec_before_core_lowering() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let agent_package = fixture("ail_toolchain_agent.ail");
     let spec_path = std::env::temp_dir().join(format!(
-        "eigl-support-ticket-agent-spec-file-{}.ail-spec.md",
+        "ail-support-ticket-agent-spec-file-{}.ail-spec.md",
         std::process::id()
     ));
     let artifact_dir = std::env::temp_dir().join(format!(
-        "eigl-ail-build-agent-spec-file-artifacts-{}",
+        "ail-ail-build-agent-spec-file-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&artifact_dir);
@@ -10295,14 +10287,14 @@ fn cli_ail_build_agent_accepts_saved_spec_before_core_lowering() {
 
 #[test]
 fn cli_ail_build_accepts_saved_core_file_artifact() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let core_path = std::env::temp_dir().join(format!(
-        "eigl-support-ticket-build-core-{}.ail-core.txt",
+        "ail-support-ticket-build-core-{}.ail-core.txt",
         std::process::id()
     ));
     let artifact_dir = std::env::temp_dir().join(format!(
-        "eigl-ail-build-core-artifacts-{}",
+        "ail-ail-build-core-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&artifact_dir);
@@ -10353,15 +10345,15 @@ fn cli_ail_build_accepts_saved_core_file_artifact() {
 
 #[test]
 fn cli_ail_build_runs_toolchain_agent_bytecode() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let agent_package = fixture("ail_toolchain_agent.ail");
     let core_path = std::env::temp_dir().join(format!(
-        "eigl-support-ticket-agent-build-core-{}.ail-core.txt",
+        "ail-support-ticket-agent-build-core-{}.ail-core.txt",
         std::process::id()
     ));
     let artifact_dir = std::env::temp_dir().join(format!(
-        "eigl-ail-build-agent-artifacts-{}",
+        "ail-ail-build-agent-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&artifact_dir);
@@ -10426,15 +10418,15 @@ fn cli_ail_build_runs_toolchain_agent_bytecode() {
 
 #[test]
 fn cli_ail_build_agent_accepts_saved_core_before_compile() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let agent_package = fixture("ail_toolchain_agent.ail");
     let core_path = std::env::temp_dir().join(format!(
-        "eigl-support-ticket-agent-accept-core-file-{}.ail-core.txt",
+        "ail-support-ticket-agent-accept-core-file-{}.ail-core.txt",
         std::process::id()
     ));
     let artifact_dir = std::env::temp_dir().join(format!(
-        "eigl-ail-build-agent-core-file-artifacts-{}",
+        "ail-ail-build-agent-core-file-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&artifact_dir);
@@ -10487,11 +10479,11 @@ fn cli_ail_build_agent_accepts_saved_core_before_compile() {
 
 #[test]
 fn cli_ail_build_agent_records_requirements_capture_before_compile() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let agent_package = fixture("ail_toolchain_agent.ail");
     let artifact_dir = std::env::temp_dir().join(format!(
-        "eigl-ail-build-agent-capture-artifacts-{}",
+        "ail-ail-build-agent-capture-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&artifact_dir);
@@ -10566,11 +10558,11 @@ fn cli_ail_build_agent_records_requirements_capture_before_compile() {
 
 #[test]
 fn cli_ail_build_agent_threads_capture_checklist_into_requirements_prompt() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let agent_package = fixture("ail_toolchain_agent.ail");
     let artifact_dir = std::env::temp_dir().join(format!(
-        "eigl-ail-build-agent-checklist-artifacts-{}",
+        "ail-ail-build-agent-checklist-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&artifact_dir);
@@ -10652,11 +10644,11 @@ fn cli_ail_build_agent_threads_capture_checklist_into_requirements_prompt() {
 
 #[test]
 fn cli_ail_build_agent_threads_spec_checklist_into_spec_prompt() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let agent_package = fixture("ail_toolchain_agent.ail");
     let artifact_dir = std::env::temp_dir().join(format!(
-        "eigl-ail-build-agent-spec-checklist-artifacts-{}",
+        "ail-ail-build-agent-spec-checklist-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&artifact_dir);
@@ -10738,11 +10730,11 @@ fn cli_ail_build_agent_threads_spec_checklist_into_spec_prompt() {
 
 #[test]
 fn cli_ail_build_agent_accepts_spec_draft_before_compile() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let agent_package = fixture("ail_toolchain_agent.ail");
     let artifact_dir = std::env::temp_dir().join(format!(
-        "eigl-ail-build-agent-accept-spec-artifacts-{}",
+        "ail-ail-build-agent-accept-spec-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&artifact_dir);
@@ -10816,11 +10808,11 @@ fn cli_ail_build_agent_accepts_spec_draft_before_compile() {
 
 #[test]
 fn cli_ail_build_agent_accepts_checked_core_before_compile() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let agent_package = fixture("ail_toolchain_agent.ail");
     let artifact_dir = std::env::temp_dir().join(format!(
-        "eigl-ail-build-agent-accept-core-artifacts-{}",
+        "ail-ail-build-agent-accept-core-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&artifact_dir);
@@ -10898,11 +10890,11 @@ fn cli_ail_build_agent_accepts_checked_core_before_compile() {
 
 #[test]
 fn cli_ail_build_agent_compares_prompt_portability_before_compile() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let agent_package = fixture("ail_toolchain_agent.ail");
     let artifact_dir = std::env::temp_dir().join(format!(
-        "eigl-ail-build-agent-portability-artifacts-{}",
+        "ail-ail-build-agent-portability-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&artifact_dir);
@@ -11024,11 +11016,11 @@ fn cli_ail_build_agent_compares_prompt_portability_before_compile() {
 
 #[test]
 fn cli_ail_build_agent_verifies_bytecode_artifact_after_compile() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let agent_package = fixture("ail_toolchain_agent.ail");
     let artifact_dir = std::env::temp_dir().join(format!(
-        "eigl-ail-build-agent-verify-artifacts-{}",
+        "ail-ail-build-agent-verify-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&artifact_dir);
@@ -11139,10 +11131,10 @@ fn cli_ail_build_agent_verifies_bytecode_artifact_after_compile() {
 
 #[test]
 fn cli_ail_build_agent_capture_failure_happens_before_llm_request() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let artifact_dir = std::env::temp_dir().join(format!(
-        "eigl-ail-build-agent-preflight-artifacts-{}",
+        "ail-ail-build-agent-preflight-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&artifact_dir);
@@ -11190,19 +11182,19 @@ fn cli_ail_build_agent_capture_failure_happens_before_llm_request() {
 
 #[test]
 fn cli_ail_build_agent_compile_failure_happens_before_bytecode_lowering() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let agent_package = fixture("ail_toolchain_agent.ail");
     let core_path = std::env::temp_dir().join(format!(
-        "eigl-support-ticket-agent-prelower-core-{}.ail-core.txt",
+        "ail-support-ticket-agent-prelower-core-{}.ail-core.txt",
         std::process::id()
     ));
     let agent_bytecode_path = std::env::temp_dir().join(format!(
-        "eigl-toolchain-agent-missing-compile-{}.ailbc.json",
+        "ail-toolchain-agent-missing-compile-{}.ailbc.json",
         std::process::id()
     ));
     let artifact_dir = std::env::temp_dir().join(format!(
-        "eigl-ail-build-agent-prelower-artifacts-{}",
+        "ail-ail-build-agent-prelower-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&artifact_dir);
@@ -11269,10 +11261,10 @@ fn cli_ail_build_agent_compile_failure_happens_before_bytecode_lowering() {
 
 #[test]
 fn cli_ail_build_writes_requirements_spec_core_and_bytecode_artifacts() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let artifact_dir =
-        std::env::temp_dir().join(format!("eigl-ail-build-artifacts-{}", std::process::id()));
+        std::env::temp_dir().join(format!("ail-ail-build-artifacts-{}", std::process::id()));
     let _ = fs::remove_dir_all(&artifact_dir);
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = listener.local_addr().unwrap();
@@ -11388,11 +11380,11 @@ fn cli_ail_build_writes_requirements_spec_core_and_bytecode_artifacts() {
 
 #[test]
 fn cli_ail_build_runs_compiler_pass_before_bytecode_lowering() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let pass_package = fixture("compiler_pass.ail");
     let artifact_dir = std::env::temp_dir().join(format!(
-        "eigl-ail-build-pass-artifacts-{}",
+        "ail-ail-build-pass-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&artifact_dir);
@@ -11489,12 +11481,12 @@ fn cli_ail_build_runs_compiler_pass_before_bytecode_lowering() {
 
 #[test]
 fn cli_ail_build_agent_accepts_compiler_pass_output_before_core() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let pass_package = fixture("compiler_pass.ail");
     let agent_package = fixture("ail_toolchain_agent.ail");
     let artifact_dir = std::env::temp_dir().join(format!(
-        "eigl-ail-build-agent-pass-artifacts-{}",
+        "ail-ail-build-agent-pass-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&artifact_dir);
@@ -11642,7 +11634,7 @@ fn cli_ail_build_agent_accepts_compiler_pass_output_before_core() {
 
 #[test]
 fn cli_ail_build_for_agent_tool_profile_prompts_tool_requirements_and_outputs_bytecode() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("refund_tool.ail");
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = listener.local_addr().unwrap();
@@ -11709,7 +11701,7 @@ fn cli_ail_build_for_agent_tool_profile_prompts_tool_requirements_and_outputs_by
 
 #[test]
 fn cli_ail_draft_for_agent_tool_profile_prompts_tool_surface() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("refund_tool.ail");
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = listener.local_addr().unwrap();
@@ -11759,7 +11751,7 @@ fn cli_ail_draft_for_agent_tool_profile_prompts_tool_surface() {
 
 #[test]
 fn cli_ail_draft_for_compiler_profile_prompts_compiler_pass_surface() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("compiler_pass.ail");
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = listener.local_addr().unwrap();
@@ -11804,7 +11796,7 @@ fn cli_ail_draft_for_compiler_profile_prompts_compiler_pass_surface() {
 
 #[test]
 fn cli_ail_draft_for_system_profile_prompts_system_surface() {
-    let binary = env!("CARGO_BIN_EXE_eigl");
+    let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("network_driver.ail");
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = listener.local_addr().unwrap();

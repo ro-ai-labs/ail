@@ -6421,7 +6421,7 @@ pub fn draft_ail_spec(
     endpoint: &str,
 ) -> Result<AilDraftResult, String> {
     let prompt = build_ail_draft_prompt(package, user_prompt);
-    let spec_text = crate::llm_bridge::invoke_llm_text(endpoint, &prompt)?;
+    let spec_text = crate::llm::invoke_llm_text(endpoint, &prompt)?;
     Ok(check_ail_draft_spec(package, spec_text))
 }
 
@@ -6431,7 +6431,7 @@ pub fn draft_ail_requirements(
     endpoint: &str,
 ) -> Result<String, String> {
     let prompt = build_ail_requirements_prompt(package, user_prompt);
-    crate::llm_bridge::invoke_llm_text(endpoint, &prompt)
+    crate::llm::invoke_llm_text(endpoint, &prompt)
 }
 
 pub fn repair_ail_requirements_from_diagnostics(
@@ -6447,7 +6447,7 @@ pub fn repair_ail_requirements_from_diagnostics(
         previous_requirements_text,
         diagnostics,
     );
-    crate::llm_bridge::invoke_llm_text(endpoint, &prompt)
+    crate::llm::invoke_llm_text(endpoint, &prompt)
 }
 
 pub fn check_ail_requirements(package: &AilPackage, requirements_text: &str) -> Vec<AilDiagnostic> {
@@ -6501,7 +6501,7 @@ pub fn draft_ail_spec_from_requirements(
 ) -> Result<AilDraftResult, String> {
     let grounded_prompt = format!("{user_prompt}\n\nDRAFT REQUIREMENTS:\n{requirements_text}");
     let prompt = build_ail_draft_prompt(package, &grounded_prompt);
-    let spec_text = crate::llm_bridge::invoke_llm_text(endpoint, &prompt)?;
+    let spec_text = crate::llm::invoke_llm_text(endpoint, &prompt)?;
     Ok(check_ail_draft_spec_with_requirements(
         package,
         spec_text,
@@ -6524,7 +6524,7 @@ pub fn repair_ail_spec_from_diagnostics(
         previous_spec_text,
         diagnostics,
     );
-    let spec_text = crate::llm_bridge::invoke_llm_text(endpoint, &prompt)?;
+    let spec_text = crate::llm::invoke_llm_text(endpoint, &prompt)?;
     Ok(check_ail_draft_spec_with_requirements(
         package,
         spec_text,

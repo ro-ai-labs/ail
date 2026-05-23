@@ -2,8 +2,7 @@
 
 ## Status
 
-This is the first foundation design for AIL, formerly explored in this
-repository under the EIGL prototype name. It is not a frozen language
+This is the first foundation design for AIL. It is not a frozen language
 standard. It is a language constitution: it defines the durable goals,
 invariants, architecture, and evolution protocol that later detailed
 specifications must obey.
@@ -21,8 +20,8 @@ The name reflects three design commitments:
 - Language: AIL is intended to become a complete programming language, not a
   workflow DSL, prompt format, or no-code product.
 
-The existing Rust prototype and older documents may still use EIGL names while
-the repository migrates. New language design work should use AIL names.
+All active language, compiler, and example material in this repository uses AIL
+names.
 
 ## Goal
 
@@ -38,7 +37,7 @@ accepted programs into safe, fast executable artifacts.
 
 Long term, AIL should be powerful enough to define its own compiler, runtime,
 standard library, package system, debugger, agent protocol, and build system.
-After bootstrap, the AIL toolchain must not depend on legacy programming
+After bootstrap, the AIL toolchain must not depend on stage-0 implementation
 languages as its source of truth.
 
 ## Non-Goals For The First Specification
@@ -490,7 +489,8 @@ AIL may use Rust, C, C++, Python, JavaScript, TypeScript, Go, LLVM, Wasm, or
 other existing systems as bootstrap scaffolding.
 
 After the first viable compiler generations, no required part of the AIL
-toolchain should depend on a legacy language as its source of truth.
+toolchain should depend on a stage-0 implementation language as its source of
+truth.
 
 The long-term required AIL-defined components include:
 
@@ -512,16 +512,16 @@ The long-term required AIL-defined components include:
 - build system
 - conformance suite
 
-Legacy-language artifacts may remain as historical bootstrap artifacts,
-optional backends, or interoperability targets. They must not be required for
-AIL to define, explain, evolve, or rebuild itself.
+Stage-0 artifacts may remain as optional backends or interoperability targets.
+They must not be required for AIL to define, explain, evolve, or rebuild
+itself.
 
 ## Bootstrap Stages
 
-### Stage 0: Bootstrap Prototype
+### Stage 0: Bootstrap Compiler
 
-Use the current Rust prototype to explore parsing, checking, semantic graph
-construction, views, traces, and execution.
+Use the current Rust compiler to explore parsing, checking, semantic graph
+construction, views, traces, native ELF output, and execution.
 
 ### Stage 1: AIL Foundation Specs
 

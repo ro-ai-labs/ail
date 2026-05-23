@@ -95,12 +95,9 @@ The runtime may optimize, cache, inline, or lower behavior only when the
 observable behavior, permissions, effects, failures, guarantees, and traces
 remain equivalent under the active conformance rules.
 
-## Migration From The Existing Prototype
+## Bootstrap Boundary
 
-The existing Rust prototype remains useful as bootstrap scaffolding. Its RIF,
-RSL, EIG-Core, checker, interpreter, and examples should be treated as prior
-experiments until they are explicitly mapped to AIL-Spec and AIL-Core.
-
-Migration should happen by preserving proven concepts, renaming active language
-surfaces to AIL, and replacing prototype-specific syntax decisions with
-versioned AIL specifications.
+Stage-0 implementation code may host the first parser, checker, VM, and native
+backend while the language matures. The accepted language surface remains
+AIL-Spec, AIL-Core, AIL bytecode, native executable artifacts, manifests,
+reports, and deterministic projections.

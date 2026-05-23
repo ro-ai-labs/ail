@@ -2,51 +2,10 @@ use std::io::{Read, Write};
 use std::net::TcpStream;
 
 use crate::core_model::json_string;
-use crate::parse_rsl_text;
-use crate::render_rif_document;
-use crate::rif_model::RifDocument;
-
-pub fn llm_round_trip(document: &RifDocument, endpoint: &str) -> Result<(String, String), String> {
-    let canonical = render_rif_document(document);
-    let prompt = build_round_trip_prompt(&canonical);
-    let candidate_rsl = invoke_llm_text(endpoint, &prompt)?;
-    let candidate_document = parse_rsl_text(&candidate_rsl)?;
-    let round_tripped = render_rif_document(&candidate_document);
-    if round_tripped != canonical {
-        return Err("LLM rewrite did not round-trip back to the same canonical RIF".to_string());
-    }
-    Ok((candidate_rsl, round_tripped))
-}
 
 pub fn invoke_llm_text(endpoint: &str, prompt: &str) -> Result<String, String> {
     let response = invoke_completion(endpoint, prompt)?;
     Ok(sanitize_model_text(&response))
-}
-
-fn build_round_trip_prompt(canonical_rif: &str) -> String {
-    format!(
-        concat!(
-            "Rewrite the canonical RIF below into controlled EIGL RSL.\n",
-            "Preserve meaning exactly and output only parseable RSL text.\n",
-            "Do not output descriptive Markdown headings like ## Domain Model. Do not use bullets. Do not use code fences. Do not include reasoning.\n",
-            "Keep the same application facts, intent names, sections, steps, endpoint routes, triggers, and guarantees.\n",
-            "Use this exact RSL style when possible:\n\n",
-            "app ExampleApp\n\n",
-            "things:\n",
-            "  A Customer has an email address.\n",
-            "  An Order can be Draft, Confirmed, Cancelled.\n\n",
-            "intent Describe Domain:\n",
-            "  subject:\n",
-            "    order: Order\n\n",
-            "The output must parse back to the same canonical RIF.\n\n",
-            "CANONICAL RIF:\n",
-            "<<<RIF\n",
-            "{}\n",
-            "RIF\n",
-            ">>>\n"
-        ),
-        canonical_rif
-    )
 }
 
 fn invoke_completion(endpoint: &str, prompt: &str) -> Result<String, String> {

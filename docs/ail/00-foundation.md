@@ -11,8 +11,8 @@ of implementation syntax. AIL is a language because it is intended to become a
 complete programming language, not a prompt format, workflow DSL, or no-code
 product.
 
-Older files in this repository may still use EIGL names. New specifications use
-AIL names.
+All active language, compiler, and example material in this repository uses AIL
+names.
 
 ## Goal
 
@@ -102,8 +102,8 @@ the compiler, traceable at runtime, and compilable to efficient artifacts.
 
 ### The Toolchain Must Become Self-Sovereign
 
-Legacy languages may bootstrap AIL, but they must not own AIL. Required
-toolchain components should eventually be defined in AIL itself.
+Stage-0 implementation languages may bootstrap AIL, but they must not own AIL.
+Required toolchain components should eventually be defined in AIL itself.
 
 ## Layer Model
 
@@ -199,7 +199,8 @@ rules, effects, failures, guarantees, and traces.
 
 The Self-Sovereign Toolchain principle says AIL may use existing languages and
 systems as bootstrap scaffolding, but no required part of the mature AIL
-toolchain may depend on a legacy language as its source of truth.
+toolchain may depend on a stage-0 implementation language as its source of
+truth.
 
 The long-term AIL-defined components include the language specification,
 semantic IR schema, parser rules, checker rules, diagnostic rules, renderers,
