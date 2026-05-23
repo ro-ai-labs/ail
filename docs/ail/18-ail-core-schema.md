@@ -278,13 +278,16 @@ operation when `base_hash` does not match the checked graph.
 After the hash gate, the applier resolves node labels such as
 `Action:CloseTicket` against the checked Core graph. AIL-Flow exposes these
 labels as `coreLabel` on node-backed objects so editors do not need to invent
-label syntax from display names. `add_node` writes node provenance as
-`Provenance` nodes plus `has_provenance` edges. `add_edge` stores edge
-provenance as an edge attribute. `remove_edge` resolves the same source and
-target labels, deletes the existing edge of that kind, and rejects missing
-edges instead of treating them as no-ops. `replace_edge_attributes` merges the
-listed string attributes into the resolved edge, rewrites the stable edge id,
-and rejects missing edges instead of treating them as no-ops.
+label syntax from display names. AIL-Flow action cards expose checked edge
+references as `edgeRefs`; each entry carries the patch `kind`, `source`,
+`target`, display `targetName`, and edge `attributes` for the current graph
+edge. `add_node` writes node provenance as `Provenance` nodes plus
+`has_provenance` edges. `add_edge` stores edge provenance as an edge attribute.
+`remove_edge` resolves the same source and target labels, deletes the existing
+edge of that kind, and rejects missing edges instead of treating them as
+no-ops. `replace_edge_attributes` merges the listed string attributes into the
+resolved edge, rewrites the stable edge id, and rejects missing edges instead
+of treating them as no-ops.
 `replace_node_attributes` merges the listed string attributes into the target
 node, may replace the node `type`, rewrites the target node's stable id when
 attributes change, and rewires existing edges to the updated node before the

@@ -1615,6 +1615,19 @@ fn ail_flow_projection_renders_no_code_view_from_core() {
     assert!(flow.contains(r#""name":"CloseTicket","coreLabel":"Action:CloseTicket""#));
     assert!(flow.contains(r#""writes":["Ticket.status","a public update"]"#));
     assert!(flow.contains(r#""traces":["TicketClosed"]"#));
+    assert!(flow.contains(r#""edgeRefs":["#), "{flow}");
+    assert!(
+        flow.contains(
+            r#"{"kind":"records_trace","source":"Action:CloseTicket","target":"Trace:TicketClosed","targetName":"TicketClosed","attributes":{}}"#
+        ),
+        "{flow}"
+    );
+    assert!(
+        flow.contains(
+            r#"{"kind":"writes","source":"Action:CloseTicket","target":"Field:Ticket.status","targetName":"Ticket.status","attributes":{"provenance":"action:CloseTicket.write:the ticket status to Closed"}}"#
+        ),
+        "{flow}"
+    );
     assert!(flow.contains(
         r#""views":["a customer-visible ticket history that includes public updates and never includes internal notes","an Overdue tickets view for support managers","an open ticket queue for support agents"]"#
     ));
@@ -3653,6 +3666,12 @@ fn cli_ail_check_and_core_use_package_loader() {
         "{flow_stdout}"
     );
     assert!(flow_stdout.contains(r#""name":"CloseTicket","coreLabel":"Action:CloseTicket""#));
+    assert!(
+        flow_stdout.contains(
+            r#"{"kind":"records_trace","source":"Action:CloseTicket","target":"Trace:TicketClosed","targetName":"TicketClosed","attributes":{}}"#
+        ),
+        "{flow_stdout}"
+    );
 
     let lowered = Command::new(binary)
         .args(["ail-lower", &package])

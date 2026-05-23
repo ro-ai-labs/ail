@@ -2851,7 +2851,7 @@ fn render_flow_action(core: &AilCore, action: &str) -> String {
     let Some(action_node) = core.graph.find_node("Action", action) else {
         let core_label = flow_core_label(core, "Action", action);
         return format!(
-            "{{\"name\":{},\"coreLabel\":{},\"label\":\"\",\"trigger\":\"\",\"requires\":[],\"reads\":[],\"writes\":[],\"guarantees\":[],\"traces\":[]}}",
+            "{{\"name\":{},\"coreLabel\":{},\"label\":\"\",\"trigger\":\"\",\"requires\":[],\"reads\":[],\"writes\":[],\"guarantees\":[],\"traces\":[],\"edgeRefs\":[]}}",
             json_string(action),
             json_string(&core_label)
         );
@@ -2867,7 +2867,7 @@ fn render_flow_action(core: &AilCore, action: &str) -> String {
         .map(String::as_str)
         .unwrap_or("");
     format!(
-        "{{\"name\":{},\"coreLabel\":{},\"label\":{},\"trigger\":{},\"requires\":{},\"reads\":{},\"writes\":{},\"guarantees\":{},\"traces\":{}}}",
+        "{{\"name\":{},\"coreLabel\":{},\"label\":{},\"trigger\":{},\"requires\":{},\"reads\":{},\"writes\":{},\"guarantees\":{},\"traces\":{},\"edgeRefs\":{}}}",
         json_string(action),
         json_string(&core_node_label(action_node)),
         json_string(label),
@@ -2877,6 +2877,11 @@ fn render_flow_action(core: &AilCore, action: &str) -> String {
         render_json_array(edge_target_names(core, &action_node.id, "writes")),
         render_json_array(edge_target_names(core, &action_node.id, "guarantees")),
         render_json_array(edge_target_names(core, &action_node.id, "records_trace")),
+        render_flow_edge_refs(
+            core,
+            action_node,
+            &["requires", "reads", "writes", "guarantees", "records_trace"]
+        ),
     )
 }
 
@@ -3071,6 +3076,46 @@ fn edge_target_names(core: &AilCore, source_id: &str, kind: &str) -> Vec<String>
         .collect::<Vec<_>>();
     names.sort();
     names
+}
+
+fn render_flow_edge_refs(core: &AilCore, source: &Node, kinds: &[&str]) -> String {
+    let node_by_id = graph_node_by_id(core);
+    let source_label = core_node_label(source);
+    let mut refs = core
+        .graph
+        .edges
+        .iter()
+        .filter(|edge| edge.source == source.id && kinds.contains(&edge.kind.as_str()))
+        .filter_map(|edge| {
+            node_by_id
+                .get(&edge.target)
+                .map(|target| render_flow_edge_ref(edge, &source_label, target))
+        })
+        .collect::<Vec<_>>();
+    refs.sort();
+    format!("[{}]", refs.join(","))
+}
+
+fn render_flow_edge_ref(edge: &Edge, source_label: &str, target: &Node) -> String {
+    format!(
+        "{{\"kind\":{},\"source\":{},\"target\":{},\"targetName\":{},\"attributes\":{}}}",
+        json_string(&edge.kind),
+        json_string(source_label),
+        json_string(&core_node_label(target)),
+        json_string(&target.name),
+        render_json_string_map(&edge.attributes)
+    )
+}
+
+fn render_json_string_map(values: &BTreeMap<String, String>) -> String {
+    format!(
+        "{{{}}}",
+        values
+            .iter()
+            .map(|(key, value)| format!("{}:{}", json_string(key), json_string(value)))
+            .collect::<Vec<_>>()
+            .join(",")
+    )
 }
 
 fn system_component_layout_summaries(core: &AilCore, component_id: &str) -> Vec<String> {
