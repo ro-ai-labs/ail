@@ -6334,6 +6334,57 @@ cargo test --test ail_toolchain cli_ail_bootstrap_writes_native_toolchain_bundle
 Expected: the bootstrap bundle proves the emitted Linux target artifacts are
 machine-level ELF executable bytes before accepting the manifest.
 
+### Task 144: Direct Native Compile Records Machine Bytecode Evidence
+
+**Files:**
+- Modify: `examples/ail_toolchain_agent.ail/spec.ail-spec.md`
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing direct compile native-bytecode assertions**
+
+Extend the direct native `ail-compile --artifact-dir` test to require
+`native-bytecode-report.txt`, `native-bytecode-report.fingerprint.txt`, and a
+`native-bytecode` manifest entry. Extend the AIL-authored
+`VerifyCompileManifest` trace test to require reads for
+`buildrequest.native bytecode report` and
+`buildrequest.native bytecode report fingerprint`.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_compile_writes_saved_bytecode_native_artifacts -- --nocapture
+cargo test --test ail_toolchain cli_ail_compile_agent_verifies_manifest_artifacts -- --nocapture
+```
+
+Expected: the first test fails because the report does not exist, and the
+second test fails because the AIL-authored verifier does not read the report.
+
+- [x] **Step 3: Generate the direct compile native-bytecode report**
+
+When direct `ail-compile` writes a single native target artifact, inspect the
+emitted executable for ELF magic, ELFCLASS64, little-endian encoding,
+executable type, and x86_64 machine identity. Write a deterministic
+native-bytecode report, fingerprint it, include it in the compile manifest, and
+pass the report plus fingerprint into the AIL-authored `VerifyCompileManifest`
+state.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_compile_writes_saved_bytecode_native_artifacts -- --nocapture
+cargo test --test ail_toolchain cli_ail_compile_agent_verifies_manifest_artifacts -- --nocapture
+```
+
+Expected: direct native compile artifacts prove the emitted target is
+machine-level ELF executable bytecode before the manifest verifier accepts it.
+
 ### Task 18: Declared Failure Trace Coverage Diagnostics
 
 **Files:**

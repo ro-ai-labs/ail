@@ -212,6 +212,8 @@ When the toolchain agent verifies direct compile artifacts:
 - the system reads the BuildRequest bytecode fingerprint
 - the system reads the BuildRequest target artifact
 - the system reads the BuildRequest target artifact fingerprint
+- the system reads the BuildRequest native bytecode report
+- the system reads the BuildRequest native bytecode report fingerprint
 - the system changes the BuildRequest artifact manifest verification report to Verified
 - the system guarantees the compile manifest ties verified AIL-Bytecode and the native target artifact with deterministic fingerprints and no Rust or host-language backend source
 - the system records a trace event named CompileManifestVerified

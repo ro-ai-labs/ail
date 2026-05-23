@@ -3722,6 +3722,34 @@ fn cli_ail_compile_writes_saved_bytecode_native_artifacts() {
         fnv64_fingerprint_bytes(&target_artifact)
     );
     assert_eq!(target_artifact, fs::read(&executable_path).unwrap());
+    let native_bytecode_report =
+        fs::read_to_string(artifact_dir.join("native-bytecode-report.txt")).unwrap();
+    assert!(
+        native_bytecode_report.contains("AIL-Compile-Native-Bytecode:"),
+        "{native_bytecode_report}"
+    );
+    assert!(
+        native_bytecode_report.contains("target linux-x86_64-elf"),
+        "{native_bytecode_report}"
+    );
+    assert!(
+        native_bytecode_report.contains("action CloseTicket"),
+        "{native_bytecode_report}"
+    );
+    assert!(
+        native_bytecode_report.contains(&format!(
+            "machine-bytecode target linux-x86_64-elf target.elf elf64-little-x86_64-executable {} bytes {}",
+            fnv64_fingerprint_bytes(&target_artifact),
+            target_artifact.len()
+        )),
+        "{native_bytecode_report}"
+    );
+    let native_bytecode_report_fingerprint =
+        fs::read_to_string(artifact_dir.join("native-bytecode-report.fingerprint.txt")).unwrap();
+    assert_eq!(
+        native_bytecode_report_fingerprint.trim(),
+        fnv64_fingerprint(&native_bytecode_report)
+    );
 
     let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-compile.txt")).unwrap();
     assert!(manifest.contains("AIL-Compile-Manifest:"), "{manifest}");
@@ -3730,6 +3758,13 @@ fn cli_ail_compile_writes_saved_bytecode_native_artifacts() {
         manifest.contains(&format!(
             "bytecode artifact.ailbc.json {}",
             fnv64_fingerprint(&bytecode_artifact)
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "native-bytecode native-bytecode-report.txt {}",
+            fnv64_fingerprint(&native_bytecode_report)
         )),
         "{manifest}"
     );
@@ -3831,6 +3866,8 @@ fn cli_ail_compile_agent_verifies_manifest_artifacts() {
     assert!(agent_trace.contains("read buildrequest.bytecode fingerprint"));
     assert!(agent_trace.contains("read buildrequest.target artifact"));
     assert!(agent_trace.contains("read buildrequest.target artifact fingerprint"));
+    assert!(agent_trace.contains("read buildrequest.native bytecode report"));
+    assert!(agent_trace.contains("read buildrequest.native bytecode report fingerprint"));
     assert!(agent_trace.contains("read buildrequest.artifact manifest"));
     assert!(agent_trace.contains("read buildrequest.artifact manifest fingerprint"));
     assert!(
@@ -3848,6 +3885,8 @@ fn cli_ail_compile_agent_verifies_manifest_artifacts() {
             "buildrequest.bytecode fingerprint=fnv64:bytecode",
             "buildrequest.target artifact=ok",
             "buildrequest.target artifact fingerprint=fnv64:target",
+            "buildrequest.native bytecode report=ok",
+            "buildrequest.native bytecode report fingerprint=fnv64:native-bytecode",
             "buildrequest.artifact manifest=ok",
             "buildrequest.artifact manifest fingerprint=fnv64:manifest",
         ])

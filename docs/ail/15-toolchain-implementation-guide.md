@@ -445,15 +445,19 @@ verifies it, and emits a native ELF executable from that artifact boundary
 without loading the source package or generating host-language backend source.
 With `--artifact-dir`, direct `ail-compile` writes `artifact.ailbc.json`,
 `artifact.fingerprint.txt`, `target.elf`, `target.fingerprint.txt`,
+`native-bytecode-report.txt`, `native-bytecode-report.fingerprint.txt`,
 `manifest.ail-compile.txt`, and `manifest.fingerprint.txt`; compiles from
-checked AIL-Core also include `checked.ail-core.txt`. The compile manifest ties
-the selected action, verified bytecode artifact, and native target executable
-fingerprint into a reviewable artifact boundary. With
+checked AIL-Core also include `checked.ail-core.txt`. The native-bytecode report
+records the selected action target as ELF64 x86_64 executable bytes, and the
+compile manifest ties the selected action, verified bytecode artifact,
+native-bytecode report, and native target executable fingerprint into a
+reviewable artifact boundary. With
 `--agent <agent-package-or-bytecode>`, `ail-compile --artifact-dir` also runs
 the AIL-authored `VerifyCompileManifest` action over that manifest and writes
 `agent.ailbc.json`, `agent.fingerprint.txt`, `agent-trace.txt`, and native
 `agent-<ActionName>.elf` verifier executables recorded as `agent-target`
-entries.
+entries. The verifier reads the native-bytecode report and fingerprint before
+accepting the manifest.
 With `--all-actions --target linux-x86_64-elf --artifact-dir <dir>`,
 `ail-compile` compiles every action in the package or saved bytecode artifact
 into native `target-<ActionName>.elf` executables. This exposes the same
