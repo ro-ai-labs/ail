@@ -452,6 +452,7 @@ struct AilBootstrapArtifactSet<'a> {
     fixed_point_report_text: &'a str,
     native_bytecode_report_text: &'a str,
     host_boundary_report_text: &'a str,
+    dependency_report_text: &'a str,
     compiler_pass_conformance_report: &'a str,
     compiler_pass_native_executables: &'a [AilNativeArtifact],
     agent_bytecode_text: Option<&'a str>,
@@ -909,6 +910,10 @@ fn render_ail_bootstrap_manifest(artifacts: &AilBootstrapArtifactSet<'_>) -> Str
         format!(
             "bootstrap-host-boundary bootstrap-host-boundary-report.txt {}",
             ail_artifact_fingerprint(artifacts.host_boundary_report_text)
+        ),
+        format!(
+            "bootstrap-dependencies bootstrap-dependency-report.txt {}",
+            ail_artifact_fingerprint(artifacts.dependency_report_text)
         ),
         format!(
             "toolchain-agent-conformance toolchain-agent-conformance-report.txt {}",
@@ -1375,6 +1380,21 @@ fn write_ail_bootstrap_artifacts(
     )
     .map_err(|error| {
         format!("failed to write ail-bootstrap host boundary report fingerprint: {error}")
+    })?;
+    fs::write(
+        root.join("bootstrap-dependency-report.txt"),
+        artifacts.dependency_report_text,
+    )
+    .map_err(|error| format!("failed to write ail-bootstrap dependency report: {error}"))?;
+    fs::write(
+        root.join("bootstrap-dependency-report.fingerprint.txt"),
+        format!(
+            "{}\n",
+            ail_artifact_fingerprint(artifacts.dependency_report_text)
+        ),
+    )
+    .map_err(|error| {
+        format!("failed to write ail-bootstrap dependency report fingerprint: {error}")
     })?;
     fs::write(
         root.join("toolchain-agent-conformance-report.txt"),
@@ -3683,6 +3703,7 @@ struct AilBootstrapAgentManifestRequest<'a> {
     fixed_point_report_text: &'a str,
     native_bytecode_report_text: &'a str,
     host_boundary_report_text: &'a str,
+    dependency_report_text: &'a str,
     toolchain_conformance_report: &'a str,
     compiler_pass_conformance_report: &'a str,
     target_artifacts: &'a [AilNativeArtifact],
@@ -3711,6 +3732,7 @@ fn run_ail_bootstrap_agent_verify_manifest(
         fixed_point_report_text,
         native_bytecode_report_text,
         host_boundary_report_text,
+        dependency_report_text,
         toolchain_conformance_report,
         compiler_pass_conformance_report,
         target_artifacts,
@@ -3798,6 +3820,14 @@ fn run_ail_bootstrap_agent_verify_manifest(
         (
             "buildrequest.host boundary report fingerprint".to_string(),
             ail_artifact_fingerprint(host_boundary_report_text),
+        ),
+        (
+            "buildrequest.dependency report".to_string(),
+            dependency_report_text.to_string(),
+        ),
+        (
+            "buildrequest.dependency report fingerprint".to_string(),
+            ail_artifact_fingerprint(dependency_report_text),
         ),
         (
             "buildrequest.conformance report".to_string(),
@@ -3941,6 +3971,44 @@ fn render_ail_bootstrap_host_boundary_report(
     Ok(format!("{}\n", lines.join("\n")))
 }
 
+fn render_ail_bootstrap_dependency_report(
+    target_name: &str,
+    toolchain_artifacts: &[AilNativeArtifact],
+    compiler_pass_artifacts: &[AilNativeArtifact],
+    agent_artifacts: &[AilNativeArtifact],
+) -> Result<String, String> {
+    let mut lines = vec![
+        "AIL-Bootstrap-Dependency-Report:".to_string(),
+        format!("target {target_name}"),
+        "host-language-runtime none".to_string(),
+        "dynamic-linker none".to_string(),
+        "shared-libraries none".to_string(),
+        "library-dependencies none".to_string(),
+        "linker-invocation none".to_string(),
+        "runtime-abi linux-syscall-argv-key-value".to_string(),
+    ];
+    for artifacts in [
+        toolchain_artifacts,
+        compiler_pass_artifacts,
+        agent_artifacts,
+    ] {
+        for artifact in artifacts {
+            if artifact.target_name != target_name {
+                return Err(format!(
+                    "dependency artifact {} targets {}, expected {target_name}",
+                    artifact.file_name, artifact.target_name
+                ));
+            }
+            lines.push(format!(
+                "machine-bytecode-dependency {} {}",
+                artifact.file_name,
+                native_elf_dependency_identity(&artifact.bytes)?
+            ));
+        }
+    }
+    Ok(format!("{}\n", lines.join("\n")))
+}
+
 fn render_ail_compile_native_bytecode_report(
     action_name: &str,
     target_name: &str,
@@ -4068,6 +4136,42 @@ fn native_machine_bytecode_identity(bytes: &[u8]) -> Result<&'static str, String
             "unsupported native bytecode ELF identity class={elf_class} data={elf_data} type={elf_type} machine={elf_machine}"
         )),
     }
+}
+
+fn native_elf_dependency_identity(bytes: &[u8]) -> Result<&'static str, String> {
+    native_machine_bytecode_identity(bytes)?;
+    if bytes.len() < 64 {
+        return Err("native bytecode artifact is too small to contain an ELF64 header".to_string());
+    }
+    let program_header_offset = u64::from_le_bytes([
+        bytes[32], bytes[33], bytes[34], bytes[35], bytes[36], bytes[37], bytes[38], bytes[39],
+    ]) as usize;
+    let program_header_entry_size = u16::from_le_bytes([bytes[54], bytes[55]]) as usize;
+    let program_header_count = u16::from_le_bytes([bytes[56], bytes[57]]) as usize;
+    let headers_size = program_header_entry_size
+        .checked_mul(program_header_count)
+        .ok_or_else(|| "native ELF program header table size overflows".to_string())?;
+    let headers_end = program_header_offset
+        .checked_add(headers_size)
+        .ok_or_else(|| "native ELF program header table offset overflows".to_string())?;
+    if program_header_entry_size < 4 || headers_end > bytes.len() {
+        return Err("native ELF program header table is outside the artifact".to_string());
+    }
+    for index in 0..program_header_count {
+        let header_offset = program_header_offset + index * program_header_entry_size;
+        let program_header_type = u32::from_le_bytes([
+            bytes[header_offset],
+            bytes[header_offset + 1],
+            bytes[header_offset + 2],
+            bytes[header_offset + 3],
+        ]);
+        match program_header_type {
+            2 => return Err("native ELF declares a dynamic section dependency".to_string()),
+            3 => return Err("native ELF declares a dynamic interpreter dependency".to_string()),
+            _ => {}
+        }
+    }
+    Ok("standalone-linux-syscall-elf")
 }
 
 fn draft_checked_ail_requirements_for_package(
@@ -5051,6 +5155,12 @@ fn run_ail_bootstrap_command(path: &str, cli_options: &CliOptions) -> Result<u8,
         compiler_pass_native_artifacts.as_slice(),
         agent_native_artifacts.as_slice(),
     )?;
+    let dependency_report_text = render_ail_bootstrap_dependency_report(
+        target,
+        toolchain_native_artifacts.as_slice(),
+        compiler_pass_native_artifacts.as_slice(),
+        agent_native_artifacts.as_slice(),
+    )?;
     let empty_agent_trace: &[String] = &[];
     let manifest_text = render_ail_bootstrap_manifest(&AilBootstrapArtifactSet {
         target_name: target,
@@ -5069,6 +5179,7 @@ fn run_ail_bootstrap_command(path: &str, cli_options: &CliOptions) -> Result<u8,
         fixed_point_report_text: &fixed_point_report_text,
         native_bytecode_report_text: &native_bytecode_report_text,
         host_boundary_report_text: &host_boundary_report_text,
+        dependency_report_text: &dependency_report_text,
         compiler_pass_conformance_report: &compiler_pass_conformance_report,
         compiler_pass_native_executables: compiler_pass_native_artifacts.as_slice(),
         agent_bytecode_text: Some(agent_bytecode_text.as_str()),
@@ -5093,6 +5204,7 @@ fn run_ail_bootstrap_command(path: &str, cli_options: &CliOptions) -> Result<u8,
         fixed_point_report_text: &fixed_point_report_text,
         native_bytecode_report_text: &native_bytecode_report_text,
         host_boundary_report_text: &host_boundary_report_text,
+        dependency_report_text: &dependency_report_text,
         toolchain_conformance_report: &toolchain_conformance_report,
         compiler_pass_conformance_report: &compiler_pass_conformance_report,
         target_artifacts: toolchain_native_artifacts.as_slice(),
@@ -5119,6 +5231,7 @@ fn run_ail_bootstrap_command(path: &str, cli_options: &CliOptions) -> Result<u8,
             fixed_point_report_text: &fixed_point_report_text,
             native_bytecode_report_text: &native_bytecode_report_text,
             host_boundary_report_text: &host_boundary_report_text,
+            dependency_report_text: &dependency_report_text,
             compiler_pass_conformance_report: &compiler_pass_conformance_report,
             compiler_pass_native_executables: compiler_pass_native_artifacts.as_slice(),
             agent_bytecode_text: Some(agent_run.bytecode_text.as_str()),

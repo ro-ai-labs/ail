@@ -48,7 +48,9 @@ native machine-code artifacts, a native-bytecode report proving the Linux
 outputs are ELF64 x86_64 executable bytes, package conformance reports, and a
 fixed-point report proving the compiler-pass output is stable on a second pass,
 a host-boundary report proving no Rust, C, Python, JavaScript, or other
-host-language backend source was generated, with an AIL-authored verifier
+host-language backend source was generated, and a dependency report proving the
+emitted Linux ELF artifacts use no dynamic linker, shared libraries,
+host-language runtime, or linker invocation, with an AIL-authored verifier
 accepting the manifest.
 
 ## Stage 4: Self-Hosted Fixed Point

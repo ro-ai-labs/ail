@@ -6903,6 +6903,60 @@ Expected: the bootstrap bundle proves its generated boundary contains no
 host-language backend source before the AIL-authored bootstrap verifier accepts
 the manifest.
 
+### Task 155: Bootstrap Records Zero Dependency Evidence
+
+**Files:**
+- Modify: `examples/ail_toolchain_agent.ail/spec.ail-spec.md`
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/13-bootstrap-self-hosting.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing bootstrap dependency assertions**
+
+Extend the native `ail-bootstrap` bundle test to require
+`bootstrap-dependency-report.txt`,
+`bootstrap-dependency-report.fingerprint.txt`, a fingerprinted
+`bootstrap-dependencies` manifest entry, and AIL-authored
+`VerifyBootstrapManifest` reads for `BuildRequest dependency report` and
+`BuildRequest dependency report fingerprint`. Require the report to state that
+host-language runtime, dynamic linker, shared libraries, library dependencies,
+and linker invocation are all absent, and that each emitted ELF is a standalone
+Linux syscall executable.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_bootstrap_writes_native_toolchain_bundle -- --nocapture
+```
+
+Expected: failure because the bootstrap bundle does not yet write the
+dependency report.
+
+- [x] **Step 3: Inspect ELF dependency boundaries**
+
+Render a deterministic bootstrap dependency report, fingerprint it, include it
+in `manifest.ail-bootstrap.txt`, write its sidecar fingerprint, and pass the
+report plus fingerprint into the AIL-authored `VerifyBootstrapManifest` state.
+The report inspects each emitted ELF program header table and rejects dynamic
+interpreter or dynamic-section entries before recording
+`standalone-linux-syscall-elf`.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_bootstrap_writes_native_toolchain_bundle -- --nocapture
+```
+
+Expected: the bootstrap bundle proves its emitted ELF artifacts have no
+host-language runtime, dynamic linker, shared-library, library, or linker
+dependency before the AIL-authored bootstrap verifier accepts the manifest.
+
 ### Task 18: Declared Failure Trace Coverage Diagnostics
 
 **Files:**

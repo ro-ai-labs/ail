@@ -35,6 +35,8 @@ A BuildRequest has:
 - native bytecode report fingerprint: Text
 - host boundary report: Text
 - host boundary report fingerprint: Text
+- dependency report: Text
+- dependency report fingerprint: Text
 - bytecode artifact: Text
 - bytecode fingerprint: Text
 - bytecode verification report: Text
@@ -279,6 +281,8 @@ When the toolchain agent verifies an AIL bootstrap bundle:
 - the system reads the BuildRequest native bytecode report fingerprint
 - the system reads the BuildRequest host boundary report
 - the system reads the BuildRequest host boundary report fingerprint
+- the system reads the BuildRequest dependency report
+- the system reads the BuildRequest dependency report fingerprint
 - the system reads the BuildRequest target artifact fingerprint
 - the system reads the BuildRequest compiler pass target artifact fingerprint
 - the system changes the BuildRequest artifact manifest verification report to Verified
