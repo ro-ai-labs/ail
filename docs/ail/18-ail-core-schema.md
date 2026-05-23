@@ -300,11 +300,13 @@ the patch `kind`, `source`, `target`, display `targetName`, and edge
 `has_provenance` edges. `remove_node` resolves a checked node label, deletes
 only detached nodes, and rejects nodes with incident edges so the patch must
 remove relationships explicitly first. `add_edge` stores edge provenance as an
-edge attribute. `remove_edge` resolves the same source and target labels,
-deletes the existing edge of that kind, and rejects missing edges instead of
-treating them as no-ops. `replace_edge_attributes` merges the listed string
-attributes into the resolved edge, rewrites the stable edge id, and rejects
-missing edges instead of treating them as no-ops.
+edge attribute and rejects an existing edge with the same kind, source, and
+target instead of treating the operation as a no-op. `remove_edge` resolves the
+same source and target labels, deletes the existing edge of that kind, and
+rejects missing edges instead of treating them as no-ops.
+`replace_edge_attributes` merges the listed string attributes into the resolved
+edge, rewrites the stable edge id, and rejects missing edges instead of
+treating them as no-ops.
 `replace_node_attributes` merges the listed string attributes into the target
 node, may replace the node `type`, rewrites the target node's stable id when
 attributes change, and rewires existing edges to the updated node before the

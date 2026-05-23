@@ -790,6 +790,16 @@ fn apply_ail_core_patch_add_edge(
     {
         attributes.insert("provenance".to_string(), provenance);
     }
+    if core
+        .graph
+        .edges
+        .iter()
+        .any(|edge| edge.kind == kind && edge.source == source.id && edge.target == target.id)
+    {
+        return Err(format!(
+            "AIL-Core patch add_edge refuses to add existing edge {kind} {source_label} -> {target_label}"
+        ));
+    }
     core.graph
         .add_edge(kind.to_string(), &source, &target, attributes);
     Ok(())

@@ -158,13 +158,14 @@ operation runs. When the patch includes `package`, it must be a string and
 must match the checked Core package name before any operation runs. The CLI
 then runs the AIL-Core checker before printing the patched Core artifact. Node
 removals reject nodes with incident edges, so visual editors remove
-relationships first. Edge removals and edge attribute edits reject missing
-source, target, or edge references instead of silently accepting a no-op.
-Attribute edits rewire changed stable ids before checking, so existing rules,
-traces, failures, and provenance stay attached to the edited node or edge.
-`declare_provenance` attaches reviewed provenance to an existing node without
-changing semantic attributes. The patched Core can be rendered back to AIL-Spec
-with `ail-spec --core-file`.
+relationships first. Edge additions reject existing source, target, and kind
+triples; edge removals and edge attribute edits reject missing source, target,
+or edge references instead of silently accepting a no-op. Attribute edits
+rewire changed stable ids before checking, so existing rules, traces, failures,
+and provenance stay attached to the edited node or edge. `declare_provenance`
+attaches reviewed provenance to an existing node without changing semantic
+attributes. The patched Core can be rendered back to AIL-Spec with
+`ail-spec --core-file`.
 
 Direct visual edits are allowed for fields, rules, trace names, form bindings,
 view filters, and declared permissions when all required semantics are present.

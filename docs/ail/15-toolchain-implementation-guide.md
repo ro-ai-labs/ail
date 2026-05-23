@@ -634,12 +634,14 @@ name before any operation is applied. AIL-Flow exposes the package name as
 `package`, the hash as `coreHash`, node patch labels as `coreLabel`, and
 patch-ready edge labels as `edgeRefs` on action, tool, compiler-pass, and
 system-component projections. Node removals are guarded: they only delete
-detached nodes and require relationships to be removed first. Attribute
-replacement is key-merge based; node edits can update `type` and rewire changed
-stable node ids before checking, while edge attribute edits rewrite the stable
-edge id. `declare_provenance` adds reviewed provenance to an existing node
-without changing semantic attributes. This is the first concrete AIL-Flow /
-agent-edit path that edits Core directly before rendering back to AIL-Spec.
+detached nodes and require relationships to be removed first. Edge additions
+reject existing source, target, and kind triples, so an agent must use
+`replace_edge_attributes` for attribute changes. Attribute replacement is
+key-merge based; node edits can update `type` and rewire changed stable node
+ids before checking, while edge attribute edits rewrite the stable edge id.
+`declare_provenance` adds reviewed provenance to an existing node without
+changing semantic attributes. This is the first concrete AIL-Flow / agent-edit
+path that edits Core directly before rendering back to AIL-Spec.
 `ail-pass` compiles an AIL-Meta compiler pass package into verified
 AIL-Bytecode, or reads a saved Compiler-profile AIL-Bytecode artifact, checks a
 target package into AIL-Core, executes the selected pass bytecode over that
