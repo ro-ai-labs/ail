@@ -438,6 +438,7 @@ struct AilBootstrapArtifactSet<'a> {
     compiler_pass_bytecode_text: &'a str,
     toolchain_pass_output_core_text: &'a str,
     toolchain_pass_trace_text: &'a str,
+    fixed_point_report_text: &'a str,
     compiler_pass_conformance_report: &'a str,
     compiler_pass_native_executables: &'a [AilNativeArtifact],
     agent_bytecode_text: Option<&'a str>,
@@ -712,6 +713,10 @@ fn render_ail_bootstrap_manifest(artifacts: &AilBootstrapArtifactSet<'_>) -> Str
         format!(
             "toolchain-agent-pass-trace toolchain-agent.pass-trace.txt {}",
             ail_artifact_fingerprint(artifacts.toolchain_pass_trace_text)
+        ),
+        format!(
+            "bootstrap-fixed-point bootstrap-fixed-point-report.txt {}",
+            ail_artifact_fingerprint(artifacts.fixed_point_report_text)
         ),
         format!(
             "toolchain-agent-conformance toolchain-agent-conformance-report.txt {}",
@@ -1067,6 +1072,21 @@ fn write_ail_bootstrap_artifacts(
     )
     .map_err(|error| {
         format!("failed to write ail-bootstrap toolchain agent pass trace fingerprint: {error}")
+    })?;
+    fs::write(
+        root.join("bootstrap-fixed-point-report.txt"),
+        artifacts.fixed_point_report_text,
+    )
+    .map_err(|error| format!("failed to write ail-bootstrap fixed point report: {error}"))?;
+    fs::write(
+        root.join("bootstrap-fixed-point-report.fingerprint.txt"),
+        format!(
+            "{}\n",
+            ail_artifact_fingerprint(artifacts.fixed_point_report_text)
+        ),
+    )
+    .map_err(|error| {
+        format!("failed to write ail-bootstrap fixed point report fingerprint: {error}")
     })?;
     fs::write(
         root.join("toolchain-agent-conformance-report.txt"),
@@ -3029,6 +3049,7 @@ struct AilBootstrapAgentManifestRequest<'a> {
     compiler_pass_bytecode_text: &'a str,
     toolchain_pass_output_core_text: &'a str,
     toolchain_pass_trace_text: &'a str,
+    fixed_point_report_text: &'a str,
     toolchain_conformance_report: &'a str,
     compiler_pass_conformance_report: &'a str,
     target_artifacts: &'a [AilNativeArtifact],
@@ -3054,6 +3075,7 @@ fn run_ail_bootstrap_agent_verify_manifest(
         compiler_pass_bytecode_text,
         toolchain_pass_output_core_text,
         toolchain_pass_trace_text,
+        fixed_point_report_text,
         toolchain_conformance_report,
         compiler_pass_conformance_report,
         target_artifacts,
@@ -3117,6 +3139,14 @@ fn run_ail_bootstrap_agent_verify_manifest(
         (
             "buildrequest.compiler pass trace".to_string(),
             toolchain_pass_trace_text.to_string(),
+        ),
+        (
+            "buildrequest.fixed point report".to_string(),
+            fixed_point_report_text.to_string(),
+        ),
+        (
+            "buildrequest.fixed point report fingerprint".to_string(),
+            ail_artifact_fingerprint(fixed_point_report_text),
         ),
         (
             "buildrequest.conformance report".to_string(),
@@ -3869,6 +3899,22 @@ fn ensure_trailing_newline(text: String) -> String {
     }
 }
 
+fn render_ail_bootstrap_fixed_point_report(
+    first_pass_output_core_text: &str,
+    second_pass_output_core_text: &str,
+    second_pass_trace_text: &str,
+) -> String {
+    let changed = first_pass_output_core_text != second_pass_output_core_text;
+    format!(
+        "AIL-Bootstrap-Fixed-Point:\nfixed-point: {}\nfirst-pass-output {}\nsecond-pass-output {}\nsecond-pass-changed {}\nsecond-pass-trace {}\n",
+        if changed { "changed" } else { "ok" },
+        ail_artifact_fingerprint(first_pass_output_core_text),
+        ail_artifact_fingerprint(second_pass_output_core_text),
+        changed,
+        ail_artifact_fingerprint(second_pass_trace_text)
+    )
+}
+
 fn run_ail_bootstrap_command(path: &str, cli_options: &CliOptions) -> Result<u8, String> {
     let target = cli_options
         .ail_compile_target
@@ -3947,6 +3993,45 @@ fn run_ail_bootstrap_command(path: &str, cli_options: &CliOptions) -> Result<u8,
     let toolchain_pass_output_core_text =
         format!("{}\n", render_ail_core(&toolchain_pass_result.core));
     let toolchain_pass_trace_text = format!("{}\n", toolchain_pass_result.run.trace.join("\n"));
+    let fixed_point_pass_result = run_ail_compiler_pass_on_core(
+        &compiler_pass_bytecode,
+        &compiler_pass_action,
+        &toolchain_pass_result.core,
+    )?;
+    if fixed_point_pass_result.run.status != "succeeded" {
+        let mut message =
+            format!("ail-bootstrap fixed-point compiler pass {compiler_pass_action} failed");
+        if let Some(failure) = fixed_point_pass_result.run.failure {
+            message.push_str(&format!(": {failure}"));
+        }
+        if !fixed_point_pass_result.run.trace.is_empty() {
+            message.push_str(&format!(
+                "\n{}",
+                fixed_point_pass_result.run.trace.join("\n")
+            ));
+        }
+        return Err(message);
+    }
+    let fixed_point_diagnostics = check_ail_core(&fixed_point_pass_result.core);
+    if !fixed_point_diagnostics.is_empty() {
+        return Err(format!(
+            "ail-bootstrap fixed-point compiler pass output has diagnostics:\n{}",
+            fixed_point_diagnostics.join("\n")
+        ));
+    }
+    let fixed_point_output_core_text =
+        format!("{}\n", render_ail_core(&fixed_point_pass_result.core));
+    let fixed_point_trace_text = format!("{}\n", fixed_point_pass_result.run.trace.join("\n"));
+    let fixed_point_report_text = render_ail_bootstrap_fixed_point_report(
+        &toolchain_pass_output_core_text,
+        &fixed_point_output_core_text,
+        &fixed_point_trace_text,
+    );
+    if fixed_point_output_core_text != toolchain_pass_output_core_text {
+        return Err(format!(
+            "ail-bootstrap fixed-point changed compiler output:\n{fixed_point_report_text}"
+        ));
+    }
     let toolchain_bytecode = compile_ail_core_bytecode(&toolchain_pass_result.core)?;
     let toolchain_bytecode_text = format!("{}\n", render_ail_bytecode(&toolchain_bytecode));
     let toolchain_diagnostics = verify_ail_bytecode(&toolchain_bytecode);
@@ -3978,6 +4063,7 @@ fn run_ail_bootstrap_command(path: &str, cli_options: &CliOptions) -> Result<u8,
         compiler_pass_bytecode_text: &compiler_pass_bytecode_text,
         toolchain_pass_output_core_text: &toolchain_pass_output_core_text,
         toolchain_pass_trace_text: &toolchain_pass_trace_text,
+        fixed_point_report_text: &fixed_point_report_text,
         compiler_pass_conformance_report: &compiler_pass_conformance_report,
         compiler_pass_native_executables: compiler_pass_native_artifacts.as_slice(),
         agent_bytecode_text: Some(agent_bytecode_text.as_str()),
@@ -3999,6 +4085,7 @@ fn run_ail_bootstrap_command(path: &str, cli_options: &CliOptions) -> Result<u8,
         compiler_pass_bytecode_text: &compiler_pass_bytecode_text,
         toolchain_pass_output_core_text: &toolchain_pass_output_core_text,
         toolchain_pass_trace_text: &toolchain_pass_trace_text,
+        fixed_point_report_text: &fixed_point_report_text,
         toolchain_conformance_report: &toolchain_conformance_report,
         compiler_pass_conformance_report: &compiler_pass_conformance_report,
         target_artifacts: toolchain_native_artifacts.as_slice(),
@@ -4022,6 +4109,7 @@ fn run_ail_bootstrap_command(path: &str, cli_options: &CliOptions) -> Result<u8,
             compiler_pass_bytecode_text: &compiler_pass_bytecode_text,
             toolchain_pass_output_core_text: &toolchain_pass_output_core_text,
             toolchain_pass_trace_text: &toolchain_pass_trace_text,
+            fixed_point_report_text: &fixed_point_report_text,
             compiler_pass_conformance_report: &compiler_pass_conformance_report,
             compiler_pass_native_executables: compiler_pass_native_artifacts.as_slice(),
             agent_bytecode_text: Some(agent_run.bytecode_text.as_str()),

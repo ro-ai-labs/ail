@@ -476,18 +476,20 @@ It writes source package snapshots, `toolchain-agent.checked.ail-core.txt`,
 `toolchain-agent.ailbc.json`, `compiler-pass.checked.ail-core.txt`,
 `compiler-pass.ailbc.json`, native ELF executables for every action in both
 packages, package conformance reports, `agent.ailbc.json`, `agent-trace.txt`,
-and `manifest.ail-bootstrap.txt`. The bootstrap command runs the AIL-Meta
-compiler pass bytecode over the toolchain agent checked IR and compiles the
-toolchain bytecode from that transformed IR. The manifest records
-`no-host-backend-source true` and deterministic fingerprints for source
-packages, checked AIL-Core IR, compiler-pass output IR and trace, bytecode,
-conformance reports, and native executable bytes. The AIL-authored
-`VerifyBootstrapManifest` action reads the source-package fingerprint,
-checked-core fingerprint, compiler-pass trace, conformance report fingerprint,
-bytecode fingerprints, and native target fingerprints before the bundle is
-accepted, so the bootstrap boundary is reviewable as AIL source, checked IR,
-AIL compiler-pass output, AIL bytecode, and machine-level ELF artifacts rather
-than a Rust or host-language backend source tree.
+`bootstrap-fixed-point-report.txt`, and `manifest.ail-bootstrap.txt`. The
+bootstrap command runs the AIL-Meta compiler pass bytecode over the toolchain
+agent checked IR, reruns the same pass over that output to prove the transformed
+IR is stable, and compiles the toolchain bytecode from the first transformed IR.
+The manifest records `no-host-backend-source true` and deterministic
+fingerprints for source packages, checked AIL-Core IR, compiler-pass output IR
+and trace, fixed-point report, bytecode, conformance reports, and native
+executable bytes. The AIL-authored `VerifyBootstrapManifest` action reads the
+source-package fingerprint, checked-core fingerprint, compiler-pass trace,
+fixed-point report fingerprint, conformance report fingerprint, bytecode
+fingerprints, and native target fingerprints before the bundle is accepted, so
+the bootstrap boundary is reviewable as AIL source, checked IR, stable AIL
+compiler-pass output, AIL bytecode, and machine-level ELF artifacts rather than
+a Rust or host-language backend source tree.
 `ail-requirements` runs the first developer-facing agent capture stage by asking
 the package base LLM for an AIL-Requirements artifact, checking profile-specific
 coverage, and sending diagnostics back for one repair pass when the artifact is

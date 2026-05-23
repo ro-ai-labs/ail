@@ -4256,6 +4256,37 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
         toolchain_bytecode,
         format!("{expected_toolchain_bytecode}\n")
     );
+    let fixed_point_report =
+        fs::read_to_string(artifact_dir.join("bootstrap-fixed-point-report.txt")).unwrap();
+    assert!(
+        fixed_point_report.contains("fixed-point: ok"),
+        "{fixed_point_report}"
+    );
+    assert!(
+        fixed_point_report.contains(&format!(
+            "first-pass-output {}",
+            fnv64_fingerprint(&toolchain_pass_output)
+        )),
+        "{fixed_point_report}"
+    );
+    assert!(
+        fixed_point_report.contains(&format!(
+            "second-pass-output {}",
+            fnv64_fingerprint(&toolchain_pass_output)
+        )),
+        "{fixed_point_report}"
+    );
+    assert!(
+        fixed_point_report.contains("second-pass-changed false"),
+        "{fixed_point_report}"
+    );
+    let fixed_point_fingerprint =
+        fs::read_to_string(artifact_dir.join("bootstrap-fixed-point-report.fingerprint.txt"))
+            .unwrap();
+    assert_eq!(
+        fixed_point_fingerprint.trim(),
+        fnv64_fingerprint(&fixed_point_report)
+    );
 
     let toolchain_conformance =
         fs::read_to_string(artifact_dir.join("toolchain-agent-conformance-report.txt")).unwrap();
@@ -4309,6 +4340,8 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
     assert!(agent_trace.contains("read buildrequest.bytecode fingerprint"));
     assert!(agent_trace.contains("read buildrequest.compiler pass fingerprint"));
     assert!(agent_trace.contains("read buildrequest.compiler pass trace"));
+    assert!(agent_trace.contains("read buildrequest.fixed point report"));
+    assert!(agent_trace.contains("read buildrequest.fixed point report fingerprint"));
     assert!(agent_trace.contains("read buildrequest.conformance report"));
     assert!(agent_trace.contains("read buildrequest.conformance report fingerprint"));
     assert!(agent_trace.contains("read buildrequest.target artifact fingerprint"));
@@ -4334,6 +4367,8 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
             "buildrequest.bytecode fingerprint=fnv64:toolchain",
             "buildrequest.compiler pass fingerprint=fnv64:pass",
             "buildrequest.compiler pass trace=ok",
+            "buildrequest.fixed point report=ok",
+            "buildrequest.fixed point report fingerprint=fnv64:fixed-point",
             "buildrequest.conformance report=ok",
             "buildrequest.conformance report fingerprint=fnv64:conformance",
             "buildrequest.target artifact fingerprint=fnv64:toolchain-native",
@@ -4414,6 +4449,13 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
         manifest.contains(&format!(
             "toolchain-agent-pass-trace toolchain-agent.pass-trace.txt {}",
             fnv64_fingerprint(&toolchain_pass_trace)
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "bootstrap-fixed-point bootstrap-fixed-point-report.txt {}",
+            fnv64_fingerprint(&fixed_point_report)
         )),
         "{manifest}"
     );

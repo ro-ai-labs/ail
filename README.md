@@ -119,9 +119,10 @@ AIL-Meta compiler pass, runs the AIL-Meta compiler pass bytecode over the
 toolchain agent checked IR, then runs the AIL-authored
 `VerifyBootstrapManifest` action and records its trace and native verifier
 executables in `manifest.ail-bootstrap.txt`. The bundle also writes the
-compiler-pass output IR, compiler-pass trace, conformance reports, and
-fingerprints for both AIL packages, then feeds the source-package,
-checked-core, compiler-pass trace, and conformance fingerprints into the
+compiler-pass output IR, compiler-pass trace, a fixed-point report proving the
+second pass over that output is stable, conformance reports, and fingerprints
+for both AIL packages, then feeds the source-package, checked-core,
+compiler-pass trace, fixed-point, and conformance fingerprints into the
 AIL-authored bootstrap verifier before accepting the manifest.
 `ail-pass <compiler-pass-package-or-bytecode>
 <target-package> --action <PassName>` compiles an AIL-Meta compiler pass

@@ -6234,6 +6234,55 @@ cargo test --test ail_toolchain cli_ail_bootstrap_writes_native_toolchain_bundle
 Expected: the bootstrap bundle proves the AIL-authored compiler pass executed
 inside the bootstrap chain before bytecode and native ELF emission.
 
+### Task 142: Bootstrap Bundle Records Compiler-Pass Fixed Point
+
+**Files:**
+- Modify: `examples/ail_toolchain_agent.ail/spec.ail-spec.md`
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/13-bootstrap-self-hosting.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing bootstrap fixed-point assertions**
+
+Extend the native `ail-bootstrap` bundle test to require
+`bootstrap-fixed-point-report.txt`, its fingerprint file, a manifest entry for
+the fixed-point report, and AIL verifier trace reads for
+`buildrequest.fixed point report` and
+`buildrequest.fixed point report fingerprint`. Require the report to show that
+the first and second compiler-pass output fingerprints are equal.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_bootstrap_writes_native_toolchain_bundle -- --nocapture
+```
+
+Expected: failure because the bootstrap bundle does not yet write a fixed-point
+report.
+
+- [x] **Step 3: Run the fixed-point check**
+
+After the first AIL-Meta pass transforms the toolchain agent checked IR, rerun
+the same compiler-pass bytecode over the transformed IR. Fail the bootstrap
+command if the second output differs from the first output or if the second
+output has diagnostics. Write a deterministic fixed-point report and include it
+in the bootstrap manifest and AIL-authored verifier state.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_bootstrap_writes_native_toolchain_bundle -- --nocapture
+```
+
+Expected: the bootstrap bundle proves the AIL-Meta compiler pass reaches a
+stable output before bytecode and native ELF emission.
+
 ### Task 18: Declared Failure Trace Coverage Diagnostics
 
 **Files:**
