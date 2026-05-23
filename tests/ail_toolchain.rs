@@ -4117,6 +4117,10 @@ fn cli_ail_compile_writes_saved_bytecode_native_artifacts() {
     assert!(manifest.contains("AIL-Compile-Manifest:"), "{manifest}");
     assert!(manifest.contains("action CloseTicket"), "{manifest}");
     assert!(
+        manifest.contains("machine-bytecode-contract linux-x86_64-elf bytecode-level machine bytecode-container linux-elf-executable bytecode-format elf64-little-x86_64-executable"),
+        "{manifest}"
+    );
+    assert!(
         manifest.contains(&format!(
             "bytecode artifact.ailbc.json {}",
             fnv64_fingerprint(&bytecode_artifact)
@@ -5373,6 +5377,10 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
             "bootstrap-native-bytecode bootstrap-native-bytecode-report.txt {}",
             fnv64_fingerprint(&native_bytecode_report)
         )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains("machine-bytecode-contract linux-x86_64-elf bytecode-level machine bytecode-container linux-elf-executable bytecode-format elf64-little-x86_64-executable"),
         "{manifest}"
     );
     assert!(
@@ -7969,6 +7977,10 @@ fn cli_ail_conformance_writes_native_agent_artifacts() {
         manifest.contains(&format!(
             "agent-target linux-x86_64-elf agent-VerifyConformanceManifest.elf {expected_agent_native_fingerprint}"
         )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains("machine-bytecode-contract linux-x86_64-elf bytecode-level machine bytecode-container linux-elf-executable bytecode-format elf64-little-x86_64-executable"),
         "{manifest}"
     );
     let native_bytecode_report =

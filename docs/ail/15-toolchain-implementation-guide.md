@@ -322,9 +322,11 @@ requirements, and field writes.
 Every native-bytecode report begins with `bytecode-level machine`,
 `bytecode-container linux-elf-executable`, and
 `bytecode-format elf64-little-x86_64-executable` for the Linux target. That
-report-level contract keeps "bytecode" anchored to machine-level ELF
-executables, while AIL-Bytecode JSON remains the auditable compiler
-intermediate used for checking, VM execution, and bootstrap handoff.
+report-level contract is mirrored in native manifests as
+`machine-bytecode-contract linux-x86_64-elf ...`, keeping "bytecode" anchored
+to machine-level ELF executables at both the report and manifest boundaries,
+while AIL-Bytecode JSON remains the auditable compiler intermediate used for
+checking, VM execution, and bootstrap handoff.
 
 The first VM instruction compiler supports Application-profile actions,
 AgentTool-profile tool declarations, Compiler-profile compiler passes, and

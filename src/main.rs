@@ -645,6 +645,7 @@ fn render_ail_build_manifest(artifacts: &AilBuildArtifactSet<'_>) -> String {
             "target {target_name} target.elf {}",
             ail_artifact_fingerprint_bytes(target_executable)
         ));
+        lines.push(native_machine_bytecode_manifest_contract_line(target_name));
     }
     if let Some(native_bytecode_report_text) = artifacts.native_bytecode_report_text {
         lines.push(format!(
@@ -727,6 +728,9 @@ fn render_ail_compile_manifest(artifacts: &AilCompileArtifactSet<'_>) -> String 
         artifacts.target_name,
         ail_artifact_fingerprint_bytes(artifacts.target_executable)
     ));
+    lines.push(native_machine_bytecode_manifest_contract_line(
+        artifacts.target_name,
+    ));
     lines.push(format!(
         "native-bytecode native-bytecode-report.txt {}",
         ail_artifact_fingerprint(artifacts.native_bytecode_report_text)
@@ -779,6 +783,9 @@ fn render_ail_compile_bundle_manifest(artifacts: &AilCompileBundleArtifactSet<'_
         ail_artifact_fingerprint(artifacts.bytecode_text)
     ));
     lines.push("bundle all-actions".to_string());
+    lines.push(native_machine_bytecode_manifest_contract_line(
+        artifacts.target_name,
+    ));
     for executable in artifacts.target_executables {
         lines.push(format!(
             "target {} {} {}",
@@ -909,6 +916,7 @@ fn render_ail_bootstrap_manifest(artifacts: &AilBootstrapArtifactSet<'_>) -> Str
     let mut lines = vec![
         "AIL-Bootstrap-Manifest:".to_string(),
         format!("target {}", artifacts.target_name),
+        native_machine_bytecode_manifest_contract_line(artifacts.target_name),
         "no-host-backend-source true".to_string(),
         format!(
             "toolchain-agent-source toolchain-agent.source.ail-package.md toolchain-agent.source.ail-spec.md {}",
@@ -1811,6 +1819,11 @@ fn render_ail_lower_manifest(artifacts: &AilLowerArtifactSet<'_>) -> String {
     if artifacts.agent_trace.is_some() {
         lines.push("trace agent-trace.txt".to_string());
     }
+    if let Some(contract_line) = native_machine_bytecode_manifest_contract_line_from_artifacts(&[
+        artifacts.agent_native_executables,
+    ]) {
+        lines.push(contract_line);
+    }
     if let Some(native_bytecode_report_text) = artifacts.native_bytecode_report_text {
         lines.push(format!(
             "native-bytecode native-bytecode-report.txt {}",
@@ -2060,6 +2073,11 @@ fn render_ail_conformance_manifest(
     if artifacts.agent_trace.is_some() {
         lines.push("trace agent-trace.txt".to_string());
     }
+    if let Some(contract_line) = native_machine_bytecode_manifest_contract_line_from_artifacts(&[
+        artifacts.agent_native_executables,
+    ]) {
+        lines.push(contract_line);
+    }
     if let Some(native_bytecode_report_text) = artifacts.native_bytecode_report_text {
         lines.push(format!(
             "native-bytecode native-bytecode-report.txt {}",
@@ -2211,6 +2229,12 @@ fn render_ail_pass_manifest(artifacts: &AilPassArtifactSet<'_>) -> String {
             native_pass.file_name,
             ail_artifact_fingerprint_bytes(&native_pass.bytes)
         ));
+    }
+    if let Some(contract_line) = native_machine_bytecode_manifest_contract_line_from_artifacts(&[
+        artifacts.pass_native_executables,
+        artifacts.agent_native_executables,
+    ]) {
+        lines.push(contract_line);
     }
     if let Some(native_bytecode_report_text) = artifacts.native_bytecode_report_text {
         lines.push(format!(
@@ -4267,10 +4291,7 @@ fn native_machine_bytecode_report_header(
     report_title: &str,
     target_name: &str,
 ) -> Result<Vec<String>, String> {
-    let (container, format) = match target_name {
-        "linux-x86_64-elf" => ("linux-elf-executable", "elf64-little-x86_64-executable"),
-        _ => return Err(format!("unsupported native bytecode target {target_name}")),
-    };
+    let (container, format) = native_machine_bytecode_contract_parts(target_name)?;
     Ok(vec![
         report_title.to_string(),
         format!("target {target_name}"),
@@ -4278,6 +4299,32 @@ fn native_machine_bytecode_report_header(
         format!("bytecode-container {container}"),
         format!("bytecode-format {format}"),
     ])
+}
+
+fn native_machine_bytecode_contract_parts(
+    target_name: &str,
+) -> Result<(&'static str, &'static str), String> {
+    match target_name {
+        "linux-x86_64-elf" => Ok(("linux-elf-executable", "elf64-little-x86_64-executable")),
+        _ => Err(format!("unsupported native bytecode target {target_name}")),
+    }
+}
+
+fn native_machine_bytecode_manifest_contract_line(target_name: &str) -> String {
+    let (container, format) = native_machine_bytecode_contract_parts(target_name)
+        .unwrap_or(("unsupported-native-executable", "unsupported-native-format"));
+    format!(
+        "machine-bytecode-contract {target_name} bytecode-level machine bytecode-container {container} bytecode-format {format}"
+    )
+}
+
+fn native_machine_bytecode_manifest_contract_line_from_artifacts(
+    artifact_groups: &[&[AilNativeArtifact]],
+) -> Option<String> {
+    artifact_groups
+        .iter()
+        .find_map(|artifacts| artifacts.first())
+        .map(|artifact| native_machine_bytecode_manifest_contract_line(&artifact.target_name))
 }
 
 fn render_ail_bootstrap_native_bytecode_report(

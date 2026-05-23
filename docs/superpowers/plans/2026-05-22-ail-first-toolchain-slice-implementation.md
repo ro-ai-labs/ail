@@ -7497,6 +7497,52 @@ cargo test --test ail_toolchain cli_ail_conformance_writes_native_agent_artifact
 Expected: native bytecode reports now state the machine-level Linux ELF
 contract before listing each executable artifact and fingerprint.
 
+### Task 166: Native Manifests Carry Machine Bytecode Contract
+
+**Files:**
+- Modify: `src/main.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+- Test: `tests/ail_toolchain.rs`
+
+- [x] **Step 1: Write failing manifest contract assertions**
+
+Extend representative compile, bootstrap, and conformance artifact tests to
+require the manifest itself to carry a fingerprinted-machine-artifact contract
+line for `linux-x86_64-elf`: machine bytecode level, Linux ELF executable
+container, and ELF64 little-endian x86_64 executable format.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_compile_writes_saved_bytecode_native_artifacts -- --nocapture
+```
+
+Expected: failure because manifests index native targets and reports but do not
+yet declare the machine-bytecode contract directly.
+
+- [x] **Step 3: Render manifest-level machine bytecode contracts**
+
+Add a shared manifest contract line for native `linux-x86_64-elf` artifacts
+and use it from compile, compile-bundle, build, bootstrap, lower, pass, and
+conformance manifests whenever native ELF artifacts are present.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_compile_writes_saved_bytecode_native_artifacts -- --nocapture
+cargo test --test ail_toolchain cli_ail_bootstrap_writes_native_toolchain_bundle -- --nocapture
+cargo test --test ail_toolchain cli_ail_conformance_writes_native_agent_artifacts -- --nocapture
+```
+
+Expected: manifests expose the same Linux ELF machine-bytecode contract as the
+native bytecode report before the AIL-authored verifier accepts the artifact
+set.
+
 ### Task 18: Declared Failure Trace Coverage Diagnostics
 
 **Files:**

@@ -90,7 +90,9 @@ dynamic linker, shared libraries, library dependencies, or linker invocation.
 Native bytecode reports declare `bytecode-level machine`,
 `bytecode-container linux-elf-executable`, and
 `bytecode-format elf64-little-x86_64-executable` before listing artifact
-fingerprints, making the Linux ELF machine-code contract explicit.
+fingerprints, and native manifests mirror the same
+`machine-bytecode-contract` line, making the Linux ELF machine-code contract
+explicit at the review boundary.
 `ail-check`, `ail-core`,
 `ail-flow`, `ail-lower`, `ail-compile`, `ail-run`, and `ail-build` can use
 `--spec-file <path>` to read a saved generated AIL-Spec artifact instead of
