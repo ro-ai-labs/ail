@@ -6183,6 +6183,57 @@ Expected: the bootstrap bundle carries source package evidence for both bundled
 AIL packages and the AIL-authored manifest verifier reads that evidence before
 acceptance.
 
+### Task 141: Bootstrap Bundle Runs AIL-Meta Pass Over Toolchain IR
+
+**Files:**
+- Modify: `examples/ail_toolchain_agent.ail/spec.ail-spec.md`
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/13-bootstrap-self-hosting.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing bootstrap compiler-pass assertions**
+
+Extend the native `ail-bootstrap` bundle test to require
+`toolchain-agent.pass-output.ail-core.txt`,
+`toolchain-agent.pass-output.fingerprint.txt`,
+`toolchain-agent.pass-trace.txt`, and
+`toolchain-agent.pass-trace.fingerprint.txt`. Require manifest entries for the
+pass output core and pass trace, require the AIL-authored bootstrap verifier to
+read `buildrequest.compiler pass trace`, and prove
+`toolchain-agent.ailbc.json` recompiles from the pass output core.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_bootstrap_writes_native_toolchain_bundle -- --nocapture
+```
+
+Expected: failure because the bootstrap bundle does not yet run the AIL-Meta
+compiler pass over the toolchain agent checked IR.
+
+- [x] **Step 3: Run the bundled AIL-Meta pass before toolchain bytecode emission**
+
+During `ail-bootstrap`, load the toolchain agent source into checked AIL-Core,
+compile the AIL-Meta compiler pass to bytecode, run its single compiler-pass
+action over the toolchain agent checked IR, check the transformed IR, write the
+pass output core and pass trace artifacts, and compile the toolchain agent
+bytecode from the transformed IR.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_bootstrap_writes_native_toolchain_bundle -- --nocapture
+```
+
+Expected: the bootstrap bundle proves the AIL-authored compiler pass executed
+inside the bootstrap chain before bytecode and native ELF emission.
+
 ### Task 18: Declared Failure Trace Coverage Diagnostics
 
 **Files:**

@@ -241,6 +241,7 @@ When the toolchain agent verifies an AIL bootstrap bundle:
 - the system reads the BuildRequest core ir fingerprint
 - the system reads the BuildRequest bytecode fingerprint
 - the system reads the BuildRequest compiler pass fingerprint
+- the system reads the BuildRequest compiler pass trace
 - the system reads the BuildRequest conformance report
 - the system reads the BuildRequest conformance report fingerprint
 - the system reads the BuildRequest target artifact fingerprint

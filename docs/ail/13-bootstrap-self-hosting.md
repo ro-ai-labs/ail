@@ -43,9 +43,9 @@ reviewable output is deterministic ELF executable bytes plus fingerprints and
 AIL-authored agent traces, not generated Rust, C, or other host-language backend
 source. The bootstrap artifact set should bundle the AIL-authored toolchain
 agent and AIL-Meta compiler passes as source package snapshots, checked
-AIL-Core IR, checked AIL-Bytecode, and native machine-code artifacts, with
-package conformance reports and an AIL-authored verifier accepting the
-manifest.
+AIL-Core IR, AIL-Meta compiler-pass output IR and trace, checked AIL-Bytecode,
+and native machine-code artifacts, with package conformance reports and an
+AIL-authored verifier accepting the manifest.
 
 ## Stage 4: Self-Hosted Fixed Point
 
