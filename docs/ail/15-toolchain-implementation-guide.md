@@ -143,7 +143,8 @@ AIL-Core rejects `--target linux-x86_64-elf` unless the package declares either
 `x86_64-unknown-linux-syscall-elf: supported` target-support entry. Finer
 target/effect pair enforcement remains checker and backend conformance work.
 Target-support status labels must be `supported`, `supported-with-host-imports`,
-or `planned-contract`.
+or `planned-contract`. AIL-Bytecode lowering carries the same target-support
+map so saved bytecode artifacts keep the native target contract.
 When present, `schema-version` and `safety-level` are also preserved as package
 metadata in checked AIL-Core. The checker rejects unknown schema versions;
 safety-level labels must be `standard`, `low`, `medium`, `high`, or `expert`.
@@ -559,8 +560,9 @@ malformed static operands such as a non-integer `ADD_INT_FIELD.delta` before
 runtime state is touched.
 `ail-compile <artifact.ailbc.json> --action <ActionName> --target
 linux-x86_64-elf --out <path>` reads the same saved AIL-Bytecode artifact,
-verifies it, and emits a native ELF executable from that artifact boundary
-without loading the source package or generating host-language backend source.
+verifies it, checks the artifact's `target_support` map when present, and emits
+a native ELF executable from that artifact boundary without loading the source
+package or generating host-language backend source.
 With `--artifact-dir`, direct `ail-compile` writes `source.ail-package.md`,
 `source.ail-spec.md`, and `source.fingerprint.txt` when a package source is
 available; it also writes `artifact.ailbc.json`, `artifact.fingerprint.txt`,

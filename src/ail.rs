@@ -275,6 +275,7 @@ pub struct AilBytecodeProgram {
     pub package_name: String,
     pub package_version: String,
     pub profile: String,
+    pub target_support: BTreeMap<String, String>,
     pub actions: BTreeMap<String, AilBytecodeAction>,
     pub failures: BTreeMap<String, AilBytecodeFailure>,
 }
@@ -4334,23 +4335,31 @@ pub fn compile_ail_core_native_elf(
 }
 
 fn ensure_ail_core_native_target_supported(core: &AilCore, target: &str) -> Result<(), String> {
-    if core.package.target_support.is_empty() {
+    ensure_native_target_supported(&core.package.name, &core.package.target_support, target)
+}
+
+fn ensure_native_target_supported(
+    package_name: &str,
+    target_support: &BTreeMap<String, String>,
+    target: &str,
+) -> Result<(), String> {
+    if target_support.is_empty() {
         return Ok(());
     }
     for target_name in target_support_lookup_names(target) {
-        if let Some(status) = core.package.target_support.get(*target_name) {
+        if let Some(status) = target_support.get(*target_name) {
             if status == "supported" {
                 return Ok(());
             }
             return Err(format!(
                 "AIL-BACKEND-001 package {} target-support marks {target_name} as {status}; native target {target} requires supported",
-                core.package.name
+                package_name
             ));
         }
     }
     Err(format!(
         "AIL-BACKEND-001 package {} target-support does not declare native target {target}",
-        core.package.name
+        package_name
     ))
 }
 
@@ -4371,6 +4380,7 @@ pub fn compile_ail_bytecode_native_elf(
             "unsupported native target '{target}'; expected linux-x86_64-elf"
         ));
     }
+    ensure_native_target_supported(&program.package_name, &program.target_support, target)?;
     let diagnostics = verify_ail_bytecode(program);
     if !diagnostics.is_empty() {
         return Err(format!(
@@ -5981,6 +5991,7 @@ fn compile_ail_document_bytecode(
         package_name: package.metadata.name.clone(),
         package_version: package.metadata.version.clone(),
         profile: package.metadata.profile.clone(),
+        target_support: package.metadata.target_support.clone(),
         actions,
         failures,
     })
@@ -7191,10 +7202,11 @@ fn compile_ail_action_bytecode(document: &AilDocument, action: &AilAction) -> Ai
 
 pub fn render_ail_bytecode(program: &AilBytecodeProgram) -> String {
     format!(
-        "{{\"kind\":\"AIL-Bytecode\",\"package\":{},\"version\":{},\"profile\":{},\"actions\":[{}],\"failures\":[{}]}}",
+        "{{\"kind\":\"AIL-Bytecode\",\"package\":{},\"version\":{},\"profile\":{},\"target_support\":{},\"actions\":[{}],\"failures\":[{}]}}",
         json_string(&program.package_name),
         json_string(&program.package_version),
         json_string(&program.profile),
+        render_json_string_map(&program.target_support),
         program
             .actions
             .values()
@@ -7310,6 +7322,7 @@ pub fn parse_ail_bytecode(text: &str) -> Result<AilBytecodeProgram, String> {
         package_name: required_json_string(root, "package")?.to_string(),
         package_version: required_json_string(root, "version")?.to_string(),
         profile: required_json_string(root, "profile")?.to_string(),
+        target_support: optional_json_string_map(root, "target_support", "AIL-Bytecode")?,
         actions,
         failures,
     })
