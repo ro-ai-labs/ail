@@ -25,8 +25,10 @@ A BuildRequest has:
 - bytecode artifact: Text
 - bytecode fingerprint: Text
 - bytecode verification report: Text
+- target platform: Text
 - target artifact: Text
 - target artifact fingerprint: Text
+- target artifact compilation report: Text
 - target artifact verification report: Text
 - artifact manifest: Text
 - artifact manifest fingerprint: Text
@@ -121,6 +123,21 @@ When the toolchain agent compiles a captured application:
 - the system changes the BuildRequest status to BytecodeReady
 - the system guarantees the compiler emits a verified toolchain artifact and no Rust or host-language backend source
 - the system records a trace event named ApplicationBytecodeCompiled
+
+Action: Compile native target.
+
+When the toolchain agent requests executable bytes for a native target:
+
+- the system requires the BuildRequest to exist
+- the system requires the BuildRequest status to be BytecodeReady
+- the system reads the BuildRequest bytecode artifact
+- the system reads the BuildRequest bytecode fingerprint
+- the system reads the BuildRequest target platform
+- the system reads the BuildRequest target artifact
+- the system reads the BuildRequest target artifact fingerprint
+- the system changes the BuildRequest target artifact compilation report to Emitted
+- the system guarantees the native target call produces machine-level executable bytes for the selected target, Linux x86_64 ELF bytes for linux-x86_64-elf, and no Rust or host-language backend source
+- the system records a trace event named NativeTargetCompiled
 
 Action: Verify bytecode artifact.
 

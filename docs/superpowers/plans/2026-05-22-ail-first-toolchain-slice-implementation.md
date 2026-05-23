@@ -5937,6 +5937,56 @@ cargo test --test ail_toolchain cli_ail_conformance_checks_valid_and_rejected_fi
 
 Expected: the focused diagnostic and conformance tests pass.
 
+### Task 136: AIL Agent Records Native Target Compilation
+
+**Files:**
+- Modify: `examples/ail_toolchain_agent.ail/spec.ail-spec.md`
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/13-bootstrap-self-hosting.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing native-target compile action tests**
+
+Extend the toolchain-agent bytecode test to require a `CompileNativeTarget`
+action that reads the bytecode artifact, bytecode fingerprint, target platform,
+native target artifact, and native target fingerprint before recording a
+`NativeTargetCompiled` trace. Extend the native `ail-build --agent --target
+linux-x86_64-elf` test to require that action between
+`VerifyBytecodeArtifact` and `VerifyTargetArtifact`.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain ail_toolchain_agent_package_lowers_to_verified_bytecode -- --nocapture
+```
+
+Expected: failure because the AIL-authored toolchain agent has no
+`CompileNativeTarget` action.
+
+- [x] **Step 3: Add the AIL-authored native target compile handoff**
+
+Add `target platform` and `target artifact compilation report` to
+`BuildRequest`, define `CompileNativeTarget` in the AIL package, and run it
+after the bootstrap compiler emits native executable bytes and after bytecode
+verification, but before target verification.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain ail_toolchain_agent_package_lowers_to_verified_bytecode -- --nocapture
+cargo test --test ail_toolchain cli_ail_build_agent_verifies_native_target_artifact -- --nocapture
+```
+
+Expected: the AIL-authored agent bytecode includes and runs
+`CompileNativeTarget`, and native `ail-build --agent` traces the executable-byte
+handoff before verifying the Linux ELF target artifact.
+
 ### Task 18: Declared Failure Trace Coverage Diagnostics
 
 **Files:**

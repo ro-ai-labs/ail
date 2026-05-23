@@ -571,9 +571,11 @@ before `CompileApplication`. After the Rust bootstrap compiler emits and
 verifies the target artifact, the agent runs
 `VerifyBytecodeArtifact` with the emitted artifact summary and deterministic
 bytecode fingerprint for the VM artifact. When the selected target is native
-ELF, the agent also runs `VerifyTargetArtifact` with the native target artifact
-summary and deterministic fingerprint so the final machine-code boundary is
-represented in AIL bytecode. When `--artifact-dir` is present, the agent also runs
+ELF, the agent also runs `CompileNativeTarget` with the bytecode artifact,
+bytecode fingerprint, target platform, native target artifact summary, and
+deterministic target fingerprint, recording `NativeTargetCompiled` before
+`VerifyTargetArtifact` verifies the final machine-code boundary. When
+`--artifact-dir` is present, the agent also runs
 `VerifyBuildManifest` with the rendered build manifest, deterministic manifest
 fingerprint, native target fingerprint when a native target is present, and the
 native compiler-pass executable fingerprint when a native build pass is

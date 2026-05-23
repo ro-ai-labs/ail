@@ -38,6 +38,10 @@ in AIL-Meta.
 Use the bootstrap compiler to compile AIL-defined compiler rules into a new
 compiler artifact. The generated compiler must pass the conformance suite
 before it can be trusted for later stages.
+Native target generation is part of this artifact boundary: for Linux, the
+reviewable output is deterministic ELF executable bytes plus fingerprints and
+AIL-authored agent traces, not generated Rust, C, or other host-language backend
+source.
 
 ## Stage 4: Self-Hosted Fixed Point
 

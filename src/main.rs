@@ -2320,6 +2320,51 @@ fn run_ail_build_agent_verify_bytecode(
     Ok(())
 }
 
+fn run_ail_build_agent_compile_native_target(
+    agent_run: &mut AilBuildAgentRun,
+    target: &str,
+    artifact_summary: &str,
+    artifact_fingerprint: &str,
+) -> Result<(), String> {
+    if !agent_run
+        .bytecode
+        .actions
+        .contains_key("CompileNativeTarget")
+    {
+        return Err(
+            "ail-build --agent native output requires a CompileNativeTarget action".to_string(),
+        );
+    }
+    let mut compile_state = agent_run.state.clone();
+    compile_state.insert(
+        "buildrequest.target platform".to_string(),
+        target.to_string(),
+    );
+    compile_state.insert(
+        "buildrequest.target artifact".to_string(),
+        artifact_summary.to_string(),
+    );
+    compile_state.insert(
+        "buildrequest.target artifact fingerprint".to_string(),
+        artifact_fingerprint.to_string(),
+    );
+    let compile_run =
+        run_ail_bytecode_action(&agent_run.bytecode, "CompileNativeTarget", compile_state)?;
+    if compile_run.status != "succeeded" {
+        let mut message = "ail-build agent CompileNativeTarget failed".to_string();
+        if let Some(failure) = compile_run.failure {
+            message.push_str(&format!(": {failure}"));
+        }
+        if !compile_run.trace.is_empty() {
+            message.push_str(&format!("\n{}", compile_run.trace.join("\n")));
+        }
+        return Err(message);
+    }
+    agent_run.trace.extend(compile_run.trace);
+    agent_run.state = compile_run.final_state;
+    Ok(())
+}
+
 fn run_ail_build_agent_verify_target_artifact(
     agent_run: &mut AilBuildAgentRun,
     artifact_summary: &str,
@@ -3129,9 +3174,16 @@ fn run_ail_build_from_core(
         run_ail_build_agent_verify_bytecode(agent_run, &bytecode_text, &bytecode_fingerprint)?;
         if let Some((target, out, executable)) = native_build.as_ref() {
             let target_fingerprint = ail_artifact_fingerprint_bytes(executable);
+            let target_summary = format!("{target} executable {} bytes at {out}", executable.len());
+            run_ail_build_agent_compile_native_target(
+                agent_run,
+                target,
+                &target_summary,
+                &target_fingerprint,
+            )?;
             run_ail_build_agent_verify_target_artifact(
                 agent_run,
-                &format!("{target} executable {} bytes at {out}", executable.len()),
+                &target_summary,
                 &target_fingerprint,
             )?;
         }

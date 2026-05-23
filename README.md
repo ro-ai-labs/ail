@@ -167,7 +167,8 @@ runs `AcceptCompilerPassOutput` after an AIL-authored compiler pass is applied,
 runs `AcceptCoreIR` after AIL-Core is checked and before compilation, runs
 `CompileApplication` over the completed build state before target artifact
 emission, runs `VerifyBytecodeArtifact` after the VM artifact verifies, runs
-`VerifyTargetArtifact` after a native target artifact is emitted, and, with
+`CompileNativeTarget` after native Linux x86_64 ELF bytes are emitted, runs
+`VerifyTargetArtifact` after the native target artifact is recorded, and, with
 `--artifact-dir`, runs `VerifyBuildManifest` against the build manifest and
 manifest fingerprint, then writes `artifact.fingerprint.txt`,
 `agent.ailbc.json`, `agent.fingerprint.txt`, `agent-trace.txt`,
@@ -189,9 +190,12 @@ before `CompileApplication`. When `ail-build --pass` is used with `--agent`,
 the pass bytecode, pass fingerprint, and VM trace are accepted through
 `AcceptCompilerPassOutput` before `AcceptCoreIR`. The final
 `VerifyBytecodeArtifact` action reads both the emitted bytecode artifact summary
-and its deterministic fingerprint, `VerifyTargetArtifact` reads the native
-target artifact summary and deterministic fingerprint when a native target is
-selected, and `VerifyBuildManifest` reads the artifact manifest and its
+and its deterministic fingerprint, `CompileNativeTarget` reads the bytecode
+artifact, bytecode fingerprint, target platform, native target artifact summary,
+and target fingerprint before recording `NativeTargetCompiled`,
+`VerifyTargetArtifact` reads the native target artifact summary and
+deterministic fingerprint when a native target is selected, and
+`VerifyBuildManifest` reads the artifact manifest and its
 deterministic fingerprint, plus the native target fingerprint when a native
 target is selected and the native compiler-pass executable fingerprint when a
 native build pass is present. When `ail-build --target linux-x86_64-elf` is used with

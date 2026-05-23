@@ -2124,6 +2124,10 @@ fn ail_toolchain_agent_package_lowers_to_verified_bytecode() {
         "{rendered}"
     );
     assert!(
+        rendered.contains(r#""action":"CompileNativeTarget""#),
+        "{rendered}"
+    );
+    assert!(
         rendered.contains(r#""action":"VerifyBytecodeArtifact""#),
         "{rendered}"
     );
@@ -2206,6 +2210,65 @@ fn ail_toolchain_agent_package_lowers_to_verified_bytecode() {
         verify_run
             .trace
             .contains(&"trace BytecodeArtifactVerified".to_string())
+    );
+
+    let native_compile_run = run_ail_bytecode_action(
+        &bytecode,
+        "CompileNativeTarget",
+        BTreeMap::from([
+            ("buildrequest.id".to_string(), "BR-1".to_string()),
+            (
+                "buildrequest.status".to_string(),
+                "BytecodeReady".to_string(),
+            ),
+            (
+                "buildrequest.bytecode artifact".to_string(),
+                "Verified AIL-Bytecode".to_string(),
+            ),
+            (
+                "buildrequest.bytecode fingerprint".to_string(),
+                "fnv64:bytecode".to_string(),
+            ),
+            (
+                "buildrequest.target platform".to_string(),
+                "linux-x86_64-elf".to_string(),
+            ),
+            (
+                "buildrequest.target artifact".to_string(),
+                "linux-x86_64-elf executable 512 bytes".to_string(),
+            ),
+            (
+                "buildrequest.target artifact fingerprint".to_string(),
+                "fnv64:target".to_string(),
+            ),
+        ]),
+    )
+    .unwrap();
+
+    assert_eq!(native_compile_run.status, "succeeded");
+    assert_eq!(
+        native_compile_run.final_state["buildrequest.target artifact compilation report"],
+        "Emitted"
+    );
+    assert!(
+        native_compile_run
+            .trace
+            .contains(&"read buildrequest.bytecode artifact".to_string())
+    );
+    assert!(
+        native_compile_run
+            .trace
+            .contains(&"read buildrequest.bytecode fingerprint".to_string())
+    );
+    assert!(
+        native_compile_run
+            .trace
+            .contains(&"read buildrequest.target platform".to_string())
+    );
+    assert!(
+        native_compile_run
+            .trace
+            .contains(&"trace NativeTargetCompiled".to_string())
     );
 
     let target_verify_run = run_ail_bytecode_action(
@@ -7884,6 +7947,39 @@ fn cli_ail_build_agent_verifies_native_target_artifact() {
     assert!(
         agent_trace[manifest_verify_index..]
             .contains("read buildrequest.target artifact fingerprint"),
+        "{agent_trace}"
+    );
+    let bytecode_verify_index = agent_trace
+        .find("action VerifyBytecodeArtifact started")
+        .unwrap_or_else(|| panic!("{agent_trace}"));
+    let native_compile_index = agent_trace
+        .find("action CompileNativeTarget started")
+        .unwrap_or_else(|| panic!("{agent_trace}"));
+    assert!(compile_index < bytecode_verify_index, "{agent_trace}");
+    assert!(
+        bytecode_verify_index < native_compile_index,
+        "{agent_trace}"
+    );
+    assert!(native_compile_index < target_verify_index, "{agent_trace}");
+    assert!(
+        agent_trace[native_compile_index..].contains("read buildrequest.bytecode artifact"),
+        "{agent_trace}"
+    );
+    assert!(
+        agent_trace[native_compile_index..].contains("read buildrequest.bytecode fingerprint"),
+        "{agent_trace}"
+    );
+    assert!(
+        agent_trace[native_compile_index..].contains("read buildrequest.target platform"),
+        "{agent_trace}"
+    );
+    assert!(
+        agent_trace[native_compile_index..]
+            .contains("write buildrequest.target artifact compilation report=Emitted"),
+        "{agent_trace}"
+    );
+    assert!(
+        agent_trace[native_compile_index..].contains("trace NativeTargetCompiled"),
         "{agent_trace}"
     );
 
