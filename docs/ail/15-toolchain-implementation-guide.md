@@ -611,6 +611,12 @@ URL, or an OpenAI-compatible `/v1/chat/completions` URL. A root URL such as
 `http://inteligentia-pro-1:8080/` is normalized to `/completion`; chat
 completion requests use `messages` and disable model thinking with
 `chat_template_kwargs.enable_thinking=false`.
+`ail-interview` runs the first AI-IDE conversation step with
+`docs/ail/prompts/interview.system.md`. It asks the package base LLM for an
+`AIL-Interview` envelope and prints either the model's interview artifact or
+an `AIL-Interview:` list of blocking questions. It does not repair, check,
+lower, or compile anything; answered questions are intended to become
+human-confirmed inputs to the requirements stage.
 Generated requirements and spec-draft prompts ask for the prompt-pack JSON
 envelope with `artifact_kind`, `artifact_text`, `questions`, provenance, and
 `checker_handoff`, including the expected package profile. They instruct the

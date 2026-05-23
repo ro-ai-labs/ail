@@ -7283,6 +7283,27 @@ pub fn draft_ail_requirements(
     )
 }
 
+pub fn draft_ail_interview(
+    package: &AilPackage,
+    user_prompt: &str,
+    endpoint: &str,
+) -> Result<String, String> {
+    let prompt = build_ail_interview_prompt(package, user_prompt);
+    match crate::llm::invoke_llm_artifact_response(
+        endpoint,
+        &prompt,
+        "AIL-Interview",
+        package.metadata.profile.as_str(),
+    )? {
+        crate::llm::LlmArtifactResponse::Artifact(artifact_text) => {
+            Ok(normalize_ail_interview_artifact(&artifact_text))
+        }
+        crate::llm::LlmArtifactResponse::Questions(questions) => {
+            Ok(render_ail_interview_questions(&questions))
+        }
+    }
+}
+
 pub fn repair_ail_requirements_from_diagnostics(
     package: &AilPackage,
     user_prompt: &str,
@@ -8321,6 +8342,7 @@ fn prompt_envelope_instruction(artifact_kind: &str, expected_profile: &str) -> S
     )
 }
 
+const INTERVIEW_SYSTEM_PROMPT: &str = include_str!("../docs/ail/prompts/interview.system.md");
 const REQUIREMENTS_SYSTEM_PROMPT: &str = include_str!("../docs/ail/prompts/requirements.system.md");
 const SPEC_DRAFT_SYSTEM_PROMPT: &str = include_str!("../docs/ail/prompts/spec-draft.system.md");
 
@@ -8347,6 +8369,47 @@ fn prompt_pack_source_block(file_name: &str, prompt_text: &str) -> String {
         ),
         file_name, file_name, prompt_name, prompt_version, prompt_fingerprint, prompt_text
     )
+}
+
+fn build_ail_interview_prompt(package: &AilPackage, user_prompt: &str) -> String {
+    let prompt_pack_source =
+        prompt_pack_source_block("interview.system.md", INTERVIEW_SYSTEM_PROMPT);
+    format!(
+        concat!(
+            "Interview the user intent for package {} before drafting AIL requirements.\n",
+            "Use the {} profile and conformance level {}.\n",
+            "Package features: {}.\n",
+            "{}\n",
+            "{}\n",
+            "Return only a prompt-pack JSON envelope. If required actors, effects, secrets, permissions, failures, guarantees, traces, or runtime inputs are missing, set artifact_text to an empty string and return focused blocking questions. Do not emit AIL-Spec or backend source.\n\n",
+            "HUMAN REQUEST:\n",
+            "{}\n"
+        ),
+        package.metadata.name,
+        package.metadata.profile,
+        package.metadata.conformance,
+        package.metadata.features.join(", "),
+        prompt_pack_source,
+        prompt_envelope_instruction("AIL-Interview", &package.metadata.profile),
+        user_prompt
+    )
+}
+
+fn render_ail_interview_questions(questions: &[String]) -> String {
+    let mut lines = vec!["AIL-Interview:".to_string()];
+    for question in questions {
+        lines.push(format!("- {}", question.trim()));
+    }
+    lines.join("\n")
+}
+
+fn normalize_ail_interview_artifact(artifact_text: &str) -> String {
+    let artifact_text = artifact_text.trim();
+    if artifact_text.starts_with("AIL-Interview:") || artifact_text.starts_with("AIL-Requirements:")
+    {
+        return artifact_text.to_string();
+    }
+    format!("AIL-Interview:\n- {artifact_text}")
 }
 
 fn build_ail_requirements_prompt(package: &AilPackage, user_prompt: &str) -> String {

@@ -13,11 +13,32 @@ pub fn invoke_llm_text_for_artifact(
     expected_artifact_kind: &str,
     expected_profile: &str,
 ) -> Result<String, String> {
+    match invoke_llm_artifact_response(endpoint, prompt, expected_artifact_kind, expected_profile)?
+    {
+        LlmArtifactResponse::Artifact(artifact_text) => Ok(artifact_text),
+        LlmArtifactResponse::Questions(questions) => Err(format!(
+            "model returned blocking questions:\n- {}",
+            questions.join("\n- ")
+        )),
+    }
+}
+
+pub enum LlmArtifactResponse {
+    Artifact(String),
+    Questions(Vec<String>),
+}
+
+pub fn invoke_llm_artifact_response(
+    endpoint: &str,
+    prompt: &str,
+    expected_artifact_kind: &str,
+    expected_profile: &str,
+) -> Result<LlmArtifactResponse, String> {
     let expectation = PromptEnvelopeExpectation {
         artifact_kind: expected_artifact_kind,
         expected_profile,
     };
-    invoke_llm_text_with_expectation(endpoint, prompt, Some(&expectation))
+    invoke_llm_artifact_response_with_expectation(endpoint, prompt, &expectation)
 }
 
 fn invoke_llm_text_with_expectation(
@@ -25,16 +46,51 @@ fn invoke_llm_text_with_expectation(
     prompt: &str,
     expectation: Option<&PromptEnvelopeExpectation<'_>>,
 ) -> Result<String, String> {
-    let response = invoke_completion(endpoint, prompt)?;
-    let text = sanitize_model_text(&response);
-    match extract_prompt_envelope(&text, expectation) {
-        Some(PromptEnvelope::Artifact(artifact_text)) => Ok(artifact_text),
-        Some(PromptEnvelope::Questions(questions)) => Err(format!(
+    let response = match expectation {
+        Some(expectation) => {
+            invoke_llm_artifact_response_with_expectation(endpoint, prompt, expectation)?
+        }
+        None => invoke_llm_artifact_response_without_expectation(endpoint, prompt)?,
+    };
+    match response {
+        LlmArtifactResponse::Artifact(artifact_text) => Ok(artifact_text),
+        LlmArtifactResponse::Questions(questions) => Err(format!(
             "model returned blocking questions:\n- {}",
             questions.join("\n- ")
         )),
+    }
+}
+
+fn invoke_llm_artifact_response_with_expectation(
+    endpoint: &str,
+    prompt: &str,
+    expectation: &PromptEnvelopeExpectation<'_>,
+) -> Result<LlmArtifactResponse, String> {
+    let response = invoke_completion(endpoint, prompt)?;
+    let text = sanitize_model_text(&response);
+    match extract_prompt_envelope(&text, Some(expectation)) {
+        Some(PromptEnvelope::Artifact(artifact_text)) => {
+            Ok(LlmArtifactResponse::Artifact(artifact_text))
+        }
+        Some(PromptEnvelope::Questions(questions)) => Ok(LlmArtifactResponse::Questions(questions)),
         Some(PromptEnvelope::Invalid(message)) => Err(message),
-        None => Ok(text),
+        None => Ok(LlmArtifactResponse::Artifact(text)),
+    }
+}
+
+fn invoke_llm_artifact_response_without_expectation(
+    endpoint: &str,
+    prompt: &str,
+) -> Result<LlmArtifactResponse, String> {
+    let response = invoke_completion(endpoint, prompt)?;
+    let text = sanitize_model_text(&response);
+    match extract_prompt_envelope(&text, None) {
+        Some(PromptEnvelope::Artifact(artifact_text)) => {
+            Ok(LlmArtifactResponse::Artifact(artifact_text))
+        }
+        Some(PromptEnvelope::Questions(questions)) => Ok(LlmArtifactResponse::Questions(questions)),
+        Some(PromptEnvelope::Invalid(message)) => Err(message),
+        None => Ok(LlmArtifactResponse::Artifact(text)),
     }
 }
 

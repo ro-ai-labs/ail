@@ -19,6 +19,7 @@ use ail::core_model::json_string;
 
 const REQUIREMENTS_PROMPT_ASSET: &str = include_str!("../docs/ail/prompts/requirements.system.md");
 const SPEC_DRAFT_PROMPT_ASSET: &str = include_str!("../docs/ail/prompts/spec-draft.system.md");
+const INTERVIEW_PROMPT_ASSET: &str = include_str!("../docs/ail/prompts/interview.system.md");
 
 fn fixture(name: &str) -> String {
     format!("{}/examples/{name}", env!("CARGO_MANIFEST_DIR"))
@@ -10190,6 +10191,71 @@ fn cli_ail_requirements_root_llm_endpoint_uses_completion_api() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("AIL-Requirements:"));
     assert!(stdout.contains("TicketClosed"));
+}
+
+#[test]
+fn cli_ail_interview_surfaces_prompt_envelope_questions_as_artifact() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("support_ticket.ail");
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let envelope = concat!(
+        "{",
+        "\"artifact_kind\":\"AIL-Interview\",",
+        "\"artifact_text\":\"\",",
+        "\"questions\":[\"Which user roles may close tickets?\",\"Which trace events must be emitted?\"],",
+        "\"assumptions\":[],",
+        "\"provenance\":[\"prompt:roles\",\"prompt:trace\"],",
+        "\"checker_handoff\":{\"must_check\":true,\"expected_profile\":\"Application\",\"expected_features\":[]}",
+        "}"
+    );
+    let response_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(envelope)
+    );
+    let server = serve_one_chat_response(listener, response_body);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-interview",
+            &package,
+            "--prompt",
+            "Build a support ticket app",
+            "--llm-endpoint",
+            &format!("http://127.0.0.1:{}/v1/chat/completions", addr.port()),
+        ])
+        .output()
+        .unwrap();
+
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let request_body = server.join().unwrap();
+    assert!(request_body.contains("# Prompt: interview.system"));
+    assert!(request_body.contains("target artifact: blocking questions or AIL-Requirements seed"));
+    assert!(request_body.contains("prompt_file: interview.system.md"));
+    assert!(request_body.contains("prompt_version: 0.1.0"));
+    assert!(request_body.contains(&format!(
+        "prompt_fingerprint: {}",
+        fnv64_fingerprint(INTERVIEW_PROMPT_ASSET)
+    )));
+    assert!(request_body.contains("artifact_kind"));
+    assert!(request_body.contains("AIL-Interview"));
+    assert!(request_body.contains("Build a support ticket app"));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.starts_with("AIL-Interview:\n"), "{stdout}");
+    assert!(
+        stdout.contains("- Which user roles may close tickets?"),
+        "{stdout}"
+    );
+    assert!(
+        stdout.contains("- Which trace events must be emitted?"),
+        "{stdout}"
+    );
+    assert!(!stdout.contains("AIL-Requirements:"), "{stdout}");
 }
 
 #[test]

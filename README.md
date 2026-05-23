@@ -33,6 +33,7 @@ The supported AIL commands are:
 - `ail-run`
 - `ail-vm`
 - `ail-conformance`
+- `ail-interview`
 - `ail-requirements`
 - `ail-spec`
 - `ail-draft`
@@ -47,6 +48,7 @@ Use the commands through Cargo during development:
 cargo run -- ail-check examples/support_ticket.ail
 cargo run -- ail-core examples/support_ticket.ail
 cargo run -- ail-flow examples/support_ticket.ail
+cargo run -- ail-interview examples/support_ticket.ail --prompt "Build a support ticket app"
 cargo run -- ail-lower examples/support_ticket.ail
 cargo run -- ail-run examples/support_ticket.ail --action CloseTicket ticket.status=Open
 ```

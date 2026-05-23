@@ -6,14 +6,14 @@ use std::process::{Command, ExitCode};
 use ail::ail::{
     DEFAULT_BASE_LLM_ENDPOINT, apply_ail_core_patch_text, apply_ail_flow_edit_text,
     apply_ail_patch, check_ail_core, check_ail_requirements, compile_ail_bytecode_native_elf,
-    compile_ail_core_bytecode, compile_ail_core_native_elf, draft_ail_requirements, draft_ail_spec,
-    draft_ail_spec_from_requirements, elaborate_ail_core, load_ail_package_dir, parse_ail_bytecode,
-    parse_ail_core_text, parse_ail_package_document, parse_ail_package_spec_text,
-    parse_ail_patch_text, render_ail_bytecode, render_ail_core, render_ail_flow_view,
-    render_ail_runtime_state_lines, render_ail_spec, render_ail_spec_from_core,
-    repair_ail_requirements_from_diagnostics, repair_ail_spec_from_diagnostics,
-    run_ail_bytecode_action, run_ail_compiler_pass_on_core, run_ail_conformance,
-    verify_ail_bytecode,
+    compile_ail_core_bytecode, compile_ail_core_native_elf, draft_ail_interview,
+    draft_ail_requirements, draft_ail_spec, draft_ail_spec_from_requirements, elaborate_ail_core,
+    load_ail_package_dir, parse_ail_bytecode, parse_ail_core_text, parse_ail_package_document,
+    parse_ail_package_spec_text, parse_ail_patch_text, render_ail_bytecode, render_ail_core,
+    render_ail_flow_view, render_ail_runtime_state_lines, render_ail_spec,
+    render_ail_spec_from_core, repair_ail_requirements_from_diagnostics,
+    repair_ail_spec_from_diagnostics, run_ail_bytecode_action, run_ail_compiler_pass_on_core,
+    run_ail_conformance, verify_ail_bytecode,
 };
 
 struct CliOptions {
@@ -75,6 +75,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
             | "ail-compile"
             | "ail-run"
             | "ail-conformance"
+            | "ail-interview"
             | "ail-requirements"
             | "ail-spec"
             | "ail-draft"
@@ -90,7 +91,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
 }
 
 fn usage() -> String {
-    "usage: ail <ail-check|ail-core|ail-flow|ail-flow-edit|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-bootstrap|ail-patch> <path> [patch|target-package] [--action name] [--prompt text] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--base-model name] [--target-model name] [--out path] [--all-actions] [--artifact-dir path] [--llm-endpoint url] [key=value ...]\nsaved-core usage: ail <ail-spec|ail-lower|ail-compile|ail-build> --core-file <checked-core> [--action name] [--target target] [--out path] [--artifact-dir path]\ncore-patch usage: ail ail-patch --core-file <checked-core> <ail-core.patch.json>\nflow-edit usage: ail ail-flow-edit --core-file <checked-core> <ail-flow.edit.json>\nail-pass usage: ail ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR ail ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]\nail-bootstrap usage: ail ail-bootstrap <toolchain-agent-package> --pass <compiler-pass-package> --agent <toolchain-agent-package> --target linux-x86_64-elf --artifact-dir <dir>"
+    "usage: ail <ail-check|ail-core|ail-flow|ail-flow-edit|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-interview|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-bootstrap|ail-patch> <path> [patch|target-package] [--action name] [--prompt text] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--base-model name] [--target-model name] [--out path] [--all-actions] [--artifact-dir path] [--llm-endpoint url] [key=value ...]\nsaved-core usage: ail <ail-spec|ail-lower|ail-compile|ail-build> --core-file <checked-core> [--action name] [--target target] [--out path] [--artifact-dir path]\ncore-patch usage: ail ail-patch --core-file <checked-core> <ail-core.patch.json>\nflow-edit usage: ail ail-flow-edit --core-file <checked-core> <ail-flow.edit.json>\nail-pass usage: ail ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR ail ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]\nail-bootstrap usage: ail ail-bootstrap <toolchain-agent-package> --pass <compiler-pass-package> --agent <toolchain-agent-package> --target linux-x86_64-elf --artifact-dir <dir>"
         .to_string()
 }
 
@@ -6464,6 +6465,19 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
         println!("{requirements}");
         return Ok(0);
     }
+    if command == "ail-interview" {
+        let prompt = cli_options
+            .ail_prompt
+            .as_deref()
+            .ok_or_else(|| "ail-interview requires --prompt <text>".to_string())?;
+        let endpoint = cli_options
+            .llm_endpoint
+            .as_deref()
+            .unwrap_or(&package.metadata.base_llm_endpoint);
+        let interview = draft_ail_interview(&package, prompt, endpoint)?;
+        println!("{interview}");
+        return Ok(0);
+    }
     if command == "ail-spec" {
         let prompt = cli_options
             .ail_prompt
@@ -6847,7 +6861,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         if arg == "--prompt" {
             if !matches!(
                 command,
-                "ail-requirements" | "ail-spec" | "ail-draft" | "ail-build"
+                "ail-interview" | "ail-requirements" | "ail-spec" | "ail-draft" | "ail-build"
             ) {
                 return Err(usage());
             }
@@ -7010,7 +7024,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         if arg == "--llm-endpoint" {
             if !matches!(
                 command,
-                "ail-requirements" | "ail-spec" | "ail-draft" | "ail-build"
+                "ail-interview" | "ail-requirements" | "ail-spec" | "ail-draft" | "ail-build"
             ) {
                 return Err(usage());
             }
