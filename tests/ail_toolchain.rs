@@ -2552,6 +2552,18 @@ fn ail_flow_projection_renders_no_code_view_from_core() {
 }
 
 #[test]
+fn ail_core_rendering_and_hash_are_stable_across_edge_order() {
+    let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
+    let document = parse_ail_spec_text(&package.spec_text).unwrap();
+    let core = elaborate_ail_core(&package, &document);
+    let mut reordered = core.clone();
+    reordered.graph.edges.reverse();
+
+    assert_eq!(render_ail_core(&reordered), render_ail_core(&core));
+    assert_eq!(ail_core_hash(&reordered), ail_core_hash(&core));
+}
+
+#[test]
 fn cli_ail_flow_edit_renames_action_card_and_round_trips_to_spec() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");

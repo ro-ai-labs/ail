@@ -1326,7 +1326,10 @@ fn apply_ail_core_patch_replace_edge_attributes(
     for (key, value) in replacement_attributes {
         attributes.insert(key, value);
     }
-    core.graph.edges[edge_index] = Edge::new(kind.to_string(), &source, &target, attributes);
+    let ordinal = core.graph.edges[edge_index].ordinal;
+    let mut edge = Edge::new(kind.to_string(), &source, &target, attributes);
+    edge.ordinal = ordinal;
+    core.graph.edges[edge_index] = edge;
     Ok(())
 }
 
@@ -1429,7 +1432,11 @@ fn rewire_core_graph_node_id(graph: &mut Graph, old_id: &str, new_id: &str) -> R
                     edge.target
                 )
             })?;
-            *edge = Edge::new(edge.kind.clone(), source, target, edge.attributes.clone());
+            let ordinal = edge.ordinal;
+            let mut resolved_edge =
+                Edge::new(edge.kind.clone(), source, target, edge.attributes.clone());
+            resolved_edge.ordinal = ordinal;
+            *edge = resolved_edge;
         }
     }
     Ok(())
@@ -3655,19 +3662,28 @@ pub fn render_ail_core(core: &AilCore) -> String {
         .iter()
         .map(|node| (node.id.clone(), format!("{}:{}", node.kind, node.name)))
         .collect::<BTreeMap<_, _>>();
-    for edge in &core.graph.edges {
-        let source = node_labels
-            .get(&edge.source)
-            .map(String::as_str)
-            .unwrap_or(edge.source.as_str());
-        let target = node_labels
-            .get(&edge.target)
-            .map(String::as_str)
-            .unwrap_or(edge.target.as_str());
-        let mut line = format!("edge {} {} -> {}", edge.kind, source, target);
-        if !edge.attributes.is_empty() {
-            line.push_str(&format!(" [{}]", render_core_attributes(&edge.attributes)));
-        }
+    let mut edge_lines = core
+        .graph
+        .edges
+        .iter()
+        .map(|edge| {
+            let source = node_labels
+                .get(&edge.source)
+                .map(String::as_str)
+                .unwrap_or(edge.source.as_str());
+            let target = node_labels
+                .get(&edge.target)
+                .map(String::as_str)
+                .unwrap_or(edge.target.as_str());
+            let mut line = format!("edge {} {} -> {}", edge.kind, source, target);
+            if !edge.attributes.is_empty() {
+                line.push_str(&format!(" [{}]", render_core_attributes(&edge.attributes)));
+            }
+            (edge.ordinal, edge.id.clone(), line)
+        })
+        .collect::<Vec<_>>();
+    edge_lines.sort();
+    for (_, _, line) in edge_lines {
         lines.push(line);
     }
     lines.join("\n")

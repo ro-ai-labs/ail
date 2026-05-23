@@ -36,6 +36,8 @@ pub struct Edge {
     pub source: String,
     pub target: String,
     pub attributes: BTreeMap<String, String>,
+    // Semantic edge order is part of checked Core, but not an edge attribute.
+    pub ordinal: usize,
 }
 
 impl Edge {
@@ -53,6 +55,7 @@ impl Edge {
             source: source.id.clone(),
             target: target.id.clone(),
             attributes,
+            ordinal: 0,
         }
     }
 }
@@ -100,7 +103,8 @@ impl Graph {
         {
             return existing.clone();
         }
-        let edge = Edge::new(kind, source, target, attributes);
+        let mut edge = Edge::new(kind, source, target, attributes);
+        edge.ordinal = self.edges.len();
         self.edges.push(edge.clone());
         edge
     }
