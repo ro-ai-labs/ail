@@ -104,7 +104,7 @@ with:
 
 ```text
 ail ail-compile <package-or-artifact.ailbc.json> \
-  (--action <ActionName> | --all-actions) \
+  (--action <ActionName> [--agent <agent-package-or-bytecode>] | --all-actions) \
   --target wasm32-unknown-sandbox-wasm \
   --artifact-dir <dir>
 ```
@@ -135,6 +135,10 @@ still contains executable outputs such as `target.elf`, `target-<Action>.elf`,
 bytecode without the
 `external_bindings` field remains loadable, but the report marks host-import
 metadata as absent and does not enumerate import dependencies.
+For single-action Wasm contracts, `--agent` runs `VerifyCompileManifest` in the
+AIL bytecode VM and records `agent.ailbc.json`, `agent.fingerprint.txt`, and
+`agent-trace.txt` without emitting native verifier executables. Wasm
+`--all-actions --agent` is still rejected.
 
 ## Additional OS Target Plan
 

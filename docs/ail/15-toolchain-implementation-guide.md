@@ -635,7 +635,14 @@ package source writes `source.ail-package.md`, `source.ail-spec.md`,
 written, but the compile manifest records `bundle all-actions` and a
 fingerprinted `wasm-contract` report instead of native `target` entries. The
 same Wasm contract command from saved bytecode omits the source and
-checked-core snapshots. The
+checked-core snapshots. For single-action Wasm contracts, adding
+`--agent <agent-package-or-bytecode>` runs the AIL-authored
+`VerifyCompileManifest` action in the bytecode VM over the contract manifest
+and writes `agent.ailbc.json`, `agent.fingerprint.txt`, and `agent-trace.txt`.
+The manifest records `agent` and `trace` entries, but no `agent-target` native
+executable entry. Wasm `--all-actions --agent` remains unsupported until the
+bundle verifier can consume contract-bundle reports without native target
+executables. The
 native-bytecode report records the selected action target as ELF64 x86_64
 executable bytes. The dependency report records `host-language-runtime none`,
 `dynamic-linker none`, `shared-libraries none`, `library-dependencies none`,
