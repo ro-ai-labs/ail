@@ -7543,6 +7543,58 @@ Expected: manifests expose the same Linux ELF machine-bytecode contract as the
 native bytecode report before the AIL-authored verifier accepts the artifact
 set.
 
+### Task 167: AIL Verifiers Read Machine Bytecode Contract
+
+**Files:**
+- Modify: `examples/ail_toolchain_agent.ail/spec.ail-spec.md`
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing verifier contract assertions**
+
+Extend the AIL Toolchain Agent spec so native-relevant manifest verifier
+actions require and read `BuildRequest.machine bytecode contract`. Extend
+representative tests to require the AIL verifier traces to read that contract
+before accepting native compile, build, bootstrap, lower, pass, and conformance
+artifact sets.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_compile_agent_verifies_manifest_artifacts -- --nocapture
+```
+
+Expected: failure because the AIL verifier now requires the machine-bytecode
+contract, but the host bootstrap state does not yet pass it into the
+AIL-authored manifest verifier action.
+
+- [x] **Step 3: Thread machine bytecode contract through verifier states**
+
+Allow AIL existence requirements to target declared fields as well as whole
+things, then derive the machine-bytecode contract from each native bytecode
+report or native target and insert it as
+`buildrequest.machine bytecode contract` for build, compile, compile-bundle,
+bootstrap, lower, pass, and conformance manifest verification. Use `none` for
+non-native verifier paths so the same AIL action remains valid before native
+target selection.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_compile_agent_verifies_manifest_artifacts -- --nocapture
+cargo test --test ail_toolchain cli_ail_bootstrap_writes_native_toolchain_bundle -- --nocapture
+cargo test --test ail_toolchain cli_ail_conformance_writes_native_agent_artifacts -- --nocapture
+```
+
+Expected: AIL-authored verifier traces show that the machine-bytecode contract
+is read before accepting native manifests and reports.
+
 ### Task 18: Declared Failure Trace Coverage Diagnostics
 
 **Files:**

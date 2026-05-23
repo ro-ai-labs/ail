@@ -31,6 +31,7 @@ A BuildRequest has:
 - conformance report fingerprint: Text
 - fixed point report: Text
 - fixed point report fingerprint: Text
+- machine bytecode contract: Text
 - native bytecode report: Text
 - native bytecode report fingerprint: Text
 - host boundary report: Text
@@ -175,6 +176,7 @@ When the toolchain agent verifies AIL-Core lowering artifacts:
 
 - the system requires the BuildRequest to exist
 - the system requires the BuildRequest status to be BytecodeReady
+- the system requires the BuildRequest machine bytecode contract to exist
 - the system reads the BuildRequest core ir
 - the system reads the BuildRequest core ir fingerprint
 - the system reads the BuildRequest source package
@@ -183,6 +185,7 @@ When the toolchain agent verifies AIL-Core lowering artifacts:
 - the system reads the BuildRequest bytecode fingerprint
 - the system reads the BuildRequest artifact manifest
 - the system reads the BuildRequest artifact manifest fingerprint
+- the system reads the BuildRequest machine bytecode contract
 - the system reads the BuildRequest native bytecode report
 - the system reads the BuildRequest native bytecode report fingerprint
 - the system reads the BuildRequest dependency report
@@ -209,6 +212,7 @@ When the toolchain agent verifies the build artifact manifest:
 
 - the system requires the BuildRequest to exist
 - the system requires the BuildRequest status to be BytecodeReady
+- the system requires the BuildRequest machine bytecode contract to exist
 - the system reads the BuildRequest artifact manifest
 - the system reads the BuildRequest artifact manifest fingerprint
 - the system reads the BuildRequest source package
@@ -220,6 +224,7 @@ When the toolchain agent verifies the build artifact manifest:
 - the system reads the BuildRequest target artifact fingerprint
 - the system reads the BuildRequest compiler pass target artifact fingerprint
 - the system reads the BuildRequest prompt portability report fingerprint
+- the system reads the BuildRequest machine bytecode contract
 - the system reads the BuildRequest native bytecode report
 - the system reads the BuildRequest native bytecode report fingerprint
 - the system reads the BuildRequest dependency report
@@ -234,6 +239,7 @@ When the toolchain agent verifies direct compile artifacts:
 
 - the system requires the BuildRequest to exist
 - the system requires the BuildRequest status to be BytecodeReady
+- the system requires the BuildRequest machine bytecode contract to exist
 - the system reads the BuildRequest artifact manifest
 - the system reads the BuildRequest artifact manifest fingerprint
 - the system reads the BuildRequest bytecode fingerprint
@@ -241,6 +247,7 @@ When the toolchain agent verifies direct compile artifacts:
 - the system reads the BuildRequest source package fingerprint
 - the system reads the BuildRequest target artifact
 - the system reads the BuildRequest target artifact fingerprint
+- the system reads the BuildRequest machine bytecode contract
 - the system reads the BuildRequest native bytecode report
 - the system reads the BuildRequest native bytecode report fingerprint
 - the system reads the BuildRequest dependency report
@@ -255,6 +262,7 @@ When the toolchain agent verifies direct all-action compile artifacts:
 
 - the system requires the BuildRequest to exist
 - the system requires the BuildRequest status to be BytecodeReady
+- the system requires the BuildRequest machine bytecode contract to exist
 - the system reads the BuildRequest artifact manifest
 - the system reads the BuildRequest artifact manifest fingerprint
 - the system reads the BuildRequest bytecode fingerprint
@@ -262,6 +270,7 @@ When the toolchain agent verifies direct all-action compile artifacts:
 - the system reads the BuildRequest source package fingerprint
 - the system reads the BuildRequest target artifact
 - the system reads the BuildRequest target artifact fingerprint
+- the system reads the BuildRequest machine bytecode contract
 - the system reads the BuildRequest native bytecode report
 - the system reads the BuildRequest native bytecode report fingerprint
 - the system reads the BuildRequest dependency report
@@ -276,6 +285,7 @@ When the toolchain agent verifies an AIL bootstrap bundle:
 
 - the system requires the BuildRequest to exist
 - the system requires the BuildRequest status to be BytecodeReady
+- the system requires the BuildRequest machine bytecode contract to exist
 - the system reads the BuildRequest artifact manifest
 - the system reads the BuildRequest artifact manifest fingerprint
 - the system reads the BuildRequest source package
@@ -289,6 +299,7 @@ When the toolchain agent verifies an AIL bootstrap bundle:
 - the system reads the BuildRequest fixed point report fingerprint
 - the system reads the BuildRequest conformance report
 - the system reads the BuildRequest conformance report fingerprint
+- the system reads the BuildRequest machine bytecode contract
 - the system reads the BuildRequest native bytecode report
 - the system reads the BuildRequest native bytecode report fingerprint
 - the system reads the BuildRequest host boundary report
@@ -309,6 +320,7 @@ When the toolchain agent verifies the standalone compiler pass manifest:
 
 - the system requires the BuildRequest to exist
 - the system requires the BuildRequest status to be PassApplied
+- the system requires the BuildRequest machine bytecode contract to exist
 - the system reads the BuildRequest artifact manifest
 - the system reads the BuildRequest artifact manifest fingerprint
 - the system reads the BuildRequest compiler pass source package
@@ -316,6 +328,7 @@ When the toolchain agent verifies the standalone compiler pass manifest:
 - the system reads the BuildRequest compiler pass fingerprint
 - the system reads the BuildRequest source package
 - the system reads the BuildRequest source package fingerprint
+- the system reads the BuildRequest machine bytecode contract
 - the system reads the BuildRequest native bytecode report
 - the system reads the BuildRequest native bytecode report fingerprint
 - the system reads the BuildRequest dependency report
@@ -330,10 +343,12 @@ When the toolchain agent verifies conformance artifacts:
 
 - the system requires the BuildRequest to exist
 - the system requires the BuildRequest status to be BytecodeReady
+- the system requires the BuildRequest machine bytecode contract to exist
 - the system reads the BuildRequest conformance report
 - the system reads the BuildRequest conformance report fingerprint
 - the system reads the BuildRequest artifact manifest
 - the system reads the BuildRequest artifact manifest fingerprint
+- the system reads the BuildRequest machine bytecode contract
 - the system reads the BuildRequest native bytecode report
 - the system reads the BuildRequest native bytecode report fingerprint
 - the system reads the BuildRequest dependency report

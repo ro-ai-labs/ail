@@ -3134,7 +3134,7 @@ pub fn run_ail_action(
 
     for requirement in &action.requirements {
         if let Some(subject) = existence_requirement_reference(requirement) {
-            let key = format!("{}.id", runtime_subject_key(&subject));
+            let key = existence_requirement_runtime_key(document, &subject);
             if !final_state.contains_key(&key) {
                 return Ok(failed_run(document, final_state, trace, "NotFound"));
             }
@@ -5328,7 +5328,7 @@ fn compile_ail_action_bytecode(document: &AilDocument, action: &AilAction) -> Ai
             instructions.push(AilBytecodeInstruction::new(
                 "REQUIRE_EXISTS",
                 &[
-                    ("key", format!("{}.id", runtime_subject_key(&subject))),
+                    ("key", existence_requirement_runtime_key(document, &subject)),
                     ("rule", requirement.clone()),
                     ("failure", "NotFound".to_string()),
                 ],
@@ -8068,6 +8068,13 @@ fn check_requirement_reference_diagnostics(core: &AilCore) -> Vec<AilDiagnostic>
         .filter(|node| node.kind == "Thing")
         .map(|node| node.name.to_ascii_lowercase())
         .collect::<std::collections::BTreeSet<_>>();
+    let field_names = core
+        .graph
+        .nodes
+        .iter()
+        .filter(|node| node.kind == "Field")
+        .map(|node| node.name.clone())
+        .collect::<Vec<_>>();
     let node_by_id = graph_node_by_id(core);
     let mut diagnostics = Vec::new();
     for edge in core
@@ -8086,6 +8093,9 @@ fn check_requirement_reference_diagnostics(core: &AilCore) -> Vec<AilDiagnostic>
             continue;
         };
         if !known_subjects.contains(&reference.to_ascii_lowercase()) {
+            if referenced_core_field_name(&field_names, &reference).is_some() {
+                continue;
+            }
             diagnostics.push(
                 AilDiagnostic::error(
                     "AIL001",
@@ -10046,6 +10056,11 @@ fn existence_requirement_reference(rule: &str) -> Option<String> {
         .trim()
         .to_string();
     (!reference.is_empty()).then_some(reference)
+}
+
+fn existence_requirement_runtime_key(document: &AilDocument, reference: &str) -> String {
+    referenced_runtime_field_key(document, reference)
+        .unwrap_or_else(|| format!("{}.id", runtime_subject_key(reference)))
 }
 
 fn requirement_field_reference_text(rule: &str) -> Option<String> {

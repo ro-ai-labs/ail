@@ -326,7 +326,11 @@ report-level contract is mirrored in native manifests as
 `machine-bytecode-contract linux-x86_64-elf ...`, keeping "bytecode" anchored
 to machine-level ELF executables at both the report and manifest boundaries,
 while AIL-Bytecode JSON remains the auditable compiler intermediate used for
-checking, VM execution, and bootstrap handoff.
+checking, VM execution, and bootstrap handoff. The AIL Toolchain Agent declares
+`BuildRequest.machine bytecode contract`; native-relevant manifest verifier
+actions require and read that field before accepting the artifact set. The
+bootstrap host supplies `none` for non-native verifier paths and the concrete
+Linux ELF contract for native paths.
 
 The first VM instruction compiler supports Application-profile actions,
 AgentTool-profile tool declarations, Compiler-profile compiler passes, and

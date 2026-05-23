@@ -2320,6 +2320,10 @@ fn ail_toolchain_agent_package_lowers_to_verified_bytecode() {
                 "buildrequest.artifact manifest fingerprint".to_string(),
                 "fnv64:manifest".to_string(),
             ),
+            (
+                "buildrequest.machine bytecode contract".to_string(),
+                "machine-bytecode-contract linux-x86_64-elf bytecode-level machine bytecode-container linux-elf-executable bytecode-format elf64-little-x86_64-executable".to_string(),
+            ),
         ]),
     )
     .unwrap();
@@ -2333,6 +2337,11 @@ fn ail_toolchain_agent_package_lowers_to_verified_bytecode() {
         manifest_run
             .trace
             .contains(&"trace BuildManifestVerified".to_string())
+    );
+    assert!(
+        manifest_run
+            .trace
+            .contains(&"read buildrequest.machine bytecode contract".to_string())
     );
 
     let compile_manifest_run = run_ail_bytecode_action(
@@ -2364,6 +2373,10 @@ fn ail_toolchain_agent_package_lowers_to_verified_bytecode() {
                 "buildrequest.artifact manifest fingerprint".to_string(),
                 "fnv64:manifest".to_string(),
             ),
+            (
+                "buildrequest.machine bytecode contract".to_string(),
+                "machine-bytecode-contract linux-x86_64-elf bytecode-level machine bytecode-container linux-elf-executable bytecode-format elf64-little-x86_64-executable".to_string(),
+            ),
         ]),
     )
     .unwrap();
@@ -2377,6 +2390,11 @@ fn ail_toolchain_agent_package_lowers_to_verified_bytecode() {
         compile_manifest_run
             .trace
             .contains(&"trace CompileManifestVerified".to_string())
+    );
+    assert!(
+        compile_manifest_run
+            .trace
+            .contains(&"read buildrequest.machine bytecode contract".to_string())
     );
 
     let pass_manifest_run = run_ail_bytecode_action(
@@ -2397,6 +2415,10 @@ fn ail_toolchain_agent_package_lowers_to_verified_bytecode() {
                 "buildrequest.compiler pass fingerprint".to_string(),
                 "fnv64:pass".to_string(),
             ),
+            (
+                "buildrequest.machine bytecode contract".to_string(),
+                "machine-bytecode-contract linux-x86_64-elf bytecode-level machine bytecode-container linux-elf-executable bytecode-format elf64-little-x86_64-executable".to_string(),
+            ),
         ]),
     )
     .unwrap();
@@ -2410,6 +2432,11 @@ fn ail_toolchain_agent_package_lowers_to_verified_bytecode() {
         pass_manifest_run
             .trace
             .contains(&"trace PassManifestVerified".to_string())
+    );
+    assert!(
+        pass_manifest_run
+            .trace
+            .contains(&"read buildrequest.machine bytecode contract".to_string())
     );
 }
 
@@ -2984,6 +3011,7 @@ fn cli_ail_pass_writes_native_tool_artifacts() {
     );
     let agent_trace = fs::read_to_string(artifact_dir.join("agent-trace.txt")).unwrap();
     assert!(agent_trace.contains("action VerifyPassManifest started"));
+    assert!(agent_trace.contains("read buildrequest.machine bytecode contract"));
     assert!(agent_trace.contains("read buildrequest.native bytecode report"));
     assert!(agent_trace.contains("read buildrequest.native bytecode report fingerprint"));
     assert!(agent_trace.contains("read buildrequest.dependency report"));
@@ -3722,6 +3750,7 @@ fn cli_ail_lower_writes_native_agent_artifacts() {
             "buildrequest.bytecode fingerprint=fnv64:bytecode",
             "buildrequest.artifact manifest=ok",
             "buildrequest.artifact manifest fingerprint=fnv64:manifest",
+            "buildrequest.machine bytecode contract=machine-bytecode-contract linux-x86_64-elf bytecode-level machine bytecode-container linux-elf-executable bytecode-format elf64-little-x86_64-executable",
         ])
         .output()
         .unwrap();
@@ -3822,6 +3851,7 @@ fn cli_ail_lower_writes_native_agent_artifacts() {
     );
     let agent_trace = fs::read_to_string(artifact_dir.join("agent-trace.txt")).unwrap();
     assert!(agent_trace.contains("action VerifyLowerManifest started"));
+    assert!(agent_trace.contains("read buildrequest.machine bytecode contract"));
     assert!(agent_trace.contains("read buildrequest.native bytecode report"));
     assert!(agent_trace.contains("read buildrequest.native bytecode report fingerprint"));
     assert!(agent_trace.contains("read buildrequest.dependency report"));
@@ -4239,6 +4269,7 @@ fn cli_ail_compile_agent_verifies_manifest_artifacts() {
     assert!(agent_trace.contains("read buildrequest.bytecode fingerprint"));
     assert!(agent_trace.contains("read buildrequest.target artifact"));
     assert!(agent_trace.contains("read buildrequest.target artifact fingerprint"));
+    assert!(agent_trace.contains("read buildrequest.machine bytecode contract"));
     assert!(agent_trace.contains("read buildrequest.native bytecode report"));
     assert!(agent_trace.contains("read buildrequest.native bytecode report fingerprint"));
     assert!(agent_trace.contains("read buildrequest.dependency report"));
@@ -4260,6 +4291,7 @@ fn cli_ail_compile_agent_verifies_manifest_artifacts() {
             "buildrequest.bytecode fingerprint=fnv64:bytecode",
             "buildrequest.target artifact=ok",
             "buildrequest.target artifact fingerprint=fnv64:target",
+            "buildrequest.machine bytecode contract=machine-bytecode-contract linux-x86_64-elf bytecode-level machine bytecode-container linux-elf-executable bytecode-format elf64-little-x86_64-executable",
             "buildrequest.native bytecode report=ok",
             "buildrequest.native bytecode report fingerprint=fnv64:native-bytecode",
             "buildrequest.dependency report=ok",
@@ -4586,6 +4618,7 @@ fn cli_ail_compile_writes_all_action_native_bundle() {
             "buildrequest.target artifact fingerprint=fnv64:target",
             "buildrequest.compiler pass target artifact fingerprint=fnv64:pass-target",
             "buildrequest.prompt portability report fingerprint=fnv64:prompt-portability",
+            "buildrequest.machine bytecode contract=machine-bytecode-contract linux-x86_64-elf bytecode-level machine bytecode-container linux-elf-executable bytecode-format elf64-little-x86_64-executable",
             "buildrequest.dependency report=ok",
             "buildrequest.dependency report fingerprint=fnv64:dependencies",
             "buildrequest.artifact manifest=ok",
@@ -4692,6 +4725,7 @@ fn cli_ail_compile_agent_verifies_all_action_native_bundle() {
     assert!(agent_trace.contains("read buildrequest.source package fingerprint"));
     assert!(agent_trace.contains("read buildrequest.target artifact"));
     assert!(agent_trace.contains("read buildrequest.target artifact fingerprint"));
+    assert!(agent_trace.contains("read buildrequest.machine bytecode contract"));
     assert!(agent_trace.contains("read buildrequest.native bytecode report"));
     assert!(agent_trace.contains("read buildrequest.native bytecode report fingerprint"));
     assert!(agent_trace.contains("read buildrequest.dependency report"));
@@ -4717,6 +4751,7 @@ fn cli_ail_compile_agent_verifies_all_action_native_bundle() {
             "buildrequest.bytecode fingerprint=fnv64:bytecode",
             "buildrequest.target artifact=bundle",
             "buildrequest.target artifact fingerprint=fnv64:target-bundle",
+            "buildrequest.machine bytecode contract=machine-bytecode-contract linux-x86_64-elf bytecode-level machine bytecode-container linux-elf-executable bytecode-format elf64-little-x86_64-executable",
             "buildrequest.native bytecode report=ok",
             "buildrequest.native bytecode report fingerprint=fnv64:native-bytecode",
             "buildrequest.dependency report=ok",
@@ -5244,6 +5279,7 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
     assert!(agent_trace.contains("read buildrequest.fixed point report fingerprint"));
     assert!(agent_trace.contains("read buildrequest.conformance report"));
     assert!(agent_trace.contains("read buildrequest.conformance report fingerprint"));
+    assert!(agent_trace.contains("read buildrequest.machine bytecode contract"));
     assert!(agent_trace.contains("read buildrequest.native bytecode report"));
     assert!(agent_trace.contains("read buildrequest.native bytecode report fingerprint"));
     assert!(agent_trace.contains("read buildrequest.host boundary report"));
@@ -5276,6 +5312,7 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
             "buildrequest.fixed point report fingerprint=fnv64:fixed-point",
             "buildrequest.conformance report=ok",
             "buildrequest.conformance report fingerprint=fnv64:conformance",
+            "buildrequest.machine bytecode contract=machine-bytecode-contract linux-x86_64-elf bytecode-level machine bytecode-container linux-elf-executable bytecode-format elf64-little-x86_64-executable",
             "buildrequest.native bytecode report=ok",
             "buildrequest.native bytecode report fingerprint=fnv64:native-bytecode",
             "buildrequest.host boundary report=ok",
@@ -7959,6 +7996,7 @@ fn cli_ail_conformance_writes_native_agent_artifacts() {
             "buildrequest.conformance report fingerprint=fnv64:report",
             "buildrequest.artifact manifest=ok",
             "buildrequest.artifact manifest fingerprint=fnv64:manifest",
+            "buildrequest.machine bytecode contract=machine-bytecode-contract linux-x86_64-elf bytecode-level machine bytecode-container linux-elf-executable bytecode-format elf64-little-x86_64-executable",
         ])
         .output()
         .unwrap();
@@ -8075,6 +8113,7 @@ fn cli_ail_conformance_writes_native_agent_artifacts() {
     );
     let agent_trace = fs::read_to_string(artifact_dir.join("agent-trace.txt")).unwrap();
     assert!(agent_trace.contains("action VerifyConformanceManifest started"));
+    assert!(agent_trace.contains("read buildrequest.machine bytecode contract"));
     assert!(agent_trace.contains("read buildrequest.native bytecode report"));
     assert!(agent_trace.contains("read buildrequest.native bytecode report fingerprint"));
     assert!(agent_trace.contains("read buildrequest.dependency report"));
@@ -9502,6 +9541,11 @@ fn cli_ail_build_agent_verifies_native_target_artifact() {
     assert!(
         agent_trace[manifest_verify_index..]
             .contains("read buildrequest.target artifact fingerprint"),
+        "{agent_trace}"
+    );
+    assert!(
+        agent_trace[manifest_verify_index..]
+            .contains("read buildrequest.machine bytecode contract"),
         "{agent_trace}"
     );
     assert!(

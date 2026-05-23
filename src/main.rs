@@ -2706,6 +2706,10 @@ fn run_ail_pass_agent_verify_manifest(
             ail_artifact_fingerprint(&source_package_text),
         );
     }
+    verify_state.insert(
+        "buildrequest.machine bytecode contract".to_string(),
+        machine_bytecode_contract_from_native_report(native_bytecode_report_text),
+    );
     if let Some(native_bytecode_report_text) = native_bytecode_report_text {
         verify_state.insert(
             "buildrequest.native bytecode report".to_string(),
@@ -2799,6 +2803,10 @@ fn run_ail_conformance_agent_verify_manifest(
             "BytecodeReady".to_string(),
         ),
     ]);
+    state.insert(
+        "buildrequest.machine bytecode contract".to_string(),
+        machine_bytecode_contract_from_native_report(native_bytecode_report_text),
+    );
     if let Some(native_bytecode_report_text) = native_bytecode_report_text {
         state.insert(
             "buildrequest.native bytecode report".to_string(),
@@ -2937,6 +2945,10 @@ fn run_ail_lower_agent_verify_manifest(
             source_package_fingerprint,
         );
     }
+    state.insert(
+        "buildrequest.machine bytecode contract".to_string(),
+        machine_bytecode_contract_from_native_report(native_bytecode_report_text.as_deref()),
+    );
     if let Some(native_bytecode_report_text) = native_bytecode_report_text.as_deref() {
         state.insert(
             "buildrequest.native bytecode report".to_string(),
@@ -3783,6 +3795,10 @@ fn run_ail_build_agent_verify_manifest(
             prompt_portability_fingerprint.to_string(),
         );
     }
+    verify_state.insert(
+        "buildrequest.machine bytecode contract".to_string(),
+        machine_bytecode_contract_from_native_report(request.native_bytecode_report_text),
+    );
     if let Some(native_bytecode_report_text) = request.native_bytecode_report_text {
         verify_state.insert(
             "buildrequest.native bytecode report".to_string(),
@@ -3885,6 +3901,10 @@ fn run_ail_compile_agent_verify_manifest(
         (
             "buildrequest.target artifact fingerprint".to_string(),
             ail_artifact_fingerprint_bytes(target_executable),
+        ),
+        (
+            "buildrequest.machine bytecode contract".to_string(),
+            machine_bytecode_contract_from_native_report(Some(native_bytecode_report_text)),
         ),
         (
             "buildrequest.native bytecode report".to_string(),
@@ -4016,6 +4036,10 @@ fn run_ail_compile_bundle_agent_verify_manifest(
         (
             "buildrequest.target artifact fingerprint".to_string(),
             target_fingerprint,
+        ),
+        (
+            "buildrequest.machine bytecode contract".to_string(),
+            machine_bytecode_contract_from_native_report(Some(native_bytecode_report_text)),
         ),
         (
             "buildrequest.native bytecode report".to_string(),
@@ -4199,6 +4223,10 @@ fn run_ail_bootstrap_agent_verify_manifest(
             ail_artifact_fingerprint(fixed_point_report_text),
         ),
         (
+            "buildrequest.machine bytecode contract".to_string(),
+            machine_bytecode_contract_from_native_report(Some(native_bytecode_report_text)),
+        ),
+        (
             "buildrequest.native bytecode report".to_string(),
             native_bytecode_report_text.to_string(),
         ),
@@ -4316,6 +4344,19 @@ fn native_machine_bytecode_manifest_contract_line(target_name: &str) -> String {
     format!(
         "machine-bytecode-contract {target_name} bytecode-level machine bytecode-container {container} bytecode-format {format}"
     )
+}
+
+fn machine_bytecode_contract_from_native_report(
+    native_bytecode_report_text: Option<&str>,
+) -> String {
+    native_bytecode_report_text
+        .and_then(|report| {
+            report
+                .lines()
+                .find_map(|line| line.strip_prefix("target ").map(str::trim))
+        })
+        .map(native_machine_bytecode_manifest_contract_line)
+        .unwrap_or_else(|| "none".to_string())
 }
 
 fn native_machine_bytecode_manifest_contract_line_from_artifacts(
@@ -4611,6 +4652,7 @@ fn bootstrap_handoff_case(action_name: &str) -> Result<BootstrapHandoffCase, Str
             args: &[
                 "buildrequest.id=bootstrap-handoff",
                 "buildrequest.status=BytecodeReady",
+                "buildrequest.machine bytecode contract=machine-bytecode-contract linux-x86_64-elf bytecode-level machine bytecode-container linux-elf-executable bytecode-format elf64-little-x86_64-executable",
                 "buildrequest.artifact manifest=manifest",
                 "buildrequest.artifact manifest fingerprint=fnv64:manifest",
                 "buildrequest.source package=source",
@@ -4641,6 +4683,7 @@ fn bootstrap_handoff_case(action_name: &str) -> Result<BootstrapHandoffCase, Str
             args: &[
                 "buildrequest.id=bootstrap-handoff",
                 "buildrequest.status=BytecodeReady",
+                "buildrequest.machine bytecode contract=machine-bytecode-contract linux-x86_64-elf bytecode-level machine bytecode-container linux-elf-executable bytecode-format elf64-little-x86_64-executable",
                 "buildrequest.artifact manifest=manifest",
                 "buildrequest.artifact manifest fingerprint=fnv64:manifest",
                 "buildrequest.source package=source",
@@ -4670,6 +4713,7 @@ fn bootstrap_handoff_case(action_name: &str) -> Result<BootstrapHandoffCase, Str
             args: &[
                 "buildrequest.id=bootstrap-handoff",
                 "buildrequest.status=BytecodeReady",
+                "buildrequest.machine bytecode contract=machine-bytecode-contract linux-x86_64-elf bytecode-level machine bytecode-container linux-elf-executable bytecode-format elf64-little-x86_64-executable",
                 "buildrequest.artifact manifest=manifest",
                 "buildrequest.artifact manifest fingerprint=fnv64:manifest",
                 "buildrequest.bytecode fingerprint=fnv64:bytecode",
@@ -4686,6 +4730,7 @@ fn bootstrap_handoff_case(action_name: &str) -> Result<BootstrapHandoffCase, Str
             args: &[
                 "buildrequest.id=bootstrap-handoff",
                 "buildrequest.status=BytecodeReady",
+                "buildrequest.machine bytecode contract=machine-bytecode-contract linux-x86_64-elf bytecode-level machine bytecode-container linux-elf-executable bytecode-format elf64-little-x86_64-executable",
                 "buildrequest.artifact manifest=manifest",
                 "buildrequest.artifact manifest fingerprint=fnv64:manifest",
                 "buildrequest.bytecode fingerprint=fnv64:bytecode",
@@ -4702,6 +4747,7 @@ fn bootstrap_handoff_case(action_name: &str) -> Result<BootstrapHandoffCase, Str
             args: &[
                 "buildrequest.id=bootstrap-handoff",
                 "buildrequest.status=BytecodeReady",
+                "buildrequest.machine bytecode contract=machine-bytecode-contract linux-x86_64-elf bytecode-level machine bytecode-container linux-elf-executable bytecode-format elf64-little-x86_64-executable",
                 "buildrequest.conformance report=conformance",
                 "buildrequest.conformance report fingerprint=fnv64:conformance",
                 "buildrequest.artifact manifest=manifest",
@@ -4717,6 +4763,7 @@ fn bootstrap_handoff_case(action_name: &str) -> Result<BootstrapHandoffCase, Str
             args: &[
                 "buildrequest.id=bootstrap-handoff",
                 "buildrequest.status=BytecodeReady",
+                "buildrequest.machine bytecode contract=machine-bytecode-contract linux-x86_64-elf bytecode-level machine bytecode-container linux-elf-executable bytecode-format elf64-little-x86_64-executable",
                 "buildrequest.core ir=core",
                 "buildrequest.core ir fingerprint=fnv64:core",
                 "buildrequest.source package=source",
@@ -4736,6 +4783,7 @@ fn bootstrap_handoff_case(action_name: &str) -> Result<BootstrapHandoffCase, Str
             args: &[
                 "buildrequest.id=bootstrap-handoff",
                 "buildrequest.status=PassApplied",
+                "buildrequest.machine bytecode contract=machine-bytecode-contract linux-x86_64-elf bytecode-level machine bytecode-container linux-elf-executable bytecode-format elf64-little-x86_64-executable",
                 "buildrequest.artifact manifest=manifest",
                 "buildrequest.artifact manifest fingerprint=fnv64:manifest",
                 "buildrequest.compiler pass source package=pass-source",
