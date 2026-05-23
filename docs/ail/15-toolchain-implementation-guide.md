@@ -395,7 +395,13 @@ multiple checks, so `the ticket exists and its status is not Closed` lowers both
 a `ticket.id` existence check and a `ticket.status != Closed` check. Compound
 input requirements such as `the customer id and title` lower to
 `REQUIRE_EXISTS` checks for `customer.id` and `ticket.title` after application
-users are preserved in checked AIL-Core. Time comparison requirements such as
+users are preserved in checked AIL-Core. Permission requirements phrased as
+`the actor has role SupportAgent` lower to an exact `actor.role=SupportAgent`
+field check, `the caller has Admin or SupportAgent role` lowers to
+`caller.role` with both allowed values, and requirements such as
+`the requesting user has permission to modify ticket status` lower to
+`requesting user.permission=modify ticket status`, matching common LLM repair
+output. Time comparison requirements such as
 `the current time to be later than due_at` lower to `REQUIRE_FIELD_AFTER` from
 deterministic runtime input `current.time` to `ticket.due_at`; the interpreter,
 VM, and native executable all require the left value to sort later than the
@@ -635,7 +641,11 @@ requirements capture scopes the coverage instruction to the package profile:
 Application prompts ask for application domain objects and actions, AgentTool
 prompts ask for tool capability and inputs/outputs, Compiler prompts ask for
 compiler-pass transformations, and System prompts ask for components,
-resources, and effects. With
+resources, and effects. During requirements-grounded spec drafting, the checker
+also compares permission-bearing requirement bullets against the corresponding
+action in the accepted spec; if a requirement says an action needs permission,
+approval, authorization, access control, a role, or a forbidden-state guard, the
+spec must preserve an explicit action requirement before it can be lowered. With
 `--requirements-file <path>`, `ail-build` skips requirements capture, validates
 the saved AIL-Requirements artifact, and resumes at the requirements-grounded
 spec-drafting stage. If the checker rejects the first candidate, `ail-build`

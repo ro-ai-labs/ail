@@ -3141,6 +3141,34 @@ pub fn run_ail_action(
             }
             handled = true;
         }
+        if let Some((key, allowed_values)) = has_role_requirement(document, requirement) {
+            if !final_state
+                .get(&key)
+                .is_some_and(|value| allowed_values.iter().any(|allowed| value == allowed))
+            {
+                return Ok(failed_run(
+                    document,
+                    final_state,
+                    trace,
+                    "RequirementFailed",
+                ));
+            }
+            handled = true;
+        }
+        if let Some((key, allowed_values)) = has_permission_requirement(requirement) {
+            if !final_state
+                .get(&key)
+                .is_some_and(|value| allowed_values.iter().any(|allowed| value == allowed))
+            {
+                return Ok(failed_run(
+                    document,
+                    final_state,
+                    trace,
+                    "RequirementFailed",
+                ));
+            }
+            handled = true;
+        }
         if let Some(keys) = input_requirement_keys(document, requirement) {
             if keys.iter().any(|key| !final_state.contains_key(key)) {
                 return Ok(failed_run(
@@ -5336,6 +5364,30 @@ fn compile_ail_action_bytecode(document: &AilDocument, action: &AilAction) -> Ai
             ));
             emitted = true;
         }
+        if let Some((key, allowed_values)) = has_role_requirement(document, requirement) {
+            instructions.push(AilBytecodeInstruction::new(
+                "REQUIRE_FIELD_IN",
+                &[
+                    ("key", key),
+                    ("values", encode_ail_bytecode_list(&allowed_values)),
+                    ("rule", requirement.clone()),
+                    ("failure", "RequirementFailed".to_string()),
+                ],
+            ));
+            emitted = true;
+        }
+        if let Some((key, allowed_values)) = has_permission_requirement(requirement) {
+            instructions.push(AilBytecodeInstruction::new(
+                "REQUIRE_FIELD_IN",
+                &[
+                    ("key", key),
+                    ("values", encode_ail_bytecode_list(&allowed_values)),
+                    ("rule", requirement.clone()),
+                    ("failure", "RequirementFailed".to_string()),
+                ],
+            ));
+            emitted = true;
+        }
         if let Some(keys) = input_requirement_keys(document, requirement) {
             for key in keys {
                 instructions.push(AilBytecodeInstruction::new(
@@ -6450,7 +6502,11 @@ pub fn draft_ail_spec_from_requirements(
     let grounded_prompt = format!("{user_prompt}\n\nDRAFT REQUIREMENTS:\n{requirements_text}");
     let prompt = build_ail_draft_prompt(package, &grounded_prompt);
     let spec_text = crate::llm_bridge::invoke_llm_text(endpoint, &prompt)?;
-    Ok(check_ail_draft_spec(package, spec_text))
+    Ok(check_ail_draft_spec_with_requirements(
+        package,
+        spec_text,
+        Some(requirements_text),
+    ))
 }
 
 pub fn repair_ail_spec_from_diagnostics(
@@ -6469,12 +6525,34 @@ pub fn repair_ail_spec_from_diagnostics(
         diagnostics,
     );
     let spec_text = crate::llm_bridge::invoke_llm_text(endpoint, &prompt)?;
-    Ok(check_ail_draft_spec(package, spec_text))
+    Ok(check_ail_draft_spec_with_requirements(
+        package,
+        spec_text,
+        Some(requirements_text),
+    ))
 }
 
 fn check_ail_draft_spec(package: &AilPackage, spec_text: String) -> AilDraftResult {
+    check_ail_draft_spec_with_requirements(package, spec_text, None)
+}
+
+fn check_ail_draft_spec_with_requirements(
+    package: &AilPackage,
+    spec_text: String,
+    requirements_text: Option<&str>,
+) -> AilDraftResult {
     let diagnostics = match parse_ail_package_spec_text(package, &spec_text) {
-        Ok(document) => check_ail_core_diagnostics(&elaborate_ail_core(package, &document)),
+        Ok(document) => {
+            let mut diagnostics =
+                check_ail_core_diagnostics(&elaborate_ail_core(package, &document));
+            if let Some(requirements_text) = requirements_text {
+                diagnostics.extend(check_ail_spec_preserves_requirement_permissions(
+                    &document,
+                    requirements_text,
+                ));
+            }
+            diagnostics
+        }
         Err(error) => vec![AilDiagnostic::error(
             "AIL000",
             format!("parse error: {error}"),
@@ -6484,6 +6562,73 @@ fn check_ail_draft_spec(package: &AilPackage, spec_text: String) -> AilDraftResu
         spec_text,
         diagnostics,
     }
+}
+
+fn check_ail_spec_preserves_requirement_permissions(
+    document: &AilDocument,
+    requirements_text: &str,
+) -> Vec<AilDiagnostic> {
+    let mut missing_actions = BTreeSet::new();
+    for line in requirements_text
+        .lines()
+        .map(str::trim)
+        .filter(|line| line.starts_with("- "))
+    {
+        let lowered = line.to_ascii_lowercase();
+        if !mentions_permission_requirement(&lowered) {
+            continue;
+        }
+        let compact_line = compact_requirement_match_text(line);
+        for action in document.actions.values() {
+            let compact_name = compact_requirement_match_text(&action.name);
+            let compact_label = compact_requirement_match_text(&action.label);
+            if (compact_line.contains(&compact_name) || compact_line.contains(&compact_label))
+                && !action_preserves_permission_requirement(action)
+            {
+                missing_actions.insert(action.name.clone());
+            }
+        }
+    }
+    missing_actions
+        .into_iter()
+        .map(|action_name| {
+            AilDiagnostic::error(
+                "AILR011",
+                format!("spec is missing permission requirement for action {action_name}"),
+            )
+            .with_repair_suggestion(format!(
+                "Add an explicit permission, role, approval, access, or forbidden-state requirement to action {action_name}."
+            ))
+        })
+        .collect()
+}
+
+fn action_preserves_permission_requirement(action: &AilAction) -> bool {
+    action
+        .requirements
+        .iter()
+        .any(|requirement| mentions_permission_requirement(&requirement.to_ascii_lowercase()))
+}
+
+fn mentions_permission_requirement(text: &str) -> bool {
+    [
+        "permission",
+        "approval",
+        "authorized",
+        "authorised",
+        "access",
+        "forbidden",
+        " role",
+    ]
+    .iter()
+    .any(|term| text.contains(term))
+}
+
+fn compact_requirement_match_text(text: &str) -> String {
+    text.chars()
+        .filter(|ch| ch.is_ascii_alphanumeric())
+        .flat_map(char::to_lowercase)
+        .collect()
 }
 
 pub fn run_ail_conformance(package: &AilPackage) -> Result<AilConformanceResult, String> {
@@ -7695,7 +7840,12 @@ fn failed_run(
 fn input_requirement_keys(document: &AilDocument, requirement: &str) -> Option<Vec<String>> {
     let text = normalized_field_reference_text(requirement);
     let normalized = text.to_ascii_lowercase();
-    if normalized.contains(" to ") || normalized.contains(" is ") {
+    if normalized.contains(" to ")
+        || normalized.contains(" is ")
+        || normalized.contains(" has role ")
+        || normalized.contains(" has permission to ")
+        || (normalized.contains(" has ") && normalized.ends_with(" role"))
+    {
         return None;
     }
 
@@ -7749,6 +7899,42 @@ fn user_field_name(document: &AilDocument, text: &str) -> Option<String> {
                 || runtime_subject_key(&field.name) == normalized
         })
         .map(|field| field.name.clone())
+}
+
+fn has_role_requirement(
+    document: &AilDocument,
+    requirement: &str,
+) -> Option<(String, Vec<String>)> {
+    let (subject_text, allowed_text) = requirement
+        .rsplit_once(" has role ")
+        .or_else(|| trailing_role_requirement_parts(requirement))?;
+    let key = role_requirement_runtime_key(document, subject_text)?;
+    let allowed_values = split_allowed_requirement_values(allowed_text);
+    (!allowed_values.is_empty()).then_some((key, allowed_values))
+}
+
+fn trailing_role_requirement_parts(requirement: &str) -> Option<(&str, &str)> {
+    let (subject_text, allowed_text) = requirement.rsplit_once(" has ")?;
+    let allowed_text = allowed_text.trim().strip_suffix(" role")?.trim();
+    (!allowed_text.is_empty()).then_some((subject_text, allowed_text))
+}
+
+fn role_requirement_runtime_key(document: &AilDocument, subject_text: &str) -> Option<String> {
+    let normalized = normalized_field_reference_text(subject_text).to_ascii_lowercase();
+    match normalized.as_str() {
+        "actor" | "caller" | "requester" | "current user" => {
+            Some(format!("{}.role", runtime_subject_key(normalized.as_str())))
+        }
+        _ => referenced_runtime_field_key(document, &format!("{subject_text} role"))
+            .or_else(|| Some(format!("{}.role", runtime_subject_key(subject_text)))),
+    }
+}
+
+fn has_permission_requirement(requirement: &str) -> Option<(String, Vec<String>)> {
+    let (subject_text, allowed_text) = requirement.rsplit_once(" has permission to ")?;
+    let key = format!("{}.permission", runtime_subject_key(subject_text));
+    let allowed_values = split_allowed_requirement_values(allowed_text);
+    (!allowed_values.is_empty()).then_some((key, allowed_values))
 }
 
 fn negative_field_requirement(

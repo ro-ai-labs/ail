@@ -7779,6 +7779,98 @@ longer include irrelevant compiler-pass or system-component bullets.
 Expected: prompt tests pass and the live requirements artifact stays scoped to
 the Application package surface.
 
+### Task 172: Preserve Action Permission Requirements In Specs
+
+**Files:**
+- Modify: `src/ail.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Reproduce dropped permission requirement**
+
+Inspect a live Qwen-backed Application build where checked requirements include
+a `CloseTicket` permission condition but the accepted AIL-Spec omits any
+permission, role, approval, access, or forbidden-state requirement on that
+action.
+
+- [x] **Step 2: Write failing requirements-to-spec repair test**
+
+Add a build test whose requirements mention a `CloseTicket` permission check,
+whose first spec candidate is otherwise valid but drops that permission, and
+whose repaired spec adds an explicit role requirement to `CloseTicket`.
+
+- [x] **Step 3: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_repairs_spec_that_drops_permission_requirement -- --nocapture
+```
+
+Expected: failure because the first spec is accepted and no repair request is
+sent.
+
+- [x] **Step 4: Add action-specific permission preservation diagnostics**
+
+During requirements-grounded spec checking, compare permission-bearing
+requirements against the named action and emit `AILR011` when the spec drops
+the corresponding action permission, role, approval, access, or forbidden-state
+requirement.
+
+- [x] **Step 5: Verify GREEN**
+
+Run focused build/spec repair tests, full formatting/linting/test validation,
+and a live Qwen-backed Application build.
+
+Expected: specs that drop action permission requirements are repaired before
+lowering, while unaffected requirements-grounded builds still pass.
+
+### Task 173: LLM Role And Permission Requirements Lower To Native Checks
+
+**Files:**
+- Modify: `src/ail.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Reproduce repaired permission phrasings**
+
+Run the live Qwen-backed build after adding `AILR011`.
+
+Expected: Qwen repairs the dropped permission requirement, but uses
+`the actor has role SupportAgent`, `the caller has Admin or SupportAgent role`,
+or later uses `the requesting user has permission to modify ticket status`; the
+checker accepts it as an observed rule and native compilation rejects the
+unlowered requirement.
+
+- [x] **Step 2: Write failing native role-requirement test**
+
+Add a saved-spec native build test that inserts
+`the actor has role SupportAgent` into `CloseTicket` and requires bytecode and
+the emitted ELF to enforce `actor.role=SupportAgent`.
+
+- [x] **Step 3: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_native_executable_enforces_llm_style_has_role_requirement -- --nocapture
+```
+
+Expected: failure because `has role` is lowered as a generic existence check
+instead of an exact field-value requirement.
+
+- [x] **Step 4: Support `has role` and `has permission to` requirements and verify GREEN**
+
+Lower `the actor has role SupportAgent`,
+`the caller has Admin or SupportAgent role`, and similar role requirements to
+`REQUIRE_FIELD_IN`; lower permission phrases such as
+`the requesting user has permission to modify ticket status` to
+`requesting user.permission=modify ticket status`, keep generic input parsing
+from consuming the same phrases, then rerun focused tests, full validation, and
+the live Qwen-backed build.
+
+Expected: repaired permission requirements compile into native ELF checks.
+
 ### Task 18: Declared Failure Trace Coverage Diagnostics
 
 **Files:**

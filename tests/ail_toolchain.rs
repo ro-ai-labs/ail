@@ -6333,6 +6333,336 @@ fn cli_ail_build_native_executable_enforces_llm_style_is_not_field_requirement()
 
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+fn cli_ail_build_native_executable_enforces_llm_style_has_role_requirement() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("support_ticket.ail");
+    let spec_path = std::env::temp_dir().join(format!(
+        "eigl-support-ticket-has-role-requirement-{}.ail-spec.md",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "eigl-support-ticket-has-role-requirement-artifacts-{}",
+        std::process::id()
+    ));
+    let executable_path = std::env::temp_dir().join(format!(
+        "eigl-support-ticket-has-role-requirement-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+    let _ = fs::remove_file(&executable_path);
+    let spec_text = fs::read_to_string(format!("{package}/spec.ail-spec.md"))
+        .unwrap()
+        .replace(
+            "- the system requires the ticket status not to be Closed",
+            concat!(
+                "- the system requires the ticket status not to be Closed\n",
+                "- the system requires the actor has role SupportAgent"
+            ),
+        );
+    fs::write(&spec_path, spec_text).unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-build",
+            &package,
+            "--spec-file",
+            spec_path.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+            "--action",
+            "CloseTicket",
+            "--target",
+            "linux-x86_64-elf",
+            "--out",
+            executable_path.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let bytecode_artifact = fs::read_to_string(artifact_dir.join("artifact.ailbc.json")).unwrap();
+    assert!(
+        parse_ail_bytecode(&bytecode_artifact)
+            .unwrap()
+            .actions
+            .get("CloseTicket")
+            .unwrap()
+            .instructions
+            .iter()
+            .any(|instruction| {
+                instruction.opcode == "REQUIRE_FIELD_IN"
+                    && instruction
+                        .operands
+                        .get("key")
+                        .is_some_and(|key| key == "actor.role")
+                    && instruction
+                        .operands
+                        .get("values")
+                        .is_some_and(|values| values == "SupportAgent")
+            }),
+        "{bytecode_artifact}"
+    );
+
+    let success = Command::new(&executable_path)
+        .args([
+            "ticket.id=T-1",
+            "ticket.status=Open",
+            "actor.role=SupportAgent",
+        ])
+        .output()
+        .unwrap();
+    assert!(success.status.success(), "SupportAgent actor should pass");
+    assert_eq!(
+        String::from_utf8_lossy(&success.stdout),
+        "ticket.status=Closed\n"
+    );
+
+    let failed = Command::new(&executable_path)
+        .args(["ticket.id=T-1", "ticket.status=Open", "actor.role=Customer"])
+        .output()
+        .unwrap();
+    assert!(!failed.status.success(), "Customer actor should fail");
+    assert_eq!(String::from_utf8_lossy(&failed.stdout), "");
+
+    fs::remove_file(spec_path).unwrap();
+    fs::remove_dir_all(artifact_dir).unwrap();
+    fs::remove_file(executable_path).unwrap();
+}
+
+#[test]
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+fn cli_ail_build_native_executable_enforces_llm_style_trailing_role_requirement() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("support_ticket.ail");
+    let spec_path = std::env::temp_dir().join(format!(
+        "eigl-support-ticket-trailing-role-requirement-{}.ail-spec.md",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "eigl-support-ticket-trailing-role-requirement-artifacts-{}",
+        std::process::id()
+    ));
+    let executable_path = std::env::temp_dir().join(format!(
+        "eigl-support-ticket-trailing-role-requirement-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+    let _ = fs::remove_file(&executable_path);
+    let spec_text = fs::read_to_string(format!("{package}/spec.ail-spec.md"))
+        .unwrap()
+        .replace(
+            "- the system requires the ticket status not to be Closed",
+            concat!(
+                "- the system requires the ticket status not to be Closed\n",
+                "- the system requires the caller has Admin or SupportAgent role"
+            ),
+        );
+    fs::write(&spec_path, spec_text).unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-build",
+            &package,
+            "--spec-file",
+            spec_path.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+            "--action",
+            "CloseTicket",
+            "--target",
+            "linux-x86_64-elf",
+            "--out",
+            executable_path.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let bytecode_artifact = fs::read_to_string(artifact_dir.join("artifact.ailbc.json")).unwrap();
+    assert!(
+        parse_ail_bytecode(&bytecode_artifact)
+            .unwrap()
+            .actions
+            .get("CloseTicket")
+            .unwrap()
+            .instructions
+            .iter()
+            .any(|instruction| {
+                instruction.opcode == "REQUIRE_FIELD_IN"
+                    && instruction
+                        .operands
+                        .get("key")
+                        .is_some_and(|key| key == "caller.role")
+                    && instruction
+                        .operands
+                        .get("values")
+                        .is_some_and(|values| values == "Admin\u{1f}SupportAgent")
+            }),
+        "{bytecode_artifact}"
+    );
+
+    let admin = Command::new(&executable_path)
+        .args(["ticket.id=T-1", "ticket.status=Open", "caller.role=Admin"])
+        .output()
+        .unwrap();
+    assert!(admin.status.success(), "Admin caller should pass");
+    assert_eq!(
+        String::from_utf8_lossy(&admin.stdout),
+        "ticket.status=Closed\n"
+    );
+
+    let support_agent = Command::new(&executable_path)
+        .args([
+            "ticket.id=T-1",
+            "ticket.status=Open",
+            "caller.role=SupportAgent",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        support_agent.status.success(),
+        "SupportAgent caller should pass"
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&support_agent.stdout),
+        "ticket.status=Closed\n"
+    );
+
+    let failed = Command::new(&executable_path)
+        .args([
+            "ticket.id=T-1",
+            "ticket.status=Open",
+            "caller.role=Customer",
+        ])
+        .output()
+        .unwrap();
+    assert!(!failed.status.success(), "Customer caller should fail");
+    assert_eq!(String::from_utf8_lossy(&failed.stdout), "");
+
+    fs::remove_file(spec_path).unwrap();
+    fs::remove_dir_all(artifact_dir).unwrap();
+    fs::remove_file(executable_path).unwrap();
+}
+
+#[test]
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+fn cli_ail_build_native_executable_enforces_llm_style_has_permission_requirement() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("support_ticket.ail");
+    let spec_path = std::env::temp_dir().join(format!(
+        "eigl-support-ticket-has-permission-requirement-{}.ail-spec.md",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "eigl-support-ticket-has-permission-requirement-artifacts-{}",
+        std::process::id()
+    ));
+    let executable_path = std::env::temp_dir().join(format!(
+        "eigl-support-ticket-has-permission-requirement-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+    let _ = fs::remove_file(&executable_path);
+    let spec_text = fs::read_to_string(format!("{package}/spec.ail-spec.md"))
+        .unwrap()
+        .replace(
+            "- the system requires the ticket status not to be Closed",
+            concat!(
+                "- the system requires the ticket status not to be Closed\n",
+                "- the system requires the requesting user has permission to modify ticket status"
+            ),
+        );
+    fs::write(&spec_path, spec_text).unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-build",
+            &package,
+            "--spec-file",
+            spec_path.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+            "--action",
+            "CloseTicket",
+            "--target",
+            "linux-x86_64-elf",
+            "--out",
+            executable_path.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let bytecode_artifact = fs::read_to_string(artifact_dir.join("artifact.ailbc.json")).unwrap();
+    assert!(
+        parse_ail_bytecode(&bytecode_artifact)
+            .unwrap()
+            .actions
+            .get("CloseTicket")
+            .unwrap()
+            .instructions
+            .iter()
+            .any(|instruction| {
+                instruction.opcode == "REQUIRE_FIELD_IN"
+                    && instruction
+                        .operands
+                        .get("key")
+                        .is_some_and(|key| key == "requesting user.permission")
+                    && instruction
+                        .operands
+                        .get("values")
+                        .is_some_and(|values| values == "modify ticket status")
+            }),
+        "{bytecode_artifact}"
+    );
+
+    let success = Command::new(&executable_path)
+        .args([
+            "ticket.id=T-1",
+            "ticket.status=Open",
+            "requesting user.permission=modify ticket status",
+        ])
+        .output()
+        .unwrap();
+    assert!(success.status.success(), "permission should pass");
+    assert_eq!(
+        String::from_utf8_lossy(&success.stdout),
+        "ticket.status=Closed\n"
+    );
+
+    let failed = Command::new(&executable_path)
+        .args([
+            "ticket.id=T-1",
+            "ticket.status=Open",
+            "requesting user.permission=view ticket",
+        ])
+        .output()
+        .unwrap();
+    assert!(!failed.status.success(), "wrong permission should fail");
+    assert_eq!(String::from_utf8_lossy(&failed.stdout), "");
+
+    fs::remove_file(spec_path).unwrap();
+    fs::remove_dir_all(artifact_dir).unwrap();
+    fs::remove_file(executable_path).unwrap();
+}
+
+#[test]
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_compile_native_executable_enforces_field_in_requirements() {
     let binary = env!("CARGO_BIN_EXE_eigl");
     let package = fixture("support_ticket.ail");
@@ -8828,6 +9158,88 @@ fn cli_ail_build_repairs_rejected_candidate_before_lowering() {
     assert_eq!(bytecode.profile, "Application");
     assert_eq!(verify_ail_bytecode(&bytecode), Vec::<String>::new());
     assert!(bytecode.actions.contains_key("CloseTicket"));
+}
+
+#[test]
+fn cli_ail_build_repairs_spec_that_drops_permission_requirement() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("support_ticket.ail");
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let requirements = concat!(
+        "AIL-Requirements:\n",
+        "- The application manages support tickets.\n",
+        "- Ticket fields include id, title, status, and secret internal notes.\n",
+        "- The CloseTicket action requires ticket id input and ticket status not to be Closed.\n",
+        "- Permission check must restrict the CloseTicket action to support agents.\n",
+        "- Failure NotFound happens when ticket id is missing and records TicketNotFound.\n",
+        "- The action guarantees closed tickets do not appear in the open queue.\n",
+        "- The action records trace event TicketClosed.\n"
+    );
+    let requirements_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(requirements)
+    );
+    let dropped_permission_spec =
+        fs::read_to_string(format!("{package}/spec.ail-spec.md")).unwrap();
+    let dropped_permission_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(&format!(
+            "<think>ignore this</think>\n```ail\n{dropped_permission_spec}\n```"
+        ))
+    );
+    let repaired_spec = dropped_permission_spec.replace(
+        "- the system requires the ticket status not to be Closed",
+        concat!(
+            "- the system requires the ticket status not to be Closed\n",
+            "- the system requires the assignee role to be SupportAgent or SupportManager"
+        ),
+    );
+    let repaired_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(&format!(
+            "<think>ignore this</think>\n```ail\n{repaired_spec}\n```"
+        ))
+    );
+    let server = serve_chat_responses(
+        listener,
+        vec![requirements_body, dropped_permission_body, repaired_body],
+    );
+
+    let output = Command::new(binary)
+        .args([
+            "ail-build",
+            &package,
+            "--prompt",
+            "Build an AIL support ticket bytecode artifact",
+            "--llm-endpoint",
+            &format!("http://127.0.0.1:{}/v1/chat/completions", addr.port()),
+        ])
+        .output()
+        .unwrap();
+
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let request_bodies = server.join().unwrap();
+    assert_eq!(request_bodies.len(), 3);
+    assert!(request_bodies[2].contains("Repair an AIL-Spec candidate"));
+    assert!(request_bodies[2].contains("AILR011"));
+    assert!(request_bodies[2].contains("permission requirement for action CloseTicket"));
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let bytecode = parse_ail_bytecode(&stdout).unwrap();
+    let close_ticket = bytecode.actions.get("CloseTicket").unwrap();
+    assert!(close_ticket.instructions.iter().any(|instruction| {
+        instruction.opcode == "REQUIRE_FIELD_IN"
+            && instruction
+                .operands
+                .get("key")
+                .is_some_and(|key| key == "ticket.assignee.role")
+    }));
 }
 
 #[test]
