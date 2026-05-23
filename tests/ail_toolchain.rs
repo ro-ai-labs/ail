@@ -11839,6 +11839,83 @@ fn cli_ail_build_repairs_spec_that_drops_failure_requirement() {
 }
 
 #[test]
+fn cli_ail_build_repairs_spec_that_drops_trace_requirement() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("support_ticket.ail");
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let requirements = concat!(
+        "AIL-Requirements:\n",
+        "- The application manages support tickets.\n",
+        "- Ticket fields include id, title, status, and secret internal notes.\n",
+        "- The CloseTicket action requires ticket id input and ticket status not to be Closed.\n",
+        "- Failure NotFound happens when ticket id is missing and records TicketNotFound.\n",
+        "- The action guarantees closed tickets do not appear in the open queue.\n",
+        "- The CloseTicket action records trace event TicketClosureAudited.\n"
+    );
+    let requirements_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(requirements)
+    );
+    let dropped_trace_spec = fs::read_to_string(format!("{package}/spec.ail-spec.md")).unwrap();
+    let dropped_trace_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(&format!(
+            "<think>ignore this</think>\n```ail\n{dropped_trace_spec}\n```"
+        ))
+    );
+    let repaired_spec = dropped_trace_spec.replace(
+        "- the system records a trace event named TicketClosed",
+        "- the system records a trace event named TicketClosureAudited",
+    );
+    let repaired_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(&format!(
+            "<think>ignore this</think>\n```ail\n{repaired_spec}\n```"
+        ))
+    );
+    let server = serve_chat_responses(
+        listener,
+        vec![requirements_body, dropped_trace_body, repaired_body],
+    );
+
+    let output = Command::new(binary)
+        .args([
+            "ail-build",
+            &package,
+            "--prompt",
+            "Build an AIL support ticket bytecode artifact",
+            "--llm-endpoint",
+            &format!("http://127.0.0.1:{}/v1/chat/completions", addr.port()),
+        ])
+        .output()
+        .unwrap();
+
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let request_bodies = server.join().unwrap();
+    assert_eq!(request_bodies.len(), 3);
+    assert!(request_bodies[2].contains("Repair an AIL-Spec candidate"));
+    assert!(request_bodies[2].contains("AILR013"));
+    assert!(request_bodies[2].contains("TicketClosureAudited"));
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let bytecode = parse_ail_bytecode(&stdout).unwrap();
+    let close_ticket = bytecode.actions.get("CloseTicket").unwrap();
+    assert!(close_ticket.instructions.iter().any(|instruction| {
+        instruction.opcode == "EMIT_TRACE"
+            && instruction
+                .operands
+                .get("event")
+                .is_some_and(|event| event == "TicketClosureAudited")
+    }));
+}
+
+#[test]
 fn cli_ail_build_repairs_incomplete_requirements_before_spec_drafting() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");

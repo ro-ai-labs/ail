@@ -58,6 +58,7 @@ severity, blocking behavior, and at least one invalid fixture.
 | `AIL-PROMPT-001` | `ail.prompt.envelope.valid` | agent output violates prompt envelope schema | error | yes | regenerate with required schema |
 | `AILR011` | `ail.spec.requirements.permission-preserved` | spec draft drops a permission-like requirement from AIL-Requirements | error | yes | add an explicit action requirement |
 | `AILR012` | `ail.spec.requirements.failure-preserved` | spec draft drops a required Failure section from AIL-Requirements | error | yes | add the named Failure section |
+| `AILR013` | `ail.spec.requirements.trace-preserved` | spec draft drops a required trace event from AIL-Requirements | error | yes | add the named trace event |
 | `AIL-ROUNDTRIP-001` | `ail.projection.roundtrip.preserves-core` | projection round trip changes graph hash | error | yes | repair projection or patch |
 | `AIL-UI-A11Y-001` | `ail.ui.action.accessible-name` | reachable UI action lacks accessible name | error | yes | add accessible label |
 

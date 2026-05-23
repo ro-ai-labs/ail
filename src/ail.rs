@@ -8506,6 +8506,10 @@ fn check_ail_draft_spec_with_requirements(
                     &document,
                     requirements_text,
                 ));
+                diagnostics.extend(check_ail_spec_preserves_requirement_traces(
+                    &document,
+                    requirements_text,
+                ));
             }
             diagnostics
         }
@@ -8591,6 +8595,113 @@ fn requirement_failure_name(line: &str) -> Option<String> {
     let bullet = line.strip_prefix("- ")?.trim();
     let (failure_name, _) = parse_failure_header(bullet)?;
     Some(failure_name)
+}
+
+fn check_ail_spec_preserves_requirement_traces(
+    document: &AilDocument,
+    requirements_text: &str,
+) -> Vec<AilDiagnostic> {
+    let mut missing_traces = BTreeSet::new();
+    for line in requirements_text
+        .lines()
+        .map(str::trim)
+        .filter(|line| line.starts_with("- "))
+    {
+        let Some(trace_name) = requirement_trace_name(line) else {
+            continue;
+        };
+        let action_names = requirement_matching_action_names(document, line);
+        if action_names.is_empty() {
+            if !document_preserves_trace(document, &trace_name) {
+                missing_traces.insert((String::new(), trace_name));
+            }
+            continue;
+        }
+        for action_name in action_names {
+            let Some(action) = document.actions.get(&action_name) else {
+                continue;
+            };
+            if !action.traces.iter().any(|trace| trace == &trace_name) {
+                missing_traces.insert((action_name, trace_name.clone()));
+            }
+        }
+    }
+    missing_traces
+        .into_iter()
+        .map(|(action_name, trace_name)| {
+            let (message, repair) = if action_name.is_empty() {
+                (
+                    format!("spec is missing required trace event {trace_name}"),
+                    format!(
+                        "Add a trace bullet that records trace event {trace_name} on the relevant action or failure."
+                    ),
+                )
+            } else {
+                (
+                    format!(
+                        "spec is missing required trace event {trace_name} for action {action_name}"
+                    ),
+                    format!(
+                        "Add '- the system records a trace event named {trace_name}' to action {action_name}."
+                    ),
+                )
+            };
+            AilDiagnostic::error("AILR013", message).with_repair_suggestion(repair)
+        })
+        .collect()
+}
+
+fn requirement_trace_name(line: &str) -> Option<String> {
+    let bullet = trim_sentence(line.strip_prefix("- ").unwrap_or(line).trim());
+    let lowered = bullet.to_ascii_lowercase();
+    for marker in ["trace event named ", "trace event "] {
+        let Some(index) = lowered.find(marker) else {
+            continue;
+        };
+        let trace_text = bullet[index + marker.len()..].trim();
+        let trace_name = trace_text
+            .split(|ch: char| ch.is_ascii_whitespace() || matches!(ch, ',' | ';' | '.'))
+            .next()
+            .unwrap_or("")
+            .trim();
+        if !trace_name.is_empty() {
+            return Some(trace_name.to_string());
+        }
+    }
+    None
+}
+
+fn requirement_matching_action_names(document: &AilDocument, line: &str) -> Vec<String> {
+    let compact_line = compact_requirement_match_text(line);
+    document
+        .actions
+        .values()
+        .filter(|action| {
+            let compact_name = compact_requirement_match_text(&action.name);
+            let compact_label = compact_requirement_match_text(&action.label);
+            compact_line.contains(&compact_name) || compact_line.contains(&compact_label)
+        })
+        .map(|action| action.name.clone())
+        .collect()
+}
+
+fn document_preserves_trace(document: &AilDocument, trace_name: &str) -> bool {
+    document
+        .actions
+        .values()
+        .any(|action| action.traces.iter().any(|trace| trace == trace_name))
+        || document
+            .failures
+            .values()
+            .any(|failure| failure.traces.iter().any(|trace| trace == trace_name))
+        || document
+            .tools
+            .values()
+            .any(|tool| tool.traces.iter().any(|trace| trace == trace_name))
+        || document
+            .system_components
+            .values()
+            .any(|component| component.traces.iter().any(|trace| trace == trace_name))
 }
 
 fn action_preserves_permission_requirement(action: &AilAction) -> bool {
