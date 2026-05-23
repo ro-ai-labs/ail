@@ -6506,6 +6506,15 @@ pub fn verify_ail_bytecode(program: &AilBytecodeProgram) -> Vec<String> {
                     action.name, index, target
                 ));
             }
+            if instruction.opcode == "ADD_INT_FIELD"
+                && let Some(delta) = instruction.operands.get("delta")
+                && delta.parse::<i64>().is_err()
+            {
+                diagnostics.push(format!(
+                    "AILBC006 action {} instruction {} opcode ADD_INT_FIELD delta '{}' is not an integer",
+                    action.name, index, delta
+                ));
+            }
         }
     }
     diagnostics

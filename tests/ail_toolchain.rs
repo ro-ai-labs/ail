@@ -2883,6 +2883,40 @@ fn ail_bytecode_verifier_rejects_invalid_opcodes_and_operands() {
 }
 
 #[test]
+fn ail_bytecode_verifier_rejects_non_integer_add_int_delta() {
+    let bytecode_text = r#"{
+  "kind": "AIL-Bytecode",
+  "package": "bad-counter",
+  "version": "0.1.0",
+  "profile": "Application",
+  "failures": [],
+  "actions": [
+    {
+      "action": "BadCounter",
+      "instructions": [
+        {"opcode":"ACTION_BEGIN","operands":{"action":"BadCounter"}},
+        {"opcode":"ADD_INT_FIELD","operands":{"key":"counter","delta":"one","text":"bad increment"}},
+        {"opcode":"RETURN_SUCCESS","operands":{}}
+      ]
+    }
+  ]
+}"#;
+    let bytecode = parse_ail_bytecode(bytecode_text).unwrap();
+    let diagnostics = verify_ail_bytecode(&bytecode);
+
+    assert!(
+        diagnostics.iter().any(|diagnostic| {
+            diagnostic.contains("AILBC006")
+                && diagnostic.contains("BadCounter")
+                && diagnostic.contains("ADD_INT_FIELD")
+                && diagnostic.contains("delta")
+                && diagnostic.contains("one")
+        }),
+        "{diagnostics:?}"
+    );
+}
+
+#[test]
 fn ail_bytecode_vm_executes_branch_and_jump_control_flow() {
     let bytecode_text = r#"{
   "kind": "AIL-Bytecode",

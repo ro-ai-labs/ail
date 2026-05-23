@@ -520,7 +520,9 @@ provenance text that affect emitted bytecode instructions.
 `ail-vm` reads a saved AIL-Bytecode artifact and executes it directly without
 reparsing the source AIL package, making bytecode a real artifact boundary
 instead of only a display format. The VM verifier rejects unknown opcodes and
-missing required operands before executing saved bytecode.
+missing required operands before executing saved bytecode. It also rejects
+malformed static operands such as a non-integer `ADD_INT_FIELD.delta` before
+runtime state is touched.
 `ail-compile <artifact.ailbc.json> --action <ActionName> --target
 linux-x86_64-elf --out <path>` reads the same saved AIL-Bytecode artifact,
 verifies it, and emits a native ELF executable from that artifact boundary

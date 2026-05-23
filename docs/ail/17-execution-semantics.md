@@ -65,11 +65,11 @@ to unknown actions before execution.
 
 The initial integer state-mutation subset includes `ADD_INT_FIELD`. It reads a
 runtime state field as an integer, adds the signed integer `delta`, writes the
-result back to the same field, and records the new value in the trace. The VM
-rejects missing fields, non-integer field values, and non-integer deltas at
-runtime. Together with `LABEL`, `BRANCH_FIELD_EQUALS`, and `JUMP`, this gives
-AIL-Bytecode a finite loop counter primitive without introducing host-language
-execution.
+result back to the same field, and records the new value in the trace. The
+bytecode verifier rejects non-integer `delta` literals before execution, and
+the VM rejects missing fields or non-integer field values at runtime. Together
+with `LABEL`, `BRANCH_FIELD_EQUALS`, and `JUMP`, this gives AIL-Bytecode a
+finite loop counter primitive without introducing host-language execution.
 
 ## Calls And Returns
 
