@@ -3117,6 +3117,27 @@ fn ail_core_compilers_reject_unchecked_core_ir() {
 }
 
 #[test]
+fn ail_core_native_compile_rejects_manifest_unsupported_target() {
+    let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
+    let document = parse_ail_package_document(&package).unwrap();
+    let mut core = elaborate_ail_core(&package, &document);
+    assert_eq!(check_ail_core(&core), Vec::<String>::new());
+
+    core.package.target_support = BTreeMap::from([(
+        "x86_64-unknown-linux-syscall-elf".to_string(),
+        "planned-contract".to_string(),
+    )]);
+
+    let error = compile_ail_core_native_elf(&core, "CloseTicket", "linux-x86_64-elf").unwrap_err();
+    assert!(error.contains("AIL-BACKEND-001"), "{error}");
+    assert!(
+        error.contains("x86_64-unknown-linux-syscall-elf"),
+        "{error}"
+    );
+    assert!(error.contains("planned-contract"), "{error}");
+}
+
+#[test]
 fn ail_bytecode_vm_executes_close_ticket_success_and_failure() {
     let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
     let document = parse_ail_package_document(&package).unwrap();

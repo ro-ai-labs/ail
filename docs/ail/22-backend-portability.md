@@ -69,6 +69,10 @@ host boundary: Linux syscall ABI
 runtime input: argv key=value pairs for first slice
 ```
 
+The current prototype CLI spells this backend target as `linux-x86_64-elf`.
+Manifest `target-support` matching treats that CLI name as an alias for the
+canonical `x86_64-unknown-linux-syscall-elf` target triple.
+
 Supported first-slice effects:
 
 - process exit

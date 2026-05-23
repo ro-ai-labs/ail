@@ -137,8 +137,11 @@ When present, `prompt-pack: <package-or-version>` is preserved in package
 metadata and rendered into checked AIL-Core so agent prompt requests can be
 reviewed against the same package identity as the compiler input.
 When present, the `target-support:` manifest block is preserved as deterministic
-target support metadata in checked AIL-Core. Backend target/effect enforcement
-remains a checker and backend conformance responsibility.
+target support metadata in checked AIL-Core. Native emission from checked
+AIL-Core rejects `--target linux-x86_64-elf` unless the package declares either
+`linux-x86_64-elf: supported` or the canonical
+`x86_64-unknown-linux-syscall-elf: supported` target-support entry. Finer
+target/effect pair enforcement remains checker and backend conformance work.
 When present, `schema-version` and `safety-level` are also preserved as package
 metadata in checked AIL-Core. The checker rejects unknown schema versions;
 safety-level labels must be `standard`, `low`, `medium`, `high`, or `expert`.

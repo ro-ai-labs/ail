@@ -4289,6 +4289,7 @@ pub fn compile_ail_core_native_elf(
             "unsupported native target '{target}'; expected linux-x86_64-elf"
         ));
     }
+    ensure_ail_core_native_target_supported(core, target)?;
     let program = compile_ail_core_bytecode(core)?;
     let diagnostics = verify_ail_bytecode(&program);
     if !diagnostics.is_empty() {
@@ -4303,6 +4304,34 @@ pub fn compile_ail_core_native_elf(
         .ok_or_else(|| format!("unknown AIL action '{action_name}'"))?;
     let action = expand_native_action_calls(action, &program.actions)?;
     emit_linux_x86_64_elf_for_action(&action, &program.failures)
+}
+
+fn ensure_ail_core_native_target_supported(core: &AilCore, target: &str) -> Result<(), String> {
+    if core.package.target_support.is_empty() {
+        return Ok(());
+    }
+    for target_name in target_support_lookup_names(target) {
+        if let Some(status) = core.package.target_support.get(*target_name) {
+            if status == "supported" {
+                return Ok(());
+            }
+            return Err(format!(
+                "AIL-BACKEND-001 package {} target-support marks {target_name} as {status}; native target {target} requires supported",
+                core.package.name
+            ));
+        }
+    }
+    Err(format!(
+        "AIL-BACKEND-001 package {} target-support does not declare native target {target}",
+        core.package.name
+    ))
+}
+
+fn target_support_lookup_names(target: &str) -> &'static [&'static str] {
+    match target {
+        "linux-x86_64-elf" => &["linux-x86_64-elf", "x86_64-unknown-linux-syscall-elf"],
+        _ => &[],
+    }
 }
 
 pub fn compile_ail_bytecode_native_elf(
