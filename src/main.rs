@@ -3,7 +3,7 @@ use std::env;
 use std::fs;
 use std::io::{Read, Write};
 use std::net::TcpListener;
-use std::process::ExitCode;
+use std::process::{Command, ExitCode};
 
 use eigl::ail::{
     DEFAULT_BASE_LLM_ENDPOINT, apply_ail_patch, check_ail_core, check_ail_requirements,
@@ -453,6 +453,7 @@ struct AilBootstrapArtifactSet<'a> {
     native_bytecode_report_text: &'a str,
     host_boundary_report_text: &'a str,
     dependency_report_text: &'a str,
+    handoff_report_text: &'a str,
     compiler_pass_conformance_report: &'a str,
     compiler_pass_native_executables: &'a [AilNativeArtifact],
     agent_bytecode_text: Option<&'a str>,
@@ -914,6 +915,10 @@ fn render_ail_bootstrap_manifest(artifacts: &AilBootstrapArtifactSet<'_>) -> Str
         format!(
             "bootstrap-dependencies bootstrap-dependency-report.txt {}",
             ail_artifact_fingerprint(artifacts.dependency_report_text)
+        ),
+        format!(
+            "bootstrap-handoff bootstrap-handoff-report.txt {}",
+            ail_artifact_fingerprint(artifacts.handoff_report_text)
         ),
         format!(
             "toolchain-agent-conformance toolchain-agent-conformance-report.txt {}",
@@ -1395,6 +1400,21 @@ fn write_ail_bootstrap_artifacts(
     )
     .map_err(|error| {
         format!("failed to write ail-bootstrap dependency report fingerprint: {error}")
+    })?;
+    fs::write(
+        root.join("bootstrap-handoff-report.txt"),
+        artifacts.handoff_report_text,
+    )
+    .map_err(|error| format!("failed to write ail-bootstrap handoff report: {error}"))?;
+    fs::write(
+        root.join("bootstrap-handoff-report.fingerprint.txt"),
+        format!(
+            "{}\n",
+            ail_artifact_fingerprint(artifacts.handoff_report_text)
+        ),
+    )
+    .map_err(|error| {
+        format!("failed to write ail-bootstrap handoff report fingerprint: {error}")
     })?;
     fs::write(
         root.join("toolchain-agent-conformance-report.txt"),
@@ -3704,6 +3724,7 @@ struct AilBootstrapAgentManifestRequest<'a> {
     native_bytecode_report_text: &'a str,
     host_boundary_report_text: &'a str,
     dependency_report_text: &'a str,
+    handoff_report_text: &'a str,
     toolchain_conformance_report: &'a str,
     compiler_pass_conformance_report: &'a str,
     target_artifacts: &'a [AilNativeArtifact],
@@ -3733,6 +3754,7 @@ fn run_ail_bootstrap_agent_verify_manifest(
         native_bytecode_report_text,
         host_boundary_report_text,
         dependency_report_text,
+        handoff_report_text,
         toolchain_conformance_report,
         compiler_pass_conformance_report,
         target_artifacts,
@@ -3828,6 +3850,14 @@ fn run_ail_bootstrap_agent_verify_manifest(
         (
             "buildrequest.dependency report fingerprint".to_string(),
             ail_artifact_fingerprint(dependency_report_text),
+        ),
+        (
+            "buildrequest.handoff report".to_string(),
+            handoff_report_text.to_string(),
+        ),
+        (
+            "buildrequest.handoff report fingerprint".to_string(),
+            ail_artifact_fingerprint(handoff_report_text),
         ),
         (
             "buildrequest.conformance report".to_string(),
@@ -4007,6 +4037,144 @@ fn render_ail_bootstrap_dependency_report(
         }
     }
     Ok(format!("{}\n", lines.join("\n")))
+}
+
+fn render_ail_bootstrap_handoff_report(
+    target_name: &str,
+    toolchain_artifacts: &[AilNativeArtifact],
+    compiler_pass_artifacts: &[AilNativeArtifact],
+) -> Result<String, String> {
+    let mut lines = vec![
+        "AIL-Bootstrap-Handoff-Report:".to_string(),
+        format!("target {target_name}"),
+        "runtime-abi linux-syscall-argv-key-value".to_string(),
+    ];
+    append_bootstrap_handoff_action(
+        &mut lines,
+        find_native_artifact(
+            toolchain_artifacts,
+            "toolchain-agent-CompileApplication.elf",
+        )?,
+        "ApplicationBytecodeCompiled",
+        &[
+            "buildrequest.id=bootstrap-handoff",
+            "buildrequest.status=SpecCaptured",
+            "buildrequest.requirements=checked",
+            "buildrequest.spec=checked",
+        ],
+    )?;
+    append_bootstrap_handoff_action(
+        &mut lines,
+        find_native_artifact(
+            toolchain_artifacts,
+            "toolchain-agent-CompileNativeTarget.elf",
+        )?,
+        "NativeTargetCompiled",
+        &[
+            "buildrequest.id=bootstrap-handoff",
+            "buildrequest.status=BytecodeReady",
+            "buildrequest.bytecode artifact=verified",
+            "buildrequest.bytecode fingerprint=fnv64:handoff-bytecode",
+            "buildrequest.target platform=linux-x86_64-elf",
+            "buildrequest.target artifact=elf-bytes",
+            "buildrequest.target artifact fingerprint=fnv64:handoff-target",
+        ],
+    )?;
+    append_bootstrap_handoff_action(
+        &mut lines,
+        find_native_artifact(
+            compiler_pass_artifacts,
+            "compiler-pass-InferReadPermissions.elf",
+        )?,
+        "ReadPermissionAdded",
+        &[
+            "input graph=checked-ail-core",
+            "package policy=permission-inference",
+        ],
+    )?;
+    Ok(format!("{}\n", lines.join("\n")))
+}
+
+fn find_native_artifact<'a>(
+    artifacts: &'a [AilNativeArtifact],
+    file_name: &str,
+) -> Result<&'a AilNativeArtifact, String> {
+    artifacts
+        .iter()
+        .find(|artifact| artifact.file_name == file_name)
+        .ok_or_else(|| format!("missing native handoff artifact {file_name}"))
+}
+
+fn append_bootstrap_handoff_action(
+    lines: &mut Vec<String>,
+    artifact: &AilNativeArtifact,
+    trace_marker: &str,
+    args: &[&str],
+) -> Result<(), String> {
+    let (stdout, stderr) = run_bootstrap_handoff_native_action(artifact, args)?;
+    if !stdout.contains(trace_marker) && !stderr.contains(trace_marker) {
+        return Err(format!(
+            "native handoff artifact {} did not emit trace {trace_marker}\nstdout:\n{stdout}\nstderr:\n{stderr}",
+            artifact.file_name
+        ));
+    }
+    lines.push(format!(
+        "handoff-native-action {} ok trace {}",
+        artifact.file_name, trace_marker
+    ));
+    lines.push(format!(
+        "handoff-stdout {} {}",
+        artifact.file_name,
+        ail_artifact_fingerprint(&stdout)
+    ));
+    lines.push(format!(
+        "handoff-stderr {} {}",
+        artifact.file_name,
+        ail_artifact_fingerprint(&stderr)
+    ));
+    Ok(())
+}
+
+fn run_bootstrap_handoff_native_action(
+    artifact: &AilNativeArtifact,
+    args: &[&str],
+) -> Result<(String, String), String> {
+    let executable_path = env::temp_dir().join(format!(
+        "eigl-bootstrap-handoff-{}-{}",
+        std::process::id(),
+        artifact.file_name
+    ));
+    fs::write(&executable_path, &artifact.bytes).map_err(|error| {
+        format!(
+            "failed to write native handoff artifact {}: {error}",
+            artifact.file_name
+        )
+    })?;
+    let executable_path_text = executable_path.to_string_lossy().into_owned();
+    if let Err(error) = set_native_executable_permissions(&executable_path_text) {
+        let _ = fs::remove_file(&executable_path);
+        return Err(error);
+    }
+    let output = match Command::new(&executable_path).args(args).output() {
+        Ok(output) => output,
+        Err(error) => {
+            let _ = fs::remove_file(&executable_path);
+            return Err(format!(
+                "failed to run native handoff artifact {}: {error}",
+                artifact.file_name
+            ));
+        }
+    };
+    let _ = fs::remove_file(&executable_path);
+    let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
+    let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
+    if !output.status.success() {
+        return Err(format!(
+            "native handoff artifact {} exited with {}\nstdout:\n{stdout}\nstderr:\n{stderr}",
+            artifact.file_name, output.status
+        ));
+    }
+    Ok((stdout, stderr))
 }
 
 fn render_ail_compile_native_bytecode_report(
@@ -5161,6 +5329,11 @@ fn run_ail_bootstrap_command(path: &str, cli_options: &CliOptions) -> Result<u8,
         compiler_pass_native_artifacts.as_slice(),
         agent_native_artifacts.as_slice(),
     )?;
+    let handoff_report_text = render_ail_bootstrap_handoff_report(
+        target,
+        toolchain_native_artifacts.as_slice(),
+        compiler_pass_native_artifacts.as_slice(),
+    )?;
     let empty_agent_trace: &[String] = &[];
     let manifest_text = render_ail_bootstrap_manifest(&AilBootstrapArtifactSet {
         target_name: target,
@@ -5180,6 +5353,7 @@ fn run_ail_bootstrap_command(path: &str, cli_options: &CliOptions) -> Result<u8,
         native_bytecode_report_text: &native_bytecode_report_text,
         host_boundary_report_text: &host_boundary_report_text,
         dependency_report_text: &dependency_report_text,
+        handoff_report_text: &handoff_report_text,
         compiler_pass_conformance_report: &compiler_pass_conformance_report,
         compiler_pass_native_executables: compiler_pass_native_artifacts.as_slice(),
         agent_bytecode_text: Some(agent_bytecode_text.as_str()),
@@ -5205,6 +5379,7 @@ fn run_ail_bootstrap_command(path: &str, cli_options: &CliOptions) -> Result<u8,
         native_bytecode_report_text: &native_bytecode_report_text,
         host_boundary_report_text: &host_boundary_report_text,
         dependency_report_text: &dependency_report_text,
+        handoff_report_text: &handoff_report_text,
         toolchain_conformance_report: &toolchain_conformance_report,
         compiler_pass_conformance_report: &compiler_pass_conformance_report,
         target_artifacts: toolchain_native_artifacts.as_slice(),
@@ -5232,6 +5407,7 @@ fn run_ail_bootstrap_command(path: &str, cli_options: &CliOptions) -> Result<u8,
             native_bytecode_report_text: &native_bytecode_report_text,
             host_boundary_report_text: &host_boundary_report_text,
             dependency_report_text: &dependency_report_text,
+            handoff_report_text: &handoff_report_text,
             compiler_pass_conformance_report: &compiler_pass_conformance_report,
             compiler_pass_native_executables: compiler_pass_native_artifacts.as_slice(),
             agent_bytecode_text: Some(agent_run.bytecode_text.as_str()),

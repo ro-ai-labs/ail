@@ -4808,6 +4808,44 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
         dependency_report_fingerprint.trim(),
         fnv64_fingerprint(&dependency_report)
     );
+    let handoff_report =
+        fs::read_to_string(artifact_dir.join("bootstrap-handoff-report.txt")).unwrap();
+    assert!(
+        handoff_report.contains("AIL-Bootstrap-Handoff-Report:"),
+        "{handoff_report}"
+    );
+    assert!(
+        handoff_report.contains("target linux-x86_64-elf"),
+        "{handoff_report}"
+    );
+    assert!(
+        handoff_report.contains("runtime-abi linux-syscall-argv-key-value"),
+        "{handoff_report}"
+    );
+    assert!(
+        handoff_report.contains(
+            "handoff-native-action toolchain-agent-CompileApplication.elf ok trace ApplicationBytecodeCompiled"
+        ),
+        "{handoff_report}"
+    );
+    assert!(
+        handoff_report.contains(
+            "handoff-native-action toolchain-agent-CompileNativeTarget.elf ok trace NativeTargetCompiled"
+        ),
+        "{handoff_report}"
+    );
+    assert!(
+        handoff_report.contains(
+            "handoff-native-action compiler-pass-InferReadPermissions.elf ok trace ReadPermissionAdded"
+        ),
+        "{handoff_report}"
+    );
+    let handoff_report_fingerprint =
+        fs::read_to_string(artifact_dir.join("bootstrap-handoff-report.fingerprint.txt")).unwrap();
+    assert_eq!(
+        handoff_report_fingerprint.trim(),
+        fnv64_fingerprint(&handoff_report)
+    );
 
     let agent_bytecode = fs::read_to_string(artifact_dir.join("agent.ailbc.json")).unwrap();
     assert_eq!(agent_bytecode, toolchain_bytecode);
@@ -4830,6 +4868,8 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
     assert!(agent_trace.contains("read buildrequest.host boundary report fingerprint"));
     assert!(agent_trace.contains("read buildrequest.dependency report"));
     assert!(agent_trace.contains("read buildrequest.dependency report fingerprint"));
+    assert!(agent_trace.contains("read buildrequest.handoff report"));
+    assert!(agent_trace.contains("read buildrequest.handoff report fingerprint"));
     assert!(agent_trace.contains("read buildrequest.target artifact fingerprint"));
     assert!(agent_trace.contains("read buildrequest.compiler pass target artifact fingerprint"));
     assert!(agent_trace.contains("read buildrequest.artifact manifest"));
@@ -4860,6 +4900,8 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
             "buildrequest.host boundary report fingerprint=fnv64:host-boundary",
             "buildrequest.dependency report=ok",
             "buildrequest.dependency report fingerprint=fnv64:dependencies",
+            "buildrequest.handoff report=ok",
+            "buildrequest.handoff report fingerprint=fnv64:handoff",
             "buildrequest.target artifact fingerprint=fnv64:toolchain-native",
             "buildrequest.compiler pass target artifact fingerprint=fnv64:pass-native",
             "buildrequest.artifact manifest=ok",
@@ -4966,6 +5008,13 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
         manifest.contains(&format!(
             "bootstrap-dependencies bootstrap-dependency-report.txt {}",
             fnv64_fingerprint(&dependency_report)
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "bootstrap-handoff bootstrap-handoff-report.txt {}",
+            fnv64_fingerprint(&handoff_report)
         )),
         "{manifest}"
     );

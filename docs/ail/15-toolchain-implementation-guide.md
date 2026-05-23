@@ -494,27 +494,33 @@ It writes source package snapshots, `toolchain-agent.checked.ail-core.txt`,
 `compiler-pass.ailbc.json`, native ELF executables for every action in both
 packages, package conformance reports, `agent.ailbc.json`, `agent-trace.txt`,
 `bootstrap-fixed-point-report.txt`, `bootstrap-native-bytecode-report.txt`,
-`bootstrap-host-boundary-report.txt`, `bootstrap-dependency-report.txt`, and
-`manifest.ail-bootstrap.txt`. The bootstrap command runs the AIL-Meta compiler
-pass bytecode over the toolchain agent checked IR, reruns the same pass over
-that output to prove the transformed IR is stable, compiles the toolchain
-bytecode from the first transformed IR, and records the machine-bytecode
-identity of every emitted native artifact. The manifest records
+`bootstrap-host-boundary-report.txt`, `bootstrap-dependency-report.txt`,
+`bootstrap-handoff-report.txt`, and `manifest.ail-bootstrap.txt`. The bootstrap
+command runs the AIL-Meta compiler pass bytecode over the toolchain agent
+checked IR, reruns the same pass over that output to prove the transformed IR
+is stable, compiles the toolchain bytecode from the first transformed IR, and
+records the machine-bytecode identity of every emitted native artifact. It also
+runs representative generated native AIL toolchain actions
+(`CompileApplication` and `CompileNativeTarget`) and the native AIL-Meta
+`InferReadPermissions` compiler pass through the Linux syscall argv ABI, then
+records that handoff evidence in a fingerprinted report. The manifest records
 `no-host-backend-source true` and deterministic fingerprints for source
 packages, checked AIL-Core IR, compiler-pass output IR and trace, fixed-point
 report, native-bytecode report, host-boundary report, dependency report,
-bytecode, conformance reports, and native executable bytes. The AIL-authored
-`VerifyBootstrapManifest` action reads the
+native-handoff report, bytecode, conformance reports, and native executable
+bytes. The AIL-authored `VerifyBootstrapManifest` action reads the
 source-package fingerprint, checked-core fingerprint, compiler-pass trace,
 fixed-point report fingerprint, native-bytecode report fingerprint, conformance
 report fingerprint, host-boundary report fingerprint, dependency report
-fingerprint, bytecode fingerprints, and native target fingerprints before the
-bundle is accepted. The dependency report records `host-language-runtime none`,
-`dynamic-linker none`, `shared-libraries none`, `library-dependencies none`,
-and `linker-invocation none` for standalone Linux syscall ELF artifacts, so the
-bootstrap boundary is reviewable as AIL source, checked IR, stable AIL
-compiler-pass output, AIL bytecode, reports, and machine-level Linux ELF
-artifacts rather than a Rust or host-language backend source tree.
+fingerprint, native-handoff report fingerprint, bytecode fingerprints, and
+native target fingerprints before the bundle is accepted. The dependency report
+records `host-language-runtime none`, `dynamic-linker none`,
+`shared-libraries none`, `library-dependencies none`, and
+`linker-invocation none` for standalone Linux syscall ELF artifacts, while the
+handoff report records `handoff-native-action ... ok trace ...` for emitted native toolchain
+actions. This keeps the bootstrap boundary reviewable as AIL source, checked
+IR, stable AIL compiler-pass output, AIL bytecode, reports, and machine-level
+Linux ELF artifacts rather than a Rust or host-language backend source tree.
 `ail-requirements` runs the first developer-facing agent capture stage by asking
 the package base LLM for an AIL-Requirements artifact, checking profile-specific
 coverage, and sending diagnostics back for one repair pass when the artifact is

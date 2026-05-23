@@ -6957,6 +6957,63 @@ Expected: the bootstrap bundle proves its emitted ELF artifacts have no
 host-language runtime, dynamic linker, shared-library, library, or linker
 dependency before the AIL-authored bootstrap verifier accepts the manifest.
 
+### Task 156: Bootstrap Runs Native Handoff Smoke Tests
+
+**Files:**
+- Modify: `examples/ail_toolchain_agent.ail/spec.ail-spec.md`
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/13-bootstrap-self-hosting.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing bootstrap handoff assertions**
+
+Extend the native `ail-bootstrap` bundle test to require
+`bootstrap-handoff-report.txt`,
+`bootstrap-handoff-report.fingerprint.txt`, a fingerprinted
+`bootstrap-handoff` manifest entry, and AIL-authored
+`VerifyBootstrapManifest` reads for `BuildRequest handoff report` and
+`BuildRequest handoff report fingerprint`. Require the report to show that
+generated native AIL toolchain actions and the AIL-Meta compiler pass ran
+through the Linux syscall argv ABI.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_bootstrap_writes_native_toolchain_bundle -- --nocapture
+```
+
+Expected: failure because the bootstrap bundle does not yet write the handoff
+report.
+
+- [x] **Step 3: Execute representative generated native tools**
+
+Render a deterministic bootstrap handoff report by writing selected generated
+ELF bytes to a temporary executable, running
+`toolchain-agent-CompileApplication.elf`,
+`toolchain-agent-CompileNativeTarget.elf`, and
+`compiler-pass-InferReadPermissions.elf` with deterministic argv state, and
+requiring their expected AIL trace markers before recording
+`handoff-native-action ... ok trace ...` entries. Fingerprint the report,
+include it in `manifest.ail-bootstrap.txt`, write its sidecar fingerprint, and
+pass the report plus fingerprint into the AIL-authored
+`VerifyBootstrapManifest` state.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_bootstrap_writes_native_toolchain_bundle -- --nocapture
+```
+
+Expected: the bootstrap bundle proves representative generated native AIL
+toolchain actions and the native AIL-Meta compiler pass execute successfully
+before the AIL-authored bootstrap verifier accepts the manifest.
+
 ### Task 18: Declared Failure Trace Coverage Diagnostics
 
 **Files:**
