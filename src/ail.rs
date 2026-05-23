@@ -62,6 +62,7 @@ pub struct AilDocument {
     pub compiler_passes: BTreeMap<String, AilCompilerPass>,
     pub system_components: BTreeMap<String, AilSystemComponent>,
     pub functions: BTreeMap<String, AilFunction>,
+    pub external_bindings: BTreeMap<String, AilExternalBinding>,
     pub actions: BTreeMap<String, AilAction>,
     pub failures: BTreeMap<String, AilFailure>,
 }
@@ -162,6 +163,36 @@ pub struct AilFunctionValue {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AilFunctionCall {
     pub text: String,
+    pub target: String,
+    pub provenance: String,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct AilExternalBinding {
+    pub name: String,
+    pub library: String,
+    pub symbol: String,
+    pub binding_kind: String,
+    pub calling_convention: String,
+    pub inputs: BTreeMap<String, AilExternalBindingValue>,
+    pub outputs: BTreeMap<String, AilExternalBindingValue>,
+    pub status_maps: Vec<AilExternalStatusMap>,
+    pub capabilities: Vec<String>,
+    pub traces: Vec<String>,
+    pub provenance: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AilExternalBindingValue {
+    pub name: String,
+    pub type_name: String,
+    pub ownership: String,
+    pub provenance: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AilExternalStatusMap {
+    pub code: String,
     pub target: String,
     pub provenance: String,
 }
@@ -1455,6 +1486,7 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
         compiler_passes: BTreeMap::new(),
         system_components: BTreeMap::new(),
         functions: BTreeMap::new(),
+        external_bindings: BTreeMap::new(),
         actions: BTreeMap::new(),
         failures: BTreeMap::new(),
     };
@@ -1467,6 +1499,9 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
     let mut current_system_section: Option<SystemSection> = None;
     let mut current_function: Option<String> = None;
     let mut current_function_section: Option<FunctionSection> = None;
+    let mut current_c_library: Option<String> = None;
+    let mut current_external_binding: Option<String> = None;
+    let mut current_external_binding_section: Option<ExternalBindingSection> = None;
     let mut current_action: Option<String> = None;
     let mut current_failure: Option<String> = None;
     let mut current_list: Option<ListContext> = None;
@@ -1537,6 +1572,97 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
             current_function_section = None;
             current_action = None;
             current_failure = None;
+            continue;
+        }
+        if let Some(library) = parse_c_library_header(line) {
+            current_c_library = Some(library);
+            current_external_binding = None;
+            current_external_binding_section = None;
+            current_thing = None;
+            current_tool = None;
+            current_tool_section = None;
+            current_compiler_pass = None;
+            current_compiler_pass_section = None;
+            current_system_component = None;
+            current_system_section = None;
+            current_function = None;
+            current_function_section = None;
+            current_action = None;
+            current_failure = None;
+            current_list = None;
+            action_header_waiting_for_when = false;
+            continue;
+        }
+        if let Some((library, symbol)) =
+            parse_external_function_import(line, current_c_library.as_deref())
+        {
+            let name = format!("{library}.{symbol}");
+            document
+                .external_bindings
+                .entry(name.clone())
+                .or_insert_with(|| AilExternalBinding {
+                    name: name.clone(),
+                    library,
+                    symbol,
+                    binding_kind: "CFunction".to_string(),
+                    calling_convention: "cdecl".to_string(),
+                    provenance: format!("external_binding:{name}"),
+                    ..AilExternalBinding::default()
+                });
+            current_external_binding = Some(name);
+            current_external_binding_section = None;
+            current_thing = None;
+            current_tool = None;
+            current_tool_section = None;
+            current_compiler_pass = None;
+            current_compiler_pass_section = None;
+            current_system_component = None;
+            current_system_section = None;
+            current_function = None;
+            current_function_section = None;
+            current_action = None;
+            current_failure = None;
+            current_list = None;
+            action_header_waiting_for_when = false;
+            continue;
+        }
+        if let Some((binding_name, section)) = parse_external_binding_section(&document, line) {
+            current_external_binding = Some(binding_name);
+            current_external_binding_section = Some(section);
+            current_thing = None;
+            current_tool = None;
+            current_tool_section = None;
+            current_compiler_pass = None;
+            current_compiler_pass_section = None;
+            current_system_component = None;
+            current_system_section = None;
+            current_function = None;
+            current_function_section = None;
+            current_action = None;
+            current_failure = None;
+            current_list = None;
+            action_header_waiting_for_when = false;
+            continue;
+        }
+        if let Some((binding_name, trace)) = parse_external_trace_event_line(&document, line) {
+            if let Some(binding) = document.external_bindings.get_mut(&binding_name) {
+                binding.traces.push(trace);
+            }
+            current_external_binding = Some(binding_name);
+            current_external_binding_section = None;
+            current_thing = None;
+            current_tool = None;
+            current_tool_section = None;
+            current_compiler_pass = None;
+            current_compiler_pass_section = None;
+            current_system_component = None;
+            current_system_section = None;
+            current_function = None;
+            current_function_section = None;
+            current_action = None;
+            current_failure = None;
+            current_list = None;
+            action_header_waiting_for_when = false;
             continue;
         }
         if let Some(thing_name) = parse_thing_header(line) {
@@ -1886,6 +2012,18 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
                 parse_function_bullet(&mut document, function_name, section, bullet, line_number)?;
                 continue;
             }
+            if let (Some(binding_name), Some(section)) =
+                (&current_external_binding, current_external_binding_section)
+            {
+                parse_external_binding_bullet(
+                    &mut document,
+                    binding_name,
+                    section,
+                    bullet,
+                    line_number,
+                )?;
+                continue;
+            }
             if let Some(action_name) = &current_action {
                 parse_action_bullet(&mut document, action_name, bullet);
                 continue;
@@ -1913,9 +2051,10 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
         && document.compiler_passes.is_empty()
         && document.system_components.is_empty()
         && document.functions.is_empty()
+        && document.external_bindings.is_empty()
     {
         return Err(
-            "AIL-Spec missing application, tool, compiler pass, system component, or function declaration"
+            "AIL-Spec missing application, tool, compiler pass, system component, function, or external binding declaration"
                 .to_string(),
         );
     }
@@ -2063,6 +2202,83 @@ pub fn elaborate_ail_core(package: &AilPackage, document: &AilDocument) -> AilCo
                 &mut graph,
                 &trace_node,
                 format!("function:{}.trace:{trace}", function.name),
+            );
+        }
+    }
+
+    for binding in document.external_bindings.values() {
+        let binding_node = graph.add_node(
+            "ExternalBinding",
+            &binding.name,
+            None,
+            attr(&[
+                ("binding_kind", &binding.binding_kind),
+                ("library", &binding.library),
+                ("symbol", &binding.symbol),
+            ]),
+        );
+        attach_provenance(&mut graph, &binding_node, &binding.provenance);
+        let layout_node = graph.add_node(
+            "Layout",
+            format!("{}.signature", binding.name),
+            Some(binding.calling_convention.clone()),
+            BTreeMap::new(),
+        );
+        graph.add_edge("uses_layout", &binding_node, &layout_node, BTreeMap::new());
+        attach_provenance(
+            &mut graph,
+            &layout_node,
+            format!("external_binding:{}.layout", binding.name),
+        );
+        for input in binding.inputs.values() {
+            let input_node = graph.add_node(
+                "Input",
+                format!("{}.{}", binding.name, input.name),
+                Some(input.type_name.clone()),
+                external_binding_value_attributes(input),
+            );
+            graph.add_edge("has_input", &binding_node, &input_node, BTreeMap::new());
+            attach_provenance(&mut graph, &input_node, &input.provenance);
+        }
+        for output in binding.outputs.values() {
+            let output_node = graph.add_node(
+                "Output",
+                format!("{}.{}", binding.name, output.name),
+                Some(output.type_name.clone()),
+                external_binding_value_attributes(output),
+            );
+            graph.add_edge("has_output", &binding_node, &output_node, BTreeMap::new());
+            attach_provenance(&mut graph, &output_node, &output.provenance);
+        }
+        for status_map in &binding.status_maps {
+            let Some(failure_name) = external_status_map_failure(&status_map.target) else {
+                continue;
+            };
+            let failure_node = graph.add_node("Failure", failure_name, None, BTreeMap::new());
+            graph.add_edge(
+                "may_fail_with",
+                &binding_node,
+                &failure_node,
+                attr(&[("code", &status_map.code)]),
+            );
+            attach_provenance(&mut graph, &failure_node, &status_map.provenance);
+        }
+        for capability in &binding.capabilities {
+            let capability_node = graph.add_node("Capability", capability, None, BTreeMap::new());
+            graph.add_edge("requires", &binding_node, &capability_node, BTreeMap::new());
+            attach_provenance(
+                &mut graph,
+                &capability_node,
+                format!("external_binding:{}.capability:{capability}", binding.name),
+            );
+        }
+        for trace in &binding.traces {
+            let trace_node = graph.add_node("Trace", trace, None, BTreeMap::new());
+            graph.add_edge("records_trace", &binding_node, &trace_node, BTreeMap::new());
+            attach_provenance(
+                &mut graph,
+                &trace_node,
+                format!("external_binding:{}.trace:{trace}", binding.name),
             );
         }
     }
@@ -4243,6 +4459,62 @@ pub fn render_ail_spec(document: &AilDocument) -> String {
                     "- the function records a trace event named {trace}"
                 ));
             }
+            lines.push(String::new());
+        }
+    }
+    for binding in document.external_bindings.values() {
+        lines.push(format!("C library: {}.", binding.library));
+        lines.push(String::new());
+        lines.push(format!("The library imports function {}.", binding.symbol));
+        lines.push(String::new());
+        if !binding.inputs.is_empty() {
+            lines.push(format!("{} needs:", binding.symbol));
+            lines.push(String::new());
+            for input in binding.inputs.values() {
+                lines.push(format!(
+                    "- {}: {}",
+                    input.name,
+                    render_external_binding_value_type(input)
+                ));
+            }
+            lines.push(String::new());
+        }
+        if !binding.outputs.is_empty() {
+            lines.push(format!("{} produces:", binding.symbol));
+            lines.push(String::new());
+            for output in binding.outputs.values() {
+                lines.push(format!(
+                    "- {}: {}",
+                    output.name,
+                    render_external_binding_value_type(output)
+                ));
+            }
+            lines.push(String::new());
+        }
+        if !binding.status_maps.is_empty() {
+            lines.push(format!("{} maps errno or status codes:", binding.symbol));
+            lines.push(String::new());
+            for status_map in &binding.status_maps {
+                lines.push(format!(
+                    "- {} maps to {}",
+                    status_map.code, status_map.target
+                ));
+            }
+            lines.push(String::new());
+        }
+        if !binding.capabilities.is_empty() {
+            lines.push(format!("{} requires capability:", binding.symbol));
+            lines.push(String::new());
+            for capability in &binding.capabilities {
+                lines.push(format!("- {capability}"));
+            }
+            lines.push(String::new());
+        }
+        for trace in &binding.traces {
+            lines.push(format!(
+                "{} records trace event named {trace}",
+                binding.symbol
+            ));
             lines.push(String::new());
         }
     }
@@ -6545,6 +6817,7 @@ pub fn ail_document_from_core(core: &AilCore) -> AilDocument {
         compiler_passes: BTreeMap::new(),
         system_components: BTreeMap::new(),
         functions: BTreeMap::new(),
+        external_bindings: BTreeMap::new(),
         actions: BTreeMap::new(),
         failures: BTreeMap::new(),
     };
@@ -6682,6 +6955,104 @@ pub fn ail_document_from_core(core: &AilCore) -> AilDocument {
             .map(|node| node.name)
             .collect();
         document.functions.insert(function.name.clone(), function);
+    }
+
+    for binding_node in core
+        .graph
+        .nodes
+        .iter()
+        .filter(|node| node.kind == "ExternalBinding")
+    {
+        let mut binding = AilExternalBinding {
+            name: binding_node.name.clone(),
+            library: binding_node
+                .attributes
+                .get("library")
+                .cloned()
+                .unwrap_or_default(),
+            symbol: binding_node
+                .attributes
+                .get("symbol")
+                .cloned()
+                .unwrap_or_else(|| binding_node.name.clone()),
+            binding_kind: binding_node
+                .attributes
+                .get("binding_kind")
+                .cloned()
+                .unwrap_or_else(|| "CFunction".to_string()),
+            calling_convention: "cdecl".to_string(),
+            provenance: node_provenance(core, &binding_node.id).unwrap_or_default(),
+            ..AilExternalBinding::default()
+        };
+        if let Some(layout_node) = outgoing_nodes(core, &node_by_id, binding_node, "uses_layout")
+            .into_iter()
+            .find(|node| node.kind == "Layout")
+            && let Some(type_name) = layout_node.type_name
+        {
+            binding.calling_convention = type_name;
+        }
+        for input_node in outgoing_nodes(core, &node_by_id, binding_node, "has_input")
+            .into_iter()
+            .filter(|node| node.kind == "Input")
+        {
+            let input_name = local_core_name(&input_node.name, &binding.name);
+            binding.inputs.insert(
+                input_name.clone(),
+                AilExternalBindingValue {
+                    name: input_name,
+                    type_name: input_node.type_name.clone().unwrap_or_default(),
+                    ownership: input_node
+                        .attributes
+                        .get("ownership")
+                        .cloned()
+                        .unwrap_or_default(),
+                    provenance: node_provenance(core, &input_node.id).unwrap_or_default(),
+                },
+            );
+        }
+        for output_node in outgoing_nodes(core, &node_by_id, binding_node, "has_output")
+            .into_iter()
+            .filter(|node| node.kind == "Output")
+        {
+            let output_name = local_core_name(&output_node.name, &binding.name);
+            binding.outputs.insert(
+                output_name.clone(),
+                AilExternalBindingValue {
+                    name: output_name,
+                    type_name: output_node.type_name.clone().unwrap_or_default(),
+                    ownership: output_node
+                        .attributes
+                        .get("ownership")
+                        .cloned()
+                        .unwrap_or_default(),
+                    provenance: node_provenance(core, &output_node.id).unwrap_or_default(),
+                },
+            );
+        }
+        binding.status_maps = outgoing_edges(core, binding_node, "may_fail_with")
+            .into_iter()
+            .filter_map(|edge| {
+                let failure = node_by_id.get(&edge.target)?;
+                (failure.kind == "Failure").then(|| AilExternalStatusMap {
+                    code: edge.attributes.get("code").cloned().unwrap_or_default(),
+                    target: format!("Failure.{}", failure.name),
+                    provenance: node_provenance(core, &failure.id).unwrap_or_default(),
+                })
+            })
+            .collect();
+        binding.capabilities = outgoing_nodes(core, &node_by_id, binding_node, "requires")
+            .into_iter()
+            .filter(|node| node.kind == "Capability")
+            .map(|node| node.name)
+            .collect();
+        binding.traces = outgoing_nodes(core, &node_by_id, binding_node, "records_trace")
+            .into_iter()
+            .filter(|node| node.kind == "Trace")
+            .map(|node| node.name)
+            .collect();
+        document
+            .external_bindings
+            .insert(binding.name.clone(), binding);
     }
 
     for failure_node in core
@@ -7172,6 +7543,15 @@ fn outgoing_nodes(
         .iter()
         .filter(|edge| edge.kind == edge_kind && edge.source == source.id)
         .filter_map(|edge| node_by_id.get(&edge.target).cloned())
+        .collect()
+}
+
+fn outgoing_edges(core: &AilCore, source: &Node, edge_kind: &str) -> Vec<Edge> {
+    core.graph
+        .edges
+        .iter()
+        .filter(|edge| edge.kind == edge_kind && edge.source == source.id)
+        .cloned()
         .collect()
 }
 
@@ -9904,6 +10284,7 @@ fn namespace_ail_document(document: &AilDocument, alias: &str) -> AilDocument {
         compiler_passes: BTreeMap::new(),
         system_components: BTreeMap::new(),
         functions: BTreeMap::new(),
+        external_bindings: BTreeMap::new(),
         actions: BTreeMap::new(),
         failures: BTreeMap::new(),
     };
@@ -10012,6 +10393,40 @@ fn namespace_ail_document(document: &AilDocument, alias: &str) -> AilDocument {
                     .map(|trace| qualify_name(alias, trace))
                     .collect(),
                 provenance: format!("function:{function_name}"),
+            },
+        );
+    }
+
+    for binding in document.external_bindings.values() {
+        let binding_name = qualify_name(alias, &binding.name);
+        namespaced.external_bindings.insert(
+            binding_name.clone(),
+            AilExternalBinding {
+                name: binding_name.clone(),
+                library: binding.library.clone(),
+                symbol: binding.symbol.clone(),
+                binding_kind: binding.binding_kind.clone(),
+                calling_convention: binding.calling_convention.clone(),
+                inputs: namespace_external_binding_values(
+                    alias,
+                    &binding_name,
+                    &binding.inputs,
+                    &thing_names,
+                ),
+                outputs: namespace_external_binding_values(
+                    alias,
+                    &binding_name,
+                    &binding.outputs,
+                    &thing_names,
+                ),
+                status_maps: binding.status_maps.clone(),
+                capabilities: binding.capabilities.clone(),
+                traces: binding
+                    .traces
+                    .iter()
+                    .map(|trace| qualify_name(alias, trace))
+                    .collect(),
+                provenance: format!("external_binding:{binding_name}"),
             },
         );
     }
@@ -10464,6 +10879,28 @@ fn namespace_function_values(
         .collect()
 }
 
+fn namespace_external_binding_values(
+    alias: &str,
+    binding_name: &str,
+    values: &BTreeMap<String, AilExternalBindingValue>,
+    thing_names: &[String],
+) -> BTreeMap<String, AilExternalBindingValue> {
+    values
+        .values()
+        .map(|value| {
+            (
+                value.name.clone(),
+                AilExternalBindingValue {
+                    name: value.name.clone(),
+                    type_name: qualify_type_name(&value.type_name, alias, thing_names),
+                    ownership: value.ownership.clone(),
+                    provenance: format!("external_binding:{binding_name}.value:{}", value.name),
+                },
+            )
+        })
+        .collect()
+}
+
 fn namespace_tool_slots(
     alias: &str,
     tool_name: &str,
@@ -10507,7 +10944,7 @@ fn qualify_type_name(type_name: &str, alias: &str, thing_names: &[String]) -> St
     if thing_names.iter().any(|thing| thing == &type_name) {
         return qualify_name(alias, &type_name);
     }
-    for wrapper in ["Secret", "List", "Option"] {
+    for wrapper in ["Secret", "List", "Option", "Pointer", "Nullable", "NonNull"] {
         if let Some(inner) = generic_inner(&type_name, wrapper) {
             return format!(
                 "{wrapper}<{}>",
@@ -11652,7 +12089,7 @@ fn typed_node_diagnostic_kind(kind: &str) -> &'static str {
 }
 
 fn suggested_declared_type_name(type_name: &str) -> String {
-    for wrapper in ["Option", "List", "Secret"] {
+    for wrapper in ["Option", "List", "Secret", "Pointer", "Nullable", "NonNull"] {
         if let Some(inner) = generic_inner(type_name, wrapper) {
             return suggested_declared_type_name(inner);
         }
@@ -11672,6 +12109,9 @@ fn check_action_failure_declarations(core: &AilCore) -> Vec<AilDiagnostic> {
         let Some(action) = node_by_id.get(&edge.source) else {
             continue;
         };
+        if action.kind == "ExternalBinding" {
+            continue;
+        }
         let Some(failure) = node_by_id.get(&edge.target) else {
             continue;
         };
@@ -11841,7 +12281,12 @@ fn check_trace_attachment(core: &AilCore) -> Vec<AilDiagnostic> {
                     && node_by_id.get(&edge.source).is_some_and(|source| {
                         matches!(
                             source.kind.as_str(),
-                            "Action" | "Failure" | "Function" | "Tool" | "SystemComponent"
+                            "Action"
+                                | "ExternalBinding"
+                                | "Failure"
+                                | "Function"
+                                | "Tool"
+                                | "SystemComponent"
                         )
                     })
             })
@@ -13552,6 +13997,13 @@ fn is_known_ail_type(type_name: &str, declared_types: &BTreeSet<&str>) -> bool {
             | "Duration"
             | "Bool"
             | "Int"
+            | "UInt8"
+            | "UInt16"
+            | "UInt32"
+            | "UInt64"
+            | "CInt"
+            | "CChar"
+            | "Void"
             | "Decimal"
             | "Money"
             | "Buffer"
@@ -13571,7 +14023,7 @@ fn is_known_ail_type(type_name: &str, declared_types: &BTreeSet<&str>) -> bool {
             .map(str::trim)
             .all(|value| !value.is_empty());
     }
-    for wrapper in ["Option", "List", "Secret"] {
+    for wrapper in ["Option", "List", "Secret", "Pointer", "Nullable", "NonNull"] {
         if let Some(inner) = generic_inner(type_name, wrapper) {
             return is_known_ail_type(inner, declared_types);
         }
@@ -13629,6 +14081,69 @@ fn parse_function_body_header(line: &str) -> Option<String> {
     let name = line.strip_prefix("When ")?;
     let name = name.strip_suffix(" runs:")?;
     Some(name.trim().to_string())
+}
+
+fn parse_c_library_header(line: &str) -> Option<String> {
+    let library = line.strip_prefix("C library: ")?;
+    Some(library.trim().trim_end_matches('.').to_string())
+}
+
+fn parse_external_function_import(
+    line: &str,
+    current_library: Option<&str>,
+) -> Option<(String, String)> {
+    if let Some(symbol) = line
+        .strip_prefix("The library imports function ")
+        .and_then(|symbol| symbol.strip_suffix('.'))
+    {
+        let library = current_library?;
+        return Some((library.to_string(), symbol.trim().to_string()));
+    }
+    let rest = line.strip_prefix("Import function ")?;
+    let rest = rest.strip_suffix('.')?;
+    let (symbol, library) = rest.split_once(" from ")?;
+    Some((library.trim().to_string(), symbol.trim().to_string()))
+}
+
+fn parse_external_binding_section(
+    document: &AilDocument,
+    line: &str,
+) -> Option<(String, ExternalBindingSection)> {
+    let section_specs = [
+        (" needs:", ExternalBindingSection::Inputs),
+        (" produces:", ExternalBindingSection::Outputs),
+        (
+            " maps errno or status codes:",
+            ExternalBindingSection::StatusMaps,
+        ),
+        (
+            " requires capability:",
+            ExternalBindingSection::Capabilities,
+        ),
+        (" records trace:", ExternalBindingSection::Traces),
+    ];
+    for (suffix, section) in section_specs {
+        let Some(subject) = line.strip_suffix(suffix) else {
+            continue;
+        };
+        let binding_name = external_binding_name_for_subject(document, subject.trim())?;
+        return Some((binding_name, section));
+    }
+    None
+}
+
+fn parse_external_trace_event_line(document: &AilDocument, line: &str) -> Option<(String, String)> {
+    let (subject, trace) = line.split_once(" records trace event named ")?;
+    let binding_name = external_binding_name_for_subject(document, subject.trim())?;
+    Some((binding_name, trim_sentence(trace)))
+}
+
+fn external_binding_name_for_subject(document: &AilDocument, subject: &str) -> Option<String> {
+    document
+        .external_bindings
+        .values()
+        .find(|binding| binding.symbol == subject || binding.name == subject)
+        .map(|binding| binding.name.clone())
 }
 
 fn parse_system_component_header(line: &str) -> Option<String> {
@@ -13899,6 +14414,99 @@ fn parse_function_body_bullet(function: &mut AilFunction, bullet: &str) {
     } else if let Some(text) = bullet.strip_prefix("the function records a trace event named ") {
         function.traces.push(trim_sentence(text));
     }
+}
+
+fn parse_external_binding_bullet(
+    document: &mut AilDocument,
+    binding_name: &str,
+    section: ExternalBindingSection,
+    bullet: &str,
+    line_number: usize,
+) -> Result<(), String> {
+    let binding = document
+        .external_bindings
+        .get_mut(binding_name)
+        .ok_or_else(|| format!("line {line_number}: unknown external binding {binding_name}"))?;
+    match section {
+        ExternalBindingSection::Inputs => {
+            let value = parse_external_binding_value(binding_name, "input", bullet, line_number)?;
+            binding.inputs.insert(value.name.clone(), value);
+        }
+        ExternalBindingSection::Outputs => {
+            let value = parse_external_binding_value(binding_name, "output", bullet, line_number)?;
+            binding.outputs.insert(value.name.clone(), value);
+        }
+        ExternalBindingSection::StatusMaps => {
+            let Some((code, target)) = bullet.split_once(" maps to ") else {
+                return Err(format!(
+                    "line {line_number}: expected '<code> maps to <target>'"
+                ));
+            };
+            let code = code.trim().to_string();
+            binding.status_maps.push(AilExternalStatusMap {
+                provenance: format!("external_binding:{binding_name}.status:{code}"),
+                code,
+                target: trim_sentence(target),
+            });
+        }
+        ExternalBindingSection::Capabilities => binding.capabilities.push(trim_sentence(bullet)),
+        ExternalBindingSection::Traces => binding.traces.push(trim_sentence(bullet)),
+    }
+    Ok(())
+}
+
+fn parse_external_binding_value(
+    binding_name: &str,
+    role: &str,
+    bullet: &str,
+    line_number: usize,
+) -> Result<AilExternalBindingValue, String> {
+    let (name, type_and_ownership) = parse_typed_bullet(bullet, line_number)?;
+    let (type_name, ownership) = split_external_type_and_ownership(&type_and_ownership);
+    Ok(AilExternalBindingValue {
+        name: name.clone(),
+        type_name: normalize_type_name(&type_name),
+        ownership,
+        provenance: format!("external_binding:{binding_name}.{role}:{name}"),
+    })
+}
+
+fn split_external_type_and_ownership(type_and_ownership: &str) -> (String, String) {
+    let trimmed = type_and_ownership.trim();
+    if let Some(end) = trimmed.rfind('>')
+        && trimmed[..=end].contains('<')
+    {
+        let type_name = trimmed[..=end].trim().to_string();
+        let ownership = trimmed[end + 1..].trim().to_string();
+        return (type_name, ownership);
+    }
+    if let Some((type_name, ownership)) = trimmed.split_once(' ') {
+        (type_name.trim().to_string(), ownership.trim().to_string())
+    } else {
+        (trimmed.to_string(), String::new())
+    }
+}
+
+fn render_external_binding_value_type(value: &AilExternalBindingValue) -> String {
+    if value.ownership.is_empty() {
+        value.type_name.clone()
+    } else {
+        format!("{} {}", value.type_name, value.ownership)
+    }
+}
+
+fn external_binding_value_attributes(value: &AilExternalBindingValue) -> BTreeMap<String, String> {
+    if value.ownership.is_empty() {
+        BTreeMap::new()
+    } else {
+        attr(&[("ownership", &value.ownership)])
+    }
+}
+
+fn external_status_map_failure(target: &str) -> Option<&str> {
+    target
+        .strip_prefix("Failure.")
+        .or_else(|| (target != "success").then_some(target))
 }
 
 fn function_call_target(text: &str) -> String {
@@ -14294,6 +14902,15 @@ fn normalize_type_name(type_name: &str) -> String {
     if let Some(inner) = type_name.strip_prefix("Option ") {
         return format!("Option<{}>", normalize_type_name(inner));
     }
+    if let Some(inner) = type_name.strip_prefix("Pointer ") {
+        return format!("Pointer<{}>", normalize_type_name(inner));
+    }
+    if let Some(inner) = type_name.strip_prefix("Nullable ") {
+        return format!("Nullable<{}>", normalize_type_name(inner));
+    }
+    if let Some(inner) = type_name.strip_prefix("NonNull ") {
+        return format!("NonNull<{}>", normalize_type_name(inner));
+    }
     if let Some(values) = type_name.strip_prefix("Enum:") {
         let values = values
             .split(',')
@@ -14303,7 +14920,7 @@ fn normalize_type_name(type_name: &str) -> String {
             .join(", ");
         return format!("State<{values}>");
     }
-    for wrapper in ["Secret", "List", "Option"] {
+    for wrapper in ["Secret", "List", "Option", "Pointer", "Nullable", "NonNull"] {
         if let Some(inner) = generic_inner(type_name, wrapper) {
             return format!("{wrapper}<{}>", normalize_type_name(inner));
         }
@@ -14591,6 +15208,15 @@ enum FunctionSection {
     Inputs,
     Outputs,
     Body,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ExternalBindingSection {
+    Inputs,
+    Outputs,
+    StatusMaps,
+    Capabilities,
+    Traces,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -1011,6 +1011,9 @@ rules are preserved.
 17. Lower parsed `Function:` declarations into runnable structural
     AIL-Bytecode entries and execute their function input, output, branch,
     call, return, and trace records with the bootstrap VM.
+18. Parse C interop `ExternalBinding` declarations for imported functions into
+    checked AIL-Core, including pointer ownership annotations, status-code
+    failure maps, required capabilities, and foreign-call traces.
 
 ## Out Of Scope For The First Slice
 

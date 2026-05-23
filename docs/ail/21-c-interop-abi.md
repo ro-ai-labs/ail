@@ -44,15 +44,30 @@ compress2 records trace event named ForeignCallCompress2
 AIL-Core nodes:
 
 ```text
-node ExternalBinding zlib.compress2 binding_kind=CFunction
+node ExternalBinding zlib.compress2 [binding_kind=CFunction,library=zlib,symbol=compress2]
 node Layout zlib.compress2.signature : cdecl
+node Input zlib.compress2.dest : Pointer<UInt8> [ownership=borrowed mutable]
+node Input zlib.compress2.dest_len : Pointer<UInt64> [ownership=borrowed mutable]
+node Input zlib.compress2.source : Pointer<UInt8> [ownership=borrowed]
+node Input zlib.compress2.source_len : UInt64
+node Input zlib.compress2.level : Int
+node Output zlib.compress2.status : CInt
 node Capability call zlib compress2
 node Failure OutOfMemory
 node Failure OutputBufferTooSmall
-edge zlib.compress2 requires Capability:call zlib compress2
-edge zlib.compress2 may_fail_with Failure:OutOfMemory
-edge zlib.compress2 records_trace Trace:ForeignCallCompress2
+edge uses_layout ExternalBinding:zlib.compress2 -> Layout:zlib.compress2.signature
+edge has_input ExternalBinding:zlib.compress2 -> Input:zlib.compress2.dest
+edge has_output ExternalBinding:zlib.compress2 -> Output:zlib.compress2.status
+edge requires ExternalBinding:zlib.compress2 -> Capability:call zlib compress2
+edge may_fail_with ExternalBinding:zlib.compress2 -> Failure:OutOfMemory [code=Z_MEM_ERROR]
+edge records_trace ExternalBinding:zlib.compress2 -> Trace:ForeignCallCompress2
 ```
+
+Current implementation status: the bootstrap parser accepts imported C function
+declarations, typed inputs and outputs, status-code failure maps, required
+capabilities, and trace events, then lowers them into checked AIL-Core
+`ExternalBinding` graphs. The VM and native backends do not yet call or link
+foreign symbols; executable FFI calls remain a later backend step.
 
 ## Supported C Surface
 

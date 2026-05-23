@@ -950,6 +950,81 @@ When factorial runs:
 }
 
 #[test]
+fn ail_c_interop_import_parses_into_external_binding_core() {
+    let mut package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
+    package.metadata.profile = "C interop".to_string();
+    let spec = r#"C library: zlib.
+
+The library imports function compress2.
+
+compress2 needs:
+
+- dest: Pointer<UInt8> borrowed mutable
+- dest_len: Pointer<UInt64> borrowed mutable
+- source: Pointer<UInt8> borrowed
+- source_len: UInt64
+- level: Int
+
+compress2 produces:
+
+- status: CInt
+
+compress2 maps errno or status codes:
+
+- Z_OK maps to success
+- Z_MEM_ERROR maps to Failure.OutOfMemory
+- Z_BUF_ERROR maps to Failure.OutputBufferTooSmall
+
+compress2 requires capability:
+
+- call zlib compress2
+
+compress2 records trace event named ForeignCallCompress2
+"#;
+
+    let document = parse_ail_spec_text(spec).unwrap();
+    let core = elaborate_ail_core(&package, &document);
+    assert_eq!(check_ail_core(&core), Vec::<String>::new());
+    let rendered_core = render_ail_core(&core);
+
+    assert!(
+        rendered_core.contains(
+            "node ExternalBinding zlib.compress2 [binding_kind=CFunction,library=zlib,symbol=compress2]"
+        ),
+        "{rendered_core}"
+    );
+    assert!(rendered_core.contains("node Layout zlib.compress2.signature : cdecl"));
+    assert!(rendered_core.contains("node Input zlib.compress2.dest : Pointer<UInt8>"));
+    assert!(rendered_core.contains("node Input zlib.compress2.dest_len : Pointer<UInt64>"));
+    assert!(rendered_core.contains("node Output zlib.compress2.status : CInt"));
+    assert!(rendered_core.contains("node Capability call zlib compress2"));
+    assert!(rendered_core.contains("node Failure OutOfMemory"));
+    assert!(rendered_core.contains(
+        "edge requires ExternalBinding:zlib.compress2 -> Capability:call zlib compress2"
+    ));
+    assert!(
+        rendered_core
+            .contains("edge may_fail_with ExternalBinding:zlib.compress2 -> Failure:OutOfMemory")
+    );
+    assert!(rendered_core.contains(
+        "edge records_trace ExternalBinding:zlib.compress2 -> Trace:ForeignCallCompress2"
+    ));
+
+    let rendered_spec = render_ail_spec(&document);
+    assert!(rendered_spec.contains("C library: zlib."));
+    assert!(rendered_spec.contains("The library imports function compress2."));
+    assert!(rendered_spec.contains("- dest: Pointer<UInt8> borrowed mutable"));
+    assert!(rendered_spec.contains("- Z_OK maps to success"));
+    assert!(rendered_spec.contains("- call zlib compress2"));
+    assert!(rendered_spec.contains("compress2 records trace event named ForeignCallCompress2"));
+    let reparsed = parse_ail_spec_text(&rendered_spec).unwrap();
+    assert_eq!(
+        render_ail_core(&elaborate_ail_core(&package, &reparsed)),
+        rendered_core
+    );
+}
+
+#[test]
 fn ail_system_profile_accepts_mutable_borrowed_resources() {
     let package = load_ail_package_dir(fixture("network_driver.ail")).unwrap();
     let spec = fs::read_to_string(format!(
