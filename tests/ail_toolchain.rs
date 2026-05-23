@@ -1879,6 +1879,16 @@ capability-grants:
         reparsed.package.capability_grants,
         package.metadata.capability_grants
     );
+    let bytecode = compile_ail_core_bytecode(&reparsed).unwrap();
+    let rendered_bytecode = render_ail_bytecode(&bytecode);
+    assert!(
+        rendered_bytecode.contains(
+            r#""capability_grants":[{"package":"payments.stripe","capability":"call external payment provider","effects":["network","money"],"approvals":["manager approval over USD 500"]}]"#
+        ),
+        "{rendered_bytecode}"
+    );
+    let parsed_bytecode = parse_ail_bytecode(&rendered_bytecode).unwrap();
+    assert_eq!(render_ail_bytecode(&parsed_bytecode), rendered_bytecode);
 
     fs::remove_dir_all(root).unwrap();
 }

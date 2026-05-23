@@ -275,6 +275,7 @@ pub struct AilBytecodeProgram {
     pub package_name: String,
     pub package_version: String,
     pub profile: String,
+    pub capability_grants: Vec<AilCapabilityGrant>,
     pub target_support: BTreeMap<String, String>,
     pub actions: BTreeMap<String, AilBytecodeAction>,
     pub failures: BTreeMap<String, AilBytecodeFailure>,
@@ -5991,6 +5992,7 @@ fn compile_ail_document_bytecode(
         package_name: package.metadata.name.clone(),
         package_version: package.metadata.version.clone(),
         profile: package.metadata.profile.clone(),
+        capability_grants: package.metadata.capability_grants.clone(),
         target_support: package.metadata.target_support.clone(),
         actions,
         failures,
@@ -7202,10 +7204,11 @@ fn compile_ail_action_bytecode(document: &AilDocument, action: &AilAction) -> Ai
 
 pub fn render_ail_bytecode(program: &AilBytecodeProgram) -> String {
     format!(
-        "{{\"kind\":\"AIL-Bytecode\",\"package\":{},\"version\":{},\"profile\":{},\"target_support\":{},\"actions\":[{}],\"failures\":[{}]}}",
+        "{{\"kind\":\"AIL-Bytecode\",\"package\":{},\"version\":{},\"profile\":{},\"capability_grants\":{},\"target_support\":{},\"actions\":[{}],\"failures\":[{}]}}",
         json_string(&program.package_name),
         json_string(&program.package_version),
         json_string(&program.profile),
+        render_ail_bytecode_capability_grants(&program.capability_grants),
         render_json_string_map(&program.target_support),
         program
             .actions
@@ -7217,6 +7220,25 @@ pub fn render_ail_bytecode(program: &AilBytecodeProgram) -> String {
             .failures
             .values()
             .map(render_ail_bytecode_failure)
+            .collect::<Vec<_>>()
+            .join(",")
+    )
+}
+
+fn render_ail_bytecode_capability_grants(grants: &[AilCapabilityGrant]) -> String {
+    format!(
+        "[{}]",
+        grants
+            .iter()
+            .map(|grant| {
+                format!(
+                    "{{\"package\":{},\"capability\":{},\"effects\":{},\"approvals\":{}}}",
+                    json_string(&grant.package),
+                    json_string(&grant.capability),
+                    render_json_array(grant.effects.clone()),
+                    render_json_array(grant.approvals.clone())
+                )
+            })
             .collect::<Vec<_>>()
             .join(",")
     )
@@ -7322,10 +7344,51 @@ pub fn parse_ail_bytecode(text: &str) -> Result<AilBytecodeProgram, String> {
         package_name: required_json_string(root, "package")?.to_string(),
         package_version: required_json_string(root, "version")?.to_string(),
         profile: required_json_string(root, "profile")?.to_string(),
+        capability_grants: optional_ail_bytecode_capability_grants(root)?,
         target_support: optional_json_string_map(root, "target_support", "AIL-Bytecode")?,
         actions,
         failures,
     })
+}
+
+fn optional_ail_bytecode_capability_grants(
+    root: &BTreeMap<String, AilJsonValue>,
+) -> Result<Vec<AilCapabilityGrant>, String> {
+    let Some(value) = root.get("capability_grants") else {
+        return Ok(Vec::new());
+    };
+    let grants = value
+        .as_array()
+        .ok_or_else(|| "AIL-Bytecode field 'capability_grants' must be an array".to_string())?;
+    grants
+        .iter()
+        .map(|grant_value| {
+            let grant = grant_value
+                .as_object()
+                .ok_or_else(|| "AIL-Bytecode capability grant must be an object".to_string())?;
+            Ok(AilCapabilityGrant {
+                package: required_json_string(grant, "package")?.to_string(),
+                capability: required_json_string(grant, "capability")?.to_string(),
+                effects: required_ail_bytecode_string_array(grant, "effects")?,
+                approvals: required_ail_bytecode_string_array(grant, "approvals")?,
+            })
+        })
+        .collect()
+}
+
+fn required_ail_bytecode_string_array(
+    object: &BTreeMap<String, AilJsonValue>,
+    key: &str,
+) -> Result<Vec<String>, String> {
+    required_json_array(object, key)?
+        .iter()
+        .map(|value| {
+            value
+                .as_string()
+                .map(str::to_string)
+                .ok_or_else(|| format!("AIL-Bytecode field '{key}' entries must be strings"))
+        })
+        .collect()
 }
 
 pub fn verify_ail_bytecode(program: &AilBytecodeProgram) -> Vec<String> {

@@ -151,8 +151,10 @@ safety-level labels must be `standard`, `low`, `medium`, `high`, or `expert`.
 Deeper safety policy enforcement remains checker work.
 When present, `capability-grants:` entries are parsed into package metadata and
 rendered into checked AIL-Core as deterministic grant records with package,
-capability, effects, and approvals. Enforcement that imported behavior stays
-inside granted effects remains checker work.
+capability, effects, and approvals. AIL-Bytecode lowering carries the same
+grant records so saved bytecode artifacts preserve the authorization boundary.
+Enforcement that imported behavior stays inside granted effects remains checker
+work.
 
 Conformance checks must validate the entry spec, every accepted fixture, and
 every rejected fixture. Accepted fixtures pass only when they produce no checker

@@ -177,5 +177,6 @@ catalog and checker rules.
 Package metadata is part of the semantic boundary. Package name, version,
 profile, imports, feature flags, prompt-pack version, capability grants,
 target support, and conformance level affect validation and hashing. Lowered
-AIL-Bytecode carries target support forward so saved bytecode keeps backend
-portability constraints at the artifact boundary.
+AIL-Bytecode carries capability grants and target support forward so saved
+bytecode keeps authorization and backend portability constraints at the
+artifact boundary.
