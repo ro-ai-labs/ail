@@ -626,10 +626,11 @@ instead of internal `ail-build` details.
 artifact and a stage-0 `ail-core.patch.v0` JSON patch, applies supported
 `add_node`, `add_edge`, and `replace_node_attributes` graph operations, runs
 the AIL-Core checker on the patched graph, and prints the patched Core
-artifact. Attribute replacement is key-merge based, can update node `type`, and
-rewires changed stable node ids before checking. This is the first concrete
-AIL-Flow / agent-edit path that edits Core directly before rendering back to
-AIL-Spec.
+artifact. The patch `base_hash` must match the canonical checked Core hash
+before any operation is applied. Attribute replacement is key-merge based, can
+update node `type`, and rewires changed stable node ids before checking. This
+is the first concrete AIL-Flow / agent-edit path that edits Core directly
+before rendering back to AIL-Spec.
 `ail-pass` compiles an AIL-Meta compiler pass package into verified
 AIL-Bytecode, or reads a saved Compiler-profile AIL-Bytecode artifact, checks a
 target package into AIL-Core, executes the selected pass bytecode over that

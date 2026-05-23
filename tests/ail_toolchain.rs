@@ -7,13 +7,13 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use ail::ail::{
-    DEFAULT_BASE_LLM_ENDPOINT, apply_ail_patch, check_ail_core, check_ail_core_diagnostics,
-    compile_ail_bytecode, compile_ail_core_bytecode, compile_ail_core_native_elf,
-    elaborate_ail_core, load_ail_package_dir, parse_ail_bytecode, parse_ail_core_text,
-    parse_ail_package_document, parse_ail_package_spec_text, parse_ail_patch_text,
-    parse_ail_spec_text, render_ail_bytecode, render_ail_core, render_ail_flow_view,
-    render_ail_spec, render_ail_spec_from_core, run_ail_action, run_ail_bytecode_action,
-    run_ail_compiler_pass_on_core, verify_ail_bytecode,
+    DEFAULT_BASE_LLM_ENDPOINT, ail_core_hash, apply_ail_patch, check_ail_core,
+    check_ail_core_diagnostics, compile_ail_bytecode, compile_ail_core_bytecode,
+    compile_ail_core_native_elf, elaborate_ail_core, load_ail_package_dir, parse_ail_bytecode,
+    parse_ail_core_text, parse_ail_package_document, parse_ail_package_spec_text,
+    parse_ail_patch_text, parse_ail_spec_text, render_ail_bytecode, render_ail_core,
+    render_ail_flow_view, render_ail_spec, render_ail_spec_from_core, run_ail_action,
+    run_ail_bytecode_action, run_ail_compiler_pass_on_core, verify_ail_bytecode,
 };
 use ail::core_model::json_string;
 
@@ -3528,29 +3528,6 @@ fn cli_ail_check_and_core_use_package_loader() {
         "ail-flow-require-open-status-{}.ail-core.txt",
         std::process::id()
     ));
-    fs::write(
-        &core_patch_path,
-        r#"{
-  "schema": "ail-core.patch.v0",
-  "source_view": "ActionCard:CloseTicket",
-  "ops": [
-    {
-      "op": "add_node",
-      "kind": "Rule",
-      "name": "the ticket status to be Open",
-      "provenance": ["flow:ActionCard:CloseTicket.requirement:open-status"]
-    },
-    {
-      "op": "add_edge",
-      "kind": "requires",
-      "source": "Action:CloseTicket",
-      "target": "Rule:the ticket status to be Open",
-      "provenance": ["flow:ActionCard:CloseTicket.requirement:open-status"]
-    }
-  ]
-}"#,
-    )
-    .unwrap();
     let core_output = Command::new(binary)
         .args(["ail-core", &package])
         .output()
@@ -3560,7 +3537,77 @@ fn cli_ail_check_and_core_use_package_loader() {
         "{}",
         String::from_utf8_lossy(&core_output.stderr)
     );
-    fs::write(&core_path, core_output.stdout).unwrap();
+    let core_text = String::from_utf8(core_output.stdout).unwrap();
+    let core_hash = ail_core_hash(&parse_ail_core_text(&core_text).unwrap());
+    fs::write(&core_path, &core_text).unwrap();
+
+    let stale_patch_path = std::env::temp_dir().join(format!(
+        "ail-flow-stale-base-{}.ail-core.patch.json",
+        std::process::id()
+    ));
+    fs::write(
+        &stale_patch_path,
+        r#"{
+  "schema": "ail-core.patch.v0",
+  "base_hash": "ail-core:fnv64:0000000000000000",
+  "source_view": "ActionCard:CloseTicket",
+  "ops": [
+    {
+      "op": "add_node",
+      "kind": "Rule",
+      "name": "the ticket status to be Open",
+      "provenance": ["flow:ActionCard:CloseTicket.requirement:open-status"]
+    }
+  ]
+}"#,
+    )
+    .unwrap();
+    let stale_patch = Command::new(binary)
+        .args([
+            "ail-patch",
+            "--core-file",
+            core_path.to_str().unwrap(),
+            stale_patch_path.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !stale_patch.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&stale_patch.stdout),
+        String::from_utf8_lossy(&stale_patch.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&stale_patch.stderr).contains("AIL-Core patch base_hash mismatch"),
+        "stderr:\n{}",
+        String::from_utf8_lossy(&stale_patch.stderr)
+    );
+    fs::write(
+        &core_patch_path,
+        format!(
+            r#"{{
+  "schema": "ail-core.patch.v0",
+  "base_hash": "{core_hash}",
+  "source_view": "ActionCard:CloseTicket",
+  "ops": [
+    {{
+      "op": "add_node",
+      "kind": "Rule",
+      "name": "the ticket status to be Open",
+      "provenance": ["flow:ActionCard:CloseTicket.requirement:open-status"]
+    }},
+    {{
+      "op": "add_edge",
+      "kind": "requires",
+      "source": "Action:CloseTicket",
+      "target": "Rule:the ticket status to be Open",
+      "provenance": ["flow:ActionCard:CloseTicket.requirement:open-status"]
+    }}
+  ]
+}}"#
+        ),
+    )
+    .unwrap();
 
     let patched_core = Command::new(binary)
         .args([
@@ -3592,20 +3639,23 @@ fn cli_ail_check_and_core_use_package_loader() {
     ));
     fs::write(
         &replace_patch_path,
-        r#"{
+        format!(
+            r#"{{
   "schema": "ail-core.patch.v0",
+  "base_hash": "{core_hash}",
   "source_view": "ActionCard:CloseTicket",
   "ops": [
-    {
+    {{
       "op": "replace_node_attributes",
       "target": "Action:CloseTicket",
-      "attributes": {
+      "attributes": {{
         "label": "Resolve ticket"
-      },
+      }},
       "provenance": ["flow:ActionCard:CloseTicket.label"]
-    }
+    }}
   ]
-}"#,
+}}"#
+        ),
     )
     .unwrap();
     let relabeled_core = Command::new(binary)
@@ -3639,6 +3689,7 @@ fn cli_ail_check_and_core_use_package_loader() {
         "{relabeled_spec}"
     );
 
+    fs::remove_file(stale_patch_path).unwrap();
     fs::remove_file(replace_patch_path).unwrap();
     fs::remove_file(core_patch_path).unwrap();
     fs::remove_file(core_path).unwrap();

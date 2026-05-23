@@ -661,6 +661,13 @@ pub fn apply_ail_core_patch_text(core: &AilCore, patch_text: &str) -> Result<Ail
     if schema != "ail-core.patch.v0" {
         return Err(format!("expected ail-core.patch.v0 patch, got '{schema}'"));
     }
+    let base_hash = required_json_string_for(root, "base_hash", "AIL-Core patch")?;
+    let actual_hash = ail_core_hash(core);
+    if base_hash != actual_hash {
+        return Err(format!(
+            "AIL-Core patch base_hash mismatch: expected {actual_hash}, got {base_hash}"
+        ));
+    }
     let mut patched = core.clone();
     for op_value in required_json_array_for(root, "ops", "AIL-Core patch")? {
         let op = op_value
@@ -676,6 +683,19 @@ pub fn apply_ail_core_patch_text(core: &AilCore, patch_text: &str) -> Result<Ail
         }
     }
     Ok(patched)
+}
+
+pub fn ail_core_hash(core: &AilCore) -> String {
+    format!("ail-core:{}", ail_text_fingerprint(&render_ail_core(core)))
+}
+
+fn ail_text_fingerprint(text: &str) -> String {
+    let mut hash = 0xcbf29ce484222325u64;
+    for byte in text.as_bytes() {
+        hash ^= u64::from(*byte);
+        hash = hash.wrapping_mul(0x100000001b3);
+    }
+    format!("fnv64:{hash:016x}")
 }
 
 fn apply_ail_core_patch_add_node(

@@ -252,14 +252,20 @@ Patch operations:
 - `add_edge`
 - `replace_node_attributes`
 
-The stage-0 patch applier resolves node labels such as `Action:CloseTicket`
-against the checked Core graph. `add_node` writes node provenance as
-`Provenance` nodes plus `has_provenance` edges. `add_edge` stores edge
-provenance as an edge attribute. `replace_node_attributes` merges the listed
-string attributes into the target node, may replace the node `type`, rewrites
-the target node's stable id when attributes change, and rewires existing edges
-to the updated node before the checker runs. The CLI prints the patched Core
-artifact only after the resulting graph passes the AIL-Core checker.
+`base_hash` is required. It uses the form `ail-core:fnv64:<hex>` and is
+computed from the canonical checked AIL-Core rendering after parsing, not from
+raw terminal output bytes. The stage-0 patch applier rejects the patch before
+running any operation when `base_hash` does not match the checked graph.
+
+After the hash gate, the applier resolves node labels such as
+`Action:CloseTicket` against the checked Core graph. `add_node` writes node
+provenance as `Provenance` nodes plus `has_provenance` edges. `add_edge`
+stores edge provenance as an edge attribute. `replace_node_attributes` merges
+the listed string attributes into the target node, may replace the node `type`,
+rewrites the target node's stable id when attributes change, and rewires
+existing edges to the updated node before the checker runs. The CLI prints the
+patched Core artifact only after the resulting graph passes the AIL-Core
+checker.
 
 Reserved target operations:
 
