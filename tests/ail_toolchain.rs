@@ -1707,6 +1707,112 @@ fn ail_flow_projection_renders_no_code_view_from_core() {
 }
 
 #[test]
+fn cli_ail_flow_edit_renames_action_card_and_round_trips_to_spec() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("support_ticket.ail");
+    let core_output = Command::new(binary)
+        .args(["ail-core", &package])
+        .output()
+        .unwrap();
+    assert!(
+        core_output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&core_output.stdout),
+        String::from_utf8_lossy(&core_output.stderr)
+    );
+    let core_text = String::from_utf8(core_output.stdout).unwrap();
+    let core = parse_ail_core_text(&core_text).unwrap();
+    let core_hash = ail_core_hash(&core);
+    let flow = render_ail_flow_view(&core);
+    assert!(
+        flow.contains(r#""coreLabel":"Action:CloseTicket""#),
+        "{flow}"
+    );
+
+    let core_path = std::env::temp_dir().join(format!(
+        "ail-flow-edit-action-card-{}.ail-core.txt",
+        std::process::id()
+    ));
+    let edit_path = std::env::temp_dir().join(format!(
+        "ail-flow-edit-action-card-{}.ail-flow.edit.json",
+        std::process::id()
+    ));
+    let patched_core_path = std::env::temp_dir().join(format!(
+        "ail-flow-edit-action-card-patched-{}.ail-core.txt",
+        std::process::id()
+    ));
+    fs::write(&core_path, core_text).unwrap();
+    fs::write(
+        &edit_path,
+        format!(
+            r#"{{
+  "schema": "ail-flow.edit.v0",
+  "package": "support-ticket",
+  "base_hash": "{core_hash}",
+  "source_view": "ActionCard:CloseTicket",
+  "edits": [
+    {{
+      "op": "ActionCard.rename",
+      "target": "Action:CloseTicket",
+      "label": "Resolve ticket",
+      "provenance": ["flow:ActionCard:CloseTicket.label"]
+    }}
+  ]
+}}"#
+        ),
+    )
+    .unwrap();
+
+    let patched_core = Command::new(binary)
+        .args([
+            "ail-flow-edit",
+            "--core-file",
+            core_path.to_str().unwrap(),
+            edit_path.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        patched_core.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&patched_core.stdout),
+        String::from_utf8_lossy(&patched_core.stderr)
+    );
+    let patched_core_text = String::from_utf8(patched_core.stdout).unwrap();
+    let patched_core_artifact = parse_ail_core_text(&patched_core_text).unwrap();
+    assert_eq!(check_ail_core(&patched_core_artifact), Vec::<String>::new());
+    fs::write(&patched_core_path, patched_core_text).unwrap();
+
+    let spec = Command::new(binary)
+        .args([
+            "ail-spec",
+            "--core-file",
+            patched_core_path.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        spec.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&spec.stdout),
+        String::from_utf8_lossy(&spec.stderr)
+    );
+    let spec_stdout = String::from_utf8_lossy(&spec.stdout);
+    assert!(
+        spec_stdout.contains("Action: Resolve ticket."),
+        "{spec_stdout}"
+    );
+    assert!(
+        spec_stdout.contains("- the system records a trace event named TicketClosed"),
+        "{spec_stdout}"
+    );
+
+    fs::remove_file(core_path).unwrap();
+    fs::remove_file(edit_path).unwrap();
+    fs::remove_file(patched_core_path).unwrap();
+}
+
+#[test]
 fn ail_core_patch_rejects_package_mismatch() {
     let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
     let document = parse_ail_spec_text(&package.spec_text).unwrap();

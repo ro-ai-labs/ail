@@ -4,9 +4,9 @@ use std::fs;
 use std::process::{Command, ExitCode};
 
 use ail::ail::{
-    DEFAULT_BASE_LLM_ENDPOINT, apply_ail_core_patch_text, apply_ail_patch, check_ail_core,
-    check_ail_requirements, compile_ail_bytecode_native_elf, compile_ail_core_bytecode,
-    compile_ail_core_native_elf, draft_ail_requirements, draft_ail_spec,
+    DEFAULT_BASE_LLM_ENDPOINT, apply_ail_core_patch_text, apply_ail_flow_edit_text,
+    apply_ail_patch, check_ail_core, check_ail_requirements, compile_ail_bytecode_native_elf,
+    compile_ail_core_bytecode, compile_ail_core_native_elf, draft_ail_requirements, draft_ail_spec,
     draft_ail_spec_from_requirements, elaborate_ail_core, load_ail_package_dir, parse_ail_bytecode,
     parse_ail_core_text, parse_ail_package_document, parse_ail_package_spec_text,
     parse_ail_patch_text, render_ail_bytecode, render_ail_core, render_ail_flow_view,
@@ -54,7 +54,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
     let pathless_core_file_command = args[1].starts_with("--")
         && matches!(
             command.as_str(),
-            "ail-spec" | "ail-lower" | "ail-compile" | "ail-build" | "ail-patch"
+            "ail-spec" | "ail-lower" | "ail-compile" | "ail-build" | "ail-patch" | "ail-flow-edit"
         );
     let default_path = ".".to_string();
     let (path, option_args): (&String, &[String]) = if pathless_core_file_command {
@@ -82,6 +82,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
             | "ail-pass"
             | "ail-bootstrap"
             | "ail-patch"
+            | "ail-flow-edit"
     ) {
         return run_ail_command(command, path, &cli_options);
     }
@@ -89,7 +90,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
 }
 
 fn usage() -> String {
-    "usage: ail <ail-check|ail-core|ail-flow|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-bootstrap|ail-patch> <path> [patch|target-package] [--action name] [--prompt text] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--base-model name] [--target-model name] [--out path] [--all-actions] [--artifact-dir path] [--llm-endpoint url] [key=value ...]\nsaved-core usage: ail <ail-spec|ail-lower|ail-compile|ail-build> --core-file <checked-core> [--action name] [--target target] [--out path] [--artifact-dir path]\ncore-patch usage: ail ail-patch --core-file <checked-core> <ail-core.patch.json>\nail-pass usage: ail ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR ail ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]\nail-bootstrap usage: ail ail-bootstrap <toolchain-agent-package> --pass <compiler-pass-package> --agent <toolchain-agent-package> --target linux-x86_64-elf --artifact-dir <dir>"
+    "usage: ail <ail-check|ail-core|ail-flow|ail-flow-edit|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-bootstrap|ail-patch> <path> [patch|target-package] [--action name] [--prompt text] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--base-model name] [--target-model name] [--out path] [--all-actions] [--artifact-dir path] [--llm-endpoint url] [key=value ...]\nsaved-core usage: ail <ail-spec|ail-lower|ail-compile|ail-build> --core-file <checked-core> [--action name] [--target target] [--out path] [--artifact-dir path]\ncore-patch usage: ail ail-patch --core-file <checked-core> <ail-core.patch.json>\nflow-edit usage: ail ail-flow-edit --core-file <checked-core> <ail-flow.edit.json>\nail-pass usage: ail ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR ail ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]\nail-bootstrap usage: ail ail-bootstrap <toolchain-agent-package> --pass <compiler-pass-package> --agent <toolchain-agent-package> --target linux-x86_64-elf --artifact-dir <dir>"
         .to_string()
 }
 
@@ -6321,6 +6322,36 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
         println!("{}", render_ail_core(&patched));
         return Ok(0);
     }
+    if command == "ail-flow-edit" && cli_options.ail_core_file.is_some() {
+        let core = parse_cli_ail_core(cli_options)?;
+        let diagnostics = check_ail_core(&core);
+        if !diagnostics.is_empty() {
+            println!("ail-flow-edit core diagnostics:");
+            for diagnostic in diagnostics {
+                println!("{diagnostic}");
+            }
+            return Ok(1);
+        }
+        let Some(edit_path) = cli_options.patch_path.as_ref() else {
+            return Err("ail-flow-edit --core-file requires an edit file".to_string());
+        };
+        let edit_text = fs::read_to_string(edit_path)
+            .map_err(|error| format!("failed to read {edit_path}: {error}"))?;
+        let patched = apply_ail_flow_edit_text(&core, &edit_text)?;
+        let diagnostics = check_ail_core(&patched);
+        if !diagnostics.is_empty() {
+            println!("ail-flow-edit diagnostics:");
+            for diagnostic in diagnostics {
+                println!("{diagnostic}");
+            }
+            return Ok(1);
+        }
+        println!("{}", render_ail_core(&patched));
+        return Ok(0);
+    }
+    if command == "ail-flow-edit" {
+        return Err("ail-flow-edit requires --core-file <checked-core>".to_string());
+    }
     let package = load_ail_package_dir(path)?;
     if command == "ail-conformance" {
         let result = run_ail_conformance(&package)?;
@@ -6861,7 +6892,13 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         if arg == "--core-file" {
             if !matches!(
                 command,
-                "ail-lower" | "ail-pass" | "ail-compile" | "ail-build" | "ail-spec" | "ail-patch"
+                "ail-lower"
+                    | "ail-pass"
+                    | "ail-compile"
+                    | "ail-build"
+                    | "ail-spec"
+                    | "ail-patch"
+                    | "ail-flow-edit"
             ) {
                 return Err(usage());
             }
@@ -6872,7 +6909,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
             index += 2;
             continue;
         }
-        if command == "ail-patch" {
+        if matches!(command, "ail-patch" | "ail-flow-edit") {
             if patch_path.is_some() {
                 return Err(usage());
             }

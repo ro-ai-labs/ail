@@ -27,6 +27,7 @@ The supported AIL commands are:
 - `ail-check`
 - `ail-core`
 - `ail-flow`
+- `ail-flow-edit`
 - `ail-lower`
 - `ail-compile`
 - `ail-run`
@@ -63,6 +64,7 @@ AIL-Core artifact:
 
 ```bash
 cargo run -- ail-patch --core-file /tmp/support-ticket.ail-core.txt /path/to/edit.ail-core.patch.json
+cargo run -- ail-flow-edit --core-file /tmp/support-ticket.ail-core.txt /path/to/edit.ail-flow.edit.json
 ```
 
 ## Machine Bytecode

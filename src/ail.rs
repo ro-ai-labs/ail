@@ -707,6 +707,115 @@ pub fn apply_ail_core_patch_text(core: &AilCore, patch_text: &str) -> Result<Ail
     Ok(patched)
 }
 
+pub fn apply_ail_flow_edit_text(core: &AilCore, edit_text: &str) -> Result<AilCore, String> {
+    let patch_text = render_ail_core_patch_from_flow_edit_text(core, edit_text)?;
+    apply_ail_core_patch_text(core, &patch_text)
+}
+
+pub fn render_ail_core_patch_from_flow_edit_text(
+    core: &AilCore,
+    edit_text: &str,
+) -> Result<String, String> {
+    let mut parser = AilJsonParser::new(edit_text);
+    let value = parser.parse_value()?;
+    parser.skip_whitespace();
+    if !parser.is_finished() {
+        return Err("unexpected trailing content in AIL-Flow edit artifact".to_string());
+    }
+    let root = value
+        .as_object()
+        .ok_or_else(|| "AIL-Flow edit artifact must be a JSON object".to_string())?;
+    let schema = required_json_string_for(root, "schema", "AIL-Flow edit")?;
+    if schema != "ail-flow.edit.v0" {
+        return Err(format!("expected ail-flow.edit.v0 edit, got '{schema}'"));
+    }
+    if root.contains_key("package") {
+        let package_name = required_json_string_for(root, "package", "AIL-Flow edit")?;
+        if package_name != core.package.name {
+            return Err(format!(
+                "AIL-Flow edit package mismatch: expected {}, got {package_name}",
+                core.package.name
+            ));
+        }
+    }
+    let base_hash = required_json_string_for(root, "base_hash", "AIL-Flow edit")?;
+    let actual_hash = ail_core_hash(core);
+    if base_hash != actual_hash {
+        return Err(format!(
+            "AIL-Flow edit base_hash mismatch: expected {actual_hash}, got {base_hash}"
+        ));
+    }
+    let source_view = required_json_string_for(root, "source_view", "AIL-Flow edit")?;
+    let mut ops = Vec::new();
+    for edit_value in required_json_array_for(root, "edits", "AIL-Flow edit")? {
+        let edit = edit_value
+            .as_object()
+            .ok_or_else(|| "AIL-Flow edit entry must be an object".to_string())?;
+        match required_json_string_for(edit, "op", "AIL-Flow edit entry")? {
+            "ActionCard.rename" => {
+                ops.push(render_action_card_rename_core_patch_op(core, edit)?);
+            }
+            op_name => return Err(format!("unsupported AIL-Flow edit op '{op_name}'")),
+        }
+    }
+    Ok(format!(
+        concat!(
+            "{{\n",
+            "  \"schema\": \"ail-core.patch.v0\",\n",
+            "  \"package\": {},\n",
+            "  \"base_hash\": {},\n",
+            "  \"source_view\": {},\n",
+            "  \"ops\": [\n",
+            "{}\n",
+            "  ]\n",
+            "}}"
+        ),
+        json_string(&core.package.name),
+        json_string(base_hash),
+        json_string(source_view),
+        ops.join(",\n")
+    ))
+}
+
+fn render_action_card_rename_core_patch_op(
+    core: &AilCore,
+    edit: &BTreeMap<String, AilJsonValue>,
+) -> Result<String, String> {
+    let target = required_json_string_for(edit, "target", "AIL-Flow ActionCard.rename")?;
+    let Some(target_node) = find_core_patch_node(core, target) else {
+        return Err(format!(
+            "AIL-Flow ActionCard.rename references unknown target '{target}'"
+        ));
+    };
+    if target_node.kind != "Action" {
+        return Err(format!(
+            "AIL-Flow ActionCard.rename target must be an Action, got {}",
+            core_node_label(&target_node)
+        ));
+    }
+    let label = required_json_string_for(edit, "label", "AIL-Flow ActionCard.rename")?;
+    let provenance = optional_json_string_array(edit, "provenance", "AIL-Flow ActionCard.rename")?;
+    let provenance_field = if provenance.is_empty() {
+        String::new()
+    } else {
+        format!(",\n      \"provenance\": {}", render_json_array(provenance))
+    };
+    Ok(format!(
+        concat!(
+            "    {{\n",
+            "      \"op\": \"replace_node_attributes\",\n",
+            "      \"target\": {},\n",
+            "      \"attributes\": {{\n",
+            "        \"label\": {}\n",
+            "      }}{}\n",
+            "    }}"
+        ),
+        json_string(&core_node_label(&target_node)),
+        json_string(label),
+        provenance_field
+    ))
+}
+
 pub fn ail_core_hash(core: &AilCore) -> String {
     format!("ail-core:{}", ail_text_fingerprint(&render_ail_core(core)))
 }

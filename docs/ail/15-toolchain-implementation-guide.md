@@ -659,6 +659,14 @@ ids before checking, while edge attribute edits rewrite the stable edge id.
 `declare_provenance` adds reviewed provenance to an existing node without
 changing semantic attributes. This is the first concrete AIL-Flow / agent-edit
 path that edits Core directly before rendering back to AIL-Spec.
+`ail-flow-edit --core-file <path> <edit.json>` reads a checked Core artifact
+and an `ail-flow.edit.v0` visual edit artifact, translates supported flow ops
+into a checked Core patch, and prints patched Core only after the Core checker
+accepts the translated result. The first supported visual edit is
+`ActionCard.rename`, which updates an action card label through
+`replace_node_attributes` while preserving reviewed provenance, existing
+requirements, writes, guarantees, and trace edges for the later
+`ail-spec --core-file` round trip.
 `ail-pass` compiles an AIL-Meta compiler pass package into verified
 AIL-Bytecode, or reads a saved Compiler-profile AIL-Bytecode artifact, checks a
 target package into AIL-Core, executes the selected pass bytecode over that
