@@ -7111,6 +7111,366 @@ fn cli_ail_compile_writes_saved_bytecode_native_artifacts() {
 }
 
 #[test]
+fn cli_ail_compile_writes_saved_bytecode_wasm_contract_artifacts() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let unique_suffix = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let root = std::env::temp_dir().join(format!(
+        "ail-wasm-contract-package-{}-{unique_suffix}",
+        std::process::id()
+    ));
+    let bytecode_path = std::env::temp_dir().join(format!(
+        "ail-wasm-contract-bytecode-{}-{unique_suffix}.ailbc.json",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-wasm-contract-artifacts-{}-{unique_suffix}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&root);
+    let _ = fs::remove_file(&bytecode_path);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&root).unwrap();
+    fs::write(
+        root.join("ail-package.md"),
+        r#"name: wasm-contract-app
+version: 0.1.0
+profile: Application
+entry: spec.ail-spec.md
+features: actions, traces
+conformance: first-slice
+target-support:
+  wasm32-unknown-sandbox-wasm: supported-with-host-imports
+"#,
+    )
+    .unwrap();
+    fs::write(
+        root.join("spec.ail-spec.md"),
+        r#"The application Wasm Contract App manages portable compilation.
+
+Action: Emit trace.
+
+When emit trace happens:
+
+- the system records a trace event named WasmContractCompiled
+"#,
+    )
+    .unwrap();
+
+    let lowered = Command::new(binary)
+        .args(["ail-lower", root.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(
+        lowered.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&lowered.stdout),
+        String::from_utf8_lossy(&lowered.stderr)
+    );
+    let lowered_bytecode = String::from_utf8(lowered.stdout).unwrap();
+    fs::write(&bytecode_path, &lowered_bytecode).unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-compile",
+            bytecode_path.to_str().unwrap(),
+            "--action",
+            "EmitTrace",
+            "--target",
+            "wasm32-unknown-sandbox-wasm",
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stdout)
+            .contains("ail-compile wrote wasm32-unknown-sandbox-wasm contract"),
+        "{}",
+        String::from_utf8_lossy(&output.stdout)
+    );
+
+    let bytecode_artifact = fs::read_to_string(artifact_dir.join("artifact.ailbc.json")).unwrap();
+    assert_eq!(bytecode_artifact, lowered_bytecode);
+    let bytecode_fingerprint =
+        fs::read_to_string(artifact_dir.join("artifact.fingerprint.txt")).unwrap();
+    assert_eq!(
+        bytecode_fingerprint.trim(),
+        fnv64_fingerprint(&bytecode_artifact)
+    );
+    assert!(
+        !artifact_dir.join("target.elf").exists(),
+        "wasm contract artifacts must not pretend to be native ELF output"
+    );
+
+    let contract_report =
+        fs::read_to_string(artifact_dir.join("wasm-contract-report.txt")).unwrap();
+    assert!(
+        contract_report.contains("AIL-Wasm-Contract-Report:"),
+        "{contract_report}"
+    );
+    assert!(
+        contract_report.contains("target wasm32-unknown-sandbox-wasm"),
+        "{contract_report}"
+    );
+    assert!(
+        contract_report.contains("status supported-with-host-imports"),
+        "{contract_report}"
+    );
+    assert!(
+        contract_report.contains("bytecode-level portable-vm-contract"),
+        "{contract_report}"
+    );
+    assert!(
+        contract_report.contains("host-boundary saved-bytecode-contract"),
+        "{contract_report}"
+    );
+    assert!(
+        contract_report.contains("host-import-metadata not-present-in-saved-bytecode"),
+        "{contract_report}"
+    );
+    assert!(
+        contract_report.contains("action EmitTrace"),
+        "{contract_report}"
+    );
+    assert!(
+        contract_report.contains("trace-preservation required"),
+        "{contract_report}"
+    );
+    let contract_report_fingerprint =
+        fs::read_to_string(artifact_dir.join("wasm-contract-report.fingerprint.txt")).unwrap();
+    assert_eq!(
+        contract_report_fingerprint.trim(),
+        fnv64_fingerprint(&contract_report)
+    );
+
+    let dependency_report = fs::read_to_string(artifact_dir.join("dependency-report.txt")).unwrap();
+    assert!(
+        dependency_report.contains("AIL-Compile-Dependency-Report:"),
+        "{dependency_report}"
+    );
+    assert!(
+        dependency_report.contains("target wasm32-unknown-sandbox-wasm"),
+        "{dependency_report}"
+    );
+    assert!(
+        dependency_report.contains("host-language-runtime none"),
+        "{dependency_report}"
+    );
+    assert!(
+        dependency_report.contains("dynamic-linker none"),
+        "{dependency_report}"
+    );
+    assert!(
+        dependency_report.contains("shared-libraries none"),
+        "{dependency_report}"
+    );
+    assert!(
+        dependency_report.contains("library-dependencies not-enumerated-in-saved-bytecode"),
+        "{dependency_report}"
+    );
+    let dependency_report_fingerprint =
+        fs::read_to_string(artifact_dir.join("dependency-report.fingerprint.txt")).unwrap();
+    assert_eq!(
+        dependency_report_fingerprint.trim(),
+        fnv64_fingerprint(&dependency_report)
+    );
+
+    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-compile.txt")).unwrap();
+    assert!(manifest.contains("AIL-Compile-Manifest:"), "{manifest}");
+    assert!(manifest.contains("action EmitTrace"), "{manifest}");
+    assert!(
+        manifest.contains("machine-bytecode-contract wasm32-unknown-sandbox-wasm bytecode-level portable-vm-contract bytecode-container wasm-sandbox-contract bytecode-format wasm32-contract-report"),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "bytecode artifact.ailbc.json {}",
+            fnv64_fingerprint(&bytecode_artifact)
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "wasm-contract wasm-contract-report.txt {}",
+            fnv64_fingerprint(&contract_report)
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "dependencies dependency-report.txt {}",
+            fnv64_fingerprint(&dependency_report)
+        )),
+        "{manifest}"
+    );
+    let manifest_fingerprint =
+        fs::read_to_string(artifact_dir.join("manifest.fingerprint.txt")).unwrap();
+    assert_eq!(manifest_fingerprint.trim(), fnv64_fingerprint(&manifest));
+
+    fs::remove_dir_all(root).unwrap();
+    fs::remove_file(bytecode_path).unwrap();
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
+fn cli_ail_compile_wasm_contract_marks_reachable_call_trace_required() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let unique_suffix = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let bytecode_path = std::env::temp_dir().join(format!(
+        "ail-wasm-contract-call-bytecode-{}-{unique_suffix}.ailbc.json",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-wasm-contract-call-artifacts-{}-{unique_suffix}",
+        std::process::id()
+    ));
+    let _ = fs::remove_file(&bytecode_path);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    let bytecode_text = r#"{
+  "kind": "AIL-Bytecode",
+  "package": "wasm-call-example",
+  "version": "0.1.0",
+  "profile": "Application",
+  "target_support": {"wasm32-unknown-sandbox-wasm":"supported-with-host-imports"},
+  "failures": [],
+  "actions": [
+    {
+      "action": "ResolveTicket",
+      "instructions": [
+        {"opcode":"ACTION_BEGIN","operands":{"action":"ResolveTicket"}},
+        {"opcode":"CALL_ACTION","operands":{"target":"CloseTicket"}},
+        {"opcode":"RETURN_SUCCESS","operands":{}}
+      ]
+    },
+    {
+      "action": "CloseTicket",
+      "instructions": [
+        {"opcode":"ACTION_BEGIN","operands":{"action":"CloseTicket"}},
+        {"opcode":"EMIT_TRACE","operands":{"event":"TicketClosed"}},
+        {"opcode":"RETURN_SUCCESS","operands":{}}
+      ]
+    }
+  ]
+}"#;
+    fs::write(&bytecode_path, bytecode_text).unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-compile",
+            bytecode_path.to_str().unwrap(),
+            "--action",
+            "ResolveTicket",
+            "--target",
+            "wasm32-unknown-sandbox-wasm",
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let contract_report =
+        fs::read_to_string(artifact_dir.join("wasm-contract-report.txt")).unwrap();
+    assert!(
+        contract_report.contains("action ResolveTicket"),
+        "{contract_report}"
+    );
+    assert!(
+        contract_report.contains("trace-preservation required"),
+        "{contract_report}"
+    );
+
+    fs::remove_file(bytecode_path).unwrap();
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
+fn cli_ail_compile_wasm_contract_rejects_stale_executable_artifacts() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let unique_suffix = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let bytecode_path = std::env::temp_dir().join(format!(
+        "ail-wasm-contract-stale-bytecode-{}-{unique_suffix}.ailbc.json",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-wasm-contract-stale-artifacts-{}-{unique_suffix}",
+        std::process::id()
+    ));
+    let _ = fs::remove_file(&bytecode_path);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&artifact_dir).unwrap();
+    fs::write(artifact_dir.join("target.elf"), b"stale-native-output").unwrap();
+    let bytecode_text = r#"{
+  "kind": "AIL-Bytecode",
+  "package": "wasm-stale-example",
+  "version": "0.1.0",
+  "profile": "Application",
+  "target_support": {"wasm32-unknown-sandbox-wasm":"supported-with-host-imports"},
+  "failures": [],
+  "actions": [
+    {
+      "action": "EmitTrace",
+      "instructions": [
+        {"opcode":"ACTION_BEGIN","operands":{"action":"EmitTrace"}},
+        {"opcode":"EMIT_TRACE","operands":{"event":"WasmContractCompiled"}},
+        {"opcode":"RETURN_SUCCESS","operands":{}}
+      ]
+    }
+  ]
+}"#;
+    fs::write(&bytecode_path, bytecode_text).unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-compile",
+            bytecode_path.to_str().unwrap(),
+            "--action",
+            "EmitTrace",
+            "--target",
+            "wasm32-unknown-sandbox-wasm",
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stderr)
+            .contains("contains stale executable artifact target.elf"),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    fs::remove_file(bytecode_path).unwrap();
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_compile_agent_verifies_manifest_artifacts() {
     let binary = env!("CARGO_BIN_EXE_ail");

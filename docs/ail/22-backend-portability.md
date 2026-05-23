@@ -98,6 +98,35 @@ The Wasm backend is the portable sandbox target for browser, plugin, and
 embedded host contexts. Host imports map to `ExternalBinding` nodes with
 explicit capability grants.
 
+Current implementation status: saved AIL-Bytecode can be compiled to a
+deterministic Wasm sandbox contract report with:
+
+```text
+ail ail-compile artifact.ailbc.json \
+  --action <ActionName> \
+  --target wasm32-unknown-sandbox-wasm \
+  --artifact-dir <dir>
+```
+
+The package or saved bytecode must declare
+`wasm32-unknown-sandbox-wasm: supported` or
+`wasm32-unknown-sandbox-wasm: supported-with-host-imports` in `target-support`.
+The command writes `wasm-contract-report.txt`,
+`wasm-contract-report.fingerprint.txt`, `dependency-report.txt`,
+`dependency-report.fingerprint.txt`, `manifest.ail-compile.txt`, and
+`manifest.fingerprint.txt` alongside the saved `artifact.ailbc.json` and its
+fingerprint. It intentionally does not write `target.elf` or an executable
+`.wasm` module yet. The contract report records `bytecode-level
+portable-vm-contract`, `bytecode-container wasm-sandbox-contract`,
+`bytecode-format wasm32-contract-report`, `host-boundary
+saved-bytecode-contract`, `host-import-metadata
+not-present-in-saved-bytecode`, selected action, target-support status, and
+trace preservation requirements across the selected action's reachable
+`CALL_ACTION` graph. Saved bytecode does not preserve `ExternalBinding` or
+host-import declarations yet, so this first report does not enumerate host
+imports. Reusing an artifact directory that still contains executable outputs
+such as `target.elf`, `target.wasm`, or native bytecode reports is rejected.
+
 ## Additional OS Target Plan
 
 Target 3:

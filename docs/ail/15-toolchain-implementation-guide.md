@@ -144,7 +144,13 @@ AIL-Core rejects `--target linux-x86_64-elf` unless the package declares either
 target/effect pair enforcement remains checker and backend conformance work.
 Target-support status labels must be `supported`, `supported-with-host-imports`,
 or `planned-contract`. AIL-Bytecode lowering carries the same target-support
-map so saved bytecode artifacts keep the native target contract.
+map so saved bytecode artifacts keep backend target contracts. Saved bytecode
+that declares `wasm32-unknown-sandbox-wasm: supported-with-host-imports` can
+now produce a Wasm sandbox contract artifact. That artifact is a reviewable
+portability boundary for saved-bytecode trace preservation; saved bytecode does
+not carry external binding or host-import metadata yet, so host imports are not
+enumerated in this first report. It is not an executable WebAssembly module
+yet.
 When present, `schema-version` and `safety-level` are also preserved as package
 metadata in checked AIL-Core. The checker rejects unknown schema versions;
 safety-level labels must be `standard`, `low`, `medium`, `high`, or `expert`.
@@ -575,14 +581,37 @@ linux-x86_64-elf --out <path>` reads the same saved AIL-Bytecode artifact,
 verifies it, checks the artifact's `target_support` map when present, and emits
 a native ELF executable from that artifact boundary without loading the source
 package or generating host-language backend source.
-With `--artifact-dir`, direct `ail-compile` writes `source.ail-package.md`,
-`source.ail-spec.md`, and `source.fingerprint.txt` when a package source is
-available; it also writes `artifact.ailbc.json`, `artifact.fingerprint.txt`,
-`target.elf`, `target.fingerprint.txt`, `native-bytecode-report.txt`,
-`native-bytecode-report.fingerprint.txt`, `dependency-report.txt`,
-`dependency-report.fingerprint.txt`, `manifest.ail-compile.txt`, and
-`manifest.fingerprint.txt`; compiles from checked AIL-Core also include
-`checked.ail-core.txt` and `checked.ail-core.fingerprint.txt`. The
+`ail-compile <artifact.ailbc.json> --action <ActionName> --target
+wasm32-unknown-sandbox-wasm --artifact-dir <dir>` reads a saved AIL-Bytecode
+artifact that declares `wasm32-unknown-sandbox-wasm` as `supported` or
+`supported-with-host-imports`, verifies the selected action, and writes a
+deterministic Wasm sandbox contract report instead of `target.elf`. The report
+records `bytecode-level portable-vm-contract`,
+`bytecode-container wasm-sandbox-contract`,
+`bytecode-format wasm32-contract-report`,
+`host-boundary saved-bytecode-contract`, `host-import-metadata
+not-present-in-saved-bytecode`, the target-support status, selected action, and
+whether trace preservation is required across the selected action's reachable
+`CALL_ACTION` graph. The matching dependency report records
+`host-language-runtime none`, `dynamic-linker none`, `shared-libraries none`,
+`library-dependencies not-enumerated-in-saved-bytecode`, and `runtime-abi
+wasm32-declared-host-imports`. If the selected artifact directory already
+contains stale executable outputs such as `target.elf`, `target.wasm`, or native
+bytecode reports, the command fails rather than leaving misleading executable
+artifacts beside a contract-only manifest.
+With `--artifact-dir`, native direct `ail-compile` writes
+`source.ail-package.md`, `source.ail-spec.md`, and `source.fingerprint.txt`
+when a package source is available; it also writes `artifact.ailbc.json`,
+`artifact.fingerprint.txt`, `target.elf`, `target.fingerprint.txt`,
+`native-bytecode-report.txt`, `native-bytecode-report.fingerprint.txt`,
+`dependency-report.txt`, `dependency-report.fingerprint.txt`,
+`manifest.ail-compile.txt`, and `manifest.fingerprint.txt`; compiles from
+checked AIL-Core also include `checked.ail-core.txt` and
+`checked.ail-core.fingerprint.txt`. Wasm contract direct `ail-compile` from
+saved bytecode writes `artifact.ailbc.json`, `artifact.fingerprint.txt`,
+`wasm-contract-report.txt`, `wasm-contract-report.fingerprint.txt`,
+`dependency-report.txt`, `dependency-report.fingerprint.txt`,
+`manifest.ail-compile.txt`, and `manifest.fingerprint.txt`. The
 native-bytecode report records the selected action target as ELF64 x86_64
 executable bytes. The dependency report records `host-language-runtime none`,
 `dynamic-linker none`, `shared-libraries none`, `library-dependencies none`,
