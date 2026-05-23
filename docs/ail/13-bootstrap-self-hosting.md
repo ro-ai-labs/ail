@@ -35,6 +35,30 @@ Represent parser rules, checker rules, diagnostics, renderers, examples,
 round-trip rules, lowering obligations, optimizer rules, and package metadata
 in AIL-Meta.
 
+## SelfHostCore v0
+
+The first self-hosting subset is intentionally small and executable. It
+includes:
+
+- graph traversal
+- graph pattern matching
+- graph patch construction
+- diagnostics with stable IDs
+- deterministic sorting
+- hashing
+- canonical serialization
+- parser rule definitions
+- renderer rule definitions
+- checker rule definitions
+- bytecode emission rules
+- conformance assertions
+- package metadata validation
+- prompt-pack metadata validation
+
+SelfHostCore v0 is sufficient to define the parser, checker, canonical
+renderer, diagnostic catalog, graph normalization, bytecode lowering, and
+conformance harness for the first language slice.
+
 ## Stage 3: Generated AIL Compiler
 
 Use the bootstrap compiler to compile AIL-defined compiler rules into a new
@@ -62,6 +86,16 @@ Linux argv ABI, with an AIL-authored verifier accepting the manifest.
 Compiler N compiles the AIL toolchain spec into Compiler N+1. Compiler N+1
 compiles the same spec into Compiler N+2. The outputs are equivalent under the
 defined fixed-point check.
+
+Minimum fixed-point proof:
+
+- package graph hashes are identical or differ only by approved version metadata
+- diagnostic catalog output is identical
+- parser accepted/rejected fixture results are identical
+- renderer round-trip hashes are identical
+- bytecode emission manifests are equivalent
+- prompt pack metadata is preserved
+- native backend manifests preserve trace mappings
 
 ## Stage 5: Bootstrap Independence
 

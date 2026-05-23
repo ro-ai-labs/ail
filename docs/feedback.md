@@ -1,3 +1,53 @@
+## Resolution status
+
+Status date: 2026-05-23.
+
+This feedback has been actioned in the active AIL documentation suite. The
+original review is preserved below as provenance; the current source of truth
+is the specification set under `docs/ail/`.
+
+| Recommendation | Resolution artifact |
+| --- | --- |
+| Formal execution semantics | `docs/ail/17-execution-semantics.md` |
+| Machine-checkable AIL-Core schema | `docs/ail/18-ail-core-schema.md` and `docs/ail/03-semantic-ir.md` |
+| Turing-complete AIL-Core subset | `docs/ail/17-execution-semantics.md`, `docs/ail/02-structured-spec.md`, `docs/ail/07-types-values-effects.md` |
+| Canonical vs friendly AIL-Spec split | `docs/ail/02-structured-spec.md` |
+| Agent prompt pack | `docs/ail/19-agent-prompt-pack.md` and `docs/ail/prompts/` |
+| Prompt portability harness | `docs/ail/19-agent-prompt-pack.md` and `docs/ail/corpus/prompts/` |
+| Round-trip algorithms | `docs/ail/11-round-trip-equivalence.md` and `docs/ail/corpus/roundtrip/` |
+| AIL-Flow block and graph UI model | `docs/ail/04-no-code-views.md` and `docs/ail/23-ui-profile.md` |
+| Standard library and packages | `docs/ail/20-standard-library-and-packages.md` |
+| C interop and ABI profile | `docs/ail/21-c-interop-abi.md` |
+| Backend portability | `docs/ail/22-backend-portability.md` |
+| UI/UX application profile | `docs/ail/23-ui-profile.md` |
+| Kernel/system staged capability matrix | `docs/ail/09-system-profile.md` |
+| Self-hosting subset | `docs/ail/13-bootstrap-self-hosting.md` |
+| Executable AIL-Meta feature package | `docs/ail/10-meta-profile.md` and `docs/ail/corpus/selfhost/` |
+| Diagnostics catalog | `docs/ail/24-diagnostics-catalog.md` |
+| Versioned training and conformance corpus | `docs/ail/12-training-corpus.md` and `docs/ail/corpus/` |
+| Example inventory | `docs/ail/25-example-inventory.md` and `docs/ail/examples/network-driver.ail-core.md` |
+| Semantic safety model | `docs/ail/26-semantic-safety-model.md` |
+| Desired outcome traceability matrix | `docs/ail/27-desired-outcome-traceability.md` |
+| File-specific updates for `00` through `16` | `docs/ail/00-foundation.md` through `docs/ail/16-implementation-readiness-checklist.md` |
+| Milestone sequence | `docs/ail/15-toolchain-implementation-guide.md` |
+| Language MVP checklist | `docs/ail/16-implementation-readiness-checklist.md` |
+
+Verification commands run after this resolution:
+
+```bash
+rg -n "TB[D]|TO[D]O|FIXM[E]|implement late[r]|fill in detail[s]" docs README.md
+git diff --check -- README.md docs/README.md docs/ail docs/feedback.md
+cargo fmt --check
+cargo check
+cargo test --test ail_toolchain
+cargo test
+cargo clippy --all-targets -- -D warnings
+```
+
+The placeholder scan is expected to return no matches.
+
+## Original feedback
+
 ## Executive assessment
 
 The documents are directionally strong. They already define AIL as an English-first, agent-assisted, deterministic semantic programming language rather than a prompt format or no-code product. They also establish the key trust boundary: conversation and LLM outputs are not compiled directly; only checked deterministic artifacts are accepted, with AIL-Core as the semantic source of truth. That matches your desired architecture very closely.  

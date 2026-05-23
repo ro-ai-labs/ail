@@ -8,8 +8,8 @@ native Linux ELF backend, LLM-assisted agent workflow, and conformance suite.
 ## Read Order
 
 1. [AIL Specification](ail/README.md)
-2. [AIL Language Foundation Design](superpowers/specs/2026-05-22-ail-language-foundation-design.md)
-3. [AIL First Toolchain Slice Plan](superpowers/plans/2026-05-22-ail-first-toolchain-slice-implementation.md)
+2. [AIL Desired Outcome Traceability](ail/27-desired-outcome-traceability.md)
+3. [AIL Implementation Readiness Checklist](ail/16-implementation-readiness-checklist.md)
 
 ## Current Direction
 
@@ -29,4 +29,7 @@ architecture, structured English, semantic IR, no-code views, agent protocol,
 agent tools, type/effect model, failure and trace model, systems profile,
 meta/compiler profile, round-trip equivalence, training corpus, bootstrap
 self-hosting path, language evolution protocol, toolchain implementation guide,
-and implementation-readiness checklist.
+implementation-readiness checklist, formal execution semantics, AIL-Core schema,
+agent prompt pack, standard library and package model, C interop and ABI
+profile, backend portability, UI profile, diagnostic catalog, example
+inventory, semantic safety model, and desired-outcome traceability matrix.

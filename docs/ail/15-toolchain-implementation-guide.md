@@ -49,6 +49,33 @@ This is intentionally narrow. It exercises the architecture without forcing
 systems programming, self-hosting, package distribution, or full no-code editing
 into the first milestone.
 
+## Implementation Phase Map
+
+The guide is split into phases so the first vertical slice remains narrow while
+the language definition covers the complete desired outcome:
+
+1. Semantic MVP: package loading, canonical AIL-Spec parsing, AIL-Core schema,
+   checker, renderer, diagnostics, round-trip tests, and one trace runtime.
+2. Turing Core: control flow, functions, action calls, recursion or loops,
+   collections, state mutation, and operational semantics.
+3. Agent Prompt Pack: interview, requirements capture, spec drafting, repair,
+   IR rendering, trace explanation, patch prompts, and portability tests.
+4. Visual Review And Patch: AIL-Flow block/card views, graph patch validation,
+   patch round trips, and low-code edit fixtures.
+5. Standard Library And Packages: core packages, imports, versioning,
+   capability grants, and package projections.
+6. Bytecode And VM: checked AIL-Core to AIL-Bytecode, bytecode verifier, VM
+   runtime, and bytecode artifact boundary.
+7. Native Target 1: Linux x86_64 ELF with backend conformance manifest.
+8. C Interop: ABI-safe imports, pointer ownership, failure mapping, callbacks,
+   and traceable foreign calls.
+9. UI Profile: routes, forms, components, events, accessibility, UI state, and
+   UI traces.
+10. AIL-Meta Self-Hosting: parser, checker, renderer, diagnostic, lowering,
+    and conformance rules as AIL-Meta packages.
+11. Self-Hosted Fixed Point: bootstrap compiler generates the next compiler
+    from AIL-defined toolchain sources and proves fixed-point equivalence.
+
 The next implemented profile expansion is the Refund Tool `AgentTool` example.
 It proves that the same package loader, parser, AIL-Core store, checker,
 renderer, AIL-Flow projection, and LLM draft loop can represent an agent tool

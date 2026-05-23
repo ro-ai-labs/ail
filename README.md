@@ -9,6 +9,10 @@ programs into AIL-Core IR, and compiles checked artifacts into executable
 behavior.
 
 The active documentation starts at [docs/README.md](docs/README.md).
+The complete AIL specification suite is indexed at
+[docs/ail/README.md](docs/ail/README.md), including execution semantics,
+AIL-Core schema, prompt pack, package model, C interop, backend portability,
+UI profile, diagnostics, safety, corpus, and traceability artifacts.
 
 ## Toolchain
 

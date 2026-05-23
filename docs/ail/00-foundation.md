@@ -88,6 +88,15 @@ AIL-Core -> AIL-Flow view -> AIL-Core patch
 
 The authority is normalized semantic IR equivalence, not text similarity.
 
+### AIL-Core Must Be Formally Executable
+
+AIL is a complete programming language. Its Turing-complete core is defined at
+the AIL-Core level, not by accepting arbitrary free-form English. Checked
+AIL-Core must support function and action invocation, conditionals, loops or
+recursion, state and value construction, failure handling, traces, and explicit
+effects. Non-engineer friendliness does not remove the need for formal
+execution semantics.
+
 ### The AI Agent Is Official But Untrusted
 
 The AI Agent is part of the toolchain. It asks questions, writes AIL-Spec,
@@ -132,6 +141,10 @@ things, fields, actions, events, tools, values, rules, contracts, permissions,
 effects, failures, guarantees, provenance, views, traces, and low-level
 obligations.
 
+The executable subset and proof sketch are defined in
+`17-execution-semantics.md`. The machine-checkable schema is defined in
+`18-ail-core-schema.md`.
+
 ### AIL-System
 
 AIL-System is the low-level profile for systems programming. It expresses
@@ -144,6 +157,9 @@ obligations while remaining explainable in English.
 AIL-Meta is the profile used to define AIL itself: parsers, checkers, compiler
 passes, diagnostics, renderers, agent prompts, lowering rules, optimizers,
 tests, package metadata, and language evolution rules.
+
+AIL-Meta packages must be concrete enough for the bootstrap compiler to consume
+and generate checker or renderer components.
 
 ## Program Profiles
 
@@ -207,6 +223,9 @@ semantic IR schema, parser rules, checker rules, diagnostic rules, renderers,
 no-code projections, debugger, agent protocol, compiler passes, optimizer
 rules, lowering rules, runtime primitives, standard library, package system,
 build system, and conformance suite.
+
+The first self-hosting subset is `SelfHostCore v0`, defined in
+`13-bootstrap-self-hosting.md`.
 
 ## Readability Gate
 

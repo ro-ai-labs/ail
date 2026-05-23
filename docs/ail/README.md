@@ -27,6 +27,17 @@ traces, bytecode, native executables, and low-level explanations.
 15. `14-evolution-protocol.md`
 16. `15-toolchain-implementation-guide.md`
 17. `16-implementation-readiness-checklist.md`
+18. `17-execution-semantics.md`
+19. `18-ail-core-schema.md`
+20. `19-agent-prompt-pack.md`
+21. `20-standard-library-and-packages.md`
+22. `21-c-interop-abi.md`
+23. `22-backend-portability.md`
+24. `23-ui-profile.md`
+25. `24-diagnostics-catalog.md`
+26. `25-example-inventory.md`
+27. `26-semantic-safety-model.md`
+28. `27-desired-outcome-traceability.md`
 
 ## Specification Contract
 
@@ -34,10 +45,10 @@ traces, bytecode, native executables, and low-level explanations.
 human English
   -> AI-assisted interview
   -> AIL-Requirements
-  -> AIL-Spec structured English
+  -> AIL-Spec Canonical
   -> AIL-Core canonical semantic graph
   -> checked program artifact
-  -> AIL bytecode, native Linux ELF, and projections
+  -> AIL bytecode, VM/native/Wasm/interoperability artifacts, and projections
 ```
 
 The compiler accepts checked deterministic artifacts, not free-form
@@ -55,6 +66,15 @@ the trusted checker is the authority for acceptance.
 - `examples/compiler-pass.ail-spec.md`
 - `examples/compiler-pass.ail-core.md`
 - `../../examples/network_driver.ail/spec.ail-spec.md`
+- `examples/network-driver.ail-core.md`
+- `25-example-inventory.md`
+
+## Versioned Assets
+
+- `prompts/`: agent prompt pack artifacts
+- `corpus/`: conformance and training fixtures
+- `24-diagnostics-catalog.md`: stable diagnostic IDs
+- `27-desired-outcome-traceability.md`: outcome-to-artifact matrix
 
 ## Implementation Start
 

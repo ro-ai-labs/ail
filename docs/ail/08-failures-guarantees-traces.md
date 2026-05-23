@@ -53,10 +53,49 @@ Trace Events record semantic execution:
 - data write
 - external call
 - branch selection
+- loop entry, iteration, and exit
+- recursive call entry and return
 - failure occurrence
 - compensation
 - guarantee check
+- async task spawn, await, cancellation, and join
 - low-level lowering or allocation decision
+
+## Control-Flow Failure Semantics
+
+Loops and recursion can fail through:
+
+- termination policy violation
+- iteration budget exhaustion
+- stack or continuation limit
+- guarantee failure inside an iteration
+- cancellation
+- failure propagated from a called action or function
+
+Profiles that require termination must reject unproven recursion or unbounded
+loops before runtime. Profiles that allow divergence must still declare
+cancellation and trace behavior.
+
+## Async And Concurrent Failure Semantics
+
+Concurrent actions declare spawn, await, cancellation, join, and compensation
+behavior. If one task fails, the graph must say whether sibling tasks continue,
+cancel, compensate, or join before returning. Concurrent writes require
+ownership, lock, or deterministic join rules.
+
+## External And C Interop Failures
+
+External calls map provider errors, timeouts, rejected responses, C return
+codes, `errno`, null pointers, callback failures, memory faults, and ABI
+violations into declared AIL `Failure` nodes. Unmapped external failures are
+blocking for safe profiles.
+
+## Backend Lowering Failures
+
+Backend failures such as unsupported effect, unsupported target type, missing
+symbol, verifier mismatch, trace mapping loss, or native artifact validation
+failure map into `LoweringFailed` subdiagnostics. A backend failure blocks
+artifact emission but must preserve the checked AIL-Core artifact for review.
 
 ## Interactive Debugging
 

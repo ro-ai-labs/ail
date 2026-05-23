@@ -48,12 +48,23 @@ Effects name every state change, external call, message, file write, payment
 action, network request, device action, or compiler mutation the tool may
 perform.
 
+External API bindings must declare target endpoint, input and output schema,
+permission, capability, failure mapping, retry behavior, timeout, redaction,
+and trace event. A natural-language mention of an API is not enough.
+
 ## Secrets
 
 Secrets are explicit. A tool that receives a payment token must declare it as a
 secret and must guarantee that the payment token never appears in a response,
 trace summary, log, or agent-visible explanation unless a redacted form is
 specified.
+
+Secret-redaction fixtures must show:
+
+- accepted redacted output
+- rejected raw secret output
+- trace summary with redacted value
+- diagnostic code when a secret reaches an agent-visible field
 
 ## Human Approval
 
@@ -81,6 +92,46 @@ requests, approvals, external calls, and guarantee checks.
 The LLM can request a tool, but the runtime enforces the declared capability.
 If the request exceeds the contract, the runtime rejects it before the external
 effect occurs.
+
+## Authorization Flow
+
+Runtime tool calls follow this order:
+
+1. Decode request into declared input types.
+2. Check requester permission.
+3. Check capability grant.
+4. Check approval conditions.
+5. Check secret redaction rules.
+6. Check sandbox or external binding policy.
+7. Execute the call.
+8. Map failures into declared AIL failures.
+9. Record audit trace.
+10. Check guarantees.
+
+## Sandboxing Rules
+
+Tool execution has no ambient authority. File, network, process, clock, random,
+payment, C interop, and device effects require explicit capabilities. A tool
+that requests an undeclared effect is rejected before the effect occurs.
+
+## External API Binding Rules
+
+An external API binding declares:
+
+- service name
+- operation name
+- endpoint or symbolic binding
+- input schema
+- output schema
+- authentication secret handling
+- permission and capability
+- effect class
+- rate limit or retry behavior
+- failure mapping
+- trace event
+
+The binding is represented in AIL-Core as an `ExternalBinding` and checked like
+any other effectful call.
 
 ## Example: Refund Customer Payment
 

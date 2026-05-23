@@ -47,6 +47,28 @@ are internally consistent:
   experiments, proposal requirements, and acceptance gates
 - `15-toolchain-implementation-guide.md`: first vertical slice, component
   boundaries, artifact format, development sequence, and slice completion gate
+- `17-execution-semantics.md`: executable Turing Core, evaluation order,
+  control flow, recursion, state, failures, traces, and concurrency boundaries
+- `18-ail-core-schema.md`: canonical package envelope, node/edge schema,
+  patch schema, normalization, hashing, examples, and invalid graphs
+- `19-agent-prompt-pack.md`: prompt assets, output envelope, prompt versioning,
+  portability harness, and checker handoff rules
+- `20-standard-library-and-packages.md`: standard modules, manifest fields,
+  imports, versioning, capability grants, and package conformance
+- `21-c-interop-abi.md`: C imports, layout, pointer ownership, callbacks,
+  linking, failure mapping, unsafe boundaries, and FFI diagnostics
+- `22-backend-portability.md`: target triples, backend contracts, artifact
+  boundaries, Linux ELF, Wasm, additional OS target, and manifests
+- `23-ui-profile.md`: routes, forms, components, UI events, accessibility,
+  state, permissions, failures, and AIL-Flow projection
+- `24-diagnostics-catalog.md`: stable diagnostic schema and checker-rule
+  coverage
+- `25-example-inventory.md`: referenced example artifacts and verification
+  commands
+- `26-semantic-safety-model.md`: safety classes, confirmations, approvals,
+  expert mode, agent refusal, UI review, and audit traces
+- `27-desired-outcome-traceability.md`: matrix from desired outcomes to
+  docs, artifacts, examples, diagnostics, and conformance boundaries
 
 ## Examples Required For Development Start
 
@@ -71,10 +93,10 @@ Run these checks before claiming the documentation is ready for implementation:
 ```bash
 find docs -maxdepth 1 -type f | sort
 find docs/ail -maxdepth 2 -type f | sort
-rg -n "TB[D]|TO[D]O|FIXM[E]|implement late[r]|fill in detail[s]" docs/ail docs/superpowers/specs README.md docs/README.md
+rg -n "TB[D]|TO[D]O|FIXM[E]|implement late[r]|fill in detail[s]" docs/ail README.md docs/README.md
 rg -n "English starts|canonical semantic|AI Agent|Round-Trip|Self-Sovereign|Readability Gate|LLM" docs/ail
 rg -n "Package Loader|AIL-Spec Parser|Elaborator|AIL-Core Store|Checker|Renderer|Trace Runtime|Diagnostics" docs/ail/15-toolchain-implementation-guide.md
-git diff --check -- README.md docs/README.md docs/ail docs/superpowers/specs docs/superpowers/plans
+git diff --check -- README.md docs/README.md docs/ail
 ```
 
 The placeholder scan should return no matches. `rg` exits with code 1 when it
@@ -109,3 +131,33 @@ Development may start when:
 
 If one of these conditions fails, update the relevant spec before implementing
 compiler code.
+
+## Language MVP Readiness Checklist
+
+This second checklist is stricter than the first vertical-slice gate. AIL is
+ready to claim a language MVP only when:
+
+- AIL-Core schema validation and stable semantic hashing are implemented.
+- Execution semantics cover functions, calls, branches, loops or recursion,
+  state mutation, failure propagation, guarantees, traces, and external calls.
+- Turing Core fixtures include recursive factorial, map/filter/reduce,
+  stateful counter, event loop, and compiler graph pass.
+- The prompt pack files exist and the portability harness records accepted and
+  rejected model outputs.
+- AIL-Flow block patches round-trip through AIL-Core.
+- Standard library package manifests, imports, version constraints, capability
+  grants, and package conformance fixtures exist.
+- C interop fixtures cover function import, callback, struct layout, ownership
+  transfer, rejected unsafe pointer, and foreign-call trace.
+- Backend conformance manifests exist for Linux x86_64 ELF and Wasm, with one
+  additional OS target contract.
+- UI profile fixtures cover CRUD app, dashboard, multi-step workflow, and
+  accessibility trace.
+- SelfHostCore v0 can define at least one checker or renderer component as an
+  AIL-Meta package.
+- The diagnostic catalog has one stable diagnostic per checker rule and at
+  least one invalid fixture per diagnostic.
+- The corpus directory contains interviews, accepted/rejected specs,
+  accepted/rejected core fixtures, flow patches, traces, prompts, round trips,
+  interop fixtures, and self-host fixtures.
+- The desired-outcome traceability matrix has no row supported only by prose.

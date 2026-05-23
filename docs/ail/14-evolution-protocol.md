@@ -26,6 +26,21 @@ visual renderers, embedding-based drift signals, debugging interactions,
 lowering strategies, and editor workflows. They must not become compiler
 authority until accepted.
 
+## Required Proposal Tracks
+
+These tracks are explicit versioned decision areas:
+
+- Turing completeness and execution semantics
+- AIL-Core schema and graph patch evolution
+- C interop and ABI safety
+- standard library and package compatibility
+- visual block model and AIL-Flow patching
+- backend portability and target support
+- UI profile semantics
+- prompt pack and portability harness
+- diagnostic catalog
+- self-hosting subset
+
 ## Proposal Requirements
 
 Each language proposal must include:
@@ -41,6 +56,9 @@ Each language proposal must include:
 - trace/debugging example
 - implementation feasibility note
 - compatibility impact
+- corpus entries
+- safety classification
+- artifact boundary changes
 
 ## Readability Gate
 
@@ -63,9 +81,13 @@ checker rules, diagnostics, conformance tests, and equivalence rules.
 A proposal is accepted when it passes the gates, preserves stable invariants,
 has conformance tests, and identifies migration behavior for existing packages.
 
+Acceptance also requires the traceability matrix row for the affected outcome
+to name a schema or artifact, example, checker rule or diagnostic, conformance
+boundary, and documentation owner.
+
 ## Open Decisions For Later Specification
 
 The current recommended default is to specify the semantic contract before
-freezing surface syntax. Later proposals should decide exact package file
-formats, textual grammar, binary graph format, standard library shape, backend
-targets, and the first self-hosting subset.
+freezing surface syntax. Exact package file formats, textual grammar, binary
+graph format, standard library shape, backend targets, and self-hosting subsets
+are versioned decisions tracked by the required proposal tracks above.

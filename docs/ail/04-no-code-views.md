@@ -21,6 +21,11 @@ Initial view types are:
 - System Component Views
 - Lowering Views
 - Diagnostic Views
+- Route Maps
+- Form Blocks
+- Component Cards
+- C Interop Blocks
+- Backend Manifest Views
 
 ## Application Map
 
@@ -36,6 +41,27 @@ writes, calls, failures, approvals, guarantees, and traces.
 
 Editing an action card creates a graph patch. The patch is checked before it is
 accepted.
+
+## Block Model
+
+AIL-Flow uses deterministic blocks and sockets:
+
+- Application Map nodes: actors, things, actions, external systems, tools,
+  views, system components, and packages
+- Action Card blocks: trigger, inputs, requirements, reads, writes, calls,
+  failures, approvals, guarantees, and traces
+- Rule blocks: condition, scope, source, dependent actions
+- Failure blocks: trigger, compensation, response, trace
+- Permission blocks: actor, capability, resource, effect, audience
+- System blocks: resource, owner, borrow, region, layout, allocation, context,
+  effect
+- Compiler blocks: pass input, pass output, graph pattern, rewrite, diagnostic
+- UI blocks: route, form, component, event, state, accessibility
+- C interop blocks: function, pointer, ownership, errno mapping, callback,
+  symbol, ABI layout
+
+Sockets declare accepted node and edge kinds. A connector between sockets is a
+candidate graph edge and must satisfy the schema catalog.
 
 ## Data Tables
 
@@ -77,9 +103,46 @@ No-code views do not perform opaque text edits. They produce graph patches
 against AIL-Core. Each patch declares the nodes, edges, attributes, and
 provenance it adds, changes, or removes.
 
+Patch payload:
+
+```json
+{
+  "schema": "ail-core.patch.v0",
+  "base_hash": "ail-core:fnv64:...",
+  "source_view": "ActionCard:CloseTicket",
+  "ops": [
+    {
+      "op": "add_edge",
+      "kind": "requires",
+      "source": "Action:CloseTicket",
+      "target": "Rule:TicketNotClosed",
+      "provenance": ["flow:ActionCard:CloseTicket"]
+    }
+  ]
+}
+```
+
+Direct visual edits are allowed for fields, rules, trace names, form bindings,
+view filters, and declared permissions when all required semantics are present.
+Edits that add external calls, secret access, money movement, unsafe interop,
+or system effects require agent clarification and human confirmation.
+
 ## Validation Of View Patches
 
 View patches are checked with the same authority as structured-English patches.
 The checker validates type flow, permissions, effects, failures, guarantees,
 secrets, approvals, trace obligations, profile rules, and round-trip
 equivalence before acceptance.
+
+## Validation States
+
+AIL-Flow renders validation states:
+
+- accepted
+- needs clarification
+- checker rejected
+- high-risk confirmation required
+- expert-mode capability required
+- projection drift detected
+
+Each state links to diagnostic codes and affected graph nodes or edges.

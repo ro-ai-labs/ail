@@ -7,15 +7,48 @@ AIL uses a staged pipeline:
 ```text
 AIL-English conversation
   -> AI-assisted interview
-  -> AIL-Spec structured English
+  -> AIL-Requirements
+  -> AIL-Spec Canonical
   -> AIL-Core canonical semantic graph
   -> checker
-  -> executable artifact
-  -> projections, diagnostics, traces, and explanations
+  -> AIL-Bytecode
+  -> backend-specific native, Wasm, VM, or interop artifacts
+  -> projections, diagnostics, traces, manifests, and explanations
 ```
 
 English conversation is not compiled directly. It is an input to the interview
 and clarification process. The compiler accepts only deterministic artifacts.
+
+Friendly English, no-code views, and prompt outputs are projections. They can
+start a patch, but the patch must validate against AIL-Core before acceptance.
+
+## Compiler Stage Diagram
+
+```text
+AIL-English
+  -> AIL-Agent interview
+  -> AIL-Requirements
+  -> AIL-Spec Canonical
+  -> parser
+  -> elaborator
+  -> AIL-Core schema v0
+  -> checker
+  -> canonical hash
+  -> AIL-Bytecode
+  -> VM runtime
+  -> target lowering plan
+  -> native target artifact
+  -> backend conformance manifest
+
+Side projections:
+
+AIL-Core -> AIL-Spec Friendly
+AIL-Core -> AIL-Flow block view
+AIL-Flow edit -> graph patch -> checker -> AIL-Core
+AIL-Core -> C interop binding declarations -> ABI checker
+AIL-Core -> diagnostics -> diagnostic repair prompt
+AIL-Core + trace -> trace explanation
+```
 
 ## Accepted Program Artifact
 
@@ -37,6 +70,10 @@ Every human-facing surface is a projection:
 - Runtime traces explain what happened and why.
 - Lower-level explanations connect high-level intent to generated code,
   runtime effects, memory behavior, and backend obligations.
+- C interop bindings explain imported symbols, ABI layout, pointer ownership,
+  errno mappings, callbacks, and unsafe boundaries.
+- Backend manifests explain bytecode, VM, native, Wasm, and OS-specific
+  artifact boundaries.
 
 Projections may create edits only as validated patches against AIL-Core. They
 must not silently rewrite the accepted program.
@@ -76,12 +113,16 @@ outside the boundary until they normalize into checked AIL-Core.
 The checker must reject:
 
 - unresolved questions
+- invalid prompt output schema
 - missing required inputs or outputs
 - unknown references
 - ambiguous action targets
 - invalid type, permission, effect, or failure flow
+- invalid control-flow semantics
 - secret leaks
 - unmet approval rules
+- unsafe or unmapped C interop
+- unsupported backend effects
 - profile obligations that cannot be explained or lowered
 
 ## Runtime Boundary

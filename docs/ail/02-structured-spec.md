@@ -9,6 +9,14 @@ AIL-Spec should be readable by English speakers without requiring them to learn
 symbol-heavy programming syntax. It should also be regular enough for an AI
 Agent to generate, patch, normalize, and explain.
 
+AIL-Spec has two modes:
+
+- `AIL-Spec Canonical`: parser-owned, deterministic structured English.
+- `AIL-Spec Friendly`: user-facing explanation rendered from AIL-Core.
+
+The compiler parses only Canonical. Friendly text may help review, but it must
+cite canonical sections or graph node IDs and cannot be compiled directly.
+
 ## Required Qualities
 
 An AIL-Spec document must be:
@@ -45,6 +53,168 @@ When <actor/event> <action>:
 
 Every paragraph that introduces behavior receives stable provenance so the
 derived AIL-Core nodes can point back to the human-reviewed source.
+
+## Canonical Grammar
+
+Canonical headings:
+
+```text
+Package: <package name>.
+Application: <name>.
+Tool: <name>.
+System component: <name>.
+Compiler pass: <name>.
+Function: <name>.
+Action: <name>.
+Failure <name> happens when <condition>:
+Route: <name>.
+Form: <name>.
+C library: <name>.
+Import package: <package>@<version> as <alias>.
+```
+
+Canonical bullets use one verb phrase per semantic operation:
+
+```text
+- the system requires <rule>
+- the system reads <thing.field>
+- the system changes <thing.field> to <value>
+- the system calls <action or function> with <arguments>
+- the system calls external binding <binding>
+- the system returns <value>
+- the system records a trace event named <TraceName>
+- the system guarantees <guarantee>
+```
+
+Friendly renderers may paraphrase these forms only outside the parser boundary.
+
+## Control Flow Forms
+
+Branch:
+
+```text
+If <condition>:
+- the system <operation>
+Otherwise:
+- the system <operation>
+```
+
+Loop:
+
+```text
+While <condition> remains true:
+- the system <operation>
+- the system records a trace event named <TraceName>
+```
+
+Finite iteration:
+
+```text
+For each <item> in <collection>:
+- the system <operation using item>
+```
+
+Match:
+
+```text
+When <value> is Some:
+- the system <operation>
+When <value> is None:
+- the system <operation>
+```
+
+Recursion:
+
+```text
+The function calls <function> with <arguments>.
+```
+
+Profiles that require termination must include a bounded iteration policy or a
+structural decrease explanation.
+
+## Function And Action Calls
+
+Function signatures:
+
+```text
+Function: <name>.
+
+The function needs:
+- <input>: <type>
+
+The function produces:
+- <output>: <type>
+```
+
+Action calls:
+
+```text
+The action calls <action name> with:
+- <parameter>: <value>
+```
+
+Functions are pure unless their signature declares effects. Actions may have
+effects when permissions, failures, guarantees, and traces are explicit.
+
+## External Calls And C Imports
+
+External calls:
+
+```text
+The system calls external binding <binding name>.
+```
+
+C imports:
+
+```text
+C library: <library>.
+
+The library imports function <symbol>.
+
+<symbol> needs:
+- <parameter>: <type and ownership>
+
+<symbol> maps errno or status codes:
+- <code> maps to Failure.<name>
+```
+
+Every external call requires an effect, permission or capability, failure
+mapping, secret-redaction rule when relevant, and trace event.
+
+## Library Imports And Standard Library Usage
+
+Package import:
+
+```text
+Import package: ail.std.collections@0.1 as Collections.
+```
+
+Standard library type usage:
+
+```text
+A Ticket has:
+- assignee: Option<User>
+```
+
+Imported declarations keep their package identity in AIL-Core. The checker
+rejects ambiguous aliases and unsupported package versions.
+
+## UI Forms
+
+Routes, views, components, and forms are canonical AIL-Spec sections:
+
+```text
+Route: Ticket detail.
+
+The route path is:
+- /tickets/:ticket_id
+
+The route reads:
+- Ticket.status
+```
+
+UI actions still lower to ordinary actions, rules, permissions, failures,
+guarantees, and traces.
 
 ## Application Sections
 

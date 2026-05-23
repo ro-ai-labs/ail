@@ -15,6 +15,22 @@ performance-critical library over time.
 The first implementation may cover small slices, but the model must not close
 off those targets.
 
+## Staged Capability Matrix
+
+AIL-System capabilities are accepted in levels:
+
+| Level | Scope | Required evidence |
+| --- | --- | --- |
+| 0 | resource and effect declarations | accepted and rejected fixtures for declared resources and effects |
+| 1 | ownership, borrowing, regions, layout, allocation | borrow checker diagnostics, layout fixtures, allocation fixtures |
+| 2 | interrupts, scheduler tasks, locks, timing | interrupt-context diagnostics, scheduler fixtures, lock guard fixtures |
+| 3 | device register access and DMA | device capability, DMA ownership, unsafe safety review, trace fixture |
+| 4 | filesystem and network stack components | external resource capability, concurrency semantics, backend support |
+| 5 | kernel/runtime self-hosting subset | SelfHostCore v0, fixed-point report, backend manifest |
+
+Each level must define accepted examples, rejected examples, diagnostics,
+traces, lowering obligations, and backend requirements before it is accepted.
+
 ## Memory And Layout
 
 Memory and layout semantics describe representation, alignment, allocation,
@@ -45,6 +61,14 @@ read/write conflicts, ordering, and trace joins explicit.
 Device and OS interactions use capabilities. A program cannot access a device,
 file descriptor, network socket, timer, process, or privileged instruction
 without a declared capability and effect.
+
+## C ABI Cross-Reference
+
+C interop and ABI-visible declarations reuse AIL-System resources, layout,
+ownership, borrowing, and capabilities. The first-class C profile is defined in
+`21-c-interop-abi.md`. A C import is accepted only when pointer ownership,
+layout, calling convention, symbol visibility, failure mapping, redaction, and
+trace behavior are explicit.
 
 The first implemented AIL-System slice accepts a regular component surface:
 

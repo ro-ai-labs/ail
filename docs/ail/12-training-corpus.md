@@ -24,6 +24,8 @@ Each accepted language feature should include paired artifacts:
 - round-trip examples
 - conformance expectations
 
+The versioned corpus directory is `corpus/`.
+
 ## Fine-Tuning Data
 
 fine-tuning data may include interviews, specs, IR, patches, diagnostics,
@@ -65,3 +67,45 @@ The Conformance Suite is the authoritative executable corpus. It checks
 parsing, elaboration, graph normalization, projection round trips, checker
 diagnostics, runtime behavior, traces, no-code patches, and lowering
 equivalence.
+
+## Corpus Directory Structure
+
+```text
+corpus/
+  interviews/
+  specs/accepted/
+  specs/rejected/
+  core/accepted/
+  core/rejected/
+  flow/
+  traces/
+  prompts/
+  roundtrip/
+  interop/
+  selfhost/
+```
+
+## Artifact Formats
+
+Corpus entries declare:
+
+- source artifact path
+- expected status
+- expected diagnostic codes when rejected
+- semantic hash when accepted
+- prompt pack version when model output is involved
+- trace expectations when executable
+- safety class when review is required
+
+## Acceptance Metrics
+
+Every feature proposal must add corpus entries before acceptance. Acceptance
+requires:
+
+- at least one accepted fixture
+- at least one rejected fixture for each new checker rule
+- diagnostic coverage for rejected fixtures
+- trace coverage for executable behavior
+- round-trip fixture for every new projection
+- prompt portability fixture when agent behavior changes
+- interop or backend fixture when external artifacts change

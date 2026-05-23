@@ -22,9 +22,14 @@ Initial core types include:
 - Option<T>
 - Result<T, E>
 - Secret<T>
+- Function<Input, Output>
+- Action<Input, Output, Effects>
+- Pointer<T>
+- Reference<T>
 - Thing types
 - Tool contract types
 - Region and layout types for AIL-System
+- FFI-safe integer, float, pointer, struct, union, and enum types
 
 ## Structured Values
 
@@ -42,6 +47,83 @@ The checker validates every field and nested value against its declared type.
 
 Actions must explain how they handle absent values and failures when those
 states affect behavior.
+
+## Callable Types
+
+Callable values use explicit signatures:
+
+```text
+Function<Input, Output>
+Action<Input, Output, Effects>
+Callback<Input, Output, Effects>
+```
+
+A pure `Function` cannot perform effects unless its signature declares them.
+An `Action` may perform effects only when permissions, failures, guarantees,
+and traces are declared. A `Callback` used across C interop must declare
+lifetime, thread-safety, reentrancy, and captured state.
+
+## Generic Constraints
+
+Generic declarations name their constraints:
+
+```text
+Function: List.map<T, U>.
+
+The function requires:
+- mapper: Function<T, U>
+```
+
+The checker validates that type parameters are used consistently, that generic
+effects are not hidden, and that imported package constraints are resolved.
+
+## Pointer And Reference Types
+
+Pointer and reference types are allowed only in profiles that declare their
+safety class:
+
+- `Reference<T>`: checked non-owning reference inside AIL execution
+- `MutableReference<T>`: exclusive mutable reference
+- `Pointer<T> borrowed`: C or system pointer readable during a call
+- `Pointer<T> borrowed mutable`: C or system pointer writable during a call
+- `Pointer<T> owned`: ownership transfers according to a release rule
+- `Nullable<Pointer<T>>`: null may appear
+- `NonNull<Pointer<T>>`: null rejected before use
+
+Pointer values require provenance, layout, lifetime, ownership, and traceable
+unsafe boundaries.
+
+## Collection Operations
+
+The standard collection operations are:
+
+- `List.map`
+- `List.filter`
+- `List.reduce`
+- `Map.get`
+- `Map.insert`
+- `Set.contains`
+- `Option.map`
+- `Result.map`
+- `Result.and_then`
+
+Each operation has AIL-Core mappings, exhaustive match rules, trace fixtures,
+and diagnostics in the standard library package.
+
+## FFI-Safe Types
+
+FFI-safe types are the subset accepted by `21-c-interop-abi.md`:
+
+- fixed-width integers
+- C-compatible floats
+- `Bool` with explicit ABI representation
+- `Pointer<T>` forms
+- `repr(C)` structs
+- declared unions
+- declared enums
+- function pointers and callbacks
+
+Non-FFI-safe AIL values require explicit marshalling declarations.
 
 ## Secret Values
 

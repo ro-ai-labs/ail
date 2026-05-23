@@ -36,7 +36,9 @@ Initial node kinds are:
 Application, Thing, Field, Action, Step, Tool, SystemComponent, Resource,
 Event, Rule, View, Value, Capability, Permission, Effect, Failure, Guarantee,
 Secret, Approval, Trace, Region, Layout, Allocation, ExecutionContext,
-InterruptPriority, InterruptMask, SchedulerTask, Lowering, Diagnostic
+InterruptPriority, InterruptMask, SchedulerTask, Lowering, Diagnostic,
+Function, Input, Output, Branch, Loop, Match, Call, Return, Package,
+ExternalBinding, Prompt, CorpusFixture
 ```
 
 Profiles may add specialized nodes only when they map back to these core
@@ -95,6 +97,8 @@ Initial edge kinds include:
 Each edge kind defines source node kinds, target node kinds, cardinality, and
 checker rules.
 
+The machine-checkable node and edge catalog is `18-ail-core-schema.md`.
+
 ## Attributes
 
 Attributes hold typed scalar or structured values. They include names, English
@@ -146,3 +150,30 @@ review. A mature implementation should define a canonical package format with:
 - conformance declarations
 - deterministic ordering
 - stable hashes
+
+## Canonical Schema Boundary
+
+The canonical package envelope, graph patch schema, stable serialization order,
+normalization algorithm, and semantic hash algorithm are defined in
+`18-ail-core-schema.md`. Implementations may expose readable text for review,
+but conformance compares normalized schema data, not hand-written prose.
+
+## Graph Patch Boundary
+
+AIL-Spec edits, AIL-Flow visual edits, agent repairs, and migration proposals
+all become graph patches. A patch must declare:
+
+- base graph hash
+- operations over nodes, edges, or attributes
+- provenance for every operation
+- human confirmation state when semantics change
+- expected diagnostics or accepted status
+
+A patch is accepted only after the resulting graph validates against the schema
+catalog and checker rules.
+
+## Package Schema
+
+Package metadata is part of the semantic boundary. Package name, version,
+profile, imports, feature flags, prompt-pack version, capability grants,
+target support, and conformance level affect validation and hashing.

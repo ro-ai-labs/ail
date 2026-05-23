@@ -22,6 +22,7 @@ The AI Agent should:
 - debug traces interactively
 - generate examples and tests
 - preserve provenance for every inferred fact
+- run prompt-portability checks through the conformance harness
 
 ## Interview Loop
 
@@ -49,6 +50,7 @@ Before a behavior is accepted, the agent should attempt to capture:
 - what guarantees must always hold
 - what views or interfaces humans need
 - what traces should be explainable
+- which prompt-pack version and model output produced each draft artifact
 
 ## Patch Discipline
 
@@ -94,6 +96,51 @@ Every feature should have:
 - one no-code rendering expectation
 - one trace/debugging expectation
 
+The complete versioned prompt pack is defined in
+`19-agent-prompt-pack.md` and implemented as files under `prompts/`.
+
+## Prompt Output Schemas
+
+Every prompt output uses a structured envelope:
+
+```json
+{
+  "artifact_kind": "AIL-Spec Canonical",
+  "artifact_text": "",
+  "questions": [],
+  "assumptions": [],
+  "provenance": [],
+  "checker_handoff": {
+    "must_check": true,
+    "expected_profile": "Application",
+    "expected_features": []
+  }
+}
+```
+
+Outputs that violate the envelope are rejected with `AIL-PROMPT-001`.
+
+## Prompt Versioning
+
+Prompt versions are immutable release artifacts. A package records the prompt
+pack version used by the agent, but the checker treats prompt identity as
+provenance only. The deterministic artifact must still parse, normalize, and
+pass schema validation.
+
+## Unresolved Ambiguity
+
+When the agent cannot resolve a semantic question, it must return a blocking
+question instead of guessing. This applies especially to permissions, effects,
+secrets, money, safety, C interop, OS calls, failure handling, traces, and
+approval rules.
+
+## Model Portability Tests
+
+The prompt portability harness runs the same user request through multiple
+model outputs and accepts semantic equivalence, not identical wording. A model
+output passes when it normalizes to equivalent checked AIL-Core or asks the
+expected blocking questions without inventing semantics.
+
 ## Calibration Examples
 
 Calibration examples must include accepted specs, rejected specs, diagnostic
@@ -117,3 +164,5 @@ The protocol must detect and surface:
 - incomplete failure handling
 - projection drift
 - trace explanations that do not match runtime events
+- prompt output schemas that cannot be validated
+- model outputs that are wording-compatible but semantically different
