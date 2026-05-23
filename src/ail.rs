@@ -721,10 +721,21 @@ fn apply_ail_core_patch_add_node(
     let name = required_json_string_for(op, "name", "AIL-Core patch add_node")?;
     let type_name = optional_json_string(op, "type").map(ToString::to_string);
     let attributes = optional_json_string_map(op, "attributes", "AIL-Core patch add_node")?;
+    let provenance = optional_json_string_array(op, "provenance", "AIL-Core patch add_node")?;
+    if core
+        .graph
+        .nodes
+        .iter()
+        .any(|node| node.kind == kind && node.name == name)
+    {
+        return Err(format!(
+            "AIL-Core patch add_node refuses to add existing node {kind}:{name}"
+        ));
+    }
     let node = core
         .graph
         .add_node(kind.to_string(), name.to_string(), type_name, attributes);
-    for provenance in optional_json_string_array(op, "provenance", "AIL-Core patch add_node")? {
+    for provenance in provenance {
         attach_provenance(&mut core.graph, &node, provenance);
     }
     Ok(())

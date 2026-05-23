@@ -295,8 +295,9 @@ labels as `coreLabel` on node-backed objects so editors do not need to invent
 label syntax from display names. AIL-Flow objects that render graph
 relationships expose checked edge references as `edgeRefs`; each entry carries
 the patch `kind`, `source`, `target`, display `targetName`, and edge
-`attributes` for the current graph edge. `add_node` writes node provenance as
-`Provenance` nodes plus
+`attributes` for the current graph edge. `add_node` creates a new node, rejects
+an existing node with the same kind and name instead of treating the operation
+as a no-op, and writes node provenance as `Provenance` nodes plus
 `has_provenance` edges. `remove_node` resolves a checked node label, deletes
 only detached nodes, and rejects nodes with incident edges so the patch must
 remove relationships explicitly first. `add_edge` stores edge provenance as an

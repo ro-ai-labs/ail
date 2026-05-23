@@ -1771,6 +1771,38 @@ fn ail_core_patch_remove_edge_rejects_missing_edge() {
 }
 
 #[test]
+fn ail_core_patch_add_node_rejects_existing_node() {
+    let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
+    let document = parse_ail_spec_text(&package.spec_text).unwrap();
+    let core = elaborate_ail_core(&package, &document);
+    let core_hash = ail_core_hash(&core);
+    let patch = format!(
+        r#"{{
+  "schema": "ail-core.patch.v0",
+  "base_hash": "{core_hash}",
+  "source_view": "ActionCard:CloseTicket",
+  "ops": [
+    {{
+      "op": "add_node",
+      "kind": "Rule",
+      "name": "the ticket to exist"
+    }}
+  ]
+}}"#
+    );
+    let Err(error) = apply_ail_core_patch_text(&core, &patch) else {
+        panic!("expected duplicate add_node to be rejected");
+    };
+
+    assert!(
+        error.contains(
+            "AIL-Core patch add_node refuses to add existing node Rule:the ticket to exist"
+        ),
+        "{error}"
+    );
+}
+
+#[test]
 fn ail_core_patch_add_edge_rejects_existing_edge() {
     let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
     let document = parse_ail_spec_text(&package.spec_text).unwrap();
