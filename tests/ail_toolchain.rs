@@ -2462,6 +2462,106 @@ fn cli_ail_flow_edit_adds_action_requirement_and_native_enforces_it() {
 }
 
 #[test]
+fn cli_ail_flow_edit_adds_data_table_field_and_round_trips_to_spec() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("support_ticket.ail");
+    let core_output = Command::new(binary)
+        .args(["ail-core", &package])
+        .output()
+        .unwrap();
+    assert!(
+        core_output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&core_output.stdout),
+        String::from_utf8_lossy(&core_output.stderr)
+    );
+    let core_text = String::from_utf8(core_output.stdout).unwrap();
+    let core = parse_ail_core_text(&core_text).unwrap();
+    let core_hash = ail_core_hash(&core);
+
+    let unique_suffix = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let core_path = std::env::temp_dir().join(format!(
+        "ail-flow-edit-add-field-{}-{unique_suffix}.ail-core.txt",
+        std::process::id()
+    ));
+    let edit_path = std::env::temp_dir().join(format!(
+        "ail-flow-edit-add-field-{}-{unique_suffix}.ail-flow.edit.json",
+        std::process::id()
+    ));
+    fs::write(&core_path, core_text).unwrap();
+    fs::write(
+        &edit_path,
+        format!(
+            r#"{{
+  "schema": "ail-flow.edit.v0",
+  "package": "support-ticket",
+  "base_hash": "{core_hash}",
+  "source_view": "DataTable:Ticket",
+  "edits": [
+    {{
+      "op": "DataTable.addField",
+      "target": "Thing:Ticket",
+      "name": "priority",
+      "type": "State<Low, Normal, High>",
+      "secret": "false",
+      "provenance": ["flow:DataTable:Ticket.field:priority"]
+    }}
+  ]
+}}"#
+        ),
+    )
+    .unwrap();
+
+    let patched_core = Command::new(binary)
+        .args([
+            "ail-flow-edit",
+            "--core-file",
+            core_path.to_str().unwrap(),
+            edit_path.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        patched_core.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&patched_core.stdout),
+        String::from_utf8_lossy(&patched_core.stderr)
+    );
+    let patched_core_text = String::from_utf8(patched_core.stdout).unwrap();
+    let patched_core_artifact = parse_ail_core_text(&patched_core_text).unwrap();
+    assert_eq!(check_ail_core(&patched_core_artifact), Vec::<String>::new());
+    assert!(
+        patched_core_artifact
+            .graph
+            .find_node("Field", "Ticket.priority")
+            .is_some()
+    );
+    assert!(
+        patched_core_text.contains("edge has_field Thing:Ticket -> Field:Ticket.priority"),
+        "{patched_core_text}"
+    );
+
+    let patched_spec = render_ail_spec_from_core(&patched_core_artifact);
+    assert!(
+        patched_spec.contains("- priority: State<Low, Normal, High>"),
+        "{patched_spec}"
+    );
+    let patched_flow = render_ail_flow_view(&patched_core_artifact);
+    assert!(
+        patched_flow.contains(
+            r#""name":"priority","coreLabel":"Field:Ticket.priority","type":"State<Low, Normal, High>","secret":false"#
+        ),
+        "{patched_flow}"
+    );
+
+    fs::remove_file(core_path).unwrap();
+    fs::remove_file(edit_path).unwrap();
+}
+
+#[test]
 fn ail_core_patch_rejects_package_mismatch() {
     let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
     let document = parse_ail_spec_text(&package.spec_text).unwrap();

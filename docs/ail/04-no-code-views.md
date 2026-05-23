@@ -170,6 +170,8 @@ rendered back to AIL-Spec with `ail-spec --core-file`.
 
 Direct visual edits are allowed for fields, rules, trace names, form bindings,
 view filters, and declared permissions when all required semantics are present.
+The stage-0 `ail-flow-edit` path supports `DataTable.addField` for checked
+field additions and Action Card edits for labels and requirements.
 Edits that add external calls, secret access, money movement, unsafe interop,
 or system effects require agent clarification and human confirmation.
 

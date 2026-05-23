@@ -788,6 +788,9 @@ pub fn render_ail_core_patch_from_flow_edit_text(
                     core, edit,
                 )?);
             }
+            "DataTable.addField" => {
+                ops.extend(render_data_table_add_field_core_patch_ops(core, edit)?);
+            }
             op_name => return Err(format!("unsupported AIL-Flow edit op '{op_name}'")),
         }
     }
@@ -885,6 +888,130 @@ fn render_action_card_add_requirement_core_patch_ops(
         json_string(&rule_label),
         render_json_array(provenance)
     ));
+    Ok(ops)
+}
+
+fn render_data_table_add_field_core_patch_ops(
+    core: &AilCore,
+    edit: &BTreeMap<String, AilJsonValue>,
+) -> Result<Vec<String>, String> {
+    let target = required_json_string_for(edit, "target", "AIL-Flow DataTable.addField")?;
+    let Some(target_node) = find_core_patch_node(core, target) else {
+        return Err(format!(
+            "AIL-Flow DataTable.addField references unknown target '{target}'"
+        ));
+    };
+    if target_node.kind != "Thing" {
+        return Err(format!(
+            "AIL-Flow DataTable.addField target must be a Thing, got {}",
+            core_node_label(&target_node)
+        ));
+    }
+    let field_name = trim_sentence(required_json_string_for(
+        edit,
+        "name",
+        "AIL-Flow DataTable.addField",
+    )?);
+    if field_name.is_empty() {
+        return Err("AIL-Flow DataTable.addField name must not be empty".to_string());
+    }
+    if field_name.contains('.') {
+        return Err(
+            "AIL-Flow DataTable.addField name must be local to the target Thing".to_string(),
+        );
+    }
+    let type_name = trim_sentence(required_json_string_for(
+        edit,
+        "type",
+        "AIL-Flow DataTable.addField",
+    )?);
+    if type_name.is_empty() {
+        return Err("AIL-Flow DataTable.addField type must not be empty".to_string());
+    }
+    let secret = match optional_json_string(edit, "secret") {
+        Some("true") => true,
+        Some("false") => false,
+        Some(value) => {
+            return Err(format!(
+                "AIL-Flow DataTable.addField secret must be 'true' or 'false', got '{value}'"
+            ));
+        }
+        None => type_contains_secret(&type_name),
+    };
+    let mut provenance =
+        optional_json_string_array(edit, "provenance", "AIL-Flow DataTable.addField")?;
+    if provenance.is_empty() {
+        provenance.push(format!(
+            "flow:DataTable:{}.field:{}",
+            target_node.name, field_name
+        ));
+    }
+    let provenance_array = render_json_array(provenance.clone());
+    let field_full_name = format!("{}.{}", target_node.name, field_name);
+    let field_label = format!("Field:{field_full_name}");
+    let mut ops = vec![
+        format!(
+            concat!(
+                "    {{\n",
+                "      \"op\": \"add_node\",\n",
+                "      \"kind\": \"Field\",\n",
+                "      \"name\": {},\n",
+                "      \"type\": {},\n",
+                "      \"attributes\": {{\n",
+                "        \"secret\": {}\n",
+                "      }},\n",
+                "      \"provenance\": {}\n",
+                "    }}"
+            ),
+            json_string(&field_full_name),
+            json_string(&type_name),
+            json_string(if secret { "true" } else { "false" }),
+            provenance_array
+        ),
+        format!(
+            concat!(
+                "    {{\n",
+                "      \"op\": \"add_edge\",\n",
+                "      \"kind\": \"has_field\",\n",
+                "      \"source\": {},\n",
+                "      \"target\": {},\n",
+                "      \"provenance\": {}\n",
+                "    }}"
+            ),
+            json_string(&core_node_label(&target_node)),
+            json_string(&field_label),
+            render_json_array(provenance.clone())
+        ),
+    ];
+    if secret {
+        let secret_label = format!("Secret:{field_full_name}");
+        ops.push(format!(
+            concat!(
+                "    {{\n",
+                "      \"op\": \"add_node\",\n",
+                "      \"kind\": \"Secret\",\n",
+                "      \"name\": {},\n",
+                "      \"provenance\": {}\n",
+                "    }}"
+            ),
+            json_string(&field_full_name),
+            render_json_array(provenance.clone())
+        ));
+        ops.push(format!(
+            concat!(
+                "    {{\n",
+                "      \"op\": \"add_edge\",\n",
+                "      \"kind\": \"protects_secret\",\n",
+                "      \"source\": {},\n",
+                "      \"target\": {},\n",
+                "      \"provenance\": {}\n",
+                "    }}"
+            ),
+            json_string(&secret_label),
+            json_string(&field_label),
+            render_json_array(provenance)
+        ));
+    }
     Ok(ops)
 }
 
