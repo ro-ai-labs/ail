@@ -4728,6 +4728,43 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
         native_bytecode_report_fingerprint.trim(),
         fnv64_fingerprint(&native_bytecode_report)
     );
+    let host_boundary_report =
+        fs::read_to_string(artifact_dir.join("bootstrap-host-boundary-report.txt")).unwrap();
+    assert!(
+        host_boundary_report.contains("AIL-Bootstrap-Host-Boundary:"),
+        "{host_boundary_report}"
+    );
+    assert!(
+        host_boundary_report.contains("no-host-backend-source true"),
+        "{host_boundary_report}"
+    );
+    assert!(
+        host_boundary_report.contains("generated-host-language-source none"),
+        "{host_boundary_report}"
+    );
+    assert!(
+        host_boundary_report.contains("forbidden-host-source-suffixes .rs .c .cc .cpp .h .hpp .py .js .ts .go .java .ll .bc .wasm"),
+        "{host_boundary_report}"
+    );
+    assert!(
+        host_boundary_report.contains("ail-source toolchain-agent.source.ail-spec.md"),
+        "{host_boundary_report}"
+    );
+    assert!(
+        host_boundary_report.contains("ail-bytecode toolchain-agent.ailbc.json"),
+        "{host_boundary_report}"
+    );
+    assert!(
+        host_boundary_report.contains("machine-bytecode toolchain-agent-VerifyBootstrapManifest.elf elf64-little-x86_64-executable"),
+        "{host_boundary_report}"
+    );
+    let host_boundary_report_fingerprint =
+        fs::read_to_string(artifact_dir.join("bootstrap-host-boundary-report.fingerprint.txt"))
+            .unwrap();
+    assert_eq!(
+        host_boundary_report_fingerprint.trim(),
+        fnv64_fingerprint(&host_boundary_report)
+    );
 
     let agent_bytecode = fs::read_to_string(artifact_dir.join("agent.ailbc.json")).unwrap();
     assert_eq!(agent_bytecode, toolchain_bytecode);
@@ -4746,6 +4783,8 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
     assert!(agent_trace.contains("read buildrequest.conformance report fingerprint"));
     assert!(agent_trace.contains("read buildrequest.native bytecode report"));
     assert!(agent_trace.contains("read buildrequest.native bytecode report fingerprint"));
+    assert!(agent_trace.contains("read buildrequest.host boundary report"));
+    assert!(agent_trace.contains("read buildrequest.host boundary report fingerprint"));
     assert!(agent_trace.contains("read buildrequest.target artifact fingerprint"));
     assert!(agent_trace.contains("read buildrequest.compiler pass target artifact fingerprint"));
     assert!(agent_trace.contains("read buildrequest.artifact manifest"));
@@ -4772,6 +4811,8 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
             "buildrequest.conformance report fingerprint=fnv64:conformance",
             "buildrequest.native bytecode report=ok",
             "buildrequest.native bytecode report fingerprint=fnv64:native-bytecode",
+            "buildrequest.host boundary report=ok",
+            "buildrequest.host boundary report fingerprint=fnv64:host-boundary",
             "buildrequest.target artifact fingerprint=fnv64:toolchain-native",
             "buildrequest.compiler pass target artifact fingerprint=fnv64:pass-native",
             "buildrequest.artifact manifest=ok",
@@ -4864,6 +4905,13 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
         manifest.contains(&format!(
             "bootstrap-native-bytecode bootstrap-native-bytecode-report.txt {}",
             fnv64_fingerprint(&native_bytecode_report)
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "bootstrap-host-boundary bootstrap-host-boundary-report.txt {}",
+            fnv64_fingerprint(&host_boundary_report)
         )),
         "{manifest}"
     );

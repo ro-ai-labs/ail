@@ -137,11 +137,13 @@ toolchain agent checked IR, then runs the AIL-authored
 executables in `manifest.ail-bootstrap.txt`. The bundle also writes the
 compiler-pass output IR, compiler-pass trace, a fixed-point report proving the
 second pass over that output is stable, a native-bytecode report proving the
-Linux target artifacts are ELF64 x86_64 executable bytes, conformance reports,
-and fingerprints for both AIL packages, then feeds the source-package,
-checked-core, compiler-pass trace, fixed-point, native-bytecode, and conformance
-fingerprints into the AIL-authored bootstrap verifier before accepting the
-manifest.
+Linux target artifacts are ELF64 x86_64 executable bytes, a host-boundary
+report proving the generated artifact set contains AIL sources, AIL-Core,
+AIL-Bytecode, reports, and ELF bytes rather than generated Rust/C/Python/JS/etc.
+source, conformance reports, and fingerprints for both AIL packages, then feeds
+the source-package, checked-core, compiler-pass trace, fixed-point,
+native-bytecode, host-boundary, and conformance fingerprints into the
+AIL-authored bootstrap verifier before accepting the manifest.
 `ail-pass <compiler-pass-package-or-bytecode>
 <target-package> --action <PassName>` compiles an AIL-Meta compiler pass
 package, or reads a saved Compiler-profile AIL-Bytecode artifact, and applies

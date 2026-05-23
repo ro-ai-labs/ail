@@ -451,6 +451,7 @@ struct AilBootstrapArtifactSet<'a> {
     toolchain_pass_trace_text: &'a str,
     fixed_point_report_text: &'a str,
     native_bytecode_report_text: &'a str,
+    host_boundary_report_text: &'a str,
     compiler_pass_conformance_report: &'a str,
     compiler_pass_native_executables: &'a [AilNativeArtifact],
     agent_bytecode_text: Option<&'a str>,
@@ -906,6 +907,10 @@ fn render_ail_bootstrap_manifest(artifacts: &AilBootstrapArtifactSet<'_>) -> Str
             ail_artifact_fingerprint(artifacts.native_bytecode_report_text)
         ),
         format!(
+            "bootstrap-host-boundary bootstrap-host-boundary-report.txt {}",
+            ail_artifact_fingerprint(artifacts.host_boundary_report_text)
+        ),
+        format!(
             "toolchain-agent-conformance toolchain-agent-conformance-report.txt {}",
             ail_artifact_fingerprint(artifacts.toolchain_conformance_report)
         ),
@@ -1355,6 +1360,21 @@ fn write_ail_bootstrap_artifacts(
     )
     .map_err(|error| {
         format!("failed to write ail-bootstrap native bytecode report fingerprint: {error}")
+    })?;
+    fs::write(
+        root.join("bootstrap-host-boundary-report.txt"),
+        artifacts.host_boundary_report_text,
+    )
+    .map_err(|error| format!("failed to write ail-bootstrap host boundary report: {error}"))?;
+    fs::write(
+        root.join("bootstrap-host-boundary-report.fingerprint.txt"),
+        format!(
+            "{}\n",
+            ail_artifact_fingerprint(artifacts.host_boundary_report_text)
+        ),
+    )
+    .map_err(|error| {
+        format!("failed to write ail-bootstrap host boundary report fingerprint: {error}")
     })?;
     fs::write(
         root.join("toolchain-agent-conformance-report.txt"),
@@ -3662,6 +3682,7 @@ struct AilBootstrapAgentManifestRequest<'a> {
     toolchain_pass_trace_text: &'a str,
     fixed_point_report_text: &'a str,
     native_bytecode_report_text: &'a str,
+    host_boundary_report_text: &'a str,
     toolchain_conformance_report: &'a str,
     compiler_pass_conformance_report: &'a str,
     target_artifacts: &'a [AilNativeArtifact],
@@ -3689,6 +3710,7 @@ fn run_ail_bootstrap_agent_verify_manifest(
         toolchain_pass_trace_text,
         fixed_point_report_text,
         native_bytecode_report_text,
+        host_boundary_report_text,
         toolchain_conformance_report,
         compiler_pass_conformance_report,
         target_artifacts,
@@ -3768,6 +3790,14 @@ fn run_ail_bootstrap_agent_verify_manifest(
         (
             "buildrequest.native bytecode report fingerprint".to_string(),
             ail_artifact_fingerprint(native_bytecode_report_text),
+        ),
+        (
+            "buildrequest.host boundary report".to_string(),
+            host_boundary_report_text.to_string(),
+        ),
+        (
+            "buildrequest.host boundary report fingerprint".to_string(),
+            ail_artifact_fingerprint(host_boundary_report_text),
         ),
         (
             "buildrequest.conformance report".to_string(),
@@ -3855,6 +3885,56 @@ fn render_ail_bootstrap_native_bytecode_report(
                 native_machine_bytecode_identity(&artifact.bytes)?,
                 ail_artifact_fingerprint_bytes(&artifact.bytes),
                 artifact.bytes.len()
+            ));
+        }
+    }
+    Ok(format!("{}\n", lines.join("\n")))
+}
+
+fn render_ail_bootstrap_host_boundary_report(
+    target_name: &str,
+    toolchain_artifacts: &[AilNativeArtifact],
+    compiler_pass_artifacts: &[AilNativeArtifact],
+    agent_artifacts: &[AilNativeArtifact],
+) -> Result<String, String> {
+    let mut lines = vec![
+        "AIL-Bootstrap-Host-Boundary:".to_string(),
+        format!("target {target_name}"),
+        "no-host-backend-source true".to_string(),
+        "bootstrap-language rust stage0-scaffold-only".to_string(),
+        "generated-host-language-source none".to_string(),
+        "forbidden-host-source-suffixes .rs .c .cc .cpp .h .hpp .py .js .ts .go .java .ll .bc .wasm".to_string(),
+        "ail-source toolchain-agent.source.ail-package.md".to_string(),
+        "ail-source toolchain-agent.source.ail-spec.md".to_string(),
+        "ail-source compiler-pass.source.ail-package.md".to_string(),
+        "ail-source compiler-pass.source.ail-spec.md".to_string(),
+        "ail-core toolchain-agent.checked.ail-core.txt".to_string(),
+        "ail-core compiler-pass.checked.ail-core.txt".to_string(),
+        "ail-core toolchain-agent.pass-output.ail-core.txt".to_string(),
+        "ail-bytecode toolchain-agent.ailbc.json".to_string(),
+        "ail-bytecode compiler-pass.ailbc.json".to_string(),
+        "ail-bytecode agent.ailbc.json".to_string(),
+        "report bootstrap-fixed-point-report.txt".to_string(),
+        "report bootstrap-native-bytecode-report.txt".to_string(),
+        "report toolchain-agent-conformance-report.txt".to_string(),
+        "report compiler-pass-conformance-report.txt".to_string(),
+    ];
+    for artifacts in [
+        toolchain_artifacts,
+        compiler_pass_artifacts,
+        agent_artifacts,
+    ] {
+        for artifact in artifacts {
+            if artifact.target_name != target_name {
+                return Err(format!(
+                    "host boundary artifact {} targets {}, expected {target_name}",
+                    artifact.file_name, artifact.target_name
+                ));
+            }
+            lines.push(format!(
+                "machine-bytecode {} {}",
+                artifact.file_name,
+                native_machine_bytecode_identity(&artifact.bytes)?
             ));
         }
     }
@@ -4965,6 +5045,12 @@ fn run_ail_bootstrap_command(path: &str, cli_options: &CliOptions) -> Result<u8,
         compiler_pass_native_artifacts.as_slice(),
         agent_native_artifacts.as_slice(),
     )?;
+    let host_boundary_report_text = render_ail_bootstrap_host_boundary_report(
+        target,
+        toolchain_native_artifacts.as_slice(),
+        compiler_pass_native_artifacts.as_slice(),
+        agent_native_artifacts.as_slice(),
+    )?;
     let empty_agent_trace: &[String] = &[];
     let manifest_text = render_ail_bootstrap_manifest(&AilBootstrapArtifactSet {
         target_name: target,
@@ -4982,6 +5068,7 @@ fn run_ail_bootstrap_command(path: &str, cli_options: &CliOptions) -> Result<u8,
         toolchain_pass_trace_text: &toolchain_pass_trace_text,
         fixed_point_report_text: &fixed_point_report_text,
         native_bytecode_report_text: &native_bytecode_report_text,
+        host_boundary_report_text: &host_boundary_report_text,
         compiler_pass_conformance_report: &compiler_pass_conformance_report,
         compiler_pass_native_executables: compiler_pass_native_artifacts.as_slice(),
         agent_bytecode_text: Some(agent_bytecode_text.as_str()),
@@ -5005,6 +5092,7 @@ fn run_ail_bootstrap_command(path: &str, cli_options: &CliOptions) -> Result<u8,
         toolchain_pass_trace_text: &toolchain_pass_trace_text,
         fixed_point_report_text: &fixed_point_report_text,
         native_bytecode_report_text: &native_bytecode_report_text,
+        host_boundary_report_text: &host_boundary_report_text,
         toolchain_conformance_report: &toolchain_conformance_report,
         compiler_pass_conformance_report: &compiler_pass_conformance_report,
         target_artifacts: toolchain_native_artifacts.as_slice(),
@@ -5030,6 +5118,7 @@ fn run_ail_bootstrap_command(path: &str, cli_options: &CliOptions) -> Result<u8,
             toolchain_pass_trace_text: &toolchain_pass_trace_text,
             fixed_point_report_text: &fixed_point_report_text,
             native_bytecode_report_text: &native_bytecode_report_text,
+            host_boundary_report_text: &host_boundary_report_text,
             compiler_pass_conformance_report: &compiler_pass_conformance_report,
             compiler_pass_native_executables: compiler_pass_native_artifacts.as_slice(),
             agent_bytecode_text: Some(agent_run.bytecode_text.as_str()),

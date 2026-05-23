@@ -6848,6 +6848,61 @@ Expected: the agent trace records base-model and target-model reads before
 compile, and `prompt-portability.txt` fingerprints the source and target model
 labels alongside the portability status.
 
+### Task 154: Bootstrap Records Host Boundary Evidence
+
+**Files:**
+- Modify: `examples/ail_toolchain_agent.ail/spec.ail-spec.md`
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/13-bootstrap-self-hosting.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing bootstrap host-boundary assertions**
+
+Extend the native `ail-bootstrap` bundle test to require
+`bootstrap-host-boundary-report.txt`,
+`bootstrap-host-boundary-report.fingerprint.txt`, a fingerprinted
+`bootstrap-host-boundary` manifest entry, and AIL-authored
+`VerifyBootstrapManifest` reads for `BuildRequest host boundary report` and
+`BuildRequest host boundary report fingerprint`. Require the report to state
+that generated host-language backend source is absent and that the generated
+artifact boundary contains AIL source, checked AIL-Core, AIL-Bytecode, reports,
+and ELF machine bytecode.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_bootstrap_writes_native_toolchain_bundle -- --nocapture
+```
+
+Expected: failure because the bootstrap bundle does not yet write the
+host-boundary report.
+
+- [x] **Step 3: Generate and verify the host-boundary report**
+
+Render a deterministic bootstrap host-boundary report, fingerprint it, include
+it in `manifest.ail-bootstrap.txt`, write its sidecar fingerprint, and pass the
+report plus fingerprint into the AIL-authored `VerifyBootstrapManifest` state.
+The report records `no-host-backend-source true`, forbidden host-language source
+suffixes, generated-host-language-source `none`, AIL source files, checked
+AIL-Core files, AIL-Bytecode files, report files, and ELF machine-bytecode
+artifacts.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_bootstrap_writes_native_toolchain_bundle -- --nocapture
+```
+
+Expected: the bootstrap bundle proves its generated boundary contains no
+host-language backend source before the AIL-authored bootstrap verifier accepts
+the manifest.
+
 ### Task 18: Declared Failure Trace Coverage Diagnostics
 
 **Files:**

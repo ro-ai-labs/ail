@@ -47,7 +47,9 @@ AIL-Core IR, AIL-Meta compiler-pass output IR and trace, checked AIL-Bytecode,
 native machine-code artifacts, a native-bytecode report proving the Linux
 outputs are ELF64 x86_64 executable bytes, package conformance reports, and a
 fixed-point report proving the compiler-pass output is stable on a second pass,
-with an AIL-authored verifier accepting the manifest.
+a host-boundary report proving no Rust, C, Python, JavaScript, or other
+host-language backend source was generated, with an AIL-authored verifier
+accepting the manifest.
 
 ## Stage 4: Self-Hosted Fixed Point
 
