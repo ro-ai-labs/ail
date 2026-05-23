@@ -1786,6 +1786,69 @@ fn ail_core_patch_remove_node_rejects_incident_edges() {
 }
 
 #[test]
+fn ail_core_patch_declares_node_provenance_by_core_label() {
+    let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
+    let document = parse_ail_spec_text(&package.spec_text).unwrap();
+    let core = elaborate_ail_core(&package, &document);
+    let core_hash = ail_core_hash(&core);
+    let patch = format!(
+        r#"{{
+  "schema": "ail-core.patch.v0",
+  "base_hash": "{core_hash}",
+  "source_view": "ActionCard:CloseTicket",
+  "ops": [
+    {{
+      "op": "declare_provenance",
+      "target": "Action:CloseTicket",
+      "provenance": ["flow:ActionCard:CloseTicket.reviewed"]
+    }}
+  ]
+}}"#
+    );
+    let patched = apply_ail_core_patch_text(&core, &patch).unwrap();
+    let rendered = render_ail_core(&patched);
+
+    assert_eq!(check_ail_core(&patched), Vec::<String>::new());
+    assert!(
+        rendered.contains("node Provenance flow:ActionCard:CloseTicket.reviewed"),
+        "{rendered}"
+    );
+    assert!(
+        rendered.contains(
+            "edge has_provenance Action:CloseTicket -> Provenance:flow:ActionCard:CloseTicket.reviewed"
+        ),
+        "{rendered}"
+    );
+}
+
+#[test]
+fn ail_core_patch_declare_provenance_requires_entries() {
+    let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
+    let document = parse_ail_spec_text(&package.spec_text).unwrap();
+    let core = elaborate_ail_core(&package, &document);
+    let core_hash = ail_core_hash(&core);
+    let patch = format!(
+        r#"{{
+  "schema": "ail-core.patch.v0",
+  "base_hash": "{core_hash}",
+  "source_view": "ActionCard:CloseTicket",
+  "ops": [
+    {{
+      "op": "declare_provenance",
+      "target": "Action:CloseTicket"
+    }}
+  ]
+}}"#
+    );
+    let error = apply_ail_core_patch_text(&core, &patch).unwrap_err();
+
+    assert!(
+        error.contains("AIL-Core patch declare_provenance must provide provenance"),
+        "{error}"
+    );
+}
+
+#[test]
 fn ail_core_patch_replaces_edge_attributes_by_core_labels() {
     let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
     let document = parse_ail_spec_text(&package.spec_text).unwrap();

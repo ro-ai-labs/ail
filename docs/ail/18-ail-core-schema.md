@@ -256,6 +256,11 @@ AIL-Flow, AIL-Agent, and canonical spec edits use the same graph patch schema:
         "label": "Resolve ticket"
       },
       "provenance": ["flow:action-card:close-ticket.label"]
+    },
+    {
+      "op": "declare_provenance",
+      "target": "Action:CloseTicket",
+      "provenance": ["flow:action-card:close-ticket.reviewed"]
     }
   ],
   "review": {
@@ -273,6 +278,7 @@ Patch operations:
 - `remove_edge`
 - `replace_edge_attributes`
 - `replace_node_attributes`
+- `declare_provenance`
 
 `base_hash` is required. It uses the form `ail-core:fnv64:<hex>`, is computed
 from the canonical checked AIL-Core rendering after parsing, and is exposed in
@@ -299,13 +305,14 @@ missing edges instead of treating them as no-ops.
 `replace_node_attributes` merges the listed string attributes into the target
 node, may replace the node `type`, rewrites the target node's stable id when
 attributes change, and rewires existing edges to the updated node before the
-checker runs. The CLI prints the patched Core artifact only after the resulting
-graph passes the AIL-Core checker.
+checker runs. `declare_provenance` resolves a checked node label and attaches
+one or more `Provenance` nodes through `has_provenance` edges without changing
+semantic attributes. The CLI prints the patched Core artifact only after the
+resulting graph passes the AIL-Core checker.
 
 Reserved target operations:
 
 - `move_ordered_child`
-- `declare_provenance`
 
 A patch is accepted only when its `base_hash` matches the checked graph, every
 operation validates against this schema, and the resulting graph passes the

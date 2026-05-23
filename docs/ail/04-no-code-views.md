@@ -150,16 +150,18 @@ ail ail-patch --core-file checked.ail-core.txt edit.ail-core.patch.json
 ```
 
 It currently supports `add_node`, `remove_node`, `add_edge`, `remove_edge`,
-`replace_edge_attributes`, and `replace_node_attributes` operations. The patch
-must include `base_hash` for the canonical checked AIL-Core artifact; stale
-patches are rejected before any operation runs. The CLI then runs the AIL-Core
-checker before printing the patched Core artifact. Node removals reject nodes
-with incident edges, so visual editors remove relationships first. Edge
-removals and edge attribute edits reject missing source, target, or edge
-references instead of silently accepting a no-op. Attribute edits rewire
-changed stable ids before checking, so existing rules, traces, failures, and
-provenance stay attached to the edited node or edge. The patched Core can be
-rendered back to AIL-Spec with `ail-spec --core-file`.
+`replace_edge_attributes`, `replace_node_attributes`, and
+`declare_provenance` operations. The patch must include `base_hash` for the
+canonical checked AIL-Core artifact; stale patches are rejected before any
+operation runs. The CLI then runs the AIL-Core checker before printing the
+patched Core artifact. Node removals reject nodes with incident edges, so
+visual editors remove relationships first. Edge removals and edge attribute
+edits reject missing source, target, or edge references instead of silently
+accepting a no-op. Attribute edits rewire changed stable ids before checking,
+so existing rules, traces, failures, and provenance stay attached to the edited
+node or edge. `declare_provenance` attaches reviewed provenance to an existing
+node without changing semantic attributes. The patched Core can be rendered
+back to AIL-Spec with `ail-spec --core-file`.
 
 Direct visual edits are allowed for fields, rules, trace names, form bindings,
 view filters, and declared permissions when all required semantics are present.

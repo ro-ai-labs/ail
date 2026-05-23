@@ -678,6 +678,7 @@ pub fn apply_ail_core_patch_text(core: &AilCore, patch_text: &str) -> Result<Ail
             "remove_node" => apply_ail_core_patch_remove_node(&mut patched, op)?,
             "add_edge" => apply_ail_core_patch_add_edge(&mut patched, op)?,
             "remove_edge" => apply_ail_core_patch_remove_edge(&mut patched, op)?,
+            "declare_provenance" => apply_ail_core_patch_declare_provenance(&mut patched, op)?,
             "replace_edge_attributes" => {
                 apply_ail_core_patch_replace_edge_attributes(&mut patched, op)?
             }
@@ -736,6 +737,25 @@ fn apply_ail_core_patch_remove_node(
         ));
     }
     core.graph.nodes.retain(|node| node.id != target.id);
+    Ok(())
+}
+
+fn apply_ail_core_patch_declare_provenance(
+    core: &mut AilCore,
+    op: &BTreeMap<String, AilJsonValue>,
+) -> Result<(), String> {
+    let target_label = required_json_string_for(op, "target", "AIL-Core patch declare_provenance")?;
+    let target = find_core_patch_node(core, target_label).ok_or_else(|| {
+        format!("AIL-Core patch declare_provenance references unknown target '{target_label}'")
+    })?;
+    let provenance =
+        optional_json_string_array(op, "provenance", "AIL-Core patch declare_provenance")?;
+    if provenance.is_empty() {
+        return Err("AIL-Core patch declare_provenance must provide provenance".to_string());
+    }
+    for entry in provenance {
+        attach_provenance(&mut core.graph, &target, entry);
+    }
     Ok(())
 }
 
