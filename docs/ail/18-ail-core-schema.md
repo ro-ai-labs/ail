@@ -229,6 +229,14 @@ AIL-Flow, AIL-Agent, and canonical spec edits use the same graph patch schema:
       "source": "Action:CloseTicket",
       "target": "Rule:TicketNotClosed",
       "provenance": ["flow:action-card:close-ticket"]
+    },
+    {
+      "op": "replace_node_attributes",
+      "target": "Action:CloseTicket",
+      "attributes": {
+        "label": "Resolve ticket"
+      },
+      "provenance": ["flow:action-card:close-ticket.label"]
     }
   ],
   "review": {
@@ -242,17 +250,20 @@ Patch operations:
 
 - `add_node`
 - `add_edge`
+- `replace_node_attributes`
 
-The stage-0 patch applier accepts only `add_node` and `add_edge`. It resolves
-node labels such as `Action:CloseTicket` against the checked Core graph, writes
-node provenance as `Provenance` nodes plus `has_provenance` edges, stores edge
-provenance as an edge attribute, and runs the AIL-Core checker before the CLI
-prints the patched Core artifact.
+The stage-0 patch applier resolves node labels such as `Action:CloseTicket`
+against the checked Core graph. `add_node` writes node provenance as
+`Provenance` nodes plus `has_provenance` edges. `add_edge` stores edge
+provenance as an edge attribute. `replace_node_attributes` merges the listed
+string attributes into the target node, may replace the node `type`, rewrites
+the target node's stable id when attributes change, and rewires existing edges
+to the updated node before the checker runs. The CLI prints the patched Core
+artifact only after the resulting graph passes the AIL-Core checker.
 
 Reserved target operations:
 
 - `remove_node`
-- `replace_node_attributes`
 - `remove_edge`
 - `replace_edge_attributes`
 - `move_ordered_child`

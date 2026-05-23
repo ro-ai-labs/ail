@@ -3,7 +3,7 @@ use std::fmt::{self, Display};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::core_model::{Graph, Node, attr, json_string};
+use crate::core_model::{Edge, Graph, Node, attr, json_string};
 
 pub const DEFAULT_BASE_LLM_ENDPOINT: &str = "http://inteligentia-pro-1:8080/v1/chat/completions";
 
@@ -669,6 +669,9 @@ pub fn apply_ail_core_patch_text(core: &AilCore, patch_text: &str) -> Result<Ail
         match required_json_string_for(op, "op", "AIL-Core patch op")? {
             "add_node" => apply_ail_core_patch_add_node(&mut patched, op)?,
             "add_edge" => apply_ail_core_patch_add_edge(&mut patched, op)?,
+            "replace_node_attributes" => {
+                apply_ail_core_patch_replace_node_attributes(&mut patched, op)?
+            }
             op_name => return Err(format!("unsupported AIL-Core patch op '{op_name}'")),
         }
     }
@@ -716,6 +719,88 @@ fn apply_ail_core_patch_add_edge(
     }
     core.graph
         .add_edge(kind.to_string(), &source, &target, attributes);
+    Ok(())
+}
+
+fn apply_ail_core_patch_replace_node_attributes(
+    core: &mut AilCore,
+    op: &BTreeMap<String, AilJsonValue>,
+) -> Result<(), String> {
+    let target_label =
+        required_json_string_for(op, "target", "AIL-Core patch replace_node_attributes")?;
+    let target = find_core_patch_node(core, target_label).ok_or_else(|| {
+        format!("AIL-Core patch replace_node_attributes references unknown target '{target_label}'")
+    })?;
+    let replacement_attributes =
+        optional_json_string_map(op, "attributes", "AIL-Core patch replace_node_attributes")?;
+    let replacement_type = optional_json_string(op, "type").map(ToString::to_string);
+    if replacement_attributes.is_empty() && replacement_type.is_none() {
+        return Err(
+            "AIL-Core patch replace_node_attributes must provide attributes or type".to_string(),
+        );
+    }
+    let node_index = core
+        .graph
+        .nodes
+        .iter()
+        .position(|node| node.id == target.id)
+        .ok_or_else(|| {
+            format!("AIL-Core patch replace_node_attributes lost target '{target_label}'")
+        })?;
+    let original = core.graph.nodes[node_index].clone();
+    let mut attributes = original.attributes.clone();
+    for (key, value) in replacement_attributes {
+        attributes.insert(key, value);
+    }
+    let updated = Node::new(
+        original.kind.clone(),
+        original.name.clone(),
+        replacement_type.or(original.type_name.clone()),
+        attributes,
+    );
+    core.graph.nodes[node_index] = updated.clone();
+    rewire_core_graph_node_id(&mut core.graph, &original.id, &updated.id)?;
+    for provenance in
+        optional_json_string_array(op, "provenance", "AIL-Core patch replace_node_attributes")?
+    {
+        attach_provenance(&mut core.graph, &updated, provenance);
+    }
+    Ok(())
+}
+
+fn rewire_core_graph_node_id(graph: &mut Graph, old_id: &str, new_id: &str) -> Result<(), String> {
+    if old_id == new_id {
+        return Ok(());
+    }
+    let node_by_id = graph
+        .nodes
+        .iter()
+        .map(|node| (node.id.clone(), node.clone()))
+        .collect::<BTreeMap<_, _>>();
+    for edge in &mut graph.edges {
+        let rewired = edge.source == old_id || edge.target == old_id;
+        if edge.source == old_id {
+            edge.source = new_id.to_string();
+        }
+        if edge.target == old_id {
+            edge.target = new_id.to_string();
+        }
+        if rewired {
+            let source = node_by_id.get(&edge.source).ok_or_else(|| {
+                format!(
+                    "AIL-Core patch produced missing edge source {}",
+                    edge.source
+                )
+            })?;
+            let target = node_by_id.get(&edge.target).ok_or_else(|| {
+                format!(
+                    "AIL-Core patch produced missing edge target {}",
+                    edge.target
+                )
+            })?;
+            *edge = Edge::new(edge.kind.clone(), source, target, edge.attributes.clone());
+        }
+    }
     Ok(())
 }
 

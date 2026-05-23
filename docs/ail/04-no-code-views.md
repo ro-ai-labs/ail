@@ -117,6 +117,14 @@ Patch payload:
       "source": "Action:CloseTicket",
       "target": "Rule:TicketNotClosed",
       "provenance": ["flow:ActionCard:CloseTicket"]
+    },
+    {
+      "op": "replace_node_attributes",
+      "target": "Action:CloseTicket",
+      "attributes": {
+        "label": "Resolve ticket"
+      },
+      "provenance": ["flow:ActionCard:CloseTicket.label"]
     }
   ]
 }
@@ -128,9 +136,12 @@ The stage-0 CLI accepts this JSON patch subset with:
 ail ail-patch --core-file checked.ail-core.txt edit.ail-core.patch.json
 ```
 
-It currently supports `add_node` and `add_edge` operations, then runs the
-AIL-Core checker before printing the patched Core artifact. The patched Core
-can be rendered back to AIL-Spec with `ail-spec --core-file`.
+It currently supports `add_node`, `add_edge`, and `replace_node_attributes`
+operations, then runs the AIL-Core checker before printing the patched Core
+artifact. Attribute edits rewire changed stable node ids before checking, so
+existing rules, traces, failures, and provenance stay attached to the edited
+node. The patched Core can be rendered back to AIL-Spec with
+`ail-spec --core-file`.
 
 Direct visual edits are allowed for fields, rules, trace names, form bindings,
 view filters, and declared permissions when all required semantics are present.

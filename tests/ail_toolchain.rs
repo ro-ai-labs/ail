@@ -3586,6 +3586,60 @@ fn cli_ail_check_and_core_use_package_loader() {
         "{patched_spec}"
     );
 
+    let replace_patch_path = std::env::temp_dir().join(format!(
+        "ail-flow-rename-close-ticket-{}.ail-core.patch.json",
+        std::process::id()
+    ));
+    fs::write(
+        &replace_patch_path,
+        r#"{
+  "schema": "ail-core.patch.v0",
+  "source_view": "ActionCard:CloseTicket",
+  "ops": [
+    {
+      "op": "replace_node_attributes",
+      "target": "Action:CloseTicket",
+      "attributes": {
+        "label": "Resolve ticket"
+      },
+      "provenance": ["flow:ActionCard:CloseTicket.label"]
+    }
+  ]
+}"#,
+    )
+    .unwrap();
+    let relabeled_core = Command::new(binary)
+        .args([
+            "ail-patch",
+            "--core-file",
+            core_path.to_str().unwrap(),
+            replace_patch_path.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        relabeled_core.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&relabeled_core.stdout),
+        String::from_utf8_lossy(&relabeled_core.stderr)
+    );
+    let relabeled_core_text = String::from_utf8(relabeled_core.stdout).unwrap();
+    let relabeled_core_artifact = parse_ail_core_text(&relabeled_core_text).unwrap();
+    assert_eq!(
+        check_ail_core(&relabeled_core_artifact),
+        Vec::<String>::new()
+    );
+    let relabeled_spec = render_ail_spec_from_core(&relabeled_core_artifact);
+    assert!(
+        relabeled_spec.contains("Action: Resolve ticket."),
+        "{relabeled_spec}"
+    );
+    assert!(
+        relabeled_spec.contains("- the system records a trace event named TicketClosed"),
+        "{relabeled_spec}"
+    );
+
+    fs::remove_file(replace_patch_path).unwrap();
     fs::remove_file(core_patch_path).unwrap();
     fs::remove_file(core_path).unwrap();
 
