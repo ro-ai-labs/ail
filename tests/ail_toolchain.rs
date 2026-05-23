@@ -3227,6 +3227,79 @@ fn ail_bytecode_vm_executes_action_call_control_flow() {
 }
 
 #[test]
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+fn ail_native_elf_executes_bytecode_action_call_control_flow() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let bytecode_text = r#"{
+  "kind": "AIL-Bytecode",
+  "package": "call-example",
+  "version": "0.1.0",
+  "profile": "Application",
+  "failures": [],
+  "actions": [
+    {
+      "action": "ResolveTicket",
+      "instructions": [
+        {"opcode":"ACTION_BEGIN","operands":{"action":"ResolveTicket"}},
+        {"opcode":"CALL_ACTION","operands":{"target":"CloseTicket"}},
+        {"opcode":"SET_FIELD","operands":{"key":"ticket.resolution","value":"Resolved","text":"resolution note"}},
+        {"opcode":"RETURN_SUCCESS","operands":{}}
+      ]
+    },
+    {
+      "action": "CloseTicket",
+      "instructions": [
+        {"opcode":"ACTION_BEGIN","operands":{"action":"CloseTicket"}},
+        {"opcode":"SET_FIELD","operands":{"key":"ticket.status","value":"Closed","text":"close ticket"}},
+        {"opcode":"EMIT_TRACE","operands":{"event":"TicketClosed"}},
+        {"opcode":"RETURN_SUCCESS","operands":{}}
+      ]
+    }
+  ]
+}"#;
+    let bytecode = parse_ail_bytecode(bytecode_text).unwrap();
+    let executable =
+        compile_ail_bytecode_native_elf(&bytecode, "ResolveTicket", "linux-x86_64-elf").unwrap();
+    let unique_suffix = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let executable_path = std::env::temp_dir().join(format!(
+        "ail-call-bytecode-native-{}-{unique_suffix}",
+        std::process::id()
+    ));
+    let _ = fs::remove_file(&executable_path);
+    fs::write(&executable_path, executable).unwrap();
+    let mut permissions = fs::metadata(&executable_path).unwrap().permissions();
+    permissions.set_mode(0o755);
+    fs::set_permissions(&executable_path, permissions).unwrap();
+
+    let run = Command::new(&executable_path)
+        .arg("ticket.status=Open")
+        .output()
+        .unwrap();
+    assert!(run.status.success(), "native CALL_ACTION failed");
+    assert_eq!(
+        String::from_utf8_lossy(&run.stdout),
+        concat!("ticket.status=Closed\n", "ticket.resolution=Resolved\n")
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&run.stderr),
+        concat!(
+            "action ResolveTicket started\n",
+            "call action CloseTicket\n",
+            "action CloseTicket started\n",
+            "write ticket.status=Closed\n",
+            "trace TicketClosed\n",
+            "write ticket.resolution=Resolved\n"
+        )
+    );
+
+    fs::remove_file(executable_path).unwrap();
+}
+
+#[test]
 fn ail_bytecode_vm_executes_integer_loop_state_mutation() {
     let bytecode_text = r#"{
   "kind": "AIL-Bytecode",

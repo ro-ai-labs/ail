@@ -4161,7 +4161,8 @@ pub fn compile_ail_core_native_elf(
         .actions
         .get(action_name)
         .ok_or_else(|| format!("unknown AIL action '{action_name}'"))?;
-    emit_linux_x86_64_elf_for_action(action, &program.failures)
+    let action = expand_native_action_calls(action, &program.actions)?;
+    emit_linux_x86_64_elf_for_action(&action, &program.failures)
 }
 
 pub fn compile_ail_bytecode_native_elf(
@@ -4185,12 +4186,115 @@ pub fn compile_ail_bytecode_native_elf(
         .actions
         .get(action_name)
         .ok_or_else(|| format!("unknown AIL action '{action_name}'"))?;
-    emit_linux_x86_64_elf_for_action(action, &program.failures)
+    let action = expand_native_action_calls(action, &program.actions)?;
+    emit_linux_x86_64_elf_for_action(&action, &program.failures)
 }
 
 struct NativeFailureBranch {
     label: String,
     trace_lines: Vec<String>,
+}
+
+fn expand_native_action_calls(
+    action: &AilBytecodeAction,
+    actions: &BTreeMap<String, AilBytecodeAction>,
+) -> Result<AilBytecodeAction, String> {
+    let mut next_call_id = 0usize;
+    Ok(AilBytecodeAction {
+        name: action.name.clone(),
+        instructions: expand_native_action_call_stream(
+            action,
+            actions,
+            false,
+            "",
+            &mut next_call_id,
+            0,
+        )?,
+    })
+}
+
+fn expand_native_action_call_stream(
+    action: &AilBytecodeAction,
+    actions: &BTreeMap<String, AilBytecodeAction>,
+    inline: bool,
+    label_prefix: &str,
+    next_call_id: &mut usize,
+    call_depth: usize,
+) -> Result<Vec<AilBytecodeInstruction>, String> {
+    if call_depth > 64 {
+        return Err(format!(
+            "native linux-x86_64-elf action call depth exceeded while inlining {}",
+            action.name
+        ));
+    }
+    let mut instructions = Vec::new();
+    for (index, instruction) in action.instructions.iter().enumerate() {
+        if instruction.opcode == "CALL_ACTION" {
+            let target = instruction.operands.get("target").ok_or_else(|| {
+                format!(
+                    "native linux-x86_64-elf CALL_ACTION in action {} is missing target",
+                    action.name
+                )
+            })?;
+            let callee = actions.get(target).ok_or_else(|| {
+                format!(
+                    "native linux-x86_64-elf CALL_ACTION in action {} targets unknown action {}",
+                    action.name, target
+                )
+            })?;
+            instructions.push(AilBytecodeInstruction::new(
+                "NATIVE_TRACE_LINE",
+                &[("text", format!("call action {target}"))],
+            ));
+            let call_id = *next_call_id;
+            *next_call_id += 1;
+            let callee_label_prefix = format!("__call{call_id}_{target}_");
+            instructions.extend(expand_native_action_call_stream(
+                callee,
+                actions,
+                true,
+                &callee_label_prefix,
+                next_call_id,
+                call_depth + 1,
+            )?);
+            continue;
+        }
+        if inline && instruction.opcode == "RETURN_SUCCESS" {
+            if index + 1 == action.instructions.len() {
+                continue;
+            }
+            return Err(format!(
+                "unsupported native linux-x86_64-elf early RETURN_SUCCESS in called action {}",
+                action.name
+            ));
+        }
+        instructions.push(native_prefixed_label_instruction(instruction, label_prefix));
+    }
+    Ok(instructions)
+}
+
+fn native_prefixed_label_instruction(
+    instruction: &AilBytecodeInstruction,
+    label_prefix: &str,
+) -> AilBytecodeInstruction {
+    if label_prefix.is_empty() {
+        return instruction.clone();
+    }
+    let mut instruction = instruction.clone();
+    match instruction.opcode.as_str() {
+        "LABEL" => {
+            if let Some(name) = instruction.operands.get_mut("name") {
+                *name = format!("{label_prefix}{name}");
+            }
+        }
+        "BRANCH_FIELD_EQUALS" | "JUMP" => {
+            if let Some(label) = instruction.operands.get_mut("label") {
+                *label = format!("{label_prefix}{label}");
+            }
+        }
+        _ => {}
+    }
+    instruction
 }
 
 fn emit_linux_x86_64_elf_for_action(
@@ -4229,6 +4333,16 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("action {action} started\n"),
+                    );
+                }
+            }
+            "NATIVE_TRACE_LINE" => {
+                if let Some(text) = instruction.operands.get("text") {
+                    emit_native_trace_line(
+                        &mut code,
+                        &mut data_labels,
+                        &mut next_data_label,
+                        &format!("{text}\n"),
                     );
                 }
             }
