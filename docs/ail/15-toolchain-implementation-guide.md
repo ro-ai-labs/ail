@@ -452,20 +452,24 @@ With `--artifact-dir`, direct `ail-compile` writes `source.ail-package.md`,
 `source.ail-spec.md`, and `source.fingerprint.txt` when a package source is
 available; it also writes `artifact.ailbc.json`, `artifact.fingerprint.txt`,
 `target.elf`, `target.fingerprint.txt`, `native-bytecode-report.txt`,
-`native-bytecode-report.fingerprint.txt`, `manifest.ail-compile.txt`, and
+`native-bytecode-report.fingerprint.txt`, `dependency-report.txt`,
+`dependency-report.fingerprint.txt`, `manifest.ail-compile.txt`, and
 `manifest.fingerprint.txt`; compiles from checked AIL-Core also include
 `checked.ail-core.txt` and `checked.ail-core.fingerprint.txt`. The
-native-bytecode report records the
-selected action target as ELF64 x86_64 executable bytes, and the
+native-bytecode report records the selected action target as ELF64 x86_64
+executable bytes. The dependency report records `host-language-runtime none`,
+`dynamic-linker none`, `shared-libraries none`, `library-dependencies none`,
+and `linker-invocation none` for standalone Linux syscall ELF artifacts. The
 compile manifest ties the source package when present, selected action,
-verified bytecode artifact, native-bytecode report, and native target
-executable fingerprint into a reviewable artifact boundary. With
+verified bytecode artifact, native-bytecode report, dependency report, and
+native target executable fingerprint into a reviewable artifact boundary. With
 `--agent <agent-package-or-bytecode>`, `ail-compile --artifact-dir` also runs
 the AIL-authored `VerifyCompileManifest` action over that manifest and writes
 `agent.ailbc.json`, `agent.fingerprint.txt`, `agent-trace.txt`, and native
 `agent-<ActionName>.elf` verifier executables recorded as `agent-target`
 entries. The verifier reads the source package fingerprint when present and the
-native-bytecode report and fingerprint before accepting the manifest.
+native-bytecode and dependency reports and fingerprints before accepting the
+manifest.
 With `--all-actions --target linux-x86_64-elf --artifact-dir <dir>`,
 `ail-compile` compiles every action in the package or saved bytecode artifact
 into native `target-<ActionName>.elf` executables. This exposes the same

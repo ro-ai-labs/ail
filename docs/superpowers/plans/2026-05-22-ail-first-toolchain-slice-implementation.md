@@ -7063,6 +7063,57 @@ Expected: the bootstrap bundle proves every generated native AIL toolchain
 action, verifier-agent action, and AIL-Meta compiler pass action executes
 successfully before the AIL-authored bootstrap verifier accepts the manifest.
 
+### Task 158: Direct Native Compile Records Dependency Evidence
+
+**Files:**
+- Modify: `examples/ail_toolchain_agent.ail/spec.ail-spec.md`
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing direct compile dependency assertions**
+
+Extend direct `ail-compile --target linux-x86_64-elf --artifact-dir` coverage
+to require `dependency-report.txt`, `dependency-report.fingerprint.txt`, and a
+fingerprinted `dependencies` entry in `manifest.ail-compile.txt`. Extend the
+AIL-authored `VerifyCompileManifest` flow to read `BuildRequest dependency
+report` and `BuildRequest dependency report fingerprint`.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_compile_writes_saved_bytecode_native_artifacts -- --nocapture
+```
+
+Expected: failure because direct native compile artifacts do not yet write the
+dependency report.
+
+- [x] **Step 3: Generate the direct compile dependency report**
+
+Render a deterministic `AIL-Compile-Dependency-Report`, fingerprint it, include
+it in `manifest.ail-compile.txt`, write its sidecar fingerprint, and pass the
+report plus fingerprint into the AIL-authored `VerifyCompileManifest` state.
+The report inspects the selected `target.elf` and any native verifier-agent ELF
+artifacts for standalone Linux syscall ELF identity with no dynamic linker,
+shared libraries, host-language runtime, or linker invocation.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_compile_writes_saved_bytecode_native_artifacts -- --nocapture
+cargo test --test ail_toolchain cli_ail_compile_agent_verifies_manifest_artifacts -- --nocapture
+```
+
+Expected: direct native compile artifacts prove their emitted target and
+verifier-agent ELFs have no host-language runtime, dynamic linker,
+shared-library, library, or linker dependency before the AIL-authored compile
+manifest verifier accepts the manifest.
+
 ### Task 18: Declared Failure Trace Coverage Diagnostics
 
 **Files:**

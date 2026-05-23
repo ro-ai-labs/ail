@@ -112,7 +112,10 @@ ELF64 x86_64 executable bytes. With `--agent <agent-package-or-bytecode>`,
 `agent.fingerprint.txt`, `agent-trace.txt`, and `agent-<ActionName>.elf`, and
 records each native agent executable as an `agent-target` manifest entry; the
 AIL verifier reads the source package fingerprint when present and the
-native-bytecode report fingerprint before accepting the manifest.
+native-bytecode and dependency report fingerprints before accepting the
+manifest. The dependency report proves the emitted target and native verifier
+ELFs use the standalone Linux syscall ABI with no dynamic linker, shared
+libraries, host-language runtime, or linker invocation.
 Use `ail-compile <package-or-bytecode> --all-actions --target
 linux-x86_64-elf --artifact-dir <dir>` to compile every action in an
 AIL-authored package or saved bytecode artifact into native `target-<Action>.elf`
