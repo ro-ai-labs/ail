@@ -17,6 +17,9 @@ use ail::ail::{
 };
 use ail::core_model::json_string;
 
+const REQUIREMENTS_PROMPT_ASSET: &str = include_str!("../docs/ail/prompts/requirements.system.md");
+const SPEC_DRAFT_PROMPT_ASSET: &str = include_str!("../docs/ail/prompts/spec-draft.system.md");
+
 fn fixture(name: &str) -> String {
     format!("{}/examples/{name}", env!("CARGO_MANIFEST_DIR"))
 }
@@ -10003,6 +10006,12 @@ fn cli_ail_draft_uses_llm_endpoint_and_checks_candidate_spec() {
     assert!(request_body.contains("# Prompt: spec-draft.system"));
     assert!(request_body.contains("version: 0.1.0"));
     assert!(request_body.contains("target artifact: AIL-Spec Canonical"));
+    assert!(request_body.contains("prompt_file: spec-draft.system.md"));
+    assert!(request_body.contains("prompt_version: 0.1.0"));
+    assert!(request_body.contains(&format!(
+        "prompt_fingerprint: {}",
+        fnv64_fingerprint(SPEC_DRAFT_PROMPT_ASSET)
+    )));
     assert!(request_body.contains("The application <Name> manages <purpose>."));
     assert!(request_body.contains("A <Thing> has:"));
     assert!(request_body.contains("Action: <human label>."));
@@ -10062,6 +10071,12 @@ fn cli_ail_requirements_root_llm_endpoint_uses_completion_api() {
     assert!(request_body.contains("# Prompt: requirements.system"));
     assert!(request_body.contains("version: 0.1.0"));
     assert!(request_body.contains("target artifact: AIL-Requirements"));
+    assert!(request_body.contains("prompt_file: requirements.system.md"));
+    assert!(request_body.contains("prompt_version: 0.1.0"));
+    assert!(request_body.contains(&format!(
+        "prompt_fingerprint: {}",
+        fnv64_fingerprint(REQUIREMENTS_PROMPT_ASSET)
+    )));
     assert!(request_body.contains("artifact_kind"));
     assert!(request_body.contains("AIL-Requirements"));
     assert!(request_body.contains("checker_handoff"));

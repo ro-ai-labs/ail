@@ -619,7 +619,9 @@ guessing missing semantics. The executable prompt builders embed the versioned
 prompt-pack source from `docs/ail/prompts/requirements.system.md` or
 `docs/ail/prompts/spec-draft.system.md` into the request before adding
 stage-specific package context, so the documented prompt artifact is also the
-LLM request source.
+LLM request source. Each embedded prompt block records `prompt_file`,
+`prompt_version`, and a deterministic `prompt_fingerprint` so reviewers and
+agents can tie a model request back to the exact prompt-pack asset.
 LLM output may be either the deterministic artifact text directly or the
 prompt-pack JSON envelope with `artifact_text`. When the envelope contains
 blocking `questions` and no artifact, the CLI prints the questions as a

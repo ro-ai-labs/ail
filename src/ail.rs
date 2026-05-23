@@ -8215,8 +8215,29 @@ fn prompt_envelope_instruction(artifact_kind: &str, expected_profile: &str) -> S
 const REQUIREMENTS_SYSTEM_PROMPT: &str = include_str!("../docs/ail/prompts/requirements.system.md");
 const SPEC_DRAFT_SYSTEM_PROMPT: &str = include_str!("../docs/ail/prompts/spec-draft.system.md");
 
+fn prompt_pack_header_value<'a>(prompt_text: &'a str, prefix: &str) -> Option<&'a str> {
+    prompt_text
+        .lines()
+        .find_map(|line| line.strip_prefix(prefix).map(str::trim))
+        .filter(|value| !value.is_empty())
+}
+
 fn prompt_pack_source_block(file_name: &str, prompt_text: &str) -> String {
-    format!("PROMPT PACK SOURCE {file_name}:\n{prompt_text}\n")
+    let prompt_name = prompt_pack_header_value(prompt_text, "# Prompt:")
+        .unwrap_or(file_name.trim_end_matches(".md"));
+    let prompt_version = prompt_pack_header_value(prompt_text, "version:").unwrap_or("unknown");
+    let prompt_fingerprint = ail_text_fingerprint(prompt_text);
+    format!(
+        concat!(
+            "PROMPT PACK SOURCE {}:\n",
+            "prompt_file: {}\n",
+            "prompt: {}\n",
+            "prompt_version: {}\n",
+            "prompt_fingerprint: {}\n",
+            "{}\n"
+        ),
+        file_name, file_name, prompt_name, prompt_version, prompt_fingerprint, prompt_text
+    )
 }
 
 fn build_ail_requirements_prompt(package: &AilPackage, user_prompt: &str) -> String {
