@@ -186,7 +186,12 @@ audit. `ail-conformance --agent <agent-package-or-bytecode> --artifact-dir
 manifest fingerprints, and writes `agent.ailbc.json`, `agent.fingerprint.txt`,
 and `agent-trace.txt`. Add `--target linux-x86_64-elf` to the conformance
 agent path to also write `agent-<ActionName>.elf` for each AIL-authored agent
-action and record each executable as an `agent-target` manifest entry.
+action and record each executable as an `agent-target` manifest entry. The
+native conformance-agent run also writes `native-bytecode-report.txt`,
+`dependency-report.txt`, and their fingerprints, proving the verifier-agent
+ELFs are ELF64 x86_64 executable bytes that use the standalone Linux syscall
+ABI with no host-language runtime, dynamic linker, shared libraries, library
+dependencies, or linker invocation.
 `ail-requirements --prompt <text>` asks the package base
 LLM endpoint for a checked AIL-Requirements artifact and gives the base LLM one
 diagnostics-guided repair pass if required coverage is missing, `ail-spec

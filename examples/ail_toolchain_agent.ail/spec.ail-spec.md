@@ -334,6 +334,10 @@ When the toolchain agent verifies conformance artifacts:
 - the system reads the BuildRequest conformance report fingerprint
 - the system reads the BuildRequest artifact manifest
 - the system reads the BuildRequest artifact manifest fingerprint
+- the system reads the BuildRequest native bytecode report
+- the system reads the BuildRequest native bytecode report fingerprint
+- the system reads the BuildRequest dependency report
+- the system reads the BuildRequest dependency report fingerprint
 - the system changes the BuildRequest artifact manifest verification report to Verified
 - the system guarantees the conformance manifest ties the conformance report, accepted fixtures, rejected fixtures, and fingerprints with no Rust or host-language backend source
 - the system records a trace event named ConformanceManifestVerified

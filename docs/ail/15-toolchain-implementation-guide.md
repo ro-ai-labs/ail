@@ -112,12 +112,19 @@ conformance gate produces deterministic audit artifacts instead of only
 host-side stdout. With `--agent <agent-package-or-bytecode> --artifact-dir`,
 the gate must compile or load an AIL-authored Application agent and run its
 `VerifyConformanceManifest` bytecode action against the conformance report,
-report fingerprint, manifest, and manifest fingerprint before writing
-`agent.ailbc.json`, `agent.fingerprint.txt`, and `agent-trace.txt`. With
+report fingerprint, manifest, manifest fingerprint, and native-bytecode and
+dependency report fingerprints when native verifier agents are emitted before
+writing `agent.ailbc.json`, `agent.fingerprint.txt`, and `agent-trace.txt`. With
 `--target linux-x86_64-elf`, the conformance gate must also emit
 `agent-<ActionName>.elf` for each AIL-authored agent action and record every
 native verifier executable as an `agent-target` entry in
-`manifest.ail-conformance.txt`.
+`manifest.ail-conformance.txt`. That native conformance-agent run also writes
+`native-bytecode-report.txt`, `native-bytecode-report.fingerprint.txt`,
+`dependency-report.txt`, and `dependency-report.fingerprint.txt`; the reports
+prove the verifier-agent ELFs are ELF64 little-endian x86_64 executable bytes
+and record `host-language-runtime none`, `dynamic-linker none`,
+`shared-libraries none`, `library-dependencies none`, and `linker-invocation
+none`.
 
 ### AIL-Spec Parser
 

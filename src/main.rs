@@ -501,9 +501,22 @@ struct AilLowerArtifactSet<'a> {
 
 struct AilConformanceArtifactSet<'a> {
     report_text: &'a str,
+    native_bytecode_report_text: Option<&'a str>,
+    dependency_report_text: Option<&'a str>,
     agent_bytecode_text: Option<&'a str>,
     agent_trace: Option<&'a [String]>,
     agent_native_executables: &'a [AilNativeArtifact],
+}
+
+struct AilConformanceAgentManifestRequest<'a> {
+    agent_bytecode: eigl::ail::AilBytecodeProgram,
+    agent_bytecode_text: String,
+    package_name: &'a str,
+    report_text: &'a str,
+    manifest_text: &'a str,
+    manifest_fingerprint: &'a str,
+    native_bytecode_report_text: Option<&'a str>,
+    dependency_report_text: Option<&'a str>,
 }
 
 struct AilLowerAgentManifestRun {
@@ -2047,6 +2060,18 @@ fn render_ail_conformance_manifest(
     if artifacts.agent_trace.is_some() {
         lines.push("trace agent-trace.txt".to_string());
     }
+    if let Some(native_bytecode_report_text) = artifacts.native_bytecode_report_text {
+        lines.push(format!(
+            "native-bytecode native-bytecode-report.txt {}",
+            ail_artifact_fingerprint(native_bytecode_report_text)
+        ));
+    }
+    if let Some(dependency_report_text) = artifacts.dependency_report_text {
+        lines.push(format!(
+            "dependencies dependency-report.txt {}",
+            ail_artifact_fingerprint(dependency_report_text)
+        ));
+    }
     for native_agent in artifacts.agent_native_executables {
         lines.push(format!(
             "agent-target {} {} {}",
@@ -2095,6 +2120,37 @@ fn write_ail_conformance_artifacts(
         )
         .map_err(|error| {
             format!("failed to write ail-conformance agent trace artifact: {error}")
+        })?;
+    }
+    if let Some(native_bytecode_report_text) = artifacts.native_bytecode_report_text {
+        fs::write(
+            root.join("native-bytecode-report.txt"),
+            native_bytecode_report_text,
+        )
+        .map_err(|error| {
+            format!("failed to write ail-conformance native bytecode report: {error}")
+        })?;
+        fs::write(
+            root.join("native-bytecode-report.fingerprint.txt"),
+            format!(
+                "{}\n",
+                ail_artifact_fingerprint(native_bytecode_report_text)
+            ),
+        )
+        .map_err(|error| {
+            format!("failed to write ail-conformance native bytecode report fingerprint: {error}")
+        })?;
+    }
+    if let Some(dependency_report_text) = artifacts.dependency_report_text {
+        fs::write(root.join("dependency-report.txt"), dependency_report_text).map_err(|error| {
+            format!("failed to write ail-conformance dependency report: {error}")
+        })?;
+        fs::write(
+            root.join("dependency-report.fingerprint.txt"),
+            format!("{}\n", ail_artifact_fingerprint(dependency_report_text)),
+        )
+        .map_err(|error| {
+            format!("failed to write ail-conformance dependency report fingerprint: {error}")
         })?;
     }
     for native_agent in artifacts.agent_native_executables {
@@ -2664,13 +2720,18 @@ fn run_ail_pass_agent_verify_manifest(
 }
 
 fn run_ail_conformance_agent_verify_manifest(
-    agent_bytecode: eigl::ail::AilBytecodeProgram,
-    agent_bytecode_text: String,
-    package_name: &str,
-    report_text: &str,
-    manifest_text: &str,
-    manifest_fingerprint: &str,
+    request: AilConformanceAgentManifestRequest<'_>,
 ) -> Result<AilBuildAgentRun, String> {
+    let AilConformanceAgentManifestRequest {
+        agent_bytecode,
+        agent_bytecode_text,
+        package_name,
+        report_text,
+        manifest_text,
+        manifest_fingerprint,
+        native_bytecode_report_text,
+        dependency_report_text,
+    } = request;
     if !agent_bytecode
         .actions
         .contains_key("VerifyConformanceManifest")
@@ -2679,7 +2740,7 @@ fn run_ail_conformance_agent_verify_manifest(
             "ail-conformance --agent requires a VerifyConformanceManifest action".to_string(),
         );
     }
-    let state = BTreeMap::from([
+    let mut state = BTreeMap::from([
         (
             "buildrequest.id".to_string(),
             format!("{package_name}-conformance"),
@@ -2714,6 +2775,26 @@ fn run_ail_conformance_agent_verify_manifest(
             "BytecodeReady".to_string(),
         ),
     ]);
+    if let Some(native_bytecode_report_text) = native_bytecode_report_text {
+        state.insert(
+            "buildrequest.native bytecode report".to_string(),
+            native_bytecode_report_text.to_string(),
+        );
+        state.insert(
+            "buildrequest.native bytecode report fingerprint".to_string(),
+            ail_artifact_fingerprint(native_bytecode_report_text),
+        );
+    }
+    if let Some(dependency_report_text) = dependency_report_text {
+        state.insert(
+            "buildrequest.dependency report".to_string(),
+            dependency_report_text.to_string(),
+        );
+        state.insert(
+            "buildrequest.dependency report fingerprint".to_string(),
+            ail_artifact_fingerprint(dependency_report_text),
+        );
+    }
     let run = run_ail_bytecode_action(&agent_bytecode, "VerifyConformanceManifest", state)?;
     if run.status != "succeeded" {
         let mut message = "ail-conformance agent VerifyConformanceManifest failed".to_string();
@@ -4563,6 +4644,10 @@ fn bootstrap_handoff_case(action_name: &str) -> Result<BootstrapHandoffCase, Str
                 "buildrequest.conformance report fingerprint=fnv64:conformance",
                 "buildrequest.artifact manifest=manifest",
                 "buildrequest.artifact manifest fingerprint=fnv64:manifest",
+                "buildrequest.native bytecode report=native-bytecode",
+                "buildrequest.native bytecode report fingerprint=fnv64:native-bytecode",
+                "buildrequest.dependency report=dependencies",
+                "buildrequest.dependency report fingerprint=fnv64:dependencies",
             ],
         }),
         "VerifyLowerManifest" => Ok(BootstrapHandoffCase {
@@ -4722,6 +4807,63 @@ fn render_ail_lower_dependency_report(
 ) -> Result<String, String> {
     let mut lines = vec![
         "AIL-Lower-Dependency-Report:".to_string(),
+        format!("target {target_name}"),
+        "host-language-runtime none".to_string(),
+        "dynamic-linker none".to_string(),
+        "shared-libraries none".to_string(),
+        "library-dependencies none".to_string(),
+        "linker-invocation none".to_string(),
+        "runtime-abi linux-syscall-argv-key-value".to_string(),
+    ];
+    for artifact in agent_artifacts {
+        if artifact.target_name != target_name {
+            return Err(format!(
+                "dependency artifact {} targets {}, expected {target_name}",
+                artifact.file_name, artifact.target_name
+            ));
+        }
+        lines.push(format!(
+            "machine-bytecode-dependency {} {}",
+            artifact.file_name,
+            native_elf_dependency_identity(&artifact.bytes)?
+        ));
+    }
+    Ok(format!("{}\n", lines.join("\n")))
+}
+
+fn render_ail_conformance_native_bytecode_report(
+    target_name: &str,
+    agent_artifacts: &[AilNativeArtifact],
+) -> Result<String, String> {
+    let mut lines = vec![
+        "AIL-Conformance-Native-Bytecode:".to_string(),
+        format!("target {target_name}"),
+    ];
+    for artifact in agent_artifacts {
+        if artifact.target_name != target_name {
+            return Err(format!(
+                "native bytecode artifact {} targets {}, expected {target_name}",
+                artifact.file_name, artifact.target_name
+            ));
+        }
+        lines.push(format!(
+            "machine-bytecode agent-target {} {} {} {} bytes {}",
+            artifact.target_name,
+            artifact.file_name,
+            native_machine_bytecode_identity(&artifact.bytes)?,
+            ail_artifact_fingerprint_bytes(&artifact.bytes),
+            artifact.bytes.len()
+        ));
+    }
+    Ok(format!("{}\n", lines.join("\n")))
+}
+
+fn render_ail_conformance_dependency_report(
+    target_name: &str,
+    agent_artifacts: &[AilNativeArtifact],
+) -> Result<String, String> {
+    let mut lines = vec![
+        "AIL-Conformance-Dependency-Report:".to_string(),
         format!("target {target_name}"),
         "host-language-runtime none".to_string(),
         "dynamic-linker none".to_string(),
@@ -6340,17 +6482,29 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
         let result = run_ail_conformance(&package)?;
         let report_text = render_ail_conformance_report(&result);
         let mut agent_native_artifacts = Vec::new();
+        let mut native_bytecode_report_text = None;
+        let mut dependency_report_text = None;
         let agent_run = if let Some(agent_path) = &cli_options.ail_build_agent {
             let (agent_bytecode, agent_bytecode_text) = load_verified_ail_build_agent(agent_path)?;
             if let Some(target) = &cli_options.ail_compile_target {
                 agent_native_artifacts =
                     compile_ail_build_agent_native_artifacts(&agent_bytecode, target)?;
+                native_bytecode_report_text = Some(render_ail_conformance_native_bytecode_report(
+                    target,
+                    agent_native_artifacts.as_slice(),
+                )?);
+                dependency_report_text = Some(render_ail_conformance_dependency_report(
+                    target,
+                    agent_native_artifacts.as_slice(),
+                )?);
             }
             let empty_agent_trace: &[String] = &[];
             let manifest_text = render_ail_conformance_manifest(
                 &result,
                 &AilConformanceArtifactSet {
                     report_text: &report_text,
+                    native_bytecode_report_text: native_bytecode_report_text.as_deref(),
+                    dependency_report_text: dependency_report_text.as_deref(),
                     agent_bytecode_text: Some(agent_bytecode_text.as_str()),
                     agent_trace: Some(empty_agent_trace),
                     agent_native_executables: agent_native_artifacts.as_slice(),
@@ -6358,12 +6512,16 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
             );
             let manifest_fingerprint = ail_artifact_fingerprint(&manifest_text);
             Some(run_ail_conformance_agent_verify_manifest(
-                agent_bytecode,
-                agent_bytecode_text,
-                &result.package_name,
-                &report_text,
-                &manifest_text,
-                &manifest_fingerprint,
+                AilConformanceAgentManifestRequest {
+                    agent_bytecode,
+                    agent_bytecode_text,
+                    package_name: &result.package_name,
+                    report_text: &report_text,
+                    manifest_text: &manifest_text,
+                    manifest_fingerprint: &manifest_fingerprint,
+                    native_bytecode_report_text: native_bytecode_report_text.as_deref(),
+                    dependency_report_text: dependency_report_text.as_deref(),
+                },
             )?)
         } else {
             None
@@ -6374,6 +6532,8 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
                 &result,
                 AilConformanceArtifactSet {
                     report_text: &report_text,
+                    native_bytecode_report_text: native_bytecode_report_text.as_deref(),
+                    dependency_report_text: dependency_report_text.as_deref(),
                     agent_bytecode_text: agent_run.as_ref().map(|run| run.bytecode_text.as_str()),
                     agent_trace: agent_run.as_ref().map(|run| run.trace.as_slice()),
                     agent_native_executables: agent_native_artifacts.as_slice(),
