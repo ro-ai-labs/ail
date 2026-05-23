@@ -93,9 +93,9 @@ Native bytecode reports declare `bytecode-level machine`,
 fingerprints, and native manifests mirror the same
 `machine-bytecode-contract` line, making the Linux ELF machine-code contract
 explicit at the review boundary. AIL-authored manifest verifier actions
-require and read `BuildRequest.machine bytecode contract`, so native artifact
-acceptance depends on the same machine-code contract that the host-rendered
-manifest exposes.
+require, validate, and read `BuildRequest.machine bytecode contract`, accepting
+only that Linux ELF machine-code contract or `none` for non-native verifier
+paths.
 `ail-check`, `ail-core`,
 `ail-flow`, `ail-lower`, `ail-compile`, `ail-run`, and `ail-build` can use
 `--spec-file <path>` to read a saved generated AIL-Spec artifact instead of

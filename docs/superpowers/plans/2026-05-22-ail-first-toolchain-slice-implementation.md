@@ -7595,6 +7595,48 @@ cargo test --test ail_toolchain cli_ail_conformance_writes_native_agent_artifact
 Expected: AIL-authored verifier traces show that the machine-bytecode contract
 is read before accepting native manifests and reports.
 
+### Task 168: AIL Verifiers Enforce Machine Bytecode Contract Values
+
+**Files:**
+- Modify: `examples/ail_toolchain_agent.ail/spec.ail-spec.md`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing native verifier contract rejection**
+
+Extend a native manifest-verifier test to rerun
+`agent-VerifyCompileManifest.elf` with
+`buildrequest.machine bytecode contract=wrong-contract` and require the native
+ELF verifier to reject the artifact set with `RequirementFailed`.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_compile_agent_verifies_manifest_artifacts -- --nocapture
+```
+
+Expected: failure because the native verifier accepts `wrong-contract` while
+only checking that the machine-bytecode contract field exists.
+
+- [x] **Step 3: Specify allowed machine-bytecode contract values**
+
+Extend native-relevant AIL Toolchain Agent manifest verifier actions to require
+`BuildRequest.machine bytecode contract` to be either the concrete Linux ELF
+machine-bytecode contract or `none`. Keep `none` available for non-native
+verifier paths and preserve the existing read trace.
+
+- [x] **Step 4: Verify GREEN**
+
+Run focused native verifier tests, full formatting/linting/test validation,
+and the configured base-LLM endpoint probe.
+
+Expected: AIL-authored verifier traces include the allowed-value rule, a bad
+native contract is rejected by the generated ELF verifier, and the full suite
+continues to pass.
+
 ### Task 18: Declared Failure Trace Coverage Diagnostics
 
 **Files:**

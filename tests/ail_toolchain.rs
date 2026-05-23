@@ -4269,6 +4269,8 @@ fn cli_ail_compile_agent_verifies_manifest_artifacts() {
     assert!(agent_trace.contains("read buildrequest.bytecode fingerprint"));
     assert!(agent_trace.contains("read buildrequest.target artifact"));
     assert!(agent_trace.contains("read buildrequest.target artifact fingerprint"));
+    let machine_bytecode_contract_rule = "rule passed: the BuildRequest machine bytecode contract to be machine-bytecode-contract linux-x86_64-elf bytecode-level machine bytecode-container linux-elf-executable bytecode-format elf64-little-x86_64-executable or none";
+    assert!(agent_trace.contains(machine_bytecode_contract_rule));
     assert!(agent_trace.contains("read buildrequest.machine bytecode contract"));
     assert!(agent_trace.contains("read buildrequest.native bytecode report"));
     assert!(agent_trace.contains("read buildrequest.native bytecode report fingerprint"));
@@ -4309,6 +4311,39 @@ fn cli_ail_compile_agent_verifies_manifest_artifacts() {
         String::from_utf8_lossy(&native_agent_run.stderr).contains("trace CompileManifestVerified"),
         "{}",
         String::from_utf8_lossy(&native_agent_run.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&native_agent_run.stderr).contains(machine_bytecode_contract_rule),
+        "{}",
+        String::from_utf8_lossy(&native_agent_run.stderr)
+    );
+    let bad_contract_run = Command::new(artifact_dir.join("agent-VerifyCompileManifest.elf"))
+        .args([
+            "buildrequest.id=support-ticket-compile",
+            "buildrequest.status=BytecodeReady",
+            "buildrequest.bytecode fingerprint=fnv64:bytecode",
+            "buildrequest.target artifact=ok",
+            "buildrequest.target artifact fingerprint=fnv64:target",
+            "buildrequest.machine bytecode contract=wrong-contract",
+            "buildrequest.native bytecode report=ok",
+            "buildrequest.native bytecode report fingerprint=fnv64:native-bytecode",
+            "buildrequest.dependency report=ok",
+            "buildrequest.dependency report fingerprint=fnv64:dependencies",
+            "buildrequest.artifact manifest=ok",
+            "buildrequest.artifact manifest fingerprint=fnv64:manifest",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !bad_contract_run.status.success(),
+        "native compile manifest verifier accepted a bad machine bytecode contract\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&bad_contract_run.stdout),
+        String::from_utf8_lossy(&bad_contract_run.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&bad_contract_run.stderr).contains("failure RequirementFailed"),
+        "{}",
+        String::from_utf8_lossy(&bad_contract_run.stderr)
     );
 
     let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-compile.txt")).unwrap();

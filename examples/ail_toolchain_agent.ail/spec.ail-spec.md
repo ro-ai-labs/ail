@@ -177,6 +177,7 @@ When the toolchain agent verifies AIL-Core lowering artifacts:
 - the system requires the BuildRequest to exist
 - the system requires the BuildRequest status to be BytecodeReady
 - the system requires the BuildRequest machine bytecode contract to exist
+- the system requires the BuildRequest machine bytecode contract to be machine-bytecode-contract linux-x86_64-elf bytecode-level machine bytecode-container linux-elf-executable bytecode-format elf64-little-x86_64-executable or none
 - the system reads the BuildRequest core ir
 - the system reads the BuildRequest core ir fingerprint
 - the system reads the BuildRequest source package
@@ -213,6 +214,7 @@ When the toolchain agent verifies the build artifact manifest:
 - the system requires the BuildRequest to exist
 - the system requires the BuildRequest status to be BytecodeReady
 - the system requires the BuildRequest machine bytecode contract to exist
+- the system requires the BuildRequest machine bytecode contract to be machine-bytecode-contract linux-x86_64-elf bytecode-level machine bytecode-container linux-elf-executable bytecode-format elf64-little-x86_64-executable or none
 - the system reads the BuildRequest artifact manifest
 - the system reads the BuildRequest artifact manifest fingerprint
 - the system reads the BuildRequest source package
@@ -240,6 +242,7 @@ When the toolchain agent verifies direct compile artifacts:
 - the system requires the BuildRequest to exist
 - the system requires the BuildRequest status to be BytecodeReady
 - the system requires the BuildRequest machine bytecode contract to exist
+- the system requires the BuildRequest machine bytecode contract to be machine-bytecode-contract linux-x86_64-elf bytecode-level machine bytecode-container linux-elf-executable bytecode-format elf64-little-x86_64-executable or none
 - the system reads the BuildRequest artifact manifest
 - the system reads the BuildRequest artifact manifest fingerprint
 - the system reads the BuildRequest bytecode fingerprint
@@ -263,6 +266,7 @@ When the toolchain agent verifies direct all-action compile artifacts:
 - the system requires the BuildRequest to exist
 - the system requires the BuildRequest status to be BytecodeReady
 - the system requires the BuildRequest machine bytecode contract to exist
+- the system requires the BuildRequest machine bytecode contract to be machine-bytecode-contract linux-x86_64-elf bytecode-level machine bytecode-container linux-elf-executable bytecode-format elf64-little-x86_64-executable or none
 - the system reads the BuildRequest artifact manifest
 - the system reads the BuildRequest artifact manifest fingerprint
 - the system reads the BuildRequest bytecode fingerprint
@@ -286,6 +290,7 @@ When the toolchain agent verifies an AIL bootstrap bundle:
 - the system requires the BuildRequest to exist
 - the system requires the BuildRequest status to be BytecodeReady
 - the system requires the BuildRequest machine bytecode contract to exist
+- the system requires the BuildRequest machine bytecode contract to be machine-bytecode-contract linux-x86_64-elf bytecode-level machine bytecode-container linux-elf-executable bytecode-format elf64-little-x86_64-executable or none
 - the system reads the BuildRequest artifact manifest
 - the system reads the BuildRequest artifact manifest fingerprint
 - the system reads the BuildRequest source package
@@ -321,6 +326,7 @@ When the toolchain agent verifies the standalone compiler pass manifest:
 - the system requires the BuildRequest to exist
 - the system requires the BuildRequest status to be PassApplied
 - the system requires the BuildRequest machine bytecode contract to exist
+- the system requires the BuildRequest machine bytecode contract to be machine-bytecode-contract linux-x86_64-elf bytecode-level machine bytecode-container linux-elf-executable bytecode-format elf64-little-x86_64-executable or none
 - the system reads the BuildRequest artifact manifest
 - the system reads the BuildRequest artifact manifest fingerprint
 - the system reads the BuildRequest compiler pass source package
@@ -344,6 +350,7 @@ When the toolchain agent verifies conformance artifacts:
 - the system requires the BuildRequest to exist
 - the system requires the BuildRequest status to be BytecodeReady
 - the system requires the BuildRequest machine bytecode contract to exist
+- the system requires the BuildRequest machine bytecode contract to be machine-bytecode-contract linux-x86_64-elf bytecode-level machine bytecode-container linux-elf-executable bytecode-format elf64-little-x86_64-executable or none
 - the system reads the BuildRequest conformance report
 - the system reads the BuildRequest conformance report fingerprint
 - the system reads the BuildRequest artifact manifest
