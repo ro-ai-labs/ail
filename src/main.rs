@@ -426,9 +426,11 @@ struct AilCompileBundleArtifactSet<'a> {
 
 struct AilBootstrapArtifactSet<'a> {
     target_name: &'a str,
+    toolchain_core_text: &'a str,
     toolchain_bytecode_text: &'a str,
     toolchain_conformance_report: &'a str,
     toolchain_native_executables: &'a [AilNativeArtifact],
+    compiler_pass_core_text: &'a str,
     compiler_pass_bytecode_text: &'a str,
     compiler_pass_conformance_report: &'a str,
     compiler_pass_native_executables: &'a [AilNativeArtifact],
@@ -666,8 +668,16 @@ fn render_ail_bootstrap_manifest(artifacts: &AilBootstrapArtifactSet<'_>) -> Str
             ail_artifact_fingerprint(artifacts.toolchain_bytecode_text)
         ),
         format!(
+            "toolchain-agent-core toolchain-agent.checked.ail-core.txt {}",
+            ail_artifact_fingerprint(artifacts.toolchain_core_text)
+        ),
+        format!(
             "compiler-pass compiler-pass.ailbc.json {}",
             ail_artifact_fingerprint(artifacts.compiler_pass_bytecode_text)
+        ),
+        format!(
+            "compiler-pass-core compiler-pass.checked.ail-core.txt {}",
+            ail_artifact_fingerprint(artifacts.compiler_pass_core_text)
         ),
         format!(
             "toolchain-agent-conformance toolchain-agent-conformance-report.txt {}",
@@ -888,6 +898,23 @@ fn write_ail_bootstrap_artifacts(
         format!("failed to write ail-bootstrap toolchain agent fingerprint artifact: {error}")
     })?;
     fs::write(
+        root.join("toolchain-agent.checked.ail-core.txt"),
+        artifacts.toolchain_core_text,
+    )
+    .map_err(|error| {
+        format!("failed to write ail-bootstrap toolchain agent checked core artifact: {error}")
+    })?;
+    fs::write(
+        root.join("toolchain-agent.core.fingerprint.txt"),
+        format!(
+            "{}\n",
+            ail_artifact_fingerprint(artifacts.toolchain_core_text)
+        ),
+    )
+    .map_err(|error| {
+        format!("failed to write ail-bootstrap toolchain agent core fingerprint artifact: {error}")
+    })?;
+    fs::write(
         root.join("compiler-pass.ailbc.json"),
         artifacts.compiler_pass_bytecode_text,
     )
@@ -903,6 +930,23 @@ fn write_ail_bootstrap_artifacts(
     )
     .map_err(|error| {
         format!("failed to write ail-bootstrap compiler pass fingerprint artifact: {error}")
+    })?;
+    fs::write(
+        root.join("compiler-pass.checked.ail-core.txt"),
+        artifacts.compiler_pass_core_text,
+    )
+    .map_err(|error| {
+        format!("failed to write ail-bootstrap compiler pass checked core artifact: {error}")
+    })?;
+    fs::write(
+        root.join("compiler-pass.core.fingerprint.txt"),
+        format!(
+            "{}\n",
+            ail_artifact_fingerprint(artifacts.compiler_pass_core_text)
+        ),
+    )
+    .map_err(|error| {
+        format!("failed to write ail-bootstrap compiler pass core fingerprint artifact: {error}")
     })?;
     fs::write(
         root.join("toolchain-agent-conformance-report.txt"),
@@ -2855,7 +2899,9 @@ struct AilBootstrapAgentManifestRequest<'a> {
     agent_bytecode: eigl::ail::AilBytecodeProgram,
     agent_bytecode_text: String,
     package_name: &'a str,
+    toolchain_core_text: &'a str,
     toolchain_bytecode_text: &'a str,
+    compiler_pass_core_text: &'a str,
     compiler_pass_bytecode_text: &'a str,
     toolchain_conformance_report: &'a str,
     compiler_pass_conformance_report: &'a str,
@@ -2872,7 +2918,9 @@ fn run_ail_bootstrap_agent_verify_manifest(
         agent_bytecode,
         agent_bytecode_text,
         package_name,
+        toolchain_core_text,
         toolchain_bytecode_text,
+        compiler_pass_core_text,
         compiler_pass_bytecode_text,
         toolchain_conformance_report,
         compiler_pass_conformance_report,
@@ -2887,6 +2935,12 @@ fn run_ail_bootstrap_agent_verify_manifest(
     {
         return Err("ail-bootstrap --agent requires a VerifyBootstrapManifest action".to_string());
     }
+    let core_report = format!(
+        "toolchain-agent:\n{toolchain_core_text}\ncompiler-pass:\n{compiler_pass_core_text}"
+    );
+    let conformance_report = format!(
+        "toolchain-agent:\n{toolchain_conformance_report}\ncompiler-pass:\n{compiler_pass_conformance_report}"
+    );
     let state = BTreeMap::from([
         (
             "buildrequest.id".to_string(),
@@ -2895,6 +2949,11 @@ fn run_ail_bootstrap_agent_verify_manifest(
         (
             "buildrequest.status".to_string(),
             "BytecodeReady".to_string(),
+        ),
+        ("buildrequest.core ir".to_string(), core_report.clone()),
+        (
+            "buildrequest.core ir fingerprint".to_string(),
+            ail_artifact_fingerprint(&core_report),
         ),
         (
             "buildrequest.bytecode fingerprint".to_string(),
@@ -2906,15 +2965,11 @@ fn run_ail_bootstrap_agent_verify_manifest(
         ),
         (
             "buildrequest.conformance report".to_string(),
-            format!(
-                "toolchain-agent:\n{toolchain_conformance_report}\ncompiler-pass:\n{compiler_pass_conformance_report}"
-            ),
+            conformance_report.clone(),
         ),
         (
             "buildrequest.conformance report fingerprint".to_string(),
-            ail_artifact_fingerprint(&format!(
-                "toolchain-agent:\n{toolchain_conformance_report}\ncompiler-pass:\n{compiler_pass_conformance_report}"
-            )),
+            ail_artifact_fingerprint(&conformance_report),
         ),
         (
             "buildrequest.target artifact fingerprint".to_string(),
@@ -3604,6 +3659,25 @@ fn render_ail_bootstrap_source_conformance_report(
     Ok(report)
 }
 
+fn render_ail_bootstrap_source_core_artifact(path: &str, context: &str) -> Result<String, String> {
+    if std::path::Path::new(path).is_file() {
+        return Err(format!(
+            "{context} requires an AIL package directory so checked core can be recorded, found bytecode artifact {path}"
+        ));
+    }
+    let package = load_ail_package_dir(path)?;
+    let document = parse_ail_package_document(&package)?;
+    let core = elaborate_ail_core(&package, &document);
+    let diagnostics = check_ail_core(&core);
+    if !diagnostics.is_empty() {
+        return Err(format!(
+            "{context} package has diagnostics before checked core recording:\n{}",
+            diagnostics.join("\n")
+        ));
+    }
+    Ok(format!("{}\n", render_ail_core(&core)))
+}
+
 fn run_ail_bootstrap_command(path: &str, cli_options: &CliOptions) -> Result<u8, String> {
     let target = cli_options
         .ail_compile_target
@@ -3624,6 +3698,8 @@ fn run_ail_bootstrap_command(path: &str, cli_options: &CliOptions) -> Result<u8,
 
     let (toolchain_bytecode, toolchain_bytecode_text) =
         load_ail_bytecode_or_compile_package(path, "ail-bootstrap toolchain agent")?;
+    let toolchain_core_text =
+        render_ail_bootstrap_source_core_artifact(path, "ail-bootstrap toolchain agent")?;
     let toolchain_conformance_report =
         render_ail_bootstrap_source_conformance_report(path, "ail-bootstrap toolchain agent")?;
     let toolchain_diagnostics = verify_ail_bytecode(&toolchain_bytecode);
@@ -3642,6 +3718,8 @@ fn run_ail_bootstrap_command(path: &str, cli_options: &CliOptions) -> Result<u8,
 
     let (compiler_pass_bytecode, compiler_pass_bytecode_text) =
         load_ail_bytecode_or_compile_package(pass_path, "ail-bootstrap compiler pass")?;
+    let compiler_pass_core_text =
+        render_ail_bootstrap_source_core_artifact(pass_path, "ail-bootstrap compiler pass")?;
     let compiler_pass_conformance_report =
         render_ail_bootstrap_source_conformance_report(pass_path, "ail-bootstrap compiler pass")?;
     let compiler_pass_diagnostics = verify_ail_bytecode(&compiler_pass_bytecode);
@@ -3667,9 +3745,11 @@ fn run_ail_bootstrap_command(path: &str, cli_options: &CliOptions) -> Result<u8,
     let empty_agent_trace: &[String] = &[];
     let manifest_text = render_ail_bootstrap_manifest(&AilBootstrapArtifactSet {
         target_name: target,
+        toolchain_core_text: &toolchain_core_text,
         toolchain_bytecode_text: &toolchain_bytecode_text,
         toolchain_conformance_report: &toolchain_conformance_report,
         toolchain_native_executables: toolchain_native_artifacts.as_slice(),
+        compiler_pass_core_text: &compiler_pass_core_text,
         compiler_pass_bytecode_text: &compiler_pass_bytecode_text,
         compiler_pass_conformance_report: &compiler_pass_conformance_report,
         compiler_pass_native_executables: compiler_pass_native_artifacts.as_slice(),
@@ -3682,7 +3762,9 @@ fn run_ail_bootstrap_command(path: &str, cli_options: &CliOptions) -> Result<u8,
         agent_bytecode,
         agent_bytecode_text,
         package_name: &toolchain_bytecode.package_name,
+        toolchain_core_text: &toolchain_core_text,
         toolchain_bytecode_text: &toolchain_bytecode_text,
+        compiler_pass_core_text: &compiler_pass_core_text,
         compiler_pass_bytecode_text: &compiler_pass_bytecode_text,
         toolchain_conformance_report: &toolchain_conformance_report,
         compiler_pass_conformance_report: &compiler_pass_conformance_report,
@@ -3695,9 +3777,11 @@ fn run_ail_bootstrap_command(path: &str, cli_options: &CliOptions) -> Result<u8,
         artifact_dir,
         AilBootstrapArtifactSet {
             target_name: target,
+            toolchain_core_text: &toolchain_core_text,
             toolchain_bytecode_text: &toolchain_bytecode_text,
             toolchain_conformance_report: &toolchain_conformance_report,
             toolchain_native_executables: toolchain_native_artifacts.as_slice(),
+            compiler_pass_core_text: &compiler_pass_core_text,
             compiler_pass_bytecode_text: &compiler_pass_bytecode_text,
             compiler_pass_conformance_report: &compiler_pass_conformance_report,
             compiler_pass_native_executables: compiler_pass_native_artifacts.as_slice(),

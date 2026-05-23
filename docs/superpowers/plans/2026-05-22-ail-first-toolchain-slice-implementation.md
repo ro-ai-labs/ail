@@ -6087,6 +6087,54 @@ Expected: the bootstrap bundle carries conformance evidence for both bundled
 AIL packages and the AIL-authored manifest verifier reads that evidence before
 acceptance.
 
+### Task 139: Bootstrap Bundle Includes Checked IR Evidence
+
+**Files:**
+- Modify: `examples/ail_toolchain_agent.ail/spec.ail-spec.md`
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/13-bootstrap-self-hosting.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing bootstrap IR assertions**
+
+Extend the native `ail-bootstrap` bundle test to require
+`toolchain-agent.checked.ail-core.txt`,
+`compiler-pass.checked.ail-core.txt`, their fingerprint files, manifest entries
+for both checked AIL-Core artifacts, and AIL agent trace reads for
+`buildrequest.core ir` and `buildrequest.core ir fingerprint`.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_bootstrap_writes_native_toolchain_bundle -- --nocapture
+```
+
+Expected: failure because the bootstrap bundle does not yet write checked
+AIL-Core IR artifacts.
+
+- [x] **Step 3: Generate and verify bootstrap checked IR artifacts**
+
+Render checked AIL-Core for the AIL-authored toolchain agent package and the
+AIL-Meta compiler pass package during `ail-bootstrap`. Write both checked-core
+artifacts and fingerprints, include them in `manifest.ail-bootstrap.txt`, and
+pass a combined checked-core fingerprint into `VerifyBootstrapManifest`.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_bootstrap_writes_native_toolchain_bundle -- --nocapture
+```
+
+Expected: the bootstrap bundle carries checked AIL-Core evidence for both
+bundled AIL packages and the AIL-authored manifest verifier reads that evidence
+before acceptance.
+
 ### Task 18: Declared Failure Trace Coverage Diagnostics
 
 **Files:**

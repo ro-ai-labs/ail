@@ -14,6 +14,7 @@ A BuildRequest has:
 - spec: Text
 - spec review report: Text
 - core ir: Text
+- core ir fingerprint: Text
 - core review report: Text
 - compiler pass artifact: Text
 - compiler pass fingerprint: Text
@@ -232,6 +233,8 @@ When the toolchain agent verifies an AIL bootstrap bundle:
 - the system requires the BuildRequest status to be BytecodeReady
 - the system reads the BuildRequest artifact manifest
 - the system reads the BuildRequest artifact manifest fingerprint
+- the system reads the BuildRequest core ir
+- the system reads the BuildRequest core ir fingerprint
 - the system reads the BuildRequest bytecode fingerprint
 - the system reads the BuildRequest compiler pass fingerprint
 - the system reads the BuildRequest conformance report

@@ -4140,6 +4140,22 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
         toolchain_fingerprint.trim(),
         fnv64_fingerprint(&toolchain_bytecode)
     );
+    let toolchain_core =
+        fs::read_to_string(artifact_dir.join("toolchain-agent.checked.ail-core.txt")).unwrap();
+    assert!(
+        toolchain_core.contains("package: ail-toolchain-agent"),
+        "{toolchain_core}"
+    );
+    assert!(
+        toolchain_core.contains("node Action VerifyBootstrapManifest"),
+        "{toolchain_core}"
+    );
+    let toolchain_core_fingerprint =
+        fs::read_to_string(artifact_dir.join("toolchain-agent.core.fingerprint.txt")).unwrap();
+    assert_eq!(
+        toolchain_core_fingerprint.trim(),
+        fnv64_fingerprint(&toolchain_core)
+    );
 
     let pass_bytecode = fs::read_to_string(artifact_dir.join("compiler-pass.ailbc.json")).unwrap();
     assert!(pass_bytecode.contains(r#""package":"ail-meta-permissions""#));
@@ -4147,6 +4163,19 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
     let pass_fingerprint =
         fs::read_to_string(artifact_dir.join("compiler-pass.fingerprint.txt")).unwrap();
     assert_eq!(pass_fingerprint.trim(), fnv64_fingerprint(&pass_bytecode));
+    let pass_core =
+        fs::read_to_string(artifact_dir.join("compiler-pass.checked.ail-core.txt")).unwrap();
+    assert!(
+        pass_core.contains("package: ail-meta-permissions"),
+        "{pass_core}"
+    );
+    assert!(
+        pass_core.contains("node Action InferReadPermissions [kind=CompilerPass"),
+        "{pass_core}"
+    );
+    let pass_core_fingerprint =
+        fs::read_to_string(artifact_dir.join("compiler-pass.core.fingerprint.txt")).unwrap();
+    assert_eq!(pass_core_fingerprint.trim(), fnv64_fingerprint(&pass_core));
 
     let toolchain_conformance =
         fs::read_to_string(artifact_dir.join("toolchain-agent-conformance-report.txt")).unwrap();
@@ -4193,6 +4222,8 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
     assert_eq!(agent_bytecode, toolchain_bytecode);
     let agent_trace = fs::read_to_string(artifact_dir.join("agent-trace.txt")).unwrap();
     assert!(agent_trace.contains("action VerifyBootstrapManifest started"));
+    assert!(agent_trace.contains("read buildrequest.core ir"));
+    assert!(agent_trace.contains("read buildrequest.core ir fingerprint"));
     assert!(agent_trace.contains("read buildrequest.bytecode fingerprint"));
     assert!(agent_trace.contains("read buildrequest.compiler pass fingerprint"));
     assert!(agent_trace.contains("read buildrequest.conformance report"));
@@ -4213,6 +4244,8 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
         .args([
             "buildrequest.id=ail-toolchain-agent-bootstrap",
             "buildrequest.status=BytecodeReady",
+            "buildrequest.core ir=ok",
+            "buildrequest.core ir fingerprint=fnv64:core",
             "buildrequest.bytecode fingerprint=fnv64:toolchain",
             "buildrequest.compiler pass fingerprint=fnv64:pass",
             "buildrequest.conformance report=ok",
@@ -4251,8 +4284,22 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
     );
     assert!(
         manifest.contains(&format!(
+            "toolchain-agent-core toolchain-agent.checked.ail-core.txt {}",
+            fnv64_fingerprint(&toolchain_core)
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
             "compiler-pass compiler-pass.ailbc.json {}",
             fnv64_fingerprint(&pass_bytecode)
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "compiler-pass-core compiler-pass.checked.ail-core.txt {}",
+            fnv64_fingerprint(&pass_core)
         )),
         "{manifest}"
     );
