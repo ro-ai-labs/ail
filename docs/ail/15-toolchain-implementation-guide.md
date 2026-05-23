@@ -651,7 +651,11 @@ the package base LLM for an AIL-Requirements artifact, checking profile-specific
 coverage, and sending diagnostics back for one repair pass when the artifact is
 too thin. It prints only the checked requirements artifact, so developers can
 review or compare model-specific capture behavior before committing to AIL-Spec
-and bytecode generation.
+and bytecode generation. With `--interview-file <path>`, it reads a saved
+`AIL-Interview:` answer artifact and includes those human-confirmed answers in
+the requirements capture prompt under `SAVED INTERVIEW ANSWERS`, preserving the
+AI-IDE interview handoff instead of asking the base model to infer those details
+again.
 LLM endpoints may be the llama.cpp-server root URL, an explicit `/completion`
 URL, or an OpenAI-compatible `/v1/chat/completions` URL. A root URL such as
 `http://inteligentia-pro-1:8080/` is normalized to `/completion`; chat

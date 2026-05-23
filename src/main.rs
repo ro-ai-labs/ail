@@ -28,6 +28,7 @@ struct CliOptions {
     ail_build_agent: Option<String>,
     ail_build_base_model: Option<String>,
     ail_build_target_model: Option<String>,
+    ail_interview_file: Option<String>,
     ail_requirements_file: Option<String>,
     ail_spec_file: Option<String>,
     ail_core_file: Option<String>,
@@ -91,7 +92,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
 }
 
 fn usage() -> String {
-    "usage: ail <ail-check|ail-core|ail-flow|ail-flow-edit|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-interview|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-bootstrap|ail-patch> <path> [patch|target-package] [--action name] [--prompt text] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--base-model name] [--target-model name] [--out path] [--all-actions] [--artifact-dir path] [--llm-endpoint url] [key=value ...]\nsaved-core usage: ail <ail-spec|ail-lower|ail-compile|ail-build> --core-file <checked-core> [--action name] [--target target] [--out path] [--artifact-dir path]\ncore-patch usage: ail ail-patch --core-file <checked-core> <ail-core.patch.json>\nflow-edit usage: ail ail-flow-edit --core-file <checked-core> <ail-flow.edit.json>\nail-pass usage: ail ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR ail ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]\nail-bootstrap usage: ail ail-bootstrap <toolchain-agent-package> --pass <compiler-pass-package> --agent <toolchain-agent-package> --target linux-x86_64-elf --artifact-dir <dir>"
+    "usage: ail <ail-check|ail-core|ail-flow|ail-flow-edit|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-interview|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-bootstrap|ail-patch> <path> [patch|target-package] [--action name] [--prompt text] [--interview-file path] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--base-model name] [--target-model name] [--out path] [--all-actions] [--artifact-dir path] [--llm-endpoint url] [key=value ...]\nsaved-core usage: ail <ail-spec|ail-lower|ail-compile|ail-build> --core-file <checked-core> [--action name] [--target target] [--out path] [--artifact-dir path]\ncore-patch usage: ail ail-patch --core-file <checked-core> <ail-core.patch.json>\nflow-edit usage: ail ail-flow-edit --core-file <checked-core> <ail-flow.edit.json>\nail-pass usage: ail ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR ail ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]\nail-bootstrap usage: ail ail-bootstrap <toolchain-agent-package> --pass <compiler-pass-package> --agent <toolchain-agent-package> --target linux-x86_64-elf --artifact-dir <dir>"
         .to_string()
 }
 
@@ -5071,6 +5072,25 @@ fn draft_checked_ail_requirements_for_package(
     Ok((requirements, diagnostics))
 }
 
+fn prompt_with_saved_interview_answers(
+    prompt: &str,
+    interview_file: Option<&str>,
+) -> Result<String, String> {
+    let Some(interview_file) = interview_file else {
+        return Ok(prompt.to_string());
+    };
+    let interview_answers = fs::read_to_string(interview_file)
+        .map_err(|error| format!("failed to read {interview_file}: {error}"))?;
+    let interview_answers = interview_answers.trim();
+    if interview_answers.is_empty() {
+        return Err(format!("interview file {interview_file} is empty"));
+    }
+    Ok(format!(
+        concat!("{}\n\n", "SAVED INTERVIEW ANSWERS:\n", "{}"),
+        prompt, interview_answers
+    ))
+}
+
 fn draft_checked_ail_spec_for_requirements(
     package: &ail::ail::AilPackage,
     prompt: &str,
@@ -6449,12 +6469,14 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
             .ail_prompt
             .as_deref()
             .ok_or_else(|| "ail-requirements requires --prompt <text>".to_string())?;
+        let prompt =
+            prompt_with_saved_interview_answers(prompt, cli_options.ail_interview_file.as_deref())?;
         let endpoint = cli_options
             .llm_endpoint
             .as_deref()
             .unwrap_or(&package.metadata.base_llm_endpoint);
         let (requirements, diagnostics) =
-            draft_checked_ail_requirements_for_package(&package, prompt, endpoint, None)?;
+            draft_checked_ail_requirements_for_package(&package, &prompt, endpoint, None)?;
         if !diagnostics.is_empty() {
             println!("ail-requirements diagnostics:");
             for diagnostic in diagnostics {
@@ -6819,6 +6841,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
     let mut ail_build_agent = None;
     let mut ail_build_base_model = None;
     let mut ail_build_target_model = None;
+    let mut ail_interview_file = None;
     let mut ail_requirements_file = None;
     let mut ail_spec_file = None;
     let mut ail_core_file = None;
@@ -6880,6 +6903,17 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
                 return Err("missing value for --requirements-file".to_string());
             };
             ail_requirements_file = Some(path.clone());
+            index += 2;
+            continue;
+        }
+        if arg == "--interview-file" {
+            if command != "ail-requirements" {
+                return Err(usage());
+            }
+            let Some(path) = args.get(index + 1) else {
+                return Err("missing value for --interview-file".to_string());
+            };
+            ail_interview_file = Some(path.clone());
             index += 2;
             continue;
         }
@@ -7169,6 +7203,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         ail_build_agent,
         ail_build_base_model,
         ail_build_target_model,
+        ail_interview_file,
         ail_requirements_file,
         ail_spec_file,
         ail_core_file,

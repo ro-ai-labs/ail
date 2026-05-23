@@ -12248,6 +12248,82 @@ fn cli_ail_requirements_accepts_prompt_envelope_artifact_text() {
 }
 
 #[test]
+fn cli_ail_requirements_includes_saved_interview_answers_in_capture_prompt() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("support_ticket.ail");
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let interview_path = std::env::temp_dir().join(format!(
+        "ail-requirements-interview-answers-{}.ail-interview.md",
+        std::process::id()
+    ));
+    fs::write(
+        &interview_path,
+        concat!(
+            "AIL-Interview:\n",
+            "- Q: Which user roles may close tickets?\n",
+            "  A: SupportAgent and SupportManager.\n",
+            "- Q: Which trace events must be emitted?\n",
+            "  A: TicketClosed and TicketNotFound.\n"
+        ),
+    )
+    .unwrap();
+    let requirements = concat!(
+        "AIL-Requirements:\n",
+        "- The application manages support tickets with Ticket fields id, title, status, and secret internal notes.\n",
+        "- The CloseTicket action requires ticket id input and ticket status not to be Closed.\n",
+        "- SupportAgent and SupportManager may close tickets.\n",
+        "- Failure NotFound happens when ticket id is missing and records TicketNotFound.\n",
+        "- The action guarantees closed tickets do not appear in the open queue.\n",
+        "- The action records trace event TicketClosed.\n"
+    );
+    let response_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(requirements)
+    );
+    let server = serve_one_chat_response(listener, response_body);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-requirements",
+            &package,
+            "--prompt",
+            "Capture requirements after interview answers",
+            "--interview-file",
+            interview_path.to_str().unwrap(),
+            "--llm-endpoint",
+            &format!("http://127.0.0.1:{}/v1/chat/completions", addr.port()),
+        ])
+        .output()
+        .unwrap();
+
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let request_body = server.join().unwrap();
+    assert!(
+        request_body.contains("SAVED INTERVIEW ANSWERS:"),
+        "{request_body}"
+    );
+    assert!(
+        request_body.contains("SupportAgent and SupportManager"),
+        "{request_body}"
+    );
+    assert!(
+        request_body.contains("TicketClosed and TicketNotFound"),
+        "{request_body}"
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.starts_with("AIL-Requirements:\n"), "{stdout}");
+    assert!(stdout.contains("SupportAgent and SupportManager"));
+
+    fs::remove_file(interview_path).unwrap();
+}
+
+#[test]
 fn cli_ail_requirements_rejects_prompt_envelope_wrong_artifact_kind() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
