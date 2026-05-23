@@ -4321,8 +4321,8 @@ pub fn compile_ail_core_native_elf(
             "unsupported native target '{target}'; expected linux-x86_64-elf"
         ));
     }
-    ensure_ail_core_native_target_supported(core, target)?;
     let program = compile_ail_core_bytecode(core)?;
+    ensure_native_target_supported(&program.package_name, &program.target_support, target)?;
     let diagnostics = verify_ail_bytecode(&program);
     if !diagnostics.is_empty() {
         return Err(format!(
@@ -4336,10 +4336,6 @@ pub fn compile_ail_core_native_elf(
         .ok_or_else(|| format!("unknown AIL action '{action_name}'"))?;
     let action = expand_native_action_calls(action, &program.actions)?;
     emit_linux_x86_64_elf_for_action(&action, &program.failures)
-}
-
-fn ensure_ail_core_native_target_supported(core: &AilCore, target: &str) -> Result<(), String> {
-    ensure_native_target_supported(&core.package.name, &core.package.target_support, target)
 }
 
 fn ensure_native_target_supported(

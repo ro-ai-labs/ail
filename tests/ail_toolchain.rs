@@ -3186,6 +3186,31 @@ fn ail_core_native_compile_rejects_manifest_unsupported_target() {
 }
 
 #[test]
+fn ail_core_native_compile_reports_unknown_target_support_status_before_backend_support() {
+    let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
+    let document = parse_ail_package_document(&package).unwrap();
+    let mut core = elaborate_ail_core(&package, &document);
+    assert_eq!(check_ail_core(&core), Vec::<String>::new());
+
+    core.package.target_support = BTreeMap::from([(
+        "x86_64-unknown-linux-syscall-elf".to_string(),
+        "experimental-preview".to_string(),
+    )]);
+
+    let error = compile_ail_core_native_elf(&core, "CloseTicket", "linux-x86_64-elf").unwrap_err();
+    assert!(
+        error.contains("cannot compile unchecked AIL-Core"),
+        "{error}"
+    );
+    assert!(error.contains("AIL-BACKEND-002"), "{error}");
+    assert!(
+        error.contains("x86_64-unknown-linux-syscall-elf"),
+        "{error}"
+    );
+    assert!(error.contains("experimental-preview"), "{error}");
+}
+
+#[test]
 fn ail_bytecode_native_compile_rejects_manifest_unsupported_target() {
     let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
     let document = parse_ail_package_document(&package).unwrap();
