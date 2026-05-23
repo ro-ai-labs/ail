@@ -165,6 +165,7 @@ When the toolchain agent verifies AIL-Core lowering artifacts:
 - the system requires the BuildRequest to exist
 - the system requires the BuildRequest status to be BytecodeReady
 - the system reads the BuildRequest core ir
+- the system reads the BuildRequest core ir fingerprint
 - the system reads the BuildRequest bytecode artifact
 - the system reads the BuildRequest bytecode fingerprint
 - the system reads the BuildRequest artifact manifest
@@ -193,6 +194,7 @@ When the toolchain agent verifies the build artifact manifest:
 - the system requires the BuildRequest status to be BytecodeReady
 - the system reads the BuildRequest artifact manifest
 - the system reads the BuildRequest artifact manifest fingerprint
+- the system reads the BuildRequest core ir fingerprint
 - the system reads the BuildRequest bytecode fingerprint
 - the system reads the BuildRequest target artifact fingerprint
 - the system reads the BuildRequest compiler pass target artifact fingerprint

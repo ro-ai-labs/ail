@@ -537,7 +537,10 @@ fn render_ail_build_manifest(artifacts: &AilBuildArtifactSet<'_>) -> String {
     if artifacts.spec_text.is_some() {
         lines.push("artifact accepted.ail-spec.md".to_string());
     }
-    lines.push("artifact checked.ail-core.txt".to_string());
+    lines.push(format!(
+        "core checked.ail-core.txt {}",
+        ail_artifact_fingerprint(artifacts.core_text)
+    ));
     lines.push(format!(
         "bytecode artifact.ailbc.json {}",
         artifacts.bytecode_fingerprint
@@ -604,8 +607,11 @@ fn render_ail_build_manifest(artifacts: &AilBuildArtifactSet<'_>) -> String {
 
 fn render_ail_compile_manifest(artifacts: &AilCompileArtifactSet<'_>) -> String {
     let mut lines = vec!["AIL-Compile-Manifest:".to_string()];
-    if artifacts.core_text.is_some() {
-        lines.push("artifact checked.ail-core.txt".to_string());
+    if let Some(core_text) = artifacts.core_text {
+        lines.push(format!(
+            "core checked.ail-core.txt {}",
+            ail_artifact_fingerprint(core_text)
+        ));
     }
     lines.push(format!(
         "bytecode artifact.ailbc.json {}",
@@ -643,8 +649,11 @@ fn render_ail_compile_manifest(artifacts: &AilCompileArtifactSet<'_>) -> String 
 
 fn render_ail_compile_bundle_manifest(artifacts: &AilCompileBundleArtifactSet<'_>) -> String {
     let mut lines = vec!["AIL-Compile-Manifest:".to_string()];
-    if artifacts.core_text.is_some() {
-        lines.push("artifact checked.ail-core.txt".to_string());
+    if let Some(core_text) = artifacts.core_text {
+        lines.push(format!(
+            "core checked.ail-core.txt {}",
+            ail_artifact_fingerprint(core_text)
+        ));
     }
     lines.push(format!(
         "bytecode artifact.ailbc.json {}",
@@ -796,6 +805,13 @@ fn write_ail_compile_artifacts(
     if let Some(core_text) = artifacts.core_text {
         fs::write(root.join("checked.ail-core.txt"), core_text)
             .map_err(|error| format!("failed to write ail-compile core artifact: {error}"))?;
+        fs::write(
+            root.join("checked.ail-core.fingerprint.txt"),
+            format!("{}\n", ail_artifact_fingerprint(core_text)),
+        )
+        .map_err(|error| {
+            format!("failed to write ail-compile core fingerprint artifact: {error}")
+        })?;
     }
     fs::write(root.join("artifact.ailbc.json"), artifacts.bytecode_text)
         .map_err(|error| format!("failed to write ail-compile bytecode artifact: {error}"))?;
@@ -886,6 +902,13 @@ fn write_ail_compile_bundle_artifacts(
     if let Some(core_text) = artifacts.core_text {
         fs::write(root.join("checked.ail-core.txt"), core_text)
             .map_err(|error| format!("failed to write ail-compile core artifact: {error}"))?;
+        fs::write(
+            root.join("checked.ail-core.fingerprint.txt"),
+            format!("{}\n", ail_artifact_fingerprint(core_text)),
+        )
+        .map_err(|error| {
+            format!("failed to write ail-compile core fingerprint artifact: {error}")
+        })?;
     }
     fs::write(root.join("artifact.ailbc.json"), artifacts.bytecode_text)
         .map_err(|error| format!("failed to write ail-compile bytecode artifact: {error}"))?;
@@ -1271,6 +1294,11 @@ fn write_ail_build_artifacts(
     }
     fs::write(root.join("checked.ail-core.txt"), artifacts.core_text)
         .map_err(|error| format!("failed to write ail-build core artifact: {error}"))?;
+    fs::write(
+        root.join("checked.ail-core.fingerprint.txt"),
+        format!("{}\n", ail_artifact_fingerprint(artifacts.core_text)),
+    )
+    .map_err(|error| format!("failed to write ail-build core fingerprint artifact: {error}"))?;
     fs::write(root.join("artifact.ailbc.json"), artifacts.bytecode_text)
         .map_err(|error| format!("failed to write ail-build bytecode artifact: {error}"))?;
     fs::write(
@@ -1402,7 +1430,10 @@ fn write_ail_build_artifacts(
 fn render_ail_lower_manifest(artifacts: &AilLowerArtifactSet<'_>) -> String {
     let mut lines = vec![
         "AIL-Lower-Manifest:".to_string(),
-        "artifact checked.ail-core.txt".to_string(),
+        format!(
+            "core checked.ail-core.txt {}",
+            ail_artifact_fingerprint(artifacts.core_text)
+        ),
         format!(
             "bytecode artifact.ailbc.json {}",
             ail_artifact_fingerprint(artifacts.bytecode_text)
@@ -1438,6 +1469,11 @@ fn write_ail_lower_artifacts(
     })?;
     fs::write(root.join("checked.ail-core.txt"), artifacts.core_text)
         .map_err(|error| format!("failed to write ail-lower core artifact: {error}"))?;
+    fs::write(
+        root.join("checked.ail-core.fingerprint.txt"),
+        format!("{}\n", ail_artifact_fingerprint(artifacts.core_text)),
+    )
+    .map_err(|error| format!("failed to write ail-lower core fingerprint artifact: {error}"))?;
     fs::write(root.join("artifact.ailbc.json"), artifacts.bytecode_text)
         .map_err(|error| format!("failed to write ail-lower bytecode artifact: {error}"))?;
     let bytecode_fingerprint = ail_artifact_fingerprint(artifacts.bytecode_text);
@@ -2130,6 +2166,10 @@ fn run_ail_lower_agent_verify_manifest(
             ),
             ("buildrequest.spec".to_string(), "skipped".to_string()),
             ("buildrequest.core ir".to_string(), core_text.to_string()),
+            (
+                "buildrequest.core ir fingerprint".to_string(),
+                ail_artifact_fingerprint(core_text),
+            ),
             (
                 "buildrequest.bytecode artifact".to_string(),
                 format!("Verified AIL-Bytecode ({} bytes)", bytecode_text.len()),
@@ -2894,6 +2934,7 @@ fn run_ail_build_agent_verify_manifest(
     agent_run: &mut AilBuildAgentRun,
     manifest_text: &str,
     manifest_fingerprint: &str,
+    core_fingerprint: &str,
     compiler_pass_target_fingerprint: Option<&str>,
     prompt_portability_fingerprint: Option<&str>,
     native_bytecode_report_text: Option<&str>,
@@ -2915,6 +2956,10 @@ fn run_ail_build_agent_verify_manifest(
     verify_state.insert(
         "buildrequest.artifact manifest fingerprint".to_string(),
         manifest_fingerprint.to_string(),
+    );
+    verify_state.insert(
+        "buildrequest.core ir fingerprint".to_string(),
+        core_fingerprint.to_string(),
     );
     if let Some(compiler_pass_target_fingerprint) = compiler_pass_target_fingerprint {
         verify_state.insert(
@@ -4154,6 +4199,7 @@ fn run_ail_build_from_core(
                 agent_native_executables: agent_native_artifacts.as_slice(),
             });
             let manifest_fingerprint = ail_artifact_fingerprint(&manifest_text);
+            let core_fingerprint = ail_artifact_fingerprint(&core_text);
             let pass_target_fingerprint =
                 native_artifact_fingerprint_text(pass_native_artifacts.as_slice());
             let prompt_portability_fingerprint = prompt_portability_report
@@ -4163,6 +4209,7 @@ fn run_ail_build_from_core(
                 agent_run,
                 &manifest_text,
                 &manifest_fingerprint,
+                &core_fingerprint,
                 pass_target_fingerprint.as_deref(),
                 prompt_portability_fingerprint.as_deref(),
                 native_bytecode_report_text.as_deref(),

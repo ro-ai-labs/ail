@@ -411,14 +411,15 @@ trace events. Stdout remains reserved for parseable state changes. The first
 native backend rejects future unknown VM opcodes and unlowered
 `OBSERVE_RULE` requirements instead of silently emitting a partial executable.
 With `--artifact-dir`, `ail-lower` writes `checked.ail-core.txt`,
-`artifact.ailbc.json`, `artifact.fingerprint.txt`, `manifest.ail-lower.txt`,
-and `manifest.fingerprint.txt`, keeping direct IR-to-VM-instruction lowering
+`checked.ail-core.fingerprint.txt`, `artifact.ailbc.json`,
+`artifact.fingerprint.txt`, `manifest.ail-lower.txt`, and
+`manifest.fingerprint.txt`, keeping direct IR-to-VM-instruction lowering
 auditable while stdout remains the parseable VM instruction artifact. With
 `--agent <agent-package-or-bytecode> --artifact-dir`, `ail-lower` must compile
 or load an AIL-authored Application agent and run its `VerifyLowerManifest`
-bytecode action against the checked core, bytecode artifact, bytecode
-fingerprint, lower manifest, and manifest fingerprint before writing
-`agent.ailbc.json`, `agent.fingerprint.txt`, and `agent-trace.txt`. With
+bytecode action against the checked core, checked-core fingerprint, bytecode
+artifact, bytecode fingerprint, lower manifest, and manifest fingerprint before
+writing `agent.ailbc.json`, `agent.fingerprint.txt`, and `agent-trace.txt`. With
 `--target linux-x86_64-elf`, it also emits `agent-<ActionName>.elf`
 machine-code ELF executables for the lower verifier and records them as
 `agent-target` entries in `manifest.ail-lower.txt`.
@@ -447,8 +448,9 @@ With `--artifact-dir`, direct `ail-compile` writes `artifact.ailbc.json`,
 `artifact.fingerprint.txt`, `target.elf`, `target.fingerprint.txt`,
 `native-bytecode-report.txt`, `native-bytecode-report.fingerprint.txt`,
 `manifest.ail-compile.txt`, and `manifest.fingerprint.txt`; compiles from
-checked AIL-Core also include `checked.ail-core.txt`. The native-bytecode report
-records the selected action target as ELF64 x86_64 executable bytes, and the
+checked AIL-Core also include `checked.ail-core.txt` and
+`checked.ail-core.fingerprint.txt`. The native-bytecode report records the
+selected action target as ELF64 x86_64 executable bytes, and the
 compile manifest ties the selected action, verified bytecode artifact,
 native-bytecode report, and native target executable fingerprint into a
 reviewable artifact boundary. With
@@ -609,15 +611,17 @@ deterministic target fingerprint, recording `NativeTargetCompiled` before
 `VerifyTargetArtifact` verifies the final machine-code boundary. When
 `--artifact-dir` is present, the agent also runs
 `VerifyBuildManifest` with the rendered build manifest, deterministic manifest
-fingerprint, native target fingerprint when a native target is present, the
-native-bytecode report and fingerprint when native ELF artifacts are present,
-and the native compiler-pass executable fingerprint when a native build pass is
-present, so the whole requirements/spec/core/pass/agent/artifact boundary is
-represented in AIL bytecode. This keeps the
+fingerprint, checked-core fingerprint, native target fingerprint when a native
+target is present, the native-bytecode report and fingerprint when native ELF
+artifacts are present, and the native compiler-pass executable fingerprint when
+a native build pass is present, so the whole
+requirements/spec/core/pass/agent/artifact boundary is represented in AIL
+bytecode. This keeps the
 developer-facing build coordinator in AIL bytecode
 instead of adding a host-language orchestration layer. With `--artifact-dir`,
 the same command writes
-`accepted.ail-spec.md`, `checked.ail-core.txt`, `artifact.ailbc.json`, and
+`accepted.ail-spec.md`, `checked.ail-core.txt`,
+`checked.ail-core.fingerprint.txt`, `artifact.ailbc.json`, and
 `artifact.fingerprint.txt`; it also writes `requirements.ail-requirements.md`
 when the build captured or loaded requirements, and it writes
 `accepted.ail-spec.md` only when an AIL-Spec stage was present. When a build

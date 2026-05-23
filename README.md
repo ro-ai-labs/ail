@@ -68,13 +68,15 @@ effects, guarantees, and explicit trace events.
 The first native backend rejects unsupported VM opcodes and unlowered observed
 rules instead of silently dropping them.
 `ail-lower --artifact-dir
-<dir>` also writes the checked core, VM instruction artifact, deterministic
-fingerprints, and a lower manifest while keeping stdout as the VM artifact.
+<dir>` also writes the checked core, checked-core fingerprint, VM instruction
+artifact, deterministic bytecode fingerprint, and a lower manifest while keeping
+stdout as the VM artifact.
 `ail-lower --agent <agent-package-or-bytecode> --artifact-dir <dir>` also
 compiles or loads an AIL-authored Application agent, runs its
-`VerifyLowerManifest` bytecode action against the checked core, bytecode
-artifact, bytecode fingerprint, lower manifest, and manifest fingerprint, then
-writes `agent.ailbc.json`, `agent.fingerprint.txt`, and `agent-trace.txt`.
+`VerifyLowerManifest` bytecode action against the checked core, checked-core
+fingerprint, bytecode artifact, bytecode fingerprint, lower manifest, and
+manifest fingerprint, then writes `agent.ailbc.json`, `agent.fingerprint.txt`,
+and `agent-trace.txt`.
 Adding `--target linux-x86_64-elf` emits `agent-<ActionName>.elf` native
 machine-code executables for that lower verifier and records each one as an
 `agent-target` line in the lower manifest.
@@ -98,7 +100,8 @@ without loading the source package. Adding `--artifact-dir <dir>` to
 `target.elf`, `target.fingerprint.txt`, `native-bytecode-report.txt`,
 `native-bytecode-report.fingerprint.txt`, `manifest.ail-compile.txt`, and
 `manifest.fingerprint.txt`; compiles from checked AIL-Core also include
-`checked.ail-core.txt`. The native-bytecode report records the target as
+`checked.ail-core.txt` and `checked.ail-core.fingerprint.txt`. The
+native-bytecode report records the target as
 ELF64 x86_64 executable bytes. With `--agent <agent-package-or-bytecode>`,
 `ail-compile --artifact-dir` also runs the AIL-authored
 `VerifyCompileManifest` action, writes `agent.ailbc.json`,
@@ -176,8 +179,9 @@ lowering. `ail-build --core-file <path>` skips requirements and spec stages
 entirely and resumes from checked AIL-Core IR. Add
 `--artifact-dir <dir>` to also write the captured or loaded requirements when
 present, accepted AIL-Spec when present, checked AIL-Core IR after any build
-pass, final AIL-Bytecode artifact, and `manifest.ail-build.txt` as the
-fingerprinted artifact index for review. `ail-build --agent
+pass, checked-core fingerprint, final AIL-Bytecode artifact, and
+`manifest.ail-build.txt` as the fingerprinted artifact index for review.
+`ail-build --agent
 <agent-package-or-bytecode>` compiles or loads an AIL-authored Application
 agent, validates and runs its `CaptureRequirements` bytecode action before the
 base LLM requirements request for prompt-driven requirements capture, threads
@@ -192,8 +196,9 @@ runs `AcceptCoreIR` after AIL-Core is checked and before compilation, runs
 emission, runs `VerifyBytecodeArtifact` after the VM artifact verifies, runs
 `CompileNativeTarget` after native Linux x86_64 ELF bytes are emitted, runs
 `VerifyTargetArtifact` after the native target artifact is recorded, and, with
-`--artifact-dir`, runs `VerifyBuildManifest` against the build manifest and
-manifest fingerprint, then writes `artifact.fingerprint.txt`,
+`--artifact-dir`, runs `VerifyBuildManifest` against the build manifest,
+manifest fingerprint, and checked-core fingerprint, then writes
+`artifact.fingerprint.txt`,
 `agent.ailbc.json`, `agent.fingerprint.txt`, `agent-trace.txt`,
 `manifest.ail-build.txt`, and `manifest.fingerprint.txt`. When
 `--target-model` is present with `--artifact-dir`, the artifact set also writes
@@ -219,9 +224,9 @@ and target fingerprint before recording `NativeTargetCompiled`,
 `VerifyTargetArtifact` reads the native target artifact summary and
 deterministic fingerprint when a native target is selected, and
 `VerifyBuildManifest` reads the artifact manifest and its deterministic
-fingerprint, plus the native target fingerprint, native bytecode report and
-fingerprint when a native target is selected, and the native compiler-pass
-executable fingerprint when a native build pass is present. When
+fingerprint, checked-core fingerprint, native target fingerprint, native
+bytecode report and fingerprint when a native target is selected, and the native
+compiler-pass executable fingerprint when a native build pass is present. When
 `ail-build --target linux-x86_64-elf` is used with `--artifact-dir`, it also
 writes `target.elf`, `target.fingerprint.txt`, `native-bytecode-report.txt`,
 `native-bytecode-report.fingerprint.txt`, and manifest entries for both the

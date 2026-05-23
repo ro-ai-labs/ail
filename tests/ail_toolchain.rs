@@ -3357,10 +3357,16 @@ fn cli_ail_lower_accepts_saved_core_file_artifact() {
     );
     let core_artifact = fs::read_to_string(artifact_dir.join("checked.ail-core.txt")).unwrap();
     assert_eq!(core_artifact, fs::read_to_string(&core_path).unwrap());
+    let core_fingerprint =
+        fs::read_to_string(artifact_dir.join("checked.ail-core.fingerprint.txt")).unwrap();
+    assert_eq!(core_fingerprint.trim(), fnv64_fingerprint(&core_artifact));
     let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-lower.txt")).unwrap();
     assert!(manifest.contains("AIL-Lower-Manifest:"), "{manifest}");
     assert!(
-        manifest.contains("artifact checked.ail-core.txt"),
+        manifest.contains(&format!(
+            "core checked.ail-core.txt {}",
+            fnv64_fingerprint(&core_artifact)
+        )),
         "{manifest}"
     );
     assert!(
@@ -3418,6 +3424,7 @@ fn cli_ail_lower_agent_verifies_manifest_artifacts() {
     let agent_trace = fs::read_to_string(artifact_dir.join("agent-trace.txt")).unwrap();
     assert!(agent_trace.contains("action VerifyLowerManifest started"));
     assert!(agent_trace.contains("read buildrequest.core ir"));
+    assert!(agent_trace.contains("read buildrequest.core ir fingerprint"));
     assert!(agent_trace.contains("read buildrequest.bytecode artifact"));
     assert!(agent_trace.contains("read buildrequest.bytecode fingerprint"));
     assert!(agent_trace.contains("read buildrequest.artifact manifest"));
@@ -3429,7 +3436,18 @@ fn cli_ail_lower_agent_verifies_manifest_artifacts() {
 
     let bytecode_artifact = fs::read_to_string(artifact_dir.join("artifact.ailbc.json")).unwrap();
     assert_eq!(bytecode_artifact, String::from_utf8_lossy(&output.stdout));
+    let core_artifact = fs::read_to_string(artifact_dir.join("checked.ail-core.txt")).unwrap();
+    let core_fingerprint =
+        fs::read_to_string(artifact_dir.join("checked.ail-core.fingerprint.txt")).unwrap();
+    assert_eq!(core_fingerprint.trim(), fnv64_fingerprint(&core_artifact));
     let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-lower.txt")).unwrap();
+    assert!(
+        manifest.contains(&format!(
+            "core checked.ail-core.txt {}",
+            fnv64_fingerprint(&core_artifact)
+        )),
+        "{manifest}"
+    );
     assert!(
         manifest.contains(&format!(
             "bytecode artifact.ailbc.json {}",
@@ -3492,6 +3510,7 @@ fn cli_ail_lower_writes_native_agent_artifacts() {
             "buildrequest.id=support-ticket-lower",
             "buildrequest.status=BytecodeReady",
             "buildrequest.core ir=ok",
+            "buildrequest.core ir fingerprint=fnv64:core",
             "buildrequest.bytecode artifact=ok",
             "buildrequest.bytecode fingerprint=fnv64:bytecode",
             "buildrequest.artifact manifest=ok",
@@ -4020,6 +4039,7 @@ fn cli_ail_compile_writes_all_action_native_bundle() {
         .args([
             "buildrequest.id=BR-1",
             "buildrequest.status=BytecodeReady",
+            "buildrequest.core ir fingerprint=fnv64:core",
             "buildrequest.bytecode fingerprint=fnv64:bytecode",
             "buildrequest.target artifact fingerprint=fnv64:target",
             "buildrequest.compiler pass target artifact fingerprint=fnv64:pass-target",
@@ -9486,7 +9506,18 @@ fn cli_ail_build_agent_verifies_bytecode_artifact_after_compile() {
 
     let fingerprint = fs::read_to_string(artifact_dir.join("artifact.fingerprint.txt")).unwrap();
     assert_eq!(fingerprint.trim(), expected_fingerprint);
+    let core_artifact = fs::read_to_string(artifact_dir.join("checked.ail-core.txt")).unwrap();
+    let core_fingerprint =
+        fs::read_to_string(artifact_dir.join("checked.ail-core.fingerprint.txt")).unwrap();
+    assert_eq!(core_fingerprint.trim(), fnv64_fingerprint(&core_artifact));
     let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-build.txt")).unwrap();
+    assert!(
+        manifest.contains(&format!(
+            "core checked.ail-core.txt {}",
+            fnv64_fingerprint(&core_artifact)
+        )),
+        "{manifest}"
+    );
     let manifest_fingerprint =
         fs::read_to_string(artifact_dir.join("manifest.fingerprint.txt")).unwrap();
     assert_eq!(manifest_fingerprint.trim(), fnv64_fingerprint(&manifest));
@@ -9914,7 +9945,12 @@ fn cli_ail_build_agent_accepts_compiler_pass_output_before_core() {
         "{manifest}"
     );
     assert!(
-        manifest.contains("artifact checked.ail-core.txt"),
+        manifest.contains(&format!(
+            "core checked.ail-core.txt {}",
+            fnv64_fingerprint(
+                &fs::read_to_string(artifact_dir.join("checked.ail-core.txt")).unwrap()
+            )
+        )),
         "{manifest}"
     );
     assert!(

@@ -6489,6 +6489,57 @@ cargo test --test ail_toolchain cli_ail_build_agent_verifies_native_target_artif
 Expected: native `ail-build` artifacts prove every emitted native target is
 machine-level ELF executable bytecode before the manifest verifier accepts it.
 
+### Task 147: Lower And Build Fingerprint Checked AIL-Core
+
+**Files:**
+- Modify: `examples/ail_toolchain_agent.ail/spec.ail-spec.md`
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing checked-core fingerprint assertions**
+
+Extend `ail-lower --artifact-dir` and `ail-build --agent --artifact-dir` tests
+to require `checked.ail-core.fingerprint.txt`, `core checked.ail-core.txt
+<fingerprint>` manifest entries, and AIL-authored lower/build manifest verifier
+reads for `buildrequest.core ir fingerprint`.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_lower_accepts_saved_core_file_artifact -- --nocapture
+cargo test --test ail_toolchain cli_ail_lower_agent_verifies_manifest_artifacts -- --nocapture
+cargo test --test ail_toolchain cli_ail_build_agent_verifies_bytecode_artifact_after_compile -- --nocapture
+```
+
+Expected: lower/build tests fail because checked AIL-Core fingerprint artifacts
+are missing and the AIL-authored lower/build manifest verifiers do not read the
+core fingerprint.
+
+- [x] **Step 3: Generate checked-core fingerprints**
+
+When lower/build artifact directories persist checked AIL-Core, write
+`checked.ail-core.fingerprint.txt`, include the checked-core fingerprint in the
+manifest, and pass that fingerprint into the AIL-authored lower/build manifest
+verifier state.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_lower_accepts_saved_core_file_artifact -- --nocapture
+cargo test --test ail_toolchain cli_ail_lower_agent_verifies_manifest_artifacts -- --nocapture
+cargo test --test ail_toolchain cli_ail_build_agent_verifies_bytecode_artifact_after_compile -- --nocapture
+```
+
+Expected: lower/build artifact manifests now tie checked AIL-Core IR to
+bytecode artifacts with deterministic fingerprints before the AIL-authored
+manifest verifier accepts the bundle.
+
 ### Task 18: Declared Failure Trace Coverage Diagnostics
 
 **Files:**
