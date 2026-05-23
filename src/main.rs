@@ -99,7 +99,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
 }
 
 fn usage() -> String {
-    "usage: ail <ail-check|ail-core|ail-flow|ail-flow-edit|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-interview|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-bootstrap|ail-patch> <path> [patch|target-package] [--action name] [--prompt text] [--interview-file path] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--base-model name] [--target-model name] [--out path] [--all-actions] [--artifact-dir path] [--llm-endpoint url] [key=value ...]\nsaved-core usage: ail <ail-spec|ail-lower|ail-compile|ail-run|ail-build> --core-file <checked-core> [--action name] [--target target] [--out path] [--artifact-dir path] [key=value ...]\nwasm-contract usage: ail ail-compile <artifact.ailbc.json> --action <ActionName> --target wasm32-unknown-sandbox-wasm --artifact-dir <dir>\ncore-patch usage: ail ail-patch --core-file <checked-core> <ail-core.patch.json>\nflow-edit usage: ail ail-flow-edit --core-file <checked-core> <ail-flow.edit.json>\nail-pass usage: ail ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR ail ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]\nail-bootstrap usage: ail ail-bootstrap <toolchain-agent-package> --pass <compiler-pass-package> --agent <toolchain-agent-package> --target linux-x86_64-elf --artifact-dir <dir>"
+    "usage: ail <ail-check|ail-core|ail-flow|ail-flow-edit|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-interview|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-bootstrap|ail-patch> <path> [patch|target-package] [--action name] [--prompt text] [--interview-file path] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--base-model name] [--target-model name] [--out path] [--all-actions] [--artifact-dir path] [--llm-endpoint url] [key=value ...]\nsaved-core usage: ail <ail-spec|ail-lower|ail-compile|ail-run|ail-build> --core-file <checked-core> [--action name] [--target target] [--out path] [--artifact-dir path] [key=value ...]\nwasm-contract usage: ail ail-compile <package-or-artifact.ailbc.json> (--action <ActionName>|--all-actions) --target wasm32-unknown-sandbox-wasm --artifact-dir <dir> OR ail ail-compile --core-file <checked-core> (--action <ActionName>|--all-actions) --target wasm32-unknown-sandbox-wasm --artifact-dir <dir>\ncore-patch usage: ail ail-patch --core-file <checked-core> <ail-core.patch.json>\nflow-edit usage: ail ail-flow-edit --core-file <checked-core> <ail-flow.edit.json>\nail-pass usage: ail ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR ail ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]\nail-bootstrap usage: ail ail-bootstrap <toolchain-agent-package> --pass <compiler-pass-package> --agent <toolchain-agent-package> --target linux-x86_64-elf --artifact-dir <dir>"
         .to_string()
 }
 
@@ -159,10 +159,15 @@ struct AilCompileWasmContractArtifactSet<'a> {
     source_spec_text: Option<&'a str>,
     core_text: Option<&'a str>,
     bytecode_text: &'a str,
-    action_name: &'a str,
+    scope: AilCompileWasmContractScope<'a>,
     target_name: &'a str,
     wasm_contract_report_text: &'a str,
     dependency_report_text: &'a str,
+}
+
+enum AilCompileWasmContractScope<'a> {
+    Action(&'a str),
+    AllActions,
 }
 
 struct AilBootstrapArtifactSet<'a> {
@@ -517,7 +522,14 @@ fn render_ail_compile_wasm_contract_manifest(
         "bytecode artifact.ailbc.json {}",
         ail_artifact_fingerprint(artifacts.bytecode_text)
     ));
-    lines.push(format!("action {}", artifacts.action_name));
+    match artifacts.scope {
+        AilCompileWasmContractScope::Action(action_name) => {
+            lines.push(format!("action {action_name}"));
+        }
+        AilCompileWasmContractScope::AllActions => {
+            lines.push("bundle all-actions".to_string());
+        }
+    }
     lines.push(wasm_contract_machine_bytecode_manifest_contract_line(
         artifacts.target_name,
     ));
@@ -1020,6 +1032,23 @@ fn reject_stale_wasm_contract_executable_artifacts(
         "native-bytecode-report.fingerprint.txt",
     ] {
         if root.join(file_name).exists() {
+            return Err(format!(
+                "ail-compile wasm contract artifact dir {artifact_dir} contains stale executable artifact {file_name}; use a clean artifact dir"
+            ));
+        }
+    }
+    for entry in fs::read_dir(root).map_err(|error| {
+        format!("failed to read ail-compile wasm contract artifact dir {artifact_dir}: {error}")
+    })? {
+        let entry = entry.map_err(|error| {
+            format!(
+                "failed to inspect ail-compile wasm contract artifact dir {artifact_dir}: {error}"
+            )
+        })?;
+        let file_name = entry.file_name().to_string_lossy().into_owned();
+        if (file_name.starts_with("target-") || file_name.starts_with("agent-"))
+            && (file_name.ends_with(".elf") || file_name.ends_with(".wasm"))
+        {
             return Err(format!(
                 "ail-compile wasm contract artifact dir {artifact_dir} contains stale executable artifact {file_name}; use a clean artifact dir"
             ));
@@ -4988,14 +5017,42 @@ fn render_ail_compile_wasm_contract_report(
     action_name: &str,
     target_name: &str,
 ) -> Result<String, String> {
+    let mut lines = ail_wasm_contract_report_header(program, target_name)?;
+    lines.push(format!("action {action_name}"));
+    lines.push("trace-scope reachable-action-call-graph".to_string());
+    lines.push(format!(
+        "trace-preservation {}",
+        ail_wasm_contract_trace_preservation_label(program, action_name)?
+    ));
+    lines.push("executable-wasm-module none".to_string());
+    push_ail_wasm_contract_host_import_lines(&mut lines, program);
+    Ok(format!("{}\n", lines.join("\n")))
+}
+
+fn render_ail_compile_wasm_contract_bundle_report(
+    program: &AilBytecodeProgram,
+    target_name: &str,
+) -> Result<String, String> {
+    let mut lines = ail_wasm_contract_report_header(program, target_name)?;
+    lines.push("bundle all-actions".to_string());
+    lines.push("trace-scope reachable-action-call-graph".to_string());
+    for action_name in program.actions.keys() {
+        lines.push(format!(
+            "action {action_name} trace-preservation {}",
+            ail_wasm_contract_trace_preservation_label(program, action_name)?
+        ));
+    }
+    lines.push("executable-wasm-module none".to_string());
+    push_ail_wasm_contract_host_import_lines(&mut lines, program);
+    Ok(format!("{}\n", lines.join("\n")))
+}
+
+fn ail_wasm_contract_report_header(
+    program: &AilBytecodeProgram,
+    target_name: &str,
+) -> Result<Vec<String>, String> {
     let status = ail_compile_wasm_contract_status(program, target_name)?;
-    let trace_preservation = if ail_bytecode_action_reachable_trace_required(program, action_name)?
-    {
-        "required"
-    } else {
-        "not-required-by-action"
-    };
-    let mut lines = vec![
+    Ok(vec![
         "AIL-Wasm-Contract-Report:".to_string(),
         format!(
             "package {} {}",
@@ -5022,11 +5079,21 @@ fn render_ail_compile_wasm_contract_report(
                 "not-present-in-saved-bytecode"
             }
         ),
-        format!("action {action_name}"),
-        "trace-scope reachable-action-call-graph".to_string(),
-        format!("trace-preservation {trace_preservation}"),
-        "executable-wasm-module none".to_string(),
-    ];
+    ])
+}
+
+fn ail_wasm_contract_trace_preservation_label(
+    program: &AilBytecodeProgram,
+    action_name: &str,
+) -> Result<&'static str, String> {
+    if ail_bytecode_action_reachable_trace_required(program, action_name)? {
+        Ok("required")
+    } else {
+        Ok("not-required-by-action")
+    }
+}
+
+fn push_ail_wasm_contract_host_import_lines(lines: &mut Vec<String>, program: &AilBytecodeProgram) {
     if program.external_bindings.is_empty() {
         lines.push(if program.external_bindings_metadata_present {
             "host-imports none".to_string()
@@ -5076,7 +5143,6 @@ fn render_ail_compile_wasm_contract_report(
             }
         }
     }
-    Ok(format!("{}\n", lines.join("\n")))
 }
 
 fn ail_bytecode_action_reachable_trace_required(
@@ -5124,11 +5190,35 @@ fn render_ail_compile_wasm_contract_dependency_report(
     if !program.actions.contains_key(action_name) {
         return Err(format!("unknown AIL action '{action_name}'"));
     }
+    render_ail_compile_wasm_contract_dependency_report_for_scope(
+        program,
+        target_name,
+        format!("action {action_name}"),
+    )
+}
+
+fn render_ail_compile_wasm_contract_bundle_dependency_report(
+    program: &AilBytecodeProgram,
+    target_name: &str,
+) -> Result<String, String> {
+    let _status = ail_compile_wasm_contract_status(program, target_name)?;
+    render_ail_compile_wasm_contract_dependency_report_for_scope(
+        program,
+        target_name,
+        "bundle all-actions".to_string(),
+    )
+}
+
+fn render_ail_compile_wasm_contract_dependency_report_for_scope(
+    program: &AilBytecodeProgram,
+    target_name: &str,
+    scope_line: String,
+) -> Result<String, String> {
     let library_dependencies = ail_bytecode_wasm_contract_library_dependencies(program);
     let lines = vec![
         "AIL-Compile-Dependency-Report:".to_string(),
         format!("target {target_name}"),
-        format!("action {action_name}"),
+        scope_line,
         "host-language-runtime none".to_string(),
         "dynamic-linker none".to_string(),
         "shared-libraries none".to_string(),
@@ -5641,7 +5731,7 @@ fn run_ail_compile_from_core(
                 source_spec_text: source_artifacts.map(|artifacts| artifacts.spec_text.as_str()),
                 core_text: Some(&core_text),
                 bytecode_text: &bytecode_text,
-                action_name: action,
+                scope: AilCompileWasmContractScope::Action(action),
                 target_name: target,
                 wasm_contract_report_text: &wasm_contract_report_text,
                 dependency_report_text: &dependency_report_text,
@@ -5752,6 +5842,36 @@ fn run_ail_compile_from_core(
     Ok(0)
 }
 
+fn run_ail_compile_wasm_contract_bundle(
+    bytecode: &AilBytecodeProgram,
+    bytecode_text: &str,
+    target: &str,
+    artifact_dir: &str,
+    core_text: Option<&str>,
+    source_artifacts: Option<&AilSourcePackageArtifacts>,
+) -> Result<u8, String> {
+    let wasm_contract_report_text =
+        render_ail_compile_wasm_contract_bundle_report(bytecode, target)?;
+    let dependency_report_text =
+        render_ail_compile_wasm_contract_bundle_dependency_report(bytecode, target)?;
+    write_ail_compile_wasm_contract_artifacts(
+        artifact_dir,
+        AilCompileWasmContractArtifactSet {
+            source_manifest_text: source_artifacts
+                .map(|artifacts| artifacts.manifest_text.as_str()),
+            source_spec_text: source_artifacts.map(|artifacts| artifacts.spec_text.as_str()),
+            core_text,
+            bytecode_text,
+            scope: AilCompileWasmContractScope::AllActions,
+            target_name: target,
+            wasm_contract_report_text: &wasm_contract_report_text,
+            dependency_report_text: &dependency_report_text,
+        },
+    )?;
+    println!("ail-compile wrote {target} contract bundle {artifact_dir}");
+    Ok(0)
+}
+
 fn run_ail_compile_bundle_from_core(
     core: &ail::ail::AilCore,
     cli_options: &CliOptions,
@@ -5768,6 +5888,22 @@ fn run_ail_compile_bundle_from_core(
     let bytecode = compile_ail_core_bytecode(core)?;
     let bytecode_text = format!("{}\n", render_ail_bytecode(&bytecode));
     let core_text = format!("{}\n", render_ail_core(core));
+    if target == "wasm32-unknown-sandbox-wasm" {
+        if cli_options.ail_build_agent.is_some() {
+            return Err(
+                "ail-compile wasm contract target does not support --agent verification yet"
+                    .to_string(),
+            );
+        }
+        return run_ail_compile_wasm_contract_bundle(
+            &bytecode,
+            &bytecode_text,
+            target,
+            artifact_dir,
+            Some(&core_text),
+            source_artifacts,
+        );
+    }
     let target_executables = compile_ail_native_artifacts(&bytecode, target, "target")?;
     let (agent_run, agent_native_artifacts, native_bytecode_report_text, dependency_report_text) =
         if let Some(agent_path) = &cli_options.ail_build_agent {
@@ -5878,9 +6014,22 @@ fn run_ail_compile_from_bytecode_file(path: &str, cli_options: &CliOptions) -> R
     }
     if cli_options.ail_compile_all_actions {
         if target == "wasm32-unknown-sandbox-wasm" {
-            return Err(
-                "ail-compile wasm contract target requires --action <name>; --all-actions is not supported yet"
-                    .to_string(),
+            if cli_options.ail_build_agent.is_some() {
+                return Err(
+                    "ail-compile wasm contract target does not support --agent verification yet"
+                        .to_string(),
+                );
+            }
+            let artifact_dir = cli_options.artifact_dir.as_deref().ok_or_else(|| {
+                "ail-compile --all-actions requires --artifact-dir <dir>".to_string()
+            })?;
+            return run_ail_compile_wasm_contract_bundle(
+                &bytecode,
+                &bytecode_text,
+                target,
+                artifact_dir,
+                None,
+                None,
             );
         }
         let artifact_dir = cli_options
@@ -6011,7 +6160,7 @@ fn run_ail_compile_from_bytecode_file(path: &str, cli_options: &CliOptions) -> R
                 source_spec_text: None,
                 core_text: None,
                 bytecode_text: &bytecode_text,
-                action_name: action,
+                scope: AilCompileWasmContractScope::Action(action),
                 target_name: target,
                 wasm_contract_report_text: &wasm_contract_report_text,
                 dependency_report_text: &dependency_report_text,

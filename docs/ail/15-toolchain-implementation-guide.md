@@ -582,34 +582,40 @@ linux-x86_64-elf --out <path>` reads the same saved AIL-Bytecode artifact,
 verifies it, checks the artifact's `target_support` map when present, and emits
 a native ELF executable from that artifact boundary without loading the source
 package or generating host-language backend source.
-`ail-compile <package-or-artifact.ailbc.json> --action <ActionName> --target
-wasm32-unknown-sandbox-wasm --artifact-dir <dir>` reads a source package,
-checked core with `--core-file`, or saved AIL-Bytecode artifact that declares
-`wasm32-unknown-sandbox-wasm` as `supported` or `supported-with-host-imports`,
-verifies the selected action, and writes a deterministic Wasm sandbox contract
-report instead of `target.elf`. The report
+`ail-compile <package-or-artifact.ailbc.json> (--action <ActionName> |
+--all-actions) --target wasm32-unknown-sandbox-wasm --artifact-dir <dir>` reads
+a source package, checked core with `--core-file`, or saved AIL-Bytecode
+artifact that declares `wasm32-unknown-sandbox-wasm` as `supported` or
+`supported-with-host-imports`, verifies the selected action or all-actions
+bundle, and writes a deterministic Wasm sandbox contract report instead of
+`target.elf`. The report
 records `bytecode-level portable-vm-contract`,
 `bytecode-container wasm-sandbox-contract`,
 `bytecode-format wasm32-contract-report`,
 `host-boundary declared-imports-only`, `host-import-metadata
-present-in-saved-bytecode`, the target-support status, selected action, and
-whether trace preservation is required across the selected action's reachable
-`CALL_ACTION` graph. When the saved bytecode contains `ExternalBinding`
-metadata, the report emits deterministic `host-import`,
+present-in-saved-bytecode`, and the target-support status. Single-action
+reports record `action <ActionName>` and whether trace preservation is required
+across the selected action's reachable `CALL_ACTION` graph. All-actions
+contract bundle reports record `bundle all-actions` and one
+`action <ActionName> trace-preservation <status>` line per bytecode action.
+When the saved bytecode contains `ExternalBinding` metadata, the report emits
+deterministic `host-import`,
 `host-import-input`, `host-import-output`, `host-import-status`,
 `host-import-capability`, and `host-import-trace` lines. The matching dependency
 report records
 `host-language-runtime none`, `dynamic-linker none`, `shared-libraries none`,
 `library-dependencies <comma-separated-libraries-or-none>`, `runtime-abi
-wasm32-declared-host-imports`, and one `host-import-dependency` line per
-external binding. Older saved bytecode without the `external_bindings` field is
-still accepted, but its report uses `host-boundary saved-bytecode-contract`,
+wasm32-declared-host-imports`, either `action <ActionName>` or
+`bundle all-actions`, and one `host-import-dependency` line per external
+binding. Older saved bytecode without the `external_bindings` field is still
+accepted, but its report uses `host-boundary saved-bytecode-contract`,
 `host-import-metadata not-present-in-saved-bytecode`, `host-imports
 not-enumerated-in-saved-bytecode`, and `library-dependencies
 not-enumerated-in-saved-bytecode`. If the selected artifact directory already
-contains stale executable outputs such as `target.elf`, `target.wasm`, or native
-bytecode reports, the command fails rather than leaving misleading executable
-artifacts beside a contract-only manifest.
+contains stale executable outputs such as `target.elf`, `target-<Action>.elf`,
+`agent-<Action>.elf`, `target.wasm`, `target-<Action>.wasm`,
+`agent-<Action>.wasm`, or native bytecode reports, the command fails rather
+than leaving misleading executable artifacts beside a contract-only manifest.
 With `--artifact-dir`, native direct `ail-compile` writes
 `source.ail-package.md`, `source.ail-spec.md`, and `source.fingerprint.txt`
 when a package source is available; it also writes `artifact.ailbc.json`,
@@ -625,8 +631,11 @@ package source writes `source.ail-package.md`, `source.ail-spec.md`,
 `artifact.fingerprint.txt`, `wasm-contract-report.txt`,
 `wasm-contract-report.fingerprint.txt`, `dependency-report.txt`,
 `dependency-report.fingerprint.txt`, `manifest.ail-compile.txt`, and
-`manifest.fingerprint.txt`. The same Wasm contract command from saved bytecode
-omits the source and checked-core snapshots. The
+`manifest.fingerprint.txt`. For Wasm `--all-actions`, the same files are
+written, but the compile manifest records `bundle all-actions` and a
+fingerprinted `wasm-contract` report instead of native `target` entries. The
+same Wasm contract command from saved bytecode omits the source and
+checked-core snapshots. The
 native-bytecode report records the selected action target as ELF64 x86_64
 executable bytes. The dependency report records `host-language-runtime none`,
 `dynamic-linker none`, `shared-libraries none`, `library-dependencies none`,

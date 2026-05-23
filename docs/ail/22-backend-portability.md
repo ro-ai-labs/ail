@@ -98,12 +98,13 @@ The Wasm backend is the portable sandbox target for browser, plugin, and
 embedded host contexts. Host imports map to `ExternalBinding` nodes with
 explicit capability grants.
 
-Current implementation status: saved AIL-Bytecode can be compiled to a
-deterministic Wasm sandbox contract report with:
+Current implementation status: source packages, checked AIL-Core, and saved
+AIL-Bytecode can be compiled to a deterministic Wasm sandbox contract report
+with:
 
 ```text
 ail ail-compile <package-or-artifact.ailbc.json> \
-  --action <ActionName> \
+  (--action <ActionName> | --all-actions) \
   --target wasm32-unknown-sandbox-wasm \
   --artifact-dir <dir>
 ```
@@ -121,13 +122,17 @@ fingerprint. It intentionally does not write `target.elf` or an executable
 portable-vm-contract`, `bytecode-container wasm-sandbox-contract`,
 `bytecode-format wasm32-contract-report`, `host-boundary
 declared-imports-only`, `host-import-metadata present-in-saved-bytecode`,
-selected action, target-support status, and trace preservation requirements
-across the selected action's reachable `CALL_ACTION` graph. Saved bytecode
-preserves `ExternalBinding` declarations, so the report enumerates each
-declared host import with library, symbol, ABI, input, output, status-map,
-capability, and trace metadata. Reusing an artifact directory that still
-contains executable outputs such as `target.elf`, `target.wasm`, or native
-bytecode reports is rejected. Older saved bytecode without the
+target-support status, and either the selected action or `bundle all-actions`.
+Single-action reports record trace preservation requirements across the
+selected action's reachable `CALL_ACTION` graph. All-actions contract bundles
+record one `action <ActionName> trace-preservation <status>` line per bytecode
+action. Saved bytecode preserves `ExternalBinding` declarations, so the report
+enumerates each declared host import with library, symbol, ABI, input, output,
+status-map, capability, and trace metadata. Reusing an artifact directory that
+still contains executable outputs such as `target.elf`, `target-<Action>.elf`,
+`agent-<Action>.elf`, `target.wasm`, `target-<Action>.wasm`,
+`agent-<Action>.wasm`, or native bytecode reports is rejected. Older saved
+bytecode without the
 `external_bindings` field remains loadable, but the report marks host-import
 metadata as absent and does not enumerate import dependencies.
 
