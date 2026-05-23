@@ -40,9 +40,9 @@ Optional fields:
 - `schema-version`
 - `safety-level`
 
-The current package loader preserves `prompt-pack` and `target-support` as
-package metadata and renders both into AIL-Core. Capability grants, schema
-version, and safety level remain specified manifest fields for later checker
+The current package loader preserves `prompt-pack`, `target-support`,
+`schema-version`, and `safety-level` as package metadata and renders them into
+AIL-Core. Capability grants remain a specified manifest field for later checker
 and package-resolver enforcement.
 
 ## Import Rules

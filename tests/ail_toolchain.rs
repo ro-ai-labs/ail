@@ -1628,6 +1628,61 @@ target-support:
 }
 
 #[test]
+fn ail_core_text_preserves_manifest_schema_version_and_safety_level() {
+    let unique_suffix = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let root = std::env::temp_dir().join(format!(
+        "ail-schema-safety-manifest-{}-{unique_suffix}",
+        std::process::id()
+    ));
+    fs::create_dir_all(&root).unwrap();
+    fs::write(
+        root.join("ail-package.md"),
+        r#"name: schema-safety-app
+version: 0.1.0
+profile: Application
+entry: spec.ail-spec.md
+features: things
+conformance: first-slice
+schema-version: ail-core.schema.v0
+safety-level: standard
+"#,
+    )
+    .unwrap();
+    fs::write(
+        root.join("spec.ail-spec.md"),
+        "The application Schema Safety App manages schema and safety metadata.\n",
+    )
+    .unwrap();
+
+    let package = load_ail_package_dir(&root).unwrap();
+    assert_eq!(
+        package.metadata.schema_version.as_deref(),
+        Some("ail-core.schema.v0")
+    );
+    assert_eq!(package.metadata.safety_level.as_deref(), Some("standard"));
+    let document = parse_ail_package_document(&package).unwrap();
+    let core = elaborate_ail_core(&package, &document);
+    let rendered = render_ail_core(&core);
+    assert!(
+        rendered.contains("schema-version: ail-core.schema.v0"),
+        "{rendered}"
+    );
+    assert!(rendered.contains("safety-level: standard"), "{rendered}");
+
+    let reparsed = parse_ail_core_text(&rendered).unwrap();
+    assert_eq!(
+        reparsed.package.schema_version,
+        package.metadata.schema_version
+    );
+    assert_eq!(reparsed.package.safety_level, package.metadata.safety_level);
+
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn ail_core_elaboration_preserves_provenance_for_behavior_bullets() {
     let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
     let document = parse_ail_spec_text(&package.spec_text).unwrap();
@@ -3278,8 +3333,14 @@ fn ail_native_elf_executes_bytecode_branch_and_jump_control_flow() {
     let bytecode = parse_ail_bytecode(bytecode_text).unwrap();
     let executable =
         compile_ail_bytecode_native_elf(&bytecode, "ResolveTicket", "linux-x86_64-elf").unwrap();
-    let executable_path =
-        std::env::temp_dir().join(format!("ail-branch-bytecode-native-{}", std::process::id()));
+    let unique_suffix = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let executable_path = std::env::temp_dir().join(format!(
+        "ail-branch-bytecode-native-{}-{unique_suffix}",
+        std::process::id()
+    ));
     let _ = fs::remove_file(&executable_path);
     fs::write(&executable_path, executable).unwrap();
     let mut permissions = fs::metadata(&executable_path).unwrap().permissions();

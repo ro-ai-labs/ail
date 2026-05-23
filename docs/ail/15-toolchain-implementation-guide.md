@@ -139,6 +139,9 @@ reviewed against the same package identity as the compiler input.
 When present, the `target-support:` manifest block is preserved as deterministic
 target support metadata in checked AIL-Core. Backend target/effect enforcement
 remains a checker and backend conformance responsibility.
+When present, `schema-version` and `safety-level` are also preserved as package
+metadata in checked AIL-Core. Schema-version rejection and safety policy
+enforcement remain checker responsibilities.
 
 Conformance checks must validate the entry spec, every accepted fixture, and
 every rejected fixture. Accepted fixtures pass only when they produce no checker
