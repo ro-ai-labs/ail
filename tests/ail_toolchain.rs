@@ -2320,6 +2320,148 @@ fn cli_ail_flow_edit_renames_action_card_and_round_trips_to_spec() {
 }
 
 #[test]
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+fn cli_ail_flow_edit_adds_action_requirement_and_native_enforces_it() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("support_ticket.ail");
+    let core_output = Command::new(binary)
+        .args(["ail-core", &package])
+        .output()
+        .unwrap();
+    assert!(
+        core_output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&core_output.stdout),
+        String::from_utf8_lossy(&core_output.stderr)
+    );
+    let core_text = String::from_utf8(core_output.stdout).unwrap();
+    let core = parse_ail_core_text(&core_text).unwrap();
+    let core_hash = ail_core_hash(&core);
+
+    let unique_suffix = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let core_path = std::env::temp_dir().join(format!(
+        "ail-flow-edit-add-requirement-{}-{unique_suffix}.ail-core.txt",
+        std::process::id()
+    ));
+    let edit_path = std::env::temp_dir().join(format!(
+        "ail-flow-edit-add-requirement-{}-{unique_suffix}.ail-flow.edit.json",
+        std::process::id()
+    ));
+    let executable_path = std::env::temp_dir().join(format!(
+        "ail-flow-edit-add-requirement-native-{}-{unique_suffix}",
+        std::process::id()
+    ));
+    fs::write(&core_path, core_text).unwrap();
+    fs::write(
+        &edit_path,
+        format!(
+            r#"{{
+  "schema": "ail-flow.edit.v0",
+  "package": "support-ticket",
+  "base_hash": "{core_hash}",
+  "source_view": "ActionCard:CloseTicket",
+  "edits": [
+    {{
+      "op": "ActionCard.addRequirement",
+      "target": "Action:CloseTicket",
+      "requirement": "the ticket status to be Open",
+      "provenance": ["flow:ActionCard:CloseTicket.requirement:open-status"]
+    }}
+  ]
+}}"#
+        ),
+    )
+    .unwrap();
+
+    let patched_core = Command::new(binary)
+        .args([
+            "ail-flow-edit",
+            "--core-file",
+            core_path.to_str().unwrap(),
+            edit_path.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        patched_core.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&patched_core.stdout),
+        String::from_utf8_lossy(&patched_core.stderr)
+    );
+    let patched_core_text = String::from_utf8(patched_core.stdout).unwrap();
+    let patched_core_artifact = parse_ail_core_text(&patched_core_text).unwrap();
+    assert_eq!(check_ail_core(&patched_core_artifact), Vec::<String>::new());
+
+    let patched_spec = render_ail_spec_from_core(&patched_core_artifact);
+    assert!(
+        patched_spec.contains("- the system requires the ticket status to be Open"),
+        "{patched_spec}"
+    );
+
+    let bytecode = compile_ail_core_bytecode(&patched_core_artifact).unwrap();
+    let close_ticket = bytecode.actions.get("CloseTicket").unwrap();
+    assert!(
+        close_ticket.instructions.iter().any(|instruction| {
+            instruction.opcode == "REQUIRE_FIELD_IN"
+                && instruction
+                    .operands
+                    .get("key")
+                    .is_some_and(|key| key == "ticket.status")
+                && instruction
+                    .operands
+                    .get("rule")
+                    .is_some_and(|rule| rule == "the ticket status to be Open")
+        }),
+        "{close_ticket:?}"
+    );
+
+    let executable =
+        compile_ail_core_native_elf(&patched_core_artifact, "CloseTicket", "linux-x86_64-elf")
+            .unwrap();
+    fs::write(&executable_path, executable).unwrap();
+    let mut permissions = fs::metadata(&executable_path).unwrap().permissions();
+    permissions.set_mode(0o755);
+    fs::set_permissions(&executable_path, permissions).unwrap();
+
+    let success = Command::new(&executable_path)
+        .args(["ticket.id=T-1", "ticket.status=Open"])
+        .output()
+        .unwrap();
+    assert!(success.status.success(), "Open ticket should pass");
+    assert_eq!(
+        String::from_utf8_lossy(&success.stdout),
+        "ticket.status=Closed\n"
+    );
+    assert!(
+        String::from_utf8_lossy(&success.stderr)
+            .contains("rule passed: the ticket status to be Open"),
+        "stderr:\n{}",
+        String::from_utf8_lossy(&success.stderr)
+    );
+
+    let failed = Command::new(&executable_path)
+        .args(["ticket.id=T-1", "ticket.status=Assigned"])
+        .output()
+        .unwrap();
+    assert!(!failed.status.success(), "Assigned ticket should fail");
+    assert_eq!(String::from_utf8_lossy(&failed.stdout), "");
+    assert!(
+        String::from_utf8_lossy(&failed.stderr).contains("failure RequirementFailed"),
+        "stderr:\n{}",
+        String::from_utf8_lossy(&failed.stderr)
+    );
+
+    fs::remove_file(core_path).unwrap();
+    fs::remove_file(edit_path).unwrap();
+    fs::remove_file(executable_path).unwrap();
+}
+
+#[test]
 fn ail_core_patch_rejects_package_mismatch() {
     let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
     let document = parse_ail_spec_text(&package.spec_text).unwrap();

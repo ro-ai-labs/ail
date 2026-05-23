@@ -714,11 +714,13 @@ path that edits Core directly before rendering back to AIL-Spec.
 `ail-flow-edit --core-file <path> <edit.json>` reads a checked Core artifact
 and an `ail-flow.edit.v0` visual edit artifact, translates supported flow ops
 into a checked Core patch, and prints patched Core only after the Core checker
-accepts the translated result. The first supported visual edit is
+accepts the translated result. Supported visual edits include
 `ActionCard.rename`, which updates an action card label through
-`replace_node_attributes` while preserving reviewed provenance, existing
-requirements, writes, guarantees, and trace edges for the later
-`ail-spec --core-file` round trip.
+`replace_node_attributes`, and `ActionCard.addRequirement`, which creates or
+reuses a `Rule` node, adds a `requires` edge from the action to that rule, and
+preserves reviewed provenance. The resulting checked Core renders through
+`ail-spec --core-file`, lowers to AIL-Bytecode, and is accepted by the native
+backend when the added requirement uses supported requirement syntax.
 `ail-pass` compiles an AIL-Meta compiler pass package into verified
 AIL-Bytecode, or reads a saved Compiler-profile AIL-Bytecode artifact, checks a
 target package into AIL-Core, executes the selected pass bytecode over that

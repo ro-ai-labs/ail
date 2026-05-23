@@ -783,6 +783,11 @@ pub fn render_ail_core_patch_from_flow_edit_text(
             "ActionCard.rename" => {
                 ops.push(render_action_card_rename_core_patch_op(core, edit)?);
             }
+            "ActionCard.addRequirement" => {
+                ops.extend(render_action_card_add_requirement_core_patch_ops(
+                    core, edit,
+                )?);
+            }
             op_name => return Err(format!("unsupported AIL-Flow edit op '{op_name}'")),
         }
     }
@@ -803,6 +808,84 @@ pub fn render_ail_core_patch_from_flow_edit_text(
         json_string(source_view),
         ops.join(",\n")
     ))
+}
+
+fn render_action_card_add_requirement_core_patch_ops(
+    core: &AilCore,
+    edit: &BTreeMap<String, AilJsonValue>,
+) -> Result<Vec<String>, String> {
+    let target = required_json_string_for(edit, "target", "AIL-Flow ActionCard.addRequirement")?;
+    let Some(target_node) = find_core_patch_node(core, target) else {
+        return Err(format!(
+            "AIL-Flow ActionCard.addRequirement references unknown target '{target}'"
+        ));
+    };
+    if target_node.kind != "Action" {
+        return Err(format!(
+            "AIL-Flow ActionCard.addRequirement target must be an Action, got {}",
+            core_node_label(&target_node)
+        ));
+    }
+    let requirement = trim_sentence(required_json_string_for(
+        edit,
+        "requirement",
+        "AIL-Flow ActionCard.addRequirement",
+    )?);
+    if requirement.is_empty() {
+        return Err("AIL-Flow ActionCard.addRequirement requirement must not be empty".to_string());
+    }
+    let mut provenance =
+        optional_json_string_array(edit, "provenance", "AIL-Flow ActionCard.addRequirement")?;
+    if provenance.is_empty() {
+        provenance.push(format!(
+            "flow:ActionCard:{}.requirement:{}",
+            target_node.name, requirement
+        ));
+    }
+    let provenance_array = render_json_array(provenance.clone());
+    let rule_label = format!("Rule:{requirement}");
+    let mut ops = Vec::new();
+    if core.graph.find_node("Rule", &requirement).is_some() {
+        ops.push(format!(
+            concat!(
+                "    {{\n",
+                "      \"op\": \"declare_provenance\",\n",
+                "      \"target\": {},\n",
+                "      \"provenance\": {}\n",
+                "    }}"
+            ),
+            json_string(&rule_label),
+            provenance_array
+        ));
+    } else {
+        ops.push(format!(
+            concat!(
+                "    {{\n",
+                "      \"op\": \"add_node\",\n",
+                "      \"kind\": \"Rule\",\n",
+                "      \"name\": {},\n",
+                "      \"provenance\": {}\n",
+                "    }}"
+            ),
+            json_string(&requirement),
+            provenance_array
+        ));
+    }
+    ops.push(format!(
+        concat!(
+            "    {{\n",
+            "      \"op\": \"add_edge\",\n",
+            "      \"kind\": \"requires\",\n",
+            "      \"source\": {},\n",
+            "      \"target\": {},\n",
+            "      \"provenance\": {}\n",
+            "    }}"
+        ),
+        json_string(&core_node_label(&target_node)),
+        json_string(&rule_label),
+        render_json_array(provenance)
+    ));
+    Ok(ops)
 }
 
 fn render_action_card_rename_core_patch_op(
