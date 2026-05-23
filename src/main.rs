@@ -207,6 +207,7 @@ struct AilBuildArtifactSet<'a> {
     requirements: Option<&'a str>,
     spec_text: Option<&'a str>,
     core_text: &'a str,
+    flow_review_text: &'a str,
     bytecode_text: &'a str,
     bytecode_fingerprint: &'a str,
     prompt_portability_report: Option<&'a str>,
@@ -397,6 +398,7 @@ struct AilBuildAgentManifestVerification<'a> {
     requirements_fingerprint: Option<&'a str>,
     spec_fingerprint: Option<&'a str>,
     core_fingerprint: &'a str,
+    flow_review_fingerprint: &'a str,
     compiler_pass_target_fingerprint: Option<&'a str>,
     prompt_portability_fingerprint: Option<&'a str>,
     native_bytecode_report_text: Option<&'a str>,
@@ -459,6 +461,10 @@ fn render_ail_build_manifest(artifacts: &AilBuildArtifactSet<'_>) -> String {
     lines.push(format!(
         "core checked.ail-core.txt {}",
         ail_artifact_fingerprint(artifacts.core_text)
+    ));
+    lines.push(format!(
+        "flow-review review.ail-flow.json {}",
+        ail_artifact_fingerprint(artifacts.flow_review_text)
     ));
     lines.push(format!(
         "bytecode artifact.ailbc.json {}",
@@ -1696,6 +1702,18 @@ fn write_ail_build_artifacts(
         format!("{}\n", ail_artifact_fingerprint(artifacts.core_text)),
     )
     .map_err(|error| format!("failed to write ail-build core fingerprint artifact: {error}"))?;
+    fs::write(
+        root.join("review.ail-flow.json"),
+        artifacts.flow_review_text,
+    )
+    .map_err(|error| format!("failed to write ail-build flow review artifact: {error}"))?;
+    fs::write(
+        root.join("review.ail-flow.fingerprint.txt"),
+        format!("{}\n", ail_artifact_fingerprint(artifacts.flow_review_text)),
+    )
+    .map_err(|error| {
+        format!("failed to write ail-build flow review fingerprint artifact: {error}")
+    })?;
     fs::write(root.join("artifact.ailbc.json"), artifacts.bytecode_text)
         .map_err(|error| format!("failed to write ail-build bytecode artifact: {error}"))?;
     fs::write(
@@ -3830,6 +3848,10 @@ fn run_ail_build_agent_verify_manifest(
     verify_state.insert(
         "buildrequest.core ir fingerprint".to_string(),
         request.core_fingerprint.to_string(),
+    );
+    verify_state.insert(
+        "buildrequest.flow review fingerprint".to_string(),
+        request.flow_review_fingerprint.to_string(),
     );
     if let Some(compiler_pass_target_fingerprint) = request.compiler_pass_target_fingerprint {
         verify_state.insert(
@@ -6919,6 +6941,7 @@ fn run_ail_build_from_core(
     };
     if let Some(artifact_dir) = &cli_options.artifact_dir {
         let core_text = format!("{}\n", render_ail_core(&core));
+        let flow_review_text = format!("{}\n", render_ail_flow_view(&core));
         let source_artifacts = source_artifacts.as_ref();
         let agent_native_artifacts = if let (Some((target, _, _)), Some(agent_run)) =
             (native_build.as_ref(), agent_run.as_ref())
@@ -6956,6 +6979,7 @@ fn run_ail_build_from_core(
                 requirements: requirements_artifact,
                 spec_text,
                 core_text: &core_text,
+                flow_review_text: &flow_review_text,
                 bytecode_text: &bytecode_text,
                 bytecode_fingerprint: &bytecode_fingerprint,
                 prompt_portability_report: prompt_portability_report.as_deref(),
@@ -6982,6 +7006,7 @@ fn run_ail_build_from_core(
             let requirements_fingerprint = requirements_artifact.map(ail_artifact_fingerprint);
             let spec_fingerprint = spec_text.map(ail_artifact_fingerprint);
             let core_fingerprint = ail_artifact_fingerprint(&core_text);
+            let flow_review_fingerprint = ail_artifact_fingerprint(&flow_review_text);
             let pass_target_fingerprint =
                 native_artifact_fingerprint_text(pass_native_artifacts.as_slice());
             let prompt_portability_fingerprint = prompt_portability_report
@@ -6997,6 +7022,7 @@ fn run_ail_build_from_core(
                     requirements_fingerprint: requirements_fingerprint.as_deref(),
                     spec_fingerprint: spec_fingerprint.as_deref(),
                     core_fingerprint: &core_fingerprint,
+                    flow_review_fingerprint: &flow_review_fingerprint,
                     compiler_pass_target_fingerprint: pass_target_fingerprint.as_deref(),
                     prompt_portability_fingerprint: prompt_portability_fingerprint.as_deref(),
                     native_bytecode_report_text: native_bytecode_report_text.as_deref(),
@@ -7013,6 +7039,7 @@ fn run_ail_build_from_core(
                 requirements: requirements_artifact,
                 spec_text,
                 core_text: &core_text,
+                flow_review_text: &flow_review_text,
                 bytecode_text: &bytecode_text,
                 bytecode_fingerprint: &bytecode_fingerprint,
                 prompt_portability_report: prompt_portability_report.as_deref(),

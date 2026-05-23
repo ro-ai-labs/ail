@@ -945,10 +945,11 @@ deterministic target fingerprint, recording `NativeTargetCompiled` before
 `VerifyBuildManifest` with the rendered build manifest, deterministic manifest
 fingerprint, source-package fingerprint when a package source is available,
 requirements and spec fingerprints when those artifacts are present,
-checked-core fingerprint, native target fingerprint when a native target is
-present, the native-bytecode report and fingerprint when native ELF artifacts
-are present, and the native compiler-pass executable fingerprint when a native
-build pass is present, so the whole
+checked-core fingerprint, AIL-Flow review projection fingerprint, native target
+fingerprint when a native target is present, the native-bytecode report and
+fingerprint when native ELF artifacts are present, and the native
+compiler-pass executable fingerprint when a native build pass is present, so
+the whole
 requirements/spec/core/pass/agent/artifact boundary is represented in AIL
 bytecode. This keeps the
 developer-facing build coordinator in AIL bytecode
@@ -956,12 +957,16 @@ instead of adding a host-language orchestration layer. With `--artifact-dir`,
 the same command writes `source.ail-package.md`, `source.ail-spec.md`, and
 `source.fingerprint.txt` when a package source is available. It writes
 `accepted.ail-spec.md`, `checked.ail-core.txt`,
-`checked.ail-core.fingerprint.txt`, `artifact.ailbc.json`, and
+`checked.ail-core.fingerprint.txt`, `review.ail-flow.json`,
+`review.ail-flow.fingerprint.txt`, `artifact.ailbc.json`, and
 `artifact.fingerprint.txt`; it also writes `requirements.ail-requirements.md`
 and `requirements.fingerprint.txt` when the build captured or loaded
 requirements, and it writes `accepted.ail-spec.md` and
 `accepted.ail-spec.fingerprint.txt` only when an AIL-Spec stage was present.
-When a build
+The `review.ail-flow.json` artifact is the deterministic AIL-Flow no-code
+review projection rendered from the exact checked AIL-Core that was lowered;
+its `coreHash` must match that checked core and `manifest.ail-build.txt`
+records it as a `flow-review` entry with the projection fingerprint. When a build
 pass is present, `checked.ail-core.txt` is the post-pass IR that was actually
 lowered, and the artifact directory also includes `pass.ailbc.json`,
 `pass.fingerprint.txt`, and `pass-trace.txt` for the compiler-pass bytecode,
@@ -992,7 +997,8 @@ AIL-authored agent action, and the manifest records each as an `agent-target`
 entry with the action executable fingerprint. The
 artifact directory also includes `manifest.ail-build.txt`, a deterministic
 index tying the source package fingerprint, emitted requirements fingerprint,
-accepted spec fingerprint, checked core, compiler-pass bytecode and trace,
+accepted spec fingerprint, checked core, AIL-Flow review projection,
+compiler-pass bytecode and trace,
 agent bytecode and trace, final bytecode fingerprint, and native target
 fingerprint into one review artifact, plus native-bytecode and dependency
 report fingerprints when a native target is selected, plus

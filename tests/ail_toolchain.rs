@@ -17350,6 +17350,7 @@ fn cli_ail_build_agent_verifies_bytecode_artifact_after_compile() {
     assert!(agent_trace.contains("read buildrequest.source package fingerprint"));
     assert!(agent_trace.contains("read buildrequest.requirements fingerprint"));
     assert!(agent_trace.contains("read buildrequest.spec fingerprint"));
+    assert!(agent_trace.contains("read buildrequest.flow review fingerprint"));
     assert!(
         agent_trace.contains("write buildrequest.artifact manifest verification report=Verified")
     );
@@ -17601,6 +17602,16 @@ fn cli_ail_build_writes_requirements_spec_core_and_bytecode_artifacts() {
     assert!(core_artifact.contains("package: support-ticket"));
     assert!(core_artifact.contains("node Action CloseTicket"));
     assert!(core_artifact.contains("edge writes Action:CloseTicket -> Field:Ticket.status"));
+    let checked_core = parse_ail_core_text(&core_artifact).unwrap();
+    let flow_artifact = fs::read_to_string(artifact_dir.join("review.ail-flow.json")).unwrap();
+    let expected_flow_artifact = format!("{}\n", render_ail_flow_view(&checked_core));
+    assert_eq!(flow_artifact, expected_flow_artifact);
+    assert!(flow_artifact.contains(r#""kind":"AIL-Flow""#));
+    assert!(flow_artifact.contains(r#""coreLabel":"Action:CloseTicket""#));
+    assert!(flow_artifact.contains(&format!(r#""coreHash":"{}""#, ail_core_hash(&checked_core))));
+    let flow_fingerprint =
+        fs::read_to_string(artifact_dir.join("review.ail-flow.fingerprint.txt")).unwrap();
+    assert_eq!(flow_fingerprint.trim(), fnv64_fingerprint(&flow_artifact));
     let bytecode_artifact = fs::read_to_string(artifact_dir.join("artifact.ailbc.json")).unwrap();
     assert_eq!(bytecode_artifact, stdout);
     let artifact_bytecode = parse_ail_bytecode(&bytecode_artifact).unwrap();
@@ -17624,6 +17635,13 @@ fn cli_ail_build_writes_requirements_spec_core_and_bytecode_artifacts() {
         manifest.contains(&format!(
             "spec accepted.ail-spec.md {}",
             fnv64_fingerprint(&spec_artifact)
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "flow-review review.ail-flow.json {}",
+            fnv64_fingerprint(&flow_artifact)
         )),
         "{manifest}"
     );

@@ -20,6 +20,7 @@ A BuildRequest has:
 - core ir: Text
 - core ir fingerprint: Text
 - core review report: Text
+- flow review fingerprint: Text
 - compiler pass artifact: Text
 - compiler pass fingerprint: Text
 - compiler pass source package: Text
@@ -222,6 +223,7 @@ When the toolchain agent verifies the build artifact manifest:
 - the system reads the BuildRequest requirements fingerprint
 - the system reads the BuildRequest spec fingerprint
 - the system reads the BuildRequest core ir fingerprint
+- the system reads the BuildRequest flow review fingerprint
 - the system reads the BuildRequest bytecode fingerprint
 - the system reads the BuildRequest target artifact fingerprint
 - the system reads the BuildRequest compiler pass target artifact fingerprint
@@ -232,7 +234,7 @@ When the toolchain agent verifies the build artifact manifest:
 - the system reads the BuildRequest dependency report
 - the system reads the BuildRequest dependency report fingerprint
 - the system changes the BuildRequest artifact manifest verification report to Verified
-- the system guarantees the build manifest ties requirements, spec, AIL-Core, compiler-pass, agent, prompt-portability, bytecode, native bytecode report, and native target artifacts with deterministic fingerprints and no Rust or host-language backend source
+- the system guarantees the build manifest ties requirements, spec, AIL-Core, AIL-Flow review projection, compiler-pass, agent, prompt-portability, bytecode, native bytecode report, and native target artifacts with deterministic fingerprints and no Rust or host-language backend source
 - the system records a trace event named BuildManifestVerified
 
 Action: Verify compile manifest.
