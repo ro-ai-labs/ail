@@ -6200,6 +6200,102 @@ fn cli_ail_build_native_executable_enforces_llm_style_is_field_requirement() {
 
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+fn cli_ail_build_native_executable_enforces_llm_style_is_not_field_requirement() {
+    let binary = env!("CARGO_BIN_EXE_eigl");
+    let package = fixture("support_ticket.ail");
+    let spec_path = std::env::temp_dir().join(format!(
+        "eigl-support-ticket-is-not-requirement-{}.ail-spec.md",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "eigl-support-ticket-is-not-requirement-artifacts-{}",
+        std::process::id()
+    ));
+    let executable_path = std::env::temp_dir().join(format!(
+        "eigl-support-ticket-is-not-requirement-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+    let _ = fs::remove_file(&executable_path);
+    let spec_text = fs::read_to_string(format!("{package}/spec.ail-spec.md"))
+        .unwrap()
+        .replace(
+            "the system requires the ticket status not to be Closed",
+            "the system requires the ticket status is not Closed",
+        );
+    fs::write(&spec_path, spec_text).unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-build",
+            &package,
+            "--spec-file",
+            spec_path.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+            "--action",
+            "CloseTicket",
+            "--target",
+            "linux-x86_64-elf",
+            "--out",
+            executable_path.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let bytecode_artifact = fs::read_to_string(artifact_dir.join("artifact.ailbc.json")).unwrap();
+    assert!(
+        parse_ail_bytecode(&bytecode_artifact)
+            .unwrap()
+            .actions
+            .get("CloseTicket")
+            .unwrap()
+            .instructions
+            .iter()
+            .any(|instruction| {
+                instruction.opcode == "REQUIRE_FIELD_NOT_EQUALS"
+                    && instruction
+                        .operands
+                        .get("rule")
+                        .is_some_and(|rule| rule == "the ticket status is not Closed")
+                    && instruction
+                        .operands
+                        .get("value")
+                        .is_some_and(|value| value == "Closed")
+            }),
+        "{bytecode_artifact}"
+    );
+
+    let success = Command::new(&executable_path)
+        .args(["ticket.id=T-1", "ticket.status=Open"])
+        .output()
+        .unwrap();
+    assert!(success.status.success(), "Open ticket should pass");
+    assert_eq!(
+        String::from_utf8_lossy(&success.stdout),
+        "ticket.status=Closed\n"
+    );
+
+    let failed = Command::new(&executable_path)
+        .args(["ticket.id=T-1", "ticket.status=Closed"])
+        .output()
+        .unwrap();
+    assert!(!failed.status.success(), "Closed ticket should fail");
+    assert_eq!(String::from_utf8_lossy(&failed.stdout), "");
+
+    fs::remove_file(spec_path).unwrap();
+    fs::remove_dir_all(artifact_dir).unwrap();
+    fs::remove_file(executable_path).unwrap();
+}
+
+#[test]
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_compile_native_executable_enforces_field_in_requirements() {
     let binary = env!("CARGO_BIN_EXE_eigl");
     let package = fixture("support_ticket.ail");

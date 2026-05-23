@@ -387,10 +387,13 @@ matching `key=` argument, native code generated from supported
 argument is present, including LLM-style field requirements phrased as
 `<field> is <value>` as well as `<field> to be <value>`. Field-reference
 resolution can follow typed object fields, so `assignee role` on a `Ticket`
-with `assignee: Option<User>` lowers to `ticket.assignee.role`. Compound input
-requirements such as `the customer id and title` lower to `REQUIRE_EXISTS`
-checks for `customer.id` and `ticket.title` after application users are
-preserved in checked AIL-Core. Time comparison requirements such as
+with `assignee: Option<User>` lowers to `ticket.assignee.role`. Native code
+generated from supported negative field requirements treats both
+`<field> not to be <value>` and LLM-style `<field> is not <value>` as exact
+forbidden-value checks. Compound input requirements such as `the customer id and
+title` lower to `REQUIRE_EXISTS` checks for `customer.id` and `ticket.title`
+after application users are preserved in checked AIL-Core. Time comparison
+requirements such as
 `the current time to be later than due_at` lower to `REQUIRE_FIELD_AFTER` from
 deterministic runtime input `current.time` to `ticket.due_at`; the interpreter,
 VM, and native executable all require the left value to sort later than the

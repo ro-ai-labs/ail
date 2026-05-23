@@ -7733,8 +7733,9 @@ fn negative_field_requirement(
     document: &AilDocument,
     requirement: &str,
 ) -> Option<(String, String)> {
-    let marker = " not to be ";
-    let (field_text, forbidden) = requirement.split_once(marker)?;
+    let (field_text, forbidden) = requirement
+        .split_once(" not to be ")
+        .or_else(|| requirement.split_once(" is not "))?;
     let key = referenced_runtime_field_key(document, field_text)?;
     let forbidden = forbidden
         .split(|ch: char| !ch.is_ascii_alphanumeric() && ch != '_' && ch != '.')
@@ -7748,7 +7749,7 @@ fn positive_field_requirement(
     document: &AilDocument,
     requirement: &str,
 ) -> Option<(String, Vec<String>)> {
-    if requirement.contains(" not to be ") {
+    if requirement.contains(" not to be ") || requirement.contains(" is not ") {
         return None;
     }
     let (field_text, allowed_text) = requirement
