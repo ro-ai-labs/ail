@@ -8724,6 +8724,9 @@ fn cli_ail_build_uses_llm_candidate_and_outputs_verified_bytecode() {
     assert!(request_bodies[0].contains(r#""chat_template_kwargs":{"enable_thinking":false}"#));
     assert!(request_bodies[0].contains("Draft AIL requirements"));
     assert!(request_bodies[0].contains("Build an AIL support ticket bytecode artifact"));
+    assert!(request_bodies[0].contains("application domain objects"));
+    assert!(!request_bodies[0].contains("compiler passes"));
+    assert!(!request_bodies[0].contains("system components"));
     assert!(request_bodies[1].contains("Draft an AIL-Spec candidate"));
     assert!(request_bodies[1].contains("DRAFT REQUIREMENTS:"));
     assert!(request_bodies[1].contains("Closing a ticket changes ticket status to Closed"));
@@ -11276,11 +11279,10 @@ fn cli_ail_build_for_agent_tool_profile_prompts_tool_requirements_and_outputs_by
     );
     assert_eq!(request_bodies.len(), 2);
     assert!(request_bodies[0].contains("Use the AgentTool profile"));
-    assert!(
-        request_bodies[0].contains("actions, tools, compiler passes, system components"),
-        "{}",
-        request_bodies[0]
-    );
+    assert!(request_bodies[0].contains("tool capability"));
+    assert!(request_bodies[0].contains("tool inputs and outputs"));
+    assert!(!request_bodies[0].contains("compiler passes"));
+    assert!(!request_bodies[0].contains("system components"));
     assert!(request_bodies[0].contains("permissions"));
     assert!(request_bodies[1].contains("Use this exact AgentTool surface shape"));
     assert!(request_bodies[1].contains("DRAFT REQUIREMENTS:"));

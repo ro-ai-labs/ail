@@ -7730,6 +7730,55 @@ compound requirement.
 Expected: live-model output preserves missing-ticket failure behavior while
 still accepting open tickets and rejecting closed tickets.
 
+### Task 171: Profile-Scoped Requirements Capture Prompts
+
+**Files:**
+- Modify: `src/ail.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Reproduce cross-profile requirements prompt drift**
+
+Inspect a real Qwen-backed Application build requirements artifact.
+
+Expected: Qwen includes irrelevant compiler-pass and system-component bullets
+because the requirements prompt asks every profile to name tools, compiler
+passes, and system components.
+
+- [x] **Step 2: Write failing prompt assertions**
+
+Assert Application requirements prompts mention application domain objects and
+do not mention compiler passes or system components. Assert AgentTool
+requirements prompts mention tool capability and tool inputs/outputs, and do
+not mention compiler passes or system components.
+
+- [x] **Step 3: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_build_uses_llm_candidate_and_outputs_verified_bytecode -- --nocapture
+cargo test --test ail_toolchain cli_ail_build_for_agent_tool_profile_prompts_tool_requirements_and_outputs_bytecode -- --nocapture
+```
+
+Expected: both tests fail because the requirements prompt still uses one
+cross-profile coverage sentence.
+
+- [x] **Step 4: Generate requirements coverage text by profile**
+
+Add a profile-specific requirements coverage helper so Application, AgentTool,
+Compiler, and System prompts ask for only the concepts relevant to that package
+profile.
+
+- [x] **Step 5: Verify GREEN**
+
+Run focused prompt tests, full formatting/linting/test validation, and rerun a
+live Qwen-backed Application build to confirm the captured requirements no
+longer include irrelevant compiler-pass or system-component bullets.
+
+Expected: prompt tests pass and the live requirements artifact stays scoped to
+the Application package surface.
+
 ### Task 18: Declared Failure Trace Coverage Diagnostics
 
 **Files:**

@@ -630,7 +630,12 @@ prompt.
 `ail-build` checks that artifact for profile-specific coverage before spec
 drafting; if it is too thin, the command sends requirements diagnostics back to
 the base LLM for one repair pass. It then drafts an AIL-Spec candidate for the
-package profile grounded in those checked requirements. With
+package profile grounded in those checked requirements. Prompt-driven
+requirements capture scopes the coverage instruction to the package profile:
+Application prompts ask for application domain objects and actions, AgentTool
+prompts ask for tool capability and inputs/outputs, Compiler prompts ask for
+compiler-pass transformations, and System prompts ask for components,
+resources, and effects. With
 `--requirements-file <path>`, `ail-build` skips requirements capture, validates
 the saved AIL-Requirements artifact, and resumes at the requirements-grounded
 spec-drafting stage. If the checker rejects the first candidate, `ail-build`

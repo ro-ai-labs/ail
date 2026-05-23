@@ -7262,6 +7262,7 @@ fn qualify_reference_text(text: &str, alias: &str, thing_names: &[String]) -> St
 }
 
 fn build_ail_requirements_prompt(package: &AilPackage, user_prompt: &str) -> String {
+    let coverage = ail_requirements_prompt_coverage(&package.metadata.profile);
     format!(
         concat!(
             "Draft AIL requirements for package {}.\n",
@@ -7269,7 +7270,7 @@ fn build_ail_requirements_prompt(package: &AilPackage, user_prompt: &str) -> Str
             "Package features: {}.\n",
             "Output only an AIL-Requirements artifact with concise bullet points. Do not include code fences, AIL-Spec, implementation code, backend source, or reasoning.\n",
             "The first line must be exactly AIL-Requirements:. Return at least six requirement bullets, and every requirement bullet must start with \"- \"; do not use \"*\" bullets, numbered lists, tables, or Markdown emphasis.\n",
-            "Requirements must name domain objects, required fields, actions, tools, compiler passes, system components, failure cases, guarantees, traces, secrets, permissions, and runtime inputs that the final checked AIL program must preserve.\n",
+            "{}\n",
             "These requirements are an intermediate artifact. The next compiler step will transform them into AIL-Spec, then AIL-Core, then AIL-Bytecode.\n\n",
             "HUMAN REQUEST:\n",
             "{}\n"
@@ -7278,8 +7279,26 @@ fn build_ail_requirements_prompt(package: &AilPackage, user_prompt: &str) -> Str
         package.metadata.profile,
         package.metadata.conformance,
         package.metadata.features.join(", "),
+        coverage,
         user_prompt
     )
+}
+
+fn ail_requirements_prompt_coverage(profile: &str) -> &'static str {
+    match profile {
+        "AgentTool" => {
+            "Requirements must name the tool capability, tool inputs and outputs, external calls, failure cases, guarantees, traces, secrets, permissions, and approvals that the final checked AIL tool must preserve."
+        }
+        "Compiler" => {
+            "Requirements must name the compiler pass, IR inputs and outputs, transformations, failure cases, guarantees, traces, and bytecode boundaries that the final checked AIL compiler pass must preserve."
+        }
+        "System" => {
+            "Requirements must name system components, resources, capabilities, effects, ownership or borrowing rules, scheduler/interrupt/lock constraints, guarantees, traces, and runtime inputs that the final checked AIL system component must preserve."
+        }
+        _ => {
+            "Requirements must name application domain objects, required fields, actions, failure cases, guarantees, traces, secrets, permissions, and runtime inputs that the final checked AIL application must preserve."
+        }
+    }
 }
 
 fn build_ail_requirements_repair_prompt(
