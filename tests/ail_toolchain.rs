@@ -89,6 +89,58 @@ fn serve_one_chat_response(
     })
 }
 
+fn serve_one_llm_response_with_request_line(
+    listener: TcpListener,
+    response_body: String,
+) -> thread::JoinHandle<(String, String)> {
+    thread::spawn(move || {
+        listener.set_nonblocking(true).unwrap();
+        let deadline = Instant::now() + Duration::from_secs(2);
+        let (mut stream, _) = loop {
+            match listener.accept() {
+                Ok(connection) => break connection,
+                Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                    assert!(
+                        Instant::now() < deadline,
+                        "test LLM endpoint did not receive a request"
+                    );
+                    thread::sleep(Duration::from_millis(10));
+                }
+                Err(error) => panic!("test LLM endpoint accept failed: {error}"),
+            }
+        };
+        let mut reader = BufReader::new(stream.try_clone().unwrap());
+        let mut request_line = String::new();
+        reader.read_line(&mut request_line).unwrap();
+        let mut content_length = 0usize;
+        loop {
+            let mut line = String::new();
+            let read = reader.read_line(&mut line).unwrap();
+            if read == 0 || line == "\r\n" {
+                break;
+            }
+            if let Some(value) = line
+                .strip_prefix("Content-Length:")
+                .or_else(|| line.strip_prefix("content-length:"))
+            {
+                content_length = value.trim().parse().unwrap();
+            }
+        }
+        let mut request_body = vec![0; content_length];
+        reader.read_exact(&mut request_body).unwrap();
+        let response = format!(
+            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+            response_body.len(),
+            response_body
+        );
+        stream.write_all(response.as_bytes()).unwrap();
+        (
+            request_line.trim_end().to_string(),
+            String::from_utf8(request_body).unwrap(),
+        )
+    })
+}
+
 fn serve_chat_responses(
     listener: TcpListener,
     response_bodies: Vec<String>,
@@ -9957,6 +10009,52 @@ fn cli_ail_draft_uses_llm_endpoint_and_checks_candidate_spec() {
     assert!(stdout.contains("ail-draft candidate:"));
     assert!(stdout.contains("Action: Close ticket."));
     assert!(stdout.contains("ail-draft diagnostics: none"));
+}
+
+#[test]
+fn cli_ail_requirements_root_llm_endpoint_uses_completion_api() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("support_ticket.ail");
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let requirements = concat!(
+        "AIL-Requirements:\n",
+        "- Store ticket object fields id, status, title, customer, assignee, due_at, public updates, and internal notes data.\n",
+        "- Actions create ticket, assign ticket, close ticket, and mark overdue update behavior.\n",
+        "- Each action requires runtime input such as ticket id, caller role, status precondition, and title.\n",
+        "- Failure cases include ticket not found and permission denied errors.\n",
+        "- Trace records TicketCreated, TicketAssigned, TicketClosed, TicketOverdue, TicketNotFound, and InternalNotesDenied audit events.\n",
+        "- Guarantees always preserve secret internal notes and closed tickets do not appear in the open queue.\n"
+    );
+    let response_body = format!(r#"{{"content":{}}}"#, json_string(requirements));
+    let server = serve_one_llm_response_with_request_line(listener, response_body);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-requirements",
+            &package,
+            "--prompt",
+            "Capture support ticket requirements through the AI IDE",
+            "--llm-endpoint",
+            &format!("http://127.0.0.1:{}/", addr.port()),
+        ])
+        .output()
+        .unwrap();
+
+    let (request_line, request_body) = server.join().unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(request_line, "POST /completion HTTP/1.1");
+    assert!(request_body.contains(r#""prompt":"#), "{request_body}");
+    assert!(!request_body.contains(r#""messages":"#), "{request_body}");
+    assert!(request_body.contains("Capture support ticket requirements through the AI IDE"));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("AIL-Requirements:"));
+    assert!(stdout.contains("TicketClosed"));
 }
 
 #[test]

@@ -110,6 +110,11 @@ cargo run -- ail-build examples/support_ticket.ail \
   --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
 ```
 
+For llama.cpp-server, `--llm-endpoint http://inteligentia-pro-1:8080/` is
+accepted as shorthand for its `/completion` API. Explicit
+`/completion` and `/v1/chat/completions` paths are also supported; chat
+completion requests disable thinking through `chat_template_kwargs`.
+
 The agent and base LLM are untrusted proposal mechanisms. The trusted boundary
 is checked AIL-Core plus the compiler, verifier, manifests, reports, and
 fingerprints generated from deterministic artifacts.

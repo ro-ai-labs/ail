@@ -606,6 +606,11 @@ coverage, and sending diagnostics back for one repair pass when the artifact is
 too thin. It prints only the checked requirements artifact, so developers can
 review or compare model-specific capture behavior before committing to AIL-Spec
 and bytecode generation.
+LLM endpoints may be the llama.cpp-server root URL, an explicit `/completion`
+URL, or an OpenAI-compatible `/v1/chat/completions` URL. A root URL such as
+`http://inteligentia-pro-1:8080/` is normalized to `/completion`; chat
+completion requests use `messages` and disable model thinking with
+`chat_template_kwargs.enable_thinking=false`.
 LLM output may be either the deterministic artifact text directly or the
 prompt-pack JSON envelope with `artifact_text`. When the envelope contains
 blocking `questions` and no artifact, the CLI prints the questions as a

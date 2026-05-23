@@ -94,6 +94,7 @@ fn parse_http_endpoint(endpoint: &str) -> Result<HttpEndpoint, String> {
         .strip_prefix("http://")
         .ok_or_else(|| "only http:// endpoints are supported".to_string())?;
     let (host_port, path) = match endpoint.split_once('/') {
+        Some((host_port, "")) => (host_port, "/completion".to_string()),
         Some((host_port, rest)) => (host_port, format!("/{}", rest)),
         None => (endpoint, "/completion".to_string()),
     };
