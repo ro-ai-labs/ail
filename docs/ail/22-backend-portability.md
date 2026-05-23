@@ -102,13 +102,14 @@ Current implementation status: saved AIL-Bytecode can be compiled to a
 deterministic Wasm sandbox contract report with:
 
 ```text
-ail ail-compile artifact.ailbc.json \
+ail ail-compile <package-or-artifact.ailbc.json> \
   --action <ActionName> \
   --target wasm32-unknown-sandbox-wasm \
   --artifact-dir <dir>
 ```
 
-The package or saved bytecode must declare
+Checked-core input is also supported through `--core-file <checked-core>`.
+The package, checked core, or saved bytecode must declare
 `wasm32-unknown-sandbox-wasm: supported` or
 `wasm32-unknown-sandbox-wasm: supported-with-host-imports` in `target-support`.
 The command writes `wasm-contract-report.txt`,

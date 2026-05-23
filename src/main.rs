@@ -155,6 +155,9 @@ struct AilCompileBundleArtifactSet<'a> {
 }
 
 struct AilCompileWasmContractArtifactSet<'a> {
+    source_manifest_text: Option<&'a str>,
+    source_spec_text: Option<&'a str>,
+    core_text: Option<&'a str>,
     bytecode_text: &'a str,
     action_name: &'a str,
     target_name: &'a str,
@@ -493,6 +496,23 @@ fn render_ail_compile_wasm_contract_manifest(
     artifacts: &AilCompileWasmContractArtifactSet<'_>,
 ) -> String {
     let mut lines = vec!["AIL-Compile-Manifest:".to_string()];
+    if let (Some(source_manifest_text), Some(source_spec_text)) =
+        (artifacts.source_manifest_text, artifacts.source_spec_text)
+    {
+        lines.push(format!(
+            "source-package source.ail-package.md source.ail-spec.md {}",
+            ail_artifact_fingerprint(&ail_bootstrap_source_bundle_text(
+                source_manifest_text,
+                source_spec_text,
+            ))
+        ));
+    }
+    if let Some(core_text) = artifacts.core_text {
+        lines.push(format!(
+            "core checked.ail-core.txt {}",
+            ail_artifact_fingerprint(core_text)
+        ));
+    }
     lines.push(format!(
         "bytecode artifact.ailbc.json {}",
         ail_artifact_fingerprint(artifacts.bytecode_text)
@@ -583,6 +603,14 @@ fn load_ail_source_package_artifacts(
     path: &str,
     context: &str,
 ) -> Result<AilSourcePackageArtifacts, String> {
+    load_ail_source_package_artifacts_with_spec_override(path, context, None)
+}
+
+fn load_ail_source_package_artifacts_with_spec_override(
+    path: &str,
+    context: &str,
+    spec_override_path: Option<&str>,
+) -> Result<AilSourcePackageArtifacts, String> {
     if std::path::Path::new(path).is_file() {
         return Err(format!(
             "{context} requires an AIL package directory so source package evidence can be recorded, found bytecode artifact {path}"
@@ -596,9 +624,16 @@ fn load_ail_source_package_artifacts(
             manifest_path.display()
         )
     })?;
+    let spec_text = if let Some(spec_override_path) = spec_override_path {
+        fs::read_to_string(spec_override_path).map_err(|error| {
+            format!("{context} failed to read source spec override {spec_override_path}: {error}")
+        })?
+    } else {
+        package.spec_text
+    };
     Ok(AilSourcePackageArtifacts {
         manifest_text: ensure_trailing_newline(manifest_text),
-        spec_text: ensure_trailing_newline(package.spec_text),
+        spec_text: ensure_trailing_newline(spec_text),
     })
 }
 
@@ -899,6 +934,27 @@ fn write_ail_compile_wasm_contract_artifacts(
         format!("failed to create ail-compile artifact dir {artifact_dir}: {error}")
     })?;
     reject_stale_wasm_contract_executable_artifacts(root, artifact_dir)?;
+    if let (Some(source_manifest_text), Some(source_spec_text)) =
+        (artifacts.source_manifest_text, artifacts.source_spec_text)
+    {
+        write_ail_source_package_snapshot(
+            root,
+            "ail-compile",
+            source_manifest_text,
+            source_spec_text,
+        )?;
+    }
+    if let Some(core_text) = artifacts.core_text {
+        fs::write(root.join("checked.ail-core.txt"), core_text)
+            .map_err(|error| format!("failed to write ail-compile core artifact: {error}"))?;
+        fs::write(
+            root.join("checked.ail-core.fingerprint.txt"),
+            format!("{}\n", ail_artifact_fingerprint(core_text)),
+        )
+        .map_err(|error| {
+            format!("failed to write ail-compile core fingerprint artifact: {error}")
+        })?;
+    }
     fs::write(root.join("artifact.ailbc.json"), artifacts.bytecode_text)
         .map_err(|error| format!("failed to write ail-compile bytecode artifact: {error}"))?;
     fs::write(
@@ -5554,6 +5610,46 @@ fn run_ail_compile_from_core(
         .ail_compile_target
         .as_deref()
         .ok_or_else(|| "ail-compile requires --target <target>".to_string())?;
+    if target == "wasm32-unknown-sandbox-wasm" {
+        if cli_options.ail_build_agent.is_some() {
+            return Err(
+                "ail-compile wasm contract target does not support --agent verification yet"
+                    .to_string(),
+            );
+        }
+        if cli_options.ail_compile_out.is_some() {
+            return Err(
+                "ail-compile wasm contract target does not emit --out yet; use --artifact-dir <dir>"
+                    .to_string(),
+            );
+        }
+        let artifact_dir = cli_options.artifact_dir.as_deref().ok_or_else(|| {
+            "ail-compile wasm contract target requires --artifact-dir <dir>".to_string()
+        })?;
+        let bytecode = compile_ail_core_bytecode(core)?;
+        let bytecode_text = format!("{}\n", render_ail_bytecode(&bytecode));
+        let core_text = format!("{}\n", render_ail_core(core));
+        let wasm_contract_report_text =
+            render_ail_compile_wasm_contract_report(&bytecode, action, target)?;
+        let dependency_report_text =
+            render_ail_compile_wasm_contract_dependency_report(&bytecode, action, target)?;
+        write_ail_compile_wasm_contract_artifacts(
+            artifact_dir,
+            AilCompileWasmContractArtifactSet {
+                source_manifest_text: source_artifacts
+                    .map(|artifacts| artifacts.manifest_text.as_str()),
+                source_spec_text: source_artifacts.map(|artifacts| artifacts.spec_text.as_str()),
+                core_text: Some(&core_text),
+                bytecode_text: &bytecode_text,
+                action_name: action,
+                target_name: target,
+                wasm_contract_report_text: &wasm_contract_report_text,
+                dependency_report_text: &dependency_report_text,
+            },
+        )?;
+        println!("ail-compile wrote {target} contract {artifact_dir}");
+        return Ok(0);
+    }
     let out = cli_options
         .ail_compile_out
         .as_deref()
@@ -5911,6 +6007,9 @@ fn run_ail_compile_from_bytecode_file(path: &str, cli_options: &CliOptions) -> R
         write_ail_compile_wasm_contract_artifacts(
             artifact_dir,
             AilCompileWasmContractArtifactSet {
+                source_manifest_text: None,
+                source_spec_text: None,
+                core_text: None,
                 bytecode_text: &bytecode_text,
                 action_name: action,
                 target_name: target,
@@ -7220,7 +7319,11 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
             Ok(0)
         }
         "ail-compile" => {
-            let source_artifacts = load_ail_source_package_artifacts(path, "ail-compile")?;
+            let source_artifacts = load_ail_source_package_artifacts_with_spec_override(
+                path,
+                "ail-compile",
+                cli_options.ail_spec_file.as_deref(),
+            )?;
             run_ail_compile_from_core(&core, cli_options, Some(&source_artifacts))
         }
         "ail-run" => {

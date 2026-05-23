@@ -7330,6 +7330,353 @@ When emit trace happens:
 }
 
 #[test]
+fn cli_ail_compile_package_writes_wasm_contract_artifacts() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let unique_suffix = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let root = std::env::temp_dir().join(format!(
+        "ail-wasm-contract-source-package-{}-{unique_suffix}",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-wasm-contract-source-artifacts-{}-{unique_suffix}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&root);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&root).unwrap();
+    fs::write(
+        root.join("ail-package.md"),
+        r#"name: wasm-source-contract-app
+version: 0.1.0
+profile: Application
+entry: spec.ail-spec.md
+features: actions, traces
+conformance: first-slice
+target-support:
+  wasm32-unknown-sandbox-wasm: supported-with-host-imports
+"#,
+    )
+    .unwrap();
+    fs::write(
+        root.join("spec.ail-spec.md"),
+        r#"The application Wasm Source Contract App manages portable compilation.
+
+Action: Emit trace.
+
+When emit trace happens:
+
+- the system records a trace event named WasmSourceContractCompiled
+"#,
+    )
+    .unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-compile",
+            root.to_str().unwrap(),
+            "--action",
+            "EmitTrace",
+            "--target",
+            "wasm32-unknown-sandbox-wasm",
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stdout)
+            .contains("ail-compile wrote wasm32-unknown-sandbox-wasm contract"),
+        "{}",
+        String::from_utf8_lossy(&output.stdout)
+    );
+
+    assert!(
+        fs::read_to_string(artifact_dir.join("source.ail-package.md"))
+            .unwrap()
+            .contains("name: wasm-source-contract-app")
+    );
+    assert!(
+        fs::read_to_string(artifact_dir.join("source.ail-spec.md"))
+            .unwrap()
+            .contains("Action: Emit trace.")
+    );
+    let checked_core = fs::read_to_string(artifact_dir.join("checked.ail-core.txt")).unwrap();
+    assert!(
+        checked_core
+            .contains("target-support: wasm32-unknown-sandbox-wasm=supported-with-host-imports"),
+        "{checked_core}"
+    );
+    let checked_core_fingerprint =
+        fs::read_to_string(artifact_dir.join("checked.ail-core.fingerprint.txt")).unwrap();
+    assert_eq!(
+        checked_core_fingerprint.trim(),
+        fnv64_fingerprint(&checked_core)
+    );
+    let bytecode_artifact = fs::read_to_string(artifact_dir.join("artifact.ailbc.json")).unwrap();
+    assert!(bytecode_artifact.contains(r#""action":"EmitTrace""#));
+    let contract_report =
+        fs::read_to_string(artifact_dir.join("wasm-contract-report.txt")).unwrap();
+    assert!(
+        contract_report.contains("action EmitTrace")
+            && contract_report.contains("trace-preservation required"),
+        "{contract_report}"
+    );
+    assert!(
+        !artifact_dir.join("target.elf").exists(),
+        "source Wasm contract artifacts must not emit native ELF output"
+    );
+    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-compile.txt")).unwrap();
+    assert!(manifest.contains("source-package source.ail-package.md source.ail-spec.md"));
+    assert!(manifest.contains("core checked.ail-core.txt"));
+    assert!(
+        manifest.contains("machine-bytecode-contract wasm32-unknown-sandbox-wasm bytecode-level portable-vm-contract bytecode-container wasm-sandbox-contract bytecode-format wasm32-contract-report"),
+        "{manifest}"
+    );
+    assert!(manifest.contains("wasm-contract wasm-contract-report.txt"));
+    assert!(!manifest.contains("target wasm32-unknown-sandbox-wasm target.elf"));
+
+    fs::remove_dir_all(root).unwrap();
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
+fn cli_ail_compile_package_wasm_contract_snapshots_spec_file_override() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let unique_suffix = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let root = std::env::temp_dir().join(format!(
+        "ail-wasm-contract-spec-file-package-{}-{unique_suffix}",
+        std::process::id()
+    ));
+    let override_spec_path = std::env::temp_dir().join(format!(
+        "ail-wasm-contract-spec-file-{}-{unique_suffix}.ail-spec.md",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-wasm-contract-spec-file-artifacts-{}-{unique_suffix}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&root);
+    let _ = fs::remove_file(&override_spec_path);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&root).unwrap();
+    fs::write(
+        root.join("ail-package.md"),
+        r#"name: wasm-spec-file-contract-app
+version: 0.1.0
+profile: Application
+entry: spec.ail-spec.md
+features: actions, traces
+conformance: first-slice
+target-support:
+  wasm32-unknown-sandbox-wasm: supported-with-host-imports
+"#,
+    )
+    .unwrap();
+    fs::write(
+        root.join("spec.ail-spec.md"),
+        r#"The application Wasm Spec File Contract App manages stale entry specs.
+
+Action: Original trace.
+
+When original trace happens:
+
+- the system records a trace event named OriginalSpecTrace
+"#,
+    )
+    .unwrap();
+    fs::write(
+        &override_spec_path,
+        r#"The application Wasm Spec File Contract App manages override specs.
+
+Action: Override trace.
+
+When override trace happens:
+
+- the system records a trace event named OverrideSpecTrace
+"#,
+    )
+    .unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-compile",
+            root.to_str().unwrap(),
+            "--spec-file",
+            override_spec_path.to_str().unwrap(),
+            "--action",
+            "OverrideTrace",
+            "--target",
+            "wasm32-unknown-sandbox-wasm",
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let source_spec = fs::read_to_string(artifact_dir.join("source.ail-spec.md")).unwrap();
+    assert!(
+        source_spec.contains("Action: Override trace."),
+        "{source_spec}"
+    );
+    assert!(
+        !source_spec.contains("Action: Original trace."),
+        "{source_spec}"
+    );
+    let checked_core = fs::read_to_string(artifact_dir.join("checked.ail-core.txt")).unwrap();
+    assert!(
+        checked_core.contains("node Action OverrideTrace"),
+        "{checked_core}"
+    );
+    assert!(
+        !checked_core.contains("node Action OriginalTrace"),
+        "{checked_core}"
+    );
+    let bytecode_artifact = fs::read_to_string(artifact_dir.join("artifact.ailbc.json")).unwrap();
+    assert!(bytecode_artifact.contains(r#""action":"OverrideTrace""#));
+    let contract_report =
+        fs::read_to_string(artifact_dir.join("wasm-contract-report.txt")).unwrap();
+    assert!(
+        contract_report.contains("action OverrideTrace"),
+        "{contract_report}"
+    );
+
+    fs::remove_dir_all(root).unwrap();
+    fs::remove_file(override_spec_path).unwrap();
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
+fn cli_ail_compile_core_file_writes_wasm_contract_artifacts() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let unique_suffix = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let root = std::env::temp_dir().join(format!(
+        "ail-wasm-contract-core-package-{}-{unique_suffix}",
+        std::process::id()
+    ));
+    let core_path = std::env::temp_dir().join(format!(
+        "ail-wasm-contract-core-{}-{unique_suffix}.ail-core.txt",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-wasm-contract-core-artifacts-{}-{unique_suffix}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&root);
+    let _ = fs::remove_file(&core_path);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&root).unwrap();
+    fs::write(
+        root.join("ail-package.md"),
+        r#"name: wasm-core-contract-app
+version: 0.1.0
+profile: Application
+entry: spec.ail-spec.md
+features: actions, traces
+conformance: first-slice
+target-support:
+  wasm32-unknown-sandbox-wasm: supported-with-host-imports
+"#,
+    )
+    .unwrap();
+    fs::write(
+        root.join("spec.ail-spec.md"),
+        r#"The application Wasm Core Contract App manages checked core artifacts.
+
+Action: Emit trace.
+
+When emit trace happens:
+
+- the system records a trace event named WasmCoreContractCompiled
+"#,
+    )
+    .unwrap();
+
+    let core_output = Command::new(binary)
+        .args(["ail-core", root.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(
+        core_output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&core_output.stdout),
+        String::from_utf8_lossy(&core_output.stderr)
+    );
+    let core_text = String::from_utf8(core_output.stdout).unwrap();
+    fs::write(&core_path, &core_text).unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-compile",
+            "--core-file",
+            core_path.to_str().unwrap(),
+            "--action",
+            "EmitTrace",
+            "--target",
+            "wasm32-unknown-sandbox-wasm",
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    assert!(!artifact_dir.join("source.ail-package.md").exists());
+    assert!(!artifact_dir.join("source.ail-spec.md").exists());
+    let checked_core = fs::read_to_string(artifact_dir.join("checked.ail-core.txt")).unwrap();
+    assert_eq!(checked_core, core_text);
+    let checked_core_fingerprint =
+        fs::read_to_string(artifact_dir.join("checked.ail-core.fingerprint.txt")).unwrap();
+    assert_eq!(
+        checked_core_fingerprint.trim(),
+        fnv64_fingerprint(&checked_core)
+    );
+    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-compile.txt")).unwrap();
+    assert!(!manifest.contains("source-package"));
+    assert!(
+        manifest.contains(&format!(
+            "core checked.ail-core.txt {}",
+            fnv64_fingerprint(&checked_core)
+        )),
+        "{manifest}"
+    );
+    assert!(manifest.contains("wasm-contract wasm-contract-report.txt"));
+    assert!(
+        !artifact_dir.join("target.elf").exists(),
+        "checked-core Wasm contract artifacts must not emit native ELF output"
+    );
+
+    fs::remove_dir_all(root).unwrap();
+    fs::remove_file(core_path).unwrap();
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
 fn cli_ail_compile_wasm_contract_enumerates_external_bindings() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let unique_suffix = std::time::SystemTime::now()

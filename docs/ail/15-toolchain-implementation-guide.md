@@ -582,11 +582,12 @@ linux-x86_64-elf --out <path>` reads the same saved AIL-Bytecode artifact,
 verifies it, checks the artifact's `target_support` map when present, and emits
 a native ELF executable from that artifact boundary without loading the source
 package or generating host-language backend source.
-`ail-compile <artifact.ailbc.json> --action <ActionName> --target
-wasm32-unknown-sandbox-wasm --artifact-dir <dir>` reads a saved AIL-Bytecode
-artifact that declares `wasm32-unknown-sandbox-wasm` as `supported` or
-`supported-with-host-imports`, verifies the selected action, and writes a
-deterministic Wasm sandbox contract report instead of `target.elf`. The report
+`ail-compile <package-or-artifact.ailbc.json> --action <ActionName> --target
+wasm32-unknown-sandbox-wasm --artifact-dir <dir>` reads a source package,
+checked core with `--core-file`, or saved AIL-Bytecode artifact that declares
+`wasm32-unknown-sandbox-wasm` as `supported` or `supported-with-host-imports`,
+verifies the selected action, and writes a deterministic Wasm sandbox contract
+report instead of `target.elf`. The report
 records `bytecode-level portable-vm-contract`,
 `bytecode-container wasm-sandbox-contract`,
 `bytecode-format wasm32-contract-report`,
@@ -617,11 +618,15 @@ when a package source is available; it also writes `artifact.ailbc.json`,
 `dependency-report.txt`, `dependency-report.fingerprint.txt`,
 `manifest.ail-compile.txt`, and `manifest.fingerprint.txt`; compiles from
 checked AIL-Core also include `checked.ail-core.txt` and
-`checked.ail-core.fingerprint.txt`. Wasm contract direct `ail-compile` from
-saved bytecode writes `artifact.ailbc.json`, `artifact.fingerprint.txt`,
-`wasm-contract-report.txt`, `wasm-contract-report.fingerprint.txt`,
-`dependency-report.txt`, `dependency-report.fingerprint.txt`,
-`manifest.ail-compile.txt`, and `manifest.fingerprint.txt`. The
+`checked.ail-core.fingerprint.txt`. Wasm contract direct `ail-compile` from a
+package source writes `source.ail-package.md`, `source.ail-spec.md`,
+`source.fingerprint.txt`, `checked.ail-core.txt`,
+`checked.ail-core.fingerprint.txt`, `artifact.ailbc.json`,
+`artifact.fingerprint.txt`, `wasm-contract-report.txt`,
+`wasm-contract-report.fingerprint.txt`, `dependency-report.txt`,
+`dependency-report.fingerprint.txt`, `manifest.ail-compile.txt`, and
+`manifest.fingerprint.txt`. The same Wasm contract command from saved bytecode
+omits the source and checked-core snapshots. The
 native-bytecode report records the selected action target as ELF64 x86_64
 executable bytes. The dependency report records `host-language-runtime none`,
 `dynamic-linker none`, `shared-libraries none`, `library-dependencies none`,
