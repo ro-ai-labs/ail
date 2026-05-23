@@ -7014,6 +7014,55 @@ Expected: the bootstrap bundle proves representative generated native AIL
 toolchain actions and the native AIL-Meta compiler pass execute successfully
 before the AIL-authored bootstrap verifier accepts the manifest.
 
+### Task 157: Bootstrap Handoff Covers Every Generated Native Tool
+
+**Files:**
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/13-bootstrap-self-hosting.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing all-action handoff assertions**
+
+Extend the native `ail-bootstrap` bundle test so
+`bootstrap-handoff-report.txt` must contain role summary entries for every
+generated `toolchain-agent-*`, `compiler-pass-*`, and `agent-*` native ELF
+artifact. Require the report to include handoff traces for previously unproven
+actions such as `VerifyConformanceManifest`, `CompareAgentPromptPortability`,
+and the native verifier-agent `VerifyBootstrapManifest`.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_bootstrap_writes_native_toolchain_bundle -- --nocapture
+```
+
+Expected: failure because the handoff report only runs representative native
+actions.
+
+- [x] **Step 3: Run every generated native action**
+
+Replace the representative handoff runner with a role-based runner. Derive each
+action name from the emitted ELF filename, select deterministic argv state for
+that action's AIL requirements and trace, execute the temporary ELF, require
+the expected trace marker, record stdout/stderr fingerprints, and finish each
+role with `handoff-native-role ... all-actions ok count ...`.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_bootstrap_writes_native_toolchain_bundle -- --nocapture
+```
+
+Expected: the bootstrap bundle proves every generated native AIL toolchain
+action, verifier-agent action, and AIL-Meta compiler pass action executes
+successfully before the AIL-authored bootstrap verifier accepts the manifest.
+
 ### Task 18: Declared Failure Trace Coverage Diagnostics
 
 **Files:**

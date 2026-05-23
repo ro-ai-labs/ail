@@ -51,9 +51,9 @@ a host-boundary report proving no Rust, C, Python, JavaScript, or other
 host-language backend source was generated, and a dependency report proving the
 emitted Linux ELF artifacts use no dynamic linker, shared libraries,
 host-language runtime, or linker invocation, plus a handoff report proving
-representative generated native AIL toolchain actions and AIL-Meta compiler
-passes execute through the Linux argv ABI, with an AIL-authored verifier
-accepting the manifest.
+every generated native AIL toolchain-agent action, every generated native AIL
+verifier-agent action, and the AIL-Meta compiler pass execute through the
+Linux argv ABI, with an AIL-authored verifier accepting the manifest.
 
 ## Stage 4: Self-Hosted Fixed Point
 

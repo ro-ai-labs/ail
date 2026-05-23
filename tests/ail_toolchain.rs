@@ -4823,6 +4823,18 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
         "{handoff_report}"
     );
     assert!(
+        handoff_report.contains("handoff-native-role toolchain-agent all-actions ok count 17"),
+        "{handoff_report}"
+    );
+    assert!(
+        handoff_report.contains("handoff-native-role compiler-pass all-actions ok count 1"),
+        "{handoff_report}"
+    );
+    assert!(
+        handoff_report.contains("handoff-native-role agent all-actions ok count 17"),
+        "{handoff_report}"
+    );
+    assert!(
         handoff_report.contains(
             "handoff-native-action toolchain-agent-CompileApplication.elf ok trace ApplicationBytecodeCompiled"
         ),
@@ -4837,6 +4849,24 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
     assert!(
         handoff_report.contains(
             "handoff-native-action compiler-pass-InferReadPermissions.elf ok trace ReadPermissionAdded"
+        ),
+        "{handoff_report}"
+    );
+    assert!(
+        handoff_report.contains(
+            "handoff-native-action toolchain-agent-VerifyConformanceManifest.elf ok trace ConformanceManifestVerified"
+        ),
+        "{handoff_report}"
+    );
+    assert!(
+        handoff_report.contains(
+            "handoff-native-action toolchain-agent-CompareAgentPromptPortability.elf ok trace AgentPromptPortabilityCompared"
+        ),
+        "{handoff_report}"
+    );
+    assert!(
+        handoff_report.contains(
+            "handoff-native-action agent-VerifyBootstrapManifest.elf ok trace BootstrapManifestVerified"
         ),
         "{handoff_report}"
     );

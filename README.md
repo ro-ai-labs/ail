@@ -146,10 +146,10 @@ native-bytecode, host-boundary, dependency, native-handoff, and conformance
 fingerprints into the AIL-authored bootstrap verifier before accepting the
 manifest. The dependency report checks each emitted ELF for a standalone Linux
 syscall ABI with no dynamic linker, shared libraries, host-language runtime, or
-linker invocation. The handoff report runs representative generated native AIL
-toolchain actions and the AIL-Meta compiler pass through the Linux argv ABI,
-proving the emitted machine-level tools are executable after the Rust bootstrap
-stage.
+linker invocation. The handoff report runs every generated native AIL
+toolchain-agent action, every generated native AIL verifier-agent action, and
+the AIL-Meta compiler pass through the Linux argv ABI, proving the emitted
+machine-level tools are executable after the Rust bootstrap stage.
 `ail-pass <compiler-pass-package-or-bytecode>
 <target-package> --action <PassName>` compiles an AIL-Meta compiler pass
 package, or reads a saved Compiler-profile AIL-Bytecode artifact, and applies

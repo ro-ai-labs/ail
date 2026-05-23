@@ -500,10 +500,10 @@ command runs the AIL-Meta compiler pass bytecode over the toolchain agent
 checked IR, reruns the same pass over that output to prove the transformed IR
 is stable, compiles the toolchain bytecode from the first transformed IR, and
 records the machine-bytecode identity of every emitted native artifact. It also
-runs representative generated native AIL toolchain actions
-(`CompileApplication` and `CompileNativeTarget`) and the native AIL-Meta
-`InferReadPermissions` compiler pass through the Linux syscall argv ABI, then
-records that handoff evidence in a fingerprinted report. The manifest records
+runs every generated native AIL toolchain-agent action, every generated native
+AIL verifier-agent action, and the native AIL-Meta `InferReadPermissions`
+compiler pass through the Linux syscall argv ABI, then records that handoff
+evidence in a fingerprinted report. The manifest records
 `no-host-backend-source true` and deterministic fingerprints for source
 packages, checked AIL-Core IR, compiler-pass output IR and trace, fixed-point
 report, native-bytecode report, host-boundary report, dependency report,
@@ -517,7 +517,8 @@ native target fingerprints before the bundle is accepted. The dependency report
 records `host-language-runtime none`, `dynamic-linker none`,
 `shared-libraries none`, `library-dependencies none`, and
 `linker-invocation none` for standalone Linux syscall ELF artifacts, while the
-handoff report records `handoff-native-action ... ok trace ...` for emitted native toolchain
+handoff report records `handoff-native-role ... all-actions ok count ...` and
+`handoff-native-action ... ok trace ...` for emitted native toolchain and agent
 actions. This keeps the bootstrap boundary reviewable as AIL source, checked
 IR, stable AIL compiler-pass output, AIL bytecode, reports, and machine-level
 Linux ELF artifacts rather than a Rust or host-language backend source tree.

@@ -4043,66 +4043,304 @@ fn render_ail_bootstrap_handoff_report(
     target_name: &str,
     toolchain_artifacts: &[AilNativeArtifact],
     compiler_pass_artifacts: &[AilNativeArtifact],
+    agent_artifacts: &[AilNativeArtifact],
 ) -> Result<String, String> {
     let mut lines = vec![
         "AIL-Bootstrap-Handoff-Report:".to_string(),
         format!("target {target_name}"),
         "runtime-abi linux-syscall-argv-key-value".to_string(),
     ];
-    append_bootstrap_handoff_action(
+    append_bootstrap_handoff_role(
         &mut lines,
-        find_native_artifact(
-            toolchain_artifacts,
-            "toolchain-agent-CompileApplication.elf",
-        )?,
-        "ApplicationBytecodeCompiled",
-        &[
-            "buildrequest.id=bootstrap-handoff",
-            "buildrequest.status=SpecCaptured",
-            "buildrequest.requirements=checked",
-            "buildrequest.spec=checked",
-        ],
+        target_name,
+        "toolchain-agent",
+        toolchain_artifacts,
     )?;
-    append_bootstrap_handoff_action(
+    append_bootstrap_handoff_role(
         &mut lines,
-        find_native_artifact(
-            toolchain_artifacts,
-            "toolchain-agent-CompileNativeTarget.elf",
-        )?,
-        "NativeTargetCompiled",
-        &[
-            "buildrequest.id=bootstrap-handoff",
-            "buildrequest.status=BytecodeReady",
-            "buildrequest.bytecode artifact=verified",
-            "buildrequest.bytecode fingerprint=fnv64:handoff-bytecode",
-            "buildrequest.target platform=linux-x86_64-elf",
-            "buildrequest.target artifact=elf-bytes",
-            "buildrequest.target artifact fingerprint=fnv64:handoff-target",
-        ],
+        target_name,
+        "compiler-pass",
+        compiler_pass_artifacts,
     )?;
-    append_bootstrap_handoff_action(
-        &mut lines,
-        find_native_artifact(
-            compiler_pass_artifacts,
-            "compiler-pass-InferReadPermissions.elf",
-        )?,
-        "ReadPermissionAdded",
-        &[
-            "input graph=checked-ail-core",
-            "package policy=permission-inference",
-        ],
-    )?;
+    append_bootstrap_handoff_role(&mut lines, target_name, "agent", agent_artifacts)?;
     Ok(format!("{}\n", lines.join("\n")))
 }
 
-fn find_native_artifact<'a>(
-    artifacts: &'a [AilNativeArtifact],
-    file_name: &str,
-) -> Result<&'a AilNativeArtifact, String> {
-    artifacts
-        .iter()
-        .find(|artifact| artifact.file_name == file_name)
-        .ok_or_else(|| format!("missing native handoff artifact {file_name}"))
+struct BootstrapHandoffCase {
+    trace_marker: &'static str,
+    args: &'static [&'static str],
+}
+
+fn append_bootstrap_handoff_role(
+    lines: &mut Vec<String>,
+    target_name: &str,
+    file_prefix: &str,
+    artifacts: &[AilNativeArtifact],
+) -> Result<(), String> {
+    for artifact in artifacts {
+        if artifact.target_name != target_name {
+            return Err(format!(
+                "native handoff artifact {} targets {}, expected {target_name}",
+                artifact.file_name, artifact.target_name
+            ));
+        }
+        let action_name = native_handoff_action_name(file_prefix, &artifact.file_name)?;
+        let handoff_case = bootstrap_handoff_case(action_name)?;
+        append_bootstrap_handoff_action(
+            lines,
+            artifact,
+            handoff_case.trace_marker,
+            handoff_case.args,
+        )?;
+    }
+    lines.push(format!(
+        "handoff-native-role {file_prefix} all-actions ok count {}",
+        artifacts.len()
+    ));
+    Ok(())
+}
+
+fn native_handoff_action_name<'a>(
+    file_prefix: &str,
+    file_name: &'a str,
+) -> Result<&'a str, String> {
+    let prefix = format!("{file_prefix}-");
+    file_name
+        .strip_prefix(&prefix)
+        .and_then(|name| name.strip_suffix(".elf"))
+        .ok_or_else(|| format!("native handoff artifact {file_name} does not use {prefix}*.elf"))
+}
+
+fn bootstrap_handoff_case(action_name: &str) -> Result<BootstrapHandoffCase, String> {
+    match action_name {
+        "AcceptCompilerPassOutput" => Ok(BootstrapHandoffCase {
+            trace_marker: "CompilerPassOutputAccepted",
+            args: &[
+                "buildrequest.id=bootstrap-handoff",
+                "buildrequest.status=SpecCaptured",
+                "buildrequest.requirements=checked",
+                "buildrequest.spec=checked",
+                "buildrequest.core ir=checked",
+                "buildrequest.compiler pass artifact=pass-bytecode",
+                "buildrequest.compiler pass fingerprint=fnv64:pass-bytecode",
+                "buildrequest.compiler pass trace=checked",
+            ],
+        }),
+        "AcceptCoreIR" => Ok(BootstrapHandoffCase {
+            trace_marker: "CoreIrAccepted",
+            args: &[
+                "buildrequest.id=bootstrap-handoff",
+                "buildrequest.status=SpecCaptured",
+                "buildrequest.requirements=checked",
+                "buildrequest.spec=checked",
+                "buildrequest.core ir=checked",
+            ],
+        }),
+        "AcceptSpecDraft" => Ok(BootstrapHandoffCase {
+            trace_marker: "SpecDraftAccepted",
+            args: &[
+                "buildrequest.id=bootstrap-handoff",
+                "buildrequest.status=RequirementsCaptured",
+                "buildrequest.requirements=checked",
+                "buildrequest.spec=checked",
+            ],
+        }),
+        "CaptureRequirements" => Ok(BootstrapHandoffCase {
+            trace_marker: "RequirementsCaptured",
+            args: &[
+                "buildrequest.id=bootstrap-handoff",
+                "buildrequest.developer prompt=Build a native AIL toolchain",
+            ],
+        }),
+        "CompareAgentPromptPortability" => Ok(BootstrapHandoffCase {
+            trace_marker: "AgentPromptPortabilityCompared",
+            args: &[
+                "buildrequest.id=bootstrap-handoff",
+                "buildrequest.base model=unsloth/Qwen3.6-35B-A3B-GGUF:UD-Q4_K_XL",
+                "buildrequest.target model=local-port",
+                "buildrequest.requirements=checked",
+            ],
+        }),
+        "CompileApplication" => Ok(BootstrapHandoffCase {
+            trace_marker: "ApplicationBytecodeCompiled",
+            args: &[
+                "buildrequest.id=bootstrap-handoff",
+                "buildrequest.status=SpecCaptured",
+                "buildrequest.requirements=checked",
+                "buildrequest.spec=checked",
+            ],
+        }),
+        "CompileNativeTarget" => Ok(BootstrapHandoffCase {
+            trace_marker: "NativeTargetCompiled",
+            args: &[
+                "buildrequest.id=bootstrap-handoff",
+                "buildrequest.status=BytecodeReady",
+                "buildrequest.bytecode artifact=verified",
+                "buildrequest.bytecode fingerprint=fnv64:handoff-bytecode",
+                "buildrequest.target platform=linux-x86_64-elf",
+                "buildrequest.target artifact=elf-bytes",
+                "buildrequest.target artifact fingerprint=fnv64:handoff-target",
+            ],
+        }),
+        "InferReadPermissions" => Ok(BootstrapHandoffCase {
+            trace_marker: "ReadPermissionAdded",
+            args: &[
+                "input graph=checked-ail-core",
+                "package policy=permission-inference",
+            ],
+        }),
+        "PrepareSpecDraft" => Ok(BootstrapHandoffCase {
+            trace_marker: "SpecDraftPrepared",
+            args: &[
+                "buildrequest.id=bootstrap-handoff",
+                "buildrequest.status=RequirementsCaptured",
+                "buildrequest.requirements=checked",
+            ],
+        }),
+        "VerifyBootstrapManifest" => Ok(BootstrapHandoffCase {
+            trace_marker: "BootstrapManifestVerified",
+            args: &[
+                "buildrequest.id=bootstrap-handoff",
+                "buildrequest.status=BytecodeReady",
+                "buildrequest.artifact manifest=manifest",
+                "buildrequest.artifact manifest fingerprint=fnv64:manifest",
+                "buildrequest.source package=source",
+                "buildrequest.source package fingerprint=fnv64:source",
+                "buildrequest.core ir=core",
+                "buildrequest.core ir fingerprint=fnv64:core",
+                "buildrequest.bytecode fingerprint=fnv64:bytecode",
+                "buildrequest.compiler pass fingerprint=fnv64:pass",
+                "buildrequest.compiler pass trace=trace",
+                "buildrequest.fixed point report=fixed-point",
+                "buildrequest.fixed point report fingerprint=fnv64:fixed-point",
+                "buildrequest.conformance report=conformance",
+                "buildrequest.conformance report fingerprint=fnv64:conformance",
+                "buildrequest.native bytecode report=native-bytecode",
+                "buildrequest.native bytecode report fingerprint=fnv64:native-bytecode",
+                "buildrequest.host boundary report=host-boundary",
+                "buildrequest.host boundary report fingerprint=fnv64:host-boundary",
+                "buildrequest.dependency report=dependencies",
+                "buildrequest.dependency report fingerprint=fnv64:dependencies",
+                "buildrequest.handoff report=handoff",
+                "buildrequest.handoff report fingerprint=fnv64:handoff",
+                "buildrequest.target artifact fingerprint=fnv64:target",
+                "buildrequest.compiler pass target artifact fingerprint=fnv64:pass-target",
+            ],
+        }),
+        "VerifyBuildManifest" => Ok(BootstrapHandoffCase {
+            trace_marker: "BuildManifestVerified",
+            args: &[
+                "buildrequest.id=bootstrap-handoff",
+                "buildrequest.status=BytecodeReady",
+                "buildrequest.artifact manifest=manifest",
+                "buildrequest.artifact manifest fingerprint=fnv64:manifest",
+                "buildrequest.source package=source",
+                "buildrequest.source package fingerprint=fnv64:source",
+                "buildrequest.requirements fingerprint=fnv64:requirements",
+                "buildrequest.spec fingerprint=fnv64:spec",
+                "buildrequest.core ir fingerprint=fnv64:core",
+                "buildrequest.bytecode fingerprint=fnv64:bytecode",
+                "buildrequest.target artifact fingerprint=fnv64:target",
+                "buildrequest.compiler pass target artifact fingerprint=fnv64:pass-target",
+                "buildrequest.prompt portability report fingerprint=fnv64:prompt",
+                "buildrequest.native bytecode report=native-bytecode",
+                "buildrequest.native bytecode report fingerprint=fnv64:native-bytecode",
+            ],
+        }),
+        "VerifyBytecodeArtifact" => Ok(BootstrapHandoffCase {
+            trace_marker: "BytecodeArtifactVerified",
+            args: &[
+                "buildrequest.id=bootstrap-handoff",
+                "buildrequest.status=BytecodeReady",
+                "buildrequest.bytecode artifact=bytecode",
+                "buildrequest.bytecode fingerprint=fnv64:bytecode",
+            ],
+        }),
+        "VerifyCompileBundleManifest" => Ok(BootstrapHandoffCase {
+            trace_marker: "CompileBundleManifestVerified",
+            args: &[
+                "buildrequest.id=bootstrap-handoff",
+                "buildrequest.status=BytecodeReady",
+                "buildrequest.artifact manifest=manifest",
+                "buildrequest.artifact manifest fingerprint=fnv64:manifest",
+                "buildrequest.bytecode fingerprint=fnv64:bytecode",
+                "buildrequest.source package=source",
+                "buildrequest.source package fingerprint=fnv64:source",
+                "buildrequest.target artifact=target",
+                "buildrequest.target artifact fingerprint=fnv64:target",
+                "buildrequest.native bytecode report=native-bytecode",
+                "buildrequest.native bytecode report fingerprint=fnv64:native-bytecode",
+            ],
+        }),
+        "VerifyCompileManifest" => Ok(BootstrapHandoffCase {
+            trace_marker: "CompileManifestVerified",
+            args: &[
+                "buildrequest.id=bootstrap-handoff",
+                "buildrequest.status=BytecodeReady",
+                "buildrequest.artifact manifest=manifest",
+                "buildrequest.artifact manifest fingerprint=fnv64:manifest",
+                "buildrequest.bytecode fingerprint=fnv64:bytecode",
+                "buildrequest.source package=source",
+                "buildrequest.source package fingerprint=fnv64:source",
+                "buildrequest.target artifact=target",
+                "buildrequest.target artifact fingerprint=fnv64:target",
+                "buildrequest.native bytecode report=native-bytecode",
+                "buildrequest.native bytecode report fingerprint=fnv64:native-bytecode",
+            ],
+        }),
+        "VerifyConformanceManifest" => Ok(BootstrapHandoffCase {
+            trace_marker: "ConformanceManifestVerified",
+            args: &[
+                "buildrequest.id=bootstrap-handoff",
+                "buildrequest.status=BytecodeReady",
+                "buildrequest.conformance report=conformance",
+                "buildrequest.conformance report fingerprint=fnv64:conformance",
+                "buildrequest.artifact manifest=manifest",
+                "buildrequest.artifact manifest fingerprint=fnv64:manifest",
+            ],
+        }),
+        "VerifyLowerManifest" => Ok(BootstrapHandoffCase {
+            trace_marker: "LowerManifestVerified",
+            args: &[
+                "buildrequest.id=bootstrap-handoff",
+                "buildrequest.status=BytecodeReady",
+                "buildrequest.core ir=core",
+                "buildrequest.core ir fingerprint=fnv64:core",
+                "buildrequest.source package=source",
+                "buildrequest.source package fingerprint=fnv64:source",
+                "buildrequest.bytecode artifact=bytecode",
+                "buildrequest.bytecode fingerprint=fnv64:bytecode",
+                "buildrequest.artifact manifest=manifest",
+                "buildrequest.artifact manifest fingerprint=fnv64:manifest",
+            ],
+        }),
+        "VerifyPassManifest" => Ok(BootstrapHandoffCase {
+            trace_marker: "PassManifestVerified",
+            args: &[
+                "buildrequest.id=bootstrap-handoff",
+                "buildrequest.status=PassApplied",
+                "buildrequest.artifact manifest=manifest",
+                "buildrequest.artifact manifest fingerprint=fnv64:manifest",
+                "buildrequest.compiler pass source package=pass-source",
+                "buildrequest.compiler pass source package fingerprint=fnv64:pass-source",
+                "buildrequest.compiler pass fingerprint=fnv64:pass",
+                "buildrequest.source package=source",
+                "buildrequest.source package fingerprint=fnv64:source",
+            ],
+        }),
+        "VerifyTargetArtifact" => Ok(BootstrapHandoffCase {
+            trace_marker: "TargetArtifactVerified",
+            args: &[
+                "buildrequest.id=bootstrap-handoff",
+                "buildrequest.status=BytecodeReady",
+                "buildrequest.target artifact=target",
+                "buildrequest.target artifact fingerprint=fnv64:target",
+            ],
+        }),
+        _ => Err(format!(
+            "missing native bootstrap handoff argv case for action {action_name}"
+        )),
+    }
 }
 
 fn append_bootstrap_handoff_action(
@@ -5333,6 +5571,7 @@ fn run_ail_bootstrap_command(path: &str, cli_options: &CliOptions) -> Result<u8,
         target,
         toolchain_native_artifacts.as_slice(),
         compiler_pass_native_artifacts.as_slice(),
+        agent_native_artifacts.as_slice(),
     )?;
     let empty_agent_trace: &[String] = &[];
     let manifest_text = render_ail_bootstrap_manifest(&AilBootstrapArtifactSet {
