@@ -4140,6 +4140,27 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
         toolchain_fingerprint.trim(),
         fnv64_fingerprint(&toolchain_bytecode)
     );
+    let toolchain_source_manifest =
+        fs::read_to_string(artifact_dir.join("toolchain-agent.source.ail-package.md")).unwrap();
+    assert!(
+        toolchain_source_manifest.contains("name: ail-toolchain-agent"),
+        "{toolchain_source_manifest}"
+    );
+    let toolchain_source_spec =
+        fs::read_to_string(artifact_dir.join("toolchain-agent.source.ail-spec.md")).unwrap();
+    assert!(
+        toolchain_source_spec.contains("Action: Verify bootstrap manifest."),
+        "{toolchain_source_spec}"
+    );
+    let toolchain_source_fingerprint =
+        fs::read_to_string(artifact_dir.join("toolchain-agent.source.fingerprint.txt")).unwrap();
+    let toolchain_source_bundle = format!(
+        "ail-package.md:\n{toolchain_source_manifest}\nspec.ail-spec.md:\n{toolchain_source_spec}"
+    );
+    assert_eq!(
+        toolchain_source_fingerprint.trim(),
+        fnv64_fingerprint(&toolchain_source_bundle)
+    );
     let toolchain_core =
         fs::read_to_string(artifact_dir.join("toolchain-agent.checked.ail-core.txt")).unwrap();
     assert!(
@@ -4163,6 +4184,26 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
     let pass_fingerprint =
         fs::read_to_string(artifact_dir.join("compiler-pass.fingerprint.txt")).unwrap();
     assert_eq!(pass_fingerprint.trim(), fnv64_fingerprint(&pass_bytecode));
+    let pass_source_manifest =
+        fs::read_to_string(artifact_dir.join("compiler-pass.source.ail-package.md")).unwrap();
+    assert!(
+        pass_source_manifest.contains("name: ail-meta-permissions"),
+        "{pass_source_manifest}"
+    );
+    let pass_source_spec =
+        fs::read_to_string(artifact_dir.join("compiler-pass.source.ail-spec.md")).unwrap();
+    assert!(
+        pass_source_spec.contains("Compiler pass: Infer read permissions."),
+        "{pass_source_spec}"
+    );
+    let pass_source_fingerprint =
+        fs::read_to_string(artifact_dir.join("compiler-pass.source.fingerprint.txt")).unwrap();
+    let pass_source_bundle =
+        format!("ail-package.md:\n{pass_source_manifest}\nspec.ail-spec.md:\n{pass_source_spec}");
+    assert_eq!(
+        pass_source_fingerprint.trim(),
+        fnv64_fingerprint(&pass_source_bundle)
+    );
     let pass_core =
         fs::read_to_string(artifact_dir.join("compiler-pass.checked.ail-core.txt")).unwrap();
     assert!(
@@ -4222,6 +4263,8 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
     assert_eq!(agent_bytecode, toolchain_bytecode);
     let agent_trace = fs::read_to_string(artifact_dir.join("agent-trace.txt")).unwrap();
     assert!(agent_trace.contains("action VerifyBootstrapManifest started"));
+    assert!(agent_trace.contains("read buildrequest.source package"));
+    assert!(agent_trace.contains("read buildrequest.source package fingerprint"));
     assert!(agent_trace.contains("read buildrequest.core ir"));
     assert!(agent_trace.contains("read buildrequest.core ir fingerprint"));
     assert!(agent_trace.contains("read buildrequest.bytecode fingerprint"));
@@ -4244,6 +4287,8 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
         .args([
             "buildrequest.id=ail-toolchain-agent-bootstrap",
             "buildrequest.status=BytecodeReady",
+            "buildrequest.source package=ok",
+            "buildrequest.source package fingerprint=fnv64:source",
             "buildrequest.core ir=ok",
             "buildrequest.core ir fingerprint=fnv64:core",
             "buildrequest.bytecode fingerprint=fnv64:toolchain",
@@ -4284,6 +4329,13 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
     );
     assert!(
         manifest.contains(&format!(
+            "toolchain-agent-source toolchain-agent.source.ail-package.md toolchain-agent.source.ail-spec.md {}",
+            fnv64_fingerprint(&toolchain_source_bundle)
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
             "toolchain-agent-core toolchain-agent.checked.ail-core.txt {}",
             fnv64_fingerprint(&toolchain_core)
         )),
@@ -4293,6 +4345,13 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
         manifest.contains(&format!(
             "compiler-pass compiler-pass.ailbc.json {}",
             fnv64_fingerprint(&pass_bytecode)
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "compiler-pass-source compiler-pass.source.ail-package.md compiler-pass.source.ail-spec.md {}",
+            fnv64_fingerprint(&pass_source_bundle)
         )),
         "{manifest}"
     );

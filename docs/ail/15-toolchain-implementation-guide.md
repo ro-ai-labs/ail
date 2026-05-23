@@ -471,18 +471,19 @@ bytecode rather than host orchestration alone.
 <compiler-pass-package> --agent <toolchain-agent-package>
 --target linux-x86_64-elf --artifact-dir <dir>` packages the AIL-authored
 toolchain agent and an AIL-Meta compiler pass into one bootstrap artifact set.
-It writes `toolchain-agent.checked.ail-core.txt`,
+It writes source package snapshots, `toolchain-agent.checked.ail-core.txt`,
 `toolchain-agent.ailbc.json`, `compiler-pass.checked.ail-core.txt`,
 `compiler-pass.ailbc.json`, native ELF executables for every action in both
 packages, package conformance reports, `agent.ailbc.json`, `agent-trace.txt`,
 and `manifest.ail-bootstrap.txt`. The manifest records
-`no-host-backend-source true` and deterministic fingerprints for checked
-AIL-Core IR, bytecode, conformance reports, and native executable bytes. The
-AIL-authored `VerifyBootstrapManifest` action reads the checked-core
-fingerprint, conformance report fingerprint, bytecode fingerprints, and native
-target fingerprints before the bundle is accepted, so the bootstrap boundary is
-reviewable as checked IR, AIL bytecode, and machine-level ELF artifacts rather
-than a Rust or host-language backend source tree.
+`no-host-backend-source true` and deterministic fingerprints for source
+packages, checked AIL-Core IR, bytecode, conformance reports, and native
+executable bytes. The AIL-authored `VerifyBootstrapManifest` action reads the
+source-package fingerprint, checked-core fingerprint, conformance report
+fingerprint, bytecode fingerprints, and native target fingerprints before the
+bundle is accepted, so the bootstrap boundary is reviewable as AIL source,
+checked IR, AIL bytecode, and machine-level ELF artifacts rather than a Rust or
+host-language backend source tree.
 `ail-requirements` runs the first developer-facing agent capture stage by asking
 the package base LLM for an AIL-Requirements artifact, checking profile-specific
 coverage, and sending diagnostics back for one repair pass when the artifact is

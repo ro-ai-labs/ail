@@ -6135,6 +6135,54 @@ Expected: the bootstrap bundle carries checked AIL-Core evidence for both
 bundled AIL packages and the AIL-authored manifest verifier reads that evidence
 before acceptance.
 
+### Task 140: Bootstrap Bundle Includes Source Package Evidence
+
+**Files:**
+- Modify: `examples/ail_toolchain_agent.ail/spec.ail-spec.md`
+- Modify: `src/main.rs`
+- Modify: `tests/ail_toolchain.rs`
+- Modify: `README.md`
+- Modify: `docs/ail/13-bootstrap-self-hosting.md`
+- Modify: `docs/ail/15-toolchain-implementation-guide.md`
+
+- [x] **Step 1: Write failing bootstrap source assertions**
+
+Extend the native `ail-bootstrap` bundle test to require source package
+snapshots for the AIL-authored toolchain agent and AIL-Meta compiler pass,
+source fingerprint files, manifest entries for both source package bundles, and
+AIL agent trace reads for `buildrequest.source package` and
+`buildrequest.source package fingerprint`.
+
+- [x] **Step 2: Verify RED**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_bootstrap_writes_native_toolchain_bundle -- --nocapture
+```
+
+Expected: failure because the bootstrap bundle does not yet write source
+package snapshot artifacts.
+
+- [x] **Step 3: Generate and verify bootstrap source package artifacts**
+
+Copy the source `ail-package.md` and entry `spec.ail-spec.md` for both bundled
+AIL packages during `ail-bootstrap`. Write deterministic source fingerprints,
+include them in `manifest.ail-bootstrap.txt`, and pass a combined source
+package fingerprint into `VerifyBootstrapManifest`.
+
+- [x] **Step 4: Verify GREEN**
+
+Run:
+
+```bash
+cargo test --test ail_toolchain cli_ail_bootstrap_writes_native_toolchain_bundle -- --nocapture
+```
+
+Expected: the bootstrap bundle carries source package evidence for both bundled
+AIL packages and the AIL-authored manifest verifier reads that evidence before
+acceptance.
+
 ### Task 18: Declared Failure Trace Coverage Diagnostics
 
 **Files:**

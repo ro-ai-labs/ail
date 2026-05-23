@@ -11,6 +11,8 @@ A BuildRequest has:
 - requirements: Text
 - requirements coverage checklist: Text
 - spec coverage checklist: Text
+- source package: Text
+- source package fingerprint: Text
 - spec: Text
 - spec review report: Text
 - core ir: Text
@@ -233,6 +235,8 @@ When the toolchain agent verifies an AIL bootstrap bundle:
 - the system requires the BuildRequest status to be BytecodeReady
 - the system reads the BuildRequest artifact manifest
 - the system reads the BuildRequest artifact manifest fingerprint
+- the system reads the BuildRequest source package
+- the system reads the BuildRequest source package fingerprint
 - the system reads the BuildRequest core ir
 - the system reads the BuildRequest core ir fingerprint
 - the system reads the BuildRequest bytecode fingerprint
@@ -242,7 +246,7 @@ When the toolchain agent verifies an AIL bootstrap bundle:
 - the system reads the BuildRequest target artifact fingerprint
 - the system reads the BuildRequest compiler pass target artifact fingerprint
 - the system changes the BuildRequest artifact manifest verification report to Verified
-- the system guarantees the bootstrap manifest ties the AIL-authored toolchain agent, AIL-Meta compiler pass, and Linux native executable bytes with deterministic fingerprints and no Rust or host-language backend source
+- the system guarantees the bootstrap manifest ties AIL source packages, checked AIL-Core IR, AIL-Bytecode, conformance reports, AIL-authored toolchain agent, AIL-Meta compiler pass, and Linux native executable bytes with deterministic fingerprints and no Rust or host-language backend source
 - the system records a trace event named BootstrapManifestVerified
 
 Action: Verify pass manifest.
