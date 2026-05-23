@@ -40,6 +40,11 @@ Optional fields:
 - `schema-version`
 - `safety-level`
 
+The current package loader preserves `prompt-pack` as package metadata and
+renders it into AIL-Core. Capability grants, target support, schema version,
+and safety level remain specified manifest fields for later checker and
+package-resolver enforcement.
+
 ## Import Rules
 
 Imports bind package names to explicit versions or compatible ranges:

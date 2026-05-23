@@ -25,6 +25,7 @@ pub struct AilPackageMetadata {
     pub features: Vec<String>,
     pub imports: Vec<AilImportSpec>,
     pub conformance: String,
+    pub prompt_pack: Option<String>,
     pub base_llm_endpoint: String,
 }
 
@@ -2636,10 +2637,15 @@ pub fn render_ail_core(core: &AilCore) -> String {
         format!("features: {}", core.package.features.join(", ")),
         format!("imports: {}", render_import_specs(&core.package.imports)),
         format!("conformance: {}", core.package.conformance),
+    ];
+    if let Some(prompt_pack) = &core.package.prompt_pack {
+        lines.push(format!("prompt-pack: {prompt_pack}"));
+    }
+    lines.extend([
         format!("base_llm_endpoint: {}", core.package.base_llm_endpoint),
         String::new(),
         "nodes:".to_string(),
-    ];
+    ]);
     let mut nodes = core.graph.nodes.clone();
     nodes.sort_by(|left, right| {
         left.kind
@@ -2706,6 +2712,7 @@ pub fn parse_ail_core_text(text: &str) -> Result<AilCore, String> {
     let mut features = Vec::new();
     let mut imports = Vec::new();
     let mut conformance = None;
+    let mut prompt_pack = None;
     let mut base_llm_endpoint = None;
     let mut section = "";
     let mut graph = Graph::default();
@@ -2753,6 +2760,7 @@ pub fn parse_ail_core_text(text: &str) -> Result<AilCore, String> {
                         };
                     }
                     "conformance" => conformance = Some(value),
+                    "prompt-pack" => prompt_pack = Some(value),
                     "base_llm_endpoint" => base_llm_endpoint = Some(value),
                     key => {
                         return Err(format!(
@@ -2821,6 +2829,7 @@ pub fn parse_ail_core_text(text: &str) -> Result<AilCore, String> {
             imports,
             conformance: conformance
                 .ok_or_else(|| "AIL-Core missing conformance metadata".to_string())?,
+            prompt_pack,
             base_llm_endpoint: base_llm_endpoint
                 .ok_or_else(|| "AIL-Core missing base_llm_endpoint metadata".to_string())?,
         },
@@ -8486,6 +8495,7 @@ fn parse_package_metadata(text: &str) -> Result<AilPackageMetadata, String> {
         .get("conformance")
         .cloned()
         .unwrap_or_else(|| "draft".to_string());
+    let prompt_pack = values.get("prompt-pack").cloned();
     let base_llm_endpoint = values
         .get("base_llm_endpoint")
         .cloned()
@@ -8498,6 +8508,7 @@ fn parse_package_metadata(text: &str) -> Result<AilPackageMetadata, String> {
         features,
         imports,
         conformance,
+        prompt_pack,
         base_llm_endpoint,
     })
 }

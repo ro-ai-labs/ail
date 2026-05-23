@@ -133,6 +133,10 @@ metadata version before checking, and rejects mismatches. Import aliases must
 be unique within the manifest. The alias is a namespace boundary for the
 imported fragment before checking and rendering.
 
+When present, `prompt-pack: <package-or-version>` is preserved in package
+metadata and rendered into checked AIL-Core so agent prompt requests can be
+reviewed against the same package identity as the compiler input.
+
 Conformance checks must validate the entry spec, every accepted fixture, and
 every rejected fixture. Accepted fixtures pass only when they produce no checker
 diagnostics; rejected fixtures pass only when they produce at least one stable
