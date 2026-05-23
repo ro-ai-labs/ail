@@ -278,6 +278,12 @@ fn ail_agent_tool_profile_parses_renders_and_checks_refund_tool() {
         flow.contains(r#""traces":["RefundCustomerPaymentRequested"]"#),
         "{flow}"
     );
+    assert!(
+        flow.contains(
+            r#"{"kind":"requires","source":"Tool:RefundCustomerPayment","target":"Permission:requester may create refunds","targetName":"requester may create refunds","attributes":{}}"#
+        ),
+        "{flow}"
+    );
 
     let rendered_spec = render_ail_spec(&document);
     assert!(rendered_spec.contains("The tool requires permission:"));
@@ -416,6 +422,12 @@ fn ail_compiler_profile_parses_renders_and_checks_compiler_pass() {
     assert!(flow.contains(r#""actions":[]"#), "{flow}");
     assert!(flow.contains(r#""compilerPasses":["#), "{flow}");
     assert!(flow.contains(r#""name":"InferReadPermissions""#), "{flow}");
+    assert!(
+        flow.contains(
+            r#"{"kind":"reads","source":"Action:InferReadPermissions","target":"Value:InferReadPermissions.input graph","targetName":"InferReadPermissions.input graph","attributes":{}}"#
+        ),
+        "{flow}"
+    );
 
     let rendered_spec = render_ail_spec(&document);
     let reparsed = parse_ail_spec_text(&rendered_spec).unwrap();
@@ -640,6 +652,12 @@ fn ail_system_profile_parses_renders_and_checks_resource_capabilities() {
     );
     assert!(
         flow.contains(r#""owns":["NetworkPacketReceiver.rx buffer"]"#),
+        "{flow}"
+    );
+    assert!(
+        flow.contains(
+            r#"{"kind":"performs","source":"SystemComponent:NetworkPacketReceiver","target":"Effect:read network device","targetName":"read network device","attributes":{"provenance":"system_component:NetworkPacketReceiver.effect:read network device"}}"#
+        ),
         "{flow}"
     );
     assert!(

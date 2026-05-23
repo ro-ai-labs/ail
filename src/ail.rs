@@ -2889,7 +2889,7 @@ fn render_flow_tool(core: &AilCore, tool: &str) -> String {
     let Some(tool_node) = core.graph.find_node("Tool", tool) else {
         let core_label = flow_core_label(core, "Tool", tool);
         return format!(
-            "{{\"name\":{},\"coreLabel\":{},\"label\":\"\",\"requires\":[],\"inputs\":[],\"outputs\":[],\"reads\":[],\"writes\":[],\"calls\":[],\"permissions\":[],\"approvals\":[],\"guarantees\":[],\"traces\":[]}}",
+            "{{\"name\":{},\"coreLabel\":{},\"label\":\"\",\"requires\":[],\"inputs\":[],\"outputs\":[],\"reads\":[],\"writes\":[],\"calls\":[],\"permissions\":[],\"approvals\":[],\"guarantees\":[],\"traces\":[],\"edgeRefs\":[]}}",
             json_string(tool),
             json_string(&core_label)
         );
@@ -2900,7 +2900,7 @@ fn render_flow_tool(core: &AilCore, tool: &str) -> String {
         .map(String::as_str)
         .unwrap_or("");
     format!(
-        "{{\"name\":{},\"coreLabel\":{},\"label\":{},\"requires\":{},\"inputs\":{},\"outputs\":{},\"reads\":{},\"writes\":{},\"calls\":{},\"permissions\":{},\"approvals\":{},\"guarantees\":{},\"traces\":{}}}",
+        "{{\"name\":{},\"coreLabel\":{},\"label\":{},\"requires\":{},\"inputs\":{},\"outputs\":{},\"reads\":{},\"writes\":{},\"calls\":{},\"permissions\":{},\"approvals\":{},\"guarantees\":{},\"traces\":{},\"edgeRefs\":{}}}",
         json_string(tool),
         json_string(&core_node_label(tool_node)),
         json_string(label),
@@ -2919,6 +2919,22 @@ fn render_flow_tool(core: &AilCore, tool: &str) -> String {
         render_json_array(edge_target_names(core, &tool_node.id, "requires_approval")),
         render_json_array(edge_target_names(core, &tool_node.id, "guarantees")),
         render_json_array(edge_target_names(core, &tool_node.id, "records_trace")),
+        render_flow_edge_refs(
+            core,
+            tool_node,
+            &[
+                "requires",
+                "has_input",
+                "has_output",
+                "reads",
+                "writes",
+                "calls",
+                "requires_approval",
+                "protects_secret",
+                "guarantees",
+                "records_trace"
+            ]
+        ),
     )
 }
 
@@ -2926,7 +2942,7 @@ fn render_flow_compiler_pass(core: &AilCore, pass: &str) -> String {
     let Some(pass_node) = core.graph.find_node("Action", pass) else {
         let core_label = flow_core_label(core, "Action", pass);
         return format!(
-            "{{\"name\":{},\"coreLabel\":{},\"label\":\"\",\"inputs\":[],\"outputs\":[],\"reads\":[],\"writes\":[],\"steps\":[],\"guarantees\":[],\"traces\":[]}}",
+            "{{\"name\":{},\"coreLabel\":{},\"label\":\"\",\"inputs\":[],\"outputs\":[],\"reads\":[],\"writes\":[],\"steps\":[],\"guarantees\":[],\"traces\":[],\"edgeRefs\":[]}}",
             json_string(pass),
             json_string(&core_label)
         );
@@ -2937,7 +2953,7 @@ fn render_flow_compiler_pass(core: &AilCore, pass: &str) -> String {
         .map(String::as_str)
         .unwrap_or("");
     format!(
-        "{{\"name\":{},\"coreLabel\":{},\"label\":{},\"inputs\":{},\"outputs\":{},\"reads\":{},\"writes\":{},\"steps\":{},\"guarantees\":{},\"traces\":{}}}",
+        "{{\"name\":{},\"coreLabel\":{},\"label\":{},\"inputs\":{},\"outputs\":{},\"reads\":{},\"writes\":{},\"steps\":{},\"guarantees\":{},\"traces\":{},\"edgeRefs\":{}}}",
         json_string(pass),
         json_string(&core_node_label(pass_node)),
         json_string(label),
@@ -2958,6 +2974,18 @@ fn render_flow_compiler_pass(core: &AilCore, pass: &str) -> String {
         render_json_array(edge_target_names(core, &pass_node.id, "contains")),
         render_json_array(edge_target_names(core, &pass_node.id, "guarantees")),
         render_json_array(edge_target_names(core, &pass_node.id, "records_trace")),
+        render_flow_edge_refs(
+            core,
+            pass_node,
+            &[
+                "reads",
+                "writes",
+                "contains",
+                "may_fail_with",
+                "guarantees",
+                "records_trace"
+            ]
+        ),
     )
 }
 
@@ -2965,7 +2993,7 @@ fn render_flow_system_component(core: &AilCore, component: &str) -> String {
     let Some(component_node) = core.graph.find_node("SystemComponent", component) else {
         let core_label = flow_core_label(core, "SystemComponent", component);
         return format!(
-            "{{\"name\":{},\"coreLabel\":{},\"label\":\"\",\"resources\":[],\"owns\":[],\"borrows\":[],\"mutablyBorrows\":[],\"regions\":[],\"layouts\":[],\"allocations\":[],\"lockGuards\":[],\"contexts\":[],\"priorities\":[],\"interruptMasks\":[],\"tasks\":[],\"taskPriorities\":[],\"taskTimings\":[],\"capabilities\":[],\"effects\":[],\"guarantees\":[],\"traces\":[]}}",
+            "{{\"name\":{},\"coreLabel\":{},\"label\":\"\",\"resources\":[],\"owns\":[],\"borrows\":[],\"mutablyBorrows\":[],\"regions\":[],\"layouts\":[],\"allocations\":[],\"lockGuards\":[],\"contexts\":[],\"priorities\":[],\"interruptMasks\":[],\"tasks\":[],\"taskPriorities\":[],\"taskTimings\":[],\"capabilities\":[],\"effects\":[],\"guarantees\":[],\"traces\":[],\"edgeRefs\":[]}}",
             json_string(component),
             json_string(&core_label)
         );
@@ -2976,7 +3004,7 @@ fn render_flow_system_component(core: &AilCore, component: &str) -> String {
         .map(String::as_str)
         .unwrap_or("");
     format!(
-        "{{\"name\":{},\"coreLabel\":{},\"label\":{},\"resources\":{},\"owns\":{},\"borrows\":{},\"mutablyBorrows\":{},\"regions\":{},\"layouts\":{},\"allocations\":{},\"lockGuards\":{},\"contexts\":{},\"priorities\":{},\"interruptMasks\":{},\"tasks\":{},\"taskPriorities\":{},\"taskTimings\":{},\"capabilities\":{},\"effects\":{},\"guarantees\":{},\"traces\":{}}}",
+        "{{\"name\":{},\"coreLabel\":{},\"label\":{},\"resources\":{},\"owns\":{},\"borrows\":{},\"mutablyBorrows\":{},\"regions\":{},\"layouts\":{},\"allocations\":{},\"lockGuards\":{},\"contexts\":{},\"priorities\":{},\"interruptMasks\":{},\"tasks\":{},\"taskPriorities\":{},\"taskTimings\":{},\"capabilities\":{},\"effects\":{},\"guarantees\":{},\"traces\":{},\"edgeRefs\":{}}}",
         json_string(component),
         json_string(&core_node_label(component_node)),
         json_string(label),
@@ -3031,6 +3059,30 @@ fn render_flow_system_component(core: &AilCore, component: &str) -> String {
         render_json_array(edge_target_names(core, &component_node.id, "performs")),
         render_json_array(edge_target_names(core, &component_node.id, "guarantees")),
         render_json_array(edge_target_names(core, &component_node.id, "records_trace")),
+        render_flow_edge_refs(
+            core,
+            component_node,
+            &[
+                "uses_resource",
+                "owns_resource",
+                "borrows_resource",
+                "mutably_borrows_resource",
+                "uses_region",
+                "uses_layout",
+                "uses_allocation",
+                "uses_lock_guard",
+                "runs_in_context",
+                "uses_interrupt_priority",
+                "uses_interrupt_mask",
+                "schedules_task",
+                "uses_task_priority",
+                "uses_task_timing",
+                "requires",
+                "performs",
+                "guarantees",
+                "records_trace"
+            ]
+        ),
     )
 }
 

@@ -629,11 +629,12 @@ artifact and a stage-0 `ail-core.patch.v0` JSON patch, applies supported
 patched graph, and prints the patched Core artifact. The patch `base_hash` must
 match the canonical checked Core hash before any operation is applied. AIL-Flow
 exposes the hash as `coreHash`, node patch labels as `coreLabel`, and
-action-card edge patch labels as `edgeRefs`. Attribute replacement is
-key-merge based; node edits can update `type` and rewire changed stable node
-ids before checking, while edge attribute edits rewrite the stable edge id.
-This is the first concrete AIL-Flow / agent-edit path that edits Core directly
-before rendering back to AIL-Spec.
+patch-ready edge labels as `edgeRefs` on action, tool, compiler-pass, and
+system-component projections. Attribute replacement is key-merge based; node
+edits can update `type` and rewire changed stable node ids before checking,
+while edge attribute edits rewrite the stable edge id. This is the first
+concrete AIL-Flow / agent-edit path that edits Core directly before rendering
+back to AIL-Spec.
 `ail-pass` compiles an AIL-Meta compiler pass package into verified
 AIL-Bytecode, or reads a saved Compiler-profile AIL-Bytecode artifact, checks a
 target package into AIL-Core, executes the selected pass bytecode over that

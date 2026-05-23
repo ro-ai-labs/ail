@@ -108,12 +108,13 @@ and AI agents copy that value into patch `base_hash` so a stale view cannot
 overwrite a newer checked Core graph. Node-backed Flow objects such as things,
 fields, actions, tools, compiler passes, and system components also include
 `coreLabel`, which is the exact checked Core node label to use in patch
-`source`, `target`, or `target` references. Action cards keep their
-human-readable arrays such as `requires`, `writes`, and `traces`, and also
-include `edgeRefs` for the same checked graph edges. Each edge reference names
-the patch `kind`, `source`, `target`, display `targetName`, and current edge
-`attributes`, so a visual editor can construct `remove_edge` or
-`replace_edge_attributes` operations without guessing target kinds.
+`source`, `target`, or `target` references. Flow objects that expose graph
+relationships keep their human-readable arrays such as `requires`, `writes`,
+`effects`, and `traces`, and also include `edgeRefs` for the same checked graph
+edges. Each edge reference names the patch `kind`, `source`, `target`, display
+`targetName`, and current edge `attributes`, so a visual editor can construct
+`remove_edge` or `replace_edge_attributes` operations without guessing target
+kinds.
 
 Patch payload:
 
