@@ -2722,10 +2722,12 @@ pub fn render_ail_flow_view(core: &AilCore) -> String {
         .map(|component| render_flow_system_component(core, &component))
         .collect::<Vec<_>>()
         .join(",");
+    let core_hash = ail_core_hash(core);
 
     format!(
-        "{{\"kind\":\"AIL-Flow\",\"package\":{},\"application\":{},\"things\":[{}],\"views\":{},\"actions\":[{}],\"tools\":[{}],\"compilerPasses\":[{}],\"systemComponents\":[{}]}}",
+        "{{\"kind\":\"AIL-Flow\",\"package\":{},\"coreHash\":{},\"application\":{},\"things\":[{}],\"views\":{},\"actions\":[{}],\"tools\":[{}],\"compilerPasses\":[{}],\"systemComponents\":[{}]}}",
         json_string(&core.package.name),
+        json_string(&core_hash),
         json_string(&application),
         things,
         views,

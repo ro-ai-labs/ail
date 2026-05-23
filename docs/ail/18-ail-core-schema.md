@@ -252,10 +252,11 @@ Patch operations:
 - `add_edge`
 - `replace_node_attributes`
 
-`base_hash` is required. It uses the form `ail-core:fnv64:<hex>` and is
-computed from the canonical checked AIL-Core rendering after parsing, not from
-raw terminal output bytes. The stage-0 patch applier rejects the patch before
-running any operation when `base_hash` does not match the checked graph.
+`base_hash` is required. It uses the form `ail-core:fnv64:<hex>`, is computed
+from the canonical checked AIL-Core rendering after parsing, and is exposed in
+AIL-Flow as top-level `coreHash`. It is not computed from raw terminal output
+bytes. The stage-0 patch applier rejects the patch before running any
+operation when `base_hash` does not match the checked graph.
 
 After the hash gate, the applier resolves node labels such as
 `Action:CloseTicket` against the checked Core graph. `add_node` writes node

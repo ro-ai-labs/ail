@@ -1600,9 +1600,14 @@ fn ail_flow_projection_renders_no_code_view_from_core() {
     let document = parse_ail_spec_text(&package.spec_text).unwrap();
     let core = elaborate_ail_core(&package, &document);
     let flow = render_ail_flow_view(&core);
+    let expected_core_hash = ail_core_hash(&core);
 
     assert!(flow.contains(r#""kind":"AIL-Flow""#));
     assert!(flow.contains(r#""application":"Support Tickets""#));
+    assert!(
+        flow.contains(&format!(r#""coreHash":"{expected_core_hash}""#)),
+        "{flow}"
+    );
     assert!(flow.contains(r#""name":"Ticket""#));
     assert!(flow.contains(r#""name":"internal notes","type":"Secret<List<Text>>","secret":true"#));
     assert!(flow.contains(r#""name":"CloseTicket""#));
@@ -3489,6 +3494,11 @@ fn cli_ail_check_and_core_use_package_loader() {
     let flow_stdout = String::from_utf8_lossy(&flow.stdout);
     assert!(flow_stdout.contains(r#""kind":"AIL-Flow""#));
     assert!(flow_stdout.contains(r#""application":"Support Tickets""#));
+    let expected_flow_hash = ail_core_hash(&parse_ail_core_text(&core_stdout).unwrap());
+    assert!(
+        flow_stdout.contains(&format!(r#""coreHash":"{expected_flow_hash}""#)),
+        "{flow_stdout}"
+    );
     assert!(flow_stdout.contains(r#""name":"CloseTicket""#));
 
     let lowered = Command::new(binary)

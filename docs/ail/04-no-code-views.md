@@ -103,6 +103,10 @@ No-code views do not perform opaque text edits. They produce graph patches
 against AIL-Core. Each patch declares the nodes, edges, attributes, and
 provenance it adds, changes, or removes.
 
+Every AIL-Flow projection includes a top-level `coreHash` field. Visual editors
+and AI agents copy that value into patch `base_hash` so a stale view cannot
+overwrite a newer checked Core graph.
+
 Patch payload:
 
 ```json
