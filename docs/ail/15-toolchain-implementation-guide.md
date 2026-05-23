@@ -335,6 +335,9 @@ Minimum checks:
 - guarantees attach to actions or tools
 - trace events cover action start, rule checks, writes, failures, and
   guarantees
+- function declarations lower into `Function` nodes with typed `Input` and
+  `Output` nodes, branch/call/return control nodes, trace events, and
+  deterministic AIL-Spec render/reparse equivalence
 - provenance exists for accepted semantic nodes, including generated helper
   nodes
 
@@ -997,6 +1000,8 @@ rules are preserved.
 14. Package the slice as the first conformance fixture.
 15. Lower checked Application-profile AIL-Core to AIL-Bytecode and execute the
     bytecode with the bootstrap VM.
+16. Parse the first Turing Core `Function:` surface into checked AIL-Core and
+    prove deterministic function render/reparse equivalence.
 
 ## Out Of Scope For The First Slice
 

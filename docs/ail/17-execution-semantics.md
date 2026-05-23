@@ -237,15 +237,15 @@ When factorial runs:
 AIL-Core rendering:
 
 ```text
-node Function factorial
+node Function factorial [label=factorial]
 node Input factorial.n : Int
 node Output factorial.result : Int
-node Branch factorial.base_case condition "n == 0"
-node Return factorial.return_one value 1
-node Call factorial.recursive_call target Function:factorial
-node Return factorial.return_product value "n * recursive_result"
-edge contains Function:factorial -> Branch:factorial.base_case
-edge calls Function:factorial -> Call:factorial.recursive_call
+node Branch factorial.n is 0 [condition=n is 0]
+node Call factorial.factorial with n minus 1 [target=factorial]
+node Return factorial.1 [value=1]
+node Return factorial.n multiplied by the recursive result [value=n multiplied by the recursive result]
+edge contains Function:factorial -> Branch:factorial.n is 0
+edge calls Function:factorial -> Call:factorial.factorial with n minus 1
 edge records_trace Function:factorial -> Trace:FactorialCalled
 ```
 

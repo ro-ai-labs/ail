@@ -806,6 +806,66 @@ fn ail_system_profile_lowers_to_verified_bytecode() {
 }
 
 #[test]
+fn ail_spec_parses_function_surface_into_core_and_round_trips() {
+    let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
+    let spec = r#"The application Calculator manages arithmetic workflows.
+
+Function: factorial.
+
+The function needs:
+
+- n: Int
+
+The function produces:
+
+- result: Int
+
+When factorial runs:
+
+- if n is 0, the function returns 1
+- otherwise the function calls factorial with n minus 1
+- the function returns n multiplied by the recursive result
+- the function records a trace event named FactorialCalled
+"#;
+
+    let document = parse_ail_spec_text(spec).unwrap();
+    let core = elaborate_ail_core(&package, &document);
+    assert_eq!(check_ail_core(&core), Vec::<String>::new());
+    let rendered_core = render_ail_core(&core);
+
+    assert!(rendered_core.contains("node Function factorial"));
+    assert!(rendered_core.contains("node Input factorial.n : Int"));
+    assert!(rendered_core.contains("node Output factorial.result : Int"));
+    assert!(rendered_core.contains("node Branch factorial.n is 0 [condition=n is 0]"));
+    assert!(
+        rendered_core.contains("node Call factorial.factorial with n minus 1 [target=factorial]")
+    );
+    assert!(rendered_core.contains("node Return factorial.1 [value=1]"));
+    assert!(rendered_core.contains(
+        "node Return factorial.n multiplied by the recursive result [value=n multiplied by the recursive result]"
+    ));
+    assert!(
+        rendered_core
+            .contains("edge calls Function:factorial -> Call:factorial.factorial with n minus 1")
+    );
+    assert!(
+        rendered_core.contains("edge records_trace Function:factorial -> Trace:FactorialCalled")
+    );
+
+    let rendered_spec = render_ail_spec(&document);
+    assert!(rendered_spec.contains("Function: factorial."));
+    assert!(rendered_spec.contains("The function needs:"));
+    assert!(rendered_spec.contains("- n: Int"));
+    assert!(rendered_spec.contains("When factorial runs:"));
+    assert!(rendered_spec.contains("- otherwise the function calls factorial with n minus 1"));
+    let reparsed = parse_ail_spec_text(&rendered_spec).unwrap();
+    assert_eq!(
+        render_ail_core(&elaborate_ail_core(&package, &reparsed)),
+        rendered_core
+    );
+}
+
+#[test]
 fn ail_system_profile_accepts_mutable_borrowed_resources() {
     let package = load_ail_package_dir(fixture("network_driver.ail")).unwrap();
     let spec = fs::read_to_string(format!(

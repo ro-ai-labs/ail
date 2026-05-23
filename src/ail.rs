@@ -61,6 +61,7 @@ pub struct AilDocument {
     pub tools: BTreeMap<String, AilTool>,
     pub compiler_passes: BTreeMap<String, AilCompilerPass>,
     pub system_components: BTreeMap<String, AilSystemComponent>,
+    pub functions: BTreeMap<String, AilFunction>,
     pub actions: BTreeMap<String, AilAction>,
     pub failures: BTreeMap<String, AilFailure>,
 }
@@ -135,6 +136,33 @@ pub struct AilCompilerPass {
 pub struct AilPassValue {
     pub name: String,
     pub type_name: String,
+    pub provenance: String,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct AilFunction {
+    pub name: String,
+    pub label: String,
+    pub inputs: BTreeMap<String, AilFunctionValue>,
+    pub outputs: BTreeMap<String, AilFunctionValue>,
+    pub branches: Vec<String>,
+    pub calls: Vec<AilFunctionCall>,
+    pub returns: Vec<String>,
+    pub traces: Vec<String>,
+    pub provenance: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AilFunctionValue {
+    pub name: String,
+    pub type_name: String,
+    pub provenance: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AilFunctionCall {
+    pub text: String,
+    pub target: String,
     pub provenance: String,
 }
 
@@ -1426,6 +1454,7 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
         tools: BTreeMap::new(),
         compiler_passes: BTreeMap::new(),
         system_components: BTreeMap::new(),
+        functions: BTreeMap::new(),
         actions: BTreeMap::new(),
         failures: BTreeMap::new(),
     };
@@ -1436,6 +1465,8 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
     let mut current_compiler_pass_section: Option<CompilerPassSection> = None;
     let mut current_system_component: Option<String> = None;
     let mut current_system_section: Option<SystemSection> = None;
+    let mut current_function: Option<String> = None;
+    let mut current_function_section: Option<FunctionSection> = None;
     let mut current_action: Option<String> = None;
     let mut current_failure: Option<String> = None;
     let mut current_list: Option<ListContext> = None;
@@ -1471,6 +1502,8 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
             current_compiler_pass_section = None;
             current_system_component = None;
             current_system_section = None;
+            current_function = None;
+            current_function_section = None;
             current_action = None;
             current_failure = None;
             current_list = None;
@@ -1485,6 +1518,8 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
             current_compiler_pass_section = None;
             current_system_component = None;
             current_system_section = None;
+            current_function = None;
+            current_function_section = None;
             current_action = None;
             current_failure = None;
             continue;
@@ -1498,6 +1533,8 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
             current_compiler_pass_section = None;
             current_system_component = None;
             current_system_section = None;
+            current_function = None;
+            current_function_section = None;
             current_action = None;
             current_failure = None;
             continue;
@@ -1519,6 +1556,8 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
             current_compiler_pass_section = None;
             current_system_component = None;
             current_system_section = None;
+            current_function = None;
+            current_function_section = None;
             current_action = None;
             current_failure = None;
             current_list = None;
@@ -1540,6 +1579,8 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
             current_system_component = None;
             current_system_section = None;
             current_thing = None;
+            current_function = None;
+            current_function_section = None;
             current_action = None;
             current_failure = None;
             current_list = None;
@@ -1553,6 +1594,8 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
             current_system_component = None;
             current_system_section = None;
             current_thing = None;
+            current_function = None;
+            current_function_section = None;
             current_action = None;
             current_failure = None;
             current_list = None;
@@ -1577,6 +1620,8 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
             current_system_component = None;
             current_system_section = None;
             current_thing = None;
+            current_function = None;
+            current_function_section = None;
             current_action = None;
             current_failure = None;
             current_list = None;
@@ -1604,6 +1649,8 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
             current_system_component = None;
             current_system_section = None;
             current_thing = None;
+            current_function = None;
+            current_function_section = None;
             current_action = None;
             current_failure = None;
             current_list = None;
@@ -1628,6 +1675,8 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
             current_compiler_pass = None;
             current_compiler_pass_section = None;
             current_thing = None;
+            current_function = None;
+            current_function_section = None;
             current_action = None;
             current_failure = None;
             current_list = None;
@@ -1643,6 +1692,69 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
             current_compiler_pass = None;
             current_compiler_pass_section = None;
             current_thing = None;
+            current_function = None;
+            current_function_section = None;
+            current_action = None;
+            current_failure = None;
+            current_list = None;
+            action_header_waiting_for_when = false;
+            continue;
+        }
+        if let Some(label) = parse_function_header(line) {
+            let name = label.clone();
+            document
+                .functions
+                .entry(name.clone())
+                .or_insert_with(|| AilFunction {
+                    name: name.clone(),
+                    label,
+                    provenance: format!("function:{name}"),
+                    ..AilFunction::default()
+                });
+            current_function = Some(name);
+            current_function_section = None;
+            current_thing = None;
+            current_tool = None;
+            current_tool_section = None;
+            current_compiler_pass = None;
+            current_compiler_pass_section = None;
+            current_system_component = None;
+            current_system_section = None;
+            current_action = None;
+            current_failure = None;
+            current_list = None;
+            action_header_waiting_for_when = false;
+            continue;
+        }
+        if let Some(section) = parse_function_section(line)
+            && current_function.is_some()
+        {
+            current_function_section = Some(section);
+            current_thing = None;
+            current_tool = None;
+            current_tool_section = None;
+            current_compiler_pass = None;
+            current_compiler_pass_section = None;
+            current_system_component = None;
+            current_system_section = None;
+            current_action = None;
+            current_failure = None;
+            current_list = None;
+            action_header_waiting_for_when = false;
+            continue;
+        }
+        if let Some(function_name) = parse_function_body_header(line)
+            && document.functions.contains_key(&function_name)
+        {
+            current_function = Some(function_name);
+            current_function_section = Some(FunctionSection::Body);
+            current_thing = None;
+            current_tool = None;
+            current_tool_section = None;
+            current_compiler_pass = None;
+            current_compiler_pass_section = None;
+            current_system_component = None;
+            current_system_section = None;
             current_action = None;
             current_failure = None;
             current_list = None;
@@ -1668,6 +1780,8 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
             current_compiler_pass_section = None;
             current_system_component = None;
             current_system_section = None;
+            current_function = None;
+            current_function_section = None;
             current_failure = None;
             current_list = None;
             action_header_waiting_for_when = true;
@@ -1702,6 +1816,8 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
             current_compiler_pass_section = None;
             current_system_component = None;
             current_system_section = None;
+            current_function = None;
+            current_function_section = None;
             current_failure = None;
             current_list = None;
             action_header_waiting_for_when = false;
@@ -1737,6 +1853,8 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
             current_compiler_pass_section = None;
             current_system_component = None;
             current_system_section = None;
+            current_function = None;
+            current_function_section = None;
             current_list = None;
             action_header_waiting_for_when = false;
             continue;
@@ -1760,6 +1878,12 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
                 (&current_system_component, current_system_section)
             {
                 parse_system_bullet(&mut document, component_name, section, bullet, line_number)?;
+                continue;
+            }
+            if let (Some(function_name), Some(section)) =
+                (&current_function, current_function_section)
+            {
+                parse_function_bullet(&mut document, function_name, section, bullet, line_number)?;
                 continue;
             }
             if let Some(action_name) = &current_action {
@@ -1788,9 +1912,10 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
         && document.tools.is_empty()
         && document.compiler_passes.is_empty()
         && document.system_components.is_empty()
+        && document.functions.is_empty()
     {
         return Err(
-            "AIL-Spec missing application, tool, compiler pass, or system component declaration"
+            "AIL-Spec missing application, tool, compiler pass, system component, or function declaration"
                 .to_string(),
         );
     }
@@ -1855,6 +1980,91 @@ pub fn elaborate_ail_core(package: &AilPackage, document: &AilDocument) -> AilCo
             graph.add_edge("contains", application, &view_node, BTreeMap::new());
         }
         attach_provenance(&mut graph, &view_node, format!("application.view:{view}"));
+    }
+
+    for function in document.functions.values() {
+        let function_node = graph.add_node(
+            "Function",
+            &function.name,
+            None,
+            attr(&[("label", &function.label)]),
+        );
+        if let Some(application) = &application {
+            graph.add_edge("contains", application, &function_node, BTreeMap::new());
+        }
+        attach_provenance(&mut graph, &function_node, &function.provenance);
+        for input in function.inputs.values() {
+            let input_node = graph.add_node(
+                "Input",
+                format!("{}.{}", function.name, input.name),
+                Some(input.type_name.clone()),
+                BTreeMap::new(),
+            );
+            graph.add_edge("has_input", &function_node, &input_node, BTreeMap::new());
+            attach_provenance(&mut graph, &input_node, &input.provenance);
+        }
+        for output in function.outputs.values() {
+            let output_node = graph.add_node(
+                "Output",
+                format!("{}.{}", function.name, output.name),
+                Some(output.type_name.clone()),
+                BTreeMap::new(),
+            );
+            graph.add_edge("has_output", &function_node, &output_node, BTreeMap::new());
+            attach_provenance(&mut graph, &output_node, &output.provenance);
+        }
+        for branch in &function.branches {
+            let branch_node = graph.add_node(
+                "Branch",
+                format!("{}.{}", function.name, branch),
+                None,
+                attr(&[("condition", branch)]),
+            );
+            graph.add_edge("contains", &function_node, &branch_node, BTreeMap::new());
+            attach_provenance(
+                &mut graph,
+                &branch_node,
+                format!("function:{}.branch:{branch}", function.name),
+            );
+        }
+        for call in &function.calls {
+            let call_node = graph.add_node(
+                "Call",
+                format!("{}.{}", function.name, call.text),
+                None,
+                attr(&[("target", &call.target)]),
+            );
+            graph.add_edge("calls", &function_node, &call_node, BTreeMap::new());
+            attach_provenance(&mut graph, &call_node, &call.provenance);
+        }
+        for return_value in &function.returns {
+            let return_node = graph.add_node(
+                "Return",
+                format!("{}.{}", function.name, return_value),
+                None,
+                attr(&[("value", return_value)]),
+            );
+            graph.add_edge("contains", &function_node, &return_node, BTreeMap::new());
+            attach_provenance(
+                &mut graph,
+                &return_node,
+                format!("function:{}.return:{return_value}", function.name),
+            );
+        }
+        for trace in &function.traces {
+            let trace_node = graph.add_node("Trace", trace, None, BTreeMap::new());
+            graph.add_edge(
+                "records_trace",
+                &function_node,
+                &trace_node,
+                BTreeMap::new(),
+            );
+            attach_provenance(
+                &mut graph,
+                &trace_node,
+                format!("function:{}.trace:{trace}", function.name),
+            );
+        }
     }
 
     for tool in document.tools.values() {
@@ -3992,6 +4202,49 @@ pub fn render_ail_spec(document: &AilDocument) -> String {
             lines.push(format!("- {view}"));
         }
         lines.push(String::new());
+    }
+    for function in document.functions.values() {
+        lines.push(format!("Function: {}.", function.label));
+        lines.push(String::new());
+        if !function.inputs.is_empty() {
+            lines.push("The function needs:".to_string());
+            lines.push(String::new());
+            for input in function.inputs.values() {
+                lines.push(format!("- {}: {}", input.name, input.type_name));
+            }
+            lines.push(String::new());
+        }
+        if !function.outputs.is_empty() {
+            lines.push("The function produces:".to_string());
+            lines.push(String::new());
+            for output in function.outputs.values() {
+                lines.push(format!("- {}: {}", output.name, output.type_name));
+            }
+            lines.push(String::new());
+        }
+        if !(function.branches.is_empty()
+            && function.calls.is_empty()
+            && function.returns.is_empty()
+            && function.traces.is_empty())
+        {
+            lines.push(format!("When {} runs:", function.label));
+            lines.push(String::new());
+            for branch in &function.branches {
+                lines.push(format!("- if {branch}"));
+            }
+            for call in &function.calls {
+                lines.push(format!("- otherwise the function calls {}", call.text));
+            }
+            for return_value in &function.returns {
+                lines.push(format!("- the function returns {return_value}"));
+            }
+            for trace in &function.traces {
+                lines.push(format!(
+                    "- the function records a trace event named {trace}"
+                ));
+            }
+            lines.push(String::new());
+        }
     }
     for tool in document.tools.values() {
         lines.push(format!("Tool: {}.", tool.label));
@@ -6217,6 +6470,7 @@ pub fn ail_document_from_core(core: &AilCore) -> AilDocument {
         tools: BTreeMap::new(),
         compiler_passes: BTreeMap::new(),
         system_components: BTreeMap::new(),
+        functions: BTreeMap::new(),
         actions: BTreeMap::new(),
         failures: BTreeMap::new(),
     };
@@ -6273,6 +6527,87 @@ pub fn ail_document_from_core(core: &AilCore) -> AilDocument {
             );
         }
         document.things.insert(thing.name.clone(), thing);
+    }
+
+    for function_node in core
+        .graph
+        .nodes
+        .iter()
+        .filter(|node| node.kind == "Function")
+    {
+        let mut function = AilFunction {
+            name: function_node.name.clone(),
+            label: function_node
+                .attributes
+                .get("label")
+                .cloned()
+                .unwrap_or_else(|| function_node.name.clone()),
+            provenance: node_provenance(core, &function_node.id).unwrap_or_default(),
+            ..AilFunction::default()
+        };
+        for input_node in outgoing_nodes(core, &node_by_id, function_node, "has_input")
+            .into_iter()
+            .filter(|node| node.kind == "Input")
+        {
+            let input_name = local_core_name(&input_node.name, &function.name);
+            function.inputs.insert(
+                input_name.clone(),
+                AilFunctionValue {
+                    name: input_name,
+                    type_name: input_node.type_name.clone().unwrap_or_default(),
+                    provenance: node_provenance(core, &input_node.id).unwrap_or_default(),
+                },
+            );
+        }
+        for output_node in outgoing_nodes(core, &node_by_id, function_node, "has_output")
+            .into_iter()
+            .filter(|node| node.kind == "Output")
+        {
+            let output_name = local_core_name(&output_node.name, &function.name);
+            function.outputs.insert(
+                output_name.clone(),
+                AilFunctionValue {
+                    name: output_name,
+                    type_name: output_node.type_name.clone().unwrap_or_default(),
+                    provenance: node_provenance(core, &output_node.id).unwrap_or_default(),
+                },
+            );
+        }
+        function.branches = outgoing_nodes(core, &node_by_id, function_node, "contains")
+            .into_iter()
+            .filter(|node| node.kind == "Branch")
+            .map(|node| {
+                node.attributes
+                    .get("condition")
+                    .cloned()
+                    .unwrap_or_else(|| local_core_name(&node.name, &function.name))
+            })
+            .collect();
+        function.calls = outgoing_nodes(core, &node_by_id, function_node, "calls")
+            .into_iter()
+            .filter(|node| node.kind == "Call")
+            .map(|node| AilFunctionCall {
+                text: local_core_name(&node.name, &function.name),
+                target: node.attributes.get("target").cloned().unwrap_or_default(),
+                provenance: node_provenance(core, &node.id).unwrap_or_default(),
+            })
+            .collect();
+        function.returns = outgoing_nodes(core, &node_by_id, function_node, "contains")
+            .into_iter()
+            .filter(|node| node.kind == "Return")
+            .map(|node| {
+                node.attributes
+                    .get("value")
+                    .cloned()
+                    .unwrap_or_else(|| local_core_name(&node.name, &function.name))
+            })
+            .collect();
+        function.traces = outgoing_nodes(core, &node_by_id, function_node, "records_trace")
+            .into_iter()
+            .filter(|node| node.kind == "Trace")
+            .map(|node| node.name)
+            .collect();
+        document.functions.insert(function.name.clone(), function);
     }
 
     for failure_node in core
@@ -9356,6 +9691,9 @@ fn merge_ail_import(target: &mut AilDocument, imported: AilDocument) {
     for (name, component) in imported.system_components {
         target.system_components.insert(name, component);
     }
+    for (name, function) in imported.functions {
+        target.functions.insert(name, function);
+    }
     for (name, action) in imported.actions {
         target.actions.insert(name, action);
     }
@@ -9389,6 +9727,7 @@ fn namespace_ail_document(document: &AilDocument, alias: &str) -> AilDocument {
         tools: BTreeMap::new(),
         compiler_passes: BTreeMap::new(),
         system_components: BTreeMap::new(),
+        functions: BTreeMap::new(),
         actions: BTreeMap::new(),
         failures: BTreeMap::new(),
     };
@@ -9457,6 +9796,46 @@ fn namespace_ail_document(document: &AilDocument, alias: &str) -> AilDocument {
                     .map(|text| qualify_reference_text(text, alias, &thing_names))
                     .collect(),
                 provenance: format!("action:{action_name}"),
+            },
+        );
+    }
+
+    for function in document.functions.values() {
+        let function_name = qualify_name(alias, &function.name);
+        namespaced.functions.insert(
+            function_name.clone(),
+            AilFunction {
+                name: function_name.clone(),
+                label: qualify_name(alias, &function.label),
+                inputs: namespace_function_values(
+                    alias,
+                    &function_name,
+                    &function.inputs,
+                    &thing_names,
+                ),
+                outputs: namespace_function_values(
+                    alias,
+                    &function_name,
+                    &function.outputs,
+                    &thing_names,
+                ),
+                branches: function.branches.clone(),
+                calls: function
+                    .calls
+                    .iter()
+                    .map(|call| AilFunctionCall {
+                        text: call.text.clone(),
+                        target: qualify_name(alias, &call.target),
+                        provenance: format!("function:{function_name}.call:{}", call.text),
+                    })
+                    .collect(),
+                returns: function.returns.clone(),
+                traces: function
+                    .traces
+                    .iter()
+                    .map(|trace| qualify_name(alias, trace))
+                    .collect(),
+                provenance: format!("function:{function_name}"),
             },
         );
     }
@@ -9882,6 +10261,27 @@ fn namespace_pass_values(
                     name: value.name.clone(),
                     type_name: qualify_type_name(&value.type_name, alias, thing_names),
                     provenance: format!("compiler_pass:{pass_name}.value:{}", value.name),
+                },
+            )
+        })
+        .collect()
+}
+
+fn namespace_function_values(
+    alias: &str,
+    function_name: &str,
+    values: &BTreeMap<String, AilFunctionValue>,
+    thing_names: &[String],
+) -> BTreeMap<String, AilFunctionValue> {
+    values
+        .values()
+        .map(|value| {
+            (
+                value.name.clone(),
+                AilFunctionValue {
+                    name: value.name.clone(),
+                    type_name: qualify_type_name(&value.type_name, alias, thing_names),
+                    provenance: format!("function:{function_name}.value:{}", value.name),
                 },
             )
         })
@@ -11265,7 +11665,7 @@ fn check_trace_attachment(core: &AilCore) -> Vec<AilDiagnostic> {
                     && node_by_id.get(&edge.source).is_some_and(|source| {
                         matches!(
                             source.kind.as_str(),
-                            "Action" | "Failure" | "Tool" | "SystemComponent"
+                            "Action" | "Failure" | "Function" | "Tool" | "SystemComponent"
                         )
                     })
             })
@@ -13036,6 +13436,25 @@ fn parse_compiler_pass_header(line: &str) -> Option<String> {
     Some(label.trim().trim_end_matches('.').to_string())
 }
 
+fn parse_function_header(line: &str) -> Option<String> {
+    let label = line.strip_prefix("Function: ")?;
+    Some(label.trim().trim_end_matches('.').to_string())
+}
+
+fn parse_function_section(line: &str) -> Option<FunctionSection> {
+    match line {
+        "The function needs:" => Some(FunctionSection::Inputs),
+        "The function produces:" => Some(FunctionSection::Outputs),
+        _ => None,
+    }
+}
+
+fn parse_function_body_header(line: &str) -> Option<String> {
+    let name = line.strip_prefix("When ")?;
+    let name = name.strip_suffix(" runs:")?;
+    Some(name.trim().to_string())
+}
+
 fn parse_system_component_header(line: &str) -> Option<String> {
     let label = line.strip_prefix("System component: ")?;
     Some(label.trim().trim_end_matches('.').to_string())
@@ -13121,11 +13540,8 @@ fn parse_field_bullet(
     bullet: &str,
     line_number: usize,
 ) -> Result<(), String> {
-    let Some((name, type_name)) = bullet.split_once(':') else {
-        return Err(format!("line {line_number}: expected '<field>: <type>'"));
-    };
-    let name = name.trim().to_string();
-    let type_name = normalize_type_name(type_name);
+    let (name, type_name) = parse_typed_bullet(bullet, line_number)?;
+    let type_name = normalize_type_name(&type_name);
     let is_secret = type_contains_secret(&type_name);
     let field = AilField {
         name: name.clone(),
@@ -13139,6 +13555,13 @@ fn parse_field_bullet(
         .ok_or_else(|| format!("line {line_number}: unknown thing '{thing_name}'"))?;
     thing.fields.insert(name, field);
     Ok(())
+}
+
+fn parse_typed_bullet(bullet: &str, line_number: usize) -> Result<(String, String), String> {
+    let Some((name, type_name)) = bullet.split_once(':') else {
+        return Err(format!("line {line_number}: expected '<name>: <type>'"));
+    };
+    Ok((name.trim().to_string(), type_name.trim().to_string()))
 }
 
 fn parse_tool_bullet(
@@ -13231,6 +13654,82 @@ fn parse_compiler_pass_bullet(
         CompilerPassSection::Body => parse_compiler_pass_body_bullet(pass, bullet),
     }
     Ok(())
+}
+
+fn parse_function_bullet(
+    document: &mut AilDocument,
+    function_name: &str,
+    section: FunctionSection,
+    bullet: &str,
+    line_number: usize,
+) -> Result<(), String> {
+    let function = document
+        .functions
+        .get_mut(function_name)
+        .ok_or_else(|| format!("line {line_number}: unknown function {function_name}"))?;
+    match section {
+        FunctionSection::Inputs => {
+            let (name, type_name) = parse_typed_bullet(bullet, line_number)?;
+            function.inputs.insert(
+                name.clone(),
+                AilFunctionValue {
+                    name: name.clone(),
+                    type_name: normalize_type_name(&type_name),
+                    provenance: format!("function:{function_name}.input:{name}"),
+                },
+            );
+        }
+        FunctionSection::Outputs => {
+            let (name, type_name) = parse_typed_bullet(bullet, line_number)?;
+            function.outputs.insert(
+                name.clone(),
+                AilFunctionValue {
+                    name: name.clone(),
+                    type_name: normalize_type_name(&type_name),
+                    provenance: format!("function:{function_name}.output:{name}"),
+                },
+            );
+        }
+        FunctionSection::Body => parse_function_body_bullet(function, bullet),
+    }
+    Ok(())
+}
+
+fn parse_function_body_bullet(function: &mut AilFunction, bullet: &str) {
+    if let Some(text) = bullet.strip_prefix("if ") {
+        let text = trim_sentence(text);
+        if let Some((condition, return_value)) = text.split_once(", the function returns ") {
+            function.branches.push(condition.trim().to_string());
+            function.returns.push(trim_sentence(return_value));
+        } else {
+            function.branches.push(text);
+        }
+    } else if let Some(text) = bullet.strip_prefix("otherwise the function calls ") {
+        let text = trim_sentence(text);
+        function.calls.push(AilFunctionCall {
+            target: function_call_target(&text),
+            provenance: format!("function:{}.call:{text}", function.name),
+            text,
+        });
+    } else if let Some(text) = bullet.strip_prefix("the function calls ") {
+        let text = trim_sentence(text);
+        function.calls.push(AilFunctionCall {
+            target: function_call_target(&text),
+            provenance: format!("function:{}.call:{text}", function.name),
+            text,
+        });
+    } else if let Some(text) = bullet.strip_prefix("the function returns ") {
+        function.returns.push(trim_sentence(text));
+    } else if let Some(text) = bullet.strip_prefix("the function records a trace event named ") {
+        function.traces.push(trim_sentence(text));
+    }
+}
+
+fn function_call_target(text: &str) -> String {
+    text.split_once(" with ")
+        .map(|(target, _)| target.trim())
+        .unwrap_or(text.trim())
+        .to_string()
 }
 
 fn parse_system_bullet(
@@ -13912,6 +14411,13 @@ enum CompilerPassSection {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum FunctionSection {
+    Inputs,
+    Outputs,
+    Body,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum SystemSection {
     Resources,
     Ownership,
@@ -13949,6 +14455,9 @@ fn is_structural_line(line: &str) -> bool {
         || parse_tool_section(line).is_some()
         || parse_compiler_pass_header(line).is_some()
         || parse_compiler_pass_section(line).is_some()
+        || parse_function_header(line).is_some()
+        || parse_function_section(line).is_some()
+        || parse_function_body_header(line).is_some()
         || parse_system_component_header(line).is_some()
         || parse_system_section(line).is_some()
         || parse_action_header(line).is_some()
