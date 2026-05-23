@@ -2444,6 +2444,7 @@ pub fn check_ail_core_diagnostics(core: &AilCore) -> Vec<AilDiagnostic> {
         .map(AilDiagnostic::from_message)
         .collect::<Vec<_>>();
     diagnostics.extend(check_core_schema_version(core));
+    diagnostics.extend(check_package_safety_level(core));
     diagnostics.extend(check_core_schema_catalog(core));
     diagnostics.extend(check_field_types(core));
     diagnostics.extend(check_requirement_reference_diagnostics(core));
@@ -2514,6 +2515,28 @@ fn check_core_schema_version(core: &AilCore) -> Vec<AilDiagnostic> {
         )
         .with_affected_graph_item(format!("package:{}", core.package.name))
         .with_repair_suggestion("Use ail-core.schema.v0 or migrate the package before checking."),
+    ]
+}
+
+fn check_package_safety_level(core: &AilCore) -> Vec<AilDiagnostic> {
+    let Some(safety_level) = &core.package.safety_level else {
+        return Vec::new();
+    };
+    if matches!(
+        safety_level.as_str(),
+        "standard" | "low" | "medium" | "high" | "expert"
+    ) {
+        return Vec::new();
+    }
+    vec![
+        AilDiagnostic::error(
+            "AIL-SAFETY-001",
+            format!("unknown AIL package safety level '{safety_level}'"),
+        )
+        .with_affected_graph_item(format!("package:{}", core.package.name))
+        .with_repair_suggestion(
+            "Use standard, low, medium, high, or expert as the package safety-level.",
+        ),
     ]
 }
 

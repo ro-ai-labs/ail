@@ -17,6 +17,10 @@ agent refusal before the checker accepts the artifact.
 | Expert | C interop, kernel/system operations, raw pointers, device access, unsafe memory | expert-mode capability plus conformance fixtures |
 | Prohibited | hidden external calls, secret disclosure without reveal policy, bypassing checker | rejected |
 
+Package manifests may declare `safety-level: standard`, `low`, `medium`,
+`high`, or `expert`. The checker emits `AIL-SAFETY-001` for unknown
+`safety-level` labels before applying deeper safety policy checks.
+
 ## Confirmation Rules
 
 The checker requires explicit confirmation for inferred rules that affect:

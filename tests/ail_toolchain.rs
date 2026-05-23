@@ -1727,6 +1727,49 @@ schema-version: ail-core.schema.v99
 }
 
 #[test]
+fn ail_core_reports_unknown_safety_level_metadata() {
+    let unique_suffix = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let root = std::env::temp_dir().join(format!(
+        "ail-unknown-safety-level-{}-{unique_suffix}",
+        std::process::id()
+    ));
+    fs::create_dir_all(&root).unwrap();
+    fs::write(
+        root.join("ail-package.md"),
+        r#"name: unknown-safety-app
+version: 0.1.0
+profile: Application
+entry: spec.ail-spec.md
+features: things
+conformance: first-slice
+safety-level: casual
+"#,
+    )
+    .unwrap();
+    fs::write(
+        root.join("spec.ail-spec.md"),
+        "The application Unknown Safety App manages safety validation.\n",
+    )
+    .unwrap();
+
+    let package = load_ail_package_dir(&root).unwrap();
+    let document = parse_ail_package_document(&package).unwrap();
+    let core = elaborate_ail_core(&package, &document);
+    let diagnostics = check_ail_core_diagnostics(&core);
+    assert!(
+        diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == "AIL-SAFETY-001" && diagnostic.message.contains("casual")
+        }),
+        "{diagnostics:?}"
+    );
+
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn ail_core_text_preserves_manifest_capability_grants() {
     let unique_suffix = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
