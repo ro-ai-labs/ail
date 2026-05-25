@@ -405,6 +405,7 @@ struct AilE2eCorpusEvaluation {
     bytecode_text: Option<String>,
     vm_trace_text: Option<String>,
     target_report_text: Option<String>,
+    diagnostics_text: Option<String>,
     native_executables: Vec<AilNativeArtifact>,
 }
 
@@ -1280,6 +1281,103 @@ fn extract_ail_e2e_response_artifact_text(response_text: &str) -> String {
     trimmed.to_string()
 }
 
+fn read_ail_e2e_entry_transcripts(entry: &AilE2eCorpusEntry) -> Result<(String, String), String> {
+    let request_path = ail_e2e_entry_resolved_path(entry, "request-file")?;
+    let request_text = fs::read_to_string(&request_path).map_err(|error| {
+        format!(
+            "failed to read e2e corpus request {}: {error}",
+            request_path.display()
+        )
+    })?;
+    let response_path = ail_e2e_entry_resolved_path(entry, "response-file")?;
+    let response_text = fs::read_to_string(&response_path).map_err(|error| {
+        format!(
+            "failed to read e2e corpus response {}: {error}",
+            response_path.display()
+        )
+    })?;
+    Ok((request_text, response_text))
+}
+
+fn evaluate_rejected_ail_e2e_corpus_entry(
+    entry: &AilE2eCorpusEntry,
+) -> Result<AilE2eCorpusEvaluation, String> {
+    let artifact_kind = entry
+        .fields
+        .get("artifact-kind")
+        .map(String::as_str)
+        .unwrap_or_default();
+    if artifact_kind != "ail-spec" {
+        return Err(format!(
+            "e2e corpus rejected entry {} has unsupported artifact-kind {artifact_kind}",
+            entry.id
+        ));
+    }
+    let package_path = entry
+        .fields
+        .get("package")
+        .ok_or_else(|| format!("e2e corpus entry {} is missing package", entry.id))?;
+    let expected_diagnostic = entry.fields.get("expected-diagnostic").ok_or_else(|| {
+        format!(
+            "e2e corpus rejected entry {} is missing expected-diagnostic",
+            entry.id
+        )
+    })?;
+    let failure_taxonomy = entry.fields.get("failure-taxonomy").ok_or_else(|| {
+        format!(
+            "e2e corpus rejected entry {} is missing failure-taxonomy",
+            entry.id
+        )
+    })?;
+    let (request_text, response_text) = read_ail_e2e_entry_transcripts(entry)?;
+    let spec_text = extract_ail_e2e_response_artifact_text(&response_text);
+    let diagnostics = match parse_ail_spec_text(&spec_text) {
+        Ok(document) => {
+            let package = load_ail_package_dir(package_path)?;
+            let core = elaborate_ail_core(&package, &document);
+            check_ail_core(&core)
+        }
+        Err(error) => vec![format!("parse-error {error}")],
+    };
+    if diagnostics.is_empty() {
+        return Err(format!(
+            "e2e corpus rejected entry {} was accepted without diagnostics",
+            entry.id
+        ));
+    }
+    if !diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.contains(expected_diagnostic))
+    {
+        return Err(format!(
+            "e2e corpus rejected entry {} expected diagnostic {expected_diagnostic} was not produced:\n{}",
+            entry.id,
+            diagnostics.join("\n")
+        ));
+    }
+    let mut lines = vec![
+        "AIL-E2E-Rejected-Diagnostics:".to_string(),
+        "checker-result rejected".to_string(),
+        format!("expected-diagnostic {expected_diagnostic}"),
+        format!("failure-taxonomy {failure_taxonomy}"),
+    ];
+    for diagnostic in diagnostics {
+        lines.push(format!("diagnostic {diagnostic}"));
+    }
+    Ok(AilE2eCorpusEvaluation {
+        entry: entry.clone(),
+        request_fingerprint: Some(ail_artifact_fingerprint(&request_text)),
+        response_fingerprint: Some(ail_artifact_fingerprint(&response_text)),
+        extracted_artifact_fingerprint: Some(ail_artifact_fingerprint(&spec_text)),
+        checked_core_text: None,
+        bytecode_text: None,
+        vm_trace_text: None,
+        target_report_text: None,
+        diagnostics_text: Some(format!("{}\n", lines.join("\n"))),
+        native_executables: Vec::new(),
+    })
+}
+
 fn evaluate_ail_e2e_corpus_entry(
     entry: &AilE2eCorpusEntry,
 ) -> Result<AilE2eCorpusEvaluation, String> {
@@ -1288,18 +1386,14 @@ fn evaluate_ail_e2e_corpus_entry(
         .get("checker-result")
         .map(String::as_str)
         .unwrap_or_default();
+    if checker_result == "rejected" {
+        return evaluate_rejected_ail_e2e_corpus_entry(entry);
+    }
     if checker_result != "accepted" {
-        return Ok(AilE2eCorpusEvaluation {
-            entry: entry.clone(),
-            request_fingerprint: None,
-            response_fingerprint: None,
-            extracted_artifact_fingerprint: None,
-            checked_core_text: None,
-            bytecode_text: None,
-            vm_trace_text: None,
-            target_report_text: None,
-            native_executables: Vec::new(),
-        });
+        return Err(format!(
+            "e2e corpus entry {} has unknown checker-result {checker_result}",
+            entry.id
+        ));
     }
     let artifact_kind = entry
         .fields
@@ -1316,6 +1410,7 @@ fn evaluate_ail_e2e_corpus_entry(
             bytecode_text: None,
             vm_trace_text: None,
             target_report_text: None,
+            diagnostics_text: None,
             native_executables: Vec::new(),
         });
     }
@@ -1323,20 +1418,7 @@ fn evaluate_ail_e2e_corpus_entry(
         .fields
         .get("package")
         .ok_or_else(|| format!("e2e corpus entry {} is missing package", entry.id))?;
-    let request_path = ail_e2e_entry_resolved_path(entry, "request-file")?;
-    let request_text = fs::read_to_string(&request_path).map_err(|error| {
-        format!(
-            "failed to read e2e corpus request {}: {error}",
-            request_path.display()
-        )
-    })?;
-    let response_path = ail_e2e_entry_resolved_path(entry, "response-file")?;
-    let response_text = fs::read_to_string(&response_path).map_err(|error| {
-        format!(
-            "failed to read e2e corpus response {}: {error}",
-            response_path.display()
-        )
-    })?;
+    let (request_text, response_text) = read_ail_e2e_entry_transcripts(entry)?;
     let spec_text = extract_ail_e2e_response_artifact_text(&response_text);
     let package = load_ail_package_dir(package_path)?;
     let document = parse_ail_spec_text(&spec_text)?;
@@ -1422,6 +1504,7 @@ fn evaluate_ail_e2e_corpus_entry(
         bytecode_text: Some(format!("{}\n", render_ail_bytecode(&bytecode))),
         vm_trace_text,
         target_report_text,
+        diagnostics_text: None,
         native_executables,
     })
 }
@@ -1556,6 +1639,14 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
                 entry.id,
                 entry.id,
                 ail_artifact_fingerprint(target_report_text)
+            ));
+        }
+        if let Some(diagnostics_text) = &evaluation.diagnostics_text {
+            lines.push(format!(
+                "entry-artifact {} diagnostics examples/{}/diagnostics.txt {}",
+                entry.id,
+                entry.id,
+                ail_artifact_fingerprint(diagnostics_text)
             ));
         }
     }
@@ -1844,6 +1935,18 @@ fn write_ail_e2e_corpus_artifacts(
                 format!("{}\n", ail_artifact_fingerprint(target_report_text)),
             )
             .map_err(|error| format!("failed to write e2e target report fingerprint: {error}"))?;
+        }
+        if let Some(diagnostics_text) = &evaluation.diagnostics_text {
+            let entry_dir = root.join("examples").join(&evaluation.entry.id);
+            fs::create_dir_all(&entry_dir)
+                .map_err(|error| format!("failed to create e2e entry artifact dir: {error}"))?;
+            fs::write(entry_dir.join("diagnostics.txt"), diagnostics_text)
+                .map_err(|error| format!("failed to write e2e diagnostics: {error}"))?;
+            fs::write(
+                entry_dir.join("diagnostics.fingerprint.txt"),
+                format!("{}\n", ail_artifact_fingerprint(diagnostics_text)),
+            )
+            .map_err(|error| format!("failed to write e2e diagnostics fingerprint: {error}"))?;
         }
     }
     Ok(())
