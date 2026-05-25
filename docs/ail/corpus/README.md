@@ -35,6 +35,8 @@ Directory contract:
 - `e2e/`: prompt-to-artifact examples that replay model or agent outputs
   through checked requirements or AIL-Spec, checked AIL-Core, bytecode,
   execution or target-contract artifacts, manifests, and fingerprints
+- `e2e/agents/`: Codex-style skill-agent contracts for `live-codex`
+  transcript evidence
 
 Corpus acceptance metrics:
 

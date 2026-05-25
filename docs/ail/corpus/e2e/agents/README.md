@@ -1,0 +1,48 @@
+# AIL E2E Codex Skill Agents
+
+This directory defines the Codex-style skill-agent executor labels that may be
+used by `ail-e2e-corpus` entries with `executor-family: codex-skill-agent`.
+They are evidence contracts, not trusted compilers.
+
+Each live Codex entry must store:
+
+- the agent contract file name and version in the request JSON
+- the exact user task, prompt-pack file, profile, package manifest, and input
+  artifact given to the agent
+- the raw Codex response JSON
+- the extracted deterministic AIL artifact accepted or rejected by replay
+- `capture-origin: live-codex`
+
+The trusted boundary stays unchanged: Codex may draft or repair an artifact,
+but only `ail-e2e-corpus` replay proves spec -> Core -> bytecode -> VM and
+target evidence.
+
+## Agent Contracts
+
+| executor-label | Contract | Primary output | Replay requirement |
+| --- | --- | --- | --- |
+| `codex-ail-requirements-writer` | `codex-ail-requirements-writer.md` | AIL-Requirements or blocking questions | prompt envelope validates, then requirements feed a checked spec path |
+| `codex-ail-spec-writer` | `codex-ail-spec-writer.md` | canonical AIL-Spec | parser, checker, Core lowering, bytecode, VM trace, and target evidence pass |
+| `codex-ail-diagnostic-repairer` | `codex-ail-diagnostic-repairer.md` | repaired AIL-Spec or rejected diagnostic explanation | repaired artifact passes or the expected diagnostic is reproduced |
+
+## Request JSON Shape
+
+```json
+{
+  "agent_contract": "docs/ail/corpus/e2e/agents/codex-ail-spec-writer.md",
+  "agent_contract_version": "0.1.0",
+  "executor_label": "codex-ail-spec-writer",
+  "codex_model": "codex-model-name",
+  "prompt_file": "docs/ail/prompts/spec-draft.system.md",
+  "prompt_version": "ail-prompts.v0.2",
+  "package": "examples/support_ticket.ail",
+  "profile": "Application",
+  "task": "Draft canonical AIL-Spec from checked requirements.",
+  "input": {}
+}
+```
+
+The response JSON must contain the exact text returned by Codex in `content` or
+`artifact_text`, or an OpenAI-compatible `choices[0].message.content` field.
+Replay extracts that text using the same stored-response rules as live LLM
+captures.

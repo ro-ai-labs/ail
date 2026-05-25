@@ -71,6 +71,8 @@ live LLM access. The current corpus stores:
 - `requests/`: stored prompt request transcripts.
 - `responses/`: stored model/agent response artifacts.
 - `inputs/`: schema-shaped prompt inputs used for live capture attempts.
+- `agents/`: Codex-style skill-agent executor contracts used by
+  `live-codex` transcript imports.
 
 This is a checked seed corpus with one replay-clean live LLM smoke capture, not
 final v0.2 release evidence. The current corpus marks 99 entries
