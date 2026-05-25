@@ -19778,6 +19778,49 @@ fn cli_ail_e2e_corpus_requires_100_examples() {
 }
 
 #[test]
+fn cli_ail_e2e_corpus_requires_replay_metadata() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let corpus_dir =
+        std::env::temp_dir().join(format!("ail-e2e-corpus-metadata-{}", std::process::id()));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-e2e-corpus-metadata-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&corpus_dir);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&corpus_dir).unwrap();
+    let mut corpus_text = String::new();
+    for index in 0..100 {
+        corpus_text.push_str(&format!("## End-To-End Example: example-{index}\n\n"));
+    }
+    fs::write(corpus_dir.join("examples.md"), corpus_text).unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-e2e-corpus",
+            corpus_dir.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("e2e corpus entry example-0 is missing semantic-task"),
+        "{stderr}"
+    );
+
+    let _ = fs::remove_dir_all(corpus_dir);
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
 fn cli_ail_build_agent_verifies_bytecode_artifact_after_compile() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");

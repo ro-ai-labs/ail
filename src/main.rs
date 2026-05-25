@@ -388,6 +388,13 @@ struct AilPromptCorpusEvaluation {
     checked_core_fingerprint: Option<String>,
 }
 
+#[derive(Debug, Clone)]
+struct AilE2eCorpusEntry {
+    id: String,
+    source_file: String,
+    fields: BTreeMap<String, String>,
+}
+
 struct AilBootstrapArtifactSet<'a> {
     target_name: &'a str,
     toolchain_source_manifest_text: &'a str,
@@ -1041,18 +1048,15 @@ fn run_ail_prompt_corpus_command(path: &str, cli_options: &CliOptions) -> Result
     Ok(0)
 }
 
-fn count_ail_e2e_corpus_examples(path: &std::path::Path) -> Result<usize, String> {
+fn load_ail_e2e_corpus_entries(path: &std::path::Path) -> Result<Vec<AilE2eCorpusEntry>, String> {
     if path.is_file() {
         let text = fs::read_to_string(path).map_err(|error| {
             format!("failed to read e2e corpus file {}: {error}", path.display())
         })?;
-        return Ok(text
-            .lines()
-            .filter(|line| line.starts_with("## End-To-End Example: "))
-            .count());
+        return parse_ail_e2e_corpus_entries(&path.to_string_lossy(), &text);
     }
 
-    let mut count = 0usize;
+    let mut entries = Vec::new();
     for entry in fs::read_dir(path)
         .map_err(|error| format!("failed to read e2e corpus dir {}: {error}", path.display()))?
     {
@@ -1060,28 +1064,143 @@ fn count_ail_e2e_corpus_examples(path: &std::path::Path) -> Result<usize, String
             entry.map_err(|error| format!("failed to read e2e corpus dir entry: {error}"))?;
         let entry_path = entry.path();
         if entry_path.is_dir() {
-            count += count_ail_e2e_corpus_examples(&entry_path)?;
+            entries.extend(load_ail_e2e_corpus_entries(&entry_path)?);
         } else if entry_path
             .extension()
             .is_some_and(|extension| extension == "md")
         {
-            count += count_ail_e2e_corpus_examples(&entry_path)?;
+            entries.extend(load_ail_e2e_corpus_entries(&entry_path)?);
         }
     }
-    Ok(count)
+    Ok(entries)
+}
+
+fn parse_ail_e2e_corpus_entries(
+    source_file: &str,
+    text: &str,
+) -> Result<Vec<AilE2eCorpusEntry>, String> {
+    let mut entries = Vec::new();
+    let mut current_id: Option<String> = None;
+    let mut current_fields = BTreeMap::<String, String>::new();
+    for line in text.lines() {
+        if let Some(id) = line.strip_prefix("## End-To-End Example: ") {
+            if let Some(entry_id) = current_id.take() {
+                entries.push(ail_e2e_corpus_entry_from_fields(
+                    source_file,
+                    entry_id,
+                    &current_fields,
+                )?);
+                current_fields.clear();
+            }
+            current_id = Some(id.trim().to_string());
+            continue;
+        }
+        if current_id.is_some()
+            && let Some((key, value)) = line.split_once(':')
+        {
+            let key = key.trim();
+            if !key.is_empty() && key.chars().all(|ch| ch.is_ascii_lowercase() || ch == '-') {
+                current_fields.insert(key.to_string(), value.trim().to_string());
+            }
+        }
+    }
+    if let Some(entry_id) = current_id.take() {
+        entries.push(ail_e2e_corpus_entry_from_fields(
+            source_file,
+            entry_id,
+            &current_fields,
+        )?);
+    }
+    Ok(entries)
+}
+
+fn ail_e2e_corpus_entry_from_fields(
+    source_file: &str,
+    id: String,
+    fields: &BTreeMap<String, String>,
+) -> Result<AilE2eCorpusEntry, String> {
+    for field in [
+        "semantic-task",
+        "profile",
+        "package",
+        "prompt-file",
+        "prompt-fingerprint",
+        "executor-family",
+        "executor-label",
+        "request-file",
+        "response-file",
+        "artifact-kind",
+        "checker-result",
+        "target",
+    ] {
+        if fields.get(field).is_none_or(|value| value.is_empty()) {
+            return Err(format!("e2e corpus entry {id} is missing {field}"));
+        }
+    }
+    Ok(AilE2eCorpusEntry {
+        id,
+        source_file: source_file.to_string(),
+        fields: fields.clone(),
+    })
+}
+
+fn render_ail_e2e_corpus_report(entries: &[AilE2eCorpusEntry]) -> String {
+    let mut lines = vec![
+        "AIL-End-To-End-Corpus-Report:".to_string(),
+        format!("entry-count {}", entries.len()),
+    ];
+    for entry in entries {
+        let semantic_task = entry
+            .fields
+            .get("semantic-task")
+            .map(String::as_str)
+            .unwrap_or("unknown");
+        let executor_family = entry
+            .fields
+            .get("executor-family")
+            .map(String::as_str)
+            .unwrap_or("unknown");
+        let target = entry
+            .fields
+            .get("target")
+            .map(String::as_str)
+            .unwrap_or("unknown");
+        lines.push(format!(
+            "entry {} source {} semantic-task {} executor-family {} target {}",
+            entry.id, entry.source_file, semantic_task, executor_family, target
+        ));
+    }
+    format!("{}\n", lines.join("\n"))
+}
+
+fn write_ail_e2e_corpus_artifacts(artifact_dir: &str, report_text: &str) -> Result<(), String> {
+    let root = std::path::Path::new(artifact_dir);
+    fs::create_dir_all(root)
+        .map_err(|error| format!("failed to create ail-e2e-corpus artifact dir: {error}"))?;
+    fs::write(root.join("e2e-corpus-report.txt"), report_text)
+        .map_err(|error| format!("failed to write e2e corpus report: {error}"))?;
+    fs::write(
+        root.join("e2e-corpus-report.fingerprint.txt"),
+        format!("{}\n", ail_artifact_fingerprint(report_text)),
+    )
+    .map_err(|error| format!("failed to write e2e corpus report fingerprint: {error}"))?;
+    Ok(())
 }
 
 fn run_ail_e2e_corpus_command(path: &str, cli_options: &CliOptions) -> Result<u8, String> {
-    let Some(_artifact_dir) = &cli_options.artifact_dir else {
+    let Some(artifact_dir) = &cli_options.artifact_dir else {
         return Err("ail-e2e-corpus requires --artifact-dir".to_string());
     };
-    let example_count = count_ail_e2e_corpus_examples(std::path::Path::new(path))?;
+    let entries = load_ail_e2e_corpus_entries(std::path::Path::new(path))?;
+    let example_count = entries.len();
     if example_count < 100 {
         return Err(format!(
             "ail-e2e-corpus requires at least 100 examples; found {example_count}"
         ));
     }
-    println!("ail-e2e-corpus examples {example_count}");
+    let report_text = render_ail_e2e_corpus_report(&entries);
+    write_ail_e2e_corpus_artifacts(artifact_dir, &report_text)?;
+    print!("{report_text}");
     Ok(0)
 }
 
