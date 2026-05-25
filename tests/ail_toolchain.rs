@@ -100,6 +100,11 @@ fn e2e_corpus_text_with_override(index_to_override: usize, overrides: &[(&str, &
 fn write_e2e_transcript_files(root: &std::path::Path, count: usize) {
     fs::create_dir_all(root.join("requests")).unwrap();
     fs::create_dir_all(root.join("responses")).unwrap();
+    let spec_text = fs::read_to_string(format!(
+        "{}/examples/support_ticket.ail/spec.ail-spec.md",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .unwrap();
     for index in 0..count {
         fs::write(
             root.join("requests").join(format!("example-{index}.json")),
@@ -108,7 +113,7 @@ fn write_e2e_transcript_files(root: &std::path::Path, count: usize) {
         .unwrap();
         fs::write(
             root.join("responses").join(format!("example-{index}.json")),
-            format!(r#"{{"artifact":"example-{index}"}}"#),
+            &spec_text,
         )
         .unwrap();
     }
@@ -20272,6 +20277,21 @@ fn cli_ail_e2e_corpus_writes_report_for_metadata_complete_corpus() {
     assert!(
         report.contains("executor-family codex-skill-agent"),
         "{report}"
+    );
+    let checked_core =
+        fs::read_to_string(artifact_dir.join("examples/example-0/checked.ail-core.txt")).unwrap();
+    assert!(
+        checked_core.contains("package: support-ticket")
+            && checked_core.contains("node Action CloseTicket"),
+        "{checked_core}"
+    );
+    let checked_core_fingerprint = fs::read_to_string(
+        artifact_dir.join("examples/example-0/checked.ail-core.fingerprint.txt"),
+    )
+    .unwrap();
+    assert_eq!(
+        checked_core_fingerprint.trim(),
+        fnv64_fingerprint(&checked_core)
     );
     let report_fingerprint =
         fs::read_to_string(artifact_dir.join("e2e-corpus-report.fingerprint.txt")).unwrap();

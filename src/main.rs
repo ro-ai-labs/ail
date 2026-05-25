@@ -395,6 +395,12 @@ struct AilE2eCorpusEntry {
     fields: BTreeMap<String, String>,
 }
 
+#[derive(Debug, Clone)]
+struct AilE2eCorpusEvaluation {
+    entry: AilE2eCorpusEntry,
+    checked_core_text: Option<String>,
+}
+
 struct AilBootstrapArtifactSet<'a> {
     target_name: &'a str,
     toolchain_source_manifest_text: &'a str,
@@ -1216,6 +1222,95 @@ fn validate_ail_e2e_corpus_transcript_files(entries: &[AilE2eCorpusEntry]) -> Re
     Ok(())
 }
 
+fn ail_e2e_entry_source_dir(entry: &AilE2eCorpusEntry) -> &std::path::Path {
+    std::path::Path::new(&entry.source_file)
+        .parent()
+        .unwrap_or_else(|| std::path::Path::new("."))
+}
+
+fn ail_e2e_entry_relative_path(entry: &AilE2eCorpusEntry, field: &str) -> Result<String, String> {
+    entry
+        .fields
+        .get(field)
+        .cloned()
+        .ok_or_else(|| format!("e2e corpus entry {} is missing {field}", entry.id))
+}
+
+fn ail_e2e_entry_resolved_path(
+    entry: &AilE2eCorpusEntry,
+    field: &str,
+) -> Result<std::path::PathBuf, String> {
+    Ok(ail_e2e_entry_source_dir(entry).join(ail_e2e_entry_relative_path(entry, field)?))
+}
+
+fn extract_ail_e2e_response_artifact_text(response_text: &str) -> String {
+    let trimmed = response_text.trim();
+    if let Some(fenced) = trimmed.strip_prefix("```") {
+        let without_language = match fenced.find('\n') {
+            Some(newline_index) => &fenced[newline_index + 1..],
+            None => fenced,
+        };
+        if let Some(end) = without_language.rfind("```") {
+            return without_language[..end].trim().to_string();
+        }
+    }
+    trimmed.to_string()
+}
+
+fn evaluate_ail_e2e_corpus_entry(
+    entry: &AilE2eCorpusEntry,
+) -> Result<AilE2eCorpusEvaluation, String> {
+    let checker_result = entry
+        .fields
+        .get("checker-result")
+        .map(String::as_str)
+        .unwrap_or_default();
+    if checker_result != "accepted" {
+        return Ok(AilE2eCorpusEvaluation {
+            entry: entry.clone(),
+            checked_core_text: None,
+        });
+    }
+    let artifact_kind = entry
+        .fields
+        .get("artifact-kind")
+        .map(String::as_str)
+        .unwrap_or_default();
+    if artifact_kind != "ail-spec" {
+        return Ok(AilE2eCorpusEvaluation {
+            entry: entry.clone(),
+            checked_core_text: None,
+        });
+    }
+    let package_path = entry
+        .fields
+        .get("package")
+        .ok_or_else(|| format!("e2e corpus entry {} is missing package", entry.id))?;
+    let response_path = ail_e2e_entry_resolved_path(entry, "response-file")?;
+    let response_text = fs::read_to_string(&response_path).map_err(|error| {
+        format!(
+            "failed to read e2e corpus response {}: {error}",
+            response_path.display()
+        )
+    })?;
+    let spec_text = extract_ail_e2e_response_artifact_text(&response_text);
+    let package = load_ail_package_dir(package_path)?;
+    let document = parse_ail_spec_text(&spec_text)?;
+    let core = elaborate_ail_core(&package, &document);
+    let diagnostics = check_ail_core(&core);
+    if !diagnostics.is_empty() {
+        return Err(format!(
+            "e2e corpus accepted entry {} has diagnostics:\n{}",
+            entry.id,
+            diagnostics.join("\n")
+        ));
+    }
+    Ok(AilE2eCorpusEvaluation {
+        entry: entry.clone(),
+        checked_core_text: Some(render_ail_core(&core)),
+    })
+}
+
 fn render_ail_e2e_corpus_report(entries: &[AilE2eCorpusEntry]) -> String {
     let mut lines = vec![
         "AIL-End-To-End-Corpus-Report:".to_string(),
@@ -1282,7 +1377,11 @@ fn validate_ail_e2e_corpus_release_coverage(entries: &[AilE2eCorpusEntry]) -> Re
     Ok(())
 }
 
-fn write_ail_e2e_corpus_artifacts(artifact_dir: &str, report_text: &str) -> Result<(), String> {
+fn write_ail_e2e_corpus_artifacts(
+    artifact_dir: &str,
+    report_text: &str,
+    evaluations: &[AilE2eCorpusEvaluation],
+) -> Result<(), String> {
     let root = std::path::Path::new(artifact_dir);
     fs::create_dir_all(root)
         .map_err(|error| format!("failed to create ail-e2e-corpus artifact dir: {error}"))?;
@@ -1293,6 +1392,20 @@ fn write_ail_e2e_corpus_artifacts(artifact_dir: &str, report_text: &str) -> Resu
         format!("{}\n", ail_artifact_fingerprint(report_text)),
     )
     .map_err(|error| format!("failed to write e2e corpus report fingerprint: {error}"))?;
+    for evaluation in evaluations {
+        if let Some(core_text) = &evaluation.checked_core_text {
+            let entry_dir = root.join("examples").join(&evaluation.entry.id);
+            fs::create_dir_all(&entry_dir)
+                .map_err(|error| format!("failed to create e2e entry artifact dir: {error}"))?;
+            fs::write(entry_dir.join("checked.ail-core.txt"), core_text)
+                .map_err(|error| format!("failed to write e2e checked core: {error}"))?;
+            fs::write(
+                entry_dir.join("checked.ail-core.fingerprint.txt"),
+                format!("{}\n", ail_artifact_fingerprint(core_text)),
+            )
+            .map_err(|error| format!("failed to write e2e checked core fingerprint: {error}"))?;
+        }
+    }
     Ok(())
 }
 
@@ -1309,8 +1422,12 @@ fn run_ail_e2e_corpus_command(path: &str, cli_options: &CliOptions) -> Result<u8
     }
     validate_ail_e2e_corpus_release_coverage(&entries)?;
     validate_ail_e2e_corpus_transcript_files(&entries)?;
+    let mut evaluations = Vec::new();
+    for entry in &entries {
+        evaluations.push(evaluate_ail_e2e_corpus_entry(entry)?);
+    }
     let report_text = render_ail_e2e_corpus_report(&entries);
-    write_ail_e2e_corpus_artifacts(artifact_dir, &report_text)?;
+    write_ail_e2e_corpus_artifacts(artifact_dir, &report_text, &evaluations)?;
     print!("{report_text}");
     Ok(0)
 }
