@@ -1580,6 +1580,25 @@ fn validate_ail_e2e_corpus_release_coverage(entries: &[AilE2eCorpusEntry]) -> Re
             ));
         }
     }
+    let mut profile_counts = BTreeMap::new();
+    for entry in entries {
+        if let Some(profile) = entry.fields.get("profile") {
+            *profile_counts.entry(profile.as_str()).or_insert(0usize) += 1;
+        }
+    }
+    for (required_profile, required_count) in [
+        ("Application", 40usize),
+        ("AgentTool", 15usize),
+        ("Compiler", 10usize),
+        ("System", 10usize),
+    ] {
+        let found = profile_counts.get(required_profile).copied().unwrap_or(0);
+        if found < required_count {
+            return Err(format!(
+                "ail-e2e-corpus requires at least {required_count} profile {required_profile} examples; found {found}"
+            ));
+        }
+    }
     Ok(())
 }
 

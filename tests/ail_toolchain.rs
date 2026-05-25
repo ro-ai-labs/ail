@@ -54,6 +54,12 @@ fn e2e_corpus_entry_text(index: usize, overrides: &[(&str, &str)]) -> String {
         "docs/ail/prompts/interop.system.md",
     ];
     let prompt_file = prompt_files[index % prompt_files.len()];
+    let profile = match index {
+        0..=39 => "Application",
+        40..=54 => "AgentTool",
+        55..=64 => "Compiler",
+        _ => "System",
+    };
     let executor_family = if index == 99 {
         "codex-skill-agent"
     } else {
@@ -61,7 +67,7 @@ fn e2e_corpus_entry_text(index: usize, overrides: &[(&str, &str)]) -> String {
     };
     let mut fields = BTreeMap::from([
         ("semantic-task", format!("support-ticket-{index}")),
-        ("profile", "Application".to_string()),
+        ("profile", profile.to_string()),
         ("package", "examples/support_ticket.ail".to_string()),
         ("prompt-file", prompt_file.to_string()),
         ("prompt-version", "ail-prompts.v0.2".to_string()),
@@ -20294,6 +20300,51 @@ fn cli_ail_e2e_corpus_requires_full_prompt_pack_coverage() {
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
         stderr.contains("ail-e2e-corpus requires prompt-file docs/ail/prompts/interview.system.md"),
+        "{stderr}"
+    );
+
+    let _ = fs::remove_dir_all(corpus_dir);
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
+fn cli_ail_e2e_corpus_requires_profile_thresholds() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let corpus_dir = std::env::temp_dir().join(format!(
+        "ail-e2e-corpus-profile-coverage-{}",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-e2e-corpus-profile-coverage-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&corpus_dir);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&corpus_dir).unwrap();
+    let mut corpus_text = String::new();
+    for index in 0..100 {
+        corpus_text.push_str(&e2e_corpus_entry_text(index, &[("profile", "Application")]));
+    }
+    fs::write(corpus_dir.join("examples.md"), corpus_text).unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-e2e-corpus",
+            corpus_dir.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("ail-e2e-corpus requires at least 15 profile AgentTool examples; found 0"),
         "{stderr}"
     );
 
