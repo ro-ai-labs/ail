@@ -1068,23 +1068,22 @@ runtime-state: order.id=O-1;payment.captured=true;refund.amount=100
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-55
-semantic-task: compiler-pass-55
+semantic-task: compiler-pass-live-codex-core-to-spec-55
 profile: Compiler
 surface-tags: core
 package: examples/compiler_pass.ail
 prompt-file: docs/ail/prompts/core-to-spec.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:9f447e07620792b2
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-55.json
-response-file: responses/example-55.ail-spec.md
+response-file: responses/example-55.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
 vm-action: InferReadPermissions
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-56
 semantic-task: compiler-pass-56
@@ -1438,24 +1437,23 @@ checker-result: accepted
 target: linux-x86_64-elf
 
 ## End-To-End Example: example-75
-semantic-task: secret-access-75
+semantic-task: secret-access-live-codex-core-to-spec-75
 profile: System
 surface-tags: core
 package: examples/secret_access.ail
 prompt-file: docs/ail/prompts/core-to-spec.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:9f447e07620792b2
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-75.json
-response-file: responses/example-75.ail-spec.md
+response-file: responses/example-75.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
 vm-action: ViewInternalNotes
 runtime-state: ticket.id=T-1;requester.role=SupportAgent
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-76
 semantic-task: secret-access-76
@@ -1538,24 +1536,23 @@ runtime-state: ticket.id=T-1;requester.role=SupportAgent
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-80
-semantic-task: repeated-task-80
+semantic-task: repeated-task-live-codex-interview-80
 profile: System
 surface-tags: core
 package: examples/repeated_task.ail
 prompt-file: docs/ail/prompts/interview.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-80.json
-response-file: responses/example-80.ail-spec.md
+response-file: responses/example-80.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
 vm-action: RunMaintenanceCycle
 runtime-state: counter.value=0
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-81
 semantic-task: repeated-task-81

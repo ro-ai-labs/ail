@@ -19897,7 +19897,7 @@ fn cli_ail_e2e_corpus_replays_checked_seed_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("capture-origin-count deterministic-seed 92"),
+        report.contains("capture-origin-count deterministic-seed 89"),
         "{report}"
     );
     assert!(
@@ -19905,7 +19905,7 @@ fn cli_ail_e2e_corpus_replays_checked_seed_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("capture-origin-count live-codex 5"),
+        report.contains("capture-origin-count live-codex 8"),
         "{report}"
     );
     assert!(
@@ -19953,6 +19953,24 @@ fn cli_ail_e2e_corpus_replays_checked_seed_corpus() {
     assert!(
         report.contains("entry example-74")
             && report.contains("semantic-task network-driver-live-codex-diagnostic-repair-74")
+            && report.contains("capture-origin live-codex"),
+        "{report}"
+    );
+    assert!(
+        report.contains("entry example-55")
+            && report.contains("semantic-task compiler-pass-live-codex-core-to-spec-55")
+            && report.contains("capture-origin live-codex"),
+        "{report}"
+    );
+    assert!(
+        report.contains("entry example-75")
+            && report.contains("semantic-task secret-access-live-codex-core-to-spec-75")
+            && report.contains("capture-origin live-codex"),
+        "{report}"
+    );
+    assert!(
+        report.contains("entry example-80")
+            && report.contains("semantic-task repeated-task-live-codex-interview-80")
             && report.contains("capture-origin live-codex"),
         "{report}"
     );
@@ -20016,7 +20034,7 @@ fn cli_ail_e2e_corpus_release_evidence_rejects_deterministic_seed_corpus() {
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
         stderr.contains(
-            "ail-e2e-corpus --release-evidence requires zero deterministic-seed entries; found 92"
+            "ail-e2e-corpus --release-evidence requires zero deterministic-seed entries; found 89"
         ),
         "{stderr}"
     );
