@@ -71,6 +71,18 @@ End-to-end release corpus entries are checked offline with:
 cargo run -- ail-e2e-corpus docs/ail/corpus/e2e --artifact-dir /tmp/ail-e2e-corpus
 ```
 
+Seed replay uses the default mode above. Final v0.2 release evidence must use
+the stricter release mode:
+
+```bash
+cargo run -- ail-e2e-corpus docs/ail/corpus/e2e --artifact-dir /tmp/ail-e2e-corpus --release-evidence
+```
+
+`--release-evidence` refuses deterministic seed entries and requires both
+`live-llm` and `live-codex` capture origins. This keeps the checked seed corpus
+useful for verifier development without letting it satisfy the live
+prompt-to-artifact release gate.
+
 To capture live LLM evidence without changing the offline replay contract, copy
 the seed corpus and replace one entry with a stored HTTP completion transcript:
 

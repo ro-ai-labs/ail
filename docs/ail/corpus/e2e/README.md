@@ -65,3 +65,14 @@ Replay with:
 ```sh
 cargo run -- ail-e2e-corpus docs/ail/corpus/e2e --artifact-dir /tmp/ail-e2e-seed-artifacts
 ```
+
+Final release replay adds the strict evidence switch:
+
+```sh
+cargo run -- ail-e2e-corpus docs/ail/corpus/e2e --artifact-dir /tmp/ail-e2e-release-artifacts --release-evidence
+```
+
+That mode requires all counted entries to come from stored live captures and
+requires both `live-llm` and `live-codex` origins. The current deterministic
+seed corpus is expected to fail that stricter command until broad live
+transcripts replace the seed entries.

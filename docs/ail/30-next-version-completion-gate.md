@@ -343,7 +343,9 @@ cargo test cli_ail_e2e_corpus_requires_target_thresholds
 cargo test cli_ail_e2e_corpus_replays_imported_package_specs
 cargo test cli_ail_e2e_corpus_replays_ui_profile_specs
 cargo test cli_ail_e2e_corpus_replays_rejected_prompt_failures
-cargo run -- ail-e2e-corpus docs/ail/corpus/e2e --artifact-dir /tmp/ail-v02-e2e-corpus
+cargo test cli_ail_e2e_corpus_release_evidence_rejects_deterministic_seed_corpus
+cargo test cli_ail_e2e_corpus_release_evidence_requires_live_codex_for_codex_executor
+cargo run -- ail-e2e-corpus docs/ail/corpus/e2e --artifact-dir /tmp/ail-v02-e2e-corpus --release-evidence
 ```
 
 ### 7. Diagnostics And Governance Coverage
@@ -394,7 +396,7 @@ cargo run -- ail-compile examples/c_interop.ail --target wasm32-unknown-sandbox-
 cargo run -- ail-compile examples/support_ticket.ail --target aarch64-apple-darwin-libsystem-macho --action CloseTicket --artifact-dir /tmp/ail-v02-darwin-contract
 cargo run -- ail-spec --core-file /tmp/ail-v02-build-support/checked.ail-core.txt --artifact-dir /tmp/ail-v02-spec-roundtrip
 cargo run -- ail-bootstrap examples/ail_toolchain_agent.ail --pass examples/compiler_pass.ail --agent examples/ail_toolchain_agent.ail --target linux-x86_64-elf --artifact-dir /tmp/ail-v02-bootstrap
-cargo run -- ail-e2e-corpus docs/ail/corpus/e2e --artifact-dir /tmp/ail-v02-e2e-corpus
+cargo run -- ail-e2e-corpus docs/ail/corpus/e2e --artifact-dir /tmp/ail-v02-e2e-corpus --release-evidence
 ```
 
 The release audit fails if any command fails, if a named command does not

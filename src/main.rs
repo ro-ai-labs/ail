@@ -38,6 +38,7 @@ struct CliOptions {
     ail_compile_out: Option<String>,
     ail_compile_all_actions: bool,
     diagnostics_json: bool,
+    release_evidence: bool,
 }
 
 struct AilInterviewArtifactSet<'a> {
@@ -117,7 +118,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
 }
 
 fn usage() -> String {
-    "usage: ail <ail-check|ail-core|ail-flow|ail-flow-edit|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-interview|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-bootstrap|ail-prompt-corpus|ail-e2e-corpus|ail-patch> <path> [patch|target-package] [--action name] [--prompt text] [--interview-file path] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--base-model name] [--target-model name] [--out path] [--all-actions] [--diagnostics-json] [--artifact-dir path] [--llm-endpoint url] [key=value ...]\nsaved-core usage: ail <ail-spec|ail-lower|ail-compile|ail-run|ail-build> --core-file <checked-core> [--action name] [--target target] [--out path] [--artifact-dir path] [key=value ...]\nwasm-contract usage: ail ail-compile <package-or-artifact.ailbc.json> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir> OR ail ail-compile --core-file <checked-core> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir>\ncore-patch usage: ail ail-patch --core-file <checked-core> <ail-core.patch.json>\nflow-edit usage: ail ail-flow-edit --core-file <checked-core> <ail-flow.edit.json>\nail-pass usage: ail ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR ail ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]\nail-bootstrap usage: ail ail-bootstrap <toolchain-agent-package> --pass <compiler-pass-package> --agent <toolchain-agent-package> --target linux-x86_64-elf --artifact-dir <dir>\nail-prompt-corpus usage: ail ail-prompt-corpus <corpus-file-or-dir> --artifact-dir <dir>\nail-e2e-corpus usage: ail ail-e2e-corpus <corpus-dir> --artifact-dir <dir>"
+    "usage: ail <ail-check|ail-core|ail-flow|ail-flow-edit|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-interview|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-bootstrap|ail-prompt-corpus|ail-e2e-corpus|ail-patch> <path> [patch|target-package] [--action name] [--prompt text] [--interview-file path] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--base-model name] [--target-model name] [--out path] [--all-actions] [--diagnostics-json] [--artifact-dir path] [--llm-endpoint url] [--release-evidence] [key=value ...]\nsaved-core usage: ail <ail-spec|ail-lower|ail-compile|ail-run|ail-build> --core-file <checked-core> [--action name] [--target target] [--out path] [--artifact-dir path] [key=value ...]\nwasm-contract usage: ail ail-compile <package-or-artifact.ailbc.json> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir> OR ail ail-compile --core-file <checked-core> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir>\ncore-patch usage: ail ail-patch --core-file <checked-core> <ail-core.patch.json>\nflow-edit usage: ail ail-flow-edit --core-file <checked-core> <ail-flow.edit.json>\nail-pass usage: ail ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR ail ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]\nail-bootstrap usage: ail ail-bootstrap <toolchain-agent-package> --pass <compiler-pass-package> --agent <toolchain-agent-package> --target linux-x86_64-elf --artifact-dir <dir>\nail-prompt-corpus usage: ail ail-prompt-corpus <corpus-file-or-dir> --artifact-dir <dir>\nail-e2e-corpus usage: ail ail-e2e-corpus <corpus-dir> --artifact-dir <dir> [--release-evidence]"
         .to_string()
 }
 
@@ -2145,6 +2146,65 @@ fn validate_ail_e2e_corpus_release_coverage(entries: &[AilE2eCorpusEntry]) -> Re
     Ok(())
 }
 
+fn validate_ail_e2e_corpus_live_release_evidence(
+    entries: &[AilE2eCorpusEntry],
+) -> Result<(), String> {
+    let mut capture_origin_counts = BTreeMap::new();
+    for entry in entries {
+        if let Some(capture_origin) = entry.fields.get("capture-origin") {
+            *capture_origin_counts
+                .entry(capture_origin.as_str())
+                .or_insert(0usize) += 1;
+        }
+    }
+    let deterministic_seed_count = capture_origin_counts
+        .get("deterministic-seed")
+        .copied()
+        .unwrap_or(0);
+    if deterministic_seed_count > 0 {
+        return Err(format!(
+            "ail-e2e-corpus --release-evidence requires zero deterministic-seed entries; found {deterministic_seed_count}"
+        ));
+    }
+    for entry in entries {
+        let executor_family = entry
+            .fields
+            .get("executor-family")
+            .map(String::as_str)
+            .unwrap_or_default();
+        let capture_origin = entry
+            .fields
+            .get("capture-origin")
+            .map(String::as_str)
+            .unwrap_or_default();
+        if executor_family == "llm-http" && capture_origin != "live-llm" {
+            return Err(format!(
+                "ail-e2e-corpus --release-evidence llm-http entry {} must use capture-origin live-llm",
+                entry.id
+            ));
+        }
+        if executor_family == "codex-skill-agent" && capture_origin != "live-codex" {
+            return Err(format!(
+                "ail-e2e-corpus --release-evidence codex-skill-agent entry {} must use capture-origin live-codex",
+                entry.id
+            ));
+        }
+    }
+    for required_capture_origin in ["live-llm", "live-codex"] {
+        if capture_origin_counts
+            .get(required_capture_origin)
+            .copied()
+            .unwrap_or(0)
+            == 0
+        {
+            return Err(format!(
+                "ail-e2e-corpus --release-evidence requires capture-origin {required_capture_origin}"
+            ));
+        }
+    }
+    Ok(())
+}
+
 fn write_ail_e2e_corpus_artifacts(
     artifact_dir: &str,
     report_text: &str,
@@ -2302,6 +2362,9 @@ fn run_ail_e2e_corpus_command(path: &str, cli_options: &CliOptions) -> Result<u8
         ));
     }
     validate_ail_e2e_corpus_release_coverage(&entries)?;
+    if cli_options.release_evidence {
+        validate_ail_e2e_corpus_live_release_evidence(&entries)?;
+    }
     validate_ail_e2e_corpus_transcript_files(&entries)?;
     let mut evaluations = Vec::new();
     for entry in &entries {
@@ -10548,6 +10611,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
     let mut ail_compile_out = None;
     let mut ail_compile_all_actions = false;
     let mut diagnostics_json = false;
+    let mut release_evidence = false;
     let mut index = 0;
 
     if command == "ail-patch" && args.get(index).is_none_or(|arg| arg != "--core-file") {
@@ -10778,6 +10842,14 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
             index += 1;
             continue;
         }
+        if arg == "--release-evidence" {
+            if command != "ail-e2e-corpus" {
+                return Err(usage());
+            }
+            release_evidence = true;
+            index += 1;
+            continue;
+        }
         if arg == "--artifact-dir" {
             if !matches!(
                 command,
@@ -10924,6 +10996,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         ail_compile_out,
         ail_compile_all_actions,
         diagnostics_json,
+        release_evidence,
     })
 }
 
