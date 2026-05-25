@@ -1,0 +1,5 @@
+{
+  "agent": "codex-ail-spec-writer",
+  "content": "# Secret Access AIL-Spec Example\n\nThe application Secret Access manages restricted internal notes.\n\nA Requester has:\n\n- id: Text\n- role: State<Customer, SupportAgent, SupportManager>\n\nA Ticket has:\n\n- id: Text\n- internal notes: Secret<List<Text>>\n\nAction: View internal notes.\n\nWhen a requester views internal notes:\n\n- the system requires the ticket to exist\n- the system requires the requester role to be SupportAgent or SupportManager\n- the system reads ticket internal notes\n- the system does not reveal internal notes to the customer\n- the system guarantees only support staff can see internal notes\n- the system records a trace event named InternalNotesViewedScenario076\n\nFailure PermissionDenied happens when requester role is not SupportAgent or SupportManager:\n\n- the caller sees \"Permission denied\"\n- the trace records InternalNotesDeniedScenario076",
+  "model": "codex-subagent-default"
+}
