@@ -398,6 +398,9 @@ struct AilE2eCorpusEntry {
 #[derive(Debug, Clone)]
 struct AilE2eCorpusEvaluation {
     entry: AilE2eCorpusEntry,
+    request_fingerprint: Option<String>,
+    response_fingerprint: Option<String>,
+    extracted_artifact_fingerprint: Option<String>,
     checked_core_text: Option<String>,
     bytecode_text: Option<String>,
     native_executables: Vec<AilNativeArtifact>,
@@ -1286,6 +1289,9 @@ fn evaluate_ail_e2e_corpus_entry(
     if checker_result != "accepted" {
         return Ok(AilE2eCorpusEvaluation {
             entry: entry.clone(),
+            request_fingerprint: None,
+            response_fingerprint: None,
+            extracted_artifact_fingerprint: None,
             checked_core_text: None,
             bytecode_text: None,
             native_executables: Vec::new(),
@@ -1299,6 +1305,9 @@ fn evaluate_ail_e2e_corpus_entry(
     if artifact_kind != "ail-spec" {
         return Ok(AilE2eCorpusEvaluation {
             entry: entry.clone(),
+            request_fingerprint: None,
+            response_fingerprint: None,
+            extracted_artifact_fingerprint: None,
             checked_core_text: None,
             bytecode_text: None,
             native_executables: Vec::new(),
@@ -1308,6 +1317,13 @@ fn evaluate_ail_e2e_corpus_entry(
         .fields
         .get("package")
         .ok_or_else(|| format!("e2e corpus entry {} is missing package", entry.id))?;
+    let request_path = ail_e2e_entry_resolved_path(entry, "request-file")?;
+    let request_text = fs::read_to_string(&request_path).map_err(|error| {
+        format!(
+            "failed to read e2e corpus request {}: {error}",
+            request_path.display()
+        )
+    })?;
     let response_path = ail_e2e_entry_resolved_path(entry, "response-file")?;
     let response_text = fs::read_to_string(&response_path).map_err(|error| {
         format!(
@@ -1348,6 +1364,9 @@ fn evaluate_ail_e2e_corpus_entry(
     };
     Ok(AilE2eCorpusEvaluation {
         entry: entry.clone(),
+        request_fingerprint: Some(ail_artifact_fingerprint(&request_text)),
+        response_fingerprint: Some(ail_artifact_fingerprint(&response_text)),
+        extracted_artifact_fingerprint: Some(ail_artifact_fingerprint(&spec_text)),
         checked_core_text: Some(render_ail_core(&core)),
         bytecode_text: Some(format!("{}\n", render_ail_bytecode(&bytecode))),
         native_executables,
@@ -1380,6 +1399,24 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
             "entry {} source {} semantic-task {} executor-family {} target {}",
             entry.id, entry.source_file, semantic_task, executor_family, target
         ));
+        if let Some(request_fingerprint) = &evaluation.request_fingerprint {
+            lines.push(format!(
+                "entry-artifact {} request examples/{}/request.fingerprint.txt {}",
+                entry.id, entry.id, request_fingerprint
+            ));
+        }
+        if let Some(response_fingerprint) = &evaluation.response_fingerprint {
+            lines.push(format!(
+                "entry-artifact {} response examples/{}/response.fingerprint.txt {}",
+                entry.id, entry.id, response_fingerprint
+            ));
+        }
+        if let Some(extracted_artifact_fingerprint) = &evaluation.extracted_artifact_fingerprint {
+            lines.push(format!(
+                "entry-artifact {} extracted-artifact examples/{}/artifact.fingerprint.txt {}",
+                entry.id, entry.id, extracted_artifact_fingerprint
+            ));
+        }
         if let Some(core_text) = &evaluation.checked_core_text {
             lines.push(format!(
                 "entry-artifact {} checked-core examples/{}/checked.ail-core.txt {}",
@@ -1473,6 +1510,38 @@ fn write_ail_e2e_corpus_artifacts(
     )
     .map_err(|error| format!("failed to write e2e corpus report fingerprint: {error}"))?;
     for evaluation in evaluations {
+        if evaluation.request_fingerprint.is_some()
+            || evaluation.response_fingerprint.is_some()
+            || evaluation.extracted_artifact_fingerprint.is_some()
+        {
+            let entry_dir = root.join("examples").join(&evaluation.entry.id);
+            fs::create_dir_all(&entry_dir)
+                .map_err(|error| format!("failed to create e2e entry artifact dir: {error}"))?;
+            if let Some(request_fingerprint) = &evaluation.request_fingerprint {
+                fs::write(
+                    entry_dir.join("request.fingerprint.txt"),
+                    format!("{request_fingerprint}\n"),
+                )
+                .map_err(|error| format!("failed to write e2e request fingerprint: {error}"))?;
+            }
+            if let Some(response_fingerprint) = &evaluation.response_fingerprint {
+                fs::write(
+                    entry_dir.join("response.fingerprint.txt"),
+                    format!("{response_fingerprint}\n"),
+                )
+                .map_err(|error| format!("failed to write e2e response fingerprint: {error}"))?;
+            }
+            if let Some(extracted_artifact_fingerprint) = &evaluation.extracted_artifact_fingerprint
+            {
+                fs::write(
+                    entry_dir.join("artifact.fingerprint.txt"),
+                    format!("{extracted_artifact_fingerprint}\n"),
+                )
+                .map_err(|error| {
+                    format!("failed to write e2e extracted artifact fingerprint: {error}")
+                })?;
+            }
+        }
         if let Some(core_text) = &evaluation.checked_core_text {
             let entry_dir = root.join("examples").join(&evaluation.entry.id);
             fs::create_dir_all(&entry_dir)

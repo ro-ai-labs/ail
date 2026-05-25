@@ -20475,6 +20475,31 @@ fn cli_ail_e2e_corpus_writes_report_for_metadata_complete_corpus() {
         report.contains("executor-family codex-skill-agent"),
         "{report}"
     );
+    let request_transcript =
+        fs::read_to_string(corpus_dir.join("requests/example-0.json")).unwrap();
+    let request_fingerprint =
+        fs::read_to_string(artifact_dir.join("examples/example-0/request.fingerprint.txt"))
+            .unwrap();
+    assert_eq!(
+        request_fingerprint.trim(),
+        fnv64_fingerprint(&request_transcript)
+    );
+    let response_transcript =
+        fs::read_to_string(corpus_dir.join("responses/example-0.json")).unwrap();
+    let response_fingerprint =
+        fs::read_to_string(artifact_dir.join("examples/example-0/response.fingerprint.txt"))
+            .unwrap();
+    assert_eq!(
+        response_fingerprint.trim(),
+        fnv64_fingerprint(&response_transcript)
+    );
+    let extracted_artifact_fingerprint =
+        fs::read_to_string(artifact_dir.join("examples/example-0/artifact.fingerprint.txt"))
+            .unwrap();
+    assert_eq!(
+        extracted_artifact_fingerprint.trim(),
+        fnv64_fingerprint(response_transcript.trim())
+    );
     let checked_core =
         fs::read_to_string(artifact_dir.join("examples/example-0/checked.ail-core.txt")).unwrap();
     assert!(
@@ -20516,6 +20541,27 @@ fn cli_ail_e2e_corpus_writes_report_for_metadata_complete_corpus() {
     assert_eq!(
         native_fingerprint.trim(),
         fnv64_fingerprint_bytes(&native_artifact)
+    );
+    assert!(
+        report.contains(&format!(
+            "entry-artifact example-0 request examples/example-0/request.fingerprint.txt {}",
+            request_fingerprint.trim()
+        )),
+        "{report}"
+    );
+    assert!(
+        report.contains(&format!(
+            "entry-artifact example-0 response examples/example-0/response.fingerprint.txt {}",
+            response_fingerprint.trim()
+        )),
+        "{report}"
+    );
+    assert!(
+        report.contains(&format!(
+            "entry-artifact example-0 extracted-artifact examples/example-0/artifact.fingerprint.txt {}",
+            extracted_artifact_fingerprint.trim()
+        )),
+        "{report}"
     );
     assert!(
         report.contains(&format!(
