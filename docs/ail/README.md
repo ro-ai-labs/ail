@@ -92,6 +92,7 @@ one of these version surfaces or add a versioned surface through
 - `examples/compiler-pass.ail-core.md`
 - `../../examples/network_driver.ail/spec.ail-spec.md`
 - `examples/network-driver.ail-core.md`
+- `../../examples/stateful_counter.ail/spec.ail-spec.md`
 - `25-example-inventory.md`
 
 ## Versioned Assets

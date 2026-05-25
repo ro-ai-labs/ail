@@ -141,6 +141,7 @@ AIL packages live under [examples](examples):
 - `refund_tool.ail`
 - `secret_access.ail`
 - `runtime_generic.ail`
+- `stateful_counter.ail`
 - `network_driver.ail`
 - `compiler_pass.ail`
 - `ail_toolchain_agent.ail`

@@ -8702,7 +8702,12 @@ fn compile_ail_action_bytecode(document: &AilDocument, action: &AilAction) -> Ai
         ));
     }
     for write in &action.writes {
-        if let Some((key, value)) = field_write_assignment(document, write) {
+        if let Some((key, delta)) = field_integer_delta_assignment(document, write) {
+            instructions.push(AilBytecodeInstruction::new(
+                "ADD_INT_FIELD",
+                &[("key", key), ("delta", delta), ("text", write.clone())],
+            ));
+        } else if let Some((key, value)) = field_write_assignment(document, write) {
             instructions.push(AilBytecodeInstruction::new(
                 "SET_FIELD",
                 &[("key", key), ("value", value), ("text", write.clone())],
@@ -12425,6 +12430,22 @@ fn field_write_assignment(document: &AilDocument, write: &str) -> Option<(String
         .or_else(|| field_write_with_assignment(document, write))
 }
 
+fn field_integer_delta_assignment(document: &AilDocument, write: &str) -> Option<(String, String)> {
+    let (sign, rest) = write
+        .strip_prefix("increments ")
+        .map(|rest| (1_i64, rest))
+        .or_else(|| write.strip_prefix("decrements ").map(|rest| (-1_i64, rest)))?;
+    let (field_text, delta_text) = rest.rsplit_once(" by ")?;
+    let key = referenced_runtime_field_key(document, field_text.trim_start_matches("the "))?;
+    let delta = delta_text
+        .split(|ch: char| !ch.is_ascii_digit() && ch != '-')
+        .next()
+        .unwrap_or("")
+        .parse::<i64>()
+        .ok()?;
+    Some((key, (sign * delta).to_string()))
+}
+
 fn field_write_to_assignment(document: &AilDocument, write: &str) -> Option<(String, String)> {
     let marker = " to ";
     let (field_text, value) = write.rsplit_once(marker)?;
@@ -15714,6 +15735,14 @@ fn parse_action_bullet(document: &mut AilDocument, action_name: &str, bullet: &s
         action.reads.push(trim_sentence(text));
     } else if let Some(text) = bullet.strip_prefix("the system changes ") {
         action.writes.push(trim_sentence(text));
+    } else if let Some(text) = bullet.strip_prefix("the system increments ") {
+        action
+            .writes
+            .push(format!("increments {}", trim_sentence(text)));
+    } else if let Some(text) = bullet.strip_prefix("the system decrements ") {
+        action
+            .writes
+            .push(format!("decrements {}", trim_sentence(text)));
     } else if let Some(text) = bullet.strip_prefix("the system creates ") {
         action.writes.push(trim_sentence(text));
     } else if let Some(text) = bullet.strip_prefix("the system calls ") {

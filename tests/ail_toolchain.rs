@@ -4527,6 +4527,48 @@ When resolve ticket happens:
 }
 
 #[test]
+fn ail_spec_lowers_stateful_counter_increment_to_integer_bytecode() {
+    let package = load_ail_package_dir(fixture("stateful_counter.ail")).unwrap();
+    let document = parse_ail_package_document(&package).unwrap();
+    let core = elaborate_ail_core(&package, &document);
+    assert_eq!(check_ail_core(&core), Vec::<String>::new());
+
+    let bytecode = compile_ail_core_bytecode(&core).unwrap();
+    assert_eq!(verify_ail_bytecode(&bytecode), Vec::<String>::new());
+    let rendered = render_ail_bytecode(&bytecode);
+    assert!(
+        rendered.contains(r#""opcode":"ADD_INT_FIELD""#),
+        "{rendered}"
+    );
+    assert!(rendered.contains(r#""key":"counter.value""#), "{rendered}");
+    assert!(rendered.contains(r#""delta":"1""#), "{rendered}");
+
+    let run = run_ail_bytecode_action(
+        &bytecode,
+        "IncrementCounter",
+        BTreeMap::from([("counter.value".to_string(), "41".to_string())]),
+    )
+    .unwrap();
+
+    assert_eq!(run.status, "succeeded");
+    assert_eq!(
+        run.final_state.get("counter.value").map(String::as_str),
+        Some("42")
+    );
+    assert!(
+        run.trace
+            .contains(&"add counter.value by 1 -> 42".to_string()),
+        "{:?}",
+        run.trace
+    );
+    assert!(
+        run.trace.contains(&"trace CounterIncremented".to_string()),
+        "{:?}",
+        run.trace
+    );
+}
+
+#[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn ail_native_elf_executes_bytecode_action_call_control_flow() {
     use std::os::unix::fs::PermissionsExt;
