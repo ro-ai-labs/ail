@@ -73,6 +73,11 @@ fn e2e_corpus_entry_text(index: usize, overrides: &[(&str, &str)]) -> String {
         ("artifact-kind", "ail-spec".to_string()),
         ("checker-result", "accepted".to_string()),
         ("target", "linux-x86_64-elf".to_string()),
+        ("vm-action", "CloseTicket".to_string()),
+        (
+            "runtime-state",
+            "ticket.id=T-1;ticket.status=Open".to_string(),
+        ),
     ]);
     if executor_family == "llm-http" {
         fields.insert("endpoint-label", "local-endpoint".to_string());
@@ -20531,6 +20536,16 @@ fn cli_ail_e2e_corpus_writes_report_for_metadata_complete_corpus() {
         bytecode_fingerprint.trim(),
         fnv64_fingerprint(&bytecode_artifact)
     );
+    let vm_trace =
+        fs::read_to_string(artifact_dir.join("examples/example-0/vm-trace.txt")).unwrap();
+    assert!(
+        vm_trace.contains("action CloseTicket started") && vm_trace.contains("trace TicketClosed"),
+        "{vm_trace}"
+    );
+    let vm_trace_fingerprint =
+        fs::read_to_string(artifact_dir.join("examples/example-0/vm-trace.fingerprint.txt"))
+            .unwrap();
+    assert_eq!(vm_trace_fingerprint.trim(), fnv64_fingerprint(&vm_trace));
     let native_artifact =
         fs::read(artifact_dir.join("examples/example-0/target-CloseTicket.elf")).unwrap();
     assert_eq!(&native_artifact[..4], &[0x7f, b'E', b'L', b'F']);
@@ -20574,6 +20589,13 @@ fn cli_ail_e2e_corpus_writes_report_for_metadata_complete_corpus() {
         report.contains(&format!(
             "entry-artifact example-0 bytecode examples/example-0/artifact.ailbc.json {}",
             bytecode_fingerprint.trim()
+        )),
+        "{report}"
+    );
+    assert!(
+        report.contains(&format!(
+            "entry-artifact example-0 vm-trace examples/example-0/vm-trace.txt {}",
+            vm_trace_fingerprint.trim()
         )),
         "{report}"
     );

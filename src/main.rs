@@ -403,6 +403,7 @@ struct AilE2eCorpusEvaluation {
     extracted_artifact_fingerprint: Option<String>,
     checked_core_text: Option<String>,
     bytecode_text: Option<String>,
+    vm_trace_text: Option<String>,
     native_executables: Vec<AilNativeArtifact>,
 }
 
@@ -1294,6 +1295,7 @@ fn evaluate_ail_e2e_corpus_entry(
             extracted_artifact_fingerprint: None,
             checked_core_text: None,
             bytecode_text: None,
+            vm_trace_text: None,
             native_executables: Vec::new(),
         });
     }
@@ -1310,6 +1312,7 @@ fn evaluate_ail_e2e_corpus_entry(
             extracted_artifact_fingerprint: None,
             checked_core_text: None,
             bytecode_text: None,
+            vm_trace_text: None,
             native_executables: Vec::new(),
         });
     }
@@ -1357,6 +1360,17 @@ fn evaluate_ail_e2e_corpus_entry(
         .get("target")
         .map(String::as_str)
         .unwrap_or_default();
+    let vm_trace_text = if let Some(action_name) = entry
+        .fields
+        .get("vm-action")
+        .filter(|action_name| !action_name.is_empty())
+    {
+        let runtime_state = parse_ail_e2e_runtime_state(entry)?;
+        let run = run_ail_bytecode_action(&bytecode, action_name, runtime_state)?;
+        Some(format!("{}\n", run.trace.join("\n")))
+    } else {
+        None
+    };
     let native_executables = if target == "linux-x86_64-elf" {
         compile_ail_native_artifacts(&bytecode, target, "target")?
     } else {
@@ -1369,8 +1383,31 @@ fn evaluate_ail_e2e_corpus_entry(
         extracted_artifact_fingerprint: Some(ail_artifact_fingerprint(&spec_text)),
         checked_core_text: Some(render_ail_core(&core)),
         bytecode_text: Some(format!("{}\n", render_ail_bytecode(&bytecode))),
+        vm_trace_text,
         native_executables,
     })
+}
+
+fn parse_ail_e2e_runtime_state(
+    entry: &AilE2eCorpusEntry,
+) -> Result<BTreeMap<String, String>, String> {
+    let mut runtime_state = BTreeMap::new();
+    let Some(runtime_state_text) = entry.fields.get("runtime-state") else {
+        return Ok(runtime_state);
+    };
+    for assignment in runtime_state_text
+        .split(';')
+        .map(str::trim)
+        .filter(|assignment| !assignment.is_empty())
+    {
+        insert_runtime_state_arg(assignment, &mut runtime_state).map_err(|error| {
+            format!(
+                "e2e corpus entry {} has invalid runtime-state assignment {assignment}: {error}",
+                entry.id
+            )
+        })?;
+    }
+    Ok(runtime_state)
 }
 
 fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> String {
@@ -1431,6 +1468,14 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
                 entry.id,
                 entry.id,
                 ail_artifact_fingerprint(bytecode_text)
+            ));
+        }
+        if let Some(vm_trace_text) = &evaluation.vm_trace_text {
+            lines.push(format!(
+                "entry-artifact {} vm-trace examples/{}/vm-trace.txt {}",
+                entry.id,
+                entry.id,
+                ail_artifact_fingerprint(vm_trace_text)
             ));
         }
         for executable in &evaluation.native_executables {
@@ -1565,6 +1610,18 @@ fn write_ail_e2e_corpus_artifacts(
                 format!("{}\n", ail_artifact_fingerprint(bytecode_text)),
             )
             .map_err(|error| format!("failed to write e2e bytecode fingerprint: {error}"))?;
+        }
+        if let Some(vm_trace_text) = &evaluation.vm_trace_text {
+            let entry_dir = root.join("examples").join(&evaluation.entry.id);
+            fs::create_dir_all(&entry_dir)
+                .map_err(|error| format!("failed to create e2e entry artifact dir: {error}"))?;
+            fs::write(entry_dir.join("vm-trace.txt"), vm_trace_text)
+                .map_err(|error| format!("failed to write e2e vm trace: {error}"))?;
+            fs::write(
+                entry_dir.join("vm-trace.fingerprint.txt"),
+                format!("{}\n", ail_artifact_fingerprint(vm_trace_text)),
+            )
+            .map_err(|error| format!("failed to write e2e vm trace fingerprint: {error}"))?;
         }
         if !evaluation.native_executables.is_empty() {
             let entry_dir = root.join("examples").join(&evaluation.entry.id);
