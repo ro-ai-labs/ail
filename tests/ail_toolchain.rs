@@ -64,6 +64,7 @@ fn e2e_corpus_entry_text(index: usize, overrides: &[(&str, &str)]) -> String {
         ("profile", "Application".to_string()),
         ("package", "examples/support_ticket.ail".to_string()),
         ("prompt-file", prompt_file.to_string()),
+        ("prompt-version", "ail-prompts.v0.2".to_string()),
         ("prompt-fingerprint", format!("fnv64:prompt-{index}")),
         ("executor-family", executor_family.to_string()),
         ("executor-label", "local-executor".to_string()),
@@ -19963,26 +19964,11 @@ fn cli_ail_e2e_corpus_requires_prompt_version_metadata() {
     let _ = fs::remove_dir_all(&corpus_dir);
     let _ = fs::remove_dir_all(&artifact_dir);
     fs::create_dir_all(&corpus_dir).unwrap();
-    let mut corpus_text = String::new();
-    for index in 0..100 {
-        corpus_text.push_str(&format!(
-            "## End-To-End Example: example-{index}\n\
-             semantic-task: support-ticket-{index}\n\
-             profile: Application\n\
-             package: examples/support_ticket.ail\n\
-             prompt-file: docs/ail/prompts/spec-draft.system.md\n\
-             prompt-fingerprint: fnv64:spec-draft\n\
-             executor-family: llm-http\n\
-             executor-label: local-model\n\
-             endpoint-label: inteligentia-pro-1\n\
-             request-file: requests/example-{index}.json\n\
-             response-file: responses/example-{index}.json\n\
-             artifact-kind: ail-spec\n\
-             checker-result: accepted\n\
-             target: linux-x86_64-elf\n\n"
-        ));
-    }
-    fs::write(corpus_dir.join("examples.md"), corpus_text).unwrap();
+    fs::write(
+        corpus_dir.join("examples.md"),
+        e2e_corpus_text_with_override(0, &[("prompt-version", "")]),
+    )
+    .unwrap();
 
     let output = Command::new(binary)
         .args([
@@ -20031,6 +20017,7 @@ fn cli_ail_e2e_corpus_requires_llm_and_codex_executor_families() {
              profile: Application\n\
              package: examples/support_ticket.ail\n\
              prompt-file: docs/ail/prompts/spec-draft.system.md\n\
+             prompt-version: ail-prompts.v0.2\n\
              prompt-fingerprint: fnv64:spec-draft\n\
              executor-family: llm-http\n\
              executor-label: local-model\n\
@@ -20091,6 +20078,7 @@ fn cli_ail_e2e_corpus_requires_rejected_example_diagnostics() {
              profile: Application\n\
              package: examples/support_ticket.ail\n\
              prompt-file: docs/ail/prompts/spec-draft.system.md\n\
+             prompt-version: ail-prompts.v0.2\n\
              prompt-fingerprint: fnv64:spec-draft\n\
              executor-family: llm-http\n\
              executor-label: local-model\n\
@@ -20108,6 +20096,7 @@ fn cli_ail_e2e_corpus_requires_rejected_example_diagnostics() {
          profile: Application\n\
          package: examples/support_ticket.ail\n\
          prompt-file: docs/ail/prompts/spec-draft.system.md\n\
+         prompt-version: ail-prompts.v0.2\n\
          prompt-fingerprint: fnv64:spec-draft\n\
          executor-family: codex-skill-agent\n\
          executor-label: codex-ail-spec-writer\n\
@@ -20171,6 +20160,7 @@ fn cli_ail_e2e_corpus_requires_full_prompt_pack_coverage() {
              profile: Application\n\
              package: examples/support_ticket.ail\n\
              prompt-file: docs/ail/prompts/spec-draft.system.md\n\
+             prompt-version: ail-prompts.v0.2\n\
              prompt-fingerprint: fnv64:spec-draft\n\
              executor-family: {executor_family}\n\
              executor-label: local-executor\n\

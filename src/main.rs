@@ -1132,6 +1132,7 @@ fn ail_e2e_corpus_entry_from_fields(
         "profile",
         "package",
         "prompt-file",
+        "prompt-version",
         "prompt-fingerprint",
         "executor-family",
         "executor-label",
