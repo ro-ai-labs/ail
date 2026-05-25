@@ -1835,24 +1835,23 @@ runtime-state: ticket.id=T-1;ticket.status=Open
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-95
-semantic-task: stateful-counter-95
+semantic-task: stateful-counter-live-codex-core-to-spec-95
 profile: System
 surface-tags: core
 package: examples/stateful_counter.ail
 prompt-file: docs/ail/prompts/core-to-spec.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:9f447e07620792b2
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-95.json
-response-file: responses/example-95.ail-spec.md
+response-file: responses/example-95.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: vm
 vm-action: IncrementCounter
 runtime-state: counter.value=0
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-96
 semantic-task: stateful-counter-96
