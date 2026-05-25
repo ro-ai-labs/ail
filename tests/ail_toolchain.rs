@@ -14,7 +14,8 @@ use ail::ail::{
     parse_ail_package_document, parse_ail_package_spec_text, parse_ail_patch_text,
     parse_ail_spec_text, render_ail_bytecode, render_ail_core, render_ail_flow_view,
     render_ail_package_dependency_report, render_ail_spec, render_ail_spec_from_core,
-    run_ail_action, run_ail_bytecode_action, run_ail_compiler_pass_on_core, verify_ail_bytecode,
+    run_ail_action, run_ail_bytecode_action, run_ail_compiler_pass_on_core, run_ail_conformance,
+    verify_ail_bytecode,
 };
 use ail::core_model::json_string;
 
@@ -1091,6 +1092,154 @@ fn ail_standard_library_option_map_executes_collection_transform_bytecode() {
         "{:?}",
         none_run.trace
     );
+}
+
+#[test]
+fn cli_ail_stdlib_packages_have_checked_package_artifacts() {
+    let required_packages = [
+        (
+            "ail_std_core.ail",
+            "ail.std.core",
+            [
+                "node Function Identity.copy",
+                "edge records_trace Function:Identity.copy -> Trace:IdentityCopied",
+            ]
+            .as_slice(),
+        ),
+        (
+            "ail_std_collections.ail",
+            "ail.std.collections",
+            [
+                "node Type Option<T>",
+                "node Type Result<T,E>",
+                "node Type List<T>",
+                "node Type Map<K,V>",
+                "node Type Set<T>",
+                "node Function Option.map",
+            ]
+            .as_slice(),
+        ),
+        (
+            "ail_std_effects.ail",
+            "ail.std.effects",
+            [
+                "node Action ReadResource [label=Read resource",
+                "node Action WriteResource [label=Write resource",
+                "edge records_trace Action:ReadResource -> Trace:ResourceRead",
+                "edge records_trace Action:WriteResource -> Trace:ResourceWritten",
+            ]
+            .as_slice(),
+        ),
+        (
+            "ail_std_security.ail",
+            "ail.std.security",
+            [
+                "node Field SecretEnvelope.payload : Secret<Text>",
+                "node Action RevealSecret [label=Reveal secret",
+                "edge protects_secret Action:RevealSecret -> Field:SecretEnvelope.payload",
+                "edge records_trace Action:RevealSecret -> Trace:SecretRevealed",
+            ]
+            .as_slice(),
+        ),
+        (
+            "ail_std_runtime.ail",
+            "ail.std.runtime",
+            [
+                "node Failure RuntimeUnavailable",
+                "node Action RunTask [label=Run task",
+                "edge may_fail_with Action:RunTask -> Failure:RuntimeUnavailable",
+                "edge records_trace Action:RunTask -> Trace:TaskRun",
+            ]
+            .as_slice(),
+        ),
+    ];
+
+    for (fixture_name, package_name, expected_core_fragments) in required_packages {
+        let package = load_ail_package_dir(fixture(fixture_name)).unwrap();
+        assert_eq!(package.metadata.name, package_name);
+        assert_eq!(package.metadata.conformance, "v0.2");
+        assert!(
+            package
+                .metadata
+                .target_support
+                .contains_key("ail-core.schema.v0"),
+            "{package_name} missing ail-core.schema.v0 target support"
+        );
+        assert!(
+            package
+                .metadata
+                .features
+                .iter()
+                .any(|feature| feature == "stdlib"),
+            "{package_name} missing stdlib feature"
+        );
+
+        let document = parse_ail_package_document(&package).unwrap();
+        let core = elaborate_ail_core(&package, &document);
+        assert_eq!(
+            check_ail_core(&core),
+            Vec::<String>::new(),
+            "{package_name} did not check cleanly"
+        );
+        let rendered_core = render_ail_core(&core);
+        assert!(
+            rendered_core.contains(&format!("package: {package_name}")),
+            "{rendered_core}"
+        );
+        assert!(
+            rendered_core.contains("conformance: v0.2"),
+            "{rendered_core}"
+        );
+        assert!(
+            rendered_core.contains("target-support: ail-core.schema.v0=supported"),
+            "{rendered_core}"
+        );
+        for expected in expected_core_fragments {
+            assert!(
+                rendered_core.contains(expected),
+                "{package_name} missing checked core fragment {expected}\n{rendered_core}"
+            );
+        }
+
+        let rendered_spec = render_ail_spec(&document);
+        let reparsed = parse_ail_spec_text(&rendered_spec).unwrap();
+        let reparsed_core = elaborate_ail_core(&package, &reparsed);
+        assert_eq!(
+            check_ail_core(&reparsed_core),
+            Vec::<String>::new(),
+            "{package_name} rendered AIL-Spec did not re-check cleanly"
+        );
+
+        let conformance = run_ail_conformance(&package).unwrap();
+        assert!(
+            conformance.success(),
+            "{package_name} conformance failed: {conformance:?}"
+        );
+        assert!(
+            !conformance.accepted.is_empty(),
+            "{package_name} missing accepted conformance fixture"
+        );
+    }
+}
+
+#[test]
+fn cli_ail_stdlib_import_records_dependency_report() {
+    let package = load_ail_package_dir(fixture("ail_std_runtime.ail")).unwrap();
+    let report = render_ail_package_dependency_report(&package).unwrap();
+    assert!(
+        report.contains("root-package ail.std.runtime 0.2.0"),
+        "{report}"
+    );
+    assert!(
+        report.contains("resolved-import Effects path=../ail_std_effects.ail requirement=compatible ^0.2 name=ail.std.effects version=0.2.0"),
+        "{report}"
+    );
+    assert!(
+        report.contains("resolved-import Core path=../ail_std_core.ail requirement=compatible ^0.2 name=ail.std.core version=0.2.0"),
+        "{report}"
+    );
+    assert!(report.contains("source-path="), "{report}");
+    assert!(report.contains("package-hash=ail-package:"), "{report}");
 }
 
 #[test]

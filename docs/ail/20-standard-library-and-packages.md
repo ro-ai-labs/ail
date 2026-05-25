@@ -136,6 +136,27 @@ Initial standard library packages:
 | `ail.std.system` | memory, layout, region, allocation, device, ABI |
 | `ail.std.compiler` | graph traversal, graph patch, diagnostics, renderers |
 
+Current v0.2 package fixtures cover the required initial package set as real
+AIL packages under `examples/ail_std_*.ail`:
+
+| Package | Fixture | Checked public surface |
+| --- | --- | --- |
+| `ail.std.core` | `examples/ail_std_core.ail` | `Identity.copy`, trace `IdentityCopied` |
+| `ail.std.collections` | `examples/ail_std_collections.ail` | `Option<T>`, `Result<T,E>`, `List<T>`, `Map<K,V>`, `Set<T>`, `Option.map` |
+| `ail.std.effects` | `examples/ail_std_effects.ail` | read/write resource actions and trace events |
+| `ail.std.security` | `examples/ail_std_security.ail` | `Secret<T>` field, reveal permission requirement, capability requirement, redaction/protection edge, trace |
+| `ail.std.runtime` | `examples/ail_std_runtime.ail` | runtime task action, `RuntimeUnavailable` failure, failure handling, traces |
+
+Each required fixture has `ail-package.md`, canonical `spec.ail-spec.md`,
+`conformance: v0.2`, `schema-version: ail-core.schema.v0`, `target-support:
+ail-core.schema.v0=supported`, and at least one accepted conformance fixture.
+The proof test is:
+
+```bash
+cargo test cli_ail_stdlib_packages_have_checked_package_artifacts
+cargo test cli_ail_stdlib_import_records_dependency_report
+```
+
 ## Library Authoring Rules
 
 A library package must include:
@@ -203,10 +224,11 @@ When Option.map runs:
 Current implementation status: the bootstrap parser accepts `Type: Option<T>.`
 and variant bullets such as `Some(value: T)` and `None`, lowers them into
 checked `Type`, `Variant`, and variant payload `Field` nodes, and preserves the
-standard-library function surface through deterministic render/reparse. The
-checker recognizes single-letter generic parameters in this context. Exhaustive
-`Match` checking and executable `Option.map` evaluation remain later standard
-library semantics.
+standard-library function surface through render/reparse with clean checking.
+The checker recognizes single-letter generic parameters in this context.
+`Option.map` also has bytecode and VM trace evidence through
+`ail_standard_library_option_map_executes_collection_transform_bytecode`.
+Exhaustive `Match` checking remains later standard library semantics.
 
 Checker obligations:
 

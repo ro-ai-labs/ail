@@ -120,23 +120,40 @@ Evidence:
 
 - Each required standard package has `ail-package.md`, canonical AIL-Spec,
   checked AIL-Core, public API declarations, target-support metadata, and
-  conformance fixtures.
+  conformance fixtures. Current evidence: `examples/ail_std_core.ail`,
+  `examples/ail_std_collections.ail`, `examples/ail_std_effects.ail`,
+  `examples/ail_std_security.ail`, and `examples/ail_std_runtime.ail` are real
+  package directories with `conformance: v0.2`,
+  `schema-version: ail-core.schema.v0`, `target-support:
+  ail-core.schema.v0=supported`, and accepted conformance fixtures.
 - `Option<T>`, `Result<T,E>`, `List<T>`, `Map<K,V>`, and `Set<T>` have checked
-  type/variant surfaces.
+  type/variant surfaces in `ail.std.collections`.
 - `Option.map` or an equivalent collection transform has bytecode and VM trace
   evidence.
+- `Secret<T>`, permission requirements, capability requirements, trace
+  declarations, and failure declarations lower into checked Core through the
+  standard security and runtime packages.
+- Build/conformance/compile artifact manifests include dependency reports when
+  standard packages are imported through local package dependencies.
+- No compiler-hidden stdlib declaration is accepted without package source in
+  the required package fixture set.
 - Rejected fixtures cover unresolved standard imports, version conflicts,
   missing capability grants, and invalid generic use.
 
 Minimum proof commands:
 
 ```bash
+cargo test cli_ail_stdlib_packages_have_checked_package_artifacts
+cargo test cli_ail_stdlib_import_records_dependency_report
 cargo test ail_standard_library_option_type_parses_into_core
 cargo test ail_standard_library_option_map_executes_collection_transform_bytecode
-cargo test cli_ail_conformance_checks_standard_library_fixtures
 cargo test cli_ail_std_rejects_invalid_generic_variant_payload
 cargo test cli_ail_std_rejects_missing_capability_grant
 ```
+
+Open work for this gate: add rejected fixtures for invalid generic payloads and
+missing standard-library capability grants, then wire those exact rejected
+fixtures into the standard-library conformance command set.
 
 ### 3. Host Boundary And C Interop Contract
 
