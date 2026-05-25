@@ -1,0 +1,20 @@
+Return only complete canonical AIL-Spec text for the refund tool.
+
+Use these exact section forms when applicable:
+- Tool: Refund customer payment.
+- The AI Agent may request Refund customer payment when:
+- The tool needs:
+- The tool produces:
+- The tool can:
+- The tool must not:
+- The tool requires permission:
+- The tool requires approval:
+- The tool records:
+- The tool guarantees:
+- Failure ProviderRejected happens when ...:
+
+Preserve field type annotations exactly, including Money and Secret<Text>.
+Use the exact external call name PaymentProvider.refund and trace event names
+RefundCustomerPaymentRequested and RefundProviderRejected.
+
+Do not use markdown fences, commentary, or alternative headings.

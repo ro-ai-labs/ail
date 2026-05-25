@@ -106,8 +106,8 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             )
             self.assertEqual(replay.returncode, 0, replay.stderr)
             report = (artifact_dir / "e2e-corpus-report.txt").read_text()
-            self.assertIn("capture-origin-count deterministic-seed 98", report)
-            self.assertIn("capture-origin-count live-llm 2", report)
+            self.assertIn("capture-origin-count deterministic-seed 97", report)
+            self.assertIn("capture-origin-count live-llm 3", report)
             self.assertIn(
                 "entry example-30 source "
                 + str(output_dir / "examples.md")
@@ -193,7 +193,7 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             )
             self.assertEqual(replay.returncode, 0, replay.stderr)
             report = (artifact_dir / "e2e-corpus-report.txt").read_text()
-            self.assertIn("capture-origin-count live-llm 1", report)
+            self.assertIn("capture-origin-count live-llm 2", report)
             self.assertIn("entry example-32", report)
         finally:
             _CompletionHandler.response_payload = None
@@ -395,8 +395,8 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             )
             self.assertEqual(replay.returncode, 0, replay.stderr)
             report = (artifact_dir / "e2e-corpus-report.txt").read_text()
-            self.assertIn("capture-origin-count deterministic-seed 98", report)
-            self.assertIn("capture-origin-count live-llm 1", report)
+            self.assertIn("capture-origin-count deterministic-seed 97", report)
+            self.assertIn("capture-origin-count live-llm 2", report)
             self.assertIn("capture-origin-count live-codex 1", report)
             self.assertIn("checker-result-count accepted 100", report)
             self.assertIn("entry example-99", report)
@@ -524,8 +524,8 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             )
             self.assertEqual(replay.returncode, 0, replay.stderr)
             report = (artifact_dir / "e2e-corpus-report.txt").read_text()
-            self.assertIn("capture-origin-count deterministic-seed 97", report)
-            self.assertIn("capture-origin-count live-llm 2", report)
+            self.assertIn("capture-origin-count deterministic-seed 96", report)
+            self.assertIn("capture-origin-count live-llm 3", report)
             self.assertIn("capture-origin-count live-codex 1", report)
             self.assertIn("entry example-30", report)
             self.assertIn("entry example-32", report)

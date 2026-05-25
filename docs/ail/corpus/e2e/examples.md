@@ -1009,7 +1009,7 @@ runtime-state: order.id=O-1;payment.captured=true;refund.amount=100
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-52
-semantic-task: refund-tool-52
+semantic-task: refund-tool-live-spec-input-52
 profile: AgentTool
 surface-tags: core
 package: examples/refund_tool.ail
@@ -1017,16 +1017,16 @@ prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
 executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-label: unsloth-qwen3.6-35b-a3b-gguf-chat
+capture-origin: live-llm
 request-file: requests/example-52.json
-response-file: responses/example-52.ail-spec.md
+response-file: responses/example-52.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
 vm-action: RefundCustomerPayment
 runtime-state: order.id=O-1;payment.captured=true;refund.amount=100
-endpoint-label: local-endpoint
+endpoint-label: inteligentia-pro-1-qwen3.6-35b-chat
 
 ## End-To-End Example: example-53
 semantic-task: refund-tool-53

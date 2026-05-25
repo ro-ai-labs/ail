@@ -1,0 +1,36 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "Tool: Refund customer payment.\n\nThe AI Agent may request Refund customer payment when:\n- the order exists\n- the payment was captured\n- the refund amount is not greater than the captured amount\n\nThe tool needs:\n- order id: Text\n- refund amount: Money\n- reason: Text\n- payment token: Secret<Text>\n\nThe tool produces:\n- refund id: Text\n\nThe tool can:\n- read the order\n- read the payment record\n- call PaymentProvider.refund\n- write a RefundLedger entry\n- create a human review task when approval is required\n\nThe tool must not:\n- reveal the payment token\n- refund more than the captured amount\n\nThe tool requires permission:\n- requester may create refunds\n\nThe tool requires approval:\n- manager approval when the refund amount is over USD 500\n\nThe tool records:\n- trace event RefundCustomerPaymentRequested\n\nThe tool guarantees:\n- Refund amount is less than or equal to the captured amount\n- payment token is redacted from all agent-visible output\n- every external call is represented in the audit trace\n\nFailure ProviderRejected happens when PaymentProvider rejects the refund:\n- records failure ProviderRejected\n- writes no successful RefundLedger entry\n- does not notify the customer automatically\n- creates a human review task\n- the trace records RefundProviderRejected",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1779740824,
+  "id": "chatcmpl-8QhlxXw07wteHRXU8rHKuP02nNjtwmHs",
+  "model": "unsloth/Qwen3.6-35B-A3B-GGUF:UD-Q4_K_XL",
+  "object": "chat.completion",
+  "system_fingerprint": "b9248-585080d31",
+  "timings": {
+    "cache_n": 0,
+    "predicted_ms": 9464.025,
+    "predicted_n": 288,
+    "predicted_per_second": 30.4310269679127,
+    "predicted_per_token_ms": 32.86119791666667,
+    "prompt_ms": 1610.523,
+    "prompt_n": 926,
+    "prompt_per_second": 574.9685040201226,
+    "prompt_per_token_ms": 1.7392257019438444
+  },
+  "usage": {
+    "completion_tokens": 288,
+    "prompt_tokens": 926,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "total_tokens": 1214
+  }
+}

@@ -38,10 +38,12 @@ request disables thinking with `chat_template_kwargs.enable_thinking=false`,
 and replay extracts `choices[0].message.content` from the stored response.
 Prompt surfaces with an input schema use `--input-json-file`; longer task
 instructions use `--prompt-file`. The committed
-`inputs/support-ticket-spec-draft.json` and
-`inputs/support-ticket-spec-draft.task.txt` fixtures are the first replay-clean
-schema-shaped live capture inputs for `spec-draft.system.md`. Replay still does
-not call a live model.
+`inputs/support-ticket-spec-draft.json`,
+`inputs/support-ticket-spec-draft.task.txt`,
+`inputs/refund-tool-spec-draft.json`, and
+`inputs/refund-tool-spec-draft.task.txt` fixtures are the first replay-clean
+schema-shaped live capture inputs for `spec-draft.system.md` across the
+Application and AgentTool profiles. Replay still does not call a live model.
 
 Recorded Codex or skill-agent transcripts are promoted through a separate
 offline import command:
@@ -89,9 +91,9 @@ live LLM access. The current corpus stores:
 - `agents/`: Codex-style skill-agent executor contracts used by
   `live-codex` transcript imports.
 
-This is a checked seed corpus with one replay-clean live LLM smoke capture, not
-final v0.2 release evidence. The current corpus marks 99 entries
-`capture-origin: deterministic-seed` and one `spec-draft.system.md` entry
+This is a checked seed corpus with two replay-clean live LLM smoke captures,
+not final v0.2 release evidence. The current corpus marks 98 entries
+`capture-origin: deterministic-seed` and two `spec-draft.system.md` entries
 `capture-origin: live-llm`; deterministic fixture responses remain in place so
 the replay harness, artifact writing, and coverage thresholds can be verified
 while broader LLM/Codex captures are added. The replay report exposes
