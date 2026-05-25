@@ -22,16 +22,19 @@ python3 scripts/capture_e2e_transcripts.py \
   --base-corpus docs/ail/corpus/e2e \
   --output-dir /tmp/ail-e2e-live-corpus \
   --entry-id example-30 \
-  --endpoint http://inteligentia-pro-1:8080/completion \
-  --endpoint-label inteligentia-pro-1-qwen3.6-35b \
-  --executor-label unsloth-qwen3.6-35b-a3b-gguf \
+  --endpoint http://inteligentia-pro-1:8080/v1/chat/completions \
+  --endpoint-label inteligentia-pro-1-qwen3.6-35b-chat \
+  --executor-label unsloth-qwen3.6-35b-a3b-gguf-chat \
   --semantic-task support-ticket-live-capture-30 \
   --prompt "Produce the Support Ticket AIL-Spec for live capture replay."
 ```
 
 The capture script stores the raw completion request and raw JSON response in
 `requests/` and `responses/`, marks the entry `capture-origin: live-llm`, and
-leaves replay to `ail-e2e-corpus`. Replay still does not call a live model.
+leaves replay to `ail-e2e-corpus`. For `/v1/chat/completions` endpoints the
+request disables thinking with `chat_template_kwargs.enable_thinking=false`,
+and replay extracts `choices[0].message.content` from the stored response.
+Replay still does not call a live model.
 
 The generated files are committed so release verification does not depend on
 live LLM access. The current corpus stores:

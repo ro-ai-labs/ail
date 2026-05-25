@@ -76,7 +76,14 @@ def render_entry(entry_id: str, fields: dict[str, str]) -> list[str]:
     return lines
 
 
-def completion_body(prompt: str, n_predict: int) -> dict[str, object]:
+def completion_body(endpoint: str, prompt: str, n_predict: int) -> dict[str, object]:
+    if endpoint.rstrip("/").endswith("/chat/completions"):
+        return {
+            "messages": [{"role": "user", "content": prompt}],
+            "max_tokens": n_predict,
+            "temperature": 0.0,
+            "chat_template_kwargs": {"enable_thinking": False},
+        }
     return {"prompt": prompt, "n_predict": n_predict, "temperature": 0.0}
 
 
@@ -114,7 +121,7 @@ def main() -> int:
     prompt_file = fields["prompt-file"]
     system_prompt = (ROOT / prompt_file).read_text()
     prompt = f"{system_prompt.rstrip()}\n\nUSER REQUEST:\n{args.prompt}\n"
-    body = completion_body(prompt, args.n_predict)
+    body = completion_body(args.endpoint, prompt, args.n_predict)
     response_json = capture_completion(args.endpoint, body)
 
     request_file = f"requests/{args.entry_id}.json"

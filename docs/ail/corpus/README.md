@@ -91,15 +91,19 @@ python3 scripts/capture_e2e_transcripts.py \
   --base-corpus docs/ail/corpus/e2e \
   --output-dir /tmp/ail-e2e-live-corpus \
   --entry-id example-30 \
-  --endpoint http://inteligentia-pro-1:8080/completion \
-  --endpoint-label inteligentia-pro-1-qwen3.6-35b \
-  --executor-label unsloth-qwen3.6-35b-a3b-gguf \
+  --endpoint http://inteligentia-pro-1:8080/v1/chat/completions \
+  --endpoint-label inteligentia-pro-1-qwen3.6-35b-chat \
+  --executor-label unsloth-qwen3.6-35b-a3b-gguf-chat \
   --semantic-task support-ticket-live-capture-30 \
   --prompt "Produce the Support Ticket AIL-Spec for live capture replay."
 ```
 
-The captured corpus is then replayed with `ail-e2e-corpus`; replay must remain
-offline and must read only the stored request/response transcripts.
+The capture helper supports both llama.cpp `/completion` and OpenAI-compatible
+`/v1/chat/completions` endpoints. Chat-completion captures store the raw
+`choices[0].message.content` response and disable model thinking through
+`chat_template_kwargs.enable_thinking=false`. The captured corpus is then
+replayed with `ail-e2e-corpus`; replay must remain offline and must read only
+the stored request/response transcripts.
 
 The `ail-e2e-corpus` verifier is the v0.2 release gate for prompt reliability.
 It must not call a live model endpoint in replay mode. It reads stored

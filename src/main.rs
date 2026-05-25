@@ -1297,7 +1297,17 @@ fn extract_ail_e2e_response_artifact_text(response_text: &str) -> String {
             return value.trim().to_string();
         }
     }
+    if let Some(value) = extract_ail_e2e_chat_completion_message_content(trimmed) {
+        return value.trim().to_string();
+    }
     trimmed.to_string()
+}
+
+fn extract_ail_e2e_chat_completion_message_content(text: &str) -> Option<String> {
+    let choices_start = text.find("\"choices\"")?;
+    let message_start = choices_start + text[choices_start..].find("\"message\"")?;
+    let content_start = message_start + text[message_start..].find("\"content\"")?;
+    extract_ail_e2e_json_string_field(&text[content_start..], "content")
 }
 
 fn extract_ail_e2e_json_string_field(text: &str, field: &str) -> Option<String> {

@@ -13,12 +13,13 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class _CompletionHandler(BaseHTTPRequestHandler):
     response_text = ""
+    response_payload = None
     requests = []
 
     def do_POST(self):
         body = self.rfile.read(int(self.headers["Content-Length"])).decode()
         self.__class__.requests.append({"path": self.path, "body": json.loads(body)})
-        payload = {"content": self.__class__.response_text}
+        payload = self.__class__.response_payload or {"content": self.__class__.response_text}
         encoded = json.dumps(payload).encode()
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
@@ -37,6 +38,7 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
         server = None
         try:
             _CompletionHandler.requests = []
+            _CompletionHandler.response_payload = None
             _CompletionHandler.response_text = (
                 ROOT / "examples" / "support_ticket.ail" / "spec.ail-spec.md"
             ).read_text()
@@ -113,6 +115,88 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
                 report,
             )
         finally:
+            if server is not None:
+                server.shutdown()
+                server.server_close()
+            shutil.rmtree(output_dir, ignore_errors=True)
+            shutil.rmtree(artifact_dir, ignore_errors=True)
+
+    def test_capture_chat_completion_transcript_replays_offline(self):
+        output_dir = Path(tempfile.mkdtemp(prefix="ail-e2e-live-chat-capture-"))
+        artifact_dir = Path(tempfile.mkdtemp(prefix="ail-e2e-live-chat-capture-artifacts-"))
+        server = None
+        try:
+            spec_text = (
+                ROOT / "examples" / "support_ticket.ail" / "spec.ail-spec.md"
+            ).read_text()
+            _CompletionHandler.requests = []
+            _CompletionHandler.response_text = ""
+            _CompletionHandler.response_payload = {
+                "choices": [{"message": {"content": spec_text}}],
+                "model": "test-chat-model",
+            }
+            server = HTTPServer(("127.0.0.1", 0), _CompletionHandler)
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+
+            capture = subprocess.run(
+                [
+                    "python3",
+                    "scripts/capture_e2e_transcripts.py",
+                    "--base-corpus",
+                    "docs/ail/corpus/e2e",
+                    "--output-dir",
+                    str(output_dir),
+                    "--entry-id",
+                    "example-32",
+                    "--endpoint",
+                    f"http://127.0.0.1:{server.server_port}/v1/chat/completions",
+                    "--endpoint-label",
+                    "test-chat-endpoint",
+                    "--executor-label",
+                    "test-chat-model",
+                    "--semantic-task",
+                    "support-ticket-live-chat-capture-32",
+                    "--prompt",
+                    "Produce the Support Ticket AIL-Spec for live chat capture replay.",
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(capture.returncode, 0, capture.stderr)
+
+            request = json.loads((output_dir / "requests" / "example-32.json").read_text())
+            self.assertEqual(
+                request["endpoint"],
+                f"http://127.0.0.1:{server.server_port}/v1/chat/completions",
+            )
+            self.assertIn("messages", request["body"])
+            self.assertEqual(request["body"]["messages"][0]["role"], "user")
+            self.assertFalse(request["body"]["chat_template_kwargs"]["enable_thinking"])
+            self.assertEqual(_CompletionHandler.requests[0]["path"], "/v1/chat/completions")
+
+            replay = subprocess.run(
+                [
+                    "cargo",
+                    "run",
+                    "--quiet",
+                    "--",
+                    "ail-e2e-corpus",
+                    str(output_dir),
+                    "--artifact-dir",
+                    str(artifact_dir),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(replay.returncode, 0, replay.stderr)
+            report = (artifact_dir / "e2e-corpus-report.txt").read_text()
+            self.assertIn("capture-origin-count live-llm 1", report)
+            self.assertIn("entry example-32", report)
+        finally:
+            _CompletionHandler.response_payload = None
             if server is not None:
                 server.shutdown()
                 server.server_close()
