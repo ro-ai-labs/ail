@@ -22,6 +22,12 @@ packages, capability grants, host imports, UI semantics, prompt-portability
 corpus evidence, and one additional backend contract are all checked,
 manifested, and reviewable as AIL artifacts.
 
+This gate also requires broad prompt-to-artifact evidence. AIL v0.2 is not
+complete when one curated prompt works. It is complete only when the versioned
+system prompt pack has produced at least 100 replayable end-to-end examples
+that pass through checked AIL artifacts, lowering, compilation, and binary or
+target-contract evidence.
+
 The version name for this gate is:
 
 ```text
@@ -58,6 +64,7 @@ AIL package with imports and capability grants
   -> VM trace or Wasm host-contract trace for the host boundary
   -> Linux native artifact for supported local effects
   -> additional OS target contract report
+  -> replayable 100-example prompt-to-artifact corpus
   -> release evidence bundle with manifests and fingerprints
 ```
 
@@ -70,6 +77,8 @@ Every arrow must have at least one of:
 - conformance fixture
 - runtime trace or host-contract trace
 - AIL-authored agent verification action
+- replayed model or Codex-agent transcript checked against deterministic
+  artifacts
 
 ## Required Gates
 
@@ -263,22 +272,52 @@ cargo test cli_ail_compile_writes_darwin_macho_contract_artifacts
 cargo test cli_ail_compile_darwin_contract_rejects_linux_only_syscall_effect
 ```
 
-### 6. Prompt Portability Corpus
+### 6. End-To-End Prompt Corpus And Model Portability
 
 Requirement: Prompt-pack behavior is measured with stored accepted and rejected
-model outputs rather than trusted by assumption.
+model outputs rather than trusted by assumption, and the accepted prompt outputs
+prove the full toolchain path from prompt to checked AIL artifact to IR to
+compiled artifact.
 
 Evidence:
 
-- Prompt corpus includes interview, requirements, spec draft, repair,
-  core-to-spec, flow patch, diagnostic repair, and trace-debug tasks.
-- Corpus entries include at least two model labels or endpoint labels for the
-  same semantic task.
-- Accepted outputs produce checked artifacts.
+- The release corpus contains at least 100 end-to-end examples. An end-to-end
+  example starts from a user intent, a package/profile context, a versioned
+  system prompt, and one executor output, then records checked requirements or
+  checked AIL-Spec, checked AIL-Core, bytecode, a VM trace, and either a Linux
+  native artifact or a target contract artifact.
+- The 100-example minimum counts semantic examples, not repeated labels for the
+  same stored output. A semantic example is distinct only when it changes the
+  user intent, profile, package surface, required feature, target contract, or
+  expected diagnostic.
+- The corpus spans every required prompt-pack surface: interview,
+  requirements, spec draft, repair, core draft, core-to-spec,
+  core-to-summary, flow patch, trace-debug, diagnostic repair, and interop.
+- The corpus spans Application, AgentTool, Compiler, System, standard-library,
+  package-import, UI, C/host interop, Wasm contract, Darwin contract, and
+  prompt-failure cases.
+- Each accepted end-to-end example records the prompt file and fingerprint,
+  prompt-pack version, executor family, executor label, raw request
+  fingerprint, raw response fingerprint, extracted artifact fingerprint,
+  checked Core fingerprint, bytecode fingerprint, manifest fingerprint, and
+  binary or target-contract fingerprint.
+- Each accepted executable example runs through VM verification. Each accepted
+  native Linux example writes an executable artifact and target report. Each
+  accepted host-boundary example writes Wasm or Darwin contract reports instead
+  of pretending unsupported effects are executable.
 - Rejected outputs demonstrate prompt-envelope, profile mismatch,
-  hallucinated capability, missing trace, and semantic drift diagnostics.
-- Portability reports include base model, target model, prompt fingerprint,
-  artifact fingerprint, checker result, and failure taxonomy.
+  hallucinated capability, missing trace, semantic drift, unsupported target,
+  invalid interop, permission/capability, and package resolution diagnostics.
+- At least two executor families are represented in release evidence:
+  `llm-http` and `codex-skill-agent`. At least two LLM endpoint or model labels
+  are represented for the same semantic task family.
+- Live model calls are not release proof by themselves. Release proof is the
+  replayable stored transcript and artifact bundle, and the replay verifier must
+  not call a live model endpoint.
+- Portability reports include model or executor label, endpoint label where
+  applicable, prompt fingerprint, request fingerprint, response fingerprint,
+  artifact fingerprint, checker result, compile result, target result, and
+  failure taxonomy.
 
 Minimum proof commands:
 
@@ -287,6 +326,11 @@ cargo test cli_ail_build_agent_compares_prompt_portability_before_compile
 cargo test cli_ail_prompt_corpus_accepts_checked_outputs
 cargo test cli_ail_prompt_corpus_rejects_semantic_drift_outputs
 cargo test cli_ail_prompt_corpus_writes_portability_report
+cargo test cli_ail_e2e_corpus_requires_100_examples
+cargo test cli_ail_e2e_corpus_replays_prompt_to_binary_examples
+cargo test cli_ail_e2e_corpus_records_multi_executor_evidence
+cargo test cli_ail_e2e_corpus_rejects_live_only_model_evidence
+cargo run -- ail-e2e-corpus docs/ail/corpus/e2e --artifact-dir /tmp/ail-v02-e2e-corpus
 ```
 
 ### 7. Diagnostics And Governance Coverage
@@ -337,6 +381,7 @@ cargo run -- ail-compile examples/c_interop.ail --target wasm32-unknown-sandbox-
 cargo run -- ail-compile examples/support_ticket.ail --target aarch64-apple-darwin-libsystem-macho --action CloseTicket --artifact-dir /tmp/ail-v02-darwin-contract
 cargo run -- ail-spec --core-file /tmp/ail-v02-build-support/checked.ail-core.txt --artifact-dir /tmp/ail-v02-spec-roundtrip
 cargo run -- ail-bootstrap examples/ail_toolchain_agent.ail --pass examples/compiler_pass.ail --agent examples/ail_toolchain_agent.ail --target linux-x86_64-elf --artifact-dir /tmp/ail-v02-bootstrap
+cargo run -- ail-e2e-corpus docs/ail/corpus/e2e --artifact-dir /tmp/ail-v02-e2e-corpus
 ```
 
 The release audit fails if any command fails, if a named command does not
@@ -363,6 +408,11 @@ The v0.2 release evidence bundle must contain:
 - build manifest and manifest fingerprint
 - agent bytecode, agent fingerprint, and agent trace
 - prompt portability report and fingerprint
+- 100-example end-to-end prompt corpus replay report and fingerprint
+- per-example transcript, checked-artifact, Core, bytecode, target, manifest,
+  and failure-taxonomy fingerprints for the end-to-end corpus
+- model/executor manifest covering `llm-http` and `codex-skill-agent`
+  executor families
 - bootstrap artifact directory with fixed-point, host-boundary, dependency, and
   handoff reports
 
@@ -423,6 +473,12 @@ already covers parts of this gate:
 Missing v0.2 evidence includes:
 
 - v0.2-specific release evidence bundle
+- `ail-e2e-corpus` replay verifier command and tests
+- at least 100 replayable prompt-to-artifact examples
+- end-to-end corpus evidence that compiles accepted prompt outputs to bytecode
+  and binary or target-contract artifacts
+- Codex skill or agent executor evidence normalized into the same transcript
+  and replay format as HTTP LLM evidence
 
 ## Completion Decision Rule
 
