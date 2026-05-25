@@ -1396,6 +1396,16 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
 }
 
 fn validate_ail_e2e_corpus_release_coverage(entries: &[AilE2eCorpusEntry]) -> Result<(), String> {
+    let semantic_tasks = entries
+        .iter()
+        .filter_map(|entry| entry.fields.get("semantic-task").map(String::as_str))
+        .collect::<BTreeSet<_>>();
+    if semantic_tasks.len() < 100 {
+        return Err(format!(
+            "ail-e2e-corpus requires at least 100 distinct semantic-task entries; found {}",
+            semantic_tasks.len()
+        ));
+    }
     let executor_families = entries
         .iter()
         .filter_map(|entry| entry.fields.get("executor-family").map(String::as_str))
