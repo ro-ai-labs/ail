@@ -27,6 +27,7 @@ pub struct AilPackageMetadata {
     pub capability_grants: Vec<AilCapabilityGrant>,
     pub conformance: String,
     pub prompt_pack: Option<String>,
+    pub registry: Option<String>,
     pub target_support: BTreeMap<String, String>,
     pub schema_version: Option<String>,
     pub safety_level: Option<String>,
@@ -39,6 +40,7 @@ pub struct AilImportSpec {
     pub version: Option<String>,
     pub alias: String,
     pub resolved_package: Option<String>,
+    pub registry_identity: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -53,6 +55,14 @@ pub struct AilCapabilityGrant {
 pub struct AilLoadedImport {
     pub spec: AilImportSpec,
     pub package: Box<AilPackage>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct AilRegistryEntry {
+    package: String,
+    version: String,
+    identity: String,
+    path: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -662,10 +672,22 @@ fn load_ail_package_dir_inner(
     let spec_path = root.join(&metadata.entry);
     let spec_text = fs::read_to_string(&spec_path)
         .map_err(|error| format!("failed to read {}: {error}", spec_path.display()))?;
+    let registry_entries = load_package_registry_entries(&root, &metadata)?;
     let mut imports = Vec::new();
     for import_index in 0..metadata.imports.len() {
         let import = metadata.imports[import_index].clone();
-        let import_root = root.join(&import.path);
+        let registry_match = resolve_registry_import(&import, registry_entries.as_slice())?;
+        let import_root = registry_match
+            .as_ref()
+            .map(|entry| {
+                let path = PathBuf::from(&entry.path);
+                if path.is_absolute() {
+                    path
+                } else {
+                    root.join(path)
+                }
+            })
+            .unwrap_or_else(|| root.join(&import.path));
         let package = load_ail_package_dir_inner(&import_root, stack)?;
         if let Some(required_version) = &import.version
             && !import_version_requirement_matches(required_version, &package.metadata.version)?
@@ -678,6 +700,23 @@ fn load_ail_package_dir_inner(
                 package.metadata.name,
                 package.metadata.version
             ));
+        }
+        if let Some(registry_entry) = &registry_match {
+            if registry_entry.version != package.metadata.version
+                || registry_entry.package != package.metadata.name
+            {
+                return Err(format!(
+                    "AIL registry identity {} resolves {}@{} but loaded package {} is {}@{}",
+                    registry_entry.identity,
+                    registry_entry.package,
+                    registry_entry.version,
+                    import.path,
+                    package.metadata.name,
+                    package.metadata.version
+                ));
+            }
+            metadata.imports[import_index].registry_identity =
+                Some(registry_entry.identity.clone());
         }
         metadata.imports[import_index].resolved_package = Some(package.metadata.name.clone());
         imports.push(AilLoadedImport {
@@ -693,6 +732,99 @@ fn load_ail_package_dir_inner(
         spec_text,
         imports,
     })
+}
+
+fn load_package_registry_entries(
+    root: &Path,
+    metadata: &AilPackageMetadata,
+) -> Result<Vec<AilRegistryEntry>, String> {
+    let Some(registry_path) = metadata.registry.as_deref() else {
+        return Ok(Vec::new());
+    };
+    let registry_path = root.join(registry_path);
+    let registry_text = fs::read_to_string(&registry_path).map_err(|error| {
+        format!(
+            "failed to read AIL registry index {}: {error}",
+            registry_path.display()
+        )
+    })?;
+    parse_ail_registry_entries(&registry_text)
+}
+
+fn parse_ail_registry_entries(text: &str) -> Result<Vec<AilRegistryEntry>, String> {
+    let mut entries = Vec::new();
+    let mut fields = BTreeMap::<String, String>::new();
+    for raw_line in text.lines() {
+        let line = raw_line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let Some((key, value)) = line.split_once(':') else {
+            continue;
+        };
+        let key = key.trim();
+        let value = value.trim();
+        if key == "package" && fields.contains_key("package") {
+            entries.push(registry_entry_from_fields(&fields)?);
+            fields.clear();
+        }
+        fields.insert(key.to_string(), value.to_string());
+    }
+    if !fields.is_empty() {
+        entries.push(registry_entry_from_fields(&fields)?);
+    }
+    Ok(entries)
+}
+
+fn registry_entry_from_fields(
+    fields: &BTreeMap<String, String>,
+) -> Result<AilRegistryEntry, String> {
+    let field = |name: &str| {
+        fields
+            .get(name)
+            .cloned()
+            .ok_or_else(|| format!("AIL registry entry missing {name}"))
+    };
+    Ok(AilRegistryEntry {
+        package: field("package")?,
+        version: field("version")?,
+        identity: field("identity")?,
+        path: field("path")?,
+    })
+}
+
+fn resolve_registry_import(
+    import: &AilImportSpec,
+    entries: &[AilRegistryEntry],
+) -> Result<Option<AilRegistryEntry>, String> {
+    if entries.is_empty() || looks_like_local_import_path(&import.path) {
+        return Ok(None);
+    }
+    let matches = entries
+        .iter()
+        .filter(|entry| {
+            entry.package == import.path
+                && import.version.as_ref().is_none_or(|requirement| {
+                    import_version_requirement_matches(requirement, &entry.version).unwrap_or(false)
+                })
+        })
+        .cloned()
+        .collect::<Vec<_>>();
+    match matches.as_slice() {
+        [entry] => Ok(Some(entry.clone())),
+        [] => Err(format!(
+            "AIL registry import {} as {} was not found in registry index",
+            import.path, import.alias
+        )),
+        _ => Err(format!(
+            "AIL registry import {} as {} is ambiguous in registry index",
+            import.path, import.alias
+        )),
+    }
+}
+
+fn looks_like_local_import_path(path: &str) -> bool {
+    path.starts_with('.') || path.starts_with('/') || path.contains('\\')
 }
 
 pub fn parse_ail_package_document(package: &AilPackage) -> Result<AilDocument, String> {
@@ -719,15 +851,22 @@ fn render_ail_package_dependency_imports(
 ) -> Result<(), String> {
     for import in &package.imports {
         let requirement = import.spec.version.as_deref().unwrap_or("none");
+        let registry_identity = import
+            .spec
+            .registry_identity
+            .as_deref()
+            .map(|identity| format!(" registry-identity={identity}"))
+            .unwrap_or_default();
         lines.push(format!(
-            "resolved-import {} path={} requirement={} name={} version={} source-path={} package-hash={}",
+            "resolved-import {} path={} requirement={} name={} version={} source-path={} package-hash={}{}",
             import.spec.alias,
             import.spec.path,
             requirement,
             import.package.metadata.name,
             import.package.metadata.version,
             import.package.root.display(),
-            ail_package_source_hash(&import.package)?
+            ail_package_source_hash(&import.package)?,
+            registry_identity
         ));
         if import.package.metadata.capability_grants.is_empty() {
             lines.push(format!("capability-grants {} none", import.spec.alias));
@@ -4223,6 +4362,9 @@ pub fn render_ail_core(core: &AilCore) -> String {
     if let Some(prompt_pack) = &core.package.prompt_pack {
         lines.push(format!("prompt-pack: {prompt_pack}"));
     }
+    if let Some(registry) = &core.package.registry {
+        lines.push(format!("registry: {registry}"));
+    }
     if !core.package.target_support.is_empty() {
         lines.push(format!(
             "target-support: {}",
@@ -4301,14 +4443,19 @@ fn render_import_specs(imports: &[AilImportSpec]) -> String {
                 .as_ref()
                 .map(|version| format!("@{version}"))
                 .unwrap_or_default();
+            let registry_identity = import
+                .registry_identity
+                .as_ref()
+                .map(|identity| format!(" registry {identity}"))
+                .unwrap_or_default();
             let resolved_package = import
                 .resolved_package
                 .as_ref()
                 .map(|package| format!(" resolved {package}"))
                 .unwrap_or_default();
             format!(
-                "{}{} as {}{}",
-                import.path, version, import.alias, resolved_package
+                "{}{} as {}{}{}",
+                import.path, version, import.alias, registry_identity, resolved_package
             )
         })
         .collect::<Vec<_>>()
@@ -4349,6 +4496,7 @@ pub fn parse_ail_core_text(text: &str) -> Result<AilCore, String> {
     let mut capability_grants = Vec::new();
     let mut conformance = None;
     let mut prompt_pack = None;
+    let mut registry = None;
     let mut target_support = BTreeMap::new();
     let mut schema_version = None;
     let mut safety_level = None;
@@ -4407,6 +4555,7 @@ pub fn parse_ail_core_text(text: &str) -> Result<AilCore, String> {
                     }
                     "conformance" => conformance = Some(value),
                     "prompt-pack" => prompt_pack = Some(value),
+                    "registry" => registry = Some(value),
                     "target-support" => target_support = parse_target_support_specs(&value)?,
                     "schema-version" => schema_version = Some(value),
                     "safety-level" => safety_level = Some(value),
@@ -4480,6 +4629,7 @@ pub fn parse_ail_core_text(text: &str) -> Result<AilCore, String> {
             conformance: conformance
                 .ok_or_else(|| "AIL-Core missing conformance metadata".to_string())?,
             prompt_pack,
+            registry,
             target_support,
             schema_version,
             safety_level,
@@ -11620,6 +11770,7 @@ fn parse_package_metadata(text: &str) -> Result<AilPackageMetadata, String> {
         .cloned()
         .unwrap_or_else(|| "draft".to_string());
     let prompt_pack = values.get("prompt-pack").cloned();
+    let registry = values.get("registry").cloned();
     let schema_version = values.get("schema-version").cloned();
     let safety_level = values.get("safety-level").cloned();
     let base_llm_endpoint = values
@@ -11636,6 +11787,7 @@ fn parse_package_metadata(text: &str) -> Result<AilPackageMetadata, String> {
         capability_grants,
         conformance,
         prompt_pack,
+        registry,
         target_support,
         schema_version,
         safety_level,
@@ -11667,6 +11819,19 @@ fn parse_import_specs(text: &str) -> Result<Vec<AilImportSpec>, String> {
                 ));
             }
             None => (alias.trim(), None),
+        };
+        let (alias, registry_identity) = match alias.rsplit_once(" registry ") {
+            Some((alias, registry_identity))
+                if !alias.trim().is_empty() && !registry_identity.trim().is_empty() =>
+            {
+                (alias.trim(), Some(registry_identity.trim().to_string()))
+            }
+            Some(_) => {
+                return Err(format!(
+                    "AIL import '{entry}' must use '<path> as <Alias> registry <Identity>'"
+                ));
+            }
+            None => (alias, None),
         };
         if path.is_empty() || alias.is_empty() {
             return Err(format!("AIL import '{entry}' must use '<path> as <Alias>'"));
@@ -11705,6 +11870,7 @@ fn parse_import_specs(text: &str) -> Result<Vec<AilImportSpec>, String> {
             version,
             alias: alias.to_string(),
             resolved_package,
+            registry_identity,
         });
     }
     Ok(imports)

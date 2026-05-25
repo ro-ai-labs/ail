@@ -36,6 +36,7 @@ Optional fields:
 - `imports`
 - `capability-grants`
 - `prompt-pack`
+- `registry`
 - `target-support`
 - `schema-version`
 - `safety-level`
@@ -78,17 +79,41 @@ imports: ../shared compatible ^0.1 as Shared
 
 For this form, the loader resolves `../shared`, rejects unbounded major ranges
 such as `*`, and accepts only packages with the same major version and a
-version greater than or equal to the range base. Registry package names and
-cross-major compatibility policies remain package-resolver work.
+version greater than or equal to the range base. Cross-major compatibility
+policies remain package-resolver work.
+
+The loader also implements deterministic registry-index resolution for package
+names. A package can declare a local registry index:
+
+```text
+registry: ../registry/ail-registry.md
+imports: ail.std.core compatible ^0.2 as Core
+```
+
+The registry index is a text file with repeated entries:
+
+```text
+package: ail.std.core
+version: 0.2.0
+identity: registry.local/ail.std.core@0.2.0
+path: ../examples/ail_std_core.ail
+```
+
+The resolver matches the import package name and exact or compatible version
+requirement, loads the package from the indexed path, verifies the loaded name
+and version match the registry entry, and stores the registry identity on the
+resolved import. Missing and ambiguous registry entries fail before checking or
+lowering. The compiler does not perform network fetching in this slice; the
+registry file is the explicit fetch manifest.
 
 The loader also exposes a package dependency report for resolved imports. The
 report records the root package, resolved import alias, declared path,
 requirement, resolved package name and version, source path, source hash,
 capability grants, approvals, and imported effect classes. This gives v0.2 a
-verifiable package-lock surface before registry resolution exists. The
-`ail-build`, `ail-lower`, `ail-conformance`, and `ail-compile` artifact writers
-include this report and fingerprint in their manifests when the source package
-imports other packages.
+verifiable package-lock surface. For registry imports it also records
+`registry-identity=<identity>`. The `ail-build`, `ail-lower`,
+`ail-conformance`, and `ail-compile` artifact writers include this report and
+fingerprint in their manifests when the source package imports other packages.
 
 ## Version Compatibility
 
@@ -117,8 +142,7 @@ capability-grants:
 
 The checker rejects imported actions that use effects outside their grants.
 For resolved imports in the current v0.2 slice, the grant `package` field may
-name the import alias, import path, or resolved package name. Registry fetching
-and registry identity resolution remain package-resolver work.
+name the import alias, import path, or resolved package name.
 
 ## Standard Library Modules
 

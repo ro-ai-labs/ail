@@ -83,6 +83,8 @@ Evidence:
 
 - Local exact imports still work and version mismatches still fail.
 - Compatible local version ranges are resolved deterministically.
+- Registry package names are resolved through an explicit registry index that
+  records package identity, version, and source path.
 - Duplicate aliases, unresolved imports, unbounded major versions, and
   conflicting package names are rejected.
 - Capability grants are checked before imported effects can lower.
@@ -99,6 +101,8 @@ cargo test ail_package_loader_accepts_versioned_imports_and_rejects_mismatches
 cargo test ail_package_loader_rejects_duplicate_import_aliases
 cargo test cli_ail_package_resolves_compatible_local_import_ranges
 cargo test cli_ail_package_rejects_unbounded_major_import_ranges
+cargo test cli_ail_package_resolves_registry_import_identity_from_index
+cargo test cli_ail_package_rejects_unknown_registry_import
 cargo test cli_ail_package_rejects_imported_effect_without_capability_grant
 cargo test cli_ail_build_records_dependency_report_for_imported_package_graph
 ```
@@ -384,6 +388,8 @@ already covers parts of this gate:
 
 - exact local imports and version mismatch rejection
 - compatible local import range resolution and unbounded major range rejection
+- registry index import resolution with recorded registry identity and missing
+  registry entry rejection
 - package dependency report records resolved import identities, source hashes,
   capability grants, approvals, and imported effect classes
 - `ail-build`, `ail-lower`, `ail-conformance`, and `ail-compile` artifact
@@ -416,7 +422,6 @@ already covers parts of this gate:
 
 Missing v0.2 evidence includes:
 
-- registry package fetching and registry identity resolution
 - v0.2-specific release evidence bundle
 
 ## Completion Decision Rule

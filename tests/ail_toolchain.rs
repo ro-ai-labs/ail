@@ -2515,6 +2515,136 @@ conformance: first-slice
 }
 
 #[test]
+fn cli_ail_package_resolves_registry_import_identity_from_index() {
+    let unique_suffix = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let root = std::env::temp_dir().join(format!(
+        "ail-registry-import-{}-{unique_suffix}",
+        std::process::id()
+    ));
+    let registry = root.join("registry");
+    let shared = root.join("packages/shared-lib-0.1.3");
+    let app = root.join("app");
+    fs::create_dir_all(&registry).unwrap();
+    fs::create_dir_all(&shared).unwrap();
+    fs::create_dir_all(&app).unwrap();
+    fs::write(
+        registry.join("ail-registry.md"),
+        format!(
+            r#"package: shared-lib
+version: 0.1.3
+identity: registry.local/shared-lib@0.1.3
+path: {}
+"#,
+            shared.display()
+        ),
+    )
+    .unwrap();
+    fs::write(
+        shared.join("ail-package.md"),
+        r#"name: shared-lib
+version: 0.1.3
+profile: Application
+entry: spec.ail-spec.md
+features: things
+conformance: first-slice
+"#,
+    )
+    .unwrap();
+    fs::write(shared.join("spec.ail-spec.md"), "Application: Shared.\n").unwrap();
+    fs::write(app.join("spec.ail-spec.md"), "Application: App.\n").unwrap();
+    fs::write(
+        app.join("ail-package.md"),
+        r#"name: app
+version: 0.1.0
+profile: Application
+entry: spec.ail-spec.md
+features: imports
+registry: ../registry/ail-registry.md
+imports: shared-lib compatible ^0.1 as Shared
+conformance: first-slice
+"#,
+    )
+    .unwrap();
+
+    let package = load_ail_package_dir(&app).unwrap();
+    assert_eq!(package.metadata.imports[0].path, "shared-lib");
+    assert_eq!(
+        package.metadata.imports[0].version.as_deref(),
+        Some("compatible ^0.1")
+    );
+    assert_eq!(
+        package.metadata.imports[0].resolved_package.as_deref(),
+        Some("shared-lib")
+    );
+    assert_eq!(
+        package.imports[0].spec.registry_identity.as_deref(),
+        Some("registry.local/shared-lib@0.1.3")
+    );
+
+    let report = render_ail_package_dependency_report(&package).unwrap();
+    assert!(
+        report.contains("registry-identity=registry.local/shared-lib@0.1.3"),
+        "{report}"
+    );
+    assert!(
+        report.contains("resolved-import Shared path=shared-lib requirement=compatible ^0.1 name=shared-lib version=0.1.3"),
+        "{report}"
+    );
+
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn cli_ail_package_rejects_unknown_registry_import() {
+    let unique_suffix = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let root = std::env::temp_dir().join(format!(
+        "ail-registry-missing-import-{}-{unique_suffix}",
+        std::process::id()
+    ));
+    let registry = root.join("registry");
+    let app = root.join("app");
+    fs::create_dir_all(&registry).unwrap();
+    fs::create_dir_all(&app).unwrap();
+    fs::write(
+        registry.join("ail-registry.md"),
+        r#"package: other-lib
+version: 0.1.0
+identity: registry.local/other-lib@0.1.0
+path: ../other
+"#,
+    )
+    .unwrap();
+    fs::write(app.join("spec.ail-spec.md"), "Application: App.\n").unwrap();
+    fs::write(
+        app.join("ail-package.md"),
+        r#"name: app
+version: 0.1.0
+profile: Application
+entry: spec.ail-spec.md
+features: imports
+registry: ../registry/ail-registry.md
+imports: shared-lib@0.1.0 as Shared
+conformance: first-slice
+"#,
+    )
+    .unwrap();
+
+    let error = load_ail_package_dir(&app).unwrap_err();
+    assert!(
+        error.contains("registry") && error.contains("shared-lib"),
+        "{error}"
+    );
+
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn ail_package_dependency_report_records_resolved_imports_and_grants() {
     let unique_suffix = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
