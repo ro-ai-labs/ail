@@ -245,6 +245,7 @@ pub struct AilForm {
     pub fields: BTreeMap<String, AilFormField>,
     pub validations: Vec<String>,
     pub failure_traces: Vec<String>,
+    pub confirmations: Vec<String>,
     pub accessibility: Vec<String>,
     pub provenance: String,
 }
@@ -2741,6 +2742,21 @@ pub fn elaborate_ail_core(package: &AilPackage, document: &AilDocument) -> AilCo
                 format!("form:{}.trace:{trace}", form.name),
             );
         }
+        for confirmation in &form.confirmations {
+            let confirmation_node =
+                graph.add_node("Confirmation", confirmation, None, BTreeMap::new());
+            graph.add_edge(
+                "requires_confirmation",
+                &form_node,
+                &confirmation_node,
+                BTreeMap::new(),
+            );
+            attach_provenance(
+                &mut graph,
+                &confirmation_node,
+                format!("form:{}.confirmation:{confirmation}", form.name),
+            );
+        }
         for accessibility in &form.accessibility {
             let accessibility_node =
                 graph.add_node("Accessibility", accessibility, None, BTreeMap::new());
@@ -3940,6 +3956,7 @@ pub fn check_ail_core_diagnostics(core: &AilCore) -> Vec<AilDiagnostic> {
     diagnostics.extend(check_ui_form_action_targets(core));
     diagnostics.extend(check_ui_dashboard_permissions(core));
     diagnostics.extend(check_ui_form_accessibility(core));
+    diagnostics.extend(check_ui_destructive_action_confirmations(core));
     diagnostics.extend(check_ui_workflow_step_order(core));
     for action in core.graph.nodes.iter().filter(|node| node.kind == "Action") {
         if !has_outgoing_edge(&core.graph, "records_trace", &action.id) {
@@ -4073,6 +4090,7 @@ fn is_known_core_node_kind(kind: &str) -> bool {
             | "Branch"
             | "Call"
             | "Capability"
+            | "Confirmation"
             | "CorpusFixture"
             | "Accessibility"
             | "Dashboard"
@@ -4162,6 +4180,7 @@ fn is_known_core_edge_kind(kind: &str) -> bool {
             | "repeats"
             | "requires"
             | "requires_approval"
+            | "requires_confirmation"
             | "runs_in_context"
             | "schedules_task"
             | "targets_resource"
@@ -4763,6 +4782,7 @@ fn render_flow_ui_surface(core: &AilCore, kind: &str, name: &str) -> String {
                 "filters",
                 "contains",
                 "records_trace",
+                "requires_confirmation",
                 "has_accessibility",
             ],
         )
@@ -14523,6 +14543,69 @@ fn check_ui_form_accessibility(core: &AilCore) -> Vec<AilDiagnostic> {
         .collect()
 }
 
+fn check_ui_destructive_action_confirmations(core: &AilCore) -> Vec<AilDiagnostic> {
+    let node_by_id = graph_node_by_id(core);
+    let mut diagnostics = Vec::new();
+    for edge in core.graph.edges.iter().filter(|edge| edge.kind == "calls") {
+        let Some(form) = node_by_id.get(&edge.source) else {
+            continue;
+        };
+        if form.kind != "Form" || has_outgoing_edge(&core.graph, "requires_confirmation", &form.id)
+        {
+            continue;
+        }
+        let Some(action) = node_by_id.get(&edge.target) else {
+            continue;
+        };
+        if action.kind != "Action" || !ui_action_is_destructive(core, &node_by_id, &action.id) {
+            continue;
+        }
+        diagnostics.push(
+            AilDiagnostic::error(
+                "AIL-UI-CONFIRM-001",
+                format!(
+                    "form {} exposes destructive action {} without confirmation",
+                    form.name, action.name
+                ),
+            )
+            .with_source_provenance(
+                edge.attributes
+                    .get("provenance")
+                    .cloned()
+                    .or_else(|| node_provenance(core, &form.id)),
+            )
+            .with_affected_graph_item(format!("edge:{}", edge.id))
+            .with_repair_suggestion(format!(
+                "Add 'The form requires confirmation:' to form {}.",
+                form.name
+            )),
+        );
+    }
+    diagnostics
+}
+
+fn ui_action_is_destructive(
+    core: &AilCore,
+    node_by_id: &BTreeMap<String, crate::core_model::Node>,
+    action_id: &str,
+) -> bool {
+    core.graph
+        .edges
+        .iter()
+        .filter(|edge| edge.kind == "writes" && edge.source == action_id)
+        .filter_map(|edge| node_by_id.get(&edge.target))
+        .any(|target| ui_write_is_destructive(&target.name))
+}
+
+fn ui_write_is_destructive(write: &str) -> bool {
+    let normalized = write.trim().to_ascii_lowercase();
+    [
+        "delete ", "deletes ", "remove ", "removes ", "close ", "closes ", "cancel ", "cancels ",
+    ]
+    .iter()
+    .any(|prefix| normalized.starts_with(prefix))
+}
+
 fn check_ui_workflow_step_order(core: &AilCore) -> Vec<AilDiagnostic> {
     let node_by_id = graph_node_by_id(core);
     let mut steps_by_workflow = BTreeMap::<String, Vec<(String, String)>>::new();
@@ -16298,6 +16381,7 @@ fn parse_form_section(line: &str) -> Option<FormSection> {
         "The form fields are:" => Some(FormSection::Fields),
         "The form validates:" => Some(FormSection::Validations),
         "If form validation fails:" => Some(FormSection::FailureTraces),
+        "The form requires confirmation:" => Some(FormSection::Confirmations),
         "The form accessibility is:" => Some(FormSection::Accessibility),
         _ => None,
     }
@@ -16715,6 +16799,7 @@ fn parse_form_bullet(
         }
         FormSection::Validations => form.validations.push(trim_sentence(bullet)),
         FormSection::FailureTraces => form.failure_traces.push(trim_sentence(bullet)),
+        FormSection::Confirmations => form.confirmations.push(trim_sentence(bullet)),
         FormSection::Accessibility => form.accessibility.push(trim_sentence(bullet)),
     }
     Ok(())
@@ -17291,6 +17376,14 @@ fn parse_action_bullet(document: &mut AilDocument, action_name: &str, bullet: &s
         action
             .writes
             .push(format!("decrements {}", trim_sentence(text)));
+    } else if let Some(text) = bullet.strip_prefix("the system deletes ") {
+        action
+            .writes
+            .push(format!("deletes {}", trim_sentence(text)));
+    } else if let Some(text) = bullet.strip_prefix("the system removes ") {
+        action
+            .writes
+            .push(format!("removes {}", trim_sentence(text)));
     } else if let Some(text) = bullet.strip_prefix("the system creates ") {
         action.writes.push(trim_sentence(text));
     } else if let Some(text) = bullet.strip_prefix("the system calls ") {
@@ -17724,6 +17817,7 @@ enum FormSection {
     Fields,
     Validations,
     FailureTraces,
+    Confirmations,
     Accessibility,
 }
 

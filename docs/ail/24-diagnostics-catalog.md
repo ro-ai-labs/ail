@@ -63,6 +63,7 @@ severity, blocking behavior, and at least one invalid fixture.
 | `AIL-UI-A11Y-001` | `ail.ui.action.accessible-name` | reachable UI action lacks accessible name | error | yes | add accessible label |
 | `AIL-UI-FORM-001` | `ail.ui.form.action-resolves` | form calls an undeclared action | error | yes | declare the action before the form calls it |
 | `AIL-UI-PERMISSION-001` | `ail.ui.dashboard.permission-required` | dashboard reads data without permission | error | yes | add dashboard permission |
+| `AIL-UI-CONFIRM-001` | `ail.ui.form.destructive-confirmation` | form exposes destructive action without confirmation | error | yes | add form confirmation |
 | `AIL-UI-WORKFLOW-001` | `ail.ui.workflow.step-order` | blocked workflow step appears before its prerequisite | error | yes | move blocked step after prerequisite |
 
 ## Detailed Entries

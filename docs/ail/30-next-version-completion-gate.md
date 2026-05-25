@@ -207,10 +207,9 @@ Evidence:
   equivalents, and error announcements where applicable.
 - AIL-Flow projects route maps, form blocks, workflow steps, permission
   highlights, failure states, and accessibility review blocks.
-- Current rejected fixtures cover workflow step ordering violations.
-- Remaining rejected fixture coverage for action reachability, missing
-  permission parity, destructive action confirmation, and inaccessible error
-  text must be added before this gate is complete.
+- Rejected fixtures cover action reachability, dashboard permission parity,
+  destructive action confirmation, inaccessible error text, and workflow step
+  ordering violations.
 
 Minimum proof commands:
 
@@ -219,6 +218,10 @@ cargo test ail_ui_route_surface_parses_into_core
 cargo test cli_ail_ui_form_calls_checked_action
 cargo test cli_ail_ui_dashboard_requires_matching_permission
 cargo test cli_ail_ui_workflow_blocks_out_of_order_provider_call
+cargo test cli_ail_ui_rejects_unreachable_form_action
+cargo test cli_ail_ui_rejects_dashboard_without_permission
+cargo test cli_ail_ui_rejects_inaccessible_error_text
+cargo test cli_ail_ui_rejects_destructive_action_without_confirmation
 cargo test cli_ail_ui_accessibility_trace_records_field_error_announcement
 cargo test cli_ail_flow_projects_ui_profile_blocks
 ```
@@ -392,6 +395,9 @@ already covers parts of this gate:
   Core nodes
 - AIL-Flow projection for UI route, form, dashboard, workflow, and
   accessibility blocks
+- UI rejected fixtures for action reachability, dashboard permission parity,
+  destructive action confirmation, inaccessible error text, and workflow step
+  ordering
 - Wasm contract reports with host import enumeration
 - Linux native executable artifacts
 - prompt-envelope checks and prompt-to-native build evidence
@@ -401,8 +407,6 @@ Missing v0.2 evidence includes:
 - registry package fetching and registry identity resolution
 - ownership-transfer, nullable/non-null, mutable pointer aliasing, and
   secret-leakage FFI fixtures
-- rejected UI fixtures for action reachability, missing permission parity,
-  destructive action confirmation, and inaccessible error text
 - Darwin Mach-O contract artifacts
 - stored prompt portability corpus across model labels
 - v0.2-specific release evidence bundle

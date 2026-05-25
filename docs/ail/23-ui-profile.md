@@ -60,8 +60,8 @@ and `blocks_before` constraints; the checker rejects a blocked step that
 appears before or at its prerequisite.
 
 Components, responsive layout constraints, destructive-action confirmation,
-and full backend/UI permission parity remain future UI-profile implementation
-slices.
+and full backend/UI permission parity beyond dashboard-read permissions remain
+future UI-profile implementation slices.
 
 ## Views And Components
 
@@ -145,6 +145,17 @@ The UI profile requires:
 Accessibility violations are checker diagnostics when they affect reachable UI
 actions. The v0.2 checker currently enforces that a form with validation rules
 and validation failure traces has an accessibility announcement.
+
+Destructive actions reachable from forms require explicit confirmation:
+
+```text
+The form requires confirmation:
+
+- reviewer confirms ticket deletion
+```
+
+Without that confirmation, a form that calls an action with destructive writes
+such as `deletes Ticket` is rejected with `AIL-UI-CONFIRM-001`.
 
 ## Responsive Layout Constraints
 

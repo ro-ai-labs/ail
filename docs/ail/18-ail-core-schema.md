@@ -112,6 +112,7 @@ Optional attributes for all nodes:
 | `View` | `name`, `view_kind` | `Application`, package root | reads require permission |
 | `Route` | `name`, `path` | package root | reads require permission and trace |
 | `Form` | `name` | package root | called action must resolve |
+| `Confirmation` | `name` | form | destructive UI action requires confirmation |
 | `Dashboard` | `name` | package root | reads require matching permission |
 | `Workflow` | `name` | package root | blocked step ordering must hold |
 | `Filter` | `name` | dashboard | filter must attach to dashboard |
@@ -178,6 +179,7 @@ Required attributes for all edges:
 | `calls` | action, function, tool, form, pass | action, call, effect, external binding | many | target action or effects declared |
 | `validates` | form | rule | many | validation rule attached to form |
 | `has_accessibility` | form | accessibility | many | error announcement attached to form |
+| `requires_confirmation` | form | confirmation | many | destructive action confirmation attached to form |
 | `filters` | dashboard | filter | many | filter attached to dashboard |
 | `blocks_before` | workflow step | workflow step | many | blocked step must appear after prerequisite |
 | `performs` | component, action, tool | effect | many | capability and target required |

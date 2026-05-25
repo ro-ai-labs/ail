@@ -1547,6 +1547,88 @@ fn cli_ail_ui_workflow_blocks_out_of_order_provider_call() {
 }
 
 #[test]
+fn cli_ail_ui_rejects_unreachable_form_action() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let output = Command::new(binary)
+        .args(["ail-conformance", &fixture("ui_workflow.ail")])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("rejected: form-missing-action.ail-spec.md AIL-UI-FORM-001"),
+        "{stdout}"
+    );
+}
+
+#[test]
+fn cli_ail_ui_rejects_dashboard_without_permission() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let output = Command::new(binary)
+        .args(["ail-conformance", &fixture("ui_workflow.ail")])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("rejected: dashboard-missing-permission.ail-spec.md AIL-UI-PERMISSION-001"),
+        "{stdout}"
+    );
+}
+
+#[test]
+fn cli_ail_ui_rejects_inaccessible_error_text() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let output = Command::new(binary)
+        .args(["ail-conformance", &fixture("ui_workflow.ail")])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("rejected: inaccessible-error-text.ail-spec.md AIL-UI-A11Y-001"),
+        "{stdout}"
+    );
+}
+
+#[test]
+fn cli_ail_ui_rejects_destructive_action_without_confirmation() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let output = Command::new(binary)
+        .args(["ail-conformance", &fixture("ui_workflow.ail")])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains(
+            "rejected: destructive-action-without-confirmation.ail-spec.md AIL-UI-CONFIRM-001"
+        ),
+        "{stdout}"
+    );
+}
+
+#[test]
 fn cli_ail_ui_accessibility_trace_records_field_error_announcement() {
     let package = load_ail_package_dir(fixture("ui_workflow.ail")).unwrap();
     let spec =
