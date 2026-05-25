@@ -1689,24 +1689,23 @@ vm-action: CloseTicket
 runtime-state: ticket.id=T-1;ticket.status=Open
 
 ## End-To-End Example: example-91
-semantic-task: support-ticket-91
+semantic-task: support-ticket-live-codex-requirements-91
 profile: System
 surface-tags: core
 package: examples/support_ticket.ail
 prompt-file: docs/ail/prompts/requirements.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-91.json
-response-file: responses/example-91.ail-spec.md
+response-file: responses/example-91.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: aarch64-apple-darwin-libsystem-macho
 vm-action: CloseTicket
 runtime-state: ticket.id=T-1;ticket.status=Open
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-92
 semantic-task: support-ticket-live-codex-spec-92
@@ -1728,44 +1727,42 @@ vm-action: CloseTicket
 runtime-state: ticket.id=T-1;ticket.status=Open
 
 ## End-To-End Example: example-93
-semantic-task: support-ticket-93
+semantic-task: support-ticket-live-codex-core-draft-93
 profile: System
 surface-tags: core
 package: examples/support_ticket.ail
 prompt-file: docs/ail/prompts/core-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:0175222e4a84bec4
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-93.json
-response-file: responses/example-93.ail-spec.md
+response-file: responses/example-93.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: aarch64-apple-darwin-libsystem-macho
 vm-action: CloseTicket
 runtime-state: ticket.id=T-1;ticket.status=Open
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-94
-semantic-task: support-ticket-94
+semantic-task: support-ticket-live-codex-diagnostic-repair-94
 profile: System
 surface-tags: core
 package: examples/support_ticket.ail
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:c9700f2c2e57e49e
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-94.json
-response-file: responses/example-94.ail-spec.md
+response-file: responses/example-94.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: aarch64-apple-darwin-libsystem-macho
 vm-action: CloseTicket
 runtime-state: ticket.id=T-1;ticket.status=Open
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-95
 semantic-task: stateful-counter-live-codex-core-to-spec-95
