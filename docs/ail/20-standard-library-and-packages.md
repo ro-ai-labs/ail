@@ -70,6 +70,17 @@ import before checking if the versions differ. Compatible range resolution and
 registry package names remain package-resolver work, not ambient checker
 behavior.
 
+It also implements the v0.2-compatible local range form:
+
+```text
+imports: ../shared compatible ^0.1 as Shared
+```
+
+For this form, the loader resolves `../shared`, rejects unbounded major ranges
+such as `*`, and accepts only packages with the same major version and a
+version greater than or equal to the range base. Registry package names and
+cross-major compatibility policies remain package-resolver work.
+
 ## Version Compatibility
 
 Semantic version rules:

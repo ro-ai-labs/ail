@@ -1802,6 +1802,106 @@ conformance: first-slice
 }
 
 #[test]
+fn cli_ail_package_resolves_compatible_local_import_ranges() {
+    let unique_suffix = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let root = std::env::temp_dir().join(format!(
+        "ail-compatible-import-range-{}-{unique_suffix}",
+        std::process::id()
+    ));
+    let shared = root.join("shared");
+    let app = root.join("app");
+    fs::create_dir_all(&shared).unwrap();
+    fs::create_dir_all(&app).unwrap();
+    fs::write(
+        shared.join("ail-package.md"),
+        r#"name: shared-lib
+version: 0.1.3
+profile: Application
+entry: spec.ail-spec.md
+features: things
+conformance: first-slice
+"#,
+    )
+    .unwrap();
+    fs::write(shared.join("spec.ail-spec.md"), "Application: Shared.\n").unwrap();
+    fs::write(app.join("spec.ail-spec.md"), "Application: App.\n").unwrap();
+    fs::write(
+        app.join("ail-package.md"),
+        r#"name: app
+version: 0.1.0
+profile: Application
+entry: spec.ail-spec.md
+features: imports
+imports: ../shared compatible ^0.1 as Shared
+conformance: first-slice
+"#,
+    )
+    .unwrap();
+
+    let package = load_ail_package_dir(&app).unwrap();
+    assert_eq!(package.metadata.imports[0].path, "../shared");
+    assert_eq!(
+        package.metadata.imports[0].version.as_deref(),
+        Some("compatible ^0.1")
+    );
+    assert_eq!(package.imports[0].package.metadata.version, "0.1.3");
+
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn cli_ail_package_rejects_unbounded_major_import_ranges() {
+    let unique_suffix = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let root = std::env::temp_dir().join(format!(
+        "ail-unbounded-import-range-{}-{unique_suffix}",
+        std::process::id()
+    ));
+    let shared = root.join("shared");
+    let app = root.join("app");
+    fs::create_dir_all(&shared).unwrap();
+    fs::create_dir_all(&app).unwrap();
+    fs::write(
+        shared.join("ail-package.md"),
+        r#"name: shared-lib
+version: 1.2.3
+profile: Application
+entry: spec.ail-spec.md
+features: things
+conformance: first-slice
+"#,
+    )
+    .unwrap();
+    fs::write(shared.join("spec.ail-spec.md"), "Application: Shared.\n").unwrap();
+    fs::write(app.join("spec.ail-spec.md"), "Application: App.\n").unwrap();
+    fs::write(
+        app.join("ail-package.md"),
+        r#"name: app
+version: 0.1.0
+profile: Application
+entry: spec.ail-spec.md
+features: imports
+imports: ../shared compatible * as Shared
+conformance: first-slice
+"#,
+    )
+    .unwrap();
+
+    let error = load_ail_package_dir(&app).unwrap_err();
+    assert!(
+        error.contains("unbounded major") && error.contains("../shared"),
+        "{error}"
+    );
+
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn ail_package_loader_rejects_duplicate_import_aliases() {
     let unique_suffix = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)

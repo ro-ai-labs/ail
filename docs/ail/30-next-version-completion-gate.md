@@ -356,6 +356,7 @@ As of the v0.1 completion baseline, AIL v0.2 is not complete. Current evidence
 already covers parts of this gate:
 
 - exact local imports and version mismatch rejection
+- compatible local import range resolution and unbounded major range rejection
 - manifest preservation of capability grants
 - C binding parsing into `ExternalBinding` Core nodes
 - route parsing into UI Core nodes
@@ -365,7 +366,7 @@ already covers parts of this gate:
 
 Missing v0.2 evidence includes:
 
-- compatible range resolver and dependency lock/report
+- package dependency lock/report
 - checker enforcement of imported capability grants
 - standard library packages as first-class package fixtures
 - struct layout, callback, ownership-transfer, and unsafe-pointer FFI fixtures

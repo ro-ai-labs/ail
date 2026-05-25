@@ -615,7 +615,7 @@ fn load_ail_package_dir_inner(
         let import_root = root.join(&import.path);
         let package = load_ail_package_dir_inner(&import_root, stack)?;
         if let Some(required_version) = &import.version
-            && package.metadata.version != *required_version
+            && !import_version_requirement_matches(required_version, &package.metadata.version)?
         {
             return Err(format!(
                 "AIL import {} as {} requires version {}, but package {} is version {}",
@@ -10979,16 +10979,31 @@ fn parse_import_specs(text: &str) -> Result<Vec<AilImportSpec>, String> {
         if !aliases.insert(alias.to_string()) {
             return Err(format!("AIL import duplicate import alias {alias}"));
         }
-        let (path, version) = match path.rsplit_once('@') {
-            Some((path, version)) if !path.is_empty() && !version.is_empty() => {
-                (path, Some(version.to_string()))
-            }
-            Some(_) => {
+        let (path, version) = if let Some((path, requirement)) = path.split_once(" compatible ") {
+            if path.trim().is_empty() || requirement.trim().is_empty() {
                 return Err(format!(
-                    "AIL import '{entry}' must use '<path>@<version> as <Alias>'"
+                    "AIL import '{entry}' must use '<path> compatible <range> as <Alias>'"
                 ));
             }
-            None => (path, None),
+            let requirement = requirement.trim();
+            if import_version_range_is_unbounded_major(requirement) {
+                return Err(format!(
+                    "AIL import '{entry}' uses unbounded major version range {requirement}"
+                ));
+            }
+            (path.trim(), Some(format!("compatible {requirement}")))
+        } else {
+            match path.rsplit_once('@') {
+                Some((path, version)) if !path.is_empty() && !version.is_empty() => {
+                    (path, Some(version.to_string()))
+                }
+                Some(_) => {
+                    return Err(format!(
+                        "AIL import '{entry}' must use '<path>@<version> as <Alias>'"
+                    ));
+                }
+                None => (path, None),
+            }
         };
         imports.push(AilImportSpec {
             path: path.to_string(),
@@ -10997,6 +11012,74 @@ fn parse_import_specs(text: &str) -> Result<Vec<AilImportSpec>, String> {
         });
     }
     Ok(imports)
+}
+
+fn import_version_range_is_unbounded_major(requirement: &str) -> bool {
+    matches!(requirement.trim(), "*" | "x" | "X")
+}
+
+fn import_version_requirement_matches(requirement: &str, actual: &str) -> Result<bool, String> {
+    let Some(range) = requirement.strip_prefix("compatible ") else {
+        return Ok(actual == requirement);
+    };
+    let range = range.trim();
+    if import_version_range_is_unbounded_major(range) {
+        return Err(format!(
+            "AIL import compatible range {range} is unbounded major"
+        ));
+    }
+    let Some(base) = range.strip_prefix('^') else {
+        return Err(format!(
+            "AIL import compatible range {range} must use caret syntax like ^1.2"
+        ));
+    };
+    let base = parse_semver_prefix(base)?;
+    let actual = parse_semver_prefix(actual)?;
+    Ok(actual.major == base.major && semver_tuple_at_least(actual, base))
+}
+
+#[derive(Clone, Copy)]
+struct AilSemverPrefix {
+    major: u64,
+    minor: u64,
+    patch: u64,
+}
+
+fn parse_semver_prefix(version: &str) -> Result<AilSemverPrefix, String> {
+    let parts = version.split('.').collect::<Vec<_>>();
+    if parts.is_empty() || parts.len() > 3 {
+        return Err(format!("AIL version '{version}' must be major.minor.patch"));
+    }
+    let major = parse_semver_component(version, parts[0], "major")?;
+    let minor = parts
+        .get(1)
+        .map(|part| parse_semver_component(version, part, "minor"))
+        .transpose()?
+        .unwrap_or(0);
+    let patch = parts
+        .get(2)
+        .map(|part| parse_semver_component(version, part, "patch"))
+        .transpose()?
+        .unwrap_or(0);
+    Ok(AilSemverPrefix {
+        major,
+        minor,
+        patch,
+    })
+}
+
+fn parse_semver_component(version: &str, part: &str, name: &str) -> Result<u64, String> {
+    if part.is_empty() {
+        return Err(format!(
+            "AIL version '{version}' has empty {name} component"
+        ));
+    }
+    part.parse::<u64>()
+        .map_err(|_| format!("AIL version '{version}' has non-integer {name} component"))
+}
+
+fn semver_tuple_at_least(actual: AilSemverPrefix, base: AilSemverPrefix) -> bool {
+    (actual.major, actual.minor, actual.patch) >= (base.major, base.minor, base.patch)
 }
 
 fn parse_capability_grant_manifest_line(
