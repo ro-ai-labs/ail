@@ -550,23 +550,22 @@ vm-action: CompressPayload
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-29
-semantic-task: c-interop-29
+semantic-task: c-interop-live-codex-interop-29
 profile: Application
 surface-tags: c-host-interop
 package: examples/c_interop.ail
 prompt-file: docs/ail/prompts/interop.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:87f6dd1772d48729
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-29.json
-response-file: responses/example-29.ail-spec.md
+response-file: responses/example-29.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: wasm32-unknown-sandbox-wasm
 vm-action: CompressPayload
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-30
 semantic-task: support-ticket-30
