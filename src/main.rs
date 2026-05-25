@@ -399,6 +399,7 @@ struct AilE2eCorpusEntry {
 struct AilE2eCorpusEvaluation {
     entry: AilE2eCorpusEntry,
     checked_core_text: Option<String>,
+    bytecode_text: Option<String>,
 }
 
 struct AilBootstrapArtifactSet<'a> {
@@ -1269,6 +1270,7 @@ fn evaluate_ail_e2e_corpus_entry(
         return Ok(AilE2eCorpusEvaluation {
             entry: entry.clone(),
             checked_core_text: None,
+            bytecode_text: None,
         });
     }
     let artifact_kind = entry
@@ -1280,6 +1282,7 @@ fn evaluate_ail_e2e_corpus_entry(
         return Ok(AilE2eCorpusEvaluation {
             entry: entry.clone(),
             checked_core_text: None,
+            bytecode_text: None,
         });
     }
     let package_path = entry
@@ -1305,9 +1308,19 @@ fn evaluate_ail_e2e_corpus_entry(
             diagnostics.join("\n")
         ));
     }
+    let bytecode = compile_ail_core_bytecode(&core)?;
+    let bytecode_diagnostics = verify_ail_bytecode(&bytecode);
+    if !bytecode_diagnostics.is_empty() {
+        return Err(format!(
+            "e2e corpus accepted entry {} has bytecode diagnostics:\n{}",
+            entry.id,
+            bytecode_diagnostics.join("\n")
+        ));
+    }
     Ok(AilE2eCorpusEvaluation {
         entry: entry.clone(),
         checked_core_text: Some(render_ail_core(&core)),
+        bytecode_text: Some(format!("{}\n", render_ail_bytecode(&bytecode))),
     })
 }
 
@@ -1404,6 +1417,18 @@ fn write_ail_e2e_corpus_artifacts(
                 format!("{}\n", ail_artifact_fingerprint(core_text)),
             )
             .map_err(|error| format!("failed to write e2e checked core fingerprint: {error}"))?;
+        }
+        if let Some(bytecode_text) = &evaluation.bytecode_text {
+            let entry_dir = root.join("examples").join(&evaluation.entry.id);
+            fs::create_dir_all(&entry_dir)
+                .map_err(|error| format!("failed to create e2e entry artifact dir: {error}"))?;
+            fs::write(entry_dir.join("artifact.ailbc.json"), bytecode_text)
+                .map_err(|error| format!("failed to write e2e bytecode artifact: {error}"))?;
+            fs::write(
+                entry_dir.join("artifact.ailbc.fingerprint.txt"),
+                format!("{}\n", ail_artifact_fingerprint(bytecode_text)),
+            )
+            .map_err(|error| format!("failed to write e2e bytecode fingerprint: {error}"))?;
         }
     }
     Ok(())

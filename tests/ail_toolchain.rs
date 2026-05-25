@@ -20293,6 +20293,22 @@ fn cli_ail_e2e_corpus_writes_report_for_metadata_complete_corpus() {
         checked_core_fingerprint.trim(),
         fnv64_fingerprint(&checked_core)
     );
+    let bytecode_artifact =
+        fs::read_to_string(artifact_dir.join("examples/example-0/artifact.ailbc.json")).unwrap();
+    assert!(
+        bytecode_artifact.contains("\"kind\":\"AIL-Bytecode\"")
+            && bytecode_artifact.contains("\"action\":\"CloseTicket\""),
+        "{bytecode_artifact}"
+    );
+    let bytecode = parse_ail_bytecode(&bytecode_artifact).unwrap();
+    assert_eq!(verify_ail_bytecode(&bytecode), Vec::<String>::new());
+    let bytecode_fingerprint =
+        fs::read_to_string(artifact_dir.join("examples/example-0/artifact.ailbc.fingerprint.txt"))
+            .unwrap();
+    assert_eq!(
+        bytecode_fingerprint.trim(),
+        fnv64_fingerprint(&bytecode_artifact)
+    );
     let report_fingerprint =
         fs::read_to_string(artifact_dir.join("e2e-corpus-report.fingerprint.txt")).unwrap();
     assert_eq!(report_fingerprint.trim(), fnv64_fingerprint(&report));
