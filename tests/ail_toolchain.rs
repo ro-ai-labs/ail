@@ -1474,6 +1474,115 @@ The route records trace:
 }
 
 #[test]
+fn cli_ail_ui_form_calls_checked_action() {
+    let package = load_ail_package_dir(fixture("ui_workflow.ail")).unwrap();
+    let spec =
+        fs::read_to_string(format!("{}/spec.ail-spec.md", fixture("ui_workflow.ail"))).unwrap();
+    let document = parse_ail_spec_text(&spec).unwrap();
+    let core = elaborate_ail_core(&package, &document);
+
+    assert_eq!(check_ail_core(&core), Vec::<String>::new());
+    let rendered_core = render_ail_core(&core);
+    assert!(rendered_core.contains("node Form CreateTicketForm [label=Create ticket]"));
+    assert!(rendered_core.contains("node Field CreateTicketForm.title : Text"));
+    assert!(rendered_core.contains("node Rule title is not empty"));
+    assert!(rendered_core.contains("node Accessibility title error is announced"));
+    assert!(rendered_core.contains("edge calls Form:CreateTicketForm -> Action:CreateTicket"));
+    assert!(
+        rendered_core
+            .contains("edge has_field Form:CreateTicketForm -> Field:CreateTicketForm.title")
+    );
+    assert!(
+        rendered_core.contains("edge validates Form:CreateTicketForm -> Rule:title is not empty")
+    );
+    assert!(
+        rendered_core
+            .contains("edge records_trace Form:CreateTicketForm -> Trace:FormValidationFailed")
+    );
+}
+
+#[test]
+fn cli_ail_ui_dashboard_requires_matching_permission() {
+    let package = load_ail_package_dir(fixture("ui_workflow.ail")).unwrap();
+    let spec =
+        fs::read_to_string(format!("{}/spec.ail-spec.md", fixture("ui_workflow.ail"))).unwrap();
+    let document = parse_ail_spec_text(&spec).unwrap();
+    let core = elaborate_ail_core(&package, &document);
+
+    assert_eq!(check_ail_core(&core), Vec::<String>::new());
+    let rendered_core = render_ail_core(&core);
+    assert!(
+        rendered_core
+            .contains("node Dashboard SupportManagerDashboard [label=Support manager dashboard]")
+    );
+    assert!(rendered_core.contains("edge reads Dashboard:SupportManagerDashboard -> Value:SupportManagerDashboard.Ticket.status"));
+    assert!(rendered_core.contains("edge requires Dashboard:SupportManagerDashboard -> Permission:Support manager may view overdue tickets"));
+    assert!(
+        rendered_core.contains(
+            "edge records_trace Dashboard:SupportManagerDashboard -> Trace:DashboardViewed"
+        )
+    );
+}
+
+#[test]
+fn cli_ail_ui_workflow_blocks_out_of_order_provider_call() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let output = Command::new(binary)
+        .args(["ail-conformance", &fixture("ui_workflow.ail")])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains(
+            "rejected: workflow-out-of-order-provider-call.ail-spec.md AIL-UI-WORKFLOW-001"
+        ),
+        "{stdout}"
+    );
+}
+
+#[test]
+fn cli_ail_ui_accessibility_trace_records_field_error_announcement() {
+    let package = load_ail_package_dir(fixture("ui_workflow.ail")).unwrap();
+    let spec =
+        fs::read_to_string(format!("{}/spec.ail-spec.md", fixture("ui_workflow.ail"))).unwrap();
+    let document = parse_ail_spec_text(&spec).unwrap();
+    let core = elaborate_ail_core(&package, &document);
+
+    assert_eq!(check_ail_core(&core), Vec::<String>::new());
+    let rendered_core = render_ail_core(&core);
+    assert!(rendered_core.contains(
+        "edge has_accessibility Form:CreateTicketForm -> Accessibility:title error is announced"
+    ));
+    assert!(
+        rendered_core
+            .contains("edge records_trace Form:CreateTicketForm -> Trace:FormValidationFailed")
+    );
+}
+
+#[test]
+fn cli_ail_flow_projects_ui_profile_blocks() {
+    let package = load_ail_package_dir(fixture("ui_workflow.ail")).unwrap();
+    let spec =
+        fs::read_to_string(format!("{}/spec.ail-spec.md", fixture("ui_workflow.ail"))).unwrap();
+    let document = parse_ail_spec_text(&spec).unwrap();
+    let core = elaborate_ail_core(&package, &document);
+
+    assert_eq!(check_ail_core(&core), Vec::<String>::new());
+    let flow = render_ail_flow_view(&core);
+    assert!(flow.contains(r#""routes":[{"#), "{flow}");
+    assert!(flow.contains(r#""forms":[{"#), "{flow}");
+    assert!(flow.contains(r#""dashboards":[{"#), "{flow}");
+    assert!(flow.contains(r#""workflows":[{"#), "{flow}");
+    assert!(flow.contains(r#""accessibility":[{"#), "{flow}");
+}
+
+#[test]
 fn ail_system_profile_accepts_mutable_borrowed_resources() {
     let package = load_ail_package_dir(fixture("network_driver.ail")).unwrap();
     let spec = fs::read_to_string(format!(

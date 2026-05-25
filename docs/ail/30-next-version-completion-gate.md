@@ -207,9 +207,10 @@ Evidence:
   equivalents, and error announcements where applicable.
 - AIL-Flow projects route maps, form blocks, workflow steps, permission
   highlights, failure states, and accessibility review blocks.
-- Rejected fixtures cover action not reachable from form, missing permission
-  parity, destructive action without confirmation, inaccessible error text, and
-  workflow step ordering violations.
+- Current rejected fixtures cover workflow step ordering violations.
+- Remaining rejected fixture coverage for action reachability, missing
+  permission parity, destructive action confirmation, and inaccessible error
+  text must be added before this gate is complete.
 
 Minimum proof commands:
 
@@ -316,7 +317,7 @@ cargo run -- ail-conformance examples/support_ticket.ail --artifact-dir /tmp/ail
 cargo run -- ail-conformance examples/refund_tool.ail --artifact-dir /tmp/ail-v02-conformance-refund
 cargo run -- ail-conformance examples/compiler_pass.ail --artifact-dir /tmp/ail-v02-conformance-compiler
 cargo run -- ail-conformance examples/network_driver.ail --artifact-dir /tmp/ail-v02-conformance-system
-cargo run -- ail-conformance examples/std_collections.ail --artifact-dir /tmp/ail-v02-conformance-std-collections
+cargo run -- ail-conformance examples/ail_std_collections.ail --artifact-dir /tmp/ail-v02-conformance-std-collections
 cargo run -- ail-conformance examples/c_interop.ail --artifact-dir /tmp/ail-v02-conformance-c-interop
 cargo run -- ail-conformance examples/ui_workflow.ail --artifact-dir /tmp/ail-v02-conformance-ui
 cargo run -- ail-build examples/support_ticket.ail --prompt "Build an AIL support ticket bytecode artifact with imported package and UI host-boundary evidence" --agent examples/ail_toolchain_agent.ail --artifact-dir /tmp/ail-v02-build-support --target linux-x86_64-elf --action CloseTicket --out /tmp/ail-v02-close-ticket
@@ -387,7 +388,10 @@ already covers parts of this gate:
 - C binding parsing into `ExternalBinding` Core nodes
 - C interop package fixtures for external bindings, struct layout, callbacks,
   missing status maps, missing traces, and borrowed pointer escape
-- route parsing into UI Core nodes
+- route, form, dashboard, workflow, and accessibility parsing into checked UI
+  Core nodes
+- AIL-Flow projection for UI route, form, dashboard, workflow, and
+  accessibility blocks
 - Wasm contract reports with host import enumeration
 - Linux native executable artifacts
 - prompt-envelope checks and prompt-to-native build evidence
@@ -395,10 +399,10 @@ already covers parts of this gate:
 Missing v0.2 evidence includes:
 
 - registry package fetching and registry identity resolution
-- standard library packages as first-class package fixtures
 - ownership-transfer, nullable/non-null, mutable pointer aliasing, and
   secret-leakage FFI fixtures
-- UI forms, dashboards, workflows, accessibility diagnostics, and flow blocks
+- rejected UI fixtures for action reachability, missing permission parity,
+  destructive action confirmation, and inaccessible error text
 - Darwin Mach-O contract artifacts
 - stored prompt portability corpus across model labels
 - v0.2-specific release evidence bundle

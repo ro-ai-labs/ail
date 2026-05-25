@@ -61,6 +61,9 @@ severity, blocking behavior, and at least one invalid fixture.
 | `AILR013` | `ail.spec.requirements.trace-preserved` | spec draft drops a required trace event from AIL-Requirements | error | yes | add the named trace event |
 | `AIL-ROUNDTRIP-001` | `ail.projection.roundtrip.preserves-core` | projection round trip changes graph hash | error | yes | repair projection or patch |
 | `AIL-UI-A11Y-001` | `ail.ui.action.accessible-name` | reachable UI action lacks accessible name | error | yes | add accessible label |
+| `AIL-UI-FORM-001` | `ail.ui.form.action-resolves` | form calls an undeclared action | error | yes | declare the action before the form calls it |
+| `AIL-UI-PERMISSION-001` | `ail.ui.dashboard.permission-required` | dashboard reads data without permission | error | yes | add dashboard permission |
+| `AIL-UI-WORKFLOW-001` | `ail.ui.workflow.step-order` | blocked workflow step appears before its prerequisite | error | yes | move blocked step after prerequisite |
 
 ## Detailed Entries
 

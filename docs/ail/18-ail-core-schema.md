@@ -110,6 +110,12 @@ Optional attributes for all nodes:
 | `Event` | `name` | package root | event payload typed |
 | `Rule` | `name` | package root | rule must be required or checked |
 | `View` | `name`, `view_kind` | `Application`, package root | reads require permission |
+| `Route` | `name`, `path` | package root | reads require permission and trace |
+| `Form` | `name` | package root | called action must resolve |
+| `Dashboard` | `name` | package root | reads require matching permission |
+| `Workflow` | `name` | package root | blocked step ordering must hold |
+| `Filter` | `name` | dashboard | filter must attach to dashboard |
+| `Accessibility` | `name` | form | validation failure trace needs announcement |
 | `Value` | `name`, `type` | package root, action, function | type must resolve |
 | `Capability` | `name` | package root | used by effects or bindings |
 | `Permission` | `name` | package root | grants scope and subject |
@@ -166,10 +172,14 @@ Required attributes for all edges:
 | --- | --- | --- | --- | --- |
 | `contains` | package, application, action, function | declaration, step | many | target belongs to source |
 | `has_field` | `Thing` | `Field` | many | field name unique per thing |
-| `requires` | action, tool, view, component | rule, permission, capability | many | target must be declared |
-| `reads` | action, function, tool, view, pass | field, value, resource | many | read permission or ownership required |
+| `requires` | action, tool, view, component, route, dashboard | rule, permission, capability | many | target must be declared |
+| `reads` | action, function, tool, view, route, dashboard, pass | field, value, resource | many | read permission or ownership required |
 | `writes` | action, tool, component, pass | field, value, resource, effect | many | write permission required |
-| `calls` | action, function, tool, pass | action, call, effect, external binding | many | target action or effects declared |
+| `calls` | action, function, tool, form, pass | action, call, effect, external binding | many | target action or effects declared |
+| `validates` | form | rule | many | validation rule attached to form |
+| `has_accessibility` | form | accessibility | many | error announcement attached to form |
+| `filters` | dashboard | filter | many | filter attached to dashboard |
+| `blocks_before` | workflow step | workflow step | many | blocked step must appear after prerequisite |
 | `performs` | component, action, tool | effect | many | capability and target required |
 | `uses_resource` | component | resource | many | resource declared |
 | `targets_resource` | effect | resource | one | resource declared |
@@ -203,7 +213,7 @@ Required attributes for all edges:
 | `requires_approval` | action, tool | approval | many | approval has rule and trace |
 | `protects_secret` | action, tool, field, output | secret | many | redaction declared |
 | `grants_permission` | action, approval, package | permission | many | scope declared |
-| `records_trace` | action, tool, failure, loop, call | trace | many | trace name stable |
+| `records_trace` | action, tool, failure, loop, call, route, form, dashboard, workflow | trace | many | trace name stable |
 | `has_provenance` | any node or edge | provenance | one or more | human vs agent source tagged |
 | `projects_to` | core node or edge | flow/spec item | many | projection reversible or lossy |
 | `lowers_to` | core node or edge | bytecode/backend item | many | backend report required |

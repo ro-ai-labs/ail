@@ -65,6 +65,9 @@ pub struct AilDocument {
     pub functions: BTreeMap<String, AilFunction>,
     pub types: BTreeMap<String, AilType>,
     pub routes: BTreeMap<String, AilRoute>,
+    pub forms: BTreeMap<String, AilForm>,
+    pub dashboards: BTreeMap<String, AilDashboard>,
+    pub workflows: BTreeMap<String, AilWorkflow>,
     pub external_bindings: BTreeMap<String, AilExternalBinding>,
     pub actions: BTreeMap<String, AilAction>,
     pub failures: BTreeMap<String, AilFailure>,
@@ -231,6 +234,53 @@ pub struct AilRoute {
     pub reads: Vec<String>,
     pub permissions: Vec<String>,
     pub traces: Vec<String>,
+    pub provenance: String,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct AilForm {
+    pub name: String,
+    pub label: String,
+    pub action: Option<String>,
+    pub fields: BTreeMap<String, AilFormField>,
+    pub validations: Vec<String>,
+    pub failure_traces: Vec<String>,
+    pub accessibility: Vec<String>,
+    pub provenance: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AilFormField {
+    pub name: String,
+    pub type_name: String,
+    pub provenance: String,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct AilDashboard {
+    pub name: String,
+    pub label: String,
+    pub reads: Vec<String>,
+    pub permissions: Vec<String>,
+    pub filters: Vec<String>,
+    pub traces: Vec<String>,
+    pub provenance: String,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct AilWorkflow {
+    pub name: String,
+    pub label: String,
+    pub steps: Vec<String>,
+    pub blocks: Vec<AilWorkflowBlock>,
+    pub traces: Vec<String>,
+    pub provenance: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AilWorkflowBlock {
+    pub blocked_step: String,
+    pub prerequisite_step: String,
     pub provenance: String,
 }
 
@@ -1629,6 +1679,9 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
         functions: BTreeMap::new(),
         types: BTreeMap::new(),
         routes: BTreeMap::new(),
+        forms: BTreeMap::new(),
+        dashboards: BTreeMap::new(),
+        workflows: BTreeMap::new(),
         external_bindings: BTreeMap::new(),
         actions: BTreeMap::new(),
         failures: BTreeMap::new(),
@@ -1646,6 +1699,12 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
     let mut current_type_section: Option<TypeSection> = None;
     let mut current_route: Option<String> = None;
     let mut current_route_section: Option<RouteSection> = None;
+    let mut current_form: Option<String> = None;
+    let mut current_form_section: Option<FormSection> = None;
+    let mut current_dashboard: Option<String> = None;
+    let mut current_dashboard_section: Option<DashboardSection> = None;
+    let mut current_workflow: Option<String> = None;
+    let mut current_workflow_section: Option<WorkflowSection> = None;
     let mut current_c_library: Option<String> = None;
     let mut current_external_binding: Option<String> = None;
     let mut current_external_binding_section: Option<ExternalBindingSection> = None;
@@ -1894,6 +1953,171 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
             && current_route.is_some()
         {
             current_route_section = Some(section);
+            current_thing = None;
+            current_tool = None;
+            current_tool_section = None;
+            current_compiler_pass = None;
+            current_compiler_pass_section = None;
+            current_system_component = None;
+            current_system_section = None;
+            current_function = None;
+            current_function_section = None;
+            current_action = None;
+            current_failure = None;
+            current_list = None;
+            action_header_waiting_for_when = false;
+            continue;
+        }
+        if let Some(label) = parse_form_header(line) {
+            let name = format!("{}Form", action_name_from_label(&label));
+            document
+                .forms
+                .entry(name.clone())
+                .or_insert_with(|| AilForm {
+                    name: name.clone(),
+                    label,
+                    provenance: format!("form:{name}"),
+                    ..AilForm::default()
+                });
+            current_form = Some(name);
+            current_form_section = None;
+            current_route = None;
+            current_route_section = None;
+            current_thing = None;
+            current_tool = None;
+            current_tool_section = None;
+            current_compiler_pass = None;
+            current_compiler_pass_section = None;
+            current_system_component = None;
+            current_system_section = None;
+            current_function = None;
+            current_function_section = None;
+            current_action = None;
+            current_failure = None;
+            current_list = None;
+            action_header_waiting_for_when = false;
+            continue;
+        }
+        if let Some(section) = parse_form_section(line)
+            && current_form.is_some()
+        {
+            current_form_section = Some(section);
+            current_route = None;
+            current_route_section = None;
+            current_thing = None;
+            current_tool = None;
+            current_tool_section = None;
+            current_compiler_pass = None;
+            current_compiler_pass_section = None;
+            current_system_component = None;
+            current_system_section = None;
+            current_function = None;
+            current_function_section = None;
+            current_action = None;
+            current_failure = None;
+            current_list = None;
+            action_header_waiting_for_when = false;
+            continue;
+        }
+        if let Some(label) = parse_dashboard_header(line) {
+            let name = action_name_from_label(&label);
+            document
+                .dashboards
+                .entry(name.clone())
+                .or_insert_with(|| AilDashboard {
+                    name: name.clone(),
+                    label,
+                    provenance: format!("dashboard:{name}"),
+                    ..AilDashboard::default()
+                });
+            current_dashboard = Some(name);
+            current_dashboard_section = None;
+            current_form = None;
+            current_form_section = None;
+            current_route = None;
+            current_route_section = None;
+            current_thing = None;
+            current_tool = None;
+            current_tool_section = None;
+            current_compiler_pass = None;
+            current_compiler_pass_section = None;
+            current_system_component = None;
+            current_system_section = None;
+            current_function = None;
+            current_function_section = None;
+            current_action = None;
+            current_failure = None;
+            current_list = None;
+            action_header_waiting_for_when = false;
+            continue;
+        }
+        if let Some(section) = parse_dashboard_section(line)
+            && current_dashboard.is_some()
+        {
+            current_dashboard_section = Some(section);
+            current_form = None;
+            current_form_section = None;
+            current_route = None;
+            current_route_section = None;
+            current_thing = None;
+            current_tool = None;
+            current_tool_section = None;
+            current_compiler_pass = None;
+            current_compiler_pass_section = None;
+            current_system_component = None;
+            current_system_section = None;
+            current_function = None;
+            current_function_section = None;
+            current_action = None;
+            current_failure = None;
+            current_list = None;
+            action_header_waiting_for_when = false;
+            continue;
+        }
+        if let Some(label) = parse_workflow_header(line) {
+            let name = action_name_from_label(&label);
+            document
+                .workflows
+                .entry(name.clone())
+                .or_insert_with(|| AilWorkflow {
+                    name: name.clone(),
+                    label,
+                    provenance: format!("workflow:{name}"),
+                    ..AilWorkflow::default()
+                });
+            current_workflow = Some(name);
+            current_workflow_section = None;
+            current_dashboard = None;
+            current_dashboard_section = None;
+            current_form = None;
+            current_form_section = None;
+            current_route = None;
+            current_route_section = None;
+            current_thing = None;
+            current_tool = None;
+            current_tool_section = None;
+            current_compiler_pass = None;
+            current_compiler_pass_section = None;
+            current_system_component = None;
+            current_system_section = None;
+            current_function = None;
+            current_function_section = None;
+            current_action = None;
+            current_failure = None;
+            current_list = None;
+            action_header_waiting_for_when = false;
+            continue;
+        }
+        if let Some(section) = parse_workflow_section(line)
+            && current_workflow.is_some()
+        {
+            current_workflow_section = Some(section);
+            current_dashboard = None;
+            current_dashboard_section = None;
+            current_form = None;
+            current_form_section = None;
+            current_route = None;
+            current_route_section = None;
             current_thing = None;
             current_tool = None;
             current_tool_section = None;
@@ -2264,6 +2488,28 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
                 parse_route_bullet(&mut document, route_name, section, bullet, line_number)?;
                 continue;
             }
+            if let (Some(form_name), Some(section)) = (&current_form, current_form_section) {
+                parse_form_bullet(&mut document, form_name, section, bullet, line_number)?;
+                continue;
+            }
+            if let (Some(dashboard_name), Some(section)) =
+                (&current_dashboard, current_dashboard_section)
+            {
+                parse_dashboard_bullet(
+                    &mut document,
+                    dashboard_name,
+                    section,
+                    bullet,
+                    line_number,
+                )?;
+                continue;
+            }
+            if let (Some(workflow_name), Some(section)) =
+                (&current_workflow, current_workflow_section)
+            {
+                parse_workflow_bullet(&mut document, workflow_name, section, bullet, line_number)?;
+                continue;
+            }
             if let (Some(binding_name), Some(section)) =
                 (&current_external_binding, current_external_binding_section)
             {
@@ -2305,10 +2551,13 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
         && document.functions.is_empty()
         && document.types.is_empty()
         && document.routes.is_empty()
+        && document.forms.is_empty()
+        && document.dashboards.is_empty()
+        && document.workflows.is_empty()
         && document.external_bindings.is_empty()
     {
         return Err(
-            "AIL-Spec missing application, tool, compiler pass, system component, function, type, route, or external binding declaration"
+            "AIL-Spec missing application, tool, compiler pass, system component, function, type, route, form, dashboard, workflow, or external binding declaration"
                 .to_string(),
         );
     }
@@ -2448,6 +2697,190 @@ pub fn elaborate_ail_core(package: &AilPackage, document: &AilDocument) -> AilCo
                 &mut graph,
                 &trace_node,
                 format!("route:{}.trace:{trace}", route.name),
+            );
+        }
+    }
+
+    for form in document.forms.values() {
+        let form_node = graph.add_node("Form", &form.name, None, attr(&[("label", &form.label)]));
+        attach_provenance(&mut graph, &form_node, &form.provenance);
+        if let Some(action) = &form.action {
+            let action_node = graph.add_node("Action", action, None, BTreeMap::new());
+            graph.add_edge(
+                "calls",
+                &form_node,
+                &action_node,
+                attr(&[("provenance", &format!("form:{}.action:{action}", form.name))]),
+            );
+        }
+        for field in form.fields.values() {
+            let field_node = graph.add_node(
+                "Field",
+                format!("{}.{}", form.name, field.name),
+                Some(field.type_name.clone()),
+                BTreeMap::new(),
+            );
+            graph.add_edge("has_field", &form_node, &field_node, BTreeMap::new());
+            attach_provenance(&mut graph, &field_node, &field.provenance);
+        }
+        for validation in &form.validations {
+            let rule_node = graph.add_node("Rule", validation, None, BTreeMap::new());
+            graph.add_edge("validates", &form_node, &rule_node, BTreeMap::new());
+            attach_provenance(
+                &mut graph,
+                &rule_node,
+                format!("form:{}.validation:{validation}", form.name),
+            );
+        }
+        for trace in &form.failure_traces {
+            let trace_node = graph.add_node("Trace", trace, None, BTreeMap::new());
+            graph.add_edge("records_trace", &form_node, &trace_node, BTreeMap::new());
+            attach_provenance(
+                &mut graph,
+                &trace_node,
+                format!("form:{}.trace:{trace}", form.name),
+            );
+        }
+        for accessibility in &form.accessibility {
+            let accessibility_node =
+                graph.add_node("Accessibility", accessibility, None, BTreeMap::new());
+            graph.add_edge(
+                "has_accessibility",
+                &form_node,
+                &accessibility_node,
+                BTreeMap::new(),
+            );
+            attach_provenance(
+                &mut graph,
+                &accessibility_node,
+                format!("form:{}.accessibility:{accessibility}", form.name),
+            );
+        }
+    }
+
+    for dashboard in document.dashboards.values() {
+        let dashboard_node = graph.add_node(
+            "Dashboard",
+            &dashboard.name,
+            None,
+            attr(&[("label", &dashboard.label)]),
+        );
+        attach_provenance(&mut graph, &dashboard_node, &dashboard.provenance);
+        for read in &dashboard.reads {
+            let value_node = graph.add_node(
+                "Value",
+                format!("{}.{}", dashboard.name, read),
+                None,
+                BTreeMap::new(),
+            );
+            graph.add_edge(
+                "reads",
+                &dashboard_node,
+                &value_node,
+                attr(&[(
+                    "provenance",
+                    &format!("dashboard:{}.read:{read}", dashboard.name),
+                )]),
+            );
+            attach_provenance(
+                &mut graph,
+                &value_node,
+                format!("dashboard:{}.read:{read}", dashboard.name),
+            );
+        }
+        for permission in &dashboard.permissions {
+            let permission_node = graph.add_node("Permission", permission, None, BTreeMap::new());
+            graph.add_edge(
+                "requires",
+                &dashboard_node,
+                &permission_node,
+                BTreeMap::new(),
+            );
+            attach_provenance(
+                &mut graph,
+                &permission_node,
+                format!("dashboard:{}.permission:{permission}", dashboard.name),
+            );
+        }
+        for filter in &dashboard.filters {
+            let filter_node = graph.add_node("Filter", filter, None, BTreeMap::new());
+            graph.add_edge("filters", &dashboard_node, &filter_node, BTreeMap::new());
+            attach_provenance(
+                &mut graph,
+                &filter_node,
+                format!("dashboard:{}.filter:{filter}", dashboard.name),
+            );
+        }
+        for trace in &dashboard.traces {
+            let trace_node = graph.add_node("Trace", trace, None, BTreeMap::new());
+            graph.add_edge(
+                "records_trace",
+                &dashboard_node,
+                &trace_node,
+                BTreeMap::new(),
+            );
+            attach_provenance(
+                &mut graph,
+                &trace_node,
+                format!("dashboard:{}.trace:{trace}", dashboard.name),
+            );
+        }
+    }
+
+    for workflow in document.workflows.values() {
+        let workflow_node = graph.add_node(
+            "Workflow",
+            &workflow.name,
+            None,
+            attr(&[("label", &workflow.label)]),
+        );
+        attach_provenance(&mut graph, &workflow_node, &workflow.provenance);
+        for step in &workflow.steps {
+            let step_node = graph.add_node(
+                "Step",
+                format!("{}.{}", workflow.name, step),
+                None,
+                attr(&[("label", step)]),
+            );
+            graph.add_edge("contains", &workflow_node, &step_node, BTreeMap::new());
+            attach_provenance(
+                &mut graph,
+                &step_node,
+                format!("workflow:{}.step:{step}", workflow.name),
+            );
+        }
+        for block in &workflow.blocks {
+            let blocked_node = graph.add_node(
+                "Step",
+                format!("{}.{}", workflow.name, block.blocked_step),
+                None,
+                attr(&[("label", &block.blocked_step)]),
+            );
+            let prerequisite_node = graph.add_node(
+                "Step",
+                format!("{}.{}", workflow.name, block.prerequisite_step),
+                None,
+                attr(&[("label", &block.prerequisite_step)]),
+            );
+            graph.add_edge(
+                "blocks_before",
+                &blocked_node,
+                &prerequisite_node,
+                attr(&[("provenance", &block.provenance)]),
+            );
+        }
+        for trace in &workflow.traces {
+            let trace_node = graph.add_node("Trace", trace, None, BTreeMap::new());
+            graph.add_edge(
+                "records_trace",
+                &workflow_node,
+                &trace_node,
+                BTreeMap::new(),
+            );
+            attach_provenance(
+                &mut graph,
+                &trace_node,
+                format!("workflow:{}.trace:{trace}", workflow.name),
             );
         }
     }
@@ -3504,6 +3937,10 @@ pub fn check_ail_core_diagnostics(core: &AilCore) -> Vec<AilDiagnostic> {
     diagnostics.extend(check_external_binding_trace_coverage(core));
     diagnostics.extend(check_external_binding_status_maps(core));
     diagnostics.extend(check_external_binding_pointer_ownership(core));
+    diagnostics.extend(check_ui_form_action_targets(core));
+    diagnostics.extend(check_ui_dashboard_permissions(core));
+    diagnostics.extend(check_ui_form_accessibility(core));
+    diagnostics.extend(check_ui_workflow_step_order(core));
     for action in core.graph.nodes.iter().filter(|node| node.kind == "Action") {
         if !has_outgoing_edge(&core.graph, "records_trace", &action.id) {
             diagnostics.push(
@@ -3637,6 +4074,8 @@ fn is_known_core_node_kind(kind: &str) -> bool {
             | "Call"
             | "Capability"
             | "CorpusFixture"
+            | "Accessibility"
+            | "Dashboard"
             | "Diagnostic"
             | "Effect"
             | "Event"
@@ -3644,6 +4083,8 @@ fn is_known_core_node_kind(kind: &str) -> bool {
             | "ExternalBinding"
             | "Failure"
             | "Field"
+            | "Filter"
+            | "Form"
             | "Function"
             | "Guarantee"
             | "Input"
@@ -3679,6 +4120,7 @@ fn is_known_core_node_kind(kind: &str) -> bool {
             | "Value"
             | "Variant"
             | "View"
+            | "Workflow"
     )
 }
 
@@ -3687,6 +4129,7 @@ fn is_known_core_edge_kind(kind: &str) -> bool {
         kind,
         "allocates_resource"
             | "authorizes_resource"
+            | "blocks_before"
             | "borrows_resource"
             | "calls"
             | "contains"
@@ -3696,6 +4139,7 @@ fn is_known_core_edge_kind(kind: &str) -> bool {
             | "guards_resource"
             | "guarantees"
             | "handles_failure"
+            | "has_accessibility"
             | "has_field"
             | "has_input"
             | "has_output"
@@ -3733,6 +4177,8 @@ fn is_known_core_edge_kind(kind: &str) -> bool {
             | "uses_resource"
             | "uses_task_priority"
             | "uses_task_timing"
+            | "filters"
+            | "validates"
             | "writes"
     )
 }
@@ -4189,6 +4635,38 @@ pub fn render_ail_flow_view(core: &AilCore) -> String {
         .collect::<Vec<_>>()
         .join(",");
     let views = render_json_array(sorted_node_names(core, "View"));
+    let routes = sorted_node_names(core, "Route")
+        .into_iter()
+        .map(|route| render_flow_ui_surface(core, "Route", &route))
+        .collect::<Vec<_>>()
+        .join(",");
+    let forms = sorted_node_names(core, "Form")
+        .into_iter()
+        .map(|form| render_flow_ui_surface(core, "Form", &form))
+        .collect::<Vec<_>>()
+        .join(",");
+    let dashboards = sorted_node_names(core, "Dashboard")
+        .into_iter()
+        .map(|dashboard| render_flow_ui_surface(core, "Dashboard", &dashboard))
+        .collect::<Vec<_>>()
+        .join(",");
+    let workflows = sorted_node_names(core, "Workflow")
+        .into_iter()
+        .map(|workflow| render_flow_ui_surface(core, "Workflow", &workflow))
+        .collect::<Vec<_>>()
+        .join(",");
+    let accessibility = sorted_node_names(core, "Accessibility")
+        .into_iter()
+        .map(|item| {
+            let core_label = flow_core_label(core, "Accessibility", &item);
+            format!(
+                "{{\"name\":{},\"coreLabel\":{}}}",
+                json_string(&item),
+                json_string(&core_label)
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(",");
     let actions = sorted_action_names(core)
         .into_iter()
         .map(|action| render_flow_action(core, &action))
@@ -4221,16 +4699,73 @@ pub fn render_ail_flow_view(core: &AilCore) -> String {
     let core_hash = ail_core_hash(core);
 
     format!(
-        "{{\"kind\":\"AIL-Flow\",\"package\":{},\"coreHash\":{},\"application\":{},\"things\":[{}],\"views\":{},\"actions\":[{}],\"tools\":[{}],\"compilerPasses\":[{}],\"systemComponents\":[{}]}}",
+        "{{\"kind\":\"AIL-Flow\",\"package\":{},\"coreHash\":{},\"application\":{},\"things\":[{}],\"views\":{},\"routes\":[{}],\"forms\":[{}],\"dashboards\":[{}],\"workflows\":[{}],\"accessibility\":[{}],\"actions\":[{}],\"tools\":[{}],\"compilerPasses\":[{}],\"systemComponents\":[{}]}}",
         json_string(&core.package.name),
         json_string(&core_hash),
         json_string(&application),
         things,
         views,
+        routes,
+        forms,
+        dashboards,
+        workflows,
+        accessibility,
         actions,
         tools,
         compiler_passes,
         system_components
+    )
+}
+
+fn render_flow_ui_surface(core: &AilCore, kind: &str, name: &str) -> String {
+    let Some(node) = core.graph.find_node(kind, name) else {
+        let core_label = flow_core_label(core, kind, name);
+        return format!(
+            "{{\"name\":{},\"coreLabel\":{},\"label\":\"\",\"reads\":[],\"requires\":[],\"fields\":[],\"calls\":[],\"validations\":[],\"filters\":[],\"steps\":[],\"traces\":[],\"accessibility\":[],\"edgeRefs\":[]}}",
+            json_string(name),
+            json_string(&core_label)
+        );
+    };
+    let label = node
+        .attributes
+        .get("label")
+        .map(String::as_str)
+        .unwrap_or("");
+    let path = node
+        .attributes
+        .get("path")
+        .map(String::as_str)
+        .unwrap_or("");
+    format!(
+        "{{\"name\":{},\"coreLabel\":{},\"label\":{},\"path\":{},\"reads\":{},\"requires\":{},\"fields\":{},\"calls\":{},\"validations\":{},\"filters\":{},\"steps\":{},\"traces\":{},\"accessibility\":{},\"edgeRefs\":{}}}",
+        json_string(name),
+        json_string(&core_node_label(node)),
+        json_string(label),
+        json_string(path),
+        render_json_array(edge_target_names(core, &node.id, "reads")),
+        render_json_array(edge_target_names(core, &node.id, "requires")),
+        render_json_array(edge_target_names(core, &node.id, "has_field")),
+        render_json_array(edge_target_names(core, &node.id, "calls")),
+        render_json_array(edge_target_names(core, &node.id, "validates")),
+        render_json_array(edge_target_names(core, &node.id, "filters")),
+        render_json_array(edge_target_names(core, &node.id, "contains")),
+        render_json_array(edge_target_names(core, &node.id, "records_trace")),
+        render_json_array(edge_target_names(core, &node.id, "has_accessibility")),
+        render_flow_edge_refs(
+            core,
+            node,
+            &[
+                "reads",
+                "requires",
+                "has_field",
+                "calls",
+                "validates",
+                "filters",
+                "contains",
+                "records_trace",
+                "has_accessibility",
+            ],
+        )
     )
 }
 
@@ -7426,6 +7961,9 @@ pub fn ail_document_from_core(core: &AilCore) -> AilDocument {
         functions: BTreeMap::new(),
         types: BTreeMap::new(),
         routes: BTreeMap::new(),
+        forms: BTreeMap::new(),
+        dashboards: BTreeMap::new(),
+        workflows: BTreeMap::new(),
         external_bindings: BTreeMap::new(),
         actions: BTreeMap::new(),
         failures: BTreeMap::new(),
@@ -11421,6 +11959,9 @@ fn namespace_ail_document(document: &AilDocument, alias: &str) -> AilDocument {
         functions: BTreeMap::new(),
         types: BTreeMap::new(),
         routes: BTreeMap::new(),
+        forms: BTreeMap::new(),
+        dashboards: BTreeMap::new(),
+        workflows: BTreeMap::new(),
         external_bindings: BTreeMap::new(),
         actions: BTreeMap::new(),
         failures: BTreeMap::new(),
@@ -13541,10 +14082,13 @@ fn check_trace_attachment(core: &AilCore) -> Vec<AilDiagnostic> {
                         matches!(
                             source.kind.as_str(),
                             "Action"
+                                | "Dashboard"
                                 | "ExternalBinding"
                                 | "Failure"
+                                | "Form"
                                 | "Function"
                                 | "Route"
+                                | "Workflow"
                                 | "Tool"
                                 | "SystemComponent"
                         )
@@ -13577,11 +14121,11 @@ fn check_rule_attachment(core: &AilCore) -> Vec<AilDiagnostic> {
         .filter(|node| node.kind == "Rule")
         .filter(|rule| {
             !core.graph.edges.iter().any(|edge| {
-                edge.kind == "requires"
+                (edge.kind == "requires" || edge.kind == "validates")
                     && edge.target == rule.id
-                    && node_by_id
-                        .get(&edge.source)
-                        .is_some_and(|source| matches!(source.kind.as_str(), "Action" | "Tool"))
+                    && node_by_id.get(&edge.source).is_some_and(|source| {
+                        matches!(source.kind.as_str(), "Action" | "Form" | "Tool")
+                    })
             })
         })
         .map(|rule| {
@@ -13885,6 +14429,189 @@ fn check_external_binding_pointer_ownership(core: &AilCore) -> Vec<AilDiagnostic
                 .with_repair_suggestion(format!(
                     "Use owned pointer ownership for {} or remove the escape behavior.",
                     input.name
+                )),
+            );
+        }
+    }
+    diagnostics
+}
+
+fn check_ui_form_action_targets(core: &AilCore) -> Vec<AilDiagnostic> {
+    let node_by_id = graph_node_by_id(core);
+    let mut diagnostics = Vec::new();
+    for edge in core.graph.edges.iter().filter(|edge| edge.kind == "calls") {
+        let Some(form) = node_by_id.get(&edge.source) else {
+            continue;
+        };
+        if form.kind != "Form" {
+            continue;
+        }
+        let Some(action) = node_by_id.get(&edge.target) else {
+            continue;
+        };
+        if node_provenance(core, &action.id).is_none() {
+            diagnostics.push(
+                AilDiagnostic::error(
+                    "AIL-UI-FORM-001",
+                    format!("form {} calls undeclared action {}", form.name, action.name),
+                )
+                .with_source_provenance(
+                    edge.attributes
+                        .get("provenance")
+                        .cloned()
+                        .or_else(|| node_provenance(core, &form.id)),
+                )
+                .with_affected_graph_item(format!("edge:{}", edge.id))
+                .with_repair_suggestion(format!(
+                    "Declare Action: {}. before the form calls it.",
+                    title_from_pascal_case(&action.name)
+                )),
+            );
+        }
+    }
+    diagnostics
+}
+
+fn check_ui_dashboard_permissions(core: &AilCore) -> Vec<AilDiagnostic> {
+    core.graph
+        .nodes
+        .iter()
+        .filter(|node| node.kind == "Dashboard")
+        .filter(|dashboard| has_outgoing_edge(&core.graph, "reads", &dashboard.id))
+        .filter(|dashboard| !has_outgoing_edge(&core.graph, "requires", &dashboard.id))
+        .map(|dashboard| {
+            AilDiagnostic::error(
+                "AIL-UI-PERMISSION-001",
+                format!(
+                    "dashboard {} reads data without a matching permission",
+                    dashboard.name
+                ),
+            )
+            .with_source_provenance(node_provenance(core, &dashboard.id))
+            .with_affected_graph_item(format!("node:{}", dashboard.id))
+            .with_repair_suggestion(format!(
+                "Add 'The dashboard requires permission:' to dashboard {}.",
+                dashboard.name
+            ))
+        })
+        .collect()
+}
+
+fn check_ui_form_accessibility(core: &AilCore) -> Vec<AilDiagnostic> {
+    core.graph
+        .nodes
+        .iter()
+        .filter(|node| node.kind == "Form")
+        .filter(|form| has_outgoing_edge(&core.graph, "validates", &form.id))
+        .filter(|form| has_outgoing_edge(&core.graph, "records_trace", &form.id))
+        .filter(|form| !has_outgoing_edge(&core.graph, "has_accessibility", &form.id))
+        .map(|form| {
+            AilDiagnostic::error(
+                "AIL-UI-A11Y-001",
+                format!(
+                    "form {} records validation failure trace without accessibility announcement",
+                    form.name
+                ),
+            )
+            .with_source_provenance(node_provenance(core, &form.id))
+            .with_affected_graph_item(format!("node:{}", form.id))
+            .with_repair_suggestion(format!(
+                "Add 'The form accessibility is:' to form {}.",
+                form.name
+            ))
+        })
+        .collect()
+}
+
+fn check_ui_workflow_step_order(core: &AilCore) -> Vec<AilDiagnostic> {
+    let node_by_id = graph_node_by_id(core);
+    let mut steps_by_workflow = BTreeMap::<String, Vec<(String, String)>>::new();
+    for edge in core
+        .graph
+        .edges
+        .iter()
+        .filter(|edge| edge.kind == "contains")
+    {
+        let Some(workflow) = node_by_id.get(&edge.source) else {
+            continue;
+        };
+        let Some(step) = node_by_id.get(&edge.target) else {
+            continue;
+        };
+        if workflow.kind != "Workflow" || step.kind != "Step" {
+            continue;
+        }
+        let label = step
+            .attributes
+            .get("label")
+            .cloned()
+            .unwrap_or_else(|| step.name.clone());
+        steps_by_workflow
+            .entry(workflow.name.clone())
+            .or_default()
+            .push((step.id.clone(), label));
+    }
+
+    let mut diagnostics = Vec::new();
+    for edge in core
+        .graph
+        .edges
+        .iter()
+        .filter(|edge| edge.kind == "blocks_before")
+    {
+        let Some(blocked_step) = node_by_id.get(&edge.source) else {
+            continue;
+        };
+        let Some(prerequisite_step) = node_by_id.get(&edge.target) else {
+            continue;
+        };
+        let Some((workflow_name, _)) = blocked_step.name.split_once('.') else {
+            continue;
+        };
+        let Some(steps) = steps_by_workflow.get(workflow_name) else {
+            continue;
+        };
+        let blocked_index = steps.iter().position(|(id, _)| id == &blocked_step.id);
+        let prerequisite_index = steps.iter().position(|(id, _)| id == &prerequisite_step.id);
+        if let (Some(blocked_index), Some(prerequisite_index)) = (blocked_index, prerequisite_index)
+            && blocked_index <= prerequisite_index
+        {
+            diagnostics.push(
+                AilDiagnostic::error(
+                    "AIL-UI-WORKFLOW-001",
+                    format!(
+                        "workflow {workflow_name} lists blocked step '{}' before prerequisite '{}'",
+                        blocked_step
+                            .attributes
+                            .get("label")
+                            .map(String::as_str)
+                            .unwrap_or(&blocked_step.name),
+                        prerequisite_step
+                            .attributes
+                            .get("label")
+                            .map(String::as_str)
+                            .unwrap_or(&prerequisite_step.name)
+                    ),
+                )
+                .with_source_provenance(
+                    edge.attributes
+                        .get("provenance")
+                        .cloned()
+                        .or_else(|| node_provenance(core, &blocked_step.id)),
+                )
+                .with_affected_graph_item(format!("edge:{}", edge.id))
+                .with_repair_suggestion(format!(
+                    "Move '{}' after '{}' in workflow {workflow_name}.",
+                    blocked_step
+                        .attributes
+                        .get("label")
+                        .map(String::as_str)
+                        .unwrap_or(&blocked_step.name),
+                    prerequisite_step
+                        .attributes
+                        .get("label")
+                        .map(String::as_str)
+                        .unwrap_or(&prerequisite_step.name)
                 )),
             );
         }
@@ -15560,6 +16287,51 @@ fn parse_route_section(line: &str) -> Option<RouteSection> {
     }
 }
 
+fn parse_form_header(line: &str) -> Option<String> {
+    let label = line.strip_prefix("Form: ")?;
+    Some(label.trim().trim_end_matches('.').to_string())
+}
+
+fn parse_form_section(line: &str) -> Option<FormSection> {
+    match line {
+        "The form calls action:" => Some(FormSection::Action),
+        "The form fields are:" => Some(FormSection::Fields),
+        "The form validates:" => Some(FormSection::Validations),
+        "If form validation fails:" => Some(FormSection::FailureTraces),
+        "The form accessibility is:" => Some(FormSection::Accessibility),
+        _ => None,
+    }
+}
+
+fn parse_dashboard_header(line: &str) -> Option<String> {
+    let label = line.strip_prefix("Dashboard: ")?;
+    Some(label.trim().trim_end_matches('.').to_string())
+}
+
+fn parse_dashboard_section(line: &str) -> Option<DashboardSection> {
+    match line {
+        "The dashboard reads:" => Some(DashboardSection::Reads),
+        "The dashboard requires permission:" => Some(DashboardSection::Permissions),
+        "The dashboard filters:" => Some(DashboardSection::Filters),
+        "The dashboard records trace:" => Some(DashboardSection::Traces),
+        _ => None,
+    }
+}
+
+fn parse_workflow_header(line: &str) -> Option<String> {
+    let label = line.strip_prefix("Workflow: ")?;
+    Some(label.trim().trim_end_matches('.').to_string())
+}
+
+fn parse_workflow_section(line: &str) -> Option<WorkflowSection> {
+    match line {
+        "The workflow steps are:" => Some(WorkflowSection::Steps),
+        "The workflow blocks:" => Some(WorkflowSection::Blocks),
+        "The workflow records trace:" => Some(WorkflowSection::Traces),
+        _ => None,
+    }
+}
+
 fn parse_function_section(line: &str) -> Option<FunctionSection> {
     match line {
         "The function needs:" => Some(FunctionSection::Inputs),
@@ -15913,6 +16685,88 @@ fn parse_route_bullet(
         RouteSection::Reads => route.reads.push(trim_sentence(bullet)),
         RouteSection::Permissions => route.permissions.push(trim_sentence(bullet)),
         RouteSection::Traces => route.traces.push(trim_sentence(bullet)),
+    }
+    Ok(())
+}
+
+fn parse_form_bullet(
+    document: &mut AilDocument,
+    form_name: &str,
+    section: FormSection,
+    bullet: &str,
+    line_number: usize,
+) -> Result<(), String> {
+    let form = document
+        .forms
+        .get_mut(form_name)
+        .ok_or_else(|| format!("line {line_number}: unknown form {form_name}"))?;
+    match section {
+        FormSection::Action => form.action = Some(action_name_from_label(&trim_sentence(bullet))),
+        FormSection::Fields => {
+            let (name, type_name) = parse_typed_bullet(bullet, line_number)?;
+            form.fields.insert(
+                name.clone(),
+                AilFormField {
+                    name: name.clone(),
+                    type_name: normalize_type_name(&type_name),
+                    provenance: format!("form:{form_name}.field:{name}"),
+                },
+            );
+        }
+        FormSection::Validations => form.validations.push(trim_sentence(bullet)),
+        FormSection::FailureTraces => form.failure_traces.push(trim_sentence(bullet)),
+        FormSection::Accessibility => form.accessibility.push(trim_sentence(bullet)),
+    }
+    Ok(())
+}
+
+fn parse_dashboard_bullet(
+    document: &mut AilDocument,
+    dashboard_name: &str,
+    section: DashboardSection,
+    bullet: &str,
+    line_number: usize,
+) -> Result<(), String> {
+    let dashboard = document
+        .dashboards
+        .get_mut(dashboard_name)
+        .ok_or_else(|| format!("line {line_number}: unknown dashboard {dashboard_name}"))?;
+    match section {
+        DashboardSection::Reads => dashboard.reads.push(trim_sentence(bullet)),
+        DashboardSection::Permissions => dashboard.permissions.push(trim_sentence(bullet)),
+        DashboardSection::Filters => dashboard.filters.push(trim_sentence(bullet)),
+        DashboardSection::Traces => dashboard.traces.push(trim_sentence(bullet)),
+    }
+    Ok(())
+}
+
+fn parse_workflow_bullet(
+    document: &mut AilDocument,
+    workflow_name: &str,
+    section: WorkflowSection,
+    bullet: &str,
+    line_number: usize,
+) -> Result<(), String> {
+    let workflow = document
+        .workflows
+        .get_mut(workflow_name)
+        .ok_or_else(|| format!("line {line_number}: unknown workflow {workflow_name}"))?;
+    match section {
+        WorkflowSection::Steps => workflow.steps.push(trim_sentence(bullet)),
+        WorkflowSection::Blocks => {
+            let text = trim_sentence(bullet);
+            let Some((blocked_step, prerequisite_step)) = text.split_once(" before ") else {
+                return Err(format!(
+                    "line {line_number}: expected '<blocked step> before <prerequisite step>'"
+                ));
+            };
+            workflow.blocks.push(AilWorkflowBlock {
+                blocked_step: blocked_step.trim().to_string(),
+                prerequisite_step: prerequisite_step.trim().to_string(),
+                provenance: format!("workflow:{workflow_name}.block:{text}"),
+            });
+        }
+        WorkflowSection::Traces => workflow.traces.push(trim_sentence(bullet)),
     }
     Ok(())
 }
@@ -16865,6 +17719,30 @@ enum RouteSection {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum FormSection {
+    Action,
+    Fields,
+    Validations,
+    FailureTraces,
+    Accessibility,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DashboardSection {
+    Reads,
+    Permissions,
+    Filters,
+    Traces,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum WorkflowSection {
+    Steps,
+    Blocks,
+    Traces,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum SystemSection {
     Resources,
     Ownership,
@@ -16908,6 +17786,12 @@ fn is_structural_line(line: &str) -> bool {
         || parse_type_header(line).is_some()
         || parse_route_header(line).is_some()
         || parse_route_section(line).is_some()
+        || parse_form_header(line).is_some()
+        || parse_form_section(line).is_some()
+        || parse_dashboard_header(line).is_some()
+        || parse_dashboard_section(line).is_some()
+        || parse_workflow_header(line).is_some()
+        || parse_workflow_section(line).is_some()
         || parse_system_component_header(line).is_some()
         || parse_system_section(line).is_some()
         || parse_action_header(line).is_some()

@@ -49,9 +49,19 @@ Route nodes declare:
 Current implementation status: the bootstrap parser accepts `Route:`
 declarations with path, reads, permission requirements, and trace events, then
 lowers them into checked AIL-Core `Route`, `Value`, `Permission`, and `Trace`
-nodes with deterministic render/reparse. Components, forms, workflow blocks,
-responsive constraints, and accessibility diagnostics remain future UI-profile
-implementation slices.
+nodes with deterministic render/reparse.
+
+The v0.2 UI slice also accepts `Form:`, `Dashboard:`, and `Workflow:`
+declarations. Forms lower to `Form`, `Field`, `Rule`, `Trace`, and
+`Accessibility` nodes, with `calls`, `has_field`, `validates`,
+`records_trace`, and `has_accessibility` edges. Dashboards lower reads,
+permissions, filters, and trace events. Workflows lower ordered `Step` nodes
+and `blocks_before` constraints; the checker rejects a blocked step that
+appears before or at its prerequisite.
+
+Components, responsive layout constraints, destructive-action confirmation,
+and full backend/UI permission parity remain future UI-profile implementation
+slices.
 
 ## Views And Components
 
@@ -98,9 +108,11 @@ The form validates:
 
 If validation fails:
 
-- the form shows field error TitleRequired
-- the action does not run
-- the trace records FormValidationFailed
+- FormValidationFailed
+
+The form accessibility is:
+
+- title error is announced
 ```
 
 ## Events
@@ -131,7 +143,8 @@ The UI profile requires:
 - traceable confirmation for destructive or high-risk actions
 
 Accessibility violations are checker diagnostics when they affect reachable UI
-actions.
+actions. The v0.2 checker currently enforces that a form with validation rules
+and validation failure traces has an accessibility announcement.
 
 ## Responsive Layout Constraints
 
@@ -193,6 +206,10 @@ The UI profile projects into AIL-Flow as:
 Visual UI edits become graph patches and must pass the same checker as
 canonical structured English edits.
 
+Current AIL-Flow projection includes top-level `routes`, `forms`,
+`dashboards`, `workflows`, and `accessibility` blocks with edge references back
+to AIL-Core.
+
 ## Accepted Fixtures
 
 CRUD app:
@@ -207,21 +224,49 @@ Failure PermissionDenied shows "Permission denied" and records trace.
 Dashboard:
 
 ```text
-View Support manager dashboard reads overdue tickets.
-The view requires SupportManager permission.
-The view records DashboardViewed.
+Dashboard: Support manager dashboard.
+
+The dashboard reads:
+
+- Ticket.status
+
+The dashboard requires permission:
+
+- Support manager may view overdue tickets
+
+The dashboard filters:
+
+- status is Overdue
+
+The dashboard records trace:
+
+- DashboardViewed
 ```
 
 Multi-step workflow:
 
 ```text
-Workflow Refund approval has steps Request, Manager approval, Provider call,
-Ledger write, Customer notification.
-Provider call cannot run before approval.
+Workflow: Refund approval.
+
+The workflow steps are:
+
+- Request
+- Manager approval
+- Provider call
+
+The workflow blocks:
+
+- Provider call before Manager approval
 ```
 
 Accessibility trace:
 
 ```text
-trace FormValidationFailed field=title announcement=TitleRequired
+If form validation fails:
+
+- FormValidationFailed
+
+The form accessibility is:
+
+- title error is announced
 ```
