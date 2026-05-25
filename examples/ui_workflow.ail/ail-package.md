@@ -10,4 +10,4 @@ schema-version: ail-core.schema.v0
 safety-level: standard
 target-support:
   ail-core.schema.v0: supported
-
+  wasm32-unknown-sandbox-wasm: supported

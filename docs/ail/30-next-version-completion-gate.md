@@ -338,6 +338,7 @@ cargo test cli_ail_e2e_corpus_requires_llm_and_codex_executor_families
 cargo test cli_ail_e2e_corpus_requires_llm_endpoint_diversity
 cargo test cli_ail_e2e_corpus_requires_target_thresholds
 cargo test cli_ail_e2e_corpus_replays_imported_package_specs
+cargo test cli_ail_e2e_corpus_replays_ui_profile_specs
 cargo test cli_ail_e2e_corpus_replays_rejected_prompt_failures
 cargo run -- ail-e2e-corpus docs/ail/corpus/e2e --artifact-dir /tmp/ail-v02-e2e-corpus
 ```
@@ -488,15 +489,16 @@ already covers parts of this gate:
 - package-import e2e seed entries replay through package-aware import
   resolution and compile the composed support package through checked Core,
   bytecode, and VM trace artifacts
+- real UI-profile e2e seed entry replays `ui_workflow.ail` through checked
+  Core, semantic-contract bytecode, VM trace, and Wasm target-contract artifacts
 
 Missing v0.2 evidence includes:
 
 - v0.2-specific release evidence bundle
 - broad live-captured LLM/Codex executor transcripts replacing the current
   deterministic checked-fixture seed artifacts
-- real e2e UI-profile examples; the checked seed corpus still uses metadata
-  coverage for UI where the current replay path cannot yet lower the full
-  profile
+- broader live-captured UI-profile transcripts beyond the checked seed's single
+  semantic-contract replay
 - richer rejected-output coverage for prompt-envelope, profile mismatch,
   hallucinated capability, missing trace, unsupported target, invalid interop,
   permission/capability, and package resolution diagnostics in the e2e corpus

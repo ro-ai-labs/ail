@@ -72,6 +72,13 @@ ACCEPTED_FIXTURES = {
         "package": "examples/option_map.ail",
         "spec": "examples/option_map.ail/spec.ail-spec.md",
     },
+    "ui-workflow": {
+        "semantic_prefix": "ui-workflow",
+        "package": "examples/ui_workflow.ail",
+        "spec": "examples/ui_workflow.ail/spec.ail-spec.md",
+        "vm_action": "CreateTicketForm",
+        "runtime_state": "ticket.title=Bug",
+    },
     "c-host-interop": {
         "semantic_prefix": "c-interop",
         "package": "examples/c_interop.ail",
@@ -143,6 +150,8 @@ def fnv64(text: str) -> str:
 
 
 def profile_for(index: int) -> str:
+    if index == 65:
+        return "UI"
     if index <= 39:
         return "Application"
     if index <= 54:
@@ -153,6 +162,8 @@ def profile_for(index: int) -> str:
 
 
 def surface_tags_for(index: int) -> str:
+    if index == 65:
+        return "ui"
     if index <= 9:
         return "standard-library"
     if index <= 19:
@@ -167,6 +178,8 @@ def surface_tags_for(index: int) -> str:
 
 
 def target_for(index: int) -> str:
+    if index == 65:
+        return "wasm32-unknown-sandbox-wasm"
     if index <= 19 or 20 <= index <= 24:
         return "vm"
     if 25 <= index <= 29:
@@ -205,6 +218,8 @@ def accepted_fixture_for(index: int) -> dict[str, str]:
         return ACCEPTED_FIXTURES["refund-tool"]
     if index <= 64:
         return ACCEPTED_FIXTURES["compiler-pass"]
+    if index == 65:
+        return ACCEPTED_FIXTURES["ui-workflow"]
     if index <= 74:
         return ACCEPTED_FIXTURES["network-driver"]
     if index <= 79:

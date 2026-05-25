@@ -31,11 +31,13 @@ and diagnostics fingerprint reuse. Response and extracted-artifact duplicate
 counts must remain zero before claiming the final v0.2 prompt-to-artifact
 release gate.
 
-Some seed entries use surface metadata to keep UI threshold checks active while
-the replay path catches up to full UI-profile lowering. Those entries are
-scaffolding, not final release coverage for the UI surface. Package-import seed
-entries replay through package-aware import resolution and compile the composed
-support package through checked Core, bytecode, and VM trace artifacts.
+The seed includes one real `UI` profile replay through `ui_workflow.ail`, which
+lowers UI route, form, dashboard, and workflow semantics into checked Core,
+bytecode, VM trace, and Wasm target-contract artifacts. Other UI-tagged seed
+entries still use surface metadata to keep threshold checks active while
+broader UI captures are added. Package-import seed entries replay through
+package-aware import resolution and compile the composed support package
+through checked Core, bytecode, and VM trace artifacts.
 
 Replay with:
 

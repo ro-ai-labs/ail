@@ -8087,6 +8087,7 @@ fn compile_ail_document_bytecode(
             .iter()
             .map(|(name, pass)| (name.clone(), compile_ail_compiler_pass_bytecode(pass)))
             .collect(),
+        "UI" => compile_ail_ui_bytecode_actions(document),
         "System" => document
             .system_components
             .iter()
@@ -8094,7 +8095,7 @@ fn compile_ail_document_bytecode(
             .collect(),
         profile => {
             return Err(format!(
-                "ail-lower currently supports Application, C interop, AgentTool, Compiler, and System packages, not {profile}"
+                "ail-lower currently supports Application, C interop, AgentTool, Compiler, UI, and System packages, not {profile}"
             ));
         }
     };
@@ -8246,6 +8247,173 @@ pub fn ail_document_from_core(core: &AilCore) -> AilDocument {
             provenance: node_provenance(core, &route_node.id).unwrap_or_default(),
         };
         document.routes.insert(route.name.clone(), route);
+    }
+
+    for form_node in core.graph.nodes.iter().filter(|node| node.kind == "Form") {
+        let mut form = AilForm {
+            name: form_node.name.clone(),
+            label: form_node
+                .attributes
+                .get("label")
+                .cloned()
+                .unwrap_or_else(|| form_node.name.clone()),
+            action: outgoing_nodes(core, &node_by_id, form_node, "calls")
+                .into_iter()
+                .find(|node| node.kind == "Action")
+                .map(|node| node.name),
+            provenance: node_provenance(core, &form_node.id).unwrap_or_default(),
+            ..AilForm::default()
+        };
+        for field_node in outgoing_nodes(core, &node_by_id, form_node, "has_field")
+            .into_iter()
+            .filter(|node| node.kind == "Field")
+        {
+            let field_name = local_core_name(&field_node.name, &form.name);
+            form.fields.insert(
+                field_name.clone(),
+                AilFormField {
+                    name: field_name,
+                    type_name: field_node.type_name.clone().unwrap_or_default(),
+                    provenance: node_provenance(core, &field_node.id).unwrap_or_default(),
+                },
+            );
+        }
+        form.validations = outgoing_nodes(core, &node_by_id, form_node, "validates")
+            .into_iter()
+            .filter(|node| node.kind == "Rule")
+            .map(|node| node.name)
+            .collect();
+        form.failure_traces = outgoing_nodes(core, &node_by_id, form_node, "records_trace")
+            .into_iter()
+            .filter(|node| node.kind == "Trace")
+            .map(|node| node.name)
+            .collect();
+        form.confirmations = outgoing_nodes(core, &node_by_id, form_node, "requires_confirmation")
+            .into_iter()
+            .filter(|node| node.kind == "Confirmation")
+            .map(|node| node.name)
+            .collect();
+        form.accessibility = outgoing_nodes(core, &node_by_id, form_node, "has_accessibility")
+            .into_iter()
+            .filter(|node| node.kind == "Accessibility")
+            .map(|node| node.name)
+            .collect();
+        document.forms.insert(form.name.clone(), form);
+    }
+
+    for dashboard_node in core
+        .graph
+        .nodes
+        .iter()
+        .filter(|node| node.kind == "Dashboard")
+    {
+        let dashboard = AilDashboard {
+            name: dashboard_node.name.clone(),
+            label: dashboard_node
+                .attributes
+                .get("label")
+                .cloned()
+                .unwrap_or_else(|| dashboard_node.name.clone()),
+            reads: outgoing_nodes(core, &node_by_id, dashboard_node, "reads")
+                .into_iter()
+                .filter(|node| node.kind == "Value")
+                .map(|node| local_core_name(&node.name, &dashboard_node.name))
+                .collect(),
+            permissions: outgoing_nodes(core, &node_by_id, dashboard_node, "requires")
+                .into_iter()
+                .filter(|node| node.kind == "Permission")
+                .map(|node| node.name)
+                .collect(),
+            filters: outgoing_nodes(core, &node_by_id, dashboard_node, "filters")
+                .into_iter()
+                .filter(|node| node.kind == "Filter")
+                .map(|node| node.name)
+                .collect(),
+            traces: outgoing_nodes(core, &node_by_id, dashboard_node, "records_trace")
+                .into_iter()
+                .filter(|node| node.kind == "Trace")
+                .map(|node| node.name)
+                .collect(),
+            provenance: node_provenance(core, &dashboard_node.id).unwrap_or_default(),
+        };
+        document
+            .dashboards
+            .insert(dashboard.name.clone(), dashboard);
+    }
+
+    for workflow_node in core
+        .graph
+        .nodes
+        .iter()
+        .filter(|node| node.kind == "Workflow")
+    {
+        let steps = outgoing_nodes(core, &node_by_id, workflow_node, "contains")
+            .into_iter()
+            .filter(|node| node.kind == "Step")
+            .map(|node| {
+                node.attributes
+                    .get("label")
+                    .cloned()
+                    .unwrap_or_else(|| local_core_name(&node.name, &workflow_node.name))
+            })
+            .collect::<Vec<_>>();
+        let blocks = core
+            .graph
+            .edges
+            .iter()
+            .filter(|edge| edge.kind == "blocks_before")
+            .filter_map(|edge| {
+                let blocked = node_by_id.get(&edge.source)?;
+                let prerequisite = node_by_id.get(&edge.target)?;
+                if blocked.kind != "Step"
+                    || prerequisite.kind != "Step"
+                    || !blocked
+                        .name
+                        .starts_with(&format!("{}.", workflow_node.name))
+                    || !prerequisite
+                        .name
+                        .starts_with(&format!("{}.", workflow_node.name))
+                {
+                    return None;
+                }
+                Some(AilWorkflowBlock {
+                    blocked_step: blocked
+                        .attributes
+                        .get("label")
+                        .cloned()
+                        .unwrap_or_else(|| local_core_name(&blocked.name, &workflow_node.name)),
+                    prerequisite_step: prerequisite
+                        .attributes
+                        .get("label")
+                        .cloned()
+                        .unwrap_or_else(|| {
+                            local_core_name(&prerequisite.name, &workflow_node.name)
+                        }),
+                    provenance: edge
+                        .attributes
+                        .get("provenance")
+                        .cloned()
+                        .unwrap_or_default(),
+                })
+            })
+            .collect();
+        let workflow = AilWorkflow {
+            name: workflow_node.name.clone(),
+            label: workflow_node
+                .attributes
+                .get("label")
+                .cloned()
+                .unwrap_or_else(|| workflow_node.name.clone()),
+            steps,
+            blocks,
+            traces: outgoing_nodes(core, &node_by_id, workflow_node, "records_trace")
+                .into_iter()
+                .filter(|node| node.kind == "Trace")
+                .map(|node| node.name)
+                .collect(),
+            provenance: node_provenance(core, &workflow_node.id).unwrap_or_default(),
+        };
+        document.workflows.insert(workflow.name.clone(), workflow);
     }
 
     for thing_node in core.graph.nodes.iter().filter(|node| node.kind == "Thing") {
@@ -9251,6 +9419,221 @@ fn compiler_pass_declares_read_permission_inference(pass: &AilCompilerPass) -> b
     pass.writes
         .iter()
         .any(|write| write.to_ascii_lowercase().contains("read permission"))
+}
+
+fn compile_ail_ui_bytecode_actions(document: &AilDocument) -> BTreeMap<String, AilBytecodeAction> {
+    let mut actions = document
+        .actions
+        .iter()
+        .map(|(name, action)| (name.clone(), compile_ail_action_bytecode(document, action)))
+        .collect::<BTreeMap<_, _>>();
+    actions.extend(
+        document
+            .routes
+            .iter()
+            .map(|(name, route)| (name.clone(), compile_ail_ui_route_bytecode(document, route))),
+    );
+    actions.extend(
+        document
+            .forms
+            .iter()
+            .map(|(name, form)| (name.clone(), compile_ail_ui_form_bytecode(form))),
+    );
+    actions.extend(document.dashboards.iter().map(|(name, dashboard)| {
+        (
+            name.clone(),
+            compile_ail_ui_dashboard_bytecode(document, dashboard),
+        )
+    }));
+    actions.extend(
+        document
+            .workflows
+            .iter()
+            .map(|(name, workflow)| (name.clone(), compile_ail_ui_workflow_bytecode(workflow))),
+    );
+    actions
+}
+
+fn compile_ail_ui_route_bytecode(document: &AilDocument, route: &AilRoute) -> AilBytecodeAction {
+    let mut instructions = vec![AilBytecodeInstruction::new(
+        "ACTION_BEGIN",
+        &[("action", route.name.clone())],
+    )];
+    instructions.push(AilBytecodeInstruction::new(
+        "OBSERVE_RULE",
+        &[("rule", format!("route path {}", route.path))],
+    ));
+    for read in &route.reads {
+        instructions.push(AilBytecodeInstruction::new(
+            "READ_FIELD",
+            &[
+                ("key", ui_runtime_field_key(document, read)),
+                ("text", read.clone()),
+            ],
+        ));
+    }
+    for permission in &route.permissions {
+        instructions.push(AilBytecodeInstruction::new(
+            "OBSERVE_RULE",
+            &[("rule", format!("permission {permission}"))],
+        ));
+    }
+    for trace in &route.traces {
+        instructions.push(AilBytecodeInstruction::new(
+            "EMIT_TRACE",
+            &[("event", trace.clone())],
+        ));
+    }
+    instructions.push(AilBytecodeInstruction::new("RETURN_SUCCESS", &[]));
+    AilBytecodeAction {
+        name: route.name.clone(),
+        instructions,
+    }
+}
+
+fn compile_ail_ui_form_bytecode(form: &AilForm) -> AilBytecodeAction {
+    let mut instructions = vec![AilBytecodeInstruction::new(
+        "ACTION_BEGIN",
+        &[("action", form.name.clone())],
+    )];
+    for field in form.fields.values() {
+        instructions.push(AilBytecodeInstruction::new(
+            "OBSERVE_RULE",
+            &[(
+                "rule",
+                format!("field {} : {}", field.name, field.type_name),
+            )],
+        ));
+    }
+    for validation in &form.validations {
+        instructions.push(AilBytecodeInstruction::new(
+            "OBSERVE_RULE",
+            &[("rule", format!("validation {validation}"))],
+        ));
+    }
+    for confirmation in &form.confirmations {
+        instructions.push(AilBytecodeInstruction::new(
+            "OBSERVE_RULE",
+            &[("rule", format!("confirmation {confirmation}"))],
+        ));
+    }
+    for accessibility in &form.accessibility {
+        instructions.push(AilBytecodeInstruction::new(
+            "OBSERVE_RULE",
+            &[("rule", format!("accessibility {accessibility}"))],
+        ));
+    }
+    if let Some(action) = &form.action {
+        instructions.push(AilBytecodeInstruction::new(
+            "CALL_ACTION",
+            &[("target", action.clone())],
+        ));
+    }
+    for trace in &form.failure_traces {
+        instructions.push(AilBytecodeInstruction::new(
+            "EMIT_TRACE",
+            &[("event", trace.clone())],
+        ));
+    }
+    instructions.push(AilBytecodeInstruction::new("RETURN_SUCCESS", &[]));
+    AilBytecodeAction {
+        name: form.name.clone(),
+        instructions,
+    }
+}
+
+fn compile_ail_ui_dashboard_bytecode(
+    document: &AilDocument,
+    dashboard: &AilDashboard,
+) -> AilBytecodeAction {
+    let mut instructions = vec![AilBytecodeInstruction::new(
+        "ACTION_BEGIN",
+        &[("action", dashboard.name.clone())],
+    )];
+    for read in &dashboard.reads {
+        instructions.push(AilBytecodeInstruction::new(
+            "READ_FIELD",
+            &[
+                ("key", ui_runtime_field_key(document, read)),
+                ("text", read.clone()),
+            ],
+        ));
+    }
+    for permission in &dashboard.permissions {
+        instructions.push(AilBytecodeInstruction::new(
+            "OBSERVE_RULE",
+            &[("rule", format!("permission {permission}"))],
+        ));
+    }
+    for filter in &dashboard.filters {
+        instructions.push(AilBytecodeInstruction::new(
+            "OBSERVE_RULE",
+            &[("rule", format!("filter {filter}"))],
+        ));
+    }
+    for trace in &dashboard.traces {
+        instructions.push(AilBytecodeInstruction::new(
+            "EMIT_TRACE",
+            &[("event", trace.clone())],
+        ));
+    }
+    instructions.push(AilBytecodeInstruction::new("RETURN_SUCCESS", &[]));
+    AilBytecodeAction {
+        name: dashboard.name.clone(),
+        instructions,
+    }
+}
+
+fn compile_ail_ui_workflow_bytecode(workflow: &AilWorkflow) -> AilBytecodeAction {
+    let mut instructions = vec![AilBytecodeInstruction::new(
+        "ACTION_BEGIN",
+        &[("action", workflow.name.clone())],
+    )];
+    for step in &workflow.steps {
+        instructions.push(AilBytecodeInstruction::new(
+            "OBSERVE_RULE",
+            &[("rule", format!("workflow step {step}"))],
+        ));
+    }
+    for block in &workflow.blocks {
+        instructions.push(AilBytecodeInstruction::new(
+            "OBSERVE_RULE",
+            &[(
+                "rule",
+                format!(
+                    "workflow blocks {} before {}",
+                    block.blocked_step, block.prerequisite_step
+                ),
+            )],
+        ));
+    }
+    for trace in &workflow.traces {
+        instructions.push(AilBytecodeInstruction::new(
+            "EMIT_TRACE",
+            &[("event", trace.clone())],
+        ));
+    }
+    instructions.push(AilBytecodeInstruction::new("RETURN_SUCCESS", &[]));
+    AilBytecodeAction {
+        name: workflow.name.clone(),
+        instructions,
+    }
+}
+
+fn ui_runtime_field_key(document: &AilDocument, text: &str) -> String {
+    referenced_runtime_field_key(document, text).unwrap_or_else(|| {
+        format!(
+            "ui.{}",
+            text.to_ascii_lowercase()
+                .chars()
+                .map(|ch| if ch.is_ascii_alphanumeric() { ch } else { '.' })
+                .collect::<String>()
+                .split('.')
+                .filter(|part| !part.is_empty())
+                .collect::<Vec<_>>()
+                .join(".")
+        )
+    })
 }
 
 fn compile_ail_system_bytecode(component: &AilSystemComponent) -> AilBytecodeAction {

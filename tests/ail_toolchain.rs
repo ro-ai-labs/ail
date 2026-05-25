@@ -19895,8 +19895,9 @@ fn cli_ail_e2e_corpus_replays_checked_seed_corpus() {
         report.contains("failure-taxonomy-count semantic-drift 1"),
         "{report}"
     );
+    assert!(report.contains("profile-count UI 1"), "{report}");
     assert!(
-        report.contains("target-count wasm32-unknown-sandbox-wasm 10"),
+        report.contains("target-count wasm32-unknown-sandbox-wasm 11"),
         "{report}"
     );
     assert!(
@@ -19997,6 +19998,92 @@ fn cli_ail_e2e_corpus_replays_imported_package_specs() {
     let vm_trace =
         fs::read_to_string(artifact_dir.join("examples/example-10/vm-trace.txt")).unwrap();
     assert!(vm_trace.contains("trace TicketClosed"), "{vm_trace}");
+
+    let _ = fs::remove_dir_all(corpus_dir);
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
+fn cli_ail_e2e_corpus_replays_ui_profile_specs() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let corpus_dir =
+        std::env::temp_dir().join(format!("ail-e2e-corpus-ui-profile-{}", std::process::id()));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-e2e-corpus-ui-profile-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&corpus_dir);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&corpus_dir).unwrap();
+    write_e2e_transcript_files(&corpus_dir, 100);
+    fs::write(
+        corpus_dir.join("responses").join("example-65.json"),
+        fs::read_to_string(format!(
+            "{}/examples/ui_workflow.ail/spec.ail-spec.md",
+            env!("CARGO_MANIFEST_DIR")
+        ))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        corpus_dir.join("examples.md"),
+        e2e_corpus_text_with_override(
+            65,
+            &[
+                ("semantic-task", "ui-workflow-profile-65"),
+                ("profile", "UI"),
+                ("surface-tags", "ui"),
+                ("package", "examples/ui_workflow.ail"),
+                ("response-file", "responses/example-65.json"),
+                ("target", "vm"),
+                ("vm-action", ""),
+                ("runtime-state", ""),
+            ],
+        ),
+    )
+    .unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-e2e-corpus",
+            corpus_dir.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let checked_core =
+        fs::read_to_string(artifact_dir.join("examples/example-65/checked.ail-core.txt")).unwrap();
+    assert!(checked_core.contains("profile: UI"), "{checked_core}");
+    assert!(
+        checked_core.contains("node Route TicketDetail"),
+        "{checked_core}"
+    );
+    assert!(
+        checked_core.contains("node Form CreateTicketForm"),
+        "{checked_core}"
+    );
+    assert!(
+        checked_core.contains("node Dashboard SupportManagerDashboard"),
+        "{checked_core}"
+    );
+    assert!(
+        checked_core.contains("node Workflow RefundApproval"),
+        "{checked_core}"
+    );
+    let bytecode =
+        fs::read_to_string(artifact_dir.join("examples/example-65/artifact.ailbc.json")).unwrap();
+    assert!(bytecode.contains(r#""profile":"UI""#), "{bytecode}");
+    assert!(
+        bytecode.contains(r#""action":"CreateTicket""#),
+        "{bytecode}"
+    );
 
     let _ = fs::remove_dir_all(corpus_dir);
     let _ = fs::remove_dir_all(artifact_dir);
