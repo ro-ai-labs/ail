@@ -6077,6 +6077,7 @@ fn draft_checked_ail_requirements_for_package(
     prompt: &str,
     endpoint: &str,
     agent_requirements_context: Option<&str>,
+    retry_prompt_envelope_errors: bool,
 ) -> Result<(String, Vec<ail::ail::AilDiagnostic>), String> {
     let grounded_prompt = if let Some(agent_requirements_context) =
         agent_requirements_context.filter(|context| !context.trim().is_empty())
@@ -6094,7 +6095,15 @@ fn draft_checked_ail_requirements_for_package(
     } else {
         prompt.to_string()
     };
-    let mut requirements = draft_ail_requirements(package, &grounded_prompt, endpoint)?;
+    let mut requirements = match draft_ail_requirements(package, &grounded_prompt, endpoint) {
+        Ok(requirements) => requirements,
+        Err(error) if retry_prompt_envelope_errors && is_prompt_envelope_protocol_error(&error) => {
+            let retry_prompt =
+                prompt_envelope_retry_prompt(&grounded_prompt, &error, "AIL-Requirements");
+            draft_ail_requirements(package, &retry_prompt, endpoint)?
+        }
+        Err(error) => return Err(error),
+    };
     let mut diagnostics = check_ail_requirements(package, &requirements);
     if !diagnostics.is_empty() {
         requirements = repair_ail_requirements_from_diagnostics(
@@ -6128,12 +6137,43 @@ fn prompt_with_saved_interview_answers(
     ))
 }
 
+fn prompt_with_requested_native_action(prompt: &str, action: Option<&str>) -> String {
+    let Some(action) = action else {
+        return prompt.to_string();
+    };
+    format!(
+        concat!(
+            "{}\n\n",
+            "NATIVE BUILD CONSTRAINT:\n",
+            "The final AIL-Spec, checked AIL-Core, and AIL-Bytecode must define action {} because the requested native target will compile that exact action."
+        ),
+        prompt, action
+    )
+}
+
+fn prompt_with_source_spec_context(prompt: &str, source_spec_text: &str) -> String {
+    let source_spec_text = source_spec_text.trim();
+    if source_spec_text.is_empty() {
+        return prompt.to_string();
+    }
+    format!(
+        concat!(
+            "{}\n\n",
+            "PACKAGE SOURCE AIL-SPEC CONTEXT:\n",
+            "{}\n\n",
+            "Use the package source AIL-Spec as authoritative context. Preserve its named actions, failures, guarantees, traces, secret-handling rules, and runtime requirements unless the human request explicitly changes them."
+        ),
+        prompt, source_spec_text
+    )
+}
+
 fn draft_checked_ail_spec_for_requirements(
     package: &ail::ail::AilPackage,
     prompt: &str,
     requirements: &str,
     endpoint: &str,
     agent_spec_context: Option<&str>,
+    retry_prompt_envelope_errors: bool,
 ) -> Result<ail::ail::AilDraftResult, String> {
     let grounded_prompt = if let Some(agent_spec_context) =
         agent_spec_context.filter(|context| !context.trim().is_empty())
@@ -6152,7 +6192,17 @@ fn draft_checked_ail_spec_for_requirements(
         prompt.to_string()
     };
     let mut draft =
-        draft_ail_spec_from_requirements(package, &grounded_prompt, requirements, endpoint)?;
+        match draft_ail_spec_from_requirements(package, &grounded_prompt, requirements, endpoint) {
+            Ok(draft) => draft,
+            Err(error)
+                if retry_prompt_envelope_errors && is_prompt_envelope_protocol_error(&error) =>
+            {
+                let retry_prompt =
+                    prompt_envelope_retry_prompt(&grounded_prompt, &error, "AIL-Spec Canonical");
+                draft_ail_spec_from_requirements(package, &retry_prompt, requirements, endpoint)?
+            }
+            Err(error) => return Err(error),
+        };
     if !draft.success() {
         draft = repair_ail_spec_from_diagnostics(
             package,
@@ -6164,6 +6214,23 @@ fn draft_checked_ail_spec_for_requirements(
         )?;
     }
     Ok(draft)
+}
+
+fn is_prompt_envelope_protocol_error(error: &str) -> bool {
+    error.starts_with("AIL-PROMPT-001 prompt envelope")
+}
+
+fn prompt_envelope_retry_prompt(prompt: &str, error: &str, artifact_kind: &str) -> String {
+    format!(
+        concat!(
+            "{}\n\n",
+            "The previous model response was rejected by the AIL prompt envelope checker:\n",
+            "{}\n\n",
+            "Retry once. Return only a valid prompt-pack JSON envelope for artifact_kind ",
+            "{}. The envelope must contain exactly one of these: non-empty artifact_text with an empty questions array, or empty artifact_text with non-empty blocking questions. Do not include both."
+        ),
+        prompt, error, artifact_kind
+    )
 }
 
 fn read_checked_ail_requirements_file(
@@ -7849,7 +7916,7 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
             .as_deref()
             .unwrap_or(&package.metadata.base_llm_endpoint);
         let (requirements, diagnostics) =
-            draft_checked_ail_requirements_for_package(&package, &prompt, endpoint, None)?;
+            draft_checked_ail_requirements_for_package(&package, &prompt, endpoint, None, false)?;
         if !diagnostics.is_empty() {
             println!("ail-requirements diagnostics:");
             for diagnostic in diagnostics {
@@ -7912,6 +7979,7 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
             &requirements,
             endpoint,
             None,
+            false,
         )?;
         if !draft.success() {
             println!("ail-spec diagnostics:");
@@ -7957,8 +8025,16 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
                     .ail_prompt
                     .as_deref()
                     .ok_or_else(|| "ail-build requires --prompt <text>".to_string())?;
-                let requirements_prompt = prompt_with_saved_interview_answers(
+                let prompt = prompt_with_requested_native_action(
                     prompt,
+                    cli_options
+                        .ail_compile_target
+                        .as_ref()
+                        .and(cli_options.ail_action.as_deref()),
+                );
+                let prompt = prompt_with_source_spec_context(&prompt, &source_artifacts.spec_text);
+                let requirements_prompt = prompt_with_saved_interview_answers(
+                    &prompt,
                     cli_options.ail_interview_file.as_deref(),
                 )?;
                 let mut agent_start = if let Some(agent_path) =
@@ -7989,6 +8065,7 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
                             &requirements_prompt,
                             endpoint,
                             agent_requirements_context.as_deref(),
+                            true,
                         )?
                     };
                 let capture_prompt = cli_options
@@ -8008,7 +8085,7 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
                 {
                     agent_start = Some(start_ail_build_agent_from_saved_requirements(
                         &package,
-                        prompt,
+                        &prompt,
                         &requirements,
                     ));
                 }
@@ -8028,10 +8105,11 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
                 };
                 let draft = draft_checked_ail_spec_for_requirements(
                     &package,
-                    prompt,
+                    &prompt,
                     &requirements,
                     endpoint,
                     agent_spec_context.as_deref(),
+                    true,
                 )?;
                 if !draft.success() {
                     println!("ail-build diagnostics:");

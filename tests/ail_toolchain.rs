@@ -15036,6 +15036,164 @@ fn cli_ail_build_uses_llm_candidate_and_outputs_verified_bytecode() {
 }
 
 #[test]
+fn cli_ail_build_retries_malformed_requirements_prompt_envelope() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("support_ticket.ail");
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let invalid_envelope = concat!(
+        r#"{"artifact_kind":"AIL-Requirements","#,
+        r#""artifact_text":"AIL-Requirements:\n- The application manages support tickets.\n","#,
+        r#""questions":["Which trace events must be emitted?"],"#,
+        r#""checker_handoff":{"must_check":true,"expected_profile":"Application"}}"#
+    );
+    let invalid_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(invalid_envelope)
+    );
+    let requirements = concat!(
+        "AIL-Requirements:\n",
+        "- The application manages support tickets.\n",
+        "- Ticket fields include id, title, status, and secret internal notes.\n",
+        "- The CloseTicket action requires ticket id input and ticket status not to be Closed.\n",
+        "- Failure NotFound happens when ticket id is missing and records TicketNotFound.\n",
+        "- The action guarantees closed tickets do not appear in the open queue.\n",
+        "- The action records trace event TicketClosed.\n"
+    );
+    let requirements_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(requirements)
+    );
+    let response_spec = fs::read_to_string(format!("{package}/spec.ail-spec.md")).unwrap();
+    let spec_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(&format!(
+            "<think>ignore this</think>\n```ail\n{response_spec}\n```"
+        ))
+    );
+    let server = serve_chat_responses(listener, vec![invalid_body, requirements_body, spec_body]);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-build",
+            &package,
+            "--prompt",
+            "Build an AIL support ticket bytecode artifact",
+            "--llm-endpoint",
+            &format!("http://127.0.0.1:{}/v1/chat/completions", addr.port()),
+        ])
+        .output()
+        .unwrap();
+
+    let request_bodies = server.join().unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(request_bodies.len(), 3);
+    assert!(
+        request_bodies[1].contains(
+            "AIL-PROMPT-001 prompt envelope cannot contain both artifact_text and questions"
+        ),
+        "{}",
+        request_bodies[1]
+    );
+    let bytecode = parse_ail_bytecode(&String::from_utf8_lossy(&output.stdout)).unwrap();
+    assert_eq!(verify_ail_bytecode(&bytecode), Vec::<String>::new());
+    assert!(bytecode.actions.contains_key("CloseTicket"));
+}
+
+#[test]
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+fn cli_ail_build_native_prompt_names_requested_action_in_llm_prompts() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("support_ticket.ail");
+    let executable_path = std::env::temp_dir().join(format!(
+        "ail-build-native-prompt-action-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_file(&executable_path);
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let requirements = concat!(
+        "AIL-Requirements:\n",
+        "- The application manages support tickets.\n",
+        "- Ticket fields include id, title, status, and secret internal notes.\n",
+        "- The CloseTicket action requires ticket id input and ticket status not to be Closed.\n",
+        "- Failure NotFound happens when ticket id is missing and records TicketNotFound.\n",
+        "- The action guarantees closed tickets do not appear in the open queue.\n",
+        "- The action records trace event TicketClosed.\n"
+    );
+    let requirements_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(requirements)
+    );
+    let response_spec = fs::read_to_string(format!("{package}/spec.ail-spec.md")).unwrap();
+    let spec_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(&format!("```ail\n{response_spec}\n```"))
+    );
+    let server = serve_chat_responses(listener, vec![requirements_body, spec_body]);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-build",
+            &package,
+            "--prompt",
+            "Build an AIL support ticket bytecode artifact",
+            "--target",
+            "linux-x86_64-elf",
+            "--action",
+            "CloseTicket",
+            "--out",
+            executable_path.to_str().unwrap(),
+            "--llm-endpoint",
+            &format!("http://127.0.0.1:{}/v1/chat/completions", addr.port()),
+        ])
+        .output()
+        .unwrap();
+
+    let request_bodies = server.join().unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(request_bodies.len(), 2);
+    assert!(
+        request_bodies[0].contains("must define action CloseTicket"),
+        "{}",
+        request_bodies[0]
+    );
+    assert!(
+        request_bodies[0].contains("PACKAGE SOURCE AIL-SPEC CONTEXT:"),
+        "{}",
+        request_bodies[0]
+    );
+    assert!(
+        request_bodies[0].contains("Action: Close ticket."),
+        "{}",
+        request_bodies[0]
+    );
+    assert!(
+        request_bodies[1].contains("must define action CloseTicket"),
+        "{}",
+        request_bodies[1]
+    );
+    assert!(
+        request_bodies[1].contains("PACKAGE SOURCE AIL-SPEC CONTEXT:"),
+        "{}",
+        request_bodies[1]
+    );
+    assert!(executable_path.exists());
+
+    fs::remove_file(executable_path).unwrap();
+}
+
+#[test]
 fn cli_ail_build_includes_saved_interview_answers_in_requirements_prompt() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");

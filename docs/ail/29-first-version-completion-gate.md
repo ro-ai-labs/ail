@@ -323,6 +323,7 @@ cargo run -- ail-conformance examples/compiler_pass.ail --artifact-dir /tmp/ail-
 cargo run -- ail-conformance examples/network_driver.ail --artifact-dir /tmp/ail-v0-conformance-system
 cargo run -- ail-build examples/support_ticket.ail --prompt "Build an AIL support ticket bytecode artifact" --agent examples/ail_toolchain_agent.ail --artifact-dir /tmp/ail-v0-build-support --target linux-x86_64-elf --action CloseTicket --out /tmp/ail-v0-close-ticket
 cargo run -- ail-spec --core-file /tmp/ail-v0-build-support/checked.ail-core.txt --artifact-dir /tmp/ail-v0-spec-roundtrip
+cargo run -- ail-bootstrap examples/ail_toolchain_agent.ail --pass examples/compiler_pass.ail --agent examples/ail_toolchain_agent.ail --target linux-x86_64-elf --artifact-dir /tmp/ail-v0-bootstrap
 ```
 
 The release audit fails if any command fails or if any expected artifact
