@@ -544,44 +544,42 @@ target: wasm32-unknown-sandbox-wasm
 vm-action: CompressPayload
 
 ## End-To-End Example: example-30
-semantic-task: support-ticket-30
+semantic-task: support-ticket-live-codex-interview-30
 profile: Application
 surface-tags: backend-portability
 package: examples/support_ticket.ail
 prompt-file: docs/ail/prompts/interview.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-30.json
-response-file: responses/example-30.ail-spec.md
+response-file: responses/example-30.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
 vm-action: CloseTicket
 runtime-state: ticket.id=T-1;ticket.status=Open
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-31
-semantic-task: support-ticket-31
+semantic-task: support-ticket-live-codex-requirements-31
 profile: Application
 surface-tags: backend-portability
 package: examples/support_ticket.ail
 prompt-file: docs/ail/prompts/requirements.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-31.json
-response-file: responses/example-31.ail-spec.md
+response-file: responses/example-31.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
 vm-action: CloseTicket
 runtime-state: ticket.id=T-1;ticket.status=Open
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-32
 semantic-task: support-ticket-live-spec-input-32
@@ -604,44 +602,42 @@ runtime-state: ticket.id=T-1;ticket.status=Open
 endpoint-label: inteligentia-pro-1-qwen3.6-35b-chat
 
 ## End-To-End Example: example-33
-semantic-task: support-ticket-33
+semantic-task: support-ticket-live-codex-core-draft-33
 profile: Application
 surface-tags: backend-portability
 package: examples/support_ticket.ail
 prompt-file: docs/ail/prompts/core-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:0175222e4a84bec4
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-33.json
-response-file: responses/example-33.ail-spec.md
+response-file: responses/example-33.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
 vm-action: CloseTicket
 runtime-state: ticket.id=T-1;ticket.status=Open
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-34
-semantic-task: support-ticket-34
+semantic-task: support-ticket-live-codex-diagnostic-repair-34
 profile: Application
 surface-tags: backend-portability
 package: examples/support_ticket.ail
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:c9700f2c2e57e49e
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-34.json
-response-file: responses/example-34.ail-spec.md
+response-file: responses/example-34.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
 vm-action: CloseTicket
 runtime-state: ticket.id=T-1;ticket.status=Open
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-35
 semantic-task: runtime-generic-live-codex-core-to-spec-35

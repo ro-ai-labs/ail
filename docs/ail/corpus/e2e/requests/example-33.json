@@ -1,1 +1,23 @@
-{"artifact_kind": "ail-spec", "instruction": "Produce the stored AIL-Spec candidate for deterministic replay.", "prompt_file": "docs/ail/prompts/core-draft.system.md", "prompt_version": "ail-prompts.v0.2", "semantic_task": "support-ticket-33"}
+{
+  "agent_contract": "docs/ail/corpus/e2e/agents/codex-ail-spec-writer.md",
+  "agent_contract_version": "0.1.0",
+  "codex_model": "codex-subagent-default",
+  "executor_label": "codex-ail-spec-writer",
+  "input": {
+    "package_manifest_file": "examples/support_ticket.ail/ail-package.md",
+    "required_features": [
+      "things",
+      "actions",
+      "views",
+      "secrets",
+      "failures",
+      "traces"
+    ],
+    "requirements_source": "inline checked requirements from active AIL v0.2 e2e capture session"
+  },
+  "package": "examples/support_ticket.ail",
+  "profile": "Application",
+  "prompt_file": "docs/ail/prompts/core-draft.system.md",
+  "prompt_version": "ail-prompts.v0.2",
+  "task": "Draft complete canonical AIL-Spec text for the Support Ticket package from checked requirements."
+}
