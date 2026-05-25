@@ -95,6 +95,7 @@ one of these version surfaces or add a versioned surface through
 - `../../examples/recursive_factorial.ail/spec.ail-spec.md`
 - `../../examples/option_map.ail/spec.ail-spec.md`
 - `../../examples/stateful_counter.ail/spec.ail-spec.md`
+- `../../examples/repeated_task.ail/spec.ail-spec.md`
 - `25-example-inventory.md`
 
 ## Versioned Assets

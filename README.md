@@ -144,6 +144,7 @@ AIL packages live under [examples](examples):
 - `recursive_factorial.ail`
 - `option_map.ail`
 - `stateful_counter.ail`
+- `repeated_task.ail`
 - `network_driver.ail`
 - `compiler_pass.ail`
 - `ail_toolchain_agent.ail`

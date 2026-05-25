@@ -4710,6 +4710,65 @@ fn ail_bytecode_vm_executes_integer_loop_state_mutation() {
 }
 
 #[test]
+fn ail_spec_lowers_repeated_task_to_repeat_action_bytecode() {
+    let package = load_ail_package_dir(fixture("repeated_task.ail")).unwrap();
+    let document = parse_ail_package_document(&package).unwrap();
+    let core = elaborate_ail_core(&package, &document);
+    assert_eq!(check_ail_core(&core), Vec::<String>::new());
+    let rendered_core = render_ail_core(&core);
+    assert!(
+        rendered_core.contains(
+            "edge repeats Action:RunMaintenanceCycle -> Action:IncrementCounter [count=3]"
+        ),
+        "{rendered_core}"
+    );
+
+    let bytecode = compile_ail_core_bytecode(&core).unwrap();
+    assert_eq!(verify_ail_bytecode(&bytecode), Vec::<String>::new());
+    let rendered = render_ail_bytecode(&bytecode);
+    assert!(
+        rendered.contains(r#""opcode":"REPEAT_ACTION""#),
+        "{rendered}"
+    );
+    assert!(
+        rendered.contains(r#""target":"IncrementCounter""#),
+        "{rendered}"
+    );
+    assert!(rendered.contains(r#""count":"3""#), "{rendered}");
+
+    let run = run_ail_bytecode_action(
+        &bytecode,
+        "RunMaintenanceCycle",
+        BTreeMap::from([("counter.value".to_string(), "0".to_string())]),
+    )
+    .unwrap();
+
+    assert_eq!(run.status, "succeeded");
+    assert_eq!(
+        run.final_state.get("counter.value").map(String::as_str),
+        Some("3")
+    );
+    assert!(
+        run.trace
+            .contains(&"repeat action IncrementCounter 3 times".to_string()),
+        "{:?}",
+        run.trace
+    );
+    assert!(
+        run.trace
+            .contains(&"repeat IncrementCounter iteration 3".to_string()),
+        "{:?}",
+        run.trace
+    );
+    assert!(
+        run.trace
+            .contains(&"trace MaintenanceCycleCompleted".to_string()),
+        "{:?}",
+        run.trace
+    );
+}
+
+#[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn ail_native_elf_executes_bytecode_integer_state_mutation() {
     use std::os::unix::fs::PermissionsExt;

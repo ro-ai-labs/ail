@@ -344,10 +344,18 @@ pub struct AilAction {
     pub reads: Vec<String>,
     pub writes: Vec<String>,
     pub calls: Vec<String>,
+    pub repeated_calls: Vec<AilRepeatedActionCall>,
     pub failures: Vec<String>,
     pub guarantees: Vec<String>,
     pub traces: Vec<String>,
     pub secret_protections: Vec<String>,
+    pub provenance: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AilRepeatedActionCall {
+    pub target: String,
+    pub count: usize,
     pub provenance: String,
 }
 
@@ -3226,6 +3234,26 @@ pub fn elaborate_ail_core(package: &AilPackage, document: &AilDocument) -> AilCo
                 );
             }
         }
+        for repeated_call in &action.repeated_calls {
+            let target = resolve_action_call_target(&graph, document, &repeated_call.target)
+                .unwrap_or_else(|| {
+                    graph.add_node(
+                        "Effect",
+                        format!("repeat {}", repeated_call.target),
+                        None,
+                        BTreeMap::new(),
+                    )
+                });
+            graph.add_edge(
+                "repeats",
+                &action_node,
+                &target,
+                attr(&[("count", &repeated_call.count.to_string())]),
+            );
+            if target.kind == "Effect" {
+                attach_provenance(&mut graph, &target, repeated_call.provenance.clone());
+            }
+        }
         for protection in &action.secret_protections {
             let target = resolve_secret_target(&mut graph, document, protection);
             graph.add_edge("protects_secret", &action_node, &target, BTreeMap::new());
@@ -3598,6 +3626,7 @@ fn is_known_core_edge_kind(kind: &str) -> bool {
             | "protects_secret"
             | "reads"
             | "records_trace"
+            | "repeats"
             | "requires"
             | "requires_approval"
             | "runs_in_context"
@@ -5160,6 +5189,12 @@ pub fn render_ail_spec(document: &AilDocument) -> String {
         }
         for call in &action.calls {
             lines.push(format!("- the system calls {call}"));
+        }
+        for repeated_call in &action.repeated_calls {
+            lines.push(format!(
+                "- the system repeats {} {} times",
+                repeated_call.target, repeated_call.count
+            ));
         }
         for write in &action.writes {
             lines.push(format!("- the system changes {write}"));
@@ -7602,6 +7637,7 @@ pub fn ail_document_from_core(core: &AilCore) -> AilDocument {
                 .filter(|node| node.kind == "Action")
                 .map(|node| node.name)
                 .collect(),
+            repeated_calls: outgoing_repeated_action_calls(core, &node_by_id, action_node),
             failures: outgoing_nodes(core, &node_by_id, action_node, "may_fail_with")
                 .into_iter()
                 .filter(|node| node.kind == "Failure")
@@ -8058,6 +8094,30 @@ fn outgoing_edge_payloads(
                     .or_else(|| core_node_provenance_payload(core, target, &prefix))
                     .unwrap_or_else(|| target.name.clone()),
             )
+        })
+        .collect()
+}
+
+fn outgoing_repeated_action_calls(
+    core: &AilCore,
+    node_by_id: &BTreeMap<String, Node>,
+    source: &Node,
+) -> Vec<AilRepeatedActionCall> {
+    core.graph
+        .edges
+        .iter()
+        .filter(|edge| edge.kind == "repeats" && edge.source == source.id)
+        .filter_map(|edge| {
+            let target = node_by_id.get(&edge.target)?;
+            (target.kind == "Action").then(|| AilRepeatedActionCall {
+                target: target.name.clone(),
+                count: edge
+                    .attributes
+                    .get("count")
+                    .and_then(|count| count.parse::<usize>().ok())
+                    .unwrap_or(1),
+                provenance: format!("action:{}.repeat:{}", source.name, target.name),
+            })
         })
         .collect()
 }
@@ -8721,6 +8781,17 @@ fn compile_ail_action_bytecode(document: &AilDocument, action: &AilAction) -> Ai
             &[("target", target)],
         ));
     }
+    for repeated_call in &action.repeated_calls {
+        let target = action_call_target_name(document, &repeated_call.target)
+            .unwrap_or_else(|| action_name_from_label(&repeated_call.target));
+        instructions.push(AilBytecodeInstruction::new(
+            "REPEAT_ACTION",
+            &[
+                ("target", target),
+                ("count", repeated_call.count.to_string()),
+            ],
+        ));
+    }
     for write in &action.writes {
         if let Some((key, delta)) = field_integer_delta_assignment(document, write) {
             instructions.push(AilBytecodeInstruction::new(
@@ -9158,6 +9229,15 @@ pub fn verify_ail_bytecode(program: &AilBytecodeProgram) -> Vec<String> {
                     action.name, index, target
                 ));
             }
+            if instruction.opcode == "REPEAT_ACTION"
+                && let Some(target) = instruction.operands.get("target")
+                && !program.actions.contains_key(target)
+            {
+                diagnostics.push(format!(
+                    "AILBC005 action {} instruction {} repeats unknown action {}",
+                    action.name, index, target
+                ));
+            }
             if instruction.opcode == "ADD_INT_FIELD"
                 && let Some(delta) = instruction.operands.get("delta")
                 && delta.parse::<i64>().is_err()
@@ -9165,6 +9245,17 @@ pub fn verify_ail_bytecode(program: &AilBytecodeProgram) -> Vec<String> {
                 diagnostics.push(format!(
                     "AILBC006 action {} instruction {} opcode ADD_INT_FIELD delta '{}' is not an integer",
                     action.name, index, delta
+                ));
+            }
+            if instruction.opcode == "REPEAT_ACTION"
+                && let Some(count) = instruction.operands.get("count")
+                && !count
+                    .parse::<usize>()
+                    .is_ok_and(|parsed_count| parsed_count > 0)
+            {
+                diagnostics.push(format!(
+                    "AILBC007 action {} instruction {} opcode REPEAT_ACTION count '{}' is not a positive integer",
+                    action.name, index, count
                 ));
             }
         }
@@ -9201,6 +9292,7 @@ fn ail_bytecode_required_operands(opcode: &str) -> Option<&'static [&'static str
         "BRANCH_FIELD_EQUALS" => Some(&["key", "value", "label"]),
         "JUMP" => Some(&["label"]),
         "CALL_ACTION" => Some(&["target"]),
+        "REPEAT_ACTION" => Some(&["target", "count"]),
         "ADD_INT_FIELD" => Some(&["key", "delta", "text"]),
         "REQUIRE_EXISTS" => Some(&["key", "rule", "failure"]),
         "REQUIRE_FIELD_NOT_EQUALS" => Some(&["key", "value", "rule", "failure"]),
@@ -9572,6 +9664,39 @@ fn run_verified_ail_bytecode_action(
                     });
                 }
                 final_state = called.final_state;
+            }
+            "REPEAT_ACTION" => {
+                let target = ail_bytecode_operand(instruction, "target");
+                let count = ail_bytecode_operand(instruction, "count")
+                    .parse::<usize>()
+                    .map_err(|_| {
+                        format!("REPEAT_ACTION count for '{target}' must be a positive integer")
+                    })?;
+                if count == 0 {
+                    return Err(format!(
+                        "REPEAT_ACTION count for '{target}' must be a positive integer"
+                    ));
+                }
+                trace.push(format!("repeat action {target} {count} times"));
+                for iteration in 1..=count {
+                    trace.push(format!("repeat {target} iteration {iteration}"));
+                    let mut called = run_verified_ail_bytecode_action(
+                        program,
+                        target,
+                        final_state,
+                        call_depth + 1,
+                    )?;
+                    trace.append(&mut called.trace);
+                    if called.status != "succeeded" {
+                        return Ok(AilRunResult {
+                            status: called.status,
+                            failure: called.failure,
+                            final_state: called.final_state,
+                            trace,
+                        });
+                    }
+                    final_state = called.final_state;
+                }
             }
             "ADD_INT_FIELD" => {
                 let key = ail_bytecode_operand(instruction, "key");
@@ -11034,6 +11159,19 @@ fn namespace_ail_document(document: &AilDocument, alias: &str) -> AilDocument {
                         action_call_target_name(document, text)
                             .map(|target| qualify_name(alias, &target))
                             .unwrap_or_else(|| qualify_reference_text(text, alias, &thing_names))
+                    })
+                    .collect(),
+                repeated_calls: action
+                    .repeated_calls
+                    .iter()
+                    .map(|call| AilRepeatedActionCall {
+                        target: action_call_target_name(document, &call.target)
+                            .map(|target| qualify_name(alias, &target))
+                            .unwrap_or_else(|| {
+                                qualify_reference_text(&call.target, alias, &thing_names)
+                            }),
+                        count: call.count,
+                        provenance: format!("action:{action_name}.repeat:{}", call.target),
                     })
                     .collect(),
                 failures: action
@@ -15794,6 +15932,10 @@ fn parse_action_bullet(document: &mut AilDocument, action_name: &str, bullet: &s
         action.writes.push(trim_sentence(text));
     } else if let Some(text) = bullet.strip_prefix("the system calls ") {
         action.calls.push(trim_sentence(text));
+    } else if let Some(text) = bullet.strip_prefix("the system repeats ") {
+        if let Some(repeated_call) = parse_repeated_action_call(action_name, text) {
+            action.repeated_calls.push(repeated_call);
+        }
     } else if let Some(text) = bullet.strip_prefix("the system records a trace event named ") {
         action.traces.push(trim_sentence(text));
     } else if let Some(text) = bullet.strip_prefix("the system records ") {
@@ -15805,6 +15947,18 @@ fn parse_action_bullet(document: &mut AilDocument, action_name: &str, bullet: &s
     } else if let Some(text) = bullet.strip_prefix("if ") {
         action.failures.push(trim_sentence(text));
     }
+}
+
+fn parse_repeated_action_call(action_name: &str, text: &str) -> Option<AilRepeatedActionCall> {
+    let text = trim_sentence(text);
+    let text = text.strip_suffix(" times").unwrap_or(&text);
+    let (target, count) = text.rsplit_once(' ')?;
+    let count = count.parse::<usize>().ok()?;
+    (count > 0).then(|| AilRepeatedActionCall {
+        target: target.trim().to_string(),
+        count,
+        provenance: format!("action:{action_name}.repeat:{}", target.trim()),
+    })
 }
 
 fn parse_failure_bullet(document: &mut AilDocument, failure_name: &str, bullet: &str) {
