@@ -19437,6 +19437,184 @@ fn cli_ail_build_agent_compares_prompt_portability_before_compile() {
 }
 
 #[test]
+fn cli_ail_prompt_corpus_accepts_checked_outputs() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-prompt-corpus-accepted-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-prompt-corpus",
+            "docs/ail/corpus/prompts",
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    for task in [
+        "interview",
+        "requirements",
+        "spec-draft",
+        "repair",
+        "core-to-spec",
+        "flow-patch",
+        "diagnostic-repair",
+        "trace-debug",
+    ] {
+        assert!(
+            stdout.contains(&format!("accepted-task {task}")),
+            "{stdout}"
+        );
+    }
+    assert!(
+        stdout.contains(
+            "semantic-task support-ticket-private-notes model-labels base-local,target-local"
+        ),
+        "{stdout}"
+    );
+
+    let checked_core = fs::read_to_string(
+        artifact_dir.join("accepted/support-ticket-spec-draft-base.ail-core.txt"),
+    )
+    .unwrap();
+    assert!(
+        checked_core.contains("package: support-ticket") && checked_core.contains("version: 0.1.0"),
+        "{checked_core}"
+    );
+    let checked_core_fingerprint = fs::read_to_string(
+        artifact_dir.join("accepted/support-ticket-spec-draft-base.ail-core.fingerprint.txt"),
+    )
+    .unwrap();
+    assert_eq!(
+        checked_core_fingerprint.trim(),
+        fnv64_fingerprint(&checked_core)
+    );
+
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
+fn cli_ail_prompt_corpus_rejects_semantic_drift_outputs() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-prompt-corpus-rejected-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-prompt-corpus",
+            "docs/ail/corpus/prompts",
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let report = fs::read_to_string(artifact_dir.join("prompt-corpus-portability.txt")).unwrap();
+    for taxonomy in [
+        "prompt-envelope",
+        "profile-mismatch",
+        "hallucinated-capability",
+        "missing-trace",
+        "semantic-drift",
+    ] {
+        assert!(
+            report.contains(&format!("failure-taxonomy {taxonomy}")),
+            "{report}"
+        );
+    }
+    assert!(
+        report.contains("rejected-entry semantic-drift-rejected checker-result rejected diagnostic semantic-drift"),
+        "{report}"
+    );
+
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
+fn cli_ail_prompt_corpus_writes_portability_report() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-prompt-corpus-report-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-prompt-corpus",
+            "docs/ail/corpus/prompts",
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let report = fs::read_to_string(artifact_dir.join("prompt-corpus-portability.txt")).unwrap();
+    assert!(
+        report.contains("AIL-Prompt-Corpus-Portability-Report:"),
+        "{report}"
+    );
+    assert!(report.contains("base-model base-local"), "{report}");
+    assert!(report.contains("target-model target-local"), "{report}");
+    assert!(
+        report.contains("prompt-fingerprint docs/ail/prompts/spec-draft.system.md"),
+        "{report}"
+    );
+    assert!(
+        report.contains("artifact-fingerprint support-ticket-spec-draft-base"),
+        "{report}"
+    );
+    assert!(
+        report.contains("checker-result support-ticket-spec-draft-base accepted"),
+        "{report}"
+    );
+    assert!(
+        report.contains("checker-result missing-trace-rejected rejected AIL-TRACE-001"),
+        "{report}"
+    );
+
+    let report_fingerprint =
+        fs::read_to_string(artifact_dir.join("prompt-corpus-portability.fingerprint.txt")).unwrap();
+    assert_eq!(report_fingerprint.trim(), fnv64_fingerprint(&report));
+    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-prompt-corpus.txt")).unwrap();
+    assert!(
+        manifest.contains(&format!(
+            "portability-report prompt-corpus-portability.txt {}",
+            fnv64_fingerprint(&report)
+        )),
+        "{manifest}"
+    );
+    let manifest_fingerprint =
+        fs::read_to_string(artifact_dir.join("manifest.fingerprint.txt")).unwrap();
+    assert_eq!(manifest_fingerprint.trim(), fnv64_fingerprint(&manifest));
+
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
 fn cli_ail_build_agent_verifies_bytecode_artifact_after_compile() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");

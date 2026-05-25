@@ -145,6 +145,19 @@ model outputs and accepts semantic equivalence, not identical wording. A model
 output passes when it normalizes to equivalent checked AIL-Core or asks the
 expected blocking questions without inventing semantics.
 
+The offline corpus verifier is:
+
+```bash
+cargo run -- ail-prompt-corpus docs/ail/corpus/prompts --artifact-dir /tmp/ail-prompt-corpus
+```
+
+It consumes stored model outputs rather than live endpoints. Accepted `ail-spec`
+entries must normalize to checked AIL-Core and rejected entries must produce the
+stored prompt-envelope, profile mismatch, hallucinated capability,
+missing-trace, or semantic-drift failure taxonomy. The verifier writes a
+fingerprinted portability report and manifest so prompt-pack regressions can be
+reviewed without trusting current model availability.
+
 ## Calibration Examples
 
 Calibration examples must include accepted specs, rejected specs, diagnostic

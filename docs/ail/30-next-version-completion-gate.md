@@ -408,12 +408,15 @@ already covers parts of this gate:
   dependency reports, manifests, fingerprints, and Linux-only syscall
   rejection
 - Linux native executable artifacts
+- stored prompt portability corpus across base and target model labels,
+  including accepted checked outputs and rejected prompt-envelope,
+  profile-mismatch, hallucinated-capability, missing-trace, and semantic-drift
+  taxonomy
 - prompt-envelope checks and prompt-to-native build evidence
 
 Missing v0.2 evidence includes:
 
 - registry package fetching and registry identity resolution
-- stored prompt portability corpus across model labels
 - v0.2-specific release evidence bundle
 
 ## Completion Decision Rule

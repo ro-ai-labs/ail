@@ -41,3 +41,23 @@ Corpus acceptance metrics:
 - every prompt fixture either normalizes to expected AIL-Core or asks expected
   blocking questions
 - every round trip records the before and after semantic hash
+
+Prompt portability corpus entries are checked offline with:
+
+```bash
+cargo run -- ail-prompt-corpus docs/ail/corpus/prompts --artifact-dir /tmp/ail-prompt-corpus
+```
+
+The command reads `## Stored Output:` blocks, verifies accepted `ail-spec`
+outputs by normalizing them to checked AIL-Core, verifies rejected outputs
+against expected diagnostics or semantic drift, and writes:
+
+- `prompt-corpus-portability.txt`
+- `prompt-corpus-portability.fingerprint.txt`
+- `manifest.ail-prompt-corpus.txt`
+- `manifest.fingerprint.txt`
+- `accepted/<entry>.ail-core.txt`
+- `accepted/<entry>.ail-core.fingerprint.txt`
+
+The portability report records semantic task labels, model labels, prompt
+fingerprints, artifact fingerprints, checker results, and failure taxonomy.

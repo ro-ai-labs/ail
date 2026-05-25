@@ -106,6 +106,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
             | "ail-build"
             | "ail-pass"
             | "ail-bootstrap"
+            | "ail-prompt-corpus"
             | "ail-patch"
             | "ail-flow-edit"
     ) {
@@ -115,7 +116,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
 }
 
 fn usage() -> String {
-    "usage: ail <ail-check|ail-core|ail-flow|ail-flow-edit|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-interview|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-bootstrap|ail-patch> <path> [patch|target-package] [--action name] [--prompt text] [--interview-file path] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--base-model name] [--target-model name] [--out path] [--all-actions] [--diagnostics-json] [--artifact-dir path] [--llm-endpoint url] [key=value ...]\nsaved-core usage: ail <ail-spec|ail-lower|ail-compile|ail-run|ail-build> --core-file <checked-core> [--action name] [--target target] [--out path] [--artifact-dir path] [key=value ...]\nwasm-contract usage: ail ail-compile <package-or-artifact.ailbc.json> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir> OR ail ail-compile --core-file <checked-core> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir>\ncore-patch usage: ail ail-patch --core-file <checked-core> <ail-core.patch.json>\nflow-edit usage: ail ail-flow-edit --core-file <checked-core> <ail-flow.edit.json>\nail-pass usage: ail ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR ail ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]\nail-bootstrap usage: ail ail-bootstrap <toolchain-agent-package> --pass <compiler-pass-package> --agent <toolchain-agent-package> --target linux-x86_64-elf --artifact-dir <dir>"
+    "usage: ail <ail-check|ail-core|ail-flow|ail-flow-edit|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-interview|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-bootstrap|ail-prompt-corpus|ail-patch> <path> [patch|target-package] [--action name] [--prompt text] [--interview-file path] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--base-model name] [--target-model name] [--out path] [--all-actions] [--diagnostics-json] [--artifact-dir path] [--llm-endpoint url] [key=value ...]\nsaved-core usage: ail <ail-spec|ail-lower|ail-compile|ail-run|ail-build> --core-file <checked-core> [--action name] [--target target] [--out path] [--artifact-dir path] [key=value ...]\nwasm-contract usage: ail ail-compile <package-or-artifact.ailbc.json> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir> OR ail ail-compile --core-file <checked-core> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir>\ncore-patch usage: ail ail-patch --core-file <checked-core> <ail-core.patch.json>\nflow-edit usage: ail ail-flow-edit --core-file <checked-core> <ail-flow.edit.json>\nail-pass usage: ail ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR ail ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]\nail-bootstrap usage: ail ail-bootstrap <toolchain-agent-package> --pass <compiler-pass-package> --agent <toolchain-agent-package> --target linux-x86_64-elf --artifact-dir <dir>\nail-prompt-corpus usage: ail ail-prompt-corpus <corpus-file-or-dir> --artifact-dir <dir>"
         .to_string()
 }
 
@@ -359,6 +360,33 @@ struct AilCompileDarwinMachOContractArtifactSet<'a> {
     dependency_report_text: &'a str,
 }
 
+#[derive(Debug, Clone)]
+struct AilPromptCorpusEntry {
+    id: String,
+    source_file: String,
+    semantic_task: String,
+    task: String,
+    model_label: String,
+    prompt_file: String,
+    checker_result: String,
+    artifact_kind: String,
+    package: Option<String>,
+    output_file: Option<String>,
+    stored_output: Option<String>,
+    expected_diagnostic: Option<String>,
+    expected_core_hash: Option<String>,
+    failure_taxonomy: String,
+}
+
+#[derive(Debug, Clone)]
+struct AilPromptCorpusEvaluation {
+    entry: AilPromptCorpusEntry,
+    diagnostic: String,
+    artifact_fingerprint: String,
+    checked_core_text: Option<String>,
+    checked_core_fingerprint: Option<String>,
+}
+
 struct AilBootstrapArtifactSet<'a> {
     target_name: &'a str,
     toolchain_source_manifest_text: &'a str,
@@ -520,6 +548,496 @@ fn render_ail_prompt_portability_report(
     }
     lines.push("trace AgentPromptPortabilityCompared".to_string());
     format!("{}\n", lines.join("\n"))
+}
+
+fn load_ail_prompt_corpus_entries(path: &str) -> Result<Vec<AilPromptCorpusEntry>, String> {
+    let root = std::path::Path::new(path);
+    let mut files = Vec::new();
+    if root.is_file() {
+        files.push(root.to_path_buf());
+    } else {
+        for entry in fs::read_dir(root)
+            .map_err(|error| format!("failed to read corpus dir {path}: {error}"))?
+        {
+            let entry =
+                entry.map_err(|error| format!("failed to read corpus dir entry: {error}"))?;
+            let entry_path = entry.path();
+            if entry_path
+                .extension()
+                .is_some_and(|extension| extension == "md")
+            {
+                files.push(entry_path);
+            }
+        }
+        files.sort();
+    }
+    let mut entries = Vec::new();
+    for file in files {
+        let text = fs::read_to_string(&file).map_err(|error| {
+            format!(
+                "failed to read prompt corpus file {}: {error}",
+                file.display()
+            )
+        })?;
+        entries.extend(parse_ail_prompt_corpus_entries(
+            &file.to_string_lossy(),
+            &text,
+        )?);
+    }
+    if entries.is_empty() {
+        return Err(format!(
+            "prompt corpus {path} did not contain stored outputs"
+        ));
+    }
+    Ok(entries)
+}
+
+fn parse_ail_prompt_corpus_entries(
+    source_file: &str,
+    text: &str,
+) -> Result<Vec<AilPromptCorpusEntry>, String> {
+    let mut parsed = Vec::new();
+    let mut current_id: Option<String> = None;
+    let mut current_fields = BTreeMap::<String, String>::new();
+    for line in text.lines() {
+        if let Some(id) = line.strip_prefix("## Stored Output: ") {
+            if let Some(entry_id) = current_id.take() {
+                parsed.push(ail_prompt_corpus_entry_from_fields(
+                    source_file,
+                    entry_id,
+                    &current_fields,
+                )?);
+                current_fields.clear();
+            }
+            current_id = Some(id.trim().to_string());
+            continue;
+        }
+        if current_id.is_some()
+            && let Some((key, value)) = line.split_once(':')
+        {
+            let key = key.trim();
+            if !key.is_empty() && key.chars().all(|ch| ch.is_ascii_lowercase() || ch == '-') {
+                current_fields.insert(key.to_string(), value.trim().to_string());
+            }
+        }
+    }
+    if let Some(entry_id) = current_id {
+        parsed.push(ail_prompt_corpus_entry_from_fields(
+            source_file,
+            entry_id,
+            &current_fields,
+        )?);
+    }
+    Ok(parsed)
+}
+
+fn ail_prompt_corpus_required_field(
+    source_file: &str,
+    entry_id: &str,
+    fields: &BTreeMap<String, String>,
+    field: &str,
+) -> Result<String, String> {
+    fields.get(field).cloned().ok_or_else(|| {
+        format!("prompt corpus entry {entry_id} in {source_file} is missing {field}")
+    })
+}
+
+fn ail_prompt_corpus_entry_from_fields(
+    source_file: &str,
+    id: String,
+    fields: &BTreeMap<String, String>,
+) -> Result<AilPromptCorpusEntry, String> {
+    Ok(AilPromptCorpusEntry {
+        semantic_task: ail_prompt_corpus_required_field(source_file, &id, fields, "semantic-task")?,
+        task: ail_prompt_corpus_required_field(source_file, &id, fields, "task")?,
+        model_label: ail_prompt_corpus_required_field(source_file, &id, fields, "model-label")?,
+        prompt_file: ail_prompt_corpus_required_field(source_file, &id, fields, "prompt-file")?,
+        checker_result: ail_prompt_corpus_required_field(
+            source_file,
+            &id,
+            fields,
+            "checker-result",
+        )?,
+        artifact_kind: ail_prompt_corpus_required_field(source_file, &id, fields, "artifact-kind")?,
+        package: fields.get("package").cloned(),
+        output_file: fields.get("output-file").cloned(),
+        stored_output: fields.get("stored-output").cloned(),
+        expected_diagnostic: fields.get("expected-diagnostic").cloned(),
+        expected_core_hash: fields.get("expected-core-hash").cloned(),
+        failure_taxonomy: fields
+            .get("failure-taxonomy")
+            .cloned()
+            .unwrap_or_else(|| "none".to_string()),
+        id,
+        source_file: source_file.to_string(),
+    })
+}
+
+fn evaluate_ail_prompt_corpus_entry(
+    entry: &AilPromptCorpusEntry,
+) -> Result<AilPromptCorpusEvaluation, String> {
+    match entry.checker_result.as_str() {
+        "accepted" => evaluate_accepted_ail_prompt_corpus_entry(entry),
+        "rejected" => evaluate_rejected_ail_prompt_corpus_entry(entry),
+        other => Err(format!(
+            "prompt corpus entry {} has unknown checker-result {other}",
+            entry.id
+        )),
+    }
+}
+
+fn evaluate_accepted_ail_prompt_corpus_entry(
+    entry: &AilPromptCorpusEntry,
+) -> Result<AilPromptCorpusEvaluation, String> {
+    let (core_text, core_fingerprint) = checked_core_from_prompt_corpus_entry(entry)?;
+    Ok(AilPromptCorpusEvaluation {
+        entry: entry.clone(),
+        diagnostic: "none".to_string(),
+        artifact_fingerprint: core_fingerprint.clone(),
+        checked_core_text: Some(core_text),
+        checked_core_fingerprint: Some(core_fingerprint),
+    })
+}
+
+fn evaluate_rejected_ail_prompt_corpus_entry(
+    entry: &AilPromptCorpusEntry,
+) -> Result<AilPromptCorpusEvaluation, String> {
+    let expected = entry.expected_diagnostic.as_deref().ok_or_else(|| {
+        format!(
+            "prompt corpus rejected entry {} is missing expected-diagnostic",
+            entry.id
+        )
+    })?;
+    let diagnostic = if entry.artifact_kind == "prompt-envelope" {
+        let stored_output = entry.stored_output.as_deref().ok_or_else(|| {
+            format!(
+                "prompt corpus prompt-envelope entry {} is missing stored-output",
+                entry.id
+            )
+        })?;
+        validate_stored_prompt_envelope_output(stored_output)
+    } else if expected == "semantic-drift" {
+        let (core_text, _) = checked_core_from_prompt_corpus_entry(entry)?;
+        let package = load_ail_package_dir(
+            entry
+                .package
+                .as_deref()
+                .ok_or_else(|| format!("prompt corpus entry {} is missing package", entry.id))?,
+        )?;
+        let output_file = entry
+            .output_file
+            .as_deref()
+            .ok_or_else(|| format!("prompt corpus entry {} is missing output-file", entry.id))?;
+        let output_text = fs::read_to_string(output_file).map_err(|error| {
+            format!("failed to read prompt corpus output {output_file}: {error}")
+        })?;
+        let core = checked_core_from_spec_text(package, output_file, output_text)?;
+        let actual_hash = ail_core_hash(&core);
+        let expected_hash = entry.expected_core_hash.as_deref().ok_or_else(|| {
+            format!(
+                "prompt corpus semantic-drift entry {} is missing expected-core-hash",
+                entry.id
+            )
+        })?;
+        if actual_hash == expected_hash {
+            return Err(format!(
+                "prompt corpus entry {} expected semantic drift but core hash matched {actual_hash}",
+                entry.id
+            ));
+        }
+        let fingerprint = ail_artifact_fingerprint(&core_text);
+        return Ok(AilPromptCorpusEvaluation {
+            entry: entry.clone(),
+            diagnostic: "semantic-drift".to_string(),
+            artifact_fingerprint: fingerprint,
+            checked_core_text: Some(core_text),
+            checked_core_fingerprint: Some(ail_artifact_fingerprint(&format!(
+                "expected {expected_hash}\nactual {actual_hash}\n"
+            ))),
+        });
+    } else {
+        let diagnostics = diagnostics_from_prompt_corpus_spec_entry(entry)?;
+        diagnostics
+            .into_iter()
+            .find(|diagnostic| diagnostic.starts_with(expected))
+            .ok_or_else(|| {
+                format!(
+                    "prompt corpus entry {} expected diagnostic {expected}, but it was not emitted",
+                    entry.id
+                )
+            })?
+    };
+    if !diagnostic.starts_with(expected) {
+        return Err(format!(
+            "prompt corpus entry {} expected diagnostic {expected}, got {diagnostic}",
+            entry.id
+        ));
+    }
+    Ok(AilPromptCorpusEvaluation {
+        entry: entry.clone(),
+        diagnostic,
+        artifact_fingerprint: ail_artifact_fingerprint(
+            entry
+                .stored_output
+                .as_deref()
+                .or(entry.output_file.as_deref())
+                .unwrap_or(&entry.id),
+        ),
+        checked_core_text: None,
+        checked_core_fingerprint: None,
+    })
+}
+
+fn checked_core_from_prompt_corpus_entry(
+    entry: &AilPromptCorpusEntry,
+) -> Result<(String, String), String> {
+    if entry.artifact_kind != "ail-spec" {
+        return Err(format!(
+            "prompt corpus accepted entry {} must use artifact-kind ail-spec",
+            entry.id
+        ));
+    }
+    let package_path = entry
+        .package
+        .as_deref()
+        .ok_or_else(|| format!("prompt corpus entry {} is missing package", entry.id))?;
+    let output_file = entry
+        .output_file
+        .as_deref()
+        .ok_or_else(|| format!("prompt corpus entry {} is missing output-file", entry.id))?;
+    let package = load_ail_package_dir(package_path)?;
+    let output_text = fs::read_to_string(output_file)
+        .map_err(|error| format!("failed to read prompt corpus output {output_file}: {error}"))?;
+    let core = checked_core_from_spec_text(package, output_file, output_text)?;
+    let core_text = format!("{}\n", render_ail_core(&core));
+    let core_fingerprint = ail_artifact_fingerprint(&core_text);
+    Ok((core_text, core_fingerprint))
+}
+
+fn checked_core_from_spec_text(
+    mut package: ail::ail::AilPackage,
+    spec_path: &str,
+    spec_text: String,
+) -> Result<ail::ail::AilCore, String> {
+    package.spec_path = std::path::PathBuf::from(spec_path);
+    package.spec_text = spec_text;
+    let document = parse_ail_package_document(&package)?;
+    let core = elaborate_ail_core(&package, &document);
+    let diagnostics = check_ail_core(&core);
+    if !diagnostics.is_empty() {
+        return Err(format!(
+            "prompt corpus accepted output {} has diagnostics:\n{}",
+            spec_path,
+            diagnostics.join("\n")
+        ));
+    }
+    Ok(core)
+}
+
+fn diagnostics_from_prompt_corpus_spec_entry(
+    entry: &AilPromptCorpusEntry,
+) -> Result<Vec<String>, String> {
+    let package_path = entry
+        .package
+        .as_deref()
+        .ok_or_else(|| format!("prompt corpus entry {} is missing package", entry.id))?;
+    let output_file = entry
+        .output_file
+        .as_deref()
+        .ok_or_else(|| format!("prompt corpus entry {} is missing output-file", entry.id))?;
+    let mut package = load_ail_package_dir(package_path)?;
+    package.spec_path = std::path::PathBuf::from(output_file);
+    package.spec_text = fs::read_to_string(output_file)
+        .map_err(|error| format!("failed to read prompt corpus output {output_file}: {error}"))?;
+    let document = parse_ail_package_document(&package)?;
+    let core = elaborate_ail_core(&package, &document);
+    Ok(check_ail_core(&core))
+}
+
+fn validate_stored_prompt_envelope_output(stored_output: &str) -> String {
+    let has_artifact = stored_output.contains("\"artifact_text\"");
+    let has_questions = stored_output.contains("\"questions\"");
+    if has_artifact && has_questions {
+        return "AIL-PROMPT-001 prompt envelope cannot contain both artifact_text and questions"
+            .to_string();
+    }
+    if !has_artifact && !has_questions {
+        return "AIL-PROMPT-001 prompt envelope must contain artifact_text or questions"
+            .to_string();
+    }
+    if !stored_output.contains("\"must_check\":true") {
+        return "AIL-PROMPT-001 prompt envelope checker_handoff.must_check must be true"
+            .to_string();
+    }
+    if stored_output.contains("\"expected_profile\":\"AgentTool\"") {
+        return "AIL-PROMPT-001 prompt envelope checker_handoff.expected_profile must be Application"
+            .to_string();
+    }
+    "accepted".to_string()
+}
+
+fn render_ail_prompt_corpus_report(evaluations: &[AilPromptCorpusEvaluation]) -> String {
+    let mut semantic_tasks = BTreeMap::<String, BTreeSet<String>>::new();
+    let mut accepted_tasks = BTreeSet::<String>::new();
+    let mut model_labels = BTreeSet::<String>::new();
+    for evaluation in evaluations {
+        semantic_tasks
+            .entry(evaluation.entry.semantic_task.clone())
+            .or_default()
+            .insert(evaluation.entry.model_label.clone());
+        model_labels.insert(evaluation.entry.model_label.clone());
+        if evaluation.entry.checker_result == "accepted" {
+            accepted_tasks.insert(evaluation.entry.task.clone());
+        }
+    }
+    let mut lines = vec![
+        "AIL-Prompt-Corpus-Portability-Report:".to_string(),
+        format!("entry-count {}", evaluations.len()),
+    ];
+    if let Some(base_model) = model_labels.iter().next() {
+        lines.push(format!("base-model {base_model}"));
+    }
+    if let Some(target_model) = model_labels.iter().next_back() {
+        lines.push(format!("target-model {target_model}"));
+    }
+    for (semantic_task, labels) in semantic_tasks {
+        lines.push(format!(
+            "semantic-task {semantic_task} model-labels {}",
+            labels.into_iter().collect::<Vec<_>>().join(",")
+        ));
+    }
+    for task in accepted_tasks {
+        lines.push(format!("accepted-task {task}"));
+    }
+    for evaluation in evaluations {
+        let prompt_fingerprint = fs::read_to_string(&evaluation.entry.prompt_file)
+            .map(|text| ail_artifact_fingerprint(&text))
+            .unwrap_or_else(|_| "missing".to_string());
+        lines.push(format!(
+            "prompt-fingerprint {} {}",
+            evaluation.entry.prompt_file, prompt_fingerprint
+        ));
+        lines.push(format!(
+            "artifact-fingerprint {} {}",
+            evaluation.entry.id, evaluation.artifact_fingerprint
+        ));
+        lines.push(format!(
+            "checker-result {} {} {}",
+            evaluation.entry.id, evaluation.entry.checker_result, evaluation.diagnostic
+        ));
+        lines.push(format!(
+            "failure-taxonomy {}",
+            evaluation.entry.failure_taxonomy
+        ));
+        if evaluation.entry.checker_result == "accepted" {
+            lines.push(format!(
+                "accepted-entry {} checker-result accepted task {} model {} source {}",
+                evaluation.entry.id,
+                evaluation.entry.task,
+                evaluation.entry.model_label,
+                evaluation.entry.source_file
+            ));
+        } else {
+            lines.push(format!(
+                "rejected-entry {} checker-result rejected diagnostic {} task {} model {} source {}",
+                evaluation.entry.id,
+                evaluation.diagnostic,
+                evaluation.entry.task,
+                evaluation.entry.model_label,
+                evaluation.entry.source_file
+            ));
+        }
+    }
+    format!("{}\n", lines.join("\n"))
+}
+
+fn render_ail_prompt_corpus_manifest(
+    corpus_path: &str,
+    report_text: &str,
+    evaluations: &[AilPromptCorpusEvaluation],
+) -> String {
+    let mut lines = vec![
+        "AIL-Prompt-Corpus-Manifest:".to_string(),
+        format!("source {corpus_path}"),
+        format!(
+            "portability-report prompt-corpus-portability.txt {}",
+            ail_artifact_fingerprint(report_text)
+        ),
+    ];
+    for evaluation in evaluations {
+        if let Some(fingerprint) = &evaluation.checked_core_fingerprint {
+            lines.push(format!(
+                "accepted-core {} accepted/{}.ail-core.txt {}",
+                evaluation.entry.id, evaluation.entry.id, fingerprint
+            ));
+        }
+    }
+    format!("{}\n", lines.join("\n"))
+}
+
+fn write_ail_prompt_corpus_artifacts(
+    artifact_dir: &str,
+    report_text: &str,
+    manifest_text: &str,
+    evaluations: &[AilPromptCorpusEvaluation],
+) -> Result<(), String> {
+    let root = std::path::Path::new(artifact_dir);
+    fs::create_dir_all(root.join("accepted")).map_err(|error| {
+        format!("failed to create ail-prompt-corpus artifact dir {artifact_dir}: {error}")
+    })?;
+    fs::write(root.join("prompt-corpus-portability.txt"), report_text)
+        .map_err(|error| format!("failed to write prompt corpus report: {error}"))?;
+    fs::write(
+        root.join("prompt-corpus-portability.fingerprint.txt"),
+        format!("{}\n", ail_artifact_fingerprint(report_text)),
+    )
+    .map_err(|error| format!("failed to write prompt corpus report fingerprint: {error}"))?;
+    for evaluation in evaluations {
+        if let Some(core_text) = &evaluation.checked_core_text {
+            fs::write(
+                root.join("accepted")
+                    .join(format!("{}.ail-core.txt", evaluation.entry.id)),
+                core_text,
+            )
+            .map_err(|error| format!("failed to write prompt corpus checked core: {error}"))?;
+            fs::write(
+                root.join("accepted")
+                    .join(format!("{}.ail-core.fingerprint.txt", evaluation.entry.id)),
+                format!("{}\n", ail_artifact_fingerprint(core_text)),
+            )
+            .map_err(|error| {
+                format!("failed to write prompt corpus checked core fingerprint: {error}")
+            })?;
+        }
+    }
+    fs::write(root.join("manifest.ail-prompt-corpus.txt"), manifest_text)
+        .map_err(|error| format!("failed to write prompt corpus manifest: {error}"))?;
+    fs::write(
+        root.join("manifest.fingerprint.txt"),
+        format!("{}\n", ail_artifact_fingerprint(manifest_text)),
+    )
+    .map_err(|error| format!("failed to write prompt corpus manifest fingerprint: {error}"))?;
+    Ok(())
+}
+
+fn run_ail_prompt_corpus_command(path: &str, cli_options: &CliOptions) -> Result<u8, String> {
+    let entries = load_ail_prompt_corpus_entries(path)?;
+    let mut evaluations = Vec::new();
+    for entry in &entries {
+        evaluations.push(evaluate_ail_prompt_corpus_entry(entry)?);
+    }
+    let report_text = render_ail_prompt_corpus_report(&evaluations);
+    let manifest_text = render_ail_prompt_corpus_manifest(path, &report_text, &evaluations);
+    if let Some(artifact_dir) = &cli_options.artifact_dir {
+        write_ail_prompt_corpus_artifacts(
+            artifact_dir,
+            &report_text,
+            &manifest_text,
+            &evaluations,
+        )?;
+    }
+    print!("{report_text}");
+    Ok(0)
 }
 
 fn render_ail_build_manifest(artifacts: &AilBuildArtifactSet<'_>) -> String {
@@ -8027,6 +8545,9 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
     if command == "ail-bootstrap" {
         return run_ail_bootstrap_command(path, cli_options);
     }
+    if command == "ail-prompt-corpus" {
+        return run_ail_prompt_corpus_command(path, cli_options);
+    }
     if command == "ail-pass" {
         return run_ail_pass_command(path, cli_options);
     }
@@ -8984,6 +9505,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
                     | "ail-compile"
                     | "ail-conformance"
                     | "ail-bootstrap"
+                    | "ail-prompt-corpus"
             ) {
                 return Err(usage());
             }

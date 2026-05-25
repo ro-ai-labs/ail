@@ -71,7 +71,7 @@ the trusted checker is the authority for acceptance.
 | --- | --- |
 | Language reference | draft `ail-reference.draft` |
 | AIL-Core schema | target `ail-core.schema.v0`; stage-0 text artifact is normative for the bootstrap compiler |
-| Prompt pack | draft prompt-pack with JSON envelope and `AIL-PROMPT-001` protocol checks |
+| Prompt pack | draft prompt-pack with JSON envelope, `AIL-PROMPT-001` protocol checks, and offline stored-output corpus verification |
 | Bytecode | stage-0 VM JSON plus native Linux x86_64 ELF target |
 | Standard library | local package imports support exact version checks; standard library packages and range resolution are not yet versioned |
 | Conformance suite | `first-slice` package fixtures and profile fixtures |
