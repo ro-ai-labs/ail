@@ -493,7 +493,7 @@ already covers parts of this gate:
   Collections, Support Ticket, and Refund Tool packages, using schema-shaped
   prompt input and an OpenAI-compatible chat-completions endpoint with thinking
   disabled
-- forty-one replay-clean live Codex `codex-ail-spec-writer` captures for the
+- forty-four replay-clean live Codex `codex-ail-spec-writer` captures for the
   Standard Collections, Composed Support, Refund Tool, Support Ticket,
   Stateful Counter, UI Workflow, C Interop, Network Driver, Compiler Pass,
   Secret Access, Repeated Task, and Runtime Generic packages, imported from

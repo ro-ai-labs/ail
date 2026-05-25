@@ -2405,6 +2405,77 @@ A Ticket has:
 }
 
 #[test]
+fn ail_spec_parser_accepts_markdown_llm_shorthand() {
+    let package = load_ail_package_dir(fixture("runtime_generic.ail")).unwrap();
+    let document = parse_ail_spec_text(
+        r#"
+# Generic Runtime AIL-Spec Example
+
+The application Runtime Tickets manages simple runtime checks.
+
+## Entities
+
+- Ticket has id: Text, priority: State<Low, High>, status: State<Open, Closed>.
+- SupportTicket has priority: State<Low, High>.
+
+## Actions
+
+### Prioritize ticket.
+
+- Requires ticket exists.
+- Requires priority not High.
+- Changes priority to High.
+- Guarantees high priority tickets handled first.
+- Records trace event named TicketPrioritizedScenario038.
+"#,
+    )
+    .unwrap();
+
+    assert_eq!(document.things["Ticket"].fields["id"].type_name, "Text");
+    assert_eq!(
+        document.things["Ticket"].fields["priority"].type_name,
+        "State<Low, High>"
+    );
+    assert_eq!(
+        document.actions["PrioritizeTicket"].requirements,
+        vec!["the ticket to exist", "priority not High"]
+    );
+    assert_eq!(
+        document.actions["PrioritizeTicket"].traces,
+        vec!["TicketPrioritizedScenario038"]
+    );
+
+    let core = elaborate_ail_core(&package, &document);
+    assert_eq!(check_ail_core(&core), Vec::<String>::new());
+}
+
+#[test]
+fn ail_bytecode_keeps_unmatched_manual_override_requirement_observed() {
+    let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
+    let spec_text = fs::read_to_string(format!(
+        "{}/spec.ail-spec.md",
+        fixture("support_ticket.ail")
+    ))
+    .unwrap()
+    .replace(
+        "the system requires the ticket to exist",
+        "the system requires manual override approval",
+    );
+    let document = parse_ail_spec_text(&spec_text).unwrap();
+    let core = elaborate_ail_core(&package, &document);
+    let bytecode = compile_ail_core_bytecode(&core).unwrap();
+    let close_ticket = bytecode.actions.get("CloseTicket").unwrap();
+
+    assert!(close_ticket.instructions.iter().any(|instruction| {
+        instruction.opcode == "OBSERVE_RULE"
+            && instruction
+                .operands
+                .get("rule")
+                .is_some_and(|rule| rule == "manual override approval")
+    }));
+}
+
+#[test]
 fn ail_core_elaboration_serializes_support_ticket_graph() {
     let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
     let document = parse_ail_spec_text(&package.spec_text).unwrap();
@@ -19897,7 +19968,7 @@ fn cli_ail_e2e_corpus_replays_checked_seed_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("capture-origin-count deterministic-seed 56"),
+        report.contains("capture-origin-count deterministic-seed 53"),
         "{report}"
     );
     assert!(
@@ -19905,7 +19976,7 @@ fn cli_ail_e2e_corpus_replays_checked_seed_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("capture-origin-count live-codex 41"),
+        report.contains("capture-origin-count live-codex 44"),
         "{report}"
     );
     assert!(
@@ -19995,6 +20066,24 @@ fn cli_ail_e2e_corpus_replays_checked_seed_corpus() {
     assert!(
         report.contains("entry example-36")
             && report.contains("semantic-task runtime-generic-live-codex-core-to-summary-36")
+            && report.contains("capture-origin live-codex"),
+        "{report}"
+    );
+    assert!(
+        report.contains("entry example-35")
+            && report.contains("semantic-task runtime-generic-live-codex-core-to-spec-35")
+            && report.contains("capture-origin live-codex"),
+        "{report}"
+    );
+    assert!(
+        report.contains("entry example-37")
+            && report.contains("semantic-task runtime-generic-live-codex-flow-patch-37")
+            && report.contains("capture-origin live-codex"),
+        "{report}"
+    );
+    assert!(
+        report.contains("entry example-38")
+            && report.contains("semantic-task runtime-generic-live-codex-trace-debug-38")
             && report.contains("capture-origin live-codex"),
         "{report}"
     );
@@ -20232,7 +20321,7 @@ fn cli_ail_e2e_corpus_release_evidence_rejects_deterministic_seed_corpus() {
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
         stderr.contains(
-            "ail-e2e-corpus --release-evidence requires zero deterministic-seed entries; found 56"
+            "ail-e2e-corpus --release-evidence requires zero deterministic-seed entries; found 53"
         ),
         "{stderr}"
     );

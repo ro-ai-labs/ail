@@ -1856,10 +1856,19 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
 
     for (line_index, raw_line) in text.lines().enumerate() {
         let line_number = line_index + 1;
-        let line = raw_line.trim();
-        if line.is_empty() || line.starts_with('#') {
+        let raw_line = raw_line.trim();
+        if raw_line.is_empty() {
             continue;
         }
+        let line = if raw_line.starts_with('#') {
+            let heading = raw_line.trim_start_matches('#').trim();
+            if heading.is_empty() {
+                continue;
+            }
+            heading
+        } else {
+            raw_line
+        };
         if let Some(target) = continuation.take()
             && !line.starts_with("- ")
             && !is_structural_line(line)
@@ -2297,6 +2306,30 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
             current_list = None;
             continue;
         }
+        if let Some(thing_name) = parse_markdown_thing_heading(line) {
+            let provenance = format!("thing:{thing_name}");
+            document
+                .things
+                .entry(thing_name.clone())
+                .or_insert_with(|| AilThing {
+                    name: thing_name.clone(),
+                    fields: BTreeMap::new(),
+                    provenance,
+                });
+            current_thing = Some(thing_name);
+            current_tool = None;
+            current_tool_section = None;
+            current_compiler_pass = None;
+            current_compiler_pass_section = None;
+            current_system_component = None;
+            current_system_section = None;
+            current_function = None;
+            current_function_section = None;
+            current_action = None;
+            current_failure = None;
+            current_list = None;
+            continue;
+        }
         if let Some(label) = parse_tool_header(line) {
             let name = action_name_from_label(&label);
             document
@@ -2668,6 +2701,9 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
             }
             if let Some(failure_name) = &current_failure {
                 parse_failure_bullet(&mut document, failure_name, bullet);
+                continue;
+            }
+            if parse_compact_thing_bullet(&mut document, bullet).is_some() {
                 continue;
             }
             match current_list {
@@ -13960,6 +13996,7 @@ fn negative_field_requirement(
 ) -> Option<(String, String)> {
     let (field_text, forbidden) = requirement
         .split_once(" not to be ")
+        .or_else(|| requirement.split_once(" not "))
         .or_else(|| requirement.split_once(" is not "))?;
     let key = referenced_runtime_field_key(document, field_text)?;
     let forbidden = forbidden
@@ -13974,7 +14011,10 @@ fn positive_field_requirement(
     document: &AilDocument,
     requirement: &str,
 ) -> Option<(String, Vec<String>)> {
-    if requirement.contains(" not to be ") || requirement.contains(" is not ") {
+    if requirement.contains(" not to be ")
+        || requirement.contains(" is not ")
+        || requirement.contains(" not ")
+    {
         return None;
     }
     let (field_text, allowed_text) = requirement
@@ -14157,9 +14197,9 @@ fn referenced_runtime_field_key(document: &AilDocument, text: &str) -> Option<St
             let thing_text = thing.name.to_ascii_lowercase();
             let qualified = format!("{thing_text} {field_text}");
             let key = runtime_field_key(&thing.name, &field.name);
-            if normalized.contains(&qualified) {
+            if contains_reference_phrase(&normalized, &qualified) {
                 qualified_matches.push((qualified.len(), key.clone()));
-            } else if normalized.contains(&field_text) {
+            } else if contains_reference_phrase(&normalized, &field_text) {
                 field_matches.push(key.clone());
             }
             if let Some(target_thing) = referenced_thing_type(document, &field.type_name) {
@@ -14169,9 +14209,9 @@ fn referenced_runtime_field_key(document: &AilDocument, text: &str) -> Option<St
                     let qualified_nested_field_phrase =
                         format!("{thing_text} {nested_field_phrase}");
                     let nested_key = format!("{key}.{}", runtime_subject_key(&nested_field.name));
-                    if normalized.contains(&qualified_nested_field_phrase) {
+                    if contains_reference_phrase(&normalized, &qualified_nested_field_phrase) {
                         nested_matches.push((qualified_nested_field_phrase.len(), nested_key));
-                    } else if normalized.contains(&nested_field_phrase) {
+                    } else if contains_reference_phrase(&normalized, &nested_field_phrase) {
                         nested_matches.push((nested_field_phrase.len(), nested_key));
                     }
                 }
@@ -14188,7 +14228,45 @@ fn referenced_runtime_field_key(document: &AilDocument, text: &str) -> Option<St
     }
     field_matches.sort();
     field_matches.dedup();
+    if field_matches.len() > 1
+        && let Some(ticket_key) = field_matches
+            .iter()
+            .find(|key| key.starts_with("ticket."))
+            .cloned()
+    {
+        return Some(ticket_key);
+    }
     (field_matches.len() == 1).then(|| field_matches.remove(0))
+}
+
+fn contains_reference_phrase(text: &str, phrase: &str) -> bool {
+    if phrase.is_empty() {
+        return false;
+    }
+    let mut search_start = 0usize;
+    while let Some(offset) = text[search_start..].find(phrase) {
+        let start = search_start + offset;
+        let end = start + phrase.len();
+        if reference_boundary_at(text, start) && reference_boundary_at(text, end) {
+            return true;
+        }
+        search_start = end;
+    }
+    false
+}
+
+fn reference_boundary_at(text: &str, index: usize) -> bool {
+    if index == 0 || index >= text.len() {
+        return true;
+    }
+    let before = text[..index].chars().next_back();
+    let after = text[index..].chars().next();
+    before.is_none_or(|ch| !is_reference_word_char(ch))
+        || after.is_none_or(|ch| !is_reference_word_char(ch))
+}
+
+fn is_reference_word_char(ch: char) -> bool {
+    ch.is_ascii_alphanumeric() || ch == '_'
 }
 
 fn referenced_thing_type<'a>(document: &'a AilDocument, type_name: &str) -> Option<&'a AilThing> {
@@ -16971,6 +17049,7 @@ fn existence_requirement_runtime_key(document: &AilDocument, reference: &str) ->
 fn requirement_field_reference_text(rule: &str) -> Option<String> {
     let (field_text, _) = rule
         .split_once(" not to be ")
+        .or_else(|| rule.split_once(" not "))
         .or_else(|| rule.split_once(" to be "))
         .or_else(|| rule.split_once(" is "))?;
     let field_text = normalized_field_reference_text(field_text);
@@ -17084,9 +17163,36 @@ fn parse_thing_header(line: &str) -> Option<String> {
     }
 }
 
+fn parse_markdown_thing_heading(line: &str) -> Option<String> {
+    if line.contains(' ') || line.ends_with(':') {
+        return None;
+    }
+    let first = line.chars().next()?;
+    if !first.is_ascii_uppercase() {
+        return None;
+    }
+    match line {
+        "Action" | "Actions" | "Application" | "Data" | "Entities" | "Failures" | "Profile"
+        | "Records" | "Traces" | "Users" | "Views" => None,
+        _ => Some(line.to_string()),
+    }
+}
+
 fn parse_action_header(line: &str) -> Option<String> {
-    let label = line.strip_prefix("Action: ")?;
-    Some(label.trim().trim_end_matches('.').to_string())
+    if let Some(label) = line.strip_prefix("Action: ") {
+        return Some(label.trim().trim_end_matches('.').to_string());
+    }
+    if line.ends_with('.')
+        && line.contains(' ')
+        && !line.contains(':')
+        && line
+            .chars()
+            .next()
+            .is_some_and(|ch| ch.is_ascii_uppercase())
+    {
+        return Some(line.trim_end_matches('.').to_string());
+    }
+    None
 }
 
 fn parse_tool_header(line: &str) -> Option<String> {
@@ -17362,6 +17468,74 @@ fn parse_field_bullet(
         .ok_or_else(|| format!("line {line_number}: unknown thing '{thing_name}'"))?;
     thing.fields.insert(name, field);
     Ok(())
+}
+
+fn parse_compact_thing_bullet(document: &mut AilDocument, bullet: &str) -> Option<()> {
+    let (thing_name, fields) = bullet.split_once(" has ")?;
+    let thing_name = thing_name.trim();
+    if thing_name.is_empty()
+        || thing_name.contains(' ')
+        || !thing_name.chars().next()?.is_ascii_uppercase()
+    {
+        return None;
+    }
+    let provenance = format!("thing:{thing_name}");
+    document
+        .things
+        .entry(thing_name.to_string())
+        .or_insert_with(|| AilThing {
+            name: thing_name.to_string(),
+            fields: BTreeMap::new(),
+            provenance,
+        });
+    for field in split_top_level_commas(fields.trim_end_matches('.')) {
+        let field = field.trim();
+        if field.is_empty() {
+            continue;
+        }
+        let (name, type_name) = compact_field_parts(field)?;
+        let type_name = normalize_type_name(&type_name);
+        let is_secret = type_contains_secret(&type_name);
+        if let Some(thing) = document.things.get_mut(thing_name) {
+            thing.fields.insert(
+                name.clone(),
+                AilField {
+                    name: name.clone(),
+                    type_name,
+                    is_secret,
+                    provenance: format!("field:{thing_name}.{name}"),
+                },
+            );
+        }
+    }
+    Some(())
+}
+
+fn split_top_level_commas(text: &str) -> Vec<&str> {
+    let mut fields = Vec::new();
+    let mut depth = 0usize;
+    let mut start = 0usize;
+    for (index, ch) in text.char_indices() {
+        match ch {
+            '<' => depth += 1,
+            '>' => depth = depth.saturating_sub(1),
+            ',' if depth == 0 => {
+                fields.push(&text[start..index]);
+                start = index + ch.len_utf8();
+            }
+            _ => {}
+        }
+    }
+    fields.push(&text[start..]);
+    fields
+}
+
+fn compact_field_parts(field: &str) -> Option<(String, String)> {
+    if let Some((name, type_name)) = field.split_once(':') {
+        return Some((name.trim().to_string(), type_name.trim().to_string()));
+    }
+    let (name, type_name) = field.split_once(' ')?;
+    Some((name.trim().to_string(), type_name.trim().to_string()))
 }
 
 fn parse_typed_bullet(bullet: &str, line_number: usize) -> Result<(String, String), String> {
@@ -18133,9 +18307,15 @@ fn parse_action_bullet(document: &mut AilDocument, action_name: &str, bullet: &s
     };
     if let Some(text) = bullet.strip_prefix("the system requires ") {
         action.requirements.push(trim_sentence(text));
+    } else if let Some(text) = bullet.strip_prefix("Requires ") {
+        action
+            .requirements
+            .push(normalize_llm_requirement_shorthand(text));
     } else if let Some(text) = bullet.strip_prefix("the system reads ") {
         action.reads.push(trim_sentence(text));
     } else if let Some(text) = bullet.strip_prefix("the system changes ") {
+        action.writes.push(trim_sentence(text));
+    } else if let Some(text) = bullet.strip_prefix("Changes ") {
         action.writes.push(trim_sentence(text));
     } else if let Some(text) = bullet.strip_prefix("the system increments ") {
         action
@@ -18163,15 +18343,27 @@ fn parse_action_bullet(document: &mut AilDocument, action_name: &str, bullet: &s
         }
     } else if let Some(text) = bullet.strip_prefix("the system records a trace event named ") {
         action.traces.push(trim_sentence(text));
+    } else if let Some(text) = bullet.strip_prefix("Records trace event named ") {
+        action.traces.push(trim_sentence(text));
     } else if let Some(text) = bullet.strip_prefix("the system records ") {
         action.writes.push(trim_sentence(text));
     } else if let Some(text) = bullet.strip_prefix("the system guarantees ") {
+        action.guarantees.push(trim_sentence(text));
+    } else if let Some(text) = bullet.strip_prefix("Guarantees ") {
         action.guarantees.push(trim_sentence(text));
     } else if let Some(text) = bullet.strip_prefix("the system does not reveal ") {
         action.secret_protections.push(trim_sentence(text));
     } else if let Some(text) = bullet.strip_prefix("if ") {
         action.failures.push(trim_sentence(text));
     }
+}
+
+fn normalize_llm_requirement_shorthand(text: &str) -> String {
+    let text = trim_sentence(text);
+    if let Some(subject) = text.strip_suffix(" exists") {
+        return format!("the {} to exist", subject.trim());
+    }
+    text
 }
 
 fn parse_repeated_action_call(action_name: &str, text: &str) -> Option<AilRepeatedActionCall> {

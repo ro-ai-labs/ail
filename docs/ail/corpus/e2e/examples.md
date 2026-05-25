@@ -644,24 +644,23 @@ runtime-state: ticket.id=T-1;ticket.status=Open
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-35
-semantic-task: runtime-generic-35
+semantic-task: runtime-generic-live-codex-core-to-spec-35
 profile: Application
 surface-tags: core
 package: examples/runtime_generic.ail
 prompt-file: docs/ail/prompts/core-to-spec.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:9f447e07620792b2
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-35.json
-response-file: responses/example-35.ail-spec.md
+response-file: responses/example-35.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
 vm-action: PrioritizeTicket
 runtime-state: ticket.id=T-1;ticket.priority=Low
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-36
 semantic-task: runtime-generic-live-codex-core-to-summary-36
@@ -683,44 +682,42 @@ vm-action: PrioritizeTicket
 runtime-state: ticket.id=T-1;ticket.priority=Low
 
 ## End-To-End Example: example-37
-semantic-task: runtime-generic-37
+semantic-task: runtime-generic-live-codex-flow-patch-37
 profile: Application
 surface-tags: core
 package: examples/runtime_generic.ail
 prompt-file: docs/ail/prompts/flow-patch.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:30136a21ab8d8eb6
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-37.json
-response-file: responses/example-37.ail-spec.md
+response-file: responses/example-37.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
 vm-action: PrioritizeTicket
 runtime-state: ticket.id=T-1;ticket.priority=Low
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-38
-semantic-task: runtime-generic-38
+semantic-task: runtime-generic-live-codex-trace-debug-38
 profile: Application
 surface-tags: core
 package: examples/runtime_generic.ail
 prompt-file: docs/ail/prompts/trace-debug.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:f5fffd069da83242
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-38.json
-response-file: responses/example-38.ail-spec.md
+response-file: responses/example-38.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
 vm-action: PrioritizeTicket
 runtime-state: ticket.id=T-1;ticket.priority=Low
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-39
 semantic-task: runtime-generic-39

@@ -1,0 +1,5 @@
+{
+  "agent": "codex-ail-spec-writer",
+  "content": "# Generic Runtime AIL-Spec Example\n\nThe application Runtime Tickets manages simple runtime checks.\n\n## Entities\n\n- Ticket has id Text, priority State<Low, High>, status State<Open, Closed>.\n- SupportTicket has priority State<Low, High>.\n\n## Actions\n\n### Prioritize ticket.\n\n- Requires ticket exists.\n- Requires priority not High.\n- Changes priority to High.\n- Guarantees high priority tickets handled first.\n- Records trace event named TicketPrioritizedScenario038.",
+  "model": "codex-subagent-default"
+}
