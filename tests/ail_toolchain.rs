@@ -19968,7 +19968,7 @@ fn cli_ail_e2e_corpus_replays_checked_seed_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("capture-origin-count deterministic-seed 38"),
+        report.contains("capture-origin-count deterministic-seed 35"),
         "{report}"
     );
     assert!(
@@ -19976,7 +19976,7 @@ fn cli_ail_e2e_corpus_replays_checked_seed_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("capture-origin-count live-codex 59"),
+        report.contains("capture-origin-count live-codex 62"),
         "{report}"
     );
     assert!(
@@ -20012,6 +20012,24 @@ fn cli_ail_e2e_corpus_replays_checked_seed_corpus() {
     assert!(
         report.contains("entry example-46")
             && report.contains("semantic-task refund-tool-live-codex-core-to-summary-46")
+            && report.contains("capture-origin live-codex"),
+        "{report}"
+    );
+    assert!(
+        report.contains("entry example-47")
+            && report.contains("semantic-task refund-tool-live-codex-flow-patch-47")
+            && report.contains("capture-origin live-codex"),
+        "{report}"
+    );
+    assert!(
+        report.contains("entry example-48")
+            && report.contains("semantic-task refund-tool-live-codex-trace-debug-48")
+            && report.contains("capture-origin live-codex"),
+        "{report}"
+    );
+    assert!(
+        report.contains("entry example-49")
+            && report.contains("semantic-task refund-tool-live-codex-interop-49")
             && report.contains("capture-origin live-codex"),
         "{report}"
     );
@@ -20411,7 +20429,7 @@ fn cli_ail_e2e_corpus_release_evidence_rejects_deterministic_seed_corpus() {
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
         stderr.contains(
-            "ail-e2e-corpus --release-evidence requires zero deterministic-seed entries; found 38"
+            "ail-e2e-corpus --release-evidence requires zero deterministic-seed entries; found 35"
         ),
         "{stderr}"
     );

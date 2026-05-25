@@ -873,64 +873,61 @@ vm-action: RefundCustomerPayment
 runtime-state: order.id=O-1;payment.captured=true;refund.amount=100
 
 ## End-To-End Example: example-47
-semantic-task: refund-tool-47
+semantic-task: refund-tool-live-codex-flow-patch-47
 profile: AgentTool
 surface-tags: core
 package: examples/refund_tool.ail
 prompt-file: docs/ail/prompts/flow-patch.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:30136a21ab8d8eb6
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-47.json
-response-file: responses/example-47.ail-spec.md
+response-file: responses/example-47.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
 vm-action: RefundCustomerPayment
 runtime-state: order.id=O-1;payment.captured=true;refund.amount=100
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-48
-semantic-task: refund-tool-48
+semantic-task: refund-tool-live-codex-trace-debug-48
 profile: AgentTool
 surface-tags: core
 package: examples/refund_tool.ail
 prompt-file: docs/ail/prompts/trace-debug.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:f5fffd069da83242
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-48.json
-response-file: responses/example-48.ail-spec.md
+response-file: responses/example-48.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
 vm-action: RefundCustomerPayment
 runtime-state: order.id=O-1;payment.captured=true;refund.amount=100
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-49
-semantic-task: refund-tool-49
+semantic-task: refund-tool-live-codex-interop-49
 profile: AgentTool
 surface-tags: core
 package: examples/refund_tool.ail
 prompt-file: docs/ail/prompts/interop.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:87f6dd1772d48729
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-49.json
-response-file: responses/example-49.ail-spec.md
+response-file: responses/example-49.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
 vm-action: RefundCustomerPayment
 runtime-state: order.id=O-1;payment.captured=true;refund.amount=100
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-50
 semantic-task: refund-tool-50
