@@ -20741,6 +20741,18 @@ fn cli_ail_e2e_corpus_replays_rejected_prompt_failures() {
     );
     let report = fs::read_to_string(artifact_dir.join("e2e-corpus-report.txt")).unwrap();
     assert!(
+        report.contains("checker-result-count accepted 99"),
+        "{report}"
+    );
+    assert!(
+        report.contains("checker-result-count rejected 1"),
+        "{report}"
+    );
+    assert!(
+        report.contains("failure-taxonomy-count semantic-drift 1"),
+        "{report}"
+    );
+    assert!(
         report.contains(&format!(
             "entry-artifact example-99 diagnostics examples/example-99/diagnostics.txt {}",
             diagnostics_fingerprint.trim()
@@ -20791,6 +20803,39 @@ fn cli_ail_e2e_corpus_writes_report_for_metadata_complete_corpus() {
     let report = fs::read_to_string(artifact_dir.join("e2e-corpus-report.txt")).unwrap();
     assert!(report.contains("AIL-End-To-End-Corpus-Report:"), "{report}");
     assert!(report.contains("entry-count 100"), "{report}");
+    assert!(report.contains("profile-count Application 40"), "{report}");
+    assert!(report.contains("profile-count AgentTool 15"), "{report}");
+    assert!(report.contains("profile-count Compiler 10"), "{report}");
+    assert!(report.contains("profile-count System 35"), "{report}");
+    assert!(
+        report.contains("prompt-count docs/ail/prompts/spec-draft.system.md 10"),
+        "{report}"
+    );
+    assert!(
+        report.contains("executor-family-count llm-http 99"),
+        "{report}"
+    );
+    assert!(
+        report.contains("executor-family-count codex-skill-agent 1"),
+        "{report}"
+    );
+    assert!(
+        report.contains("target-count linux-x86_64-elf 85"),
+        "{report}"
+    );
+    assert!(
+        report.contains("target-count wasm32-unknown-sandbox-wasm 5"),
+        "{report}"
+    );
+    assert!(
+        report.contains("target-count aarch64-apple-darwin-libsystem-macho 5"),
+        "{report}"
+    );
+    assert!(report.contains("target-count vm 5"), "{report}");
+    assert!(
+        report.contains("checker-result-count accepted 100"),
+        "{report}"
+    );
     assert!(
         report.contains("executor-family codex-skill-agent"),
         "{report}"

@@ -1560,6 +1560,24 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
         "AIL-End-To-End-Corpus-Report:".to_string(),
         format!("entry-count {}", evaluations.len()),
     ];
+    for (field, label) in [
+        ("profile", "profile-count"),
+        ("prompt-file", "prompt-count"),
+        ("executor-family", "executor-family-count"),
+        ("target", "target-count"),
+        ("checker-result", "checker-result-count"),
+        ("failure-taxonomy", "failure-taxonomy-count"),
+    ] {
+        let mut counts = BTreeMap::new();
+        for evaluation in evaluations {
+            if let Some(value) = evaluation.entry.fields.get(field) {
+                *counts.entry(value.as_str()).or_insert(0usize) += 1;
+            }
+        }
+        for (value, count) in counts {
+            lines.push(format!("{label} {value} {count}"));
+        }
+    }
     for evaluation in evaluations {
         let entry = &evaluation.entry;
         let semantic_task = entry
