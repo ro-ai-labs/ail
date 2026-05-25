@@ -68,13 +68,15 @@ fn e2e_corpus_entry_text(index: usize, overrides: &[(&str, &str)]) -> String {
         ("prompt-fingerprint", format!("fnv64:prompt-{index}")),
         ("executor-family", executor_family.to_string()),
         ("executor-label", "local-executor".to_string()),
-        ("endpoint-label", "local-endpoint".to_string()),
         ("request-file", format!("requests/example-{index}.json")),
         ("response-file", format!("responses/example-{index}.json")),
         ("artifact-kind", "ail-spec".to_string()),
         ("checker-result", "accepted".to_string()),
         ("target", "linux-x86_64-elf".to_string()),
     ]);
+    if executor_family == "llm-http" {
+        fields.insert("endpoint-label", "local-endpoint".to_string());
+    }
     for (key, value) in overrides {
         fields.insert(key, (*value).to_string());
     }
@@ -19996,6 +19998,96 @@ fn cli_ail_e2e_corpus_requires_prompt_version_metadata() {
 }
 
 #[test]
+fn cli_ail_e2e_corpus_requires_llm_endpoint_label() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let corpus_dir = std::env::temp_dir().join(format!(
+        "ail-e2e-corpus-llm-endpoint-{}",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-e2e-corpus-llm-endpoint-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&corpus_dir);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&corpus_dir).unwrap();
+    fs::write(
+        corpus_dir.join("examples.md"),
+        e2e_corpus_text_with_override(0, &[("endpoint-label", "")]),
+    )
+    .unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-e2e-corpus",
+            corpus_dir.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("e2e corpus llm-http entry example-0 is missing endpoint-label"),
+        "{stderr}"
+    );
+
+    let _ = fs::remove_dir_all(corpus_dir);
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
+fn cli_ail_e2e_corpus_rejects_offline_executor_endpoint_label() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let corpus_dir = std::env::temp_dir().join(format!(
+        "ail-e2e-corpus-offline-endpoint-{}",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-e2e-corpus-offline-endpoint-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&corpus_dir);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&corpus_dir).unwrap();
+    fs::write(
+        corpus_dir.join("examples.md"),
+        e2e_corpus_text_with_override(99, &[("endpoint-label", "offline-endpoint")]),
+    )
+    .unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-e2e-corpus",
+            corpus_dir.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("e2e corpus offline executor entry example-99 must not set endpoint-label"),
+        "{stderr}"
+    );
+
+    let _ = fs::remove_dir_all(corpus_dir);
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
 fn cli_ail_e2e_corpus_requires_llm_and_codex_executor_families() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let corpus_dir = std::env::temp_dir().join(format!(
@@ -20154,6 +20246,11 @@ fn cli_ail_e2e_corpus_requires_full_prompt_pack_coverage() {
         } else {
             "llm-http"
         };
+        let endpoint_label = if executor_family == "llm-http" {
+            "endpoint-label: local-endpoint\n"
+        } else {
+            ""
+        };
         corpus_text.push_str(&format!(
             "## End-To-End Example: example-{index}\n\
              semantic-task: support-ticket-{index}\n\
@@ -20164,7 +20261,7 @@ fn cli_ail_e2e_corpus_requires_full_prompt_pack_coverage() {
              prompt-fingerprint: fnv64:spec-draft\n\
              executor-family: {executor_family}\n\
              executor-label: local-executor\n\
-             endpoint-label: local-endpoint\n\
+             {endpoint_label}\
              request-file: requests/example-{index}.json\n\
              response-file: responses/example-{index}.json\n\
              artifact-kind: ail-spec\n\

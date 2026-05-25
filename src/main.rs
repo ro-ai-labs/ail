@@ -1176,6 +1176,20 @@ fn ail_e2e_corpus_entry_from_fields(
             "e2e corpus entry {id} has unknown executor-family {executor_family}"
         ));
     }
+    let endpoint_label = fields
+        .get("endpoint-label")
+        .map(String::as_str)
+        .unwrap_or_default();
+    if executor_family == "llm-http" && endpoint_label.is_empty() {
+        return Err(format!(
+            "e2e corpus llm-http entry {id} is missing endpoint-label"
+        ));
+    }
+    if executor_family != "llm-http" && !endpoint_label.is_empty() {
+        return Err(format!(
+            "e2e corpus offline executor entry {id} must not set endpoint-label"
+        ));
+    }
     let artifact_kind = fields
         .get("artifact-kind")
         .map(String::as_str)
