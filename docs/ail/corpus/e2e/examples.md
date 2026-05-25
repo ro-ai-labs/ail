@@ -1259,24 +1259,23 @@ vm-action: InferReadPermissions
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-65
-semantic-task: ui-workflow-65
+semantic-task: ui-workflow-live-codex-core-to-spec-65
 profile: UI
 surface-tags: ui
 package: examples/ui_workflow.ail
 prompt-file: docs/ail/prompts/core-to-spec.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:9f447e07620792b2
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-65.json
-response-file: responses/example-65.ail-spec.md
+response-file: responses/example-65.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: wasm32-unknown-sandbox-wasm
 vm-action: CreateTicketForm
 runtime-state: ticket.title=Bug
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-66
 semantic-task: network-driver-66
