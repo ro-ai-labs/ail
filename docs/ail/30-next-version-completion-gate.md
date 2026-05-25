@@ -493,9 +493,12 @@ already covers parts of this gate:
   Collections, Support Ticket, and Refund Tool packages, using schema-shaped
   prompt input and an OpenAI-compatible chat-completions endpoint with thinking
   disabled
+- one replay-clean live Codex `codex-ail-spec-writer` capture for the Support
+  Ticket package, imported from a recorded Codex sub-agent transcript and
+  replayed through the Darwin target-contract path
 - a recorded Codex/skill-agent transcript importer that promotes stored request
   and response JSON into `capture-origin: live-codex` corpus entries for
-  offline replay; no committed live Codex transcript has been promoted yet
+  offline replay
 - a batch capture runner that applies multiple live LLM captures and recorded
   Codex transcript imports to one corpus copy before replay
 - named Codex skill-agent contracts for requirements writing, spec writing, and

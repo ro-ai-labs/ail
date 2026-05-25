@@ -94,12 +94,14 @@ live LLM access. The current corpus stores:
 - `agents/`: Codex-style skill-agent executor contracts used by
   `live-codex` transcript imports.
 
-This is a checked seed corpus with three replay-clean live LLM smoke captures,
-not final v0.2 release evidence. The current corpus marks 97 entries
-`capture-origin: deterministic-seed` and three `spec-draft.system.md` entries
-`capture-origin: live-llm`; deterministic fixture responses remain in place so
-the replay harness, artifact writing, and coverage thresholds can be verified
-while broader LLM/Codex captures are added. The replay report exposes
+This is a checked seed corpus with three replay-clean live LLM smoke captures
+and one replay-clean live Codex skill-agent capture, not final v0.2 release
+evidence. The current corpus marks 96 entries `capture-origin:
+deterministic-seed`, three `spec-draft.system.md` entries `capture-origin:
+live-llm`, and one `codex-ail-spec-writer` entry `capture-origin:
+live-codex`; deterministic fixture responses remain in place so the replay
+harness, artifact writing, and coverage thresholds can be verified while
+broader LLM/Codex captures are added. The replay report exposes
 capture-origin counts plus response,
 extracted-artifact, checked Core, bytecode, VM trace, native, target-report,
 and diagnostics fingerprint reuse. Response, extracted-artifact, and
