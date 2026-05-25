@@ -472,23 +472,22 @@ target: vm
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-25
-semantic-task: c-interop-25
+semantic-task: c-interop-live-codex-core-to-spec-25
 profile: Application
 surface-tags: c-host-interop
 package: examples/c_interop.ail
 prompt-file: docs/ail/prompts/core-to-spec.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:9f447e07620792b2
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-25.json
-response-file: responses/example-25.ail-spec.md
+response-file: responses/example-25.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: wasm32-unknown-sandbox-wasm
 vm-action: CompressPayload
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-26
 semantic-task: c-interop-26
@@ -1272,22 +1271,21 @@ vm-action: CreateTicketForm
 runtime-state: ticket.title=Bug
 
 ## End-To-End Example: example-66
-semantic-task: network-driver-66
+semantic-task: network-driver-live-codex-core-to-summary-66
 profile: System
 surface-tags: core
 package: examples/network_driver.ail
 prompt-file: docs/ail/prompts/core-to-summary.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:49f26ec41d722633
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-66.json
-response-file: responses/example-66.ail-spec.md
+response-file: responses/example-66.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-67
 semantic-task: network-driver-67
@@ -1725,24 +1723,23 @@ vm-action: CompressPayload
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-90
-semantic-task: support-ticket-90
+semantic-task: support-ticket-live-codex-interview-90
 profile: System
 surface-tags: core
 package: examples/support_ticket.ail
 prompt-file: docs/ail/prompts/interview.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-90.json
-response-file: responses/example-90.ail-spec.md
+response-file: responses/example-90.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: aarch64-apple-darwin-libsystem-macho
 vm-action: CloseTicket
 runtime-state: ticket.id=T-1;ticket.status=Open
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-91
 semantic-task: support-ticket-91
