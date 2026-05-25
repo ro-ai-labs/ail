@@ -20557,6 +20557,25 @@ fn cli_ail_e2e_corpus_writes_report_for_metadata_complete_corpus() {
         native_fingerprint.trim(),
         fnv64_fingerprint_bytes(&native_artifact)
     );
+    let target_report =
+        fs::read_to_string(artifact_dir.join("examples/example-0/target-report.txt")).unwrap();
+    assert!(
+        target_report.contains("AIL-E2E-Target-Report:")
+            && target_report.contains("target linux-x86_64-elf")
+            && target_report.contains(&format!(
+                "machine-bytecode target linux-x86_64-elf target-CloseTicket.elf elf64-little-x86_64-executable {} bytes {}",
+                native_fingerprint.trim(),
+                native_artifact.len()
+            )),
+        "{target_report}"
+    );
+    let target_report_fingerprint =
+        fs::read_to_string(artifact_dir.join("examples/example-0/target-report.fingerprint.txt"))
+            .unwrap();
+    assert_eq!(
+        target_report_fingerprint.trim(),
+        fnv64_fingerprint(&target_report)
+    );
     assert!(
         report.contains(&format!(
             "entry-artifact example-0 request examples/example-0/request.fingerprint.txt {}",
@@ -20603,6 +20622,13 @@ fn cli_ail_e2e_corpus_writes_report_for_metadata_complete_corpus() {
         report.contains(&format!(
             "entry-artifact example-0 native linux-x86_64-elf examples/example-0/target-CloseTicket.elf {}",
             native_fingerprint.trim()
+        )),
+        "{report}"
+    );
+    assert!(
+        report.contains(&format!(
+            "entry-artifact example-0 target-report examples/example-0/target-report.txt {}",
+            target_report_fingerprint.trim()
         )),
         "{report}"
     );

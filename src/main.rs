@@ -404,6 +404,7 @@ struct AilE2eCorpusEvaluation {
     checked_core_text: Option<String>,
     bytecode_text: Option<String>,
     vm_trace_text: Option<String>,
+    target_report_text: Option<String>,
     native_executables: Vec<AilNativeArtifact>,
 }
 
@@ -1296,6 +1297,7 @@ fn evaluate_ail_e2e_corpus_entry(
             checked_core_text: None,
             bytecode_text: None,
             vm_trace_text: None,
+            target_report_text: None,
             native_executables: Vec::new(),
         });
     }
@@ -1313,6 +1315,7 @@ fn evaluate_ail_e2e_corpus_entry(
             checked_core_text: None,
             bytecode_text: None,
             vm_trace_text: None,
+            target_report_text: None,
             native_executables: Vec::new(),
         });
     }
@@ -1376,6 +1379,14 @@ fn evaluate_ail_e2e_corpus_entry(
     } else {
         Vec::new()
     };
+    let target_report_text = if native_executables.is_empty() {
+        None
+    } else {
+        Some(render_ail_e2e_native_target_report(
+            target,
+            native_executables.as_slice(),
+        )?)
+    };
     Ok(AilE2eCorpusEvaluation {
         entry: entry.clone(),
         request_fingerprint: Some(ail_artifact_fingerprint(&request_text)),
@@ -1384,8 +1395,33 @@ fn evaluate_ail_e2e_corpus_entry(
         checked_core_text: Some(render_ail_core(&core)),
         bytecode_text: Some(format!("{}\n", render_ail_bytecode(&bytecode))),
         vm_trace_text,
+        target_report_text,
         native_executables,
     })
+}
+
+fn render_ail_e2e_native_target_report(
+    target_name: &str,
+    native_executables: &[AilNativeArtifact],
+) -> Result<String, String> {
+    let mut lines = native_machine_bytecode_report_header("AIL-E2E-Target-Report:", target_name)?;
+    for executable in native_executables {
+        if executable.target_name != target_name {
+            return Err(format!(
+                "e2e native artifact {} targets {}, expected {target_name}",
+                executable.file_name, executable.target_name
+            ));
+        }
+        lines.push(format!(
+            "machine-bytecode target {} {} {} {} bytes {}",
+            executable.target_name,
+            executable.file_name,
+            native_machine_bytecode_identity(&executable.bytes)?,
+            ail_artifact_fingerprint_bytes(&executable.bytes),
+            executable.bytes.len()
+        ));
+    }
+    Ok(format!("{}\n", lines.join("\n")))
 }
 
 fn parse_ail_e2e_runtime_state(
@@ -1486,6 +1522,14 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
                 entry.id,
                 executable.file_name,
                 ail_artifact_fingerprint_bytes(&executable.bytes)
+            ));
+        }
+        if let Some(target_report_text) = &evaluation.target_report_text {
+            lines.push(format!(
+                "entry-artifact {} target-report examples/{}/target-report.txt {}",
+                entry.id,
+                entry.id,
+                ail_artifact_fingerprint(target_report_text)
             ));
         }
     }
@@ -1647,6 +1691,18 @@ fn write_ail_e2e_corpus_artifacts(
                     )
                 })?;
             }
+        }
+        if let Some(target_report_text) = &evaluation.target_report_text {
+            let entry_dir = root.join("examples").join(&evaluation.entry.id);
+            fs::create_dir_all(&entry_dir)
+                .map_err(|error| format!("failed to create e2e entry artifact dir: {error}"))?;
+            fs::write(entry_dir.join("target-report.txt"), target_report_text)
+                .map_err(|error| format!("failed to write e2e target report: {error}"))?;
+            fs::write(
+                entry_dir.join("target-report.fingerprint.txt"),
+                format!("{}\n", ail_artifact_fingerprint(target_report_text)),
+            )
+            .map_err(|error| format!("failed to write e2e target report fingerprint: {error}"))?;
         }
     }
     Ok(())
