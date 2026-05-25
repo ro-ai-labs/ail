@@ -928,12 +928,17 @@ prompt-portability fingerprint before accepting the manifest. When
 `AcceptCompilerPassOutput` after the AIL-authored compiler pass bytecode
 transforms the checked AIL-Core, passing the pass bytecode boundary and VM trace
 through the agent state before accepting the post-pass IR. It then runs
-`AcceptCoreIR` after AIL-Core checking and any compiler pass, and then runs its
-`CompileApplication` action against the completed build state before target
-artifact emission. For saved
+`AcceptCoreIR` after AIL-Core checking and any compiler pass. When
+`--artifact-dir` is present, the coordinator renders the deterministic
+`review.ail-flow.json` projection before bytecode compilation and runs
+`AcceptFlowReview` with the checked-core text, checked-core fingerprint,
+AIL-Flow projection, and AIL-Flow fingerprint, moving the build state to
+`FlowReviewed`. It then runs its `CompileApplication` action against the
+completed build state before target artifact emission. For saved
 `--core-file` builds, the agent starts from an explicit `CoreLoaded` state,
 loads the checked core into the `BuildRequest`, and still runs `AcceptCoreIR`
-before `CompileApplication`. After the Rust bootstrap compiler emits and
+and, with `--artifact-dir`, `AcceptFlowReview` before `CompileApplication`.
+After the Rust bootstrap compiler emits and
 verifies the target artifact, the agent runs
 `VerifyBytecodeArtifact` with the emitted artifact summary and deterministic
 bytecode fingerprint for the VM artifact. When the selected target is native

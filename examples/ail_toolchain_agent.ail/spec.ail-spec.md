@@ -20,7 +20,9 @@ A BuildRequest has:
 - core ir: Text
 - core ir fingerprint: Text
 - core review report: Text
+- flow review: Text
 - flow review fingerprint: Text
+- flow review report: Text
 - compiler pass artifact: Text
 - compiler pass fingerprint: Text
 - compiler pass source package: Text
@@ -55,7 +57,7 @@ A BuildRequest has:
 - prompt portability report: Text
 - prompt portability report fingerprint: Text
 - base model: Text
-- status: State<PromptReceived, RequirementsLoaded, RequirementsCaptured, SpecLoaded, SpecCaptured, CoreLoaded, PassApplied, CoreChecked, BytecodeReady, NeedsClarification>
+- status: State<PromptReceived, RequirementsLoaded, RequirementsCaptured, SpecLoaded, SpecCaptured, CoreLoaded, PassApplied, CoreChecked, FlowReviewed, BytecodeReady, NeedsClarification>
 - target model: Text
 
 The application shows:
@@ -130,12 +132,27 @@ When the toolchain agent accepts checked AIL-Core IR:
 - the system guarantees the checked AIL-Core IR preserves the accepted spec or saved core artifact boundary and remains eligible for VM or native target compilation
 - the system records a trace event named CoreIrAccepted
 
+Action: Accept flow review.
+
+When the toolchain agent accepts the no-code AIL-Flow review projection:
+
+- the system requires the BuildRequest to exist
+- the system requires the BuildRequest status to be CoreChecked
+- the system reads the BuildRequest core ir
+- the system reads the BuildRequest core ir fingerprint
+- the system reads the BuildRequest flow review
+- the system reads the BuildRequest flow review fingerprint
+- the system changes the BuildRequest flow review report to Accepted
+- the system changes the BuildRequest status to FlowReviewed
+- the system guarantees the AIL-Flow review projection was rendered from the checked AIL-Core IR and is tied to deterministic core and flow fingerprints before bytecode compilation
+- the system records a trace event named FlowReviewAccepted
+
 Action: Compile application.
 
 When the toolchain agent compiles a captured application:
 
 - the system requires the BuildRequest to exist
-- the system requires the BuildRequest status to be SpecCaptured or CoreChecked
+- the system requires the BuildRequest status to be SpecCaptured or CoreChecked or FlowReviewed
 - the system reads the BuildRequest requirements
 - the system reads the BuildRequest spec
 - the system changes the BuildRequest core ir to Checked

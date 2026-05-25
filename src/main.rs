@@ -3485,6 +3485,50 @@ fn run_ail_build_agent_accept_core(
     Ok(agent_start)
 }
 
+fn run_ail_build_agent_accept_flow_review(
+    agent_path: &str,
+    mut agent_start: AilBuildAgentStart,
+    core_text: &str,
+    flow_review_text: &str,
+) -> Result<AilBuildAgentStart, String> {
+    let (agent_bytecode, _) = load_verified_ail_build_agent(agent_path)?;
+    if !agent_bytecode.actions.contains_key("AcceptFlowReview") {
+        return Err(
+            "ail-build --agent --artifact-dir requires an AcceptFlowReview action".to_string(),
+        );
+    }
+    agent_start
+        .state
+        .insert("buildrequest.core ir".to_string(), core_text.to_string());
+    agent_start.state.insert(
+        "buildrequest.core ir fingerprint".to_string(),
+        ail_artifact_fingerprint(core_text),
+    );
+    agent_start.state.insert(
+        "buildrequest.flow review".to_string(),
+        flow_review_text.to_string(),
+    );
+    agent_start.state.insert(
+        "buildrequest.flow review fingerprint".to_string(),
+        ail_artifact_fingerprint(flow_review_text),
+    );
+    let accept_run =
+        run_ail_bytecode_action(&agent_bytecode, "AcceptFlowReview", agent_start.state)?;
+    if accept_run.status != "succeeded" {
+        let mut message = "ail-build agent AcceptFlowReview failed".to_string();
+        if let Some(failure) = accept_run.failure {
+            message.push_str(&format!(": {failure}"));
+        }
+        if !accept_run.trace.is_empty() {
+            message.push_str(&format!("\n{}", accept_run.trace.join("\n")));
+        }
+        return Err(message);
+    }
+    agent_start.trace.extend(accept_run.trace);
+    agent_start.state = accept_run.final_state;
+    Ok(agent_start)
+}
+
 fn start_ail_build_agent_from_checked_core(
     core: &ail::ail::AilCore,
     requirements_artifact: Option<&str>,
@@ -3633,6 +3677,11 @@ fn run_ail_build_agent(
         compile_state = compare_run.final_state;
     }
     let build_status = if compile_state
+        .get("buildrequest.status")
+        .is_some_and(|status| status == "FlowReviewed")
+    {
+        "FlowReviewed"
+    } else if compile_state
         .get("buildrequest.status")
         .is_some_and(|status| status == "CoreChecked")
     {
@@ -4913,6 +4962,17 @@ fn bootstrap_handoff_case(action_name: &str) -> Result<BootstrapHandoffCase, Str
                 "buildrequest.requirements=checked",
                 "buildrequest.spec=checked",
                 "buildrequest.core ir=checked",
+            ],
+        }),
+        "AcceptFlowReview" => Ok(BootstrapHandoffCase {
+            trace_marker: "FlowReviewAccepted",
+            args: &[
+                "buildrequest.id=bootstrap-handoff",
+                "buildrequest.status=CoreChecked",
+                "buildrequest.core ir=checked",
+                "buildrequest.core ir fingerprint=fnv64:core",
+                "buildrequest.flow review=review-flow",
+                "buildrequest.flow review fingerprint=fnv64:flow",
             ],
         }),
         "AcceptSpecDraft" => Ok(BootstrapHandoffCase {
@@ -6847,13 +6907,24 @@ fn run_ail_build_from_core(
                 },
             )?;
         }
-        Some(run_ail_build_agent_accept_core(
+        let mut agent_start = run_ail_build_agent_accept_core(
             agent_path,
             agent_start,
             requirements_artifact,
             spec_text,
             &core_text,
-        )?)
+        )?;
+        if cli_options.artifact_dir.is_some() {
+            let artifact_core_text = format!("{}\n", render_ail_core(&core));
+            let flow_review_text = format!("{}\n", render_ail_flow_view(&core));
+            agent_start = run_ail_build_agent_accept_flow_review(
+                agent_path,
+                agent_start,
+                &artifact_core_text,
+                &flow_review_text,
+            )?;
+        }
+        Some(agent_start)
     } else {
         agent_start
     };

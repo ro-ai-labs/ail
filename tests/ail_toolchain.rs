@@ -10547,7 +10547,7 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
         "{handoff_report}"
     );
     assert!(
-        handoff_report.contains("handoff-native-role toolchain-agent all-actions ok count 17"),
+        handoff_report.contains("handoff-native-role toolchain-agent all-actions ok count 18"),
         "{handoff_report}"
     );
     assert!(
@@ -10555,7 +10555,13 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
         "{handoff_report}"
     );
     assert!(
-        handoff_report.contains("handoff-native-role agent all-actions ok count 17"),
+        handoff_report.contains("handoff-native-role agent all-actions ok count 18"),
+        "{handoff_report}"
+    );
+    assert!(
+        handoff_report.contains(
+            "handoff-native-action toolchain-agent-AcceptFlowReview.elf ok trace FlowReviewAccepted"
+        ),
         "{handoff_report}"
     );
     assert!(
@@ -16755,10 +16761,9 @@ fn cli_ail_build_runs_toolchain_agent_bytecode() {
     let agent_trace = fs::read_to_string(artifact_dir.join("agent-trace.txt")).unwrap();
     assert!(agent_trace.contains("action CompileApplication started"));
     assert!(agent_trace.contains("rule passed: the BuildRequest to exist"));
-    assert!(
-        agent_trace
-            .contains("rule passed: the BuildRequest status to be SpecCaptured or CoreChecked")
-    );
+    assert!(agent_trace.contains(
+        "rule passed: the BuildRequest status to be SpecCaptured or CoreChecked or FlowReviewed"
+    ));
     assert!(agent_trace.contains("write buildrequest.bytecode artifact=Emitted"));
     assert!(agent_trace.contains("trace ApplicationBytecodeCompiled"));
     assert!(
@@ -16828,6 +16833,79 @@ fn cli_ail_build_agent_accepts_saved_core_before_compile() {
     assert!(agent_trace.contains("write buildrequest.core review report=Accepted"));
     assert!(agent_trace.contains("write buildrequest.status=CoreChecked"));
     assert!(agent_trace.contains("trace CoreIrAccepted"));
+
+    fs::remove_file(core_path).unwrap();
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
+fn cli_ail_build_agent_accepts_flow_review_before_compile() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("support_ticket.ail");
+    let agent_package = fixture("ail_toolchain_agent.ail");
+    let core_path = std::env::temp_dir().join(format!(
+        "ail-support-ticket-agent-accept-flow-file-{}.ail-core.txt",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-ail-build-agent-flow-review-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+    let package_model = load_ail_package_dir(&package).unwrap();
+    let document = parse_ail_package_document(&package_model).unwrap();
+    let core = elaborate_ail_core(&package_model, &document);
+    assert_eq!(check_ail_core(&core), Vec::<String>::new());
+    fs::write(&core_path, render_ail_core(&core)).unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-build",
+            &package,
+            "--core-file",
+            core_path.to_str().unwrap(),
+            "--agent",
+            &agent_package,
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let bytecode = parse_ail_bytecode(&stdout).unwrap();
+    assert_eq!(verify_ail_bytecode(&bytecode), Vec::<String>::new());
+
+    let agent_trace = fs::read_to_string(artifact_dir.join("agent-trace.txt")).unwrap();
+    let accept_core_index = agent_trace
+        .find("action AcceptCoreIR started")
+        .unwrap_or_else(|| panic!("{agent_trace}"));
+    let accept_flow_index = agent_trace
+        .find("action AcceptFlowReview started")
+        .unwrap_or_else(|| panic!("{agent_trace}"));
+    let compile_index = agent_trace
+        .find("action CompileApplication started")
+        .unwrap_or_else(|| panic!("{agent_trace}"));
+    assert!(accept_core_index < accept_flow_index, "{agent_trace}");
+    assert!(accept_flow_index < compile_index, "{agent_trace}");
+    assert!(agent_trace.contains("read buildrequest.flow review"));
+    assert!(agent_trace.contains("read buildrequest.flow review fingerprint"));
+    assert!(agent_trace.contains("write buildrequest.flow review report=Accepted"));
+    assert!(agent_trace.contains("write buildrequest.status=FlowReviewed"));
+    assert!(agent_trace.contains("trace FlowReviewAccepted"));
+
+    let flow_artifact = fs::read_to_string(artifact_dir.join("review.ail-flow.json")).unwrap();
+    let flow_fingerprint =
+        fs::read_to_string(artifact_dir.join("review.ail-flow.fingerprint.txt")).unwrap();
+    assert_eq!(flow_fingerprint.trim(), fnv64_fingerprint(&flow_artifact));
+    let agent_bytecode = fs::read_to_string(artifact_dir.join("agent.ailbc.json")).unwrap();
+    assert!(agent_bytecode.contains(r#""action":"AcceptFlowReview""#));
 
     fs::remove_file(core_path).unwrap();
     fs::remove_dir_all(artifact_dir).unwrap();
