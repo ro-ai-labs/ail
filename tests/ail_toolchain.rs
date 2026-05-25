@@ -101,7 +101,12 @@ fn e2e_corpus_entry_text(index: usize, overrides: &[(&str, &str)]) -> String {
         ),
     ]);
     if executor_family == "llm-http" {
-        fields.insert("endpoint-label", "local-endpoint".to_string());
+        let endpoint_label = if index == 1 {
+            "local-endpoint-alt"
+        } else {
+            "local-endpoint"
+        };
+        fields.insert("endpoint-label", endpoint_label.to_string());
     }
     for (key, value) in overrides {
         fields.insert(key, (*value).to_string());
@@ -20456,6 +20461,60 @@ fn cli_ail_e2e_corpus_requires_target_thresholds() {
     assert!(
         stderr.contains(
             "ail-e2e-corpus requires at least 5 target wasm32-unknown-sandbox-wasm examples; found 0"
+        ),
+        "{stderr}"
+    );
+
+    let _ = fs::remove_dir_all(corpus_dir);
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
+fn cli_ail_e2e_corpus_requires_llm_endpoint_diversity() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let corpus_dir = std::env::temp_dir().join(format!(
+        "ail-e2e-corpus-endpoint-diversity-{}",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-e2e-corpus-endpoint-diversity-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&corpus_dir);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&corpus_dir).unwrap();
+    let mut corpus_text = String::new();
+    for index in 0..100 {
+        if index == 99 {
+            corpus_text.push_str(&e2e_corpus_entry_text(index, &[]));
+        } else {
+            corpus_text.push_str(&e2e_corpus_entry_text(
+                index,
+                &[("endpoint-label", "local-endpoint")],
+            ));
+        }
+    }
+    fs::write(corpus_dir.join("examples.md"), corpus_text).unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-e2e-corpus",
+            corpus_dir.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains(
+            "ail-e2e-corpus requires one semantic-task family with at least two llm-http executor/endpoint labels"
         ),
         "{stderr}"
     );

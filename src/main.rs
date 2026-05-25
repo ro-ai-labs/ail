@@ -1536,6 +1536,16 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
     format!("{}\n", lines.join("\n"))
 }
 
+fn ail_e2e_semantic_task_family(semantic_task: &str) -> String {
+    if let Some((family, suffix)) = semantic_task.rsplit_once('-')
+        && !family.is_empty()
+        && suffix.chars().all(|character| character.is_ascii_digit())
+    {
+        return family.to_string();
+    }
+    semantic_task.to_string()
+}
+
 fn validate_ail_e2e_corpus_release_coverage(entries: &[AilE2eCorpusEntry]) -> Result<(), String> {
     let semantic_tasks = entries
         .iter()
@@ -1647,6 +1657,43 @@ fn validate_ail_e2e_corpus_release_coverage(entries: &[AilE2eCorpusEntry]) -> Re
                 "ail-e2e-corpus requires at least 5 target {required_target} examples; found {found}"
             ));
         }
+    }
+    let mut llm_labels_by_family: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+    for entry in entries {
+        if entry
+            .fields
+            .get("executor-family")
+            .is_some_and(|executor_family| executor_family == "llm-http")
+        {
+            let semantic_task = entry
+                .fields
+                .get("semantic-task")
+                .map(String::as_str)
+                .unwrap_or_default();
+            let executor_label = entry
+                .fields
+                .get("executor-label")
+                .map(String::as_str)
+                .unwrap_or_default();
+            let endpoint_label = entry
+                .fields
+                .get("endpoint-label")
+                .map(String::as_str)
+                .unwrap_or_default();
+            llm_labels_by_family
+                .entry(ail_e2e_semantic_task_family(semantic_task))
+                .or_default()
+                .insert(format!("{executor_label}@{endpoint_label}"));
+        }
+    }
+    if !llm_labels_by_family
+        .values()
+        .any(|executor_endpoint_labels| executor_endpoint_labels.len() >= 2)
+    {
+        return Err(
+            "ail-e2e-corpus requires one semantic-task family with at least two llm-http executor/endpoint labels"
+                .to_string(),
+        );
     }
     Ok(())
 }
