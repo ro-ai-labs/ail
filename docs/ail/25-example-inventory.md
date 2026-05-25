@@ -32,7 +32,7 @@ section must name the changed version surface.
 | Recursive Factorial | Application | draft/default | `examples/recursive_factorial.ail/` | accepted executable-semantics fixture | AIL-Spec, AIL-Core, recursive function bytecode, VM trace runtime |
 | Option Map | Application | draft/default | `examples/option_map.ail/` | accepted executable-semantics fixture | AIL-Spec, AIL-Core, collection-transform bytecode, VM trace runtime |
 | Stateful Counter | Application | draft/default | `examples/stateful_counter.ail/` | accepted executable-semantics fixture | AIL-Spec, AIL-Core, integer-state bytecode, VM trace runtime |
-| Repeated Task | Application | draft/default | `examples/repeated_task.ail/` | accepted executable-semantics fixture | AIL-Spec, AIL-Core, repeated-action bytecode, VM trace runtime |
+| Repeated Task | Application | draft/default | `examples/repeated_task.ail/` | accepted executable-semantics fixture | AIL-Spec, AIL-Core, repeated-action bytecode, VM trace runtime, native Linux x86_64 ELF runtime |
 
 ## Support Ticket
 
@@ -176,6 +176,7 @@ Verification:
 
 ```bash
 cargo test --test ail_toolchain ail_spec_lowers_repeated_task_to_repeat_action_bytecode
+cargo test --test ail_toolchain ail_native_elf_executes_repeated_action_bytecode
 ```
 
 ## Last Conformance Result

@@ -4770,6 +4770,64 @@ fn ail_spec_lowers_repeated_task_to_repeat_action_bytecode() {
 
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+fn ail_native_elf_executes_repeated_action_bytecode() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let package = load_ail_package_dir(fixture("repeated_task.ail")).unwrap();
+    let document = parse_ail_package_document(&package).unwrap();
+    let bytecode = compile_ail_bytecode(&package, &document).unwrap();
+    let executable =
+        compile_ail_bytecode_native_elf(&bytecode, "RunMaintenanceCycle", "linux-x86_64-elf")
+            .unwrap();
+    let unique_suffix = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let executable_path = std::env::temp_dir().join(format!(
+        "ail-repeat-bytecode-native-{}-{unique_suffix}",
+        std::process::id()
+    ));
+    let _ = fs::remove_file(&executable_path);
+    fs::write(&executable_path, executable).unwrap();
+    let mut permissions = fs::metadata(&executable_path).unwrap().permissions();
+    permissions.set_mode(0o755);
+    fs::set_permissions(&executable_path, permissions).unwrap();
+
+    let run = Command::new(&executable_path)
+        .arg("counter.value=0")
+        .output()
+        .unwrap();
+    assert!(run.status.success(), "native repeated action failed");
+    assert_eq!(
+        String::from_utf8_lossy(&run.stdout),
+        "counter.value=1\ncounter.value=2\ncounter.value=3\n"
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&run.stderr),
+        concat!(
+            "action RunMaintenanceCycle started\n",
+            "repeat action IncrementCounter 3 times\n",
+            "repeat IncrementCounter iteration 1\n",
+            "action IncrementCounter started\n",
+            "add counter.value by 1 -> 1\n",
+            "trace CounterIncremented\n",
+            "repeat IncrementCounter iteration 2\n",
+            "action IncrementCounter started\n",
+            "add counter.value by 1 -> 2\n",
+            "trace CounterIncremented\n",
+            "repeat IncrementCounter iteration 3\n",
+            "action IncrementCounter started\n",
+            "add counter.value by 1 -> 3\n",
+            "trace CounterIncremented\n",
+            "trace MaintenanceCycleCompleted\n"
+        )
+    );
+
+    fs::remove_file(executable_path).unwrap();
+}
+
+#[test]
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn ail_native_elf_executes_bytecode_integer_state_mutation() {
     use std::os::unix::fs::PermissionsExt;
 

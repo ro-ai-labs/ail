@@ -5546,17 +5546,50 @@ fn expand_native_action_calls(
     actions: &BTreeMap<String, AilBytecodeAction>,
 ) -> Result<AilBytecodeAction, String> {
     let mut next_call_id = 0usize;
+    let instructions =
+        expand_native_action_call_stream(action, actions, false, "", &mut next_call_id, 0)?;
     Ok(AilBytecodeAction {
         name: action.name.clone(),
-        instructions: expand_native_action_call_stream(
-            action,
-            actions,
-            false,
-            "",
-            &mut next_call_id,
-            0,
-        )?,
+        instructions: annotate_native_integer_state_effects(instructions)?,
     })
+}
+
+fn annotate_native_integer_state_effects(
+    instructions: Vec<AilBytecodeInstruction>,
+) -> Result<Vec<AilBytecodeInstruction>, String> {
+    let mut integer_deltas = BTreeMap::<String, i64>::new();
+    let mut annotated = Vec::with_capacity(instructions.len());
+    for mut instruction in instructions {
+        match instruction.opcode.as_str() {
+            "ADD_INT_FIELD" => {
+                let key = instruction
+                    .operands
+                    .get("key")
+                    .ok_or_else(|| "native ADD_INT_FIELD is missing key".to_string())?
+                    .clone();
+                let delta = instruction
+                    .operands
+                    .get("delta")
+                    .ok_or_else(|| {
+                        format!("native ADD_INT_FIELD for field {key} is missing delta")
+                    })?
+                    .parse::<i64>()
+                    .map_err(|_| {
+                        format!("native ADD_INT_FIELD for field {key} has non-integer delta")
+                    })?;
+                let effective_delta = integer_deltas.entry(key).or_insert(0);
+                *effective_delta += delta;
+                instruction.operands.insert(
+                    "native_effective_delta".to_string(),
+                    effective_delta.to_string(),
+                );
+            }
+            "LABEL" | "BRANCH_FIELD_EQUALS" | "JUMP" => integer_deltas.clear(),
+            _ => {}
+        }
+        annotated.push(instruction);
+    }
+    Ok(annotated)
 }
 
 fn expand_native_action_call_stream(
@@ -5603,6 +5636,64 @@ fn expand_native_action_call_stream(
                 next_call_id,
                 call_depth + 1,
             )?);
+            continue;
+        }
+        if instruction.opcode == "REPEAT_ACTION" {
+            let target = instruction.operands.get("target").ok_or_else(|| {
+                format!(
+                    "native linux-x86_64-elf REPEAT_ACTION in action {} is missing target",
+                    action.name
+                )
+            })?;
+            let count = instruction
+                .operands
+                .get("count")
+                .ok_or_else(|| {
+                    format!(
+                        "native linux-x86_64-elf REPEAT_ACTION in action {} is missing count",
+                        action.name
+                    )
+                })?
+                .parse::<usize>()
+                .map_err(|_| {
+                    format!(
+                        "native linux-x86_64-elf REPEAT_ACTION in action {} has non-integer count",
+                        action.name
+                    )
+                })?;
+            if count == 0 {
+                return Err(format!(
+                    "native linux-x86_64-elf REPEAT_ACTION in action {} has zero count",
+                    action.name
+                ));
+            }
+            let callee = actions.get(target).ok_or_else(|| {
+                format!(
+                    "native linux-x86_64-elf REPEAT_ACTION in action {} targets unknown action {}",
+                    action.name, target
+                )
+            })?;
+            instructions.push(AilBytecodeInstruction::new(
+                "NATIVE_TRACE_LINE",
+                &[("text", format!("repeat action {target} {count} times"))],
+            ));
+            for iteration in 1..=count {
+                instructions.push(AilBytecodeInstruction::new(
+                    "NATIVE_TRACE_LINE",
+                    &[("text", format!("repeat {target} iteration {iteration}"))],
+                ));
+                let call_id = *next_call_id;
+                *next_call_id += 1;
+                let callee_label_prefix = format!("__repeat{call_id}_{target}_");
+                instructions.extend(expand_native_action_call_stream(
+                    callee,
+                    actions,
+                    true,
+                    &callee_label_prefix,
+                    next_call_id,
+                    call_depth + 1,
+                )?);
+            }
             continue;
         }
         if inline && instruction.opcode == "RETURN_SUCCESS" {
@@ -5842,6 +5933,19 @@ fn emit_linux_x86_64_elf_for_action(
                             action.name
                         )
                     })?;
+                    let effective_delta = instruction
+                        .operands
+                        .get("native_effective_delta")
+                        .map(|value| {
+                            value.parse::<i64>().map_err(|_| {
+                                format!(
+                                    "unsupported native linux-x86_64-elf ADD_INT_FIELD effective delta in action '{}'",
+                                    action.name
+                                )
+                            })
+                        })
+                        .transpose()?
+                        .unwrap_or(delta);
                     let key_prefix = format!("{key}=");
                     let key_label = push_native_data_label(
                         &mut data_labels,
@@ -5880,7 +5984,7 @@ fn emit_linux_x86_64_elf_for_action(
                     code.emit_test_edx_edx();
                     code.emit_jcc_label(&[0x0f, 0x84], &fail_label); // jz fail
                     code.emit_mov_r14_rax();
-                    code.emit_mov_r15_imm64(delta as u64);
+                    code.emit_mov_r15_imm64(effective_delta as u64);
                     code.emit_add_r14_r15();
                     code.emit_write_label(1, &stdout_prefix_label, key_prefix.len() as u32);
                     code.emit_mov_rdi_r14();
