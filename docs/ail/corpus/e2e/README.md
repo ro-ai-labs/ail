@@ -95,10 +95,10 @@ live LLM access. The current corpus stores:
   `live-codex` transcript imports.
 
 This is a checked seed corpus with three replay-clean live LLM smoke captures
-and fifty replay-clean live Codex skill-agent captures, not final v0.2 release
-evidence. The current corpus marks 47 entries `capture-origin:
+and fifty-three replay-clean live Codex skill-agent captures, not final v0.2 release
+evidence. The current corpus marks 44 entries `capture-origin:
 deterministic-seed`, three `spec-draft.system.md` entries `capture-origin:
-live-llm`, and fifty `codex-ail-spec-writer` entries `capture-origin:
+live-llm`, and fifty-three `codex-ail-spec-writer` entries `capture-origin:
 live-codex`; deterministic fixture responses remain in place so the replay
 harness, artifact writing, and coverage thresholds can be verified while
 broader LLM/Codex captures are added. The replay report exposes

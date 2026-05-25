@@ -1108,61 +1108,58 @@ target: linux-x86_64-elf
 vm-action: InferReadPermissions
 
 ## End-To-End Example: example-59
-semantic-task: compiler-pass-59
+semantic-task: compiler-pass-live-codex-interop-59
 profile: Compiler
 surface-tags: core
 package: examples/compiler_pass.ail
 prompt-file: docs/ail/prompts/interop.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:87f6dd1772d48729
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-59.json
-response-file: responses/example-59.ail-spec.md
+response-file: responses/example-59.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
 vm-action: InferReadPermissions
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-60
-semantic-task: compiler-pass-60
+semantic-task: compiler-pass-live-codex-interview-60
 profile: Compiler
 surface-tags: core
 package: examples/compiler_pass.ail
 prompt-file: docs/ail/prompts/interview.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-60.json
-response-file: responses/example-60.ail-spec.md
+response-file: responses/example-60.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
 vm-action: InferReadPermissions
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-61
-semantic-task: compiler-pass-61
+semantic-task: compiler-pass-live-codex-requirements-61
 profile: Compiler
 surface-tags: core
 package: examples/compiler_pass.ail
 prompt-file: docs/ail/prompts/requirements.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-61.json
-response-file: responses/example-61.ail-spec.md
+response-file: responses/example-61.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
 vm-action: InferReadPermissions
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-62
 semantic-task: compiler-pass-62

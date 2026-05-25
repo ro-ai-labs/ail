@@ -19968,7 +19968,7 @@ fn cli_ail_e2e_corpus_replays_checked_seed_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("capture-origin-count deterministic-seed 47"),
+        report.contains("capture-origin-count deterministic-seed 44"),
         "{report}"
     );
     assert!(
@@ -19976,7 +19976,7 @@ fn cli_ail_e2e_corpus_replays_checked_seed_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("capture-origin-count live-codex 50"),
+        report.contains("capture-origin-count live-codex 53"),
         "{report}"
     );
     assert!(
@@ -20012,6 +20012,24 @@ fn cli_ail_e2e_corpus_replays_checked_seed_corpus() {
     assert!(
         report.contains("entry example-58")
             && report.contains("semantic-task compiler-pass-live-codex-trace-debug-58")
+            && report.contains("capture-origin live-codex"),
+        "{report}"
+    );
+    assert!(
+        report.contains("entry example-59")
+            && report.contains("semantic-task compiler-pass-live-codex-interop-59")
+            && report.contains("capture-origin live-codex"),
+        "{report}"
+    );
+    assert!(
+        report.contains("entry example-60")
+            && report.contains("semantic-task compiler-pass-live-codex-interview-60")
+            && report.contains("capture-origin live-codex"),
+        "{report}"
+    );
+    assert!(
+        report.contains("entry example-61")
+            && report.contains("semantic-task compiler-pass-live-codex-requirements-61")
             && report.contains("capture-origin live-codex"),
         "{report}"
     );
@@ -20357,7 +20375,7 @@ fn cli_ail_e2e_corpus_release_evidence_rejects_deterministic_seed_corpus() {
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
         stderr.contains(
-            "ail-e2e-corpus --release-evidence requires zero deterministic-seed entries; found 47"
+            "ail-e2e-corpus --release-evidence requires zero deterministic-seed entries; found 44"
         ),
         "{stderr}"
     );
