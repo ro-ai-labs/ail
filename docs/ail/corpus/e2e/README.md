@@ -63,6 +63,21 @@ That importer stores the provided request and response JSON, marks the entry
 HTTP endpoint metadata, and then relies on the same offline replay command for
 spec -> Core -> bytecode -> VM and target evidence.
 
+Batch promotion uses a JSON plan so multiple entries can be captured into the
+same corpus copy without overwriting earlier replacements:
+
+```sh
+python3 scripts/capture_e2e_batch.py \
+  --base-corpus docs/ail/corpus/e2e \
+  --output-dir /tmp/ail-e2e-live-batch-corpus \
+  --plan-json /tmp/ail-e2e-capture-plan.json
+```
+
+Each plan entry uses `executor_family: llm-http` with endpoint, prompt, and
+model labels, or `executor_family: codex-skill-agent` with recorded request and
+response JSON files. The batch output still must be replayed with
+`ail-e2e-corpus` before promotion.
+
 The generated files are committed so release verification does not depend on
 live LLM access. The current corpus stores:
 

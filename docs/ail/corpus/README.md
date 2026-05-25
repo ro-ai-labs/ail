@@ -155,3 +155,6 @@ Live HTTP model transcripts are captured with
 are imported with `scripts/capture_codex_e2e_transcript.py`, which marks the
 entry `executor-family: codex-skill-agent` and `capture-origin: live-codex`
 while keeping replay offline and reproducible.
+Multi-entry promotion uses `scripts/capture_e2e_batch.py` so a live LLM capture
+batch and recorded Codex transcript imports can be applied to one corpus copy
+before replay.

@@ -406,6 +406,139 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             shutil.rmtree(artifact_dir, ignore_errors=True)
             shutil.rmtree(transcript_dir, ignore_errors=True)
 
+    def test_batch_capture_preserves_previous_live_entries(self):
+        output_dir = Path(tempfile.mkdtemp(prefix="ail-e2e-live-batch-capture-"))
+        artifact_dir = Path(tempfile.mkdtemp(prefix="ail-e2e-live-batch-capture-artifacts-"))
+        transcript_dir = Path(tempfile.mkdtemp(prefix="ail-e2e-live-batch-transcript-"))
+        server = None
+        try:
+            spec_text = (
+                ROOT / "examples" / "support_ticket.ail" / "spec.ail-spec.md"
+            ).read_text()
+            _CompletionHandler.requests = []
+            _CompletionHandler.response_text = ""
+            _CompletionHandler.response_payload = {
+                "choices": [{"message": {"content": spec_text}}],
+                "model": "test-chat-model",
+            }
+            server = HTTPServer(("127.0.0.1", 0), _CompletionHandler)
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+
+            codex_request = transcript_dir / "codex-request.json"
+            codex_response = transcript_dir / "codex-response.json"
+            batch_plan = transcript_dir / "batch-plan.json"
+            codex_request.write_text(
+                json.dumps(
+                    {
+                        "agent_contract": (
+                            "docs/ail/corpus/e2e/agents/codex-ail-spec-writer.md"
+                        ),
+                        "agent_contract_version": "0.1.0",
+                        "executor_label": "codex-ail-spec-writer-test",
+                        "task": "Draft canonical Support Ticket AIL-Spec.",
+                    },
+                    indent=2,
+                    sort_keys=True,
+                )
+                + "\n"
+            )
+            codex_response.write_text(
+                json.dumps({"artifact_text": spec_text, "model": "codex-test-model"})
+                + "\n"
+            )
+            batch_plan.write_text(
+                json.dumps(
+                    {
+                        "entries": [
+                            {
+                                "entry_id": "example-30",
+                                "executor_family": "llm-http",
+                                "endpoint": (
+                                    f"http://127.0.0.1:{server.server_port}"
+                                    "/v1/chat/completions"
+                                ),
+                                "endpoint_label": "test-chat-endpoint",
+                                "executor_label": "test-chat-model",
+                                "semantic_task": "support-ticket-live-batch-30",
+                                "prompt": (
+                                    "Produce the Support Ticket AIL-Spec for live "
+                                    "batch capture replay."
+                                ),
+                            },
+                            {
+                                "entry_id": "example-99",
+                                "executor_family": "codex-skill-agent",
+                                "executor_label": "codex-ail-spec-writer-test",
+                                "semantic_task": "support-ticket-live-codex-batch-99",
+                                "request_json_file": str(codex_request),
+                                "response_json_file": str(codex_response),
+                                "checker_result": "accepted",
+                            },
+                        ]
+                    },
+                    indent=2,
+                    sort_keys=True,
+                )
+                + "\n"
+            )
+
+            capture = subprocess.run(
+                [
+                    "python3",
+                    "scripts/capture_e2e_batch.py",
+                    "--base-corpus",
+                    "docs/ail/corpus/e2e",
+                    "--output-dir",
+                    str(output_dir),
+                    "--plan-json",
+                    str(batch_plan),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(capture.returncode, 0, capture.stderr)
+
+            examples = (output_dir / "examples.md").read_text()
+            self.assertIn("semantic-task: support-ticket-live-batch-30", examples)
+            self.assertIn("semantic-task: support-ticket-live-codex-batch-99", examples)
+            self.assertIn("capture-origin: live-codex", examples)
+            self.assertIn("semantic-task: support-ticket-live-spec-input-32", examples)
+            self.assertEqual(_CompletionHandler.requests[0]["path"], "/v1/chat/completions")
+
+            replay = subprocess.run(
+                [
+                    "cargo",
+                    "run",
+                    "--quiet",
+                    "--",
+                    "ail-e2e-corpus",
+                    str(output_dir),
+                    "--artifact-dir",
+                    str(artifact_dir),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(replay.returncode, 0, replay.stderr)
+            report = (artifact_dir / "e2e-corpus-report.txt").read_text()
+            self.assertIn("capture-origin-count deterministic-seed 97", report)
+            self.assertIn("capture-origin-count live-llm 2", report)
+            self.assertIn("capture-origin-count live-codex 1", report)
+            self.assertIn("entry example-30", report)
+            self.assertIn("entry example-32", report)
+            self.assertIn("entry example-99", report)
+        finally:
+            _CompletionHandler.response_payload = None
+            if server is not None:
+                server.shutdown()
+                server.server_close()
+            shutil.rmtree(output_dir, ignore_errors=True)
+            shutil.rmtree(artifact_dir, ignore_errors=True)
+            shutil.rmtree(transcript_dir, ignore_errors=True)
+
 
 if __name__ == "__main__":
     unittest.main()

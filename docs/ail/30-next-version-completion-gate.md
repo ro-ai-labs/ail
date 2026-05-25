@@ -495,6 +495,8 @@ already covers parts of this gate:
 - a recorded Codex/skill-agent transcript importer that promotes stored request
   and response JSON into `capture-origin: live-codex` corpus entries for
   offline replay; no committed live Codex transcript has been promoted yet
+- a batch capture runner that applies multiple live LLM captures and recorded
+  Codex transcript imports to one corpus copy before replay
 - named Codex skill-agent contracts for requirements writing, spec writing, and
   diagnostic repair under `docs/ail/corpus/e2e/agents/`
 - checked e2e seed corpus responses and extracted artifacts have zero
