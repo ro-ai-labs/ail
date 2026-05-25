@@ -357,6 +357,8 @@ already covers parts of this gate:
 
 - exact local imports and version mismatch rejection
 - compatible local import range resolution and unbounded major range rejection
+- package dependency report records resolved import identities, source hashes,
+  capability grants, approvals, and imported effect classes
 - manifest preservation of capability grants
 - C binding parsing into `ExternalBinding` Core nodes
 - route parsing into UI Core nodes
@@ -366,7 +368,8 @@ already covers parts of this gate:
 
 Missing v0.2 evidence includes:
 
-- package dependency lock/report
+- CLI manifest integration for package dependency reports on imported-package
+  builds
 - checker enforcement of imported capability grants
 - standard library packages as first-class package fixtures
 - struct layout, callback, ownership-transfer, and unsafe-pointer FFI fixtures

@@ -81,6 +81,12 @@ such as `*`, and accepts only packages with the same major version and a
 version greater than or equal to the range base. Registry package names and
 cross-major compatibility policies remain package-resolver work.
 
+The loader also exposes a package dependency report for resolved imports. The
+report records the root package, resolved import alias, declared path,
+requirement, resolved package name and version, source path, source hash,
+capability grants, approvals, and imported effect classes. This gives v0.2 a
+verifiable package-lock surface before registry resolution exists.
+
 ## Version Compatibility
 
 Semantic version rules:

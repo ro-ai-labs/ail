@@ -645,6 +645,88 @@ pub fn parse_ail_package_document(package: &AilPackage) -> Result<AilDocument, S
     parse_ail_package_spec_text(package, &package.spec_text)
 }
 
+pub fn render_ail_package_dependency_report(package: &AilPackage) -> Result<String, String> {
+    let mut lines = vec![
+        "AIL-Package-Dependency-Report:".to_string(),
+        format!(
+            "root-package {} {}",
+            package.metadata.name, package.metadata.version
+        ),
+        format!("root-path {}", package.root.display()),
+        format!("root-package-hash {}", ail_package_source_hash(package)?),
+    ];
+    render_ail_package_dependency_imports(package, &mut lines)?;
+    Ok(format!("{}\n", lines.join("\n")))
+}
+
+fn render_ail_package_dependency_imports(
+    package: &AilPackage,
+    lines: &mut Vec<String>,
+) -> Result<(), String> {
+    for import in &package.imports {
+        let requirement = import.spec.version.as_deref().unwrap_or("none");
+        lines.push(format!(
+            "resolved-import {} path={} requirement={} name={} version={} source-path={} package-hash={}",
+            import.spec.alias,
+            import.spec.path,
+            requirement,
+            import.package.metadata.name,
+            import.package.metadata.version,
+            import.package.root.display(),
+            ail_package_source_hash(&import.package)?
+        ));
+        if import.package.metadata.capability_grants.is_empty() {
+            lines.push(format!("capability-grants {} none", import.spec.alias));
+            lines.push(format!(
+                "imported-effect-classes {} none",
+                import.spec.alias
+            ));
+        } else {
+            let mut effect_classes = BTreeSet::new();
+            for grant in &import.package.metadata.capability_grants {
+                for effect in &grant.effects {
+                    effect_classes.insert(effect.clone());
+                }
+                let effects = render_dependency_report_list(&grant.effects);
+                let approvals = render_dependency_report_list(&grant.approvals);
+                lines.push(format!(
+                    "capability-grant package={} capability={} effects={} approvals={}",
+                    grant.package, grant.capability, effects, approvals
+                ));
+            }
+            let effect_classes = effect_classes.into_iter().collect::<Vec<_>>();
+            lines.push(format!(
+                "imported-effect-classes {} {}",
+                import.spec.alias,
+                render_dependency_report_list(&effect_classes)
+            ));
+        }
+        render_ail_package_dependency_imports(&import.package, lines)?;
+    }
+    Ok(())
+}
+
+fn ail_package_source_hash(package: &AilPackage) -> Result<String, String> {
+    let manifest_path = package.root.join("ail-package.md");
+    let manifest_text = fs::read_to_string(&manifest_path)
+        .map_err(|error| format!("failed to read {}: {error}", manifest_path.display()))?;
+    Ok(format!(
+        "ail-package:{}",
+        ail_text_fingerprint(&format!(
+            "ail-package.md:\n{}\n{}:\n{}",
+            manifest_text, package.metadata.entry, package.spec_text
+        ))
+    ))
+}
+
+fn render_dependency_report_list(values: &[String]) -> String {
+    if values.is_empty() {
+        "none".to_string()
+    } else {
+        values.join("|")
+    }
+}
+
 pub fn parse_ail_package_spec_text(
     package: &AilPackage,
     text: &str,

@@ -13,8 +13,8 @@ use ail::ail::{
     elaborate_ail_core, load_ail_package_dir, parse_ail_bytecode, parse_ail_core_text,
     parse_ail_package_document, parse_ail_package_spec_text, parse_ail_patch_text,
     parse_ail_spec_text, render_ail_bytecode, render_ail_core, render_ail_flow_view,
-    render_ail_spec, render_ail_spec_from_core, run_ail_action, run_ail_bytecode_action,
-    run_ail_compiler_pass_on_core, verify_ail_bytecode,
+    render_ail_package_dependency_report, render_ail_spec, render_ail_spec_from_core,
+    run_ail_action, run_ail_bytecode_action, run_ail_compiler_pass_on_core, verify_ail_bytecode,
 };
 use ail::core_model::json_string;
 
@@ -1896,6 +1896,76 @@ conformance: first-slice
     assert!(
         error.contains("unbounded major") && error.contains("../shared"),
         "{error}"
+    );
+
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn ail_package_dependency_report_records_resolved_imports_and_grants() {
+    let unique_suffix = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let root = std::env::temp_dir().join(format!(
+        "ail-package-dependency-report-{}-{unique_suffix}",
+        std::process::id()
+    ));
+    let shared = root.join("shared");
+    let app = root.join("app");
+    fs::create_dir_all(&shared).unwrap();
+    fs::create_dir_all(&app).unwrap();
+    fs::write(
+        shared.join("ail-package.md"),
+        r#"name: shared-lib
+version: 0.1.3
+profile: Application
+entry: spec.ail-spec.md
+features: things
+conformance: first-slice
+capability-grants:
+  - package: shared-lib
+    capability: read shared ticket data
+    effects: [read, network]
+    approvals: [operator approval]
+"#,
+    )
+    .unwrap();
+    fs::write(shared.join("spec.ail-spec.md"), "Application: Shared.\n").unwrap();
+    fs::write(app.join("spec.ail-spec.md"), "Application: App.\n").unwrap();
+    fs::write(
+        app.join("ail-package.md"),
+        r#"name: app
+version: 0.1.0
+profile: Application
+entry: spec.ail-spec.md
+features: imports
+imports: ../shared compatible ^0.1 as Shared
+conformance: first-slice
+"#,
+    )
+    .unwrap();
+
+    let package = load_ail_package_dir(&app).unwrap();
+    let report = render_ail_package_dependency_report(&package).unwrap();
+    assert!(
+        report.contains("AIL-Package-Dependency-Report:"),
+        "{report}"
+    );
+    assert!(report.contains("root-package app 0.1.0"), "{report}");
+    assert!(
+        report.contains("resolved-import Shared path=../shared requirement=compatible ^0.1 name=shared-lib version=0.1.3"),
+        "{report}"
+    );
+    assert!(report.contains("source-path="), "{report}");
+    assert!(report.contains("package-hash=ail-package:"), "{report}");
+    assert!(
+        report.contains("capability-grant package=shared-lib capability=read shared ticket data effects=read|network approvals=operator approval"),
+        "{report}"
+    );
+    assert!(
+        report.contains("imported-effect-classes Shared network|read"),
+        "{report}"
     );
 
     fs::remove_dir_all(root).unwrap();
