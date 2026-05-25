@@ -68,6 +68,12 @@ fn e2e_corpus_entry_text(index: usize, overrides: &[(&str, &str)]) -> String {
         30..=34 => "backend-portability",
         _ => "core",
     };
+    let target = match index {
+        85..=89 => "wasm32-unknown-sandbox-wasm",
+        90..=94 => "aarch64-apple-darwin-libsystem-macho",
+        95..=99 => "vm",
+        _ => "linux-x86_64-elf",
+    };
     let executor_family = if index == 99 {
         "codex-skill-agent"
     } else {
@@ -87,7 +93,7 @@ fn e2e_corpus_entry_text(index: usize, overrides: &[(&str, &str)]) -> String {
         ("response-file", format!("responses/example-{index}.json")),
         ("artifact-kind", "ail-spec".to_string()),
         ("checker-result", "accepted".to_string()),
-        ("target", "linux-x86_64-elf".to_string()),
+        ("target", target.to_string()),
         ("vm-action", "CloseTicket".to_string()),
         (
             "runtime-state",
@@ -20400,6 +20406,56 @@ fn cli_ail_e2e_corpus_requires_surface_thresholds() {
     assert!(
         stderr.contains(
             "ail-e2e-corpus requires at least 10 standard-library or package-import examples; found 0"
+        ),
+        "{stderr}"
+    );
+
+    let _ = fs::remove_dir_all(corpus_dir);
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
+fn cli_ail_e2e_corpus_requires_target_thresholds() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let corpus_dir = std::env::temp_dir().join(format!(
+        "ail-e2e-corpus-target-coverage-{}",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-e2e-corpus-target-coverage-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&corpus_dir);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&corpus_dir).unwrap();
+    let mut corpus_text = String::new();
+    for index in 0..100 {
+        corpus_text.push_str(&e2e_corpus_entry_text(
+            index,
+            &[("target", "linux-x86_64-elf")],
+        ));
+    }
+    fs::write(corpus_dir.join("examples.md"), corpus_text).unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-e2e-corpus",
+            corpus_dir.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains(
+            "ail-e2e-corpus requires at least 5 target wasm32-unknown-sandbox-wasm examples; found 0"
         ),
         "{stderr}"
     );

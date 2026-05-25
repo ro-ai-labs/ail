@@ -1629,6 +1629,25 @@ fn validate_ail_e2e_corpus_release_coverage(entries: &[AilE2eCorpusEntry]) -> Re
             ));
         }
     }
+    let mut target_counts = BTreeMap::new();
+    for entry in entries {
+        if let Some(target) = entry.fields.get("target") {
+            *target_counts.entry(target.as_str()).or_insert(0usize) += 1;
+        }
+    }
+    for required_target in [
+        "linux-x86_64-elf",
+        "wasm32-unknown-sandbox-wasm",
+        "aarch64-apple-darwin-libsystem-macho",
+        "vm",
+    ] {
+        let found = target_counts.get(required_target).copied().unwrap_or(0);
+        if found < 5 {
+            return Err(format!(
+                "ail-e2e-corpus requires at least 5 target {required_target} examples; found {found}"
+            ));
+        }
+    }
     Ok(())
 }
 
