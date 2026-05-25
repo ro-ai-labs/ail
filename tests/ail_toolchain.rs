@@ -20309,6 +20309,17 @@ fn cli_ail_e2e_corpus_writes_report_for_metadata_complete_corpus() {
         bytecode_fingerprint.trim(),
         fnv64_fingerprint(&bytecode_artifact)
     );
+    let native_artifact =
+        fs::read(artifact_dir.join("examples/example-0/target-CloseTicket.elf")).unwrap();
+    assert_eq!(&native_artifact[..4], &[0x7f, b'E', b'L', b'F']);
+    let native_fingerprint = fs::read_to_string(
+        artifact_dir.join("examples/example-0/target-CloseTicket.elf.fingerprint.txt"),
+    )
+    .unwrap();
+    assert_eq!(
+        native_fingerprint.trim(),
+        fnv64_fingerprint_bytes(&native_artifact)
+    );
     let report_fingerprint =
         fs::read_to_string(artifact_dir.join("e2e-corpus-report.fingerprint.txt")).unwrap();
     assert_eq!(report_fingerprint.trim(), fnv64_fingerprint(&report));

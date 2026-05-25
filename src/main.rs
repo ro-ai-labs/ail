@@ -400,6 +400,7 @@ struct AilE2eCorpusEvaluation {
     entry: AilE2eCorpusEntry,
     checked_core_text: Option<String>,
     bytecode_text: Option<String>,
+    native_executables: Vec<AilNativeArtifact>,
 }
 
 struct AilBootstrapArtifactSet<'a> {
@@ -428,6 +429,7 @@ struct AilBootstrapArtifactSet<'a> {
     agent_native_executables: &'a [AilNativeArtifact],
 }
 
+#[derive(Debug, Clone)]
 struct AilNativeArtifact {
     target_name: String,
     file_name: String,
@@ -1271,6 +1273,7 @@ fn evaluate_ail_e2e_corpus_entry(
             entry: entry.clone(),
             checked_core_text: None,
             bytecode_text: None,
+            native_executables: Vec::new(),
         });
     }
     let artifact_kind = entry
@@ -1283,6 +1286,7 @@ fn evaluate_ail_e2e_corpus_entry(
             entry: entry.clone(),
             checked_core_text: None,
             bytecode_text: None,
+            native_executables: Vec::new(),
         });
     }
     let package_path = entry
@@ -1317,10 +1321,21 @@ fn evaluate_ail_e2e_corpus_entry(
             bytecode_diagnostics.join("\n")
         ));
     }
+    let target = entry
+        .fields
+        .get("target")
+        .map(String::as_str)
+        .unwrap_or_default();
+    let native_executables = if target == "linux-x86_64-elf" {
+        compile_ail_native_artifacts(&bytecode, target, "target")?
+    } else {
+        Vec::new()
+    };
     Ok(AilE2eCorpusEvaluation {
         entry: entry.clone(),
         checked_core_text: Some(render_ail_core(&core)),
         bytecode_text: Some(format!("{}\n", render_ail_bytecode(&bytecode))),
+        native_executables,
     })
 }
 
@@ -1429,6 +1444,31 @@ fn write_ail_e2e_corpus_artifacts(
                 format!("{}\n", ail_artifact_fingerprint(bytecode_text)),
             )
             .map_err(|error| format!("failed to write e2e bytecode fingerprint: {error}"))?;
+        }
+        if !evaluation.native_executables.is_empty() {
+            let entry_dir = root.join("examples").join(&evaluation.entry.id);
+            fs::create_dir_all(&entry_dir)
+                .map_err(|error| format!("failed to create e2e entry artifact dir: {error}"))?;
+            for executable in &evaluation.native_executables {
+                let artifact_path = entry_dir.join(&executable.file_name);
+                fs::write(&artifact_path, &executable.bytes).map_err(|error| {
+                    format!(
+                        "failed to write e2e native executable {}: {error}",
+                        executable.file_name
+                    )
+                })?;
+                set_native_executable_permissions(&artifact_path.to_string_lossy())?;
+                fs::write(
+                    entry_dir.join(format!("{}.fingerprint.txt", executable.file_name)),
+                    format!("{}\n", ail_artifact_fingerprint_bytes(&executable.bytes)),
+                )
+                .map_err(|error| {
+                    format!(
+                        "failed to write e2e native executable fingerprint {}: {error}",
+                        executable.file_name
+                    )
+                })?;
+            }
         }
     }
     Ok(())
