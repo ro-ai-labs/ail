@@ -318,6 +318,11 @@ Evidence:
   applicable, prompt fingerprint, request fingerprint, response fingerprint,
   artifact fingerprint, checker result, compile result, target result, and
   failure taxonomy.
+- The e2e corpus report includes duplicate-fingerprint counts for request,
+  response, extracted artifact, checked Core, bytecode, VM trace, native,
+  target-report, and diagnostics artifacts. Final release evidence requires
+  zero duplicate response and extracted-artifact entries unless this file names
+  a specific shared artifact as intentional non-release scaffolding.
 
 Minimum proof commands:
 
@@ -326,10 +331,13 @@ cargo test cli_ail_build_agent_compares_prompt_portability_before_compile
 cargo test cli_ail_prompt_corpus_accepts_checked_outputs
 cargo test cli_ail_prompt_corpus_rejects_semantic_drift_outputs
 cargo test cli_ail_prompt_corpus_writes_portability_report
-cargo test cli_ail_e2e_corpus_requires_100_examples
-cargo test cli_ail_e2e_corpus_replays_prompt_to_binary_examples
-cargo test cli_ail_e2e_corpus_records_multi_executor_evidence
-cargo test cli_ail_e2e_corpus_rejects_live_only_model_evidence
+cargo test cli_ail_e2e_corpus_replays_checked_seed_corpus
+cargo test cli_ail_e2e_corpus_requires_100_distinct_semantic_examples
+cargo test cli_ail_e2e_corpus_requires_full_prompt_pack_coverage
+cargo test cli_ail_e2e_corpus_requires_llm_and_codex_executor_families
+cargo test cli_ail_e2e_corpus_requires_llm_endpoint_diversity
+cargo test cli_ail_e2e_corpus_requires_target_thresholds
+cargo test cli_ail_e2e_corpus_replays_rejected_prompt_failures
 cargo run -- ail-e2e-corpus docs/ail/corpus/e2e --artifact-dir /tmp/ail-v02-e2e-corpus
 ```
 
@@ -469,16 +477,22 @@ already covers parts of this gate:
   profile-mismatch, hallucinated-capability, missing-trace, and semantic-drift
   taxonomy
 - prompt-envelope checks and prompt-to-native build evidence
+- `ail-e2e-corpus` replay verifier, threshold tests, stored transcript replay,
+  accepted prompt-output compilation to bytecode, VM traces, Linux native
+  artifacts, Wasm and Darwin target-contract reports, rejected-output replay,
+  and top-level manifest/report fingerprints
+- checked 100-entry e2e seed corpus under `docs/ail/corpus/e2e`
 
 Missing v0.2 evidence includes:
 
 - v0.2-specific release evidence bundle
-- `ail-e2e-corpus` replay verifier command and tests
-- at least 100 replayable prompt-to-artifact examples
-- end-to-end corpus evidence that compiles accepted prompt outputs to bytecode
-  and binary or target-contract artifacts
-- Codex skill or agent executor evidence normalized into the same transcript
-  and replay format as HTTP LLM evidence
+- at least 100 semantically distinct replayable prompt-to-artifact examples
+  with non-reused response and extracted-artifact fingerprints
+- broad live-captured LLM/Codex executor transcripts replacing the current
+  repeated support-ticket seed artifacts
+- richer rejected-output coverage for prompt-envelope, profile mismatch,
+  hallucinated capability, missing trace, unsupported target, invalid interop,
+  permission/capability, and package resolution diagnostics in the e2e corpus
 
 ## Completion Decision Rule
 

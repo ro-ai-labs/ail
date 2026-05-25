@@ -99,3 +99,10 @@ Each counted example records:
 The 100-example count is semantic, not cosmetic. Re-running the same stored
 output under a different label does not count unless the executor transcript is
 real, replayable, and the semantic task or target evidence changes.
+
+The e2e report also records duplicate-fingerprint counts for stored requests,
+responses, extracted artifacts, checked Core, bytecode, VM traces, native
+artifacts, target reports, and diagnostics. These counts make seed-corpus reuse
+auditable. Final v0.2 release evidence must drive duplicate response and
+extracted-artifact counts to zero, except for any explicitly documented shared
+artifact that is not counted as semantic-release coverage.

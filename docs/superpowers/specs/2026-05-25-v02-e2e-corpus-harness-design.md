@@ -128,7 +128,10 @@ The verifier writes:
 - `examples/<semantic-task>/diagnostics.txt` for rejected examples
 
 The top-level report includes counts by profile, prompt, executor family,
-target, checker result, and failure taxonomy.
+target, checker result, and failure taxonomy. It also reports duplicate
+fingerprint counts for requests, responses, extracted artifacts, checked Core,
+bytecode, VM traces, native artifacts, target reports, and diagnostics so seed
+fixtures cannot be mistaken for semantically broad release evidence.
 
 ## Codex Skill Agent Boundary
 

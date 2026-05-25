@@ -1578,6 +1578,49 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
             lines.push(format!("{label} {value} {count}"));
         }
     }
+    push_ail_e2e_fingerprint_reuse_lines(&mut lines, "request", evaluations, |evaluation| {
+        evaluation.request_fingerprint.clone()
+    });
+    push_ail_e2e_fingerprint_reuse_lines(&mut lines, "response", evaluations, |evaluation| {
+        evaluation.response_fingerprint.clone()
+    });
+    push_ail_e2e_fingerprint_reuse_lines(
+        &mut lines,
+        "extracted-artifact",
+        evaluations,
+        |evaluation| evaluation.extracted_artifact_fingerprint.clone(),
+    );
+    push_ail_e2e_fingerprint_reuse_lines(&mut lines, "checked-core", evaluations, |evaluation| {
+        evaluation
+            .checked_core_text
+            .as_ref()
+            .map(|text| ail_artifact_fingerprint(text))
+    });
+    push_ail_e2e_fingerprint_reuse_lines(&mut lines, "bytecode", evaluations, |evaluation| {
+        evaluation
+            .bytecode_text
+            .as_ref()
+            .map(|text| ail_artifact_fingerprint(text))
+    });
+    push_ail_e2e_fingerprint_reuse_lines(&mut lines, "vm-trace", evaluations, |evaluation| {
+        evaluation
+            .vm_trace_text
+            .as_ref()
+            .map(|text| ail_artifact_fingerprint(text))
+    });
+    push_ail_e2e_fingerprint_reuse_lines(&mut lines, "target-report", evaluations, |evaluation| {
+        evaluation
+            .target_report_text
+            .as_ref()
+            .map(|text| ail_artifact_fingerprint(text))
+    });
+    push_ail_e2e_fingerprint_reuse_lines(&mut lines, "diagnostics", evaluations, |evaluation| {
+        evaluation
+            .diagnostics_text
+            .as_ref()
+            .map(|text| ail_artifact_fingerprint(text))
+    });
+    push_ail_e2e_native_fingerprint_reuse_lines(&mut lines, evaluations);
     for evaluation in evaluations {
         let entry = &evaluation.entry;
         let semantic_task = entry
@@ -1669,6 +1712,81 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
         }
     }
     format!("{}\n", lines.join("\n"))
+}
+
+fn push_ail_e2e_fingerprint_reuse_lines<F>(
+    lines: &mut Vec<String>,
+    label: &str,
+    evaluations: &[AilE2eCorpusEvaluation],
+    fingerprint_for: F,
+) where
+    F: Fn(&AilE2eCorpusEvaluation) -> Option<String>,
+{
+    let mut entries_by_fingerprint: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    for evaluation in evaluations {
+        if let Some(fingerprint) = fingerprint_for(evaluation) {
+            entries_by_fingerprint
+                .entry(fingerprint)
+                .or_default()
+                .push(evaluation.entry.id.clone());
+        }
+    }
+    push_ail_e2e_fingerprint_reuse_summary(lines, label, entries_by_fingerprint);
+}
+
+fn push_ail_e2e_native_fingerprint_reuse_lines(
+    lines: &mut Vec<String>,
+    evaluations: &[AilE2eCorpusEvaluation],
+) {
+    let mut entries_by_fingerprint: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    for evaluation in evaluations {
+        for executable in &evaluation.native_executables {
+            entries_by_fingerprint
+                .entry(ail_artifact_fingerprint_bytes(&executable.bytes))
+                .or_default()
+                .push(format!("{}:{}", evaluation.entry.id, executable.file_name));
+        }
+    }
+    push_ail_e2e_fingerprint_reuse_summary(lines, "native", entries_by_fingerprint);
+}
+
+fn push_ail_e2e_fingerprint_reuse_summary(
+    lines: &mut Vec<String>,
+    label: &str,
+    entries_by_fingerprint: BTreeMap<String, Vec<String>>,
+) {
+    let observed_count = entries_by_fingerprint.values().map(Vec::len).sum::<usize>();
+    let duplicate_entry_count = entries_by_fingerprint
+        .values()
+        .filter(|entries| entries.len() > 1)
+        .map(|entries| entries.len() - 1)
+        .sum::<usize>();
+    let reuse_group_count = entries_by_fingerprint
+        .values()
+        .filter(|entries| entries.len() > 1)
+        .count();
+    lines.push(format!(
+        "{label}-fingerprint-observed-count {observed_count}"
+    ));
+    lines.push(format!(
+        "{label}-fingerprint-distinct-count {}",
+        entries_by_fingerprint.len()
+    ));
+    lines.push(format!(
+        "{label}-fingerprint-duplicate-entry-count {duplicate_entry_count}"
+    ));
+    lines.push(format!(
+        "{label}-fingerprint-reuse-group-count {reuse_group_count}"
+    ));
+    for (fingerprint, entries) in entries_by_fingerprint {
+        if entries.len() > 1 {
+            lines.push(format!(
+                "{label}-fingerprint-reuse {fingerprint} {} {}",
+                entries.len(),
+                entries.join(",")
+            ));
+        }
+    }
 }
 
 fn push_ail_e2e_entry_artifact_lines(
