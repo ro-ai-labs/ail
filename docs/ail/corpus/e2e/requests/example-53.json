@@ -1,1 +1,26 @@
-{"artifact_kind": "ail-spec", "instruction": "Produce the stored AIL-Spec candidate for deterministic replay.", "prompt_file": "docs/ail/prompts/core-draft.system.md", "prompt_version": "ail-prompts.v0.2", "semantic_task": "refund-tool-53"}
+{
+  "agent_contract": "docs/ail/corpus/e2e/agents/codex-ail-spec-writer.md",
+  "agent_contract_version": "0.1.0",
+  "codex_model": "codex-subagent-default",
+  "executor_label": "codex-ail-spec-writer",
+  "input": {
+    "package_manifest_file": "examples/refund_tool.ail/ail-package.md",
+    "required_features": [
+      "tools",
+      "inputs",
+      "outputs",
+      "permissions",
+      "effects",
+      "failures",
+      "guarantees",
+      "traces",
+      "secrets"
+    ],
+    "requirements_source": "inline checked requirements from active AIL v0.2 e2e capture session"
+  },
+  "package": "examples/refund_tool.ail",
+  "profile": "AgentTool",
+  "prompt_file": "docs/ail/prompts/core-draft.system.md",
+  "prompt_version": "ail-prompts.v0.2",
+  "task": "Draft complete canonical AIL-Spec text for the Refund Tool package from checked requirements for example-53."
+}
