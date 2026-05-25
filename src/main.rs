@@ -1063,11 +1063,10 @@ fn load_ail_e2e_corpus_entries(path: &std::path::Path) -> Result<Vec<AilE2eCorpu
         let entry =
             entry.map_err(|error| format!("failed to read e2e corpus dir entry: {error}"))?;
         let entry_path = entry.path();
-        if entry_path.is_dir() {
-            entries.extend(load_ail_e2e_corpus_entries(&entry_path)?);
-        } else if entry_path
-            .extension()
-            .is_some_and(|extension| extension == "md")
+        if entry_path.is_dir()
+            || entry_path
+                .extension()
+                .is_some_and(|extension| extension == "md")
         {
             entries.extend(load_ail_e2e_corpus_entries(&entry_path)?);
         }
