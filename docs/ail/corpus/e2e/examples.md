@@ -1421,22 +1421,21 @@ target: linux-x86_64-elf
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-74
-semantic-task: network-driver-74
+semantic-task: network-driver-live-codex-diagnostic-repair-74
 profile: System
 surface-tags: core
 package: examples/network_driver.ail
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:c9700f2c2e57e49e
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-74.json
-response-file: responses/example-74.ail-spec.md
+response-file: responses/example-74.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-75
 semantic-task: secret-access-75
