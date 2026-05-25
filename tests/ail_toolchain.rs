@@ -19821,6 +19821,206 @@ fn cli_ail_e2e_corpus_requires_replay_metadata() {
 }
 
 #[test]
+fn cli_ail_e2e_corpus_requires_llm_and_codex_executor_families() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let corpus_dir = std::env::temp_dir().join(format!(
+        "ail-e2e-corpus-executor-coverage-{}",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-e2e-corpus-executor-coverage-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&corpus_dir);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&corpus_dir).unwrap();
+    let mut corpus_text = String::new();
+    for index in 0..100 {
+        corpus_text.push_str(&format!(
+            "## End-To-End Example: example-{index}\n\
+             semantic-task: support-ticket-{index}\n\
+             profile: Application\n\
+             package: examples/support_ticket.ail\n\
+             prompt-file: docs/ail/prompts/spec-draft.system.md\n\
+             prompt-fingerprint: fnv64:spec-draft\n\
+             executor-family: llm-http\n\
+             executor-label: local-model\n\
+             endpoint-label: inteligentia-pro-1\n\
+             request-file: requests/example-{index}.json\n\
+             response-file: responses/example-{index}.json\n\
+             artifact-kind: ail-spec\n\
+             checker-result: accepted\n\
+             target: linux-x86_64-elf\n\n"
+        ));
+    }
+    fs::write(corpus_dir.join("examples.md"), corpus_text).unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-e2e-corpus",
+            corpus_dir.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("ail-e2e-corpus requires executor-family codex-skill-agent"),
+        "{stderr}"
+    );
+
+    let _ = fs::remove_dir_all(corpus_dir);
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
+fn cli_ail_e2e_corpus_requires_rejected_example_diagnostics() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let corpus_dir = std::env::temp_dir().join(format!(
+        "ail-e2e-corpus-rejected-diagnostics-{}",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-e2e-corpus-rejected-diagnostics-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&corpus_dir);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&corpus_dir).unwrap();
+    let mut corpus_text = String::new();
+    for index in 0..99 {
+        corpus_text.push_str(&format!(
+            "## End-To-End Example: accepted-{index}\n\
+             semantic-task: support-ticket-{index}\n\
+             profile: Application\n\
+             package: examples/support_ticket.ail\n\
+             prompt-file: docs/ail/prompts/spec-draft.system.md\n\
+             prompt-fingerprint: fnv64:spec-draft\n\
+             executor-family: llm-http\n\
+             executor-label: local-model\n\
+             endpoint-label: inteligentia-pro-1\n\
+             request-file: requests/accepted-{index}.json\n\
+             response-file: responses/accepted-{index}.json\n\
+             artifact-kind: ail-spec\n\
+             checker-result: accepted\n\
+             target: linux-x86_64-elf\n\n"
+        ));
+    }
+    corpus_text.push_str(
+        "## End-To-End Example: rejected-0\n\
+         semantic-task: support-ticket-rejected\n\
+         profile: Application\n\
+         package: examples/support_ticket.ail\n\
+         prompt-file: docs/ail/prompts/spec-draft.system.md\n\
+         prompt-fingerprint: fnv64:spec-draft\n\
+         executor-family: codex-skill-agent\n\
+         executor-label: codex-ail-spec-writer\n\
+         request-file: requests/rejected-0.json\n\
+         response-file: responses/rejected-0.json\n\
+         artifact-kind: ail-spec\n\
+         checker-result: rejected\n\
+         target: vm\n\n",
+    );
+    fs::write(corpus_dir.join("examples.md"), corpus_text).unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-e2e-corpus",
+            corpus_dir.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("e2e corpus rejected entry rejected-0 is missing expected-diagnostic"),
+        "{stderr}"
+    );
+
+    let _ = fs::remove_dir_all(corpus_dir);
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
+fn cli_ail_e2e_corpus_requires_full_prompt_pack_coverage() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let corpus_dir = std::env::temp_dir().join(format!(
+        "ail-e2e-corpus-prompt-coverage-{}",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-e2e-corpus-prompt-coverage-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&corpus_dir);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&corpus_dir).unwrap();
+    let mut corpus_text = String::new();
+    for index in 0..100 {
+        let executor_family = if index == 99 {
+            "codex-skill-agent"
+        } else {
+            "llm-http"
+        };
+        corpus_text.push_str(&format!(
+            "## End-To-End Example: example-{index}\n\
+             semantic-task: support-ticket-{index}\n\
+             profile: Application\n\
+             package: examples/support_ticket.ail\n\
+             prompt-file: docs/ail/prompts/spec-draft.system.md\n\
+             prompt-fingerprint: fnv64:spec-draft\n\
+             executor-family: {executor_family}\n\
+             executor-label: local-executor\n\
+             endpoint-label: local-endpoint\n\
+             request-file: requests/example-{index}.json\n\
+             response-file: responses/example-{index}.json\n\
+             artifact-kind: ail-spec\n\
+             checker-result: accepted\n\
+             target: linux-x86_64-elf\n\n"
+        ));
+    }
+    fs::write(corpus_dir.join("examples.md"), corpus_text).unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-e2e-corpus",
+            corpus_dir.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("ail-e2e-corpus requires prompt-file docs/ail/prompts/interview.system.md"),
+        "{stderr}"
+    );
+
+    let _ = fs::remove_dir_all(corpus_dir);
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
 fn cli_ail_build_agent_verifies_bytecode_artifact_after_compile() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");

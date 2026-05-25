@@ -1136,6 +1136,16 @@ fn ail_e2e_corpus_entry_from_fields(
             return Err(format!("e2e corpus entry {id} is missing {field}"));
         }
     }
+    if fields
+        .get("checker-result")
+        .is_some_and(|result| result == "rejected")
+    {
+        for field in ["expected-diagnostic", "failure-taxonomy"] {
+            if fields.get(field).is_none_or(|value| value.is_empty()) {
+                return Err(format!("e2e corpus rejected entry {id} is missing {field}"));
+            }
+        }
+    }
     Ok(AilE2eCorpusEntry {
         id,
         source_file: source_file.to_string(),
@@ -1172,6 +1182,43 @@ fn render_ail_e2e_corpus_report(entries: &[AilE2eCorpusEntry]) -> String {
     format!("{}\n", lines.join("\n"))
 }
 
+fn validate_ail_e2e_corpus_release_coverage(entries: &[AilE2eCorpusEntry]) -> Result<(), String> {
+    let executor_families = entries
+        .iter()
+        .filter_map(|entry| entry.fields.get("executor-family").map(String::as_str))
+        .collect::<BTreeSet<_>>();
+    for required_executor in ["llm-http", "codex-skill-agent"] {
+        if !executor_families.contains(required_executor) {
+            return Err(format!(
+                "ail-e2e-corpus requires executor-family {required_executor}"
+            ));
+        }
+    }
+    let prompt_files = entries
+        .iter()
+        .filter_map(|entry| entry.fields.get("prompt-file").map(String::as_str))
+        .collect::<BTreeSet<_>>();
+    for required_prompt in [
+        "docs/ail/prompts/interview.system.md",
+        "docs/ail/prompts/requirements.system.md",
+        "docs/ail/prompts/spec-draft.system.md",
+        "docs/ail/prompts/core-draft.system.md",
+        "docs/ail/prompts/diagnostic-repair.system.md",
+        "docs/ail/prompts/core-to-spec.system.md",
+        "docs/ail/prompts/core-to-summary.system.md",
+        "docs/ail/prompts/flow-patch.system.md",
+        "docs/ail/prompts/trace-debug.system.md",
+        "docs/ail/prompts/interop.system.md",
+    ] {
+        if !prompt_files.contains(required_prompt) {
+            return Err(format!(
+                "ail-e2e-corpus requires prompt-file {required_prompt}"
+            ));
+        }
+    }
+    Ok(())
+}
+
 fn write_ail_e2e_corpus_artifacts(artifact_dir: &str, report_text: &str) -> Result<(), String> {
     let root = std::path::Path::new(artifact_dir);
     fs::create_dir_all(root)
@@ -1197,6 +1244,7 @@ fn run_ail_e2e_corpus_command(path: &str, cli_options: &CliOptions) -> Result<u8
             "ail-e2e-corpus requires at least 100 examples; found {example_count}"
         ));
     }
+    validate_ail_e2e_corpus_release_coverage(&entries)?;
     let report_text = render_ail_e2e_corpus_report(&entries);
     write_ail_e2e_corpus_artifacts(artifact_dir, &report_text)?;
     print!("{report_text}");
