@@ -1339,12 +1339,13 @@ fn evaluate_ail_e2e_corpus_entry(
     })
 }
 
-fn render_ail_e2e_corpus_report(entries: &[AilE2eCorpusEntry]) -> String {
+fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> String {
     let mut lines = vec![
         "AIL-End-To-End-Corpus-Report:".to_string(),
-        format!("entry-count {}", entries.len()),
+        format!("entry-count {}", evaluations.len()),
     ];
-    for entry in entries {
+    for evaluation in evaluations {
+        let entry = &evaluation.entry;
         let semantic_task = entry
             .fields
             .get("semantic-task")
@@ -1364,6 +1365,32 @@ fn render_ail_e2e_corpus_report(entries: &[AilE2eCorpusEntry]) -> String {
             "entry {} source {} semantic-task {} executor-family {} target {}",
             entry.id, entry.source_file, semantic_task, executor_family, target
         ));
+        if let Some(core_text) = &evaluation.checked_core_text {
+            lines.push(format!(
+                "entry-artifact {} checked-core examples/{}/checked.ail-core.txt {}",
+                entry.id,
+                entry.id,
+                ail_artifact_fingerprint(core_text)
+            ));
+        }
+        if let Some(bytecode_text) = &evaluation.bytecode_text {
+            lines.push(format!(
+                "entry-artifact {} bytecode examples/{}/artifact.ailbc.json {}",
+                entry.id,
+                entry.id,
+                ail_artifact_fingerprint(bytecode_text)
+            ));
+        }
+        for executable in &evaluation.native_executables {
+            lines.push(format!(
+                "entry-artifact {} native {} examples/{}/{} {}",
+                entry.id,
+                executable.target_name,
+                entry.id,
+                executable.file_name,
+                ail_artifact_fingerprint_bytes(&executable.bytes)
+            ));
+        }
     }
     format!("{}\n", lines.join("\n"))
 }
@@ -1491,7 +1518,7 @@ fn run_ail_e2e_corpus_command(path: &str, cli_options: &CliOptions) -> Result<u8
     for entry in &entries {
         evaluations.push(evaluate_ail_e2e_corpus_entry(entry)?);
     }
-    let report_text = render_ail_e2e_corpus_report(&entries);
+    let report_text = render_ail_e2e_corpus_report(&evaluations);
     write_ail_e2e_corpus_artifacts(artifact_dir, &report_text, &evaluations)?;
     print!("{report_text}");
     Ok(0)

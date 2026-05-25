@@ -20320,6 +20320,27 @@ fn cli_ail_e2e_corpus_writes_report_for_metadata_complete_corpus() {
         native_fingerprint.trim(),
         fnv64_fingerprint_bytes(&native_artifact)
     );
+    assert!(
+        report.contains(&format!(
+            "entry-artifact example-0 checked-core examples/example-0/checked.ail-core.txt {}",
+            checked_core_fingerprint.trim()
+        )),
+        "{report}"
+    );
+    assert!(
+        report.contains(&format!(
+            "entry-artifact example-0 bytecode examples/example-0/artifact.ailbc.json {}",
+            bytecode_fingerprint.trim()
+        )),
+        "{report}"
+    );
+    assert!(
+        report.contains(&format!(
+            "entry-artifact example-0 native linux-x86_64-elf examples/example-0/target-CloseTicket.elf {}",
+            native_fingerprint.trim()
+        )),
+        "{report}"
+    );
     let report_fingerprint =
         fs::read_to_string(artifact_dir.join("e2e-corpus-report.fingerprint.txt")).unwrap();
     assert_eq!(report_fingerprint.trim(), fnv64_fingerprint(&report));
