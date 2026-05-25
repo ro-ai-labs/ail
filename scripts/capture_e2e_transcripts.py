@@ -32,9 +32,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--endpoint-label", required=True)
     parser.add_argument("--executor-label", required=True)
     parser.add_argument("--semantic-task", required=True)
-    parser.add_argument("--prompt", required=True)
+    parser.add_argument("--prompt")
+    parser.add_argument("--prompt-file")
+    parser.add_argument("--input-json-file")
     parser.add_argument("--n-predict", type=int, default=2048)
-    return parser.parse_args()
+    args = parser.parse_args()
+    if (args.prompt is None) == (args.prompt_file is None):
+        parser.error("exactly one of --prompt or --prompt-file is required")
+    return args
 
 
 def read_entries(text: str) -> list[tuple[str | None, list[str]]]:
@@ -100,6 +105,25 @@ def capture_completion(endpoint: str, body: dict[str, object]) -> dict[str, obje
     return json.loads(response_text)
 
 
+def render_prompt(system_prompt: str, task_prompt: str, input_json_file: str | None) -> str:
+    if input_json_file is None:
+        return f"{system_prompt.rstrip()}\n\nUSER REQUEST:\n{task_prompt}\n"
+    input_path = Path(input_json_file)
+    input_payload = json.loads(input_path.read_text())
+    input_text = json.dumps(input_payload, indent=2, sort_keys=True)
+    return (
+        f"{system_prompt.rstrip()}\n\n"
+        f"TASK:\n{task_prompt}\n\n"
+        f"INPUT JSON:\n{input_text}\n"
+    )
+
+
+def read_task_prompt(args: argparse.Namespace) -> str:
+    if args.prompt_file is not None:
+        return Path(args.prompt_file).read_text().strip()
+    return args.prompt
+
+
 def main() -> int:
     args = parse_args()
     base_corpus = (ROOT / args.base_corpus).resolve()
@@ -120,7 +144,7 @@ def main() -> int:
     fields = fields_from_entry(entry_lines)
     prompt_file = fields["prompt-file"]
     system_prompt = (ROOT / prompt_file).read_text()
-    prompt = f"{system_prompt.rstrip()}\n\nUSER REQUEST:\n{args.prompt}\n"
+    prompt = render_prompt(system_prompt, read_task_prompt(args), args.input_json_file)
     body = completion_body(args.endpoint, prompt, args.n_predict)
     response_json = capture_completion(args.endpoint, body)
 

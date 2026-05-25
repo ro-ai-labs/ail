@@ -489,6 +489,9 @@ already covers parts of this gate:
   artifacts, Wasm and Darwin target-contract reports, rejected-output replay,
   and top-level manifest/report fingerprints
 - checked 100-entry e2e seed corpus under `docs/ail/corpus/e2e`
+- one replay-clean live LLM `spec-draft.system.md` capture for the Support
+  Ticket package, using schema-shaped prompt input and an OpenAI-compatible
+  chat-completions endpoint with thinking disabled
 - checked e2e seed corpus responses and extracted artifacts have zero
   duplicate fingerprints after deterministic per-scenario trace specialization;
   target reports also have zero duplicate fingerprints after contract reports

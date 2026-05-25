@@ -609,7 +609,7 @@ runtime-state: ticket.id=T-1;ticket.status=Open
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-32
-semantic-task: support-ticket-32
+semantic-task: support-ticket-live-spec-input-32
 profile: Application
 surface-tags: backend-portability
 package: examples/support_ticket.ail
@@ -617,16 +617,16 @@ prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
 executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-label: unsloth-qwen3.6-35b-a3b-gguf-chat
+capture-origin: live-llm
 request-file: requests/example-32.json
-response-file: responses/example-32.ail-spec.md
+response-file: responses/example-32.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
 vm-action: CloseTicket
 runtime-state: ticket.id=T-1;ticket.status=Open
-endpoint-label: local-endpoint
+endpoint-label: inteligentia-pro-1-qwen3.6-35b-chat
 
 ## End-To-End Example: example-33
 semantic-task: support-ticket-33

@@ -106,8 +106,8 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             )
             self.assertEqual(replay.returncode, 0, replay.stderr)
             report = (artifact_dir / "e2e-corpus-report.txt").read_text()
-            self.assertIn("capture-origin-count deterministic-seed 99", report)
-            self.assertIn("capture-origin-count live-llm 1", report)
+            self.assertIn("capture-origin-count deterministic-seed 98", report)
+            self.assertIn("capture-origin-count live-llm 2", report)
             self.assertIn(
                 "entry example-30 source "
                 + str(output_dir / "examples.md")
@@ -202,6 +202,108 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
                 server.server_close()
             shutil.rmtree(output_dir, ignore_errors=True)
             shutil.rmtree(artifact_dir, ignore_errors=True)
+
+    def test_capture_uses_schema_input_json_file_for_spec_draft_prompt(self):
+        output_dir = Path(tempfile.mkdtemp(prefix="ail-e2e-live-input-capture-"))
+        artifact_dir = Path(tempfile.mkdtemp(prefix="ail-e2e-live-input-capture-artifacts-"))
+        input_json = Path(tempfile.mkdtemp(prefix="ail-e2e-live-input-json-")) / "input.json"
+        task_prompt = Path(tempfile.mkdtemp(prefix="ail-e2e-live-task-prompt-")) / "task.txt"
+        server = None
+        try:
+            input_payload = {
+                "profile": "Application",
+                "package_manifest": (
+                    ROOT / "examples" / "support_ticket.ail" / "ail-package.md"
+                ).read_text(),
+                "required_features": ["things", "actions", "failures", "guarantees", "traces"],
+                "requirements": (
+                    "AIL-Requirements:\n"
+                    "- The application manages customer support tickets.\n"
+                    "- The CloseTicket action is performed by a support agent.\n"
+                    "- CloseTicket requires the ticket to exist and status not to be Closed.\n"
+                    "- CloseTicket changes ticket status to Closed.\n"
+                    "- CloseTicket records trace event TicketClosed.\n"
+                ),
+            }
+            input_json.write_text(json.dumps(input_payload, indent=2, sort_keys=True) + "\n")
+            task_prompt.write_text(
+                "Draft the canonical Support Ticket AIL-Spec from the input JSON.\n"
+            )
+            spec_text = (
+                ROOT / "examples" / "support_ticket.ail" / "spec.ail-spec.md"
+            ).read_text()
+            _CompletionHandler.requests = []
+            _CompletionHandler.response_text = ""
+            _CompletionHandler.response_payload = {
+                "choices": [{"message": {"content": spec_text}}],
+                "model": "test-chat-model",
+            }
+            server = HTTPServer(("127.0.0.1", 0), _CompletionHandler)
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+
+            capture = subprocess.run(
+                [
+                    "python3",
+                    "scripts/capture_e2e_transcripts.py",
+                    "--base-corpus",
+                    "docs/ail/corpus/e2e",
+                    "--output-dir",
+                    str(output_dir),
+                    "--entry-id",
+                    "example-32",
+                    "--endpoint",
+                    f"http://127.0.0.1:{server.server_port}/v1/chat/completions",
+                    "--endpoint-label",
+                    "test-chat-endpoint",
+                    "--executor-label",
+                    "test-chat-model",
+                    "--semantic-task",
+                    "support-ticket-live-input-capture-32",
+                    "--prompt-file",
+                    str(task_prompt),
+                    "--input-json-file",
+                    str(input_json),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(capture.returncode, 0, capture.stderr)
+
+            request = json.loads((output_dir / "requests" / "example-32.json").read_text())
+            prompt = request["body"]["messages"][0]["content"]
+            self.assertIn("INPUT JSON:", prompt)
+            self.assertIn('"requirements"', prompt)
+            self.assertIn("CloseTicket records trace event TicketClosed", prompt)
+            self.assertIn("Draft the canonical Support Ticket AIL-Spec", prompt)
+            self.assertNotIn("USER REQUEST:", prompt)
+
+            replay = subprocess.run(
+                [
+                    "cargo",
+                    "run",
+                    "--quiet",
+                    "--",
+                    "ail-e2e-corpus",
+                    str(output_dir),
+                    "--artifact-dir",
+                    str(artifact_dir),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(replay.returncode, 0, replay.stderr)
+        finally:
+            _CompletionHandler.response_payload = None
+            if server is not None:
+                server.shutdown()
+                server.server_close()
+            shutil.rmtree(output_dir, ignore_errors=True)
+            shutil.rmtree(artifact_dir, ignore_errors=True)
+            shutil.rmtree(input_json.parent, ignore_errors=True)
+            shutil.rmtree(task_prompt.parent, ignore_errors=True)
 
 
 if __name__ == "__main__":

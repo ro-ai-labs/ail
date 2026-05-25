@@ -95,7 +95,8 @@ python3 scripts/capture_e2e_transcripts.py \
   --endpoint-label inteligentia-pro-1-qwen3.6-35b-chat \
   --executor-label unsloth-qwen3.6-35b-a3b-gguf-chat \
   --semantic-task support-ticket-live-capture-30 \
-  --prompt "Produce the Support Ticket AIL-Spec for live capture replay."
+  --prompt-file docs/ail/corpus/e2e/inputs/support-ticket-spec-draft.task.txt \
+  --input-json-file docs/ail/corpus/e2e/inputs/support-ticket-spec-draft.json
 ```
 
 The capture helper supports both llama.cpp `/completion` and OpenAI-compatible
@@ -103,7 +104,10 @@ The capture helper supports both llama.cpp `/completion` and OpenAI-compatible
 `choices[0].message.content` response and disable model thinking through
 `chat_template_kwargs.enable_thinking=false`. The captured corpus is then
 replayed with `ail-e2e-corpus`; replay must remain offline and must read only
-the stored request/response transcripts.
+the stored request/response transcripts. Prompt surfaces that define an input
+schema, such as `spec-draft.system.md`, should use `--input-json-file` so the
+stored request contains the expected schema payload rather than a bare natural
+language instruction.
 
 The `ail-e2e-corpus` verifier is the v0.2 release gate for prompt reliability.
 It must not call a live model endpoint in replay mode. It reads stored

@@ -1,0 +1,20 @@
+Return only complete canonical AIL-Spec text.
+
+Use these exact section forms:
+- The application Support Tickets manages ...
+- The application has these users:
+- A User has:
+- A Ticket has:
+- The application shows:
+- Action: Create ticket.
+- When a customer creates a ticket:
+- bullet lines beginning "- the system ..."
+- Failure NotFound happens when ...:
+
+Preserve field type annotations exactly, including State<...>, Option<User>,
+Time, List<Text>, and Secret<List<Text>>. For action traces use "the system
+records a trace event named X". For failure traces use "the trace records X".
+Use "the ticket status" when referring to ticket status.
+
+Do not use markdown fences, commentary, "Users:", "Ticket fields:", "Actions:",
+or "Failures:" headings.
