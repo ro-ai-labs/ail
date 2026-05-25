@@ -25,6 +25,7 @@ outcome is supported only by strategy prose.
 | Diagnostics as artifacts | `08`, `10`, `24` | diagnostic schema and catalog | action without trace | stable diagnostic IDs | rejected fixture per checker rule |
 | Semantic safety | `02`, `06`, `21`, `23`, `26` | safety classes, approval schema, audit trace | high-risk refund and C pointer examples | safety diagnostics | safety review trace |
 | Reference governance | `14`, `16`, `24`, `28` | rule identifiers, authority levels, version notes | rule-to-diagnostic entry | primary diagnostic per checker rule | conformance fixture per normative rule |
+| First complete version | `15`, `16`, `27`, `29` | v0.1 release evidence bundle | prompt-to-native Support Ticket build | release audit command set | all v0.1 gate commands and artifacts |
 
 ## Traceability Rules
 

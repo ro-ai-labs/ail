@@ -10,6 +10,7 @@ native Linux ELF backend, LLM-assisted agent workflow, and conformance suite.
 1. [AIL Specification](ail/README.md)
 2. [AIL Desired Outcome Traceability](ail/27-desired-outcome-traceability.md)
 3. [AIL Implementation Readiness Checklist](ail/16-implementation-readiness-checklist.md)
+4. [AIL First Version Completion Gate](ail/29-first-version-completion-gate.md)
 
 ## Current Direction
 
@@ -32,4 +33,5 @@ self-hosting path, language evolution protocol, toolchain implementation guide,
 implementation-readiness checklist, formal execution semantics, AIL-Core schema,
 agent prompt pack, standard library and package model, C interop and ABI
 profile, backend portability, UI profile, diagnostic catalog, example
-inventory, semantic safety model, and desired-outcome traceability matrix.
+inventory, semantic safety model, desired-outcome traceability matrix, and the
+first-version completion gate.

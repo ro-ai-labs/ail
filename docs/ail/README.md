@@ -46,6 +46,7 @@ the rest of the suite.
 27. `26-semantic-safety-model.md`
 28. `27-desired-outcome-traceability.md`
 29. `28-language-reference-style.md`
+30. `29-first-version-completion-gate.md`
 
 ## Specification Contract
 
@@ -101,6 +102,8 @@ one of these version surfaces or add a versioned surface through
 - `27-desired-outcome-traceability.md`: outcome-to-artifact matrix
 - `28-language-reference-style.md`: normative rule style, grammar notation,
   versioning, and conformance-link rules
+- `29-first-version-completion-gate.md`: v0.1 completion definition, evidence
+  gates, release audit commands, and required release artifacts
 
 ## Implementation Start
 
@@ -108,3 +111,4 @@ Use `15-toolchain-implementation-guide.md` as the implementation reference and
 `16-implementation-readiness-checklist.md` as the readiness gate. The first
 vertical slice is the support-ticket package, followed by agent-tool, systems,
 compiler-pass, conformance, and native Linux ELF workflows.
+Use `29-first-version-completion-gate.md` before claiming AIL v0.1 complete.

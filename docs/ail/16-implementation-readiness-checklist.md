@@ -180,3 +180,8 @@ ready to claim a language MVP only when:
   accepted/rejected core fixtures, flow patches, traces, prompts, round trips,
   interop fixtures, and self-host fixtures.
 - The desired-outcome traceability matrix has no row supported only by prose.
+
+`29-first-version-completion-gate.md` is stricter than this MVP readiness
+checklist. Use it as the authority for claiming AIL v0.1 complete, because it
+requires current command evidence, release artifacts, manifests, fingerprints,
+and explicit post-v0.1 deferrals.
