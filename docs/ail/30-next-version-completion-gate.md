@@ -363,7 +363,8 @@ already covers parts of this gate:
   manifests record package dependency reports and fingerprints for
   imported-package graphs
 - imported action effects are rejected before bytecode lowering unless the root
-  package grants the local import alias or path that effect class
+  package grants the import alias, import path, or resolved package name for
+  that effect class
 - manifest preservation of capability grants
 - C binding parsing into `ExternalBinding` Core nodes
 - route parsing into UI Core nodes
@@ -373,7 +374,7 @@ already covers parts of this gate:
 
 Missing v0.2 evidence includes:
 
-- resolved package-name grant matching for registry imports
+- registry package fetching and registry identity resolution
 - standard library packages as first-class package fixtures
 - struct layout, callback, ownership-transfer, and unsafe-pointer FFI fixtures
 - UI forms, dashboards, workflows, accessibility diagnostics, and flow blocks

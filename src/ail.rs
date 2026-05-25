@@ -38,6 +38,7 @@ pub struct AilImportSpec {
     pub path: String,
     pub version: Option<String>,
     pub alias: String,
+    pub resolved_package: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -606,12 +607,13 @@ fn load_ail_package_dir_inner(
     let metadata_path = root.join("ail-package.md");
     let metadata_text = fs::read_to_string(&metadata_path)
         .map_err(|error| format!("failed to read {}: {error}", metadata_path.display()))?;
-    let metadata = parse_package_metadata(&metadata_text)?;
+    let mut metadata = parse_package_metadata(&metadata_text)?;
     let spec_path = root.join(&metadata.entry);
     let spec_text = fs::read_to_string(&spec_path)
         .map_err(|error| format!("failed to read {}: {error}", spec_path.display()))?;
     let mut imports = Vec::new();
-    for import in &metadata.imports {
+    for import_index in 0..metadata.imports.len() {
+        let import = metadata.imports[import_index].clone();
         let import_root = root.join(&import.path);
         let package = load_ail_package_dir_inner(&import_root, stack)?;
         if let Some(required_version) = &import.version
@@ -626,8 +628,9 @@ fn load_ail_package_dir_inner(
                 package.metadata.version
             ));
         }
+        metadata.imports[import_index].resolved_package = Some(package.metadata.name.clone());
         imports.push(AilLoadedImport {
-            spec: import.clone(),
+            spec: metadata.imports[import_index].clone(),
             package: Box::new(package),
         });
     }
@@ -3826,7 +3829,15 @@ fn render_import_specs(imports: &[AilImportSpec]) -> String {
                 .as_ref()
                 .map(|version| format!("@{version}"))
                 .unwrap_or_default();
-            format!("{}{} as {}", import.path, version, import.alias)
+            let resolved_package = import
+                .resolved_package
+                .as_ref()
+                .map(|package| format!(" resolved {package}"))
+                .unwrap_or_default();
+            format!(
+                "{}{} as {}{}",
+                import.path, version, import.alias, resolved_package
+            )
         })
         .collect::<Vec<_>>()
         .join(", ")
@@ -11055,7 +11066,19 @@ fn parse_import_specs(text: &str) -> Result<Vec<AilImportSpec>, String> {
             return Err(format!("AIL import '{entry}' must use '<path> as <Alias>'"));
         };
         let path = path.trim();
-        let alias = alias.trim();
+        let (alias, resolved_package) = match alias.trim().rsplit_once(" resolved ") {
+            Some((alias, resolved_package))
+                if !alias.trim().is_empty() && !resolved_package.trim().is_empty() =>
+            {
+                (alias.trim(), Some(resolved_package.trim().to_string()))
+            }
+            Some(_) => {
+                return Err(format!(
+                    "AIL import '{entry}' must use '<path> as <Alias> resolved <Package>'"
+                ));
+            }
+            None => (alias.trim(), None),
+        };
         if path.is_empty() || alias.is_empty() {
             return Err(format!("AIL import '{entry}' must use '<path> as <Alias>'"));
         }
@@ -11092,6 +11115,7 @@ fn parse_import_specs(text: &str) -> Result<Vec<AilImportSpec>, String> {
             path: path.to_string(),
             version,
             alias: alias.to_string(),
+            resolved_package,
         });
     }
     Ok(imports)
@@ -13631,13 +13655,18 @@ fn check_imported_action_effect_grants(core: &AilCore) -> Vec<AilDiagnostic> {
         }) else {
             continue;
         };
-        let is_granted = [import.alias.as_str(), import.path.as_str()]
-            .iter()
-            .any(|package| {
-                granted_effects
-                    .get(*package)
-                    .is_some_and(|effects| effects.contains(&effect.name))
-            });
+        let is_granted = [
+            Some(import.alias.as_str()),
+            Some(import.path.as_str()),
+            import.resolved_package.as_deref(),
+        ]
+        .into_iter()
+        .flatten()
+        .any(|package| {
+            granted_effects
+                .get(package)
+                .is_some_and(|effects| effects.contains(&effect.name))
+        });
         if is_granted {
             continue;
         }
