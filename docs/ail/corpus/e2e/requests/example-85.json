@@ -1,1 +1,24 @@
-{"artifact_kind": "ail-spec", "instruction": "Produce the stored AIL-Spec candidate for deterministic replay.", "prompt_file": "docs/ail/prompts/core-to-spec.system.md", "prompt_version": "ail-prompts.v0.2", "semantic_task": "c-interop-85"}
+{
+  "agent_contract": "docs/ail/corpus/e2e/agents/codex-ail-spec-writer.md",
+  "agent_contract_version": "0.1.0",
+  "codex_model": "codex-subagent-default",
+  "executor_label": "codex-ail-spec-writer",
+  "input": {
+    "package_manifest_file": "examples/c_interop.ail/ail-package.md",
+    "required_features": [
+      "host-interop",
+      "c-abi",
+      "external-bindings",
+      "capabilities",
+      "failures",
+      "traces",
+      "target-contract"
+    ],
+    "requirements_source": "inline checked requirements from active AIL v0.2 e2e capture session"
+  },
+  "package": "examples/c_interop.ail",
+  "profile": "System",
+  "prompt_file": "docs/ail/prompts/core-to-spec.system.md",
+  "prompt_version": "ail-prompts.v0.2",
+  "task": "Draft complete canonical AIL-Spec text for the C Interop package from checked requirements."
+}
