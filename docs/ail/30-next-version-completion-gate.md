@@ -359,6 +359,8 @@ already covers parts of this gate:
 - compatible local import range resolution and unbounded major range rejection
 - package dependency report records resolved import identities, source hashes,
   capability grants, approvals, and imported effect classes
+- `ail-build --artifact-dir` records package dependency reports and
+  fingerprints for imported-package graphs
 - manifest preservation of capability grants
 - C binding parsing into `ExternalBinding` Core nodes
 - route parsing into UI Core nodes
@@ -368,8 +370,8 @@ already covers parts of this gate:
 
 Missing v0.2 evidence includes:
 
-- CLI manifest integration for package dependency reports on imported-package
-  builds
+- `ail-lower`, `ail-conformance`, and `ail-compile` manifest integration for
+  package dependency reports on imported-package graphs
 - checker enforcement of imported capability grants
 - standard library packages as first-class package fixtures
 - struct layout, callback, ownership-transfer, and unsafe-pointer FFI fixtures

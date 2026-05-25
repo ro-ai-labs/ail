@@ -11,8 +11,8 @@ use ail::ail::{
     draft_ail_spec_from_requirements, elaborate_ail_core, load_ail_package_dir, parse_ail_bytecode,
     parse_ail_core_text, parse_ail_package_document, parse_ail_package_spec_text,
     parse_ail_patch_text, parse_ail_spec_text, render_ail_bytecode, render_ail_core,
-    render_ail_flow_view, render_ail_runtime_state_lines, render_ail_spec,
-    render_ail_spec_from_core, repair_ail_requirements_from_diagnostics,
+    render_ail_flow_view, render_ail_package_dependency_report, render_ail_runtime_state_lines,
+    render_ail_spec, render_ail_spec_from_core, repair_ail_requirements_from_diagnostics,
     repair_ail_spec_from_diagnostics, run_ail_bytecode_action, run_ail_compiler_pass_on_core,
     run_ail_conformance, verify_ail_bytecode,
 };
@@ -439,6 +439,7 @@ struct AilLowerAgentManifestRun {
 struct AilSourcePackageArtifacts {
     manifest_text: String,
     spec_text: String,
+    package_dependency_report_text: Option<String>,
 }
 
 struct AilBuildAgentStart {
@@ -821,6 +822,11 @@ fn load_ail_source_package_artifacts_with_spec_override(
         ));
     }
     let package = load_ail_package_dir(path)?;
+    let package_dependency_report_text = if package.imports.is_empty() {
+        None
+    } else {
+        Some(render_ail_package_dependency_report(&package)?)
+    };
     let manifest_path = package.root.join("ail-package.md");
     let manifest_text = fs::read_to_string(&manifest_path).map_err(|error| {
         format!(
@@ -838,6 +844,7 @@ fn load_ail_source_package_artifacts_with_spec_override(
     Ok(AilSourcePackageArtifacts {
         manifest_text: ensure_trailing_newline(manifest_text),
         spec_text: ensure_trailing_newline(spec_text),
+        package_dependency_report_text,
     })
 }
 
@@ -7176,15 +7183,24 @@ fn run_ail_build_from_core(
             } else {
                 None
             };
+        let package_dependency_report_text = source_artifacts
+            .and_then(|artifacts| artifacts.package_dependency_report_text.as_deref());
         let dependency_report_text = if let Some((target, _, executable)) = native_build.as_ref() {
-            Some(render_ail_build_dependency_report(
+            let build_dependency_report = render_ail_build_dependency_report(
                 target,
                 executable,
                 pass_native_artifacts.as_slice(),
                 agent_native_artifacts.as_slice(),
-            )?)
+            )?;
+            Some(
+                if let Some(package_dependency_report_text) = package_dependency_report_text {
+                    format!("{build_dependency_report}\n{package_dependency_report_text}")
+                } else {
+                    build_dependency_report
+                },
+            )
         } else {
-            None
+            package_dependency_report_text.map(str::to_string)
         };
         if let Some(agent_run) = agent_run.as_mut() {
             let manifest_text = render_ail_build_manifest(&AilBuildArtifactSet {

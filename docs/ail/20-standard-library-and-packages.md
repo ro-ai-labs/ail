@@ -85,7 +85,9 @@ The loader also exposes a package dependency report for resolved imports. The
 report records the root package, resolved import alias, declared path,
 requirement, resolved package name and version, source path, source hash,
 capability grants, approvals, and imported effect classes. This gives v0.2 a
-verifiable package-lock surface before registry resolution exists.
+verifiable package-lock surface before registry resolution exists. The
+`ail-build --artifact-dir` command writes this report and fingerprint into the
+build manifest when the source package imports other packages.
 
 ## Version Compatibility
 

@@ -16613,6 +16613,72 @@ fn cli_ail_build_accepts_saved_spec_file_artifact() {
 }
 
 #[test]
+fn cli_ail_build_records_dependency_report_for_imported_package_graph() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("support_composed.ail");
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-build-imported-package-dependencies-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-build",
+            &package,
+            "--spec-file",
+            &format!("{package}/spec.ail-spec.md"),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let dependency_report = fs::read_to_string(artifact_dir.join("dependency-report.txt")).unwrap();
+    assert!(
+        dependency_report.contains("AIL-Package-Dependency-Report:"),
+        "{dependency_report}"
+    );
+    assert!(
+        dependency_report.contains("root-package support-composed 0.1.0"),
+        "{dependency_report}"
+    );
+    assert!(
+        dependency_report.contains(
+            "resolved-import Shared path=../support_shared.ail requirement=none name=support-shared version=0.1.0"
+        ),
+        "{dependency_report}"
+    );
+    assert!(
+        dependency_report.contains("package-hash=ail-package:"),
+        "{dependency_report}"
+    );
+    let dependency_report_fingerprint =
+        fs::read_to_string(artifact_dir.join("dependency-report.fingerprint.txt")).unwrap();
+    assert_eq!(
+        dependency_report_fingerprint.trim(),
+        fnv64_fingerprint(&dependency_report)
+    );
+    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-build.txt")).unwrap();
+    assert!(
+        manifest.contains(&format!(
+            "dependencies dependency-report.txt {}",
+            fnv64_fingerprint(&dependency_report)
+        )),
+        "{manifest}"
+    );
+
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn cli_ail_build_saved_spec_can_emit_native_linux_x86_64_elf() {
     let binary = env!("CARGO_BIN_EXE_ail");
