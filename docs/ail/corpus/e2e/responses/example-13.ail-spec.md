@@ -15,4 +15,4 @@ When a support agent closes a ticket:
 - the system requires the ticket to exist
 - the system changes the ticket status to Closed
 - the system guarantees closed tickets are hidden from the active queue
-- the system records a trace event named TicketClosed
+- the system records a trace event named TicketClosedScenario013

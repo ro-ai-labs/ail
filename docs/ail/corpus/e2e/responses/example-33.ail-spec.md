@@ -43,7 +43,7 @@ When a customer creates a ticket:
 - the system records the customer as the ticket customer
 - the system records an initial public update
 - the system guarantees internal notes are empty and secret
-- the system records a trace event named TicketCreated
+- the system records a trace event named TicketCreatedScenario033
 
 Action: Assign ticket.
 
@@ -56,7 +56,7 @@ When a support agent assigns a ticket:
 - the system changes the status to Assigned
 - the system records a public update
 - the system guarantees the assignee can see internal notes
-- the system records a trace event named TicketAssigned
+- the system records a trace event named TicketAssignedScenario033
 
 Action: Close ticket.
 
@@ -68,7 +68,7 @@ When a support agent closes a ticket:
 - the system records a public update
 - the system does not reveal internal notes to the customer
 - the system guarantees closed tickets do not appear in the open ticket queue
-- the system records a trace event named TicketClosed
+- the system records a trace event named TicketClosedScenario033
 
 When the scheduler marks overdue tickets:
 
@@ -76,17 +76,17 @@ When the scheduler marks overdue tickets:
 - the system requires the current time to be later than due_at
 - the system changes the ticket status to Overdue
 - the system records a public update
-- the system records a trace event named TicketOverdue
+- the system records a trace event named TicketOverdueScenario033
 
 Failure NotFound happens when a ticket id does not match a stored ticket:
 
 - the system changes no ticket data
 - the caller sees "Ticket not found"
-- the trace records TicketNotFound
+- the trace records TicketNotFoundScenario033
 
 Failure PermissionDenied happens when a user tries to see internal notes without
 support staff permission:
 
 - the system reveals no secret value
 - the caller sees "Permission denied"
-- the trace records InternalNotesDenied
+- the trace records InternalNotesDeniedScenario033

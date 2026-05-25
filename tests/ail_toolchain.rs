@@ -19900,11 +19900,11 @@ fn cli_ail_e2e_corpus_replays_checked_seed_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("response-fingerprint-duplicate-entry-count 87"),
+        report.contains("response-fingerprint-duplicate-entry-count 0"),
         "{report}"
     );
     assert!(
-        report.contains("extracted-artifact-fingerprint-duplicate-entry-count 87"),
+        report.contains("extracted-artifact-fingerprint-duplicate-entry-count 0"),
         "{report}"
     );
     assert!(

@@ -21,9 +21,9 @@ When a requester views internal notes:
 - the system reads ticket internal notes
 - the system does not reveal internal notes to the customer
 - the system guarantees only support staff can see internal notes
-- the system records a trace event named InternalNotesViewed
+- the system records a trace event named InternalNotesViewedScenario077
 
 Failure PermissionDenied happens when requester role is not SupportAgent or SupportManager:
 
 - the caller sees "Permission denied"
-- the trace records InternalNotesDenied
+- the trace records InternalNotesDeniedScenario077

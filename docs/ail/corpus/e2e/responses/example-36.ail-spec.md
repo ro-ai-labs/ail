@@ -20,4 +20,4 @@ When a support agent prioritizes a ticket:
 - the system requires the ticket priority not to be High
 - the system changes the ticket priority to High
 - the system guarantees high priority tickets are handled first
-- the system records a trace event named TicketPrioritized
+- the system records a trace event named TicketPrioritizedScenario036

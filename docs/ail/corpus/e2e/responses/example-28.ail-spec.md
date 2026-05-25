@@ -28,7 +28,7 @@ compress2 requires capability:
 
 - call zlib compress2
 
-compress2 records trace event named ForeignCallCompress2
+compress2 records trace event named ForeignCallCompress2Scenario028
 
 C library: libc.
 
@@ -54,7 +54,7 @@ qsort requires capability:
 
 - call libc qsort
 
-qsort records trace event named ForeignCallbackCompared
+qsort records trace event named ForeignCallbackComparedScenario028
 
 System component: Packet header layout.
 
@@ -68,25 +68,25 @@ The component lays out:
 
 The component records:
 
-- PacketHeaderLayoutChecked
+- PacketHeaderLayoutCheckedScenario028
 
 Action: Compress payload.
 
 When compress payload happens:
 
-- the system records a trace event named PayloadCompressed
+- the system records a trace event named PayloadCompressedScenario028
 
 Failure OutOfMemory happens when zlib reports memory exhaustion:
 
 - the caller sees "Out of memory"
-- the trace records ForeignOutOfMemory
+- the trace records ForeignOutOfMemoryScenario028
 
 Failure OutputBufferTooSmall happens when zlib reports the output buffer is too small:
 
 - the caller sees "Output buffer too small"
-- the trace records ForeignOutputBufferTooSmall
+- the trace records ForeignOutputBufferTooSmallScenario028
 
 Failure InvalidComparator happens when libc rejects the callback comparator:
 
 - the caller sees "Invalid comparator"
-- the trace records ForeignInvalidComparator
+- the trace records ForeignInvalidComparatorScenario028

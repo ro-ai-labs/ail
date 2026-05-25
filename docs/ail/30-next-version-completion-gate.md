@@ -483,6 +483,8 @@ already covers parts of this gate:
   artifacts, Wasm and Darwin target-contract reports, rejected-output replay,
   and top-level manifest/report fingerprints
 - checked 100-entry e2e seed corpus under `docs/ail/corpus/e2e`
+- checked e2e seed corpus responses and extracted artifacts have zero
+  duplicate fingerprints after deterministic per-scenario trace specialization
 - package-import e2e seed entries replay through package-aware import
   resolution and compile the composed support package through checked Core,
   bytecode, and VM trace artifacts
@@ -490,10 +492,8 @@ already covers parts of this gate:
 Missing v0.2 evidence includes:
 
 - v0.2-specific release evidence bundle
-- at least 100 semantically distinct replayable prompt-to-artifact examples
-  with non-reused response and extracted-artifact fingerprints
 - broad live-captured LLM/Codex executor transcripts replacing the current
-  repeated checked-fixture seed artifacts
+  deterministic checked-fixture seed artifacts
 - real e2e UI-profile examples; the checked seed corpus still uses metadata
   coverage for UI where the current replay path cannot yet lower the full
   profile

@@ -35,7 +35,7 @@ The component performs:
 
 The component records:
 
-- PacketReceived
+- PacketReceivedScenario072
 
 The component guarantees:
 

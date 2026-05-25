@@ -42,7 +42,7 @@ The tool requires approval:
 
 The tool records:
 
-- RefundCustomerPaymentRequested
+- RefundCustomerPaymentRequestedScenario041
 
 The tool guarantees:
 
@@ -56,4 +56,4 @@ Failure ProviderRejected happens when PaymentProvider rejects the refund:
 - the system writes no successful RefundLedger entry
 - the customer is not notified automatically
 - a human review task is created
-- the trace records RefundProviderRejected
+- the trace records RefundProviderRejectedScenario041

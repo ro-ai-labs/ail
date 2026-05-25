@@ -26,10 +26,10 @@ When the compiler runs Infer read permissions:
 - if the read target contains Secret, the system emits a diagnostic instead of silently adding permission
 - the system guarantees it does not add write permissions
 - the system guarantees every added permission has provenance from this pass
-- the system records a trace event named ReadPermissionAdded
+- the system records a trace event named ReadPermissionAddedScenario060
 
 Failure SecretReadNeedsHumanConfirmation happens when a secret read has no explicit human-confirmed permission:
 
 - the system leaves the graph unchanged for that read
 - the system emits a diagnostic
-- the trace records SecretReadInferenceBlocked
+- the trace records SecretReadInferenceBlockedScenario060

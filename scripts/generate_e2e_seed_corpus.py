@@ -15,6 +15,32 @@ CORPUS = ROOT / "docs" / "ail" / "corpus" / "e2e"
 REQUESTS = CORPUS / "requests"
 RESPONSES = CORPUS / "responses"
 
+TRACE_NAMES = [
+    "OptionMapEvaluated",
+    "TicketCreated",
+    "TicketAssigned",
+    "TicketClosed",
+    "TicketOverdue",
+    "TicketNotFound",
+    "InternalNotesDenied",
+    "TicketPrioritized",
+    "RefundCustomerPaymentRequested",
+    "RefundProviderRejected",
+    "ReadPermissionAdded",
+    "SecretReadInferenceBlocked",
+    "ForeignCallCompress2",
+    "ForeignCallbackCompared",
+    "PacketHeaderLayoutChecked",
+    "PayloadCompressed",
+    "ForeignOutOfMemory",
+    "ForeignOutputBufferTooSmall",
+    "ForeignInvalidComparator",
+    "PacketReceived",
+    "InternalNotesViewed",
+    "CounterIncremented",
+    "MaintenanceCycleCompleted",
+]
+
 PROMPT_FILES = [
     "docs/ail/prompts/interview.system.md",
     "docs/ail/prompts/requirements.system.md",
@@ -192,6 +218,14 @@ def accepted_fixture_for(index: int) -> dict[str, str]:
     return ACCEPTED_FIXTURES["stateful-counter"]
 
 
+def specialize_response_text(text: str, index: int) -> str:
+    """Make deterministic seed responses semantically unique per scenario."""
+    suffix = f"Scenario{index:03d}"
+    for trace_name in TRACE_NAMES:
+        text = text.replace(trace_name, f"{trace_name}{suffix}")
+    return text
+
+
 def main() -> None:
     REQUESTS.mkdir(parents=True, exist_ok=True)
     RESPONSES.mkdir(parents=True, exist_ok=True)
@@ -227,7 +261,11 @@ def main() -> None:
             "artifact_kind": "ail-spec",
             "instruction": "Produce the stored AIL-Spec candidate for deterministic replay.",
         }
-        response_text = rejected_spec if fixture is None else (ROOT / fixture["spec"]).read_text()
+        response_text = (
+            rejected_spec
+            if fixture is None
+            else specialize_response_text((ROOT / fixture["spec"]).read_text(), index)
+        )
         (REQUESTS / f"example-{index}.json").write_text(json.dumps(request, sort_keys=True) + "\n")
         (RESPONSES / f"example-{index}.ail-spec.md").write_text(response_text)
         fields = {

@@ -11,11 +11,11 @@ Action: Increment counter.
 When increment counter happens:
 
 - the system increments the counter value by 1
-- the system records a trace event named CounterIncremented
+- the system records a trace event named CounterIncrementedScenario080
 
 Action: Run maintenance cycle.
 
 When run maintenance cycle happens:
 
 - the system repeats IncrementCounter 3 times
-- the system records a trace event named MaintenanceCycleCompleted
+- the system records a trace event named MaintenanceCycleCompletedScenario080

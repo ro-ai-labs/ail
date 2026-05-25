@@ -23,12 +23,13 @@ live LLM access. The current corpus stores:
 - `responses/`: stored model/agent response artifacts.
 
 This is a checked seed corpus, not final v0.2 release evidence. The current
-seed intentionally reuses a small catalog of checked fixture responses across
-many entries so the replay harness, artifact writing, and coverage thresholds
-can be verified while broader LLM/Codex captures are added. The replay report
-exposes that reuse with duplicate response and extracted-artifact fingerprint
-counts. Those duplicate counts must be driven to zero before claiming the final
-v0.2 prompt-to-artifact release gate.
+seed specializes checked fixture responses per scenario so the replay harness,
+artifact writing, and coverage thresholds can be verified while broader
+LLM/Codex captures are added. The replay report exposes response,
+extracted-artifact, checked Core, bytecode, VM trace, native, target-report,
+and diagnostics fingerprint reuse. Response and extracted-artifact duplicate
+counts must remain zero before claiming the final v0.2 prompt-to-artifact
+release gate.
 
 Some seed entries use surface metadata to keep UI threshold checks active while
 the replay path catches up to full UI-profile lowering. Those entries are

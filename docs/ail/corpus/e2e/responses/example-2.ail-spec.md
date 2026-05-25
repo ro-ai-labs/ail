@@ -53,4 +53,4 @@ When Option.map runs:
 - if the option is Some(value), the function calls mapper with value
 - the function returns Some(mapped value)
 - if the option is None, the function returns None
-- the function records a trace event named OptionMapEvaluated
+- the function records a trace event named OptionMapEvaluatedScenario002
