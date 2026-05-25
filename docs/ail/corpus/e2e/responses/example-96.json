@@ -1,0 +1,5 @@
+{
+  "agent": "codex-ail-spec-writer",
+  "content": "The application Stateful Counter manages a counter.\n\nA Counter has:\n\n- value: Int\n\nAction: Increment counter.\n\nWhen increment counter happens:\n\n- the system increments the counter value by 1\n- the system records a trace event named CounterIncrementedScenario096",
+  "model": "codex-subagent-default"
+}

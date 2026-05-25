@@ -686,24 +686,23 @@ runtime-state: ticket.id=T-1;ticket.priority=Low
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-36
-semantic-task: runtime-generic-36
+semantic-task: runtime-generic-live-codex-core-to-summary-36
 profile: Application
 surface-tags: core
 package: examples/runtime_generic.ail
 prompt-file: docs/ail/prompts/core-to-summary.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:49f26ec41d722633
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-36.json
-response-file: responses/example-36.ail-spec.md
+response-file: responses/example-36.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
 vm-action: PrioritizeTicket
 runtime-state: ticket.id=T-1;ticket.priority=Low
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-37
 semantic-task: runtime-generic-37
@@ -1651,23 +1650,22 @@ vm-action: CompressPayload
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-86
-semantic-task: c-interop-86
+semantic-task: c-interop-live-codex-core-to-summary-86
 profile: System
 surface-tags: core
 package: examples/c_interop.ail
 prompt-file: docs/ail/prompts/core-to-summary.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:49f26ec41d722633
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-86.json
-response-file: responses/example-86.ail-spec.md
+response-file: responses/example-86.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: wasm32-unknown-sandbox-wasm
 vm-action: CompressPayload
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-87
 semantic-task: c-interop-87
@@ -1845,24 +1843,23 @@ vm-action: IncrementCounter
 runtime-state: counter.value=0
 
 ## End-To-End Example: example-96
-semantic-task: stateful-counter-96
+semantic-task: stateful-counter-live-codex-core-to-summary-96
 profile: System
 surface-tags: core
 package: examples/stateful_counter.ail
 prompt-file: docs/ail/prompts/core-to-summary.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:49f26ec41d722633
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-96.json
-response-file: responses/example-96.ail-spec.md
+response-file: responses/example-96.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: vm
 vm-action: IncrementCounter
 runtime-state: counter.value=0
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-97
 semantic-task: stateful-counter-97
