@@ -807,28 +807,8 @@ fn ail_system_profile_lowers_to_verified_bytecode() {
 
 #[test]
 fn ail_spec_parses_function_surface_into_core_and_round_trips() {
-    let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
-    let spec = r#"The application Calculator manages arithmetic workflows.
-
-Function: factorial.
-
-The function needs:
-
-- n: Int
-
-The function produces:
-
-- result: Int
-
-When factorial runs:
-
-- if n is 0, the function returns 1
-- otherwise the function calls factorial with n minus 1
-- the function returns n multiplied by the recursive result
-- the function records a trace event named FactorialCalled
-"#;
-
-    let document = parse_ail_spec_text(spec).unwrap();
+    let package = load_ail_package_dir(fixture("recursive_factorial.ail")).unwrap();
+    let document = parse_ail_package_document(&package).unwrap();
     let core = elaborate_ail_core(&package, &document);
     assert_eq!(check_ail_core(&core), Vec::<String>::new());
     let rendered_core = render_ail_core(&core);
@@ -867,28 +847,8 @@ When factorial runs:
 
 #[test]
 fn ail_spec_lowers_function_surface_into_runnable_bytecode() {
-    let package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
-    let spec = r#"The application Calculator manages arithmetic workflows.
-
-Function: factorial.
-
-The function needs:
-
-- n: Int
-
-The function produces:
-
-- result: Int
-
-When factorial runs:
-
-- if n is 0, the function returns 1
-- otherwise the function calls factorial with n minus 1
-- the function returns n multiplied by the recursive result
-- the function records a trace event named FactorialCalled
-"#;
-
-    let document = parse_ail_spec_text(spec).unwrap();
+    let package = load_ail_package_dir(fixture("recursive_factorial.ail")).unwrap();
+    let document = parse_ail_package_document(&package).unwrap();
     let bytecode = compile_ail_bytecode(&package, &document).unwrap();
 
     assert!(bytecode.actions.contains_key("factorial"));
