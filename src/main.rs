@@ -1136,6 +1136,48 @@ fn ail_e2e_corpus_entry_from_fields(
             return Err(format!("e2e corpus entry {id} is missing {field}"));
         }
     }
+    let checker_result = fields
+        .get("checker-result")
+        .map(String::as_str)
+        .unwrap_or_default();
+    if !matches!(checker_result, "accepted" | "rejected") {
+        return Err(format!(
+            "e2e corpus entry {id} has unknown checker-result {checker_result}"
+        ));
+    }
+    let target = fields.get("target").map(String::as_str).unwrap_or_default();
+    if !matches!(
+        target,
+        "vm" | "linux-x86_64-elf"
+            | "wasm32-unknown-sandbox-wasm"
+            | "aarch64-apple-darwin-libsystem-macho"
+    ) {
+        return Err(format!("e2e corpus entry {id} has unknown target {target}"));
+    }
+    let executor_family = fields
+        .get("executor-family")
+        .map(String::as_str)
+        .unwrap_or_default();
+    if !matches!(
+        executor_family,
+        "llm-http" | "ail-toolchain-agent" | "codex-skill-agent"
+    ) {
+        return Err(format!(
+            "e2e corpus entry {id} has unknown executor-family {executor_family}"
+        ));
+    }
+    let artifact_kind = fields
+        .get("artifact-kind")
+        .map(String::as_str)
+        .unwrap_or_default();
+    if !matches!(
+        artifact_kind,
+        "ail-requirements" | "ail-spec" | "ail-core" | "ail-flow-patch"
+    ) {
+        return Err(format!(
+            "e2e corpus entry {id} has unknown artifact-kind {artifact_kind}"
+        ));
+    }
     if fields
         .get("checker-result")
         .is_some_and(|result| result == "rejected")
@@ -1151,6 +1193,27 @@ fn ail_e2e_corpus_entry_from_fields(
         source_file: source_file.to_string(),
         fields: fields.clone(),
     })
+}
+
+fn validate_ail_e2e_corpus_transcript_files(entries: &[AilE2eCorpusEntry]) -> Result<(), String> {
+    for entry in entries {
+        let source_dir = std::path::Path::new(&entry.source_file)
+            .parent()
+            .unwrap_or_else(|| std::path::Path::new("."));
+        for field in ["request-file", "response-file"] {
+            let Some(path) = entry.fields.get(field) else {
+                continue;
+            };
+            let resolved_path = source_dir.join(path);
+            if !resolved_path.is_file() {
+                return Err(format!(
+                    "e2e corpus entry {} {field} {path} is missing",
+                    entry.id
+                ));
+            }
+        }
+    }
+    Ok(())
 }
 
 fn render_ail_e2e_corpus_report(entries: &[AilE2eCorpusEntry]) -> String {
@@ -1245,6 +1308,7 @@ fn run_ail_e2e_corpus_command(path: &str, cli_options: &CliOptions) -> Result<u8
         ));
     }
     validate_ail_e2e_corpus_release_coverage(&entries)?;
+    validate_ail_e2e_corpus_transcript_files(&entries)?;
     let report_text = render_ail_e2e_corpus_report(&entries);
     write_ail_e2e_corpus_artifacts(artifact_dir, &report_text)?;
     print!("{report_text}");

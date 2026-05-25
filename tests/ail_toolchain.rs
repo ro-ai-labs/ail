@@ -40,6 +40,80 @@ fn fnv64_fingerprint_bytes(bytes: &[u8]) -> String {
     format!("fnv64:{hash:016x}")
 }
 
+fn e2e_corpus_entry_text(index: usize, overrides: &[(&str, &str)]) -> String {
+    let prompt_files = [
+        "docs/ail/prompts/interview.system.md",
+        "docs/ail/prompts/requirements.system.md",
+        "docs/ail/prompts/spec-draft.system.md",
+        "docs/ail/prompts/core-draft.system.md",
+        "docs/ail/prompts/diagnostic-repair.system.md",
+        "docs/ail/prompts/core-to-spec.system.md",
+        "docs/ail/prompts/core-to-summary.system.md",
+        "docs/ail/prompts/flow-patch.system.md",
+        "docs/ail/prompts/trace-debug.system.md",
+        "docs/ail/prompts/interop.system.md",
+    ];
+    let prompt_file = prompt_files[index % prompt_files.len()];
+    let executor_family = if index == 99 {
+        "codex-skill-agent"
+    } else {
+        "llm-http"
+    };
+    let mut fields = BTreeMap::from([
+        ("semantic-task", format!("support-ticket-{index}")),
+        ("profile", "Application".to_string()),
+        ("package", "examples/support_ticket.ail".to_string()),
+        ("prompt-file", prompt_file.to_string()),
+        ("prompt-fingerprint", format!("fnv64:prompt-{index}")),
+        ("executor-family", executor_family.to_string()),
+        ("executor-label", "local-executor".to_string()),
+        ("endpoint-label", "local-endpoint".to_string()),
+        ("request-file", format!("requests/example-{index}.json")),
+        ("response-file", format!("responses/example-{index}.json")),
+        ("artifact-kind", "ail-spec".to_string()),
+        ("checker-result", "accepted".to_string()),
+        ("target", "linux-x86_64-elf".to_string()),
+    ]);
+    for (key, value) in overrides {
+        fields.insert(key, (*value).to_string());
+    }
+    let mut text = format!("## End-To-End Example: example-{index}\n");
+    for (key, value) in fields {
+        text.push_str(&format!("{key}: {value}\n"));
+    }
+    text.push('\n');
+    text
+}
+
+fn e2e_corpus_text_with_override(index_to_override: usize, overrides: &[(&str, &str)]) -> String {
+    let mut corpus_text = String::new();
+    for index in 0..100 {
+        if index == index_to_override {
+            corpus_text.push_str(&e2e_corpus_entry_text(index, overrides));
+        } else {
+            corpus_text.push_str(&e2e_corpus_entry_text(index, &[]));
+        }
+    }
+    corpus_text
+}
+
+fn write_e2e_transcript_files(root: &std::path::Path, count: usize) {
+    fs::create_dir_all(root.join("requests")).unwrap();
+    fs::create_dir_all(root.join("responses")).unwrap();
+    for index in 0..count {
+        fs::write(
+            root.join("requests").join(format!("example-{index}.json")),
+            format!(r#"{{"prompt":"example-{index}"}}"#),
+        )
+        .unwrap();
+        fs::write(
+            root.join("responses").join(format!("example-{index}.json")),
+            format!(r#"{{"artifact":"example-{index}"}}"#),
+        )
+        .unwrap();
+    }
+}
+
 fn detailed_ail_diagnostic(core: &ail::ail::AilCore, code: &str, message: &str) -> String {
     check_ail_core_diagnostics(core)
         .into_iter()
@@ -20015,6 +20089,193 @@ fn cli_ail_e2e_corpus_requires_full_prompt_pack_coverage() {
         stderr.contains("ail-e2e-corpus requires prompt-file docs/ail/prompts/interview.system.md"),
         "{stderr}"
     );
+
+    let _ = fs::remove_dir_all(corpus_dir);
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
+fn cli_ail_e2e_corpus_rejects_unknown_target() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let corpus_dir = std::env::temp_dir().join(format!(
+        "ail-e2e-corpus-unknown-target-{}",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-e2e-corpus-unknown-target-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&corpus_dir);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&corpus_dir).unwrap();
+    fs::write(
+        corpus_dir.join("examples.md"),
+        e2e_corpus_text_with_override(0, &[("target", "unknown-target")]),
+    )
+    .unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-e2e-corpus",
+            corpus_dir.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("e2e corpus entry example-0 has unknown target unknown-target"),
+        "{stderr}"
+    );
+
+    let _ = fs::remove_dir_all(corpus_dir);
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
+fn cli_ail_e2e_corpus_rejects_unknown_checker_result() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let corpus_dir = std::env::temp_dir().join(format!(
+        "ail-e2e-corpus-unknown-checker-{}",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-e2e-corpus-unknown-checker-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&corpus_dir);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&corpus_dir).unwrap();
+    fs::write(
+        corpus_dir.join("examples.md"),
+        e2e_corpus_text_with_override(0, &[("checker-result", "maybe")]),
+    )
+    .unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-e2e-corpus",
+            corpus_dir.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("e2e corpus entry example-0 has unknown checker-result maybe"),
+        "{stderr}"
+    );
+
+    let _ = fs::remove_dir_all(corpus_dir);
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
+fn cli_ail_e2e_corpus_requires_stored_request_and_response_files() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let corpus_dir = std::env::temp_dir().join(format!(
+        "ail-e2e-corpus-missing-transcript-{}",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-e2e-corpus-missing-transcript-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&corpus_dir);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&corpus_dir).unwrap();
+    fs::write(
+        corpus_dir.join("examples.md"),
+        e2e_corpus_text_with_override(0, &[]),
+    )
+    .unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-e2e-corpus",
+            corpus_dir.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr
+            .contains("e2e corpus entry example-0 request-file requests/example-0.json is missing"),
+        "{stderr}"
+    );
+
+    let _ = fs::remove_dir_all(corpus_dir);
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
+fn cli_ail_e2e_corpus_writes_report_for_metadata_complete_corpus() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let corpus_dir = std::env::temp_dir().join(format!(
+        "ail-e2e-corpus-complete-metadata-{}",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-e2e-corpus-complete-metadata-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&corpus_dir);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&corpus_dir).unwrap();
+    write_e2e_transcript_files(&corpus_dir, 100);
+    fs::write(
+        corpus_dir.join("examples.md"),
+        e2e_corpus_text_with_override(0, &[]),
+    )
+    .unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-e2e-corpus",
+            corpus_dir.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let report = fs::read_to_string(artifact_dir.join("e2e-corpus-report.txt")).unwrap();
+    assert!(report.contains("AIL-End-To-End-Corpus-Report:"), "{report}");
+    assert!(report.contains("entry-count 100"), "{report}");
+    assert!(
+        report.contains("executor-family codex-skill-agent"),
+        "{report}"
+    );
+    let report_fingerprint =
+        fs::read_to_string(artifact_dir.join("e2e-corpus-report.fingerprint.txt")).unwrap();
+    assert_eq!(report_fingerprint.trim(), fnv64_fingerprint(&report));
 
     let _ = fs::remove_dir_all(corpus_dir);
     let _ = fs::remove_dir_all(artifact_dir);
