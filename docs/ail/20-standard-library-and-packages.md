@@ -115,6 +115,9 @@ capability-grants:
 ```
 
 The checker rejects imported actions that use effects outside their grants.
+For local imports in the current v0.2 slice, the grant `package` field may name
+the import alias or import path; resolved package-name grant matching remains
+part of the registry package resolver work.
 
 ## Standard Library Modules
 

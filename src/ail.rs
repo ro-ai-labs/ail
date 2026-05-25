@@ -3474,6 +3474,7 @@ pub fn check_ail_core_diagnostics(core: &AilCore) -> Vec<AilDiagnostic> {
     diagnostics.extend(check_trace_attachment(core));
     diagnostics.extend(check_rule_attachment(core));
     diagnostics.extend(check_effect_attachment(core));
+    diagnostics.extend(check_imported_action_effect_grants(core));
     diagnostics.extend(check_secret_attachment(core));
     diagnostics.extend(check_tool_trace_coverage(core));
     diagnostics.extend(check_tool_approval_mentions(core));
@@ -13591,6 +13592,77 @@ fn check_effect_attachment(core: &AilCore) -> Vec<AilDiagnostic> {
             ))
         })
         .collect()
+}
+
+fn check_imported_action_effect_grants(core: &AilCore) -> Vec<AilDiagnostic> {
+    let node_by_id = graph_node_by_id(core);
+    let mut granted_effects = BTreeMap::<String, BTreeSet<String>>::new();
+    for grant in &core.package.capability_grants {
+        granted_effects
+            .entry(grant.package.clone())
+            .or_default()
+            .extend(grant.effects.iter().cloned());
+    }
+
+    let mut diagnostics = Vec::new();
+    for edge in core.graph.edges.iter().filter(|edge| {
+        matches!(
+            edge.kind.as_str(),
+            "reads" | "writes" | "calls" | "protects_secret" | "repeats"
+        )
+    }) {
+        let Some(action) = node_by_id.get(&edge.source) else {
+            continue;
+        };
+        if action.kind != "Action" {
+            continue;
+        }
+        let Some(effect) = node_by_id.get(&edge.target) else {
+            continue;
+        };
+        if effect.kind != "Effect" {
+            continue;
+        }
+        let Some(import) = core.package.imports.iter().find(|import| {
+            action
+                .name
+                .strip_prefix(&format!("{}.", import.alias))
+                .is_some()
+        }) else {
+            continue;
+        };
+        let is_granted = [import.alias.as_str(), import.path.as_str()]
+            .iter()
+            .any(|package| {
+                granted_effects
+                    .get(*package)
+                    .is_some_and(|effects| effects.contains(&effect.name))
+            });
+        if is_granted {
+            continue;
+        }
+        diagnostics.push(
+            AilDiagnostic::error(
+                "AIL-PACKAGE-001",
+                format!(
+                    "imported action {} uses effect '{}' without a capability grant for import {}",
+                    action.name, effect.name, import.alias
+                ),
+            )
+            .with_source_provenance(
+                edge.attributes
+                    .get("provenance")
+                    .cloned()
+                    .or_else(|| node_provenance(core, &effect.id)),
+            )
+            .with_affected_graph_item(format!("edge:{}", edge.id))
+            .with_repair_suggestion(format!(
+                "Add a capability-grants entry for package {} with effect '{}'.",
+                import.alias, effect.name
+            )),
+        );
+    }
+    diagnostics
 }
 
 fn check_secret_attachment(core: &AilCore) -> Vec<AilDiagnostic> {

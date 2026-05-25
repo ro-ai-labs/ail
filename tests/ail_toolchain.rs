@@ -1972,6 +1972,91 @@ conformance: first-slice
 }
 
 #[test]
+fn cli_ail_package_rejects_imported_effect_without_capability_grant() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let unique_suffix = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let root = std::env::temp_dir().join(format!(
+        "ail-imported-effect-without-grant-{}-{unique_suffix}",
+        std::process::id()
+    ));
+    let shared = root.join("shared");
+    let app = root.join("app");
+    fs::create_dir_all(&shared).unwrap();
+    fs::create_dir_all(&app).unwrap();
+    fs::write(
+        shared.join("ail-package.md"),
+        r#"name: shared-net
+version: 0.1.0
+profile: Application
+entry: spec.ail-spec.md
+features: actions
+conformance: first-slice
+"#,
+    )
+    .unwrap();
+    fs::write(
+        shared.join("spec.ail-spec.md"),
+        r#"The application Shared Net manages shared network operations.
+
+Action: Send packet.
+
+When a service sends a packet:
+
+- the system changes network
+- the system records a trace event named PacketSent
+"#,
+    )
+    .unwrap();
+    fs::write(
+        app.join("ail-package.md"),
+        r#"name: app
+version: 0.1.0
+profile: Application
+entry: spec.ail-spec.md
+features: imports
+imports: ../shared as Shared
+conformance: first-slice
+"#,
+    )
+    .unwrap();
+    fs::write(
+        app.join("spec.ail-spec.md"),
+        "The application App manages imported behavior.\n",
+    )
+    .unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-build",
+            app.to_str().unwrap(),
+            "--spec-file",
+            app.join("spec.ail-spec.md").to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    assert!(
+        !output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("AIL-PACKAGE-001")
+            && stdout.contains("Shared.SendPacket")
+            && stdout.contains("network")
+            && stdout.contains("capability grant"),
+        "{stdout}"
+    );
+
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn ail_package_loader_rejects_duplicate_import_aliases() {
     let unique_suffix = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)

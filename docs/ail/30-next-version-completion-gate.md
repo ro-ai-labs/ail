@@ -361,6 +361,8 @@ already covers parts of this gate:
   capability grants, approvals, and imported effect classes
 - `ail-build --artifact-dir` records package dependency reports and
   fingerprints for imported-package graphs
+- imported action effects are rejected before bytecode lowering unless the root
+  package grants the local import alias or path that effect class
 - manifest preservation of capability grants
 - C binding parsing into `ExternalBinding` Core nodes
 - route parsing into UI Core nodes
@@ -372,7 +374,7 @@ Missing v0.2 evidence includes:
 
 - `ail-lower`, `ail-conformance`, and `ail-compile` manifest integration for
   package dependency reports on imported-package graphs
-- checker enforcement of imported capability grants
+- resolved package-name grant matching for registry imports
 - standard library packages as first-class package fixtures
 - struct layout, callback, ownership-transfer, and unsafe-pointer FFI fixtures
 - UI forms, dashboards, workflows, accessibility diagnostics, and flow blocks
