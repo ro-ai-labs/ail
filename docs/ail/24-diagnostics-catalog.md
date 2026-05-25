@@ -50,6 +50,10 @@ severity, blocking behavior, and at least one invalid fixture.
 | `AIL-CONTROL-002` | `ail.runtime.match.exhaustive` | match over finite variants is non-exhaustive | error | yes | cover every variant |
 | `AIL-CONTROL-003` | `ail.runtime.termination.proven` | termination-required profile has unproven recursion or loop | error | yes | add proof, bound, or profile policy |
 | `AIL-FFI-OWNERSHIP-001` | `ail.ffi.pointer.borrowed-no-escape` | borrowed C pointer escapes call boundary | error | yes | use owned pointer or remove escape |
+| `AIL-FFI-OWNERSHIP-002` | `ail.ffi.pointer.owned-release` | owned C pointer lacks release semantics | error | yes | add release semantics |
+| `AIL-FFI-NULL-001` | `ail.ffi.pointer.non-null` | nullable value flows into NonNull pointer contract | error | yes | use nullable type or remove nullable marker |
+| `AIL-FFI-ALIAS-001` | `ail.ffi.pointer.mutable-alias` | multiple mutable borrowed pointers share an alias group | error | yes | split alias group or pass one mutable pointer |
+| `AIL-FFI-SECRET-001` | `ail.ffi.secret.boundary` | secret value crosses foreign boundary without redaction semantics | error | yes | remove secret type or mark boundary redacted |
 | `AIL-FFI-ERRNO-001` | `ail.ffi.errno.mapped` | C error code or errno is unmapped | error | yes | map to declared failure |
 | `AIL-SYSTEM-CAP-001` | `ail.system.effect.requires-capability` | system effect lacks matching capability | error | yes | add capability or remove effect |
 | `AIL-SYSTEM-REGION-001` | `ail.system.resource.requires-region` | resource effect lacks region placement | error | yes | declare resource region |

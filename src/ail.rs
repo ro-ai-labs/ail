@@ -3953,6 +3953,10 @@ pub fn check_ail_core_diagnostics(core: &AilCore) -> Vec<AilDiagnostic> {
     diagnostics.extend(check_external_binding_trace_coverage(core));
     diagnostics.extend(check_external_binding_status_maps(core));
     diagnostics.extend(check_external_binding_pointer_ownership(core));
+    diagnostics.extend(check_external_binding_owned_pointer_release(core));
+    diagnostics.extend(check_external_binding_nullable_non_null(core));
+    diagnostics.extend(check_external_binding_mutable_aliases(core));
+    diagnostics.extend(check_external_binding_secret_leakage(core));
     diagnostics.extend(check_ui_form_action_targets(core));
     diagnostics.extend(check_ui_dashboard_permissions(core));
     diagnostics.extend(check_ui_form_accessibility(core));
@@ -14454,6 +14458,222 @@ fn check_external_binding_pointer_ownership(core: &AilCore) -> Vec<AilDiagnostic
         }
     }
     diagnostics
+}
+
+fn check_external_binding_owned_pointer_release(core: &AilCore) -> Vec<AilDiagnostic> {
+    let node_by_id = graph_node_by_id(core);
+    let mut diagnostics = Vec::new();
+    for edge in core
+        .graph
+        .edges
+        .iter()
+        .filter(|edge| matches!(edge.kind.as_str(), "has_input" | "has_output"))
+    {
+        let Some(binding) = node_by_id.get(&edge.source) else {
+            continue;
+        };
+        if binding.kind != "ExternalBinding" {
+            continue;
+        }
+        let Some(value) = node_by_id.get(&edge.target) else {
+            continue;
+        };
+        let ownership = value
+            .attributes
+            .get("ownership")
+            .map(String::as_str)
+            .unwrap_or("");
+        if ownership_contains_token(ownership, "owned") && !ownership.contains("release") {
+            diagnostics.push(
+                AilDiagnostic::error(
+                    "AIL-FFI-OWNERSHIP-002",
+                    format!(
+                        "owned pointer {} crosses C boundary without release semantics",
+                        value.name
+                    ),
+                )
+                .with_source_provenance(node_provenance(core, &value.id))
+                .with_affected_graph_item(format!("node:{}", value.id))
+                .with_repair_suggestion(format!(
+                    "Add release semantics such as 'owned release free' to {}.",
+                    value.name
+                )),
+            );
+        }
+    }
+    diagnostics
+}
+
+fn check_external_binding_nullable_non_null(core: &AilCore) -> Vec<AilDiagnostic> {
+    let node_by_id = graph_node_by_id(core);
+    let mut diagnostics = Vec::new();
+    for edge in core
+        .graph
+        .edges
+        .iter()
+        .filter(|edge| matches!(edge.kind.as_str(), "has_input" | "has_output"))
+    {
+        let Some(binding) = node_by_id.get(&edge.source) else {
+            continue;
+        };
+        if binding.kind != "ExternalBinding" {
+            continue;
+        }
+        let Some(value) = node_by_id.get(&edge.target) else {
+            continue;
+        };
+        let ownership = value
+            .attributes
+            .get("ownership")
+            .map(String::as_str)
+            .unwrap_or("");
+        if value
+            .type_name
+            .as_deref()
+            .is_some_and(|type_name| type_name.starts_with("NonNull<"))
+            && ownership_contains_token(ownership, "nullable")
+        {
+            diagnostics.push(
+                AilDiagnostic::error(
+                    "AIL-FFI-NULL-001",
+                    format!(
+                        "nullable value {} cannot satisfy NonNull pointer contract",
+                        value.name
+                    ),
+                )
+                .with_source_provenance(node_provenance(core, &value.id))
+                .with_affected_graph_item(format!("node:{}", value.id))
+                .with_repair_suggestion(format!(
+                    "Use Nullable<Pointer<T>> or remove the nullable ownership marker from {}.",
+                    value.name
+                )),
+            );
+        }
+    }
+    diagnostics
+}
+
+fn check_external_binding_mutable_aliases(core: &AilCore) -> Vec<AilDiagnostic> {
+    let node_by_id = graph_node_by_id(core);
+    let mut diagnostics = Vec::new();
+    for binding in core
+        .graph
+        .nodes
+        .iter()
+        .filter(|node| node.kind == "ExternalBinding")
+    {
+        let mut mutable_aliases = BTreeMap::<String, Vec<Node>>::new();
+        for edge in core
+            .graph
+            .edges
+            .iter()
+            .filter(|edge| edge.kind == "has_input" && edge.source == binding.id)
+        {
+            let Some(input) = node_by_id.get(&edge.target) else {
+                continue;
+            };
+            let ownership = input
+                .attributes
+                .get("ownership")
+                .map(String::as_str)
+                .unwrap_or("");
+            if ownership.contains("borrowed mutable")
+                && let Some(alias) = ownership_alias_group(ownership)
+            {
+                mutable_aliases
+                    .entry(alias.to_string())
+                    .or_default()
+                    .push(input.clone());
+            }
+        }
+        for (alias, inputs) in mutable_aliases {
+            if inputs.len() < 2 {
+                continue;
+            }
+            let names = inputs
+                .iter()
+                .map(|input| input.name.clone())
+                .collect::<Vec<_>>()
+                .join(", ");
+            diagnostics.push(
+                AilDiagnostic::error(
+                    "AIL-FFI-ALIAS-001",
+                    format!(
+                        "external binding {} has aliased mutable pointer group {} across {}",
+                        binding.name, alias, names
+                    ),
+                )
+                .with_source_provenance(node_provenance(core, &inputs[0].id))
+                .with_affected_graph_item(format!("node:{}", inputs[0].id))
+                .with_repair_suggestion(format!(
+                    "Split mutable alias group {} or pass only one mutable borrowed pointer.",
+                    alias
+                )),
+            );
+        }
+    }
+    diagnostics
+}
+
+fn check_external_binding_secret_leakage(core: &AilCore) -> Vec<AilDiagnostic> {
+    let node_by_id = graph_node_by_id(core);
+    let mut diagnostics = Vec::new();
+    for edge in core
+        .graph
+        .edges
+        .iter()
+        .filter(|edge| matches!(edge.kind.as_str(), "has_input" | "has_output"))
+    {
+        let Some(binding) = node_by_id.get(&edge.source) else {
+            continue;
+        };
+        if binding.kind != "ExternalBinding" {
+            continue;
+        }
+        let Some(value) = node_by_id.get(&edge.target) else {
+            continue;
+        };
+        let type_name = value.type_name.as_deref().unwrap_or("");
+        let ownership = value
+            .attributes
+            .get("ownership")
+            .map(String::as_str)
+            .unwrap_or("");
+        if type_contains_secret(type_name) && !ownership.contains("redacted") {
+            diagnostics.push(
+                AilDiagnostic::error(
+                    "AIL-FFI-SECRET-001",
+                    format!(
+                        "secret value {} crosses foreign boundary without redaction semantics",
+                        value.name
+                    ),
+                )
+                .with_source_provenance(node_provenance(core, &value.id))
+                .with_affected_graph_item(format!("node:{}", value.id))
+                .with_repair_suggestion(format!(
+                    "Remove secret type from {} or mark the boundary as redacted.",
+                    value.name
+                )),
+            );
+        }
+    }
+    diagnostics
+}
+
+fn ownership_contains_token(ownership: &str, token: &str) -> bool {
+    ownership
+        .split(|ch: char| !ch.is_ascii_alphanumeric() && ch != '_')
+        .any(|part| part.eq_ignore_ascii_case(token))
+}
+
+fn ownership_alias_group(ownership: &str) -> Option<&str> {
+    let mut parts = ownership.split_whitespace();
+    while let Some(part) = parts.next() {
+        if part == "alias" {
+            return parts.next();
+        }
+    }
+    None
 }
 
 fn check_ui_form_action_targets(core: &AilCore) -> Vec<AilDiagnostic> {

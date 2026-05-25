@@ -168,11 +168,11 @@ Evidence:
   through `struct-layout-minimal.ail-spec.md`.
 - Callback fixtures record lifetime, noescape ownership, allowed effects, and
   failure propagation through the `libc.qsort` binding.
-- Ownership-transfer fixtures require release semantics.
+- Ownership-transfer fixtures require release semantics through
+  `owned-pointer-release-minimal.ail-spec.md`.
 - Rejected fixtures cover borrowed pointer escape, nullable-to-non-null
   mismatch, mutable pointer aliasing, missing status map, missing trace, and
-  secret leakage across a foreign boundary. Current evidence includes rejected
-  borrowed-pointer escape, missing status-map, and missing trace fixtures.
+  secret leakage across a foreign boundary.
 - Wasm contract reports enumerate all host imports and preserve trace
   requirements.
 - Contract evidence records foreign-call traces for deterministic host-boundary
@@ -185,7 +185,12 @@ cargo test ail_c_interop_import_parses_into_external_binding_core
 cargo test cli_ail_compile_wasm_contract_enumerates_external_bindings
 cargo test cli_ail_ffi_checks_struct_layout_fixture
 cargo test cli_ail_ffi_checks_callback_lifetime_fixture
+cargo test cli_ail_ffi_accepts_owned_pointer_release_fixture
 cargo test cli_ail_ffi_rejects_borrowed_pointer_escape
+cargo test cli_ail_ffi_rejects_owned_pointer_without_release
+cargo test cli_ail_ffi_rejects_nullable_to_non_null_mismatch
+cargo test cli_ail_ffi_rejects_mutable_pointer_aliasing
+cargo test cli_ail_ffi_rejects_secret_leakage
 cargo test cli_ail_ffi_rejects_missing_status_map
 cargo test cli_ail_ffi_records_foreign_call_trace_contract
 ```
@@ -405,8 +410,6 @@ already covers parts of this gate:
 Missing v0.2 evidence includes:
 
 - registry package fetching and registry identity resolution
-- ownership-transfer, nullable/non-null, mutable pointer aliasing, and
-  secret-leakage FFI fixtures
 - Darwin Mach-O contract artifacts
 - stored prompt portability corpus across model labels
 - v0.2-specific release evidence bundle

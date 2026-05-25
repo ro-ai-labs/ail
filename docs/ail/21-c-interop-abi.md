@@ -138,14 +138,13 @@ Pointer forms:
 - `Nullable<Pointer<T>>`: null allowed
 - `NonNull<Pointer<T>>`: null rejected before call
 
-An owned pointer must declare a release rule:
+An owned pointer must declare release semantics. The current canonical fixture
+spells this inline on the owned value:
 
 ```text
-owned pointer release:
+strdup produces:
 
-- release function: free
-- release responsibility: caller after success
-- failure release behavior: caller retains ownership
+- duplicate: Pointer<CChar> owned release free
 ```
 
 The checker rejects:
@@ -278,12 +277,21 @@ Diagnostic:
 
 ```text
 AIL-FFI-OWNERSHIP-001 borrowed pointer cannot escape the call boundary
+AIL-FFI-OWNERSHIP-002 owned pointer crosses C boundary without release semantics
+AIL-FFI-NULL-001 nullable value cannot satisfy NonNull pointer contract
+AIL-FFI-ALIAS-001 aliased mutable pointer group
+AIL-FFI-SECRET-001 secret value crosses foreign boundary without redaction semantics
 ```
 
 Current checker evidence includes:
 
 - `cli_ail_ffi_checks_struct_layout_fixture`
 - `cli_ail_ffi_checks_callback_lifetime_fixture`
+- `cli_ail_ffi_accepts_owned_pointer_release_fixture`
 - `cli_ail_ffi_rejects_borrowed_pointer_escape`
+- `cli_ail_ffi_rejects_owned_pointer_without_release`
+- `cli_ail_ffi_rejects_nullable_to_non_null_mismatch`
+- `cli_ail_ffi_rejects_mutable_pointer_aliasing`
+- `cli_ail_ffi_rejects_secret_leakage`
 - `cli_ail_ffi_rejects_missing_status_map`
 - `cli_ail_ffi_records_foreign_call_trace_contract`

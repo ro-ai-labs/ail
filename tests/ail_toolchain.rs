@@ -1075,6 +1075,107 @@ fn cli_ail_ffi_rejects_missing_status_map() {
 }
 
 #[test]
+fn cli_ail_ffi_accepts_owned_pointer_release_fixture() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let output = Command::new(binary)
+        .args(["ail-conformance", &fixture("c_interop.ail")])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("accepted: owned-pointer-release-minimal.ail-spec.md"),
+        "{stdout}"
+    );
+}
+
+#[test]
+fn cli_ail_ffi_rejects_owned_pointer_without_release() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let output = Command::new(binary)
+        .args(["ail-conformance", &fixture("c_interop.ail")])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout
+            .contains("rejected: owned-pointer-without-release.ail-spec.md AIL-FFI-OWNERSHIP-002"),
+        "{stdout}"
+    );
+}
+
+#[test]
+fn cli_ail_ffi_rejects_nullable_to_non_null_mismatch() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let output = Command::new(binary)
+        .args(["ail-conformance", &fixture("c_interop.ail")])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("rejected: nullable-to-non-null.ail-spec.md AIL-FFI-NULL-001"),
+        "{stdout}"
+    );
+}
+
+#[test]
+fn cli_ail_ffi_rejects_mutable_pointer_aliasing() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let output = Command::new(binary)
+        .args(["ail-conformance", &fixture("c_interop.ail")])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("rejected: mutable-pointer-aliasing.ail-spec.md AIL-FFI-ALIAS-001"),
+        "{stdout}"
+    );
+}
+
+#[test]
+fn cli_ail_ffi_rejects_secret_leakage() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let output = Command::new(binary)
+        .args(["ail-conformance", &fixture("c_interop.ail")])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("rejected: secret-leakage.ail-spec.md AIL-FFI-SECRET-001"),
+        "{stdout}"
+    );
+}
+
+#[test]
 fn cli_ail_ffi_records_foreign_call_trace_contract() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let unique_suffix = std::time::SystemTime::now()
