@@ -19950,6 +19950,66 @@ fn cli_ail_e2e_corpus_requires_replay_metadata() {
 }
 
 #[test]
+fn cli_ail_e2e_corpus_requires_prompt_version_metadata() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let corpus_dir = std::env::temp_dir().join(format!(
+        "ail-e2e-corpus-prompt-version-{}",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-e2e-corpus-prompt-version-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&corpus_dir);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&corpus_dir).unwrap();
+    let mut corpus_text = String::new();
+    for index in 0..100 {
+        corpus_text.push_str(&format!(
+            "## End-To-End Example: example-{index}\n\
+             semantic-task: support-ticket-{index}\n\
+             profile: Application\n\
+             package: examples/support_ticket.ail\n\
+             prompt-file: docs/ail/prompts/spec-draft.system.md\n\
+             prompt-fingerprint: fnv64:spec-draft\n\
+             executor-family: llm-http\n\
+             executor-label: local-model\n\
+             endpoint-label: inteligentia-pro-1\n\
+             request-file: requests/example-{index}.json\n\
+             response-file: responses/example-{index}.json\n\
+             artifact-kind: ail-spec\n\
+             checker-result: accepted\n\
+             target: linux-x86_64-elf\n\n"
+        ));
+    }
+    fs::write(corpus_dir.join("examples.md"), corpus_text).unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-e2e-corpus",
+            corpus_dir.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("e2e corpus entry example-0 is missing prompt-version"),
+        "{stderr}"
+    );
+
+    let _ = fs::remove_dir_all(corpus_dir);
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
 fn cli_ail_e2e_corpus_requires_llm_and_codex_executor_families() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let corpus_dir = std::env::temp_dir().join(format!(
