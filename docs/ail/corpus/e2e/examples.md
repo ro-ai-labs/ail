@@ -369,94 +369,89 @@ vm-action: CloseTicket
 runtime-state: ticket.id=T-1;ticket.status=Open
 
 ## End-To-End Example: example-20
-semantic-task: option-map-ui-surface-20
+semantic-task: option-map-live-codex-interview-20
 profile: Application
 surface-tags: ui
 package: examples/option_map.ail
 prompt-file: docs/ail/prompts/interview.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-20.json
-response-file: responses/example-20.ail-spec.md
+response-file: responses/example-20.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: vm
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-21
-semantic-task: option-map-ui-surface-21
+semantic-task: option-map-live-codex-requirements-21
 profile: Application
 surface-tags: ui
 package: examples/option_map.ail
 prompt-file: docs/ail/prompts/requirements.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-21.json
-response-file: responses/example-21.ail-spec.md
+response-file: responses/example-21.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: vm
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-22
-semantic-task: option-map-ui-surface-22
+semantic-task: option-map-live-codex-spec-draft-22
 profile: Application
 surface-tags: ui
 package: examples/option_map.ail
 prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-22.json
-response-file: responses/example-22.ail-spec.md
+response-file: responses/example-22.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: vm
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-23
-semantic-task: option-map-ui-surface-23
+semantic-task: option-map-live-codex-core-draft-23
 profile: Application
 surface-tags: ui
 package: examples/option_map.ail
 prompt-file: docs/ail/prompts/core-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:0175222e4a84bec4
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-23.json
-response-file: responses/example-23.ail-spec.md
+response-file: responses/example-23.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: vm
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-24
-semantic-task: option-map-ui-surface-24
+semantic-task: option-map-live-codex-diagnostic-repair-24
 profile: Application
 surface-tags: ui
 package: examples/option_map.ail
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:c9700f2c2e57e49e
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-24.json
-response-file: responses/example-24.ail-spec.md
+response-file: responses/example-24.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: vm
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-25
 semantic-task: c-interop-live-codex-core-to-spec-25

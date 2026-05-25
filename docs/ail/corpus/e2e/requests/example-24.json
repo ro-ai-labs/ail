@@ -1,1 +1,21 @@
-{"artifact_kind": "ail-spec", "instruction": "Produce the stored AIL-Spec candidate for deterministic replay.", "prompt_file": "docs/ail/prompts/diagnostic-repair.system.md", "prompt_version": "ail-prompts.v0.2", "semantic_task": "option-map-ui-surface-24"}
+{
+  "agent_contract": "docs/ail/corpus/e2e/agents/codex-ail-spec-writer.md",
+  "agent_contract_version": "0.1.0",
+  "codex_model": "codex-subagent-default",
+  "executor_label": "codex-ail-spec-writer",
+  "input": {
+    "package_manifest_file": "examples/option_map.ail/ail-package.md",
+    "required_features": [
+      "ui",
+      "generic-option",
+      "option-map",
+      "trace"
+    ],
+    "requirements_source": "inline checked requirements from active AIL v0.2 e2e capture session"
+  },
+  "package": "examples/option_map.ail",
+  "profile": "Application",
+  "prompt_file": "docs/ail/prompts/diagnostic-repair.system.md",
+  "prompt_version": "ail-prompts.v0.2",
+  "task": "Produce repaired complete AIL-Spec text for the Option.map UI surface while preserving the trace contract."
+}

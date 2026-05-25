@@ -19897,7 +19897,7 @@ fn cli_ail_e2e_corpus_replays_checked_seed_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("capture-origin-count deterministic-seed 67"),
+        report.contains("capture-origin-count deterministic-seed 62"),
         "{report}"
     );
     assert!(
@@ -19905,7 +19905,7 @@ fn cli_ail_e2e_corpus_replays_checked_seed_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("capture-origin-count live-codex 30"),
+        report.contains("capture-origin-count live-codex 35"),
         "{report}"
     );
     assert!(
@@ -20106,6 +20106,36 @@ fn cli_ail_e2e_corpus_replays_checked_seed_corpus() {
             && report.contains("capture-origin live-codex"),
         "{report}"
     );
+    assert!(
+        report.contains("entry example-20")
+            && report.contains("semantic-task option-map-live-codex-interview-20")
+            && report.contains("capture-origin live-codex"),
+        "{report}"
+    );
+    assert!(
+        report.contains("entry example-21")
+            && report.contains("semantic-task option-map-live-codex-requirements-21")
+            && report.contains("capture-origin live-codex"),
+        "{report}"
+    );
+    assert!(
+        report.contains("entry example-22")
+            && report.contains("semantic-task option-map-live-codex-spec-draft-22")
+            && report.contains("capture-origin live-codex"),
+        "{report}"
+    );
+    assert!(
+        report.contains("entry example-23")
+            && report.contains("semantic-task option-map-live-codex-core-draft-23")
+            && report.contains("capture-origin live-codex"),
+        "{report}"
+    );
+    assert!(
+        report.contains("entry example-24")
+            && report.contains("semantic-task option-map-live-codex-diagnostic-repair-24")
+            && report.contains("capture-origin live-codex"),
+        "{report}"
+    );
     assert!(report.contains("profile-count UI 1"), "{report}");
     assert!(
         report.contains("target-count wasm32-unknown-sandbox-wasm 11"),
@@ -20166,7 +20196,7 @@ fn cli_ail_e2e_corpus_release_evidence_rejects_deterministic_seed_corpus() {
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
         stderr.contains(
-            "ail-e2e-corpus --release-evidence requires zero deterministic-seed entries; found 67"
+            "ail-e2e-corpus --release-evidence requires zero deterministic-seed entries; found 62"
         ),
         "{stderr}"
     );

@@ -1,0 +1,5 @@
+{
+  "agent": "codex-ail-spec-writer",
+  "content": "# Option Map AIL-Spec Example\n\nPackage: ail.std.collections.\n\nType: Option<T>.\n\nOption has variants:\n\n- Some(value: T)\n- None\n\nFunction: Option.map.\n\nThe function needs:\n\n- option: Option<T>\n- mapper: Text\n\nThe function produces:\n\n- result: Option<U>\n\nWhen Option.map runs:\n\n- if the option is Some(value), the function calls mapper with value\n- the function returns Some(mapped value)\n- if the option is None, the function returns None\n- the function records a trace event named OptionMapEvaluatedScenario023",
+  "model": "codex-subagent-default"
+}
