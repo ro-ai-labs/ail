@@ -4,22 +4,21 @@ This checked seed corpus stores deterministic prompt and response transcripts
 for the `ail-e2e-corpus` release verifier.
 
 ## End-To-End Example: example-0
-semantic-task: stdlib-collections-0
+semantic-task: stdlib-collections-live-codex-interview-0
 profile: Application
 surface-tags: standard-library
 package: examples/ail_std_collections.ail
 prompt-file: docs/ail/prompts/interview.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-0.json
-response-file: responses/example-0.ail-spec.md
+response-file: responses/example-0.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: vm
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-1
 semantic-task: stdlib-collections-1
@@ -184,24 +183,23 @@ target: vm
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-10
-semantic-task: support-composed-10
+semantic-task: support-composed-live-codex-interview-10
 profile: Application
 surface-tags: package-import
 package: examples/support_composed.ail
 prompt-file: docs/ail/prompts/interview.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-10.json
-response-file: responses/example-10.ail-spec.md
+response-file: responses/example-10.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: vm
 vm-action: CloseTicket
 runtime-state: ticket.id=T-1;ticket.status=Open
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-11
 semantic-task: support-composed-11
@@ -768,24 +766,23 @@ runtime-state: ticket.id=T-1;ticket.priority=Low
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-40
-semantic-task: refund-tool-40
+semantic-task: refund-tool-live-codex-interview-40
 profile: AgentTool
 surface-tags: core
 package: examples/refund_tool.ail
 prompt-file: docs/ail/prompts/interview.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-40.json
-response-file: responses/example-40.ail-spec.md
+response-file: responses/example-40.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
 vm-action: RefundCustomerPayment
 runtime-state: order.id=O-1;payment.captured=true;refund.amount=100
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-41
 semantic-task: refund-tool-41

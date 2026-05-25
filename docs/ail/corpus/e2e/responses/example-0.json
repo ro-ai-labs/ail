@@ -1,0 +1,5 @@
+{
+  "agent": "codex-ail-spec-writer",
+  "content": "Package: ail.std.collections.\n\nType: Option<T>.\n\nOption has variants:\n\n- Some(value: T)\n- None\n\nType: Result<T,E>.\n\nResult has variants:\n\n- Success(value: T)\n- Failure(error: E)\n\nType: List<T>.\n\nList has variants:\n\n- Empty\n- Items(values: T)\n\nType: Map<K,V>.\n\nMap has variants:\n\n- Empty\n- Entries(key: K, value: V)\n\nType: Set<T>.\n\nSet has variants:\n\n- Empty\n- Members(value: T)\n\nFunction: Option.map.\n\nThe function needs:\n\n- option: Option<T>\n- mapper: Text\n\nThe function produces:\n\n- result: Option<U>\n\nWhen Option.map runs:\n\n- if the option is Some(value), the function calls mapper with value\n- the function returns Some(mapped value)\n- if the option is None, the function returns None\n- the function records a trace event named OptionMapEvaluated",
+  "model": "codex-subagent-default"
+}
