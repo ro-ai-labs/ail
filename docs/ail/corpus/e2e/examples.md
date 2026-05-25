@@ -472,61 +472,58 @@ target: wasm32-unknown-sandbox-wasm
 vm-action: CompressPayload
 
 ## End-To-End Example: example-26
-semantic-task: c-interop-26
+semantic-task: c-interop-live-codex-core-to-summary-26
 profile: Application
 surface-tags: c-host-interop
 package: examples/c_interop.ail
 prompt-file: docs/ail/prompts/core-to-summary.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:49f26ec41d722633
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-26.json
-response-file: responses/example-26.ail-spec.md
+response-file: responses/example-26.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: wasm32-unknown-sandbox-wasm
 vm-action: CompressPayload
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-27
-semantic-task: c-interop-27
+semantic-task: c-interop-live-codex-flow-patch-27
 profile: Application
 surface-tags: c-host-interop
 package: examples/c_interop.ail
 prompt-file: docs/ail/prompts/flow-patch.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:30136a21ab8d8eb6
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-27.json
-response-file: responses/example-27.ail-spec.md
+response-file: responses/example-27.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: wasm32-unknown-sandbox-wasm
 vm-action: CompressPayload
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-28
-semantic-task: c-interop-28
+semantic-task: c-interop-live-codex-trace-debug-28
 profile: Application
 surface-tags: c-host-interop
 package: examples/c_interop.ail
 prompt-file: docs/ail/prompts/trace-debug.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:f5fffd069da83242
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-28.json
-response-file: responses/example-28.ail-spec.md
+response-file: responses/example-28.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: wasm32-unknown-sandbox-wasm
 vm-action: CompressPayload
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-29
 semantic-task: c-interop-live-codex-interop-29
