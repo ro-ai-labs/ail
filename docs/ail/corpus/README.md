@@ -86,6 +86,7 @@ Each counted example records:
 - profile and package path
 - prompt file, prompt version, and prompt fingerprint
 - executor family and executor label
+- capture origin: `deterministic-seed`, `live-llm`, or `live-codex`
 - endpoint label for HTTP LLM evidence
 - raw request and raw response fingerprints
 - extracted artifact and checker result
@@ -102,7 +103,9 @@ real, replayable, and the semantic task or target evidence changes.
 
 The e2e report also records duplicate-fingerprint counts for stored requests,
 responses, extracted artifacts, checked Core, bytecode, VM traces, native
-artifacts, target reports, and diagnostics. These counts make seed-corpus reuse
-auditable. Final v0.2 release evidence must drive duplicate response,
-extracted-artifact, and target-report counts to zero, except for any explicitly
-documented shared artifact that is not counted as semantic-release coverage.
+artifacts, target reports, diagnostics, and capture-origin buckets. These
+counts make seed-corpus reuse auditable. Final v0.2 release evidence must drive
+duplicate response, extracted-artifact, and target-report counts to zero, and
+must replace broad `deterministic-seed` coverage with `live-llm` and
+`live-codex` transcript captures except for any explicitly documented shared
+artifact that is not counted as semantic-release coverage.

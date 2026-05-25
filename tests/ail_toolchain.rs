@@ -89,6 +89,7 @@ fn e2e_corpus_entry_text(index: usize, overrides: &[(&str, &str)]) -> String {
         ("prompt-fingerprint", format!("fnv64:prompt-{index}")),
         ("executor-family", executor_family.to_string()),
         ("executor-label", "local-executor".to_string()),
+        ("capture-origin", "deterministic-seed".to_string()),
         ("request-file", format!("requests/example-{index}.json")),
         ("response-file", format!("responses/example-{index}.json")),
         ("artifact-kind", "ail-spec".to_string()),
@@ -19895,6 +19896,10 @@ fn cli_ail_e2e_corpus_replays_checked_seed_corpus() {
         report.contains("failure-taxonomy-count semantic-drift 1"),
         "{report}"
     );
+    assert!(
+        report.contains("capture-origin-count deterministic-seed 100"),
+        "{report}"
+    );
     assert!(report.contains("profile-count UI 1"), "{report}");
     assert!(
         report.contains("target-count wasm32-unknown-sandbox-wasm 11"),
@@ -20277,6 +20282,98 @@ fn cli_ail_e2e_corpus_requires_llm_endpoint_label() {
 }
 
 #[test]
+fn cli_ail_e2e_corpus_requires_capture_origin() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let corpus_dir = std::env::temp_dir().join(format!(
+        "ail-e2e-corpus-capture-origin-{}",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-e2e-corpus-capture-origin-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&corpus_dir);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&corpus_dir).unwrap();
+    write_e2e_transcript_files(&corpus_dir, 100);
+    fs::write(
+        corpus_dir.join("examples.md"),
+        e2e_corpus_text_with_override(0, &[("capture-origin", "")]),
+    )
+    .unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-e2e-corpus",
+            corpus_dir.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("e2e corpus entry example-0 is missing capture-origin"),
+        "{stderr}"
+    );
+
+    let _ = fs::remove_dir_all(corpus_dir);
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
+fn cli_ail_e2e_corpus_rejects_unknown_capture_origin() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let corpus_dir = std::env::temp_dir().join(format!(
+        "ail-e2e-corpus-unknown-capture-origin-{}",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-e2e-corpus-unknown-capture-origin-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&corpus_dir);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&corpus_dir).unwrap();
+    write_e2e_transcript_files(&corpus_dir, 100);
+    fs::write(
+        corpus_dir.join("examples.md"),
+        e2e_corpus_text_with_override(0, &[("capture-origin", "simulated")]),
+    )
+    .unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-e2e-corpus",
+            corpus_dir.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("e2e corpus entry example-0 has unknown capture-origin simulated"),
+        "{stderr}"
+    );
+
+    let _ = fs::remove_dir_all(corpus_dir);
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
 fn cli_ail_e2e_corpus_rejects_offline_executor_endpoint_label() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let corpus_dir = std::env::temp_dir().join(format!(
@@ -20347,6 +20444,7 @@ fn cli_ail_e2e_corpus_requires_llm_and_codex_executor_families() {
              prompt-fingerprint: fnv64:spec-draft\n\
              executor-family: llm-http\n\
              executor-label: local-model\n\
+             capture-origin: deterministic-seed\n\
              endpoint-label: inteligentia-pro-1\n\
              request-file: requests/example-{index}.json\n\
              response-file: responses/example-{index}.json\n\
@@ -20408,6 +20506,7 @@ fn cli_ail_e2e_corpus_requires_rejected_example_diagnostics() {
              prompt-fingerprint: fnv64:spec-draft\n\
              executor-family: llm-http\n\
              executor-label: local-model\n\
+             capture-origin: deterministic-seed\n\
              endpoint-label: inteligentia-pro-1\n\
              request-file: requests/accepted-{index}.json\n\
              response-file: responses/accepted-{index}.json\n\
@@ -20426,6 +20525,7 @@ fn cli_ail_e2e_corpus_requires_rejected_example_diagnostics() {
          prompt-fingerprint: fnv64:spec-draft\n\
          executor-family: codex-skill-agent\n\
          executor-label: codex-ail-spec-writer\n\
+         capture-origin: deterministic-seed\n\
          request-file: requests/rejected-0.json\n\
          response-file: responses/rejected-0.json\n\
          artifact-kind: ail-spec\n\
@@ -20495,6 +20595,7 @@ fn cli_ail_e2e_corpus_requires_full_prompt_pack_coverage() {
              prompt-fingerprint: fnv64:spec-draft\n\
              executor-family: {executor_family}\n\
              executor-label: local-executor\n\
+             capture-origin: deterministic-seed\n\
              {endpoint_label}\
              request-file: requests/example-{index}.json\n\
              response-file: responses/example-{index}.json\n\

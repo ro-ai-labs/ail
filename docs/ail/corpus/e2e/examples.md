@@ -13,6 +13,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-0.json
 response-file: responses/example-0.ail-spec.md
 artifact-kind: ail-spec
@@ -30,6 +31,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-1.json
 response-file: responses/example-1.ail-spec.md
 artifact-kind: ail-spec
@@ -47,6 +49,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-2.json
 response-file: responses/example-2.ail-spec.md
 artifact-kind: ail-spec
@@ -64,6 +67,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:0175222e4a84bec4
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-3.json
 response-file: responses/example-3.ail-spec.md
 artifact-kind: ail-spec
@@ -81,6 +85,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:c9700f2c2e57e49e
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-4.json
 response-file: responses/example-4.ail-spec.md
 artifact-kind: ail-spec
@@ -98,6 +103,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:9f447e07620792b2
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-5.json
 response-file: responses/example-5.ail-spec.md
 artifact-kind: ail-spec
@@ -115,6 +121,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:49f26ec41d722633
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-6.json
 response-file: responses/example-6.ail-spec.md
 artifact-kind: ail-spec
@@ -132,6 +139,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:30136a21ab8d8eb6
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-7.json
 response-file: responses/example-7.ail-spec.md
 artifact-kind: ail-spec
@@ -149,6 +157,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:f5fffd069da83242
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-8.json
 response-file: responses/example-8.ail-spec.md
 artifact-kind: ail-spec
@@ -166,6 +175,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:87f6dd1772d48729
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-9.json
 response-file: responses/example-9.ail-spec.md
 artifact-kind: ail-spec
@@ -183,6 +193,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-10.json
 response-file: responses/example-10.ail-spec.md
 artifact-kind: ail-spec
@@ -202,6 +213,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-11.json
 response-file: responses/example-11.ail-spec.md
 artifact-kind: ail-spec
@@ -221,6 +233,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-12.json
 response-file: responses/example-12.ail-spec.md
 artifact-kind: ail-spec
@@ -240,6 +253,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:0175222e4a84bec4
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-13.json
 response-file: responses/example-13.ail-spec.md
 artifact-kind: ail-spec
@@ -259,6 +273,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:c9700f2c2e57e49e
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-14.json
 response-file: responses/example-14.ail-spec.md
 artifact-kind: ail-spec
@@ -278,6 +293,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:9f447e07620792b2
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-15.json
 response-file: responses/example-15.ail-spec.md
 artifact-kind: ail-spec
@@ -297,6 +313,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:49f26ec41d722633
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-16.json
 response-file: responses/example-16.ail-spec.md
 artifact-kind: ail-spec
@@ -316,6 +333,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:30136a21ab8d8eb6
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-17.json
 response-file: responses/example-17.ail-spec.md
 artifact-kind: ail-spec
@@ -335,6 +353,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:f5fffd069da83242
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-18.json
 response-file: responses/example-18.ail-spec.md
 artifact-kind: ail-spec
@@ -354,6 +373,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:87f6dd1772d48729
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-19.json
 response-file: responses/example-19.ail-spec.md
 artifact-kind: ail-spec
@@ -373,6 +393,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-20.json
 response-file: responses/example-20.ail-spec.md
 artifact-kind: ail-spec
@@ -390,6 +411,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-21.json
 response-file: responses/example-21.ail-spec.md
 artifact-kind: ail-spec
@@ -407,6 +429,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-22.json
 response-file: responses/example-22.ail-spec.md
 artifact-kind: ail-spec
@@ -424,6 +447,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:0175222e4a84bec4
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-23.json
 response-file: responses/example-23.ail-spec.md
 artifact-kind: ail-spec
@@ -441,6 +465,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:c9700f2c2e57e49e
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-24.json
 response-file: responses/example-24.ail-spec.md
 artifact-kind: ail-spec
@@ -458,6 +483,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:9f447e07620792b2
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-25.json
 response-file: responses/example-25.ail-spec.md
 artifact-kind: ail-spec
@@ -476,6 +502,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:49f26ec41d722633
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-26.json
 response-file: responses/example-26.ail-spec.md
 artifact-kind: ail-spec
@@ -494,6 +521,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:30136a21ab8d8eb6
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-27.json
 response-file: responses/example-27.ail-spec.md
 artifact-kind: ail-spec
@@ -512,6 +540,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:f5fffd069da83242
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-28.json
 response-file: responses/example-28.ail-spec.md
 artifact-kind: ail-spec
@@ -530,6 +559,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:87f6dd1772d48729
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-29.json
 response-file: responses/example-29.ail-spec.md
 artifact-kind: ail-spec
@@ -548,6 +578,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-30.json
 response-file: responses/example-30.ail-spec.md
 artifact-kind: ail-spec
@@ -567,6 +598,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-31.json
 response-file: responses/example-31.ail-spec.md
 artifact-kind: ail-spec
@@ -586,6 +618,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-32.json
 response-file: responses/example-32.ail-spec.md
 artifact-kind: ail-spec
@@ -605,6 +638,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:0175222e4a84bec4
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-33.json
 response-file: responses/example-33.ail-spec.md
 artifact-kind: ail-spec
@@ -624,6 +658,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:c9700f2c2e57e49e
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-34.json
 response-file: responses/example-34.ail-spec.md
 artifact-kind: ail-spec
@@ -643,6 +678,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:9f447e07620792b2
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-35.json
 response-file: responses/example-35.ail-spec.md
 artifact-kind: ail-spec
@@ -662,6 +698,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:49f26ec41d722633
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-36.json
 response-file: responses/example-36.ail-spec.md
 artifact-kind: ail-spec
@@ -681,6 +718,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:30136a21ab8d8eb6
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-37.json
 response-file: responses/example-37.ail-spec.md
 artifact-kind: ail-spec
@@ -700,6 +738,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:f5fffd069da83242
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-38.json
 response-file: responses/example-38.ail-spec.md
 artifact-kind: ail-spec
@@ -719,6 +758,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:87f6dd1772d48729
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-39.json
 response-file: responses/example-39.ail-spec.md
 artifact-kind: ail-spec
@@ -738,6 +778,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-40.json
 response-file: responses/example-40.ail-spec.md
 artifact-kind: ail-spec
@@ -757,6 +798,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-41.json
 response-file: responses/example-41.ail-spec.md
 artifact-kind: ail-spec
@@ -776,6 +818,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-42.json
 response-file: responses/example-42.ail-spec.md
 artifact-kind: ail-spec
@@ -795,6 +838,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:0175222e4a84bec4
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-43.json
 response-file: responses/example-43.ail-spec.md
 artifact-kind: ail-spec
@@ -814,6 +858,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:c9700f2c2e57e49e
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-44.json
 response-file: responses/example-44.ail-spec.md
 artifact-kind: ail-spec
@@ -833,6 +878,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:9f447e07620792b2
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-45.json
 response-file: responses/example-45.ail-spec.md
 artifact-kind: ail-spec
@@ -852,6 +898,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:49f26ec41d722633
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-46.json
 response-file: responses/example-46.ail-spec.md
 artifact-kind: ail-spec
@@ -871,6 +918,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:30136a21ab8d8eb6
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-47.json
 response-file: responses/example-47.ail-spec.md
 artifact-kind: ail-spec
@@ -890,6 +938,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:f5fffd069da83242
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-48.json
 response-file: responses/example-48.ail-spec.md
 artifact-kind: ail-spec
@@ -909,6 +958,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:87f6dd1772d48729
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-49.json
 response-file: responses/example-49.ail-spec.md
 artifact-kind: ail-spec
@@ -928,6 +978,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-50.json
 response-file: responses/example-50.ail-spec.md
 artifact-kind: ail-spec
@@ -947,6 +998,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-51.json
 response-file: responses/example-51.ail-spec.md
 artifact-kind: ail-spec
@@ -966,6 +1018,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-52.json
 response-file: responses/example-52.ail-spec.md
 artifact-kind: ail-spec
@@ -985,6 +1038,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:0175222e4a84bec4
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-53.json
 response-file: responses/example-53.ail-spec.md
 artifact-kind: ail-spec
@@ -1004,6 +1058,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:c9700f2c2e57e49e
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-54.json
 response-file: responses/example-54.ail-spec.md
 artifact-kind: ail-spec
@@ -1023,6 +1078,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:9f447e07620792b2
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-55.json
 response-file: responses/example-55.ail-spec.md
 artifact-kind: ail-spec
@@ -1041,6 +1097,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:49f26ec41d722633
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-56.json
 response-file: responses/example-56.ail-spec.md
 artifact-kind: ail-spec
@@ -1059,6 +1116,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:30136a21ab8d8eb6
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-57.json
 response-file: responses/example-57.ail-spec.md
 artifact-kind: ail-spec
@@ -1077,6 +1135,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:f5fffd069da83242
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-58.json
 response-file: responses/example-58.ail-spec.md
 artifact-kind: ail-spec
@@ -1095,6 +1154,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:87f6dd1772d48729
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-59.json
 response-file: responses/example-59.ail-spec.md
 artifact-kind: ail-spec
@@ -1113,6 +1173,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-60.json
 response-file: responses/example-60.ail-spec.md
 artifact-kind: ail-spec
@@ -1131,6 +1192,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-61.json
 response-file: responses/example-61.ail-spec.md
 artifact-kind: ail-spec
@@ -1149,6 +1211,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-62.json
 response-file: responses/example-62.ail-spec.md
 artifact-kind: ail-spec
@@ -1167,6 +1230,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:0175222e4a84bec4
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-63.json
 response-file: responses/example-63.ail-spec.md
 artifact-kind: ail-spec
@@ -1185,6 +1249,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:c9700f2c2e57e49e
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-64.json
 response-file: responses/example-64.ail-spec.md
 artifact-kind: ail-spec
@@ -1203,6 +1268,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:9f447e07620792b2
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-65.json
 response-file: responses/example-65.ail-spec.md
 artifact-kind: ail-spec
@@ -1222,6 +1288,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:49f26ec41d722633
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-66.json
 response-file: responses/example-66.ail-spec.md
 artifact-kind: ail-spec
@@ -1239,6 +1306,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:30136a21ab8d8eb6
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-67.json
 response-file: responses/example-67.ail-spec.md
 artifact-kind: ail-spec
@@ -1256,6 +1324,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:f5fffd069da83242
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-68.json
 response-file: responses/example-68.ail-spec.md
 artifact-kind: ail-spec
@@ -1273,6 +1342,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:87f6dd1772d48729
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-69.json
 response-file: responses/example-69.ail-spec.md
 artifact-kind: ail-spec
@@ -1290,6 +1360,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-70.json
 response-file: responses/example-70.ail-spec.md
 artifact-kind: ail-spec
@@ -1307,6 +1378,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-71.json
 response-file: responses/example-71.ail-spec.md
 artifact-kind: ail-spec
@@ -1324,6 +1396,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-72.json
 response-file: responses/example-72.ail-spec.md
 artifact-kind: ail-spec
@@ -1341,6 +1414,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:0175222e4a84bec4
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-73.json
 response-file: responses/example-73.ail-spec.md
 artifact-kind: ail-spec
@@ -1358,6 +1432,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:c9700f2c2e57e49e
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-74.json
 response-file: responses/example-74.ail-spec.md
 artifact-kind: ail-spec
@@ -1375,6 +1450,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:9f447e07620792b2
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-75.json
 response-file: responses/example-75.ail-spec.md
 artifact-kind: ail-spec
@@ -1394,6 +1470,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:49f26ec41d722633
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-76.json
 response-file: responses/example-76.ail-spec.md
 artifact-kind: ail-spec
@@ -1413,6 +1490,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:30136a21ab8d8eb6
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-77.json
 response-file: responses/example-77.ail-spec.md
 artifact-kind: ail-spec
@@ -1432,6 +1510,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:f5fffd069da83242
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-78.json
 response-file: responses/example-78.ail-spec.md
 artifact-kind: ail-spec
@@ -1451,6 +1530,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:87f6dd1772d48729
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-79.json
 response-file: responses/example-79.ail-spec.md
 artifact-kind: ail-spec
@@ -1470,6 +1550,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-80.json
 response-file: responses/example-80.ail-spec.md
 artifact-kind: ail-spec
@@ -1489,6 +1570,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-81.json
 response-file: responses/example-81.ail-spec.md
 artifact-kind: ail-spec
@@ -1508,6 +1590,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-82.json
 response-file: responses/example-82.ail-spec.md
 artifact-kind: ail-spec
@@ -1527,6 +1610,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:0175222e4a84bec4
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-83.json
 response-file: responses/example-83.ail-spec.md
 artifact-kind: ail-spec
@@ -1546,6 +1630,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:c9700f2c2e57e49e
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-84.json
 response-file: responses/example-84.ail-spec.md
 artifact-kind: ail-spec
@@ -1565,6 +1650,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:9f447e07620792b2
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-85.json
 response-file: responses/example-85.ail-spec.md
 artifact-kind: ail-spec
@@ -1583,6 +1669,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:49f26ec41d722633
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-86.json
 response-file: responses/example-86.ail-spec.md
 artifact-kind: ail-spec
@@ -1601,6 +1688,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:30136a21ab8d8eb6
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-87.json
 response-file: responses/example-87.ail-spec.md
 artifact-kind: ail-spec
@@ -1619,6 +1707,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:f5fffd069da83242
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-88.json
 response-file: responses/example-88.ail-spec.md
 artifact-kind: ail-spec
@@ -1637,6 +1726,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:87f6dd1772d48729
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-89.json
 response-file: responses/example-89.ail-spec.md
 artifact-kind: ail-spec
@@ -1655,6 +1745,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-90.json
 response-file: responses/example-90.ail-spec.md
 artifact-kind: ail-spec
@@ -1674,6 +1765,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-91.json
 response-file: responses/example-91.ail-spec.md
 artifact-kind: ail-spec
@@ -1693,6 +1785,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-92.json
 response-file: responses/example-92.ail-spec.md
 artifact-kind: ail-spec
@@ -1712,6 +1805,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:0175222e4a84bec4
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-93.json
 response-file: responses/example-93.ail-spec.md
 artifact-kind: ail-spec
@@ -1731,6 +1825,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:c9700f2c2e57e49e
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-94.json
 response-file: responses/example-94.ail-spec.md
 artifact-kind: ail-spec
@@ -1750,6 +1845,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:9f447e07620792b2
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-95.json
 response-file: responses/example-95.ail-spec.md
 artifact-kind: ail-spec
@@ -1769,6 +1865,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:49f26ec41d722633
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-96.json
 response-file: responses/example-96.ail-spec.md
 artifact-kind: ail-spec
@@ -1788,6 +1885,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:30136a21ab8d8eb6
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-97.json
 response-file: responses/example-97.ail-spec.md
 artifact-kind: ail-spec
@@ -1807,6 +1905,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:f5fffd069da83242
 executor-family: llm-http
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-98.json
 response-file: responses/example-98.ail-spec.md
 artifact-kind: ail-spec
@@ -1826,6 +1925,7 @@ prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:87f6dd1772d48729
 executor-family: codex-skill-agent
 executor-label: local-executor
+capture-origin: deterministic-seed
 request-file: requests/example-99.json
 response-file: responses/example-99.ail-spec.md
 artifact-kind: ail-spec

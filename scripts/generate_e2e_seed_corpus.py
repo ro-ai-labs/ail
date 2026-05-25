@@ -293,6 +293,7 @@ def main() -> None:
             "prompt-fingerprint": fnv64((ROOT / prompt_file).read_text()),
             "executor-family": executor_family,
             "executor-label": "local-executor",
+            "capture-origin": "deterministic-seed",
             "request-file": f"requests/example-{index}.json",
             "response-file": f"responses/example-{index}.ail-spec.md",
             "artifact-kind": "ail-spec",

@@ -297,10 +297,11 @@ Evidence:
   package-import, UI, C/host interop, Wasm contract, Darwin contract, and
   prompt-failure cases.
 - Each accepted end-to-end example records the prompt file and fingerprint,
-  prompt-pack version, executor family, executor label, raw request
-  fingerprint, raw response fingerprint, extracted artifact fingerprint,
-  checked Core fingerprint, bytecode fingerprint, manifest fingerprint, and
-  binary or target-contract fingerprint.
+  prompt-pack version, executor family, executor label, capture origin
+  (`deterministic-seed`, `live-llm`, or `live-codex`), raw request fingerprint,
+  raw response fingerprint, extracted artifact fingerprint, checked Core
+  fingerprint, bytecode fingerprint, manifest fingerprint, and binary or
+  target-contract fingerprint.
 - Each accepted executable example runs through VM verification. Each accepted
   native Linux example writes an executable artifact and target report. Each
   accepted host-boundary example writes Wasm or Darwin contract reports instead
@@ -316,14 +317,15 @@ Evidence:
   not call a live model endpoint.
 - Portability reports include model or executor label, endpoint label where
   applicable, prompt fingerprint, request fingerprint, response fingerprint,
-  artifact fingerprint, checker result, compile result, target result, and
-  failure taxonomy.
+  artifact fingerprint, checker result, compile result, target result, capture
+  origin, and failure taxonomy.
 - The e2e corpus report includes duplicate-fingerprint counts for request,
   response, extracted artifact, checked Core, bytecode, VM trace, native,
-  target-report, and diagnostics artifacts. Final release evidence requires
-  zero duplicate response, extracted-artifact, and target-report entries unless
-  this file names a specific shared artifact as intentional non-release
-  scaffolding.
+  target-report, diagnostics artifacts, and capture-origin buckets. Final
+  release evidence requires zero duplicate response, extracted-artifact, and
+  target-report entries, plus broad `live-llm` and `live-codex` capture-origin
+  coverage unless this file names a specific shared artifact as intentional
+  non-release scaffolding.
 
 Minimum proof commands:
 

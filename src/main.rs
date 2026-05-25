@@ -1142,6 +1142,7 @@ fn ail_e2e_corpus_entry_from_fields(
         "prompt-fingerprint",
         "executor-family",
         "executor-label",
+        "capture-origin",
         "request-file",
         "response-file",
         "artifact-kind",
@@ -1180,6 +1181,18 @@ fn ail_e2e_corpus_entry_from_fields(
     ) {
         return Err(format!(
             "e2e corpus entry {id} has unknown executor-family {executor_family}"
+        ));
+    }
+    let capture_origin = fields
+        .get("capture-origin")
+        .map(String::as_str)
+        .unwrap_or_default();
+    if !matches!(
+        capture_origin,
+        "deterministic-seed" | "live-llm" | "live-codex"
+    ) {
+        return Err(format!(
+            "e2e corpus entry {id} has unknown capture-origin {capture_origin}"
         ));
     }
     let endpoint_label = fields
@@ -1564,6 +1577,7 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
         ("profile", "profile-count"),
         ("prompt-file", "prompt-count"),
         ("executor-family", "executor-family-count"),
+        ("capture-origin", "capture-origin-count"),
         ("target", "target-count"),
         ("checker-result", "checker-result-count"),
         ("failure-taxonomy", "failure-taxonomy-count"),
@@ -1638,9 +1652,14 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
             .get("target")
             .map(String::as_str)
             .unwrap_or("unknown");
+        let capture_origin = entry
+            .fields
+            .get("capture-origin")
+            .map(String::as_str)
+            .unwrap_or("unspecified");
         lines.push(format!(
-            "entry {} source {} semantic-task {} executor-family {} target {}",
-            entry.id, entry.source_file, semantic_task, executor_family, target
+            "entry {} source {} semantic-task {} executor-family {} capture-origin {} target {}",
+            entry.id, entry.source_file, semantic_task, executor_family, capture_origin, target
         ));
         if let Some(request_fingerprint) = &evaluation.request_fingerprint {
             lines.push(format!(

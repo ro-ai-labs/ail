@@ -18,18 +18,20 @@ The generated files are committed so release verification does not depend on
 live LLM access. The current corpus stores:
 
 - `examples.md`: 100 manifest entries with prompt, executor, profile, surface,
-  checker-result, and target metadata.
+  capture-origin, checker-result, and target metadata.
 - `requests/`: stored prompt request transcripts.
 - `responses/`: stored model/agent response artifacts.
 
 This is a checked seed corpus, not final v0.2 release evidence. The current
-seed specializes checked fixture responses per scenario so the replay harness,
-artifact writing, and coverage thresholds can be verified while broader
-LLM/Codex captures are added. The replay report exposes response,
+seed marks every entry `capture-origin: deterministic-seed` and specializes
+checked fixture responses per scenario so the replay harness, artifact writing,
+and coverage thresholds can be verified while broader LLM/Codex captures are
+added. The replay report exposes capture-origin counts plus response,
 extracted-artifact, checked Core, bytecode, VM trace, native, target-report,
 and diagnostics fingerprint reuse. Response, extracted-artifact, and
 target-report duplicate counts must remain zero before claiming the final v0.2
-prompt-to-artifact release gate.
+prompt-to-artifact release gate, and release evidence must add `live-llm` and
+`live-codex` capture-origin entries.
 
 The seed includes one real `UI` profile replay through `ui_workflow.ail`, which
 lowers UI route, form, dashboard, and workflow semantics into checked Core,
