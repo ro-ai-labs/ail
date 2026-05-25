@@ -19909,6 +19909,10 @@ fn cli_ail_e2e_corpus_replays_checked_seed_corpus() {
         "{report}"
     );
     assert!(
+        report.contains("target-report-fingerprint-duplicate-entry-count 0"),
+        "{report}"
+    );
+    assert!(
         report
             .contains("entry-artifact example-99 diagnostics examples/example-99/diagnostics.txt"),
         "{report}"

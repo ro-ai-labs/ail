@@ -27,9 +27,9 @@ seed specializes checked fixture responses per scenario so the replay harness,
 artifact writing, and coverage thresholds can be verified while broader
 LLM/Codex captures are added. The replay report exposes response,
 extracted-artifact, checked Core, bytecode, VM trace, native, target-report,
-and diagnostics fingerprint reuse. Response and extracted-artifact duplicate
-counts must remain zero before claiming the final v0.2 prompt-to-artifact
-release gate.
+and diagnostics fingerprint reuse. Response, extracted-artifact, and
+target-report duplicate counts must remain zero before claiming the final v0.2
+prompt-to-artifact release gate.
 
 The seed includes one real `UI` profile replay through `ui_workflow.ail`, which
 lowers UI route, form, dashboard, and workflow semantics into checked Core,

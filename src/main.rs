@@ -7489,6 +7489,10 @@ fn ail_wasm_contract_report_header(
         ),
         format!("target {target_name}"),
         format!("status {status}"),
+        format!(
+            "bytecode-fingerprint {}",
+            ail_artifact_fingerprint(&render_ail_bytecode(program))
+        ),
         "bytecode-level portable-vm-contract".to_string(),
         "bytecode-container wasm-sandbox-contract".to_string(),
         "bytecode-format wasm32-contract-report".to_string(),
@@ -7719,6 +7723,10 @@ fn render_ail_compile_darwin_macho_contract_report(
         ),
         format!("target {target_name}"),
         format!("status {status}"),
+        format!(
+            "bytecode-fingerprint {}",
+            ail_artifact_fingerprint(&render_ail_bytecode(program))
+        ),
         "bytecode-level portable-vm-contract".to_string(),
         "bytecode-container darwin-macho-contract".to_string(),
         "bytecode-format macho64-arm64-contract-report".to_string(),

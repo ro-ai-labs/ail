@@ -321,8 +321,9 @@ Evidence:
 - The e2e corpus report includes duplicate-fingerprint counts for request,
   response, extracted artifact, checked Core, bytecode, VM trace, native,
   target-report, and diagnostics artifacts. Final release evidence requires
-  zero duplicate response and extracted-artifact entries unless this file names
-  a specific shared artifact as intentional non-release scaffolding.
+  zero duplicate response, extracted-artifact, and target-report entries unless
+  this file names a specific shared artifact as intentional non-release
+  scaffolding.
 
 Minimum proof commands:
 
@@ -485,7 +486,9 @@ already covers parts of this gate:
   and top-level manifest/report fingerprints
 - checked 100-entry e2e seed corpus under `docs/ail/corpus/e2e`
 - checked e2e seed corpus responses and extracted artifacts have zero
-  duplicate fingerprints after deterministic per-scenario trace specialization
+  duplicate fingerprints after deterministic per-scenario trace specialization;
+  target reports also have zero duplicate fingerprints after contract reports
+  started recording the compiled bytecode fingerprint
 - package-import e2e seed entries replay through package-aware import
   resolution and compile the composed support package through checked Core,
   bytecode, and VM trace artifacts
