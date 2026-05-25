@@ -1,0 +1,5 @@
+{
+  "agent": "codex-ail-spec-writer",
+  "content": "# Repeated Task AIL-Spec Example\n\nThe application Maintenance Runner manages repeated stateful tasks.\n\nA Counter has:\n\n- value: Int\n\nAction: Increment counter.\n\nWhen increment counter happens:\n\n- the system increments the counter value by 1\n- the system records a trace event named CounterIncrementedScenario83\n\nAction: Run maintenance cycle.\n\nWhen run maintenance cycle happens:\n\n- the system repeats IncrementCounter 3 times\n- the system records a trace event named MaintenanceCycleCompletedScenario83",
+  "model": "codex-subagent-default"
+}

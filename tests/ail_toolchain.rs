@@ -19968,7 +19968,7 @@ fn cli_ail_e2e_corpus_replays_checked_seed_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("capture-origin-count deterministic-seed 31"),
+        report.contains("capture-origin-count deterministic-seed 27"),
         "{report}"
     );
     assert!(
@@ -19976,7 +19976,7 @@ fn cli_ail_e2e_corpus_replays_checked_seed_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("capture-origin-count live-codex 66"),
+        report.contains("capture-origin-count live-codex 70"),
         "{report}"
     );
     assert!(
@@ -20156,6 +20156,30 @@ fn cli_ail_e2e_corpus_replays_checked_seed_corpus() {
     assert!(
         report.contains("entry example-80")
             && report.contains("semantic-task repeated-task-live-codex-interview-80")
+            && report.contains("capture-origin live-codex"),
+        "{report}"
+    );
+    assert!(
+        report.contains("entry example-81")
+            && report.contains("semantic-task repeated-task-live-codex-requirements-81")
+            && report.contains("capture-origin live-codex"),
+        "{report}"
+    );
+    assert!(
+        report.contains("entry example-82")
+            && report.contains("semantic-task repeated-task-live-codex-spec-draft-82")
+            && report.contains("capture-origin live-codex"),
+        "{report}"
+    );
+    assert!(
+        report.contains("entry example-83")
+            && report.contains("semantic-task repeated-task-live-codex-core-draft-83")
+            && report.contains("capture-origin live-codex"),
+        "{report}"
+    );
+    assert!(
+        report.contains("entry example-84")
+            && report.contains("semantic-task repeated-task-live-codex-diagnostic-repair-84")
             && report.contains("capture-origin live-codex"),
         "{report}"
     );
@@ -20453,7 +20477,7 @@ fn cli_ail_e2e_corpus_release_evidence_rejects_deterministic_seed_corpus() {
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
         stderr.contains(
-            "ail-e2e-corpus --release-evidence requires zero deterministic-seed entries; found 31"
+            "ail-e2e-corpus --release-evidence requires zero deterministic-seed entries; found 27"
         ),
         "{stderr}"
     );

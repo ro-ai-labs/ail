@@ -1503,84 +1503,80 @@ vm-action: RunMaintenanceCycle
 runtime-state: counter.value=0
 
 ## End-To-End Example: example-81
-semantic-task: repeated-task-81
+semantic-task: repeated-task-live-codex-requirements-81
 profile: System
 surface-tags: core
 package: examples/repeated_task.ail
 prompt-file: docs/ail/prompts/requirements.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-81.json
-response-file: responses/example-81.ail-spec.md
+response-file: responses/example-81.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
 vm-action: RunMaintenanceCycle
 runtime-state: counter.value=0
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-82
-semantic-task: repeated-task-82
+semantic-task: repeated-task-live-codex-spec-draft-82
 profile: System
 surface-tags: core
 package: examples/repeated_task.ail
 prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-82.json
-response-file: responses/example-82.ail-spec.md
+response-file: responses/example-82.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
 vm-action: RunMaintenanceCycle
 runtime-state: counter.value=0
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-83
-semantic-task: repeated-task-83
+semantic-task: repeated-task-live-codex-core-draft-83
 profile: System
 surface-tags: core
 package: examples/repeated_task.ail
 prompt-file: docs/ail/prompts/core-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:0175222e4a84bec4
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-83.json
-response-file: responses/example-83.ail-spec.md
+response-file: responses/example-83.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
 vm-action: RunMaintenanceCycle
 runtime-state: counter.value=0
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-84
-semantic-task: repeated-task-84
+semantic-task: repeated-task-live-codex-diagnostic-repair-84
 profile: System
 surface-tags: core
 package: examples/repeated_task.ail
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:c9700f2c2e57e49e
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-84.json
-response-file: responses/example-84.ail-spec.md
+response-file: responses/example-84.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
 vm-action: RunMaintenanceCycle
 runtime-state: counter.value=0
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-85
 semantic-task: c-interop-live-codex-core-to-spec-85
