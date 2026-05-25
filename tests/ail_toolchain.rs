@@ -19858,10 +19858,10 @@ fn cli_ail_prompt_corpus_writes_portability_report() {
 }
 
 #[test]
-fn cli_ail_e2e_corpus_requires_100_examples() {
+fn cli_ail_e2e_corpus_replays_checked_seed_corpus() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let artifact_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-threshold-artifacts-{}",
+        "ail-e2e-corpus-seed-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&artifact_dir);
@@ -19876,15 +19876,39 @@ fn cli_ail_e2e_corpus_requires_100_examples() {
         .output()
         .unwrap();
     assert!(
-        !output.status.success(),
+        output.status.success(),
         "stdout:\n{}\nstderr:\n{}",
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
-    let stderr = String::from_utf8_lossy(&output.stderr);
+    let report = fs::read_to_string(artifact_dir.join("e2e-corpus-report.txt")).unwrap();
+    assert!(report.contains("entry-count 100"), "{report}");
     assert!(
-        stderr.contains("ail-e2e-corpus requires at least 100 examples"),
-        "{stderr}"
+        report.contains("checker-result-count accepted 99"),
+        "{report}"
+    );
+    assert!(
+        report.contains("checker-result-count rejected 1"),
+        "{report}"
+    );
+    assert!(
+        report.contains("failure-taxonomy-count semantic-drift 1"),
+        "{report}"
+    );
+    assert!(
+        report.contains("target-count wasm32-unknown-sandbox-wasm 5"),
+        "{report}"
+    );
+    assert!(
+        report
+            .contains("entry-artifact example-99 diagnostics examples/example-99/diagnostics.txt"),
+        "{report}"
+    );
+    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-e2e-corpus.txt")).unwrap();
+    assert!(manifest.contains("AIL-E2E-Corpus-Manifest:"), "{manifest}");
+    assert!(
+        manifest.contains("entry example-99 checker-result rejected target vm"),
+        "{manifest}"
     );
 
     let _ = fs::remove_dir_all(artifact_dir);
