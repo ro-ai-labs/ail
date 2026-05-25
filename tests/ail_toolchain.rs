@@ -19968,7 +19968,7 @@ fn cli_ail_e2e_corpus_replays_checked_seed_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("capture-origin-count deterministic-seed 18"),
+        report.contains("capture-origin-count deterministic-seed 11"),
         "{report}"
     );
     assert!(
@@ -19976,7 +19976,7 @@ fn cli_ail_e2e_corpus_replays_checked_seed_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("capture-origin-count live-codex 79"),
+        report.contains("capture-origin-count live-codex 86"),
         "{report}"
     );
     assert!(
@@ -20322,6 +20322,48 @@ fn cli_ail_e2e_corpus_replays_checked_seed_corpus() {
         "{report}"
     );
     assert!(
+        report.contains("entry example-67")
+            && report.contains("semantic-task network-driver-live-codex-flow-patch-67")
+            && report.contains("capture-origin live-codex"),
+        "{report}"
+    );
+    assert!(
+        report.contains("entry example-68")
+            && report.contains("semantic-task network-driver-live-codex-trace-debug-68")
+            && report.contains("capture-origin live-codex"),
+        "{report}"
+    );
+    assert!(
+        report.contains("entry example-69")
+            && report.contains("semantic-task network-driver-live-codex-interop-69")
+            && report.contains("capture-origin live-codex"),
+        "{report}"
+    );
+    assert!(
+        report.contains("entry example-70")
+            && report.contains("semantic-task network-driver-live-codex-interview-70")
+            && report.contains("capture-origin live-codex"),
+        "{report}"
+    );
+    assert!(
+        report.contains("entry example-71")
+            && report.contains("semantic-task network-driver-live-codex-requirements-71")
+            && report.contains("capture-origin live-codex"),
+        "{report}"
+    );
+    assert!(
+        report.contains("entry example-72")
+            && report.contains("semantic-task network-driver-live-codex-spec-draft-72")
+            && report.contains("capture-origin live-codex"),
+        "{report}"
+    );
+    assert!(
+        report.contains("entry example-73")
+            && report.contains("semantic-task network-driver-live-codex-core-draft-73")
+            && report.contains("capture-origin live-codex"),
+        "{report}"
+    );
+    assert!(
         report.contains("entry example-90")
             && report.contains("semantic-task support-ticket-live-codex-interview-90")
             && report.contains("capture-origin live-codex"),
@@ -20531,7 +20573,7 @@ fn cli_ail_e2e_corpus_release_evidence_rejects_deterministic_seed_corpus() {
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
         stderr.contains(
-            "ail-e2e-corpus --release-evidence requires zero deterministic-seed entries; found 18"
+            "ail-e2e-corpus --release-evidence requires zero deterministic-seed entries; found 11"
         ),
         "{stderr}"
     );

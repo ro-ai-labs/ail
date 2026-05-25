@@ -1,0 +1,5 @@
+{
+  "agent": "codex-ail-spec-writer",
+  "content": "# Network Driver AIL-Spec Example\n\nSystem component: Network packet receiver.\n\nThe component uses:\n\n- rx buffer: Buffer\n- packet metadata: Buffer\n- network device: Device\n\nThe component owns:\n\n- rx buffer\n\nThe component borrows:\n\n- packet metadata\n\nThe component places:\n\n- rx buffer in packet processing region\n- packet metadata in packet processing region\n\nThe component requires capability:\n\n- access network device\n- read packet metadata\n\nThe component performs:\n\n- read network device\n- read packet metadata\n- write rx buffer\n- release rx buffer\n\nThe component records:\n\n- PacketReceivedScenario071\n\nThe component guarantees:\n\n- every packet read is stored in rx buffer before release",
+  "model": "codex-subagent-default"
+}

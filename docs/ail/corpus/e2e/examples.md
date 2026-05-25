@@ -1242,130 +1242,123 @@ checker-result: accepted
 target: linux-x86_64-elf
 
 ## End-To-End Example: example-67
-semantic-task: network-driver-67
+semantic-task: network-driver-live-codex-flow-patch-67
 profile: System
 surface-tags: core
 package: examples/network_driver.ail
 prompt-file: docs/ail/prompts/flow-patch.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:30136a21ab8d8eb6
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-67.json
-response-file: responses/example-67.ail-spec.md
+response-file: responses/example-67.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-68
-semantic-task: network-driver-68
+semantic-task: network-driver-live-codex-trace-debug-68
 profile: System
 surface-tags: core
 package: examples/network_driver.ail
 prompt-file: docs/ail/prompts/trace-debug.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:f5fffd069da83242
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-68.json
-response-file: responses/example-68.ail-spec.md
+response-file: responses/example-68.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-69
-semantic-task: network-driver-69
+semantic-task: network-driver-live-codex-interop-69
 profile: System
 surface-tags: core
 package: examples/network_driver.ail
 prompt-file: docs/ail/prompts/interop.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:87f6dd1772d48729
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-69.json
-response-file: responses/example-69.ail-spec.md
+response-file: responses/example-69.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-70
-semantic-task: network-driver-70
+semantic-task: network-driver-live-codex-interview-70
 profile: System
 surface-tags: core
 package: examples/network_driver.ail
 prompt-file: docs/ail/prompts/interview.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-70.json
-response-file: responses/example-70.ail-spec.md
+response-file: responses/example-70.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-71
-semantic-task: network-driver-71
+semantic-task: network-driver-live-codex-requirements-71
 profile: System
 surface-tags: core
 package: examples/network_driver.ail
 prompt-file: docs/ail/prompts/requirements.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-71.json
-response-file: responses/example-71.ail-spec.md
+response-file: responses/example-71.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-72
-semantic-task: network-driver-72
+semantic-task: network-driver-live-codex-spec-draft-72
 profile: System
 surface-tags: core
 package: examples/network_driver.ail
 prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-72.json
-response-file: responses/example-72.ail-spec.md
+response-file: responses/example-72.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-73
-semantic-task: network-driver-73
+semantic-task: network-driver-live-codex-core-draft-73
 profile: System
 surface-tags: core
 package: examples/network_driver.ail
 prompt-file: docs/ail/prompts/core-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:0175222e4a84bec4
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-73.json
-response-file: responses/example-73.ail-spec.md
+response-file: responses/example-73.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-74
 semantic-task: network-driver-live-codex-diagnostic-repair-74
