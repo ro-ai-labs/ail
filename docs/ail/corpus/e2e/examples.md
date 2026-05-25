@@ -174,10 +174,10 @@ target: vm
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-10
-semantic-task: support-shared-10
+semantic-task: support-composed-10
 profile: Application
 surface-tags: package-import
-package: examples/support_shared.ail
+package: examples/support_composed.ail
 prompt-file: docs/ail/prompts/interview.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
@@ -188,13 +188,15 @@ response-file: responses/example-10.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: vm
+vm-action: CloseTicket
+runtime-state: ticket.id=T-1;ticket.status=Open
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-11
-semantic-task: support-shared-11
+semantic-task: support-composed-11
 profile: Application
 surface-tags: package-import
-package: examples/support_shared.ail
+package: examples/support_composed.ail
 prompt-file: docs/ail/prompts/requirements.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
@@ -205,13 +207,15 @@ response-file: responses/example-11.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: vm
+vm-action: CloseTicket
+runtime-state: ticket.id=T-1;ticket.status=Open
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-12
-semantic-task: support-shared-12
+semantic-task: support-composed-12
 profile: Application
 surface-tags: package-import
-package: examples/support_shared.ail
+package: examples/support_composed.ail
 prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
@@ -222,13 +226,15 @@ response-file: responses/example-12.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: vm
+vm-action: CloseTicket
+runtime-state: ticket.id=T-1;ticket.status=Open
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-13
-semantic-task: support-shared-13
+semantic-task: support-composed-13
 profile: Application
 surface-tags: package-import
-package: examples/support_shared.ail
+package: examples/support_composed.ail
 prompt-file: docs/ail/prompts/core-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:0175222e4a84bec4
@@ -239,13 +245,15 @@ response-file: responses/example-13.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: vm
+vm-action: CloseTicket
+runtime-state: ticket.id=T-1;ticket.status=Open
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-14
-semantic-task: support-shared-14
+semantic-task: support-composed-14
 profile: Application
 surface-tags: package-import
-package: examples/support_shared.ail
+package: examples/support_composed.ail
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:c9700f2c2e57e49e
@@ -256,13 +264,15 @@ response-file: responses/example-14.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: vm
+vm-action: CloseTicket
+runtime-state: ticket.id=T-1;ticket.status=Open
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-15
-semantic-task: support-shared-15
+semantic-task: support-composed-15
 profile: Application
 surface-tags: package-import
-package: examples/support_shared.ail
+package: examples/support_composed.ail
 prompt-file: docs/ail/prompts/core-to-spec.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:9f447e07620792b2
@@ -273,13 +283,15 @@ response-file: responses/example-15.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: vm
+vm-action: CloseTicket
+runtime-state: ticket.id=T-1;ticket.status=Open
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-16
-semantic-task: support-shared-16
+semantic-task: support-composed-16
 profile: Application
 surface-tags: package-import
-package: examples/support_shared.ail
+package: examples/support_composed.ail
 prompt-file: docs/ail/prompts/core-to-summary.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:49f26ec41d722633
@@ -290,13 +302,15 @@ response-file: responses/example-16.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: vm
+vm-action: CloseTicket
+runtime-state: ticket.id=T-1;ticket.status=Open
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-17
-semantic-task: support-shared-17
+semantic-task: support-composed-17
 profile: Application
 surface-tags: package-import
-package: examples/support_shared.ail
+package: examples/support_composed.ail
 prompt-file: docs/ail/prompts/flow-patch.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:30136a21ab8d8eb6
@@ -307,13 +321,15 @@ response-file: responses/example-17.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: vm
+vm-action: CloseTicket
+runtime-state: ticket.id=T-1;ticket.status=Open
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-18
-semantic-task: support-shared-18
+semantic-task: support-composed-18
 profile: Application
 surface-tags: package-import
-package: examples/support_shared.ail
+package: examples/support_composed.ail
 prompt-file: docs/ail/prompts/trace-debug.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:f5fffd069da83242
@@ -324,13 +340,15 @@ response-file: responses/example-18.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: vm
+vm-action: CloseTicket
+runtime-state: ticket.id=T-1;ticket.status=Open
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-19
-semantic-task: support-shared-19
+semantic-task: support-composed-19
 profile: Application
 surface-tags: package-import
-package: examples/support_shared.ail
+package: examples/support_composed.ail
 prompt-file: docs/ail/prompts/interop.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:87f6dd1772d48729
@@ -341,6 +359,8 @@ response-file: responses/example-19.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: vm
+vm-action: CloseTicket
+runtime-state: ticket.id=T-1;ticket.status=Open
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-20

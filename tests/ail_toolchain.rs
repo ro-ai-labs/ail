@@ -19923,6 +19923,86 @@ fn cli_ail_e2e_corpus_replays_checked_seed_corpus() {
 }
 
 #[test]
+fn cli_ail_e2e_corpus_replays_imported_package_specs() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let corpus_dir = std::env::temp_dir().join(format!(
+        "ail-e2e-corpus-imported-package-{}",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-e2e-corpus-imported-package-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&corpus_dir);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&corpus_dir).unwrap();
+    write_e2e_transcript_files(&corpus_dir, 100);
+    fs::write(
+        corpus_dir.join("responses").join("example-10.json"),
+        fs::read_to_string(format!(
+            "{}/examples/support_composed.ail/spec.ail-spec.md",
+            env!("CARGO_MANIFEST_DIR")
+        ))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        corpus_dir.join("examples.md"),
+        e2e_corpus_text_with_override(
+            10,
+            &[
+                ("semantic-task", "support-composed-import-10"),
+                ("package", "examples/support_composed.ail"),
+                ("response-file", "responses/example-10.json"),
+                ("target", "vm"),
+                ("vm-action", "CloseTicket"),
+                ("runtime-state", "ticket.id=T-1;ticket.status=Open"),
+            ],
+        ),
+    )
+    .unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-e2e-corpus",
+            corpus_dir.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let report = fs::read_to_string(artifact_dir.join("e2e-corpus-report.txt")).unwrap();
+    assert!(
+        report.contains("entry example-10")
+            && report.contains("semantic-task support-composed-import-10"),
+        "{report}"
+    );
+    assert!(
+        report.contains("entry-artifact example-10 vm-trace examples/example-10/vm-trace.txt"),
+        "{report}"
+    );
+    let checked_core =
+        fs::read_to_string(artifact_dir.join("examples/example-10/checked.ail-core.txt")).unwrap();
+    assert!(
+        checked_core.contains("imports: ../support_shared.ail as Shared resolved support-shared"),
+        "{checked_core}"
+    );
+    assert!(checked_core.contains("Thing Shared.User"), "{checked_core}");
+    let vm_trace =
+        fs::read_to_string(artifact_dir.join("examples/example-10/vm-trace.txt")).unwrap();
+    assert!(vm_trace.contains("trace TicketClosed"), "{vm_trace}");
+
+    let _ = fs::remove_dir_all(corpus_dir);
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
 fn cli_ail_e2e_corpus_requires_100_distinct_semantic_examples() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let corpus_dir = std::env::temp_dir().join(format!(

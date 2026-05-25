@@ -1,15 +1,18 @@
-# Shared Support AIL-Spec Example
+# Composed Support AIL-Spec Example
 
-The application Shared Support manages reusable support-domain declarations.
+The application Composed Support Tickets manages support tickets with shared users.
 
-A User has:
+A Ticket has:
 
 - id: Text
-- role: State<Customer, SupportAgent, SupportManager>
-- email: Text
+- customer: Shared.User
+- status: State<Open, Closed>
 
-Failure PermissionDenied happens when a user lacks support staff permission:
+Action: Close ticket.
 
-- the system reveals no secret value
-- the caller sees "Permission denied"
-- the trace records SharedPermissionDenied
+When a support agent closes a ticket:
+
+- the system requires the ticket to exist
+- the system changes the ticket status to Closed
+- the system guarantees closed tickets are hidden from the active queue
+- the system records a trace event named TicketClosed

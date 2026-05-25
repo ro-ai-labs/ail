@@ -1331,9 +1331,9 @@ fn evaluate_rejected_ail_e2e_corpus_entry(
     })?;
     let (request_text, response_text) = read_ail_e2e_entry_transcripts(entry)?;
     let spec_text = extract_ail_e2e_response_artifact_text(&response_text);
-    let diagnostics = match parse_ail_spec_text(&spec_text) {
+    let package = load_ail_package_dir(package_path)?;
+    let diagnostics = match parse_ail_package_spec_text(&package, &spec_text) {
         Ok(document) => {
-            let package = load_ail_package_dir(package_path)?;
             let core = elaborate_ail_core(&package, &document);
             check_ail_core(&core)
         }
@@ -1421,7 +1421,7 @@ fn evaluate_ail_e2e_corpus_entry(
     let (request_text, response_text) = read_ail_e2e_entry_transcripts(entry)?;
     let spec_text = extract_ail_e2e_response_artifact_text(&response_text);
     let package = load_ail_package_dir(package_path)?;
-    let document = parse_ail_spec_text(&spec_text)?;
+    let document = parse_ail_package_spec_text(&package, &spec_text)?;
     let core = elaborate_ail_core(&package, &document);
     let diagnostics = check_ail_core(&core);
     if !diagnostics.is_empty() {

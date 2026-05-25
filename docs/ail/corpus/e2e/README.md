@@ -30,10 +30,11 @@ exposes that reuse with duplicate response and extracted-artifact fingerprint
 counts. Those duplicate counts must be driven to zero before claiming the final
 v0.2 prompt-to-artifact release gate.
 
-Some seed entries use surface metadata to keep threshold checks active while
-the replay path catches up to full UI-profile lowering and imported-package
-type resolution. Those entries are scaffolding, not final release coverage for
-those surfaces.
+Some seed entries use surface metadata to keep UI threshold checks active while
+the replay path catches up to full UI-profile lowering. Those entries are
+scaffolding, not final release coverage for the UI surface. Package-import seed
+entries replay through package-aware import resolution and compile the composed
+support package through checked Core, bytecode, and VM trace artifacts.
 
 Replay with:
 

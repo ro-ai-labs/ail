@@ -35,9 +35,11 @@ ACCEPTED_FIXTURES = {
         "spec": "examples/ail_std_collections.ail/spec.ail-spec.md",
     },
     "package-import": {
-        "semantic_prefix": "support-shared",
-        "package": "examples/support_shared.ail",
-        "spec": "examples/support_shared.ail/spec.ail-spec.md",
+        "semantic_prefix": "support-composed",
+        "package": "examples/support_composed.ail",
+        "spec": "examples/support_composed.ail/spec.ail-spec.md",
+        "vm_action": "CloseTicket",
+        "runtime_state": "ticket.id=T-1;ticket.status=Open",
     },
     "ui": {
         "semantic_prefix": "option-map-ui-surface",
