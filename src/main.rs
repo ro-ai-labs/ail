@@ -348,6 +348,17 @@ enum AilCompileWasmContractScope<'a> {
     AllActions,
 }
 
+struct AilCompileDarwinMachOContractArtifactSet<'a> {
+    source_manifest_text: Option<&'a str>,
+    source_spec_text: Option<&'a str>,
+    core_text: Option<&'a str>,
+    bytecode_text: &'a str,
+    action_name: &'a str,
+    target_name: &'a str,
+    darwin_macho_contract_report_text: &'a str,
+    dependency_report_text: &'a str,
+}
+
 struct AilBootstrapArtifactSet<'a> {
     target_name: &'a str,
     toolchain_source_manifest_text: &'a str,
@@ -681,6 +692,12 @@ fn wasm_contract_machine_bytecode_manifest_contract_line(target_name: &str) -> S
     )
 }
 
+fn darwin_macho_contract_machine_bytecode_manifest_contract_line(target_name: &str) -> String {
+    format!(
+        "machine-bytecode-contract {target_name} bytecode-level portable-vm-contract bytecode-container darwin-macho-contract bytecode-format macho64-arm64-contract-report"
+    )
+}
+
 fn render_ail_compile_wasm_contract_manifest(
     artifacts: &AilCompileWasmContractArtifactSet<'_>,
 ) -> String {
@@ -734,6 +751,45 @@ fn render_ail_compile_wasm_contract_manifest(
     if artifacts.agent_trace.is_some() {
         lines.push("trace agent-trace.txt".to_string());
     }
+    format!("{}\n", lines.join("\n"))
+}
+
+fn render_ail_compile_darwin_macho_contract_manifest(
+    artifacts: &AilCompileDarwinMachOContractArtifactSet<'_>,
+) -> String {
+    let mut lines = vec!["AIL-Compile-Manifest:".to_string()];
+    if let (Some(source_manifest_text), Some(source_spec_text)) =
+        (artifacts.source_manifest_text, artifacts.source_spec_text)
+    {
+        lines.push(format!(
+            "source-package source.ail-package.md source.ail-spec.md {}",
+            ail_artifact_fingerprint(&ail_bootstrap_source_bundle_text(
+                source_manifest_text,
+                source_spec_text,
+            ))
+        ));
+    }
+    if let Some(core_text) = artifacts.core_text {
+        lines.push(format!(
+            "core checked.ail-core.txt {}",
+            ail_artifact_fingerprint(core_text)
+        ));
+    }
+    lines.push(format!(
+        "bytecode artifact.ailbc.json {}",
+        ail_artifact_fingerprint(artifacts.bytecode_text)
+    ));
+    lines.push(format!("action {}", artifacts.action_name));
+    lines
+        .push(darwin_macho_contract_machine_bytecode_manifest_contract_line(artifacts.target_name));
+    lines.push(format!(
+        "darwin-macho-contract darwin-macho-contract-report.txt {}",
+        ail_artifact_fingerprint(artifacts.darwin_macho_contract_report_text)
+    ));
+    lines.push(format!(
+        "dependencies dependency-report.txt {}",
+        ail_artifact_fingerprint(artifacts.dependency_report_text)
+    ));
     format!("{}\n", lines.join("\n"))
 }
 
@@ -1252,6 +1308,90 @@ fn write_ail_compile_wasm_contract_artifacts(
         .map_err(|error| format!("failed to write ail-compile agent trace artifact: {error}"))?;
     }
     let manifest_text = render_ail_compile_wasm_contract_manifest(&artifacts);
+    fs::write(root.join("manifest.ail-compile.txt"), &manifest_text)
+        .map_err(|error| format!("failed to write ail-compile manifest artifact: {error}"))?;
+    fs::write(
+        root.join("manifest.fingerprint.txt"),
+        format!("{}\n", ail_artifact_fingerprint(&manifest_text)),
+    )
+    .map_err(|error| {
+        format!("failed to write ail-compile manifest fingerprint artifact: {error}")
+    })?;
+    Ok(())
+}
+
+fn write_ail_compile_darwin_macho_contract_artifacts(
+    artifact_dir: &str,
+    artifacts: AilCompileDarwinMachOContractArtifactSet<'_>,
+) -> Result<(), String> {
+    let root = std::path::Path::new(artifact_dir);
+    fs::create_dir_all(root).map_err(|error| {
+        format!("failed to create ail-compile artifact dir {artifact_dir}: {error}")
+    })?;
+    reject_stale_wasm_contract_executable_artifacts(root, artifact_dir)?;
+    if let (Some(source_manifest_text), Some(source_spec_text)) =
+        (artifacts.source_manifest_text, artifacts.source_spec_text)
+    {
+        write_ail_source_package_snapshot(
+            root,
+            "ail-compile",
+            source_manifest_text,
+            source_spec_text,
+        )?;
+    }
+    if let Some(core_text) = artifacts.core_text {
+        fs::write(root.join("checked.ail-core.txt"), core_text)
+            .map_err(|error| format!("failed to write ail-compile core artifact: {error}"))?;
+        fs::write(
+            root.join("checked.ail-core.fingerprint.txt"),
+            format!("{}\n", ail_artifact_fingerprint(core_text)),
+        )
+        .map_err(|error| {
+            format!("failed to write ail-compile core fingerprint artifact: {error}")
+        })?;
+    }
+    fs::write(root.join("artifact.ailbc.json"), artifacts.bytecode_text)
+        .map_err(|error| format!("failed to write ail-compile bytecode artifact: {error}"))?;
+    fs::write(
+        root.join("artifact.fingerprint.txt"),
+        format!("{}\n", ail_artifact_fingerprint(artifacts.bytecode_text)),
+    )
+    .map_err(|error| {
+        format!("failed to write ail-compile bytecode fingerprint artifact: {error}")
+    })?;
+    fs::write(
+        root.join("darwin-macho-contract-report.txt"),
+        artifacts.darwin_macho_contract_report_text,
+    )
+    .map_err(|error| {
+        format!("failed to write ail-compile Darwin Mach-O contract report: {error}")
+    })?;
+    fs::write(
+        root.join("darwin-macho-contract-report.fingerprint.txt"),
+        format!(
+            "{}\n",
+            ail_artifact_fingerprint(artifacts.darwin_macho_contract_report_text)
+        ),
+    )
+    .map_err(|error| {
+        format!("failed to write ail-compile Darwin Mach-O contract report fingerprint: {error}")
+    })?;
+    fs::write(
+        root.join("dependency-report.txt"),
+        artifacts.dependency_report_text,
+    )
+    .map_err(|error| format!("failed to write ail-compile dependency report: {error}"))?;
+    fs::write(
+        root.join("dependency-report.fingerprint.txt"),
+        format!(
+            "{}\n",
+            ail_artifact_fingerprint(artifacts.dependency_report_text)
+        ),
+    )
+    .map_err(|error| {
+        format!("failed to write ail-compile dependency report fingerprint: {error}")
+    })?;
+    let manifest_text = render_ail_compile_darwin_macho_contract_manifest(&artifacts);
     fs::write(root.join("manifest.ail-compile.txt"), &manifest_text)
         .map_err(|error| format!("failed to write ail-compile manifest artifact: {error}"))?;
     fs::write(
@@ -5825,6 +5965,155 @@ fn render_ail_compile_wasm_contract_dependency_report_for_scope(
     Ok(format!("{}\n", lines.join("\n")))
 }
 
+fn ail_compile_darwin_macho_contract_status<'a>(
+    program: &'a AilBytecodeProgram,
+    target_name: &str,
+) -> Result<&'a str, String> {
+    if target_name != "aarch64-apple-darwin-libsystem-macho" {
+        return Err(format!(
+            "unsupported Darwin Mach-O contract target '{target_name}'"
+        ));
+    }
+    let status = program
+        .target_support
+        .get(target_name)
+        .ok_or_else(|| {
+            format!(
+                "AIL-BACKEND-001 package {} target-support does not declare Darwin Mach-O contract target {target_name}",
+                program.package_name
+            )
+        })?
+        .as_str();
+    if matches!(
+        status,
+        "planned-contract" | "supported" | "supported-with-host-imports"
+    ) {
+        Ok(status)
+    } else {
+        Err(format!(
+            "AIL-BACKEND-001 package {} target-support marks {target_name} as {status}; Darwin Mach-O contract target {target_name} requires planned-contract, supported, or supported-with-host-imports",
+            program.package_name
+        ))
+    }
+}
+
+fn render_ail_compile_darwin_macho_contract_report(
+    program: &AilBytecodeProgram,
+    action_name: &str,
+    target_name: &str,
+) -> Result<String, String> {
+    let status = ail_compile_darwin_macho_contract_status(program, target_name)?;
+    if !program.actions.contains_key(action_name) {
+        return Err(format!("unknown AIL action '{action_name}'"));
+    }
+    let mut lines = vec![
+        "AIL-Darwin-MachO-Contract-Report:".to_string(),
+        format!(
+            "package {} {}",
+            program.package_name, program.package_version
+        ),
+        format!("target {target_name}"),
+        format!("status {status}"),
+        "bytecode-level portable-vm-contract".to_string(),
+        "bytecode-container darwin-macho-contract".to_string(),
+        "bytecode-format macho64-arm64-contract-report".to_string(),
+        "host-boundary libSystem-and-entitlements".to_string(),
+        "host-import-metadata present-in-saved-bytecode".to_string(),
+        format!("action {action_name}"),
+        "trace-scope reachable-action-call-graph".to_string(),
+        format!(
+            "trace-preservation {}",
+            ail_wasm_contract_trace_preservation_label(program, action_name)?
+        ),
+        "executable-macho-module none".to_string(),
+    ];
+    if program.external_bindings.is_empty() {
+        lines.push("external-symbols none".to_string());
+    } else {
+        for binding in program.external_bindings.values() {
+            lines.push(format!(
+                "external-symbol {} library {} symbol {} binding-kind {} calling-convention {}",
+                binding.name,
+                binding.library,
+                binding.symbol,
+                binding.binding_kind,
+                binding.calling_convention
+            ));
+            for capability in &binding.capabilities {
+                lines.push(format!("capability {} {}", binding.name, capability));
+            }
+            for trace in &binding.traces {
+                lines.push(format!("external-symbol-trace {} {}", binding.name, trace));
+            }
+        }
+    }
+    Ok(format!("{}\n", lines.join("\n")))
+}
+
+fn render_ail_compile_darwin_macho_contract_dependency_report(
+    program: &AilBytecodeProgram,
+    action_name: &str,
+    target_name: &str,
+) -> Result<String, String> {
+    let _status = ail_compile_darwin_macho_contract_status(program, target_name)?;
+    if !program.actions.contains_key(action_name) {
+        return Err(format!("unknown AIL action '{action_name}'"));
+    }
+    let libraries = ail_bytecode_darwin_macho_contract_library_dependencies(program);
+    let mut lines = vec![
+        "AIL-Compile-Dependency-Report:".to_string(),
+        format!("target {target_name}"),
+        format!("action {action_name}"),
+        "host-language-runtime none".to_string(),
+        "dynamic-linker libSystem".to_string(),
+        format!("shared-libraries {libraries}"),
+        format!("library-dependencies {libraries}"),
+        "linker-invocation none".to_string(),
+        "runtime-abi darwin-libsystem-entitlements".to_string(),
+        "machine-bytecode-dependency darwin-macho-contract-report.txt contract-only-darwin-macho"
+            .to_string(),
+    ];
+    for binding in program.external_bindings.values() {
+        lines.push(format!(
+            "external-symbol-dependency {} library {} symbol {} binding-kind {} calling-convention {}",
+            binding.name,
+            binding.library,
+            binding.symbol,
+            binding.binding_kind,
+            binding.calling_convention
+        ));
+    }
+    Ok(format!("{}\n", lines.join("\n")))
+}
+
+fn ail_bytecode_darwin_macho_contract_library_dependencies(program: &AilBytecodeProgram) -> String {
+    let mut libraries = program
+        .external_bindings
+        .values()
+        .map(|binding| binding.library.clone())
+        .collect::<BTreeSet<_>>();
+    libraries.insert("libSystem".to_string());
+    libraries.into_iter().collect::<Vec<_>>().join(",")
+}
+
+fn check_darwin_macho_contract_supported_effects(
+    core: &ail::ail::AilCore,
+    target_name: &str,
+) -> Result<(), String> {
+    if target_name != "aarch64-apple-darwin-libsystem-macho" {
+        return Ok(());
+    }
+    for node in &core.graph.nodes {
+        if node.kind == "Effect" && node.name.to_ascii_lowercase().contains("linux syscall") {
+            return Err(format!(
+                "AIL-BACKEND-001 target {target_name} does not support Linux-only syscall effect '{}'",
+                node.name
+            ));
+        }
+    }
+    Ok(())
+}
+
 fn ail_bytecode_wasm_contract_library_dependencies(program: &AilBytecodeProgram) -> String {
     if !program.external_bindings_metadata_present {
         return "not-enumerated-in-saved-bytecode".to_string();
@@ -6351,6 +6640,46 @@ fn run_ail_compile_from_core(
         .ail_compile_target
         .as_deref()
         .ok_or_else(|| "ail-compile requires --target <target>".to_string())?;
+    if target == "aarch64-apple-darwin-libsystem-macho" {
+        if cli_options.ail_compile_out.is_some() {
+            return Err("ail-compile Darwin Mach-O contract target does not emit --out yet; use --artifact-dir <dir>".to_string());
+        }
+        if cli_options.ail_build_agent.is_some() {
+            return Err(
+                "ail-compile Darwin Mach-O contract target does not support --agent yet"
+                    .to_string(),
+            );
+        }
+        let artifact_dir = cli_options.artifact_dir.as_deref().ok_or_else(|| {
+            "ail-compile Darwin Mach-O contract target requires --artifact-dir <dir>".to_string()
+        })?;
+        check_darwin_macho_contract_supported_effects(core, target)?;
+        let bytecode = compile_ail_core_bytecode(core)?;
+        let bytecode_text = format!("{}\n", render_ail_bytecode(&bytecode));
+        let core_text = format!("{}\n", render_ail_core(core));
+        let darwin_macho_contract_report_text =
+            render_ail_compile_darwin_macho_contract_report(&bytecode, action, target)?;
+        let dependency_report_text = append_source_package_dependency_report(
+            render_ail_compile_darwin_macho_contract_dependency_report(&bytecode, action, target)?,
+            source_artifacts,
+        );
+        write_ail_compile_darwin_macho_contract_artifacts(
+            artifact_dir,
+            AilCompileDarwinMachOContractArtifactSet {
+                source_manifest_text: source_artifacts
+                    .map(|artifacts| artifacts.manifest_text.as_str()),
+                source_spec_text: source_artifacts.map(|artifacts| artifacts.spec_text.as_str()),
+                core_text: Some(&core_text),
+                bytecode_text: &bytecode_text,
+                action_name: action,
+                target_name: target,
+                darwin_macho_contract_report_text: &darwin_macho_contract_report_text,
+                dependency_report_text: &dependency_report_text,
+            },
+        )?;
+        println!("ail-compile wrote {target} contract {artifact_dir}");
+        return Ok(0);
+    }
     if target == "wasm32-unknown-sandbox-wasm" {
         if cli_options.ail_compile_out.is_some() {
             return Err(
@@ -6859,6 +7188,39 @@ fn run_ail_compile_from_bytecode_file(path: &str, cli_options: &CliOptions) -> R
         .ail_action
         .as_deref()
         .ok_or_else(|| "ail-compile requires --action <name>".to_string())?;
+    if target == "aarch64-apple-darwin-libsystem-macho" {
+        if cli_options.ail_compile_out.is_some() {
+            return Err("ail-compile Darwin Mach-O contract target does not emit --out yet; use --artifact-dir <dir>".to_string());
+        }
+        if cli_options.ail_build_agent.is_some() {
+            return Err(
+                "ail-compile Darwin Mach-O contract target does not support --agent yet"
+                    .to_string(),
+            );
+        }
+        let artifact_dir = cli_options.artifact_dir.as_deref().ok_or_else(|| {
+            "ail-compile Darwin Mach-O contract target requires --artifact-dir <dir>".to_string()
+        })?;
+        let darwin_macho_contract_report_text =
+            render_ail_compile_darwin_macho_contract_report(&bytecode, action, target)?;
+        let dependency_report_text =
+            render_ail_compile_darwin_macho_contract_dependency_report(&bytecode, action, target)?;
+        write_ail_compile_darwin_macho_contract_artifacts(
+            artifact_dir,
+            AilCompileDarwinMachOContractArtifactSet {
+                source_manifest_text: None,
+                source_spec_text: None,
+                core_text: None,
+                bytecode_text: &bytecode_text,
+                action_name: action,
+                target_name: target,
+                darwin_macho_contract_report_text: &darwin_macho_contract_report_text,
+                dependency_report_text: &dependency_report_text,
+            },
+        )?;
+        println!("ail-compile wrote {target} contract {artifact_dir}");
+        return Ok(0);
+    }
     if target == "wasm32-unknown-sandbox-wasm" {
         if cli_options.ail_compile_out.is_some() {
             return Err(

@@ -9363,6 +9363,312 @@ When compress payload happens:
 }
 
 #[test]
+fn cli_ail_compile_writes_darwin_macho_contract_artifacts() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let unique_suffix = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let root = std::env::temp_dir().join(format!(
+        "ail-darwin-contract-package-{}-{unique_suffix}",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-darwin-contract-artifacts-{}-{unique_suffix}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&root);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&root).unwrap();
+    fs::write(
+        root.join("ail-package.md"),
+        r#"name: darwin-contract-app
+version: 0.1.0
+profile: Application
+entry: spec.ail-spec.md
+features: actions, traces, c-interop
+conformance: first-slice
+target-support:
+  aarch64-apple-darwin-libsystem-macho: planned-contract
+"#,
+    )
+    .unwrap();
+    fs::write(
+        root.join("spec.ail-spec.md"),
+        r#"The application Darwin Contract App manages libSystem boundaries.
+
+C library: libSystem.
+
+The library imports function getpid.
+
+getpid produces:
+
+- status: CInt
+
+getpid maps errno or status codes:
+
+- OK maps to success
+- EINVAL maps to Failure.InvalidProcessIdRead
+
+getpid requires capability:
+
+- call libSystem getpid
+
+getpid records trace event named ForeignGetPid
+
+Action: Read process id.
+
+When read process id happens:
+
+- the system records a trace event named ProcessIdRead
+"#,
+    )
+    .unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-compile",
+            root.to_str().unwrap(),
+            "--action",
+            "ReadProcessId",
+            "--target",
+            "aarch64-apple-darwin-libsystem-macho",
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stdout)
+            .contains("ail-compile wrote aarch64-apple-darwin-libsystem-macho contract"),
+        "{}",
+        String::from_utf8_lossy(&output.stdout)
+    );
+
+    assert!(
+        fs::read_to_string(artifact_dir.join("source.ail-package.md"))
+            .unwrap()
+            .contains("name: darwin-contract-app")
+    );
+    let checked_core = fs::read_to_string(artifact_dir.join("checked.ail-core.txt")).unwrap();
+    assert!(
+        checked_core
+            .contains("target-support: aarch64-apple-darwin-libsystem-macho=planned-contract"),
+        "{checked_core}"
+    );
+    let bytecode_artifact = fs::read_to_string(artifact_dir.join("artifact.ailbc.json")).unwrap();
+    assert!(bytecode_artifact.contains(r#""action":"ReadProcessId""#));
+    assert!(bytecode_artifact.contains(r#""name":"libSystem.getpid""#));
+    let bytecode_fingerprint =
+        fs::read_to_string(artifact_dir.join("artifact.fingerprint.txt")).unwrap();
+    assert_eq!(
+        bytecode_fingerprint.trim(),
+        fnv64_fingerprint(&bytecode_artifact)
+    );
+    assert!(
+        !artifact_dir.join("target.elf").exists(),
+        "Darwin contract artifacts must not pretend to be native ELF output"
+    );
+
+    let contract_report =
+        fs::read_to_string(artifact_dir.join("darwin-macho-contract-report.txt")).unwrap();
+    assert!(
+        contract_report.contains("AIL-Darwin-MachO-Contract-Report:"),
+        "{contract_report}"
+    );
+    assert!(
+        contract_report.contains("target aarch64-apple-darwin-libsystem-macho"),
+        "{contract_report}"
+    );
+    assert!(
+        contract_report.contains("status planned-contract"),
+        "{contract_report}"
+    );
+    assert!(
+        contract_report.contains("bytecode-level portable-vm-contract"),
+        "{contract_report}"
+    );
+    assert!(
+        contract_report.contains("bytecode-container darwin-macho-contract"),
+        "{contract_report}"
+    );
+    assert!(
+        contract_report.contains("bytecode-format macho64-arm64-contract-report"),
+        "{contract_report}"
+    );
+    assert!(
+        contract_report.contains("host-boundary libSystem-and-entitlements"),
+        "{contract_report}"
+    );
+    assert!(
+        contract_report
+            .contains("external-symbol libSystem.getpid library libSystem symbol getpid"),
+        "{contract_report}"
+    );
+    assert!(
+        contract_report.contains("capability libSystem.getpid call libSystem getpid"),
+        "{contract_report}"
+    );
+    assert!(
+        contract_report.contains("trace-preservation required"),
+        "{contract_report}"
+    );
+    let contract_report_fingerprint =
+        fs::read_to_string(artifact_dir.join("darwin-macho-contract-report.fingerprint.txt"))
+            .unwrap();
+    assert_eq!(
+        contract_report_fingerprint.trim(),
+        fnv64_fingerprint(&contract_report)
+    );
+
+    let dependency_report = fs::read_to_string(artifact_dir.join("dependency-report.txt")).unwrap();
+    assert!(
+        dependency_report.contains("target aarch64-apple-darwin-libsystem-macho"),
+        "{dependency_report}"
+    );
+    assert!(
+        dependency_report.contains("dynamic-linker libSystem"),
+        "{dependency_report}"
+    );
+    assert!(
+        dependency_report.contains("shared-libraries libSystem"),
+        "{dependency_report}"
+    );
+    assert!(
+        dependency_report.contains("machine-bytecode-dependency darwin-macho-contract-report.txt contract-only-darwin-macho"),
+        "{dependency_report}"
+    );
+    let dependency_report_fingerprint =
+        fs::read_to_string(artifact_dir.join("dependency-report.fingerprint.txt")).unwrap();
+    assert_eq!(
+        dependency_report_fingerprint.trim(),
+        fnv64_fingerprint(&dependency_report)
+    );
+
+    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-compile.txt")).unwrap();
+    assert!(manifest.contains("AIL-Compile-Manifest:"), "{manifest}");
+    assert!(manifest.contains("action ReadProcessId"), "{manifest}");
+    assert!(
+        manifest.contains("machine-bytecode-contract aarch64-apple-darwin-libsystem-macho bytecode-level portable-vm-contract bytecode-container darwin-macho-contract bytecode-format macho64-arm64-contract-report"),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "darwin-macho-contract darwin-macho-contract-report.txt {}",
+            fnv64_fingerprint(&contract_report)
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains("dependencies dependency-report.txt"),
+        "{manifest}"
+    );
+    assert!(
+        !manifest.contains("target aarch64-apple-darwin-libsystem-macho target.elf"),
+        "{manifest}"
+    );
+    let manifest_fingerprint =
+        fs::read_to_string(artifact_dir.join("manifest.fingerprint.txt")).unwrap();
+    assert_eq!(manifest_fingerprint.trim(), fnv64_fingerprint(&manifest));
+
+    fs::remove_dir_all(root).unwrap();
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
+fn cli_ail_compile_darwin_contract_rejects_linux_only_syscall_effect() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let unique_suffix = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let root = std::env::temp_dir().join(format!(
+        "ail-darwin-linux-effect-package-{}-{unique_suffix}",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-darwin-linux-effect-artifacts-{}-{unique_suffix}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&root);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&root).unwrap();
+    fs::write(
+        root.join("ail-package.md"),
+        r#"name: darwin-linux-effect-app
+version: 0.1.0
+profile: Application
+entry: spec.ail-spec.md
+features: actions, traces, system-components, capabilities, effects
+conformance: first-slice
+target-support:
+  aarch64-apple-darwin-libsystem-macho: planned-contract
+"#,
+    )
+    .unwrap();
+    fs::write(
+        root.join("spec.ail-spec.md"),
+        r#"The application Darwin Linux Effect App manages target-specific effects.
+
+System component: Linux syscall bridge.
+
+The component requires capability:
+
+- call linux syscall exit
+
+The component performs:
+
+- linux syscall exit
+
+Action: Linux exit.
+
+When linux exit happens:
+
+- the system records a trace event named LinuxExit
+"#,
+    )
+    .unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-compile",
+            root.to_str().unwrap(),
+            "--action",
+            "LinuxExit",
+            "--target",
+            "aarch64-apple-darwin-libsystem-macho",
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let combined_output = format!(
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        combined_output.contains("AIL-BACKEND-001 target aarch64-apple-darwin-libsystem-macho does not support Linux-only syscall effect 'linux syscall exit'"),
+        "{combined_output}"
+    );
+
+    fs::remove_dir_all(root).unwrap();
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
 fn cli_ail_compile_wasm_contract_marks_reachable_call_trace_required() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let unique_suffix = std::time::SystemTime::now()

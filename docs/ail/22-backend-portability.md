@@ -159,6 +159,38 @@ The first Darwin target must prove:
 - traces map back to AIL-Core node IDs
 - unsupported Linux-only syscalls are rejected
 
+Current implementation status: source packages, checked AIL-Core, and saved
+AIL-Bytecode can be compiled to a deterministic Darwin Mach-O contract report
+with:
+
+```text
+ail ail-compile <package-or-artifact.ailbc.json> \
+  --action <ActionName> \
+  --target aarch64-apple-darwin-libsystem-macho \
+  --artifact-dir <dir>
+```
+
+Checked-core input is also supported through `--core-file <checked-core>`.
+The package, checked core, or saved bytecode must declare
+`aarch64-apple-darwin-libsystem-macho: planned-contract`, `supported`, or
+`supported-with-host-imports` in `target-support`. The command writes
+`darwin-macho-contract-report.txt`,
+`darwin-macho-contract-report.fingerprint.txt`, `dependency-report.txt`,
+`dependency-report.fingerprint.txt`, `manifest.ail-compile.txt`, and
+`manifest.fingerprint.txt` alongside the saved `artifact.ailbc.json` and its
+fingerprint. It intentionally does not write `target.elf` or an executable
+Mach-O module yet. The contract report records `bytecode-level
+portable-vm-contract`, `bytecode-container darwin-macho-contract`,
+`bytecode-format macho64-arm64-contract-report`, `host-boundary
+libSystem-and-entitlements`, target-support status, the selected action, and
+trace preservation requirements across the selected action's reachable
+`CALL_ACTION` graph. Saved bytecode preserves `ExternalBinding` declarations,
+so the report enumerates each external symbol with library, symbol, ABI,
+declared capabilities, and traces. The dependency report records libSystem as
+the dynamic linker boundary and lists external symbol dependencies. Source
+packages are checked before bytecode lowering, and Linux-only syscall effects
+are rejected for this target with `AIL-BACKEND-001`.
+
 ## Executable Formats
 
 Backend conformance covers:

@@ -404,13 +404,15 @@ already covers parts of this gate:
   destructive action confirmation, inaccessible error text, and workflow step
   ordering
 - Wasm contract reports with host import enumeration
+- Darwin Mach-O contract reports with libSystem external-symbol metadata,
+  dependency reports, manifests, fingerprints, and Linux-only syscall
+  rejection
 - Linux native executable artifacts
 - prompt-envelope checks and prompt-to-native build evidence
 
 Missing v0.2 evidence includes:
 
 - registry package fetching and registry identity resolution
-- Darwin Mach-O contract artifacts
 - stored prompt portability corpus across model labels
 - v0.2-specific release evidence bundle
 
