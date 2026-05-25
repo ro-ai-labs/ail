@@ -489,9 +489,10 @@ already covers parts of this gate:
   artifacts, Wasm and Darwin target-contract reports, rejected-output replay,
   and top-level manifest/report fingerprints
 - checked 100-entry e2e seed corpus under `docs/ail/corpus/e2e`
-- two replay-clean live LLM `spec-draft.system.md` captures for the Support
-  Ticket and Refund Tool packages, using schema-shaped prompt input and an
-  OpenAI-compatible chat-completions endpoint with thinking disabled
+- three replay-clean live LLM `spec-draft.system.md` captures for the Standard
+  Collections, Support Ticket, and Refund Tool packages, using schema-shaped
+  prompt input and an OpenAI-compatible chat-completions endpoint with thinking
+  disabled
 - a recorded Codex/skill-agent transcript importer that promotes stored request
   and response JSON into `capture-origin: live-codex` corpus entries for
   offline replay; no committed live Codex transcript has been promoted yet

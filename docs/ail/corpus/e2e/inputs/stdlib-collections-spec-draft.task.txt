@@ -1,0 +1,24 @@
+Return only complete canonical AIL-Spec text for the AIL standard collections package.
+
+Use these exact section forms:
+- Package: ail.std.collections.
+- Type: Option<T>.
+- Option has variants:
+- Type: Result<T,E>.
+- Result has variants:
+- Type: List<T>.
+- List has variants:
+- Type: Map<K,V>.
+- Map has variants:
+- Type: Set<T>.
+- Set has variants:
+- Function: Option.map.
+- The function needs:
+- The function produces:
+- When Option.map runs:
+
+Preserve generic type names exactly, including Option<T>, Result<T,E>, List<T>,
+Map<K,V>, Set<T>, Option<U>, Some(value: T), Success(value: T), and
+Failure(error: E). Preserve the trace event name OptionMapEvaluated.
+
+Do not use markdown fences, commentary, or alternative headings.

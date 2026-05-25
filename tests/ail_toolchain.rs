@@ -19897,11 +19897,17 @@ fn cli_ail_e2e_corpus_replays_checked_seed_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("capture-origin-count deterministic-seed 98"),
+        report.contains("capture-origin-count deterministic-seed 97"),
         "{report}"
     );
     assert!(
-        report.contains("capture-origin-count live-llm 2"),
+        report.contains("capture-origin-count live-llm 3"),
+        "{report}"
+    );
+    assert!(
+        report.contains("entry example-2")
+            && report.contains("semantic-task stdlib-collections-live-spec-input-2")
+            && report.contains("capture-origin live-llm"),
         "{report}"
     );
     assert!(
@@ -19976,7 +19982,7 @@ fn cli_ail_e2e_corpus_release_evidence_rejects_deterministic_seed_corpus() {
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
         stderr.contains(
-            "ail-e2e-corpus --release-evidence requires zero deterministic-seed entries; found 98"
+            "ail-e2e-corpus --release-evidence requires zero deterministic-seed entries; found 97"
         ),
         "{stderr}"
     );

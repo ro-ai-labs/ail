@@ -40,7 +40,7 @@ target: vm
 endpoint-label: local-endpoint-alt
 
 ## End-To-End Example: example-2
-semantic-task: stdlib-collections-2
+semantic-task: stdlib-collections-live-spec-input-2
 profile: Application
 surface-tags: standard-library
 package: examples/ail_std_collections.ail
@@ -48,14 +48,14 @@ prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
 executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-label: unsloth-qwen3.6-35b-a3b-gguf-chat
+capture-origin: live-llm
 request-file: requests/example-2.json
-response-file: responses/example-2.ail-spec.md
+response-file: responses/example-2.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: vm
-endpoint-label: local-endpoint
+endpoint-label: inteligentia-pro-1-qwen3.6-35b-chat
 
 ## End-To-End Example: example-3
 semantic-task: stdlib-collections-3

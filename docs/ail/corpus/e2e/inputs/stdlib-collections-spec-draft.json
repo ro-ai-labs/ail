@@ -1,0 +1,12 @@
+{
+  "package_manifest": "# AIL Package\n\nname: ail.std.collections\nversion: 0.2.0\nprofile: Application\nentry: spec.ail-spec.md\nfeatures: stdlib, types, functions, collection-transform, traces\nimports: ../ail_std_core.ail compatible ^0.2 as Core\nconformance: v0.2\nschema-version: ail-core.schema.v0\nsafety-level: standard\ntarget-support:\n  ail-core.schema.v0: supported\n",
+  "profile": "Application",
+  "required_features": [
+    "stdlib",
+    "types",
+    "functions",
+    "collection-transform",
+    "traces"
+  ],
+  "requirements": "AIL-Requirements:\n- The package ail.std.collections defines reusable collection and result types.\n- The package defines Type Option<T> with variants Some(value: T) and None.\n- The package defines Type Result<T,E> with variants Success(value: T) and Failure(error: E).\n- The package defines Type List<T> with variants Empty and Items(values: T).\n- The package defines Type Map<K,V> with variants Empty and Entries(key: K, value: V).\n- The package defines Type Set<T> with variants Empty and Members(value: T).\n- The package defines Function Option.map.\n- Option.map needs option: Option<T> and mapper: Text.\n- Option.map produces result: Option<U>.\n- When Option.map runs, if the option is Some(value), the function calls mapper with value, returns Some(mapped value), and records a trace event named OptionMapEvaluated.\n- When Option.map runs, if the option is None, the function returns None.\n"
+}
