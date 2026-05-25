@@ -1599,6 +1599,36 @@ fn validate_ail_e2e_corpus_release_coverage(entries: &[AilE2eCorpusEntry]) -> Re
             ));
         }
     }
+    let mut surface_counts = BTreeMap::new();
+    for entry in entries {
+        if let Some(surface_tags) = entry.fields.get("surface-tags") {
+            for tag in surface_tags.split([',', ';']) {
+                let tag = tag.trim();
+                if !tag.is_empty() {
+                    *surface_counts.entry(tag).or_insert(0usize) += 1;
+                }
+            }
+        }
+    }
+    let stdlib_or_package_import = surface_counts.get("standard-library").copied().unwrap_or(0)
+        + surface_counts.get("package-import").copied().unwrap_or(0);
+    if stdlib_or_package_import < 10 {
+        return Err(format!(
+            "ail-e2e-corpus requires at least 10 standard-library or package-import examples; found {stdlib_or_package_import}"
+        ));
+    }
+    for (required_surface, required_count) in [
+        ("ui", 5usize),
+        ("c-host-interop", 5usize),
+        ("backend-portability", 5usize),
+    ] {
+        let found = surface_counts.get(required_surface).copied().unwrap_or(0);
+        if found < required_count {
+            return Err(format!(
+                "ail-e2e-corpus requires at least {required_count} surface-tag {required_surface} examples; found {found}"
+            ));
+        }
+    }
     Ok(())
 }
 
