@@ -143,18 +143,22 @@ AIL packages under `examples/ail_std_*.ail`:
 | --- | --- | --- |
 | `ail.std.core` | `examples/ail_std_core.ail` | `Identity.copy`, trace `IdentityCopied` |
 | `ail.std.collections` | `examples/ail_std_collections.ail` | `Option<T>`, `Result<T,E>`, `List<T>`, `Map<K,V>`, `Set<T>`, `Option.map` |
-| `ail.std.effects` | `examples/ail_std_effects.ail` | read/write resource actions and trace events |
+| `ail.std.effects` | `examples/ail_std_effects.ail` | read/write resource actions, network effect action, and trace events |
 | `ail.std.security` | `examples/ail_std_security.ail` | `Secret<T>` field, reveal permission requirement, capability requirement, redaction/protection edge, trace |
 | `ail.std.runtime` | `examples/ail_std_runtime.ail` | runtime task action, `RuntimeUnavailable` failure, failure handling, traces |
 
 Each required fixture has `ail-package.md`, canonical `spec.ail-spec.md`,
 `conformance: v0.2`, `schema-version: ail-core.schema.v0`, `target-support:
-ail-core.schema.v0=supported`, and at least one accepted conformance fixture.
-The proof test is:
+ail-core.schema.v0=supported`, and conformance fixtures. Rejected conformance
+fixtures include a collections invalid-generic payload fixture and a runtime
+package fixture that omits a required grant for the imported standard effects
+network action. The proof tests are:
 
 ```bash
 cargo test cli_ail_stdlib_packages_have_checked_package_artifacts
 cargo test cli_ail_stdlib_import_records_dependency_report
+cargo test cli_ail_std_rejects_invalid_generic_variant_payload
+cargo test cli_ail_std_rejects_missing_capability_grant
 ```
 
 ## Library Authoring Rules
@@ -190,9 +194,10 @@ Every public library declaration renders to:
 Each standard package contributes:
 
 - accepted import fixture
-- rejected unresolved import fixture
-- rejected version conflict fixture
-- capability grant fixture
+- rejected unresolved import or missing package source fixture
+- rejected version conflict or incompatible range fixture
+- capability grant fixture, including rejected package directories when the
+  invalid condition lives in `ail-package.md`
 - package hash fixture
 - projection fixture
 - bytecode or runtime fixture when executable

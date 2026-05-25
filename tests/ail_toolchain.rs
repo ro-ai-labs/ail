@@ -1125,8 +1125,10 @@ fn cli_ail_stdlib_packages_have_checked_package_artifacts() {
             [
                 "node Action ReadResource [label=Read resource",
                 "node Action WriteResource [label=Write resource",
+                "node Action SendNetworkMessage [label=Send network message",
                 "edge records_trace Action:ReadResource -> Trace:ResourceRead",
                 "edge records_trace Action:WriteResource -> Trace:ResourceWritten",
+                "edge records_trace Action:SendNetworkMessage -> Trace:NetworkMessageSent",
             ]
             .as_slice(),
         ),
@@ -1240,6 +1242,46 @@ fn cli_ail_stdlib_import_records_dependency_report() {
     );
     assert!(report.contains("source-path="), "{report}");
     assert!(report.contains("package-hash=ail-package:"), "{report}");
+}
+
+#[test]
+fn cli_ail_std_rejects_invalid_generic_variant_payload() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let output = Command::new(binary)
+        .args(["ail-conformance", &fixture("ail_std_collections.ail")])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("rejected: invalid-generic-variant-payload.ail-spec.md AIL-TYPE-001"),
+        "{stdout}"
+    );
+}
+
+#[test]
+fn cli_ail_std_rejects_missing_capability_grant() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let output = Command::new(binary)
+        .args(["ail-conformance", &fixture("ail_std_runtime.ail")])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("rejected: missing-capability-grant.ail AIL-PACKAGE-001"),
+        "{stdout}"
+    );
 }
 
 #[test]

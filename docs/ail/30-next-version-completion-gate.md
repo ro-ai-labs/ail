@@ -138,7 +138,10 @@ Evidence:
 - No compiler-hidden stdlib declaration is accepted without package source in
   the required package fixture set.
 - Rejected fixtures cover unresolved standard imports, version conflicts,
-  missing capability grants, and invalid generic use.
+  missing capability grants, and invalid generic use. Current evidence includes
+  `invalid-generic-variant-payload.ail-spec.md` in `ail.std.collections` and
+  the rejected package fixture `missing-capability-grant.ail` in
+  `ail.std.runtime`.
 
 Minimum proof commands:
 
@@ -150,10 +153,6 @@ cargo test ail_standard_library_option_map_executes_collection_transform_bytecod
 cargo test cli_ail_std_rejects_invalid_generic_variant_payload
 cargo test cli_ail_std_rejects_missing_capability_grant
 ```
-
-Open work for this gate: add rejected fixtures for invalid generic payloads and
-missing standard-library capability grants, then wire those exact rejected
-fixtures into the standard-library conformance command set.
 
 ### 3. Host Boundary And C Interop Contract
 

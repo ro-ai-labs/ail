@@ -25,3 +25,10 @@ When the runtime writes a resource:
 - the system requires the resource to be declared
 - the system changes resource data
 - the system records a trace event named ResourceWritten
+
+Action: Send network message.
+
+When the runtime sends a network message:
+
+- the system changes network
+- the system records a trace event named NetworkMessageSent

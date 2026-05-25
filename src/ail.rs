@@ -10889,7 +10889,7 @@ pub fn run_ail_conformance(package: &AilPackage) -> Result<AilConformanceResult,
     }
 
     if rejected_dir.exists() {
-        let mut paths = fs::read_dir(&rejected_dir)
+        let mut entries = fs::read_dir(&rejected_dir)
             .map_err(|error| format!("failed to read {}: {error}", rejected_dir.display()))?
             .map(|entry| {
                 entry
@@ -10897,19 +10897,43 @@ pub fn run_ail_conformance(package: &AilPackage) -> Result<AilConformanceResult,
                     .map_err(|error| format!("failed to read {}: {error}", rejected_dir.display()))
             })
             .collect::<Result<Vec<_>, _>>()?;
-        paths.retain(|path| {
+        entries.sort();
+
+        let mut spec_paths = entries.clone();
+        spec_paths.retain(|path| {
             path.file_name()
                 .and_then(|name| name.to_str())
                 .is_some_and(|name| name.ends_with(".ail-spec.md"))
         });
-        paths.sort();
 
-        for path in paths {
+        for path in spec_paths {
             let fixture = file_name_or_display(&path);
             let text = fs::read_to_string(&path)
                 .map_err(|error| format!("failed to read {}: {error}", path.display()))?;
             let diagnostics = match parse_ail_package_spec_text(package, &text) {
                 Ok(document) => check_ail_core_diagnostics(&elaborate_ail_core(package, &document)),
+                Err(error) => vec![AilDiagnostic::error(
+                    "AIL000",
+                    format!("parse error: {error}"),
+                )],
+            };
+            rejected.push(AilRejectedConformanceResult {
+                fixture,
+                diagnostics,
+            });
+        }
+
+        let mut package_paths = entries;
+        package_paths.retain(|path| path.is_dir() && path.join("ail-package.md").exists());
+
+        for path in package_paths {
+            let fixture = file_name_or_display(&path);
+            let diagnostics = match load_ail_package_dir(&path).and_then(|fixture_package| {
+                parse_ail_package_document(&fixture_package).map(|document| {
+                    check_ail_core_diagnostics(&elaborate_ail_core(&fixture_package, &document))
+                })
+            }) {
+                Ok(diagnostics) => diagnostics,
                 Err(error) => vec![AilDiagnostic::error(
                     "AIL000",
                     format!("parse error: {error}"),

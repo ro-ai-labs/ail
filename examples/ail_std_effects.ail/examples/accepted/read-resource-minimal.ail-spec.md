@@ -11,3 +11,10 @@ When the runtime reads a resource:
 - the system requires the resource to be declared
 - the system reads resource data
 - the system records a trace event named ResourceRead
+
+Action: Send network message.
+
+When the runtime sends a network message:
+
+- the system changes network
+- the system records a trace event named NetworkMessageSent
