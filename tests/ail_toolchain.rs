@@ -19968,7 +19968,7 @@ fn cli_ail_e2e_corpus_replays_checked_seed_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("capture-origin-count deterministic-seed 50"),
+        report.contains("capture-origin-count deterministic-seed 47"),
         "{report}"
     );
     assert!(
@@ -19976,7 +19976,7 @@ fn cli_ail_e2e_corpus_replays_checked_seed_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("capture-origin-count live-codex 47"),
+        report.contains("capture-origin-count live-codex 50"),
         "{report}"
     );
     assert!(
@@ -19995,6 +19995,24 @@ fn cli_ail_e2e_corpus_replays_checked_seed_corpus() {
         report.contains("entry example-52")
             && report.contains("semantic-task refund-tool-live-spec-input-52")
             && report.contains("capture-origin live-llm"),
+        "{report}"
+    );
+    assert!(
+        report.contains("entry example-56")
+            && report.contains("semantic-task compiler-pass-live-codex-core-to-summary-56")
+            && report.contains("capture-origin live-codex"),
+        "{report}"
+    );
+    assert!(
+        report.contains("entry example-57")
+            && report.contains("semantic-task compiler-pass-live-codex-flow-patch-57")
+            && report.contains("capture-origin live-codex"),
+        "{report}"
+    );
+    assert!(
+        report.contains("entry example-58")
+            && report.contains("semantic-task compiler-pass-live-codex-trace-debug-58")
+            && report.contains("capture-origin live-codex"),
         "{report}"
     );
     assert!(
@@ -20339,7 +20357,7 @@ fn cli_ail_e2e_corpus_release_evidence_rejects_deterministic_seed_corpus() {
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
         stderr.contains(
-            "ail-e2e-corpus --release-evidence requires zero deterministic-seed entries; found 50"
+            "ail-e2e-corpus --release-evidence requires zero deterministic-seed entries; found 47"
         ),
         "{stderr}"
     );
