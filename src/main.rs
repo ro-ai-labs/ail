@@ -1291,7 +1291,74 @@ fn extract_ail_e2e_response_artifact_text(response_text: &str) -> String {
             return without_language[..end].trim().to_string();
         }
     }
+    for field in ["content", "artifact_text"] {
+        if let Some(value) = extract_ail_e2e_json_string_field(trimmed, field) {
+            return value.trim().to_string();
+        }
+    }
     trimmed.to_string()
+}
+
+fn extract_ail_e2e_json_string_field(text: &str, field: &str) -> Option<String> {
+    let needle = format!("\"{field}\"");
+    let mut search_start = 0;
+    while search_start < text.len() {
+        let field_start = search_start + text[search_start..].find(&needle)?;
+        let mut index = field_start + needle.len();
+        index = skip_ail_e2e_json_whitespace(text, index);
+        if text.as_bytes().get(index) == Some(&b':') {
+            let start = skip_ail_e2e_json_whitespace(text, index + 1);
+            let mut chars = text[start..].chars().peekable();
+            return parse_ail_e2e_json_string(&mut chars);
+        }
+        search_start = field_start + needle.len();
+    }
+    None
+}
+
+fn skip_ail_e2e_json_whitespace(text: &str, mut index: usize) -> usize {
+    while text
+        .as_bytes()
+        .get(index)
+        .is_some_and(u8::is_ascii_whitespace)
+    {
+        index += 1;
+    }
+    index
+}
+
+fn parse_ail_e2e_json_string<I>(chars: &mut std::iter::Peekable<I>) -> Option<String>
+where
+    I: Iterator<Item = char>,
+{
+    if chars.next()? != '"' {
+        return None;
+    }
+    let mut output = String::new();
+    let mut escaped = false;
+    for ch in chars.by_ref() {
+        if escaped {
+            output.push(match ch {
+                'n' => '\n',
+                'r' => '\r',
+                't' => '\t',
+                '\\' => '\\',
+                '"' => '"',
+                other => other,
+            });
+            escaped = false;
+            continue;
+        }
+        if ch == '\\' {
+            escaped = true;
+            continue;
+        }
+        if ch == '"' {
+            return Some(output);
+        }
+        output.push(ch);
+    }
+    None
 }
 
 fn read_ail_e2e_entry_transcripts(entry: &AilE2eCorpusEntry) -> Result<(String, String), String> {

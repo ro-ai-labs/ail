@@ -71,6 +71,24 @@ End-to-end release corpus entries are checked offline with:
 cargo run -- ail-e2e-corpus docs/ail/corpus/e2e --artifact-dir /tmp/ail-e2e-corpus
 ```
 
+To capture live LLM evidence without changing the offline replay contract, copy
+the seed corpus and replace one entry with a stored HTTP completion transcript:
+
+```bash
+python3 scripts/capture_e2e_transcripts.py \
+  --base-corpus docs/ail/corpus/e2e \
+  --output-dir /tmp/ail-e2e-live-corpus \
+  --entry-id example-30 \
+  --endpoint http://inteligentia-pro-1:8080/completion \
+  --endpoint-label inteligentia-pro-1-qwen3.6-35b \
+  --executor-label unsloth-qwen3.6-35b-a3b-gguf \
+  --semantic-task support-ticket-live-capture-30 \
+  --prompt "Produce the Support Ticket AIL-Spec for live capture replay."
+```
+
+The captured corpus is then replayed with `ail-e2e-corpus`; replay must remain
+offline and must read only the stored request/response transcripts.
+
 The `ail-e2e-corpus` verifier is the v0.2 release gate for prompt reliability.
 It must not call a live model endpoint in replay mode. It reads stored
 transcripts produced by HTTP LLM executors, AIL toolchain agents, or

@@ -1,0 +1,157 @@
+#!/usr/bin/env python3
+"""Capture one live LLM transcript into a replayable AIL e2e corpus copy."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import shutil
+import urllib.request
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def fnv64(text: str) -> str:
+    value = 0xCBF29CE484222325
+    for byte in text.encode():
+        value ^= byte
+        value = (value * 0x100000001B3) & 0xFFFFFFFFFFFFFFFF
+    return f"fnv64:{value:016x}"
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Capture a live LLM response into an offline ail-e2e-corpus directory."
+    )
+    parser.add_argument("--base-corpus", required=True)
+    parser.add_argument("--output-dir", required=True)
+    parser.add_argument("--entry-id", required=True)
+    parser.add_argument("--endpoint", required=True)
+    parser.add_argument("--endpoint-label", required=True)
+    parser.add_argument("--executor-label", required=True)
+    parser.add_argument("--semantic-task", required=True)
+    parser.add_argument("--prompt", required=True)
+    parser.add_argument("--n-predict", type=int, default=2048)
+    return parser.parse_args()
+
+
+def read_entries(text: str) -> list[tuple[str | None, list[str]]]:
+    entries: list[tuple[str | None, list[str]]] = []
+    current_id: str | None = None
+    current_lines: list[str] = []
+    for line in text.splitlines():
+        if line.startswith("## End-To-End Example: "):
+            if current_id is not None:
+                entries.append((current_id, current_lines))
+            current_id = line.removeprefix("## End-To-End Example: ").strip()
+            current_lines = [line]
+        elif current_id is None:
+            entries.append((None, [line]))
+        else:
+            current_lines.append(line)
+    if current_id is not None:
+        entries.append((current_id, current_lines))
+    return entries
+
+
+def fields_from_entry(lines: list[str]) -> dict[str, str]:
+    fields: dict[str, str] = {}
+    for line in lines[1:]:
+        if ":" not in line:
+            continue
+        key, value = line.split(":", 1)
+        key = key.strip()
+        if key and all(ch.islower() or ch == "-" for ch in key):
+            fields[key] = value.strip()
+    return fields
+
+
+def render_entry(entry_id: str, fields: dict[str, str]) -> list[str]:
+    lines = [f"## End-To-End Example: {entry_id}"]
+    for key, value in fields.items():
+        lines.append(f"{key}: {value}")
+    lines.append("")
+    return lines
+
+
+def completion_body(prompt: str, n_predict: int) -> dict[str, object]:
+    return {"prompt": prompt, "n_predict": n_predict, "temperature": 0.0}
+
+
+def capture_completion(endpoint: str, body: dict[str, object]) -> dict[str, object]:
+    encoded = json.dumps(body, sort_keys=True).encode()
+    request = urllib.request.Request(
+        endpoint,
+        data=encoded,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(request, timeout=120) as response:
+        response_text = response.read().decode()
+    return json.loads(response_text)
+
+
+def main() -> int:
+    args = parse_args()
+    base_corpus = (ROOT / args.base_corpus).resolve()
+    output_dir = Path(args.output_dir).resolve()
+    if output_dir.exists():
+        shutil.rmtree(output_dir)
+    shutil.copytree(base_corpus, output_dir)
+
+    examples_path = output_dir / "examples.md"
+    entries = read_entries(examples_path.read_text())
+    replacement_index = next(
+        (index for index, (entry_id, _lines) in enumerate(entries) if entry_id == args.entry_id),
+        None,
+    )
+    if replacement_index is None:
+        raise SystemExit(f"entry {args.entry_id} not found in {examples_path}")
+    _entry_id, entry_lines = entries[replacement_index]
+    fields = fields_from_entry(entry_lines)
+    prompt_file = fields["prompt-file"]
+    system_prompt = (ROOT / prompt_file).read_text()
+    prompt = f"{system_prompt.rstrip()}\n\nUSER REQUEST:\n{args.prompt}\n"
+    body = completion_body(prompt, args.n_predict)
+    response_json = capture_completion(args.endpoint, body)
+
+    request_file = f"requests/{args.entry_id}.json"
+    response_file = f"responses/{args.entry_id}.json"
+    request_transcript = {
+        "endpoint": args.endpoint,
+        "method": "POST",
+        "body": body,
+    }
+    (output_dir / request_file).write_text(
+        json.dumps(request_transcript, indent=2, sort_keys=True) + "\n"
+    )
+    (output_dir / response_file).write_text(
+        json.dumps(response_json, indent=2, sort_keys=True) + "\n"
+    )
+
+    fields.update(
+        {
+            "semantic-task": args.semantic_task,
+            "prompt-fingerprint": fnv64(system_prompt),
+            "executor-family": "llm-http",
+            "executor-label": args.executor_label,
+            "capture-origin": "live-llm",
+            "endpoint-label": args.endpoint_label,
+            "request-file": request_file,
+            "response-file": response_file,
+            "checker-result": "accepted",
+        }
+    )
+    entries[replacement_index] = (args.entry_id, render_entry(args.entry_id, fields))
+    output_lines: list[str] = []
+    for _entry_id, lines in entries:
+        output_lines.extend(lines)
+    examples_path.write_text("\n".join(output_lines).rstrip() + "\n")
+    print(f"captured {args.entry_id} from {args.endpoint} into {output_dir}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
