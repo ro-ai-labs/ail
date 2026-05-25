@@ -6462,6 +6462,126 @@ fn cli_ail_spec_accepts_saved_core_file_artifact() {
 }
 
 #[test]
+fn cli_ail_spec_core_file_writes_roundtrip_artifacts() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("support_ticket.ail");
+
+    let core_output = Command::new(binary)
+        .args(["ail-core", &package])
+        .output()
+        .unwrap();
+    assert!(
+        core_output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&core_output.stdout),
+        String::from_utf8_lossy(&core_output.stderr)
+    );
+    let core_text = String::from_utf8(core_output.stdout).unwrap();
+    let source_core = parse_ail_core_text(&core_text).unwrap();
+    let core_path = std::env::temp_dir().join(format!(
+        "ail-support-ticket-spec-artifacts-core-{}.ail-core.txt",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-ail-spec-core-roundtrip-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::write(&core_path, &core_text).unwrap();
+
+    let spec_output = Command::new(binary)
+        .args([
+            "ail-spec",
+            "--core-file",
+            core_path.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        spec_output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&spec_output.stdout),
+        String::from_utf8_lossy(&spec_output.stderr)
+    );
+    let spec_stdout = String::from_utf8(spec_output.stdout).unwrap();
+    assert!(spec_stdout.contains("The application Support Tickets manages"));
+
+    let core_artifact = fs::read_to_string(artifact_dir.join("source.ail-core.txt")).unwrap();
+    assert_eq!(core_artifact, core_text);
+    let core_fingerprint =
+        fs::read_to_string(artifact_dir.join("source.ail-core.fingerprint.txt")).unwrap();
+    assert_eq!(core_fingerprint.trim(), fnv64_fingerprint(&core_artifact));
+    let spec_artifact = fs::read_to_string(artifact_dir.join("rendered.ail-spec.md")).unwrap();
+    assert_eq!(spec_artifact, spec_stdout);
+    let spec_fingerprint =
+        fs::read_to_string(artifact_dir.join("rendered.ail-spec.fingerprint.txt")).unwrap();
+    assert_eq!(spec_fingerprint.trim(), fnv64_fingerprint(&spec_artifact));
+    let roundtrip_core_artifact =
+        fs::read_to_string(artifact_dir.join("roundtrip.ail-core.txt")).unwrap();
+    let reparsed_spec = parse_ail_spec_text(&spec_artifact).unwrap();
+    let roundtrip_core = elaborate_ail_core(
+        &ail::ail::AilPackage {
+            metadata: source_core.package.clone(),
+            root: std::path::PathBuf::new(),
+            spec_path: std::path::PathBuf::new(),
+            spec_text: String::new(),
+            imports: Vec::new(),
+        },
+        &reparsed_spec,
+    );
+    assert_eq!(
+        roundtrip_core_artifact,
+        format!("{}\n", render_ail_core(&roundtrip_core))
+    );
+    assert_eq!(ail_core_hash(&roundtrip_core), ail_core_hash(&source_core));
+    let roundtrip_core_fingerprint =
+        fs::read_to_string(artifact_dir.join("roundtrip.ail-core.fingerprint.txt")).unwrap();
+    assert_eq!(
+        roundtrip_core_fingerprint.trim(),
+        fnv64_fingerprint(&roundtrip_core_artifact)
+    );
+    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-spec.txt")).unwrap();
+    assert!(manifest.contains("AIL-Spec-Manifest:"), "{manifest}");
+    assert!(
+        manifest.contains(&format!(
+            "source-core source.ail-core.txt {}",
+            fnv64_fingerprint(&core_artifact)
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "rendered-spec rendered.ail-spec.md {}",
+            fnv64_fingerprint(&spec_artifact)
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "roundtrip-core roundtrip.ail-core.txt {}",
+            fnv64_fingerprint(&roundtrip_core_artifact)
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "roundtrip-hash {} {}",
+            ail_core_hash(&source_core),
+            ail_core_hash(&roundtrip_core)
+        )),
+        "{manifest}"
+    );
+    let manifest_fingerprint =
+        fs::read_to_string(artifact_dir.join("manifest.fingerprint.txt")).unwrap();
+    assert_eq!(manifest_fingerprint.trim(), fnv64_fingerprint(&manifest));
+
+    fs::remove_file(core_path).unwrap();
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
 fn cli_ail_spec_core_file_does_not_require_dummy_package_path() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");

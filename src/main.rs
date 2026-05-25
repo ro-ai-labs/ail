@@ -4,17 +4,17 @@ use std::fs;
 use std::process::{Command, ExitCode};
 
 use ail::ail::{
-    AilBytecodeProgram, DEFAULT_BASE_LLM_ENDPOINT, ail_document_from_core,
+    AilBytecodeProgram, DEFAULT_BASE_LLM_ENDPOINT, ail_core_hash, ail_document_from_core,
     apply_ail_core_patch_text, apply_ail_flow_edit_text, apply_ail_patch, check_ail_core,
     check_ail_requirements, compile_ail_bytecode_native_elf, compile_ail_core_bytecode,
     compile_ail_core_native_elf, draft_ail_interview, draft_ail_requirements, draft_ail_spec,
     draft_ail_spec_from_requirements, elaborate_ail_core, load_ail_package_dir, parse_ail_bytecode,
     parse_ail_core_text, parse_ail_package_document, parse_ail_package_spec_text,
-    parse_ail_patch_text, render_ail_bytecode, render_ail_core, render_ail_flow_view,
-    render_ail_runtime_state_lines, render_ail_spec, render_ail_spec_from_core,
-    repair_ail_requirements_from_diagnostics, repair_ail_spec_from_diagnostics,
-    run_ail_bytecode_action, run_ail_compiler_pass_on_core, run_ail_conformance,
-    verify_ail_bytecode,
+    parse_ail_patch_text, parse_ail_spec_text, render_ail_bytecode, render_ail_core,
+    render_ail_flow_view, render_ail_runtime_state_lines, render_ail_spec,
+    render_ail_spec_from_core, repair_ail_requirements_from_diagnostics,
+    repair_ail_spec_from_diagnostics, run_ail_bytecode_action, run_ail_compiler_pass_on_core,
+    run_ail_conformance, verify_ail_bytecode,
 };
 use ail::core_model::json_string;
 
@@ -44,6 +44,14 @@ struct AilInterviewArtifactSet<'a> {
     package_name: &'a str,
     package_version: &'a str,
     interview_text: &'a str,
+}
+
+struct AilSpecArtifactSet<'a> {
+    source_core_text: &'a str,
+    rendered_spec_text: &'a str,
+    roundtrip_core_text: &'a str,
+    source_core_hash: &'a str,
+    roundtrip_core_hash: &'a str,
 }
 
 fn main() -> ExitCode {
@@ -109,6 +117,75 @@ fn run(args: Vec<String>) -> Result<u8, String> {
 fn usage() -> String {
     "usage: ail <ail-check|ail-core|ail-flow|ail-flow-edit|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-interview|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-bootstrap|ail-patch> <path> [patch|target-package] [--action name] [--prompt text] [--interview-file path] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--base-model name] [--target-model name] [--out path] [--all-actions] [--diagnostics-json] [--artifact-dir path] [--llm-endpoint url] [key=value ...]\nsaved-core usage: ail <ail-spec|ail-lower|ail-compile|ail-run|ail-build> --core-file <checked-core> [--action name] [--target target] [--out path] [--artifact-dir path] [key=value ...]\nwasm-contract usage: ail ail-compile <package-or-artifact.ailbc.json> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir> OR ail ail-compile --core-file <checked-core> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir>\ncore-patch usage: ail ail-patch --core-file <checked-core> <ail-core.patch.json>\nflow-edit usage: ail ail-flow-edit --core-file <checked-core> <ail-flow.edit.json>\nail-pass usage: ail ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR ail ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]\nail-bootstrap usage: ail ail-bootstrap <toolchain-agent-package> --pass <compiler-pass-package> --agent <toolchain-agent-package> --target linux-x86_64-elf --artifact-dir <dir>"
         .to_string()
+}
+
+fn render_ail_spec_manifest(artifacts: &AilSpecArtifactSet<'_>) -> String {
+    format!(
+        concat!(
+            "AIL-Spec-Manifest:\n",
+            "source-core source.ail-core.txt {}\n",
+            "rendered-spec rendered.ail-spec.md {}\n",
+            "roundtrip-core roundtrip.ail-core.txt {}\n",
+            "roundtrip-hash {} {}\n"
+        ),
+        ail_artifact_fingerprint(artifacts.source_core_text),
+        ail_artifact_fingerprint(artifacts.rendered_spec_text),
+        ail_artifact_fingerprint(artifacts.roundtrip_core_text),
+        artifacts.source_core_hash,
+        artifacts.roundtrip_core_hash
+    )
+}
+
+fn write_ail_spec_artifacts(
+    artifact_dir: &str,
+    artifacts: AilSpecArtifactSet<'_>,
+) -> Result<(), String> {
+    let root = std::path::Path::new(artifact_dir);
+    fs::create_dir_all(root).map_err(|error| {
+        format!("failed to create ail-spec artifact dir {artifact_dir}: {error}")
+    })?;
+    fs::write(root.join("source.ail-core.txt"), artifacts.source_core_text)
+        .map_err(|error| format!("failed to write ail-spec source core artifact: {error}"))?;
+    fs::write(
+        root.join("source.ail-core.fingerprint.txt"),
+        format!("{}\n", ail_artifact_fingerprint(artifacts.source_core_text)),
+    )
+    .map_err(|error| format!("failed to write ail-spec source core fingerprint: {error}"))?;
+    fs::write(
+        root.join("rendered.ail-spec.md"),
+        artifacts.rendered_spec_text,
+    )
+    .map_err(|error| format!("failed to write ail-spec rendered spec artifact: {error}"))?;
+    fs::write(
+        root.join("rendered.ail-spec.fingerprint.txt"),
+        format!(
+            "{}\n",
+            ail_artifact_fingerprint(artifacts.rendered_spec_text)
+        ),
+    )
+    .map_err(|error| format!("failed to write ail-spec rendered spec fingerprint: {error}"))?;
+    fs::write(
+        root.join("roundtrip.ail-core.txt"),
+        artifacts.roundtrip_core_text,
+    )
+    .map_err(|error| format!("failed to write ail-spec roundtrip core artifact: {error}"))?;
+    fs::write(
+        root.join("roundtrip.ail-core.fingerprint.txt"),
+        format!(
+            "{}\n",
+            ail_artifact_fingerprint(artifacts.roundtrip_core_text)
+        ),
+    )
+    .map_err(|error| format!("failed to write ail-spec roundtrip core fingerprint: {error}"))?;
+    let manifest = render_ail_spec_manifest(&artifacts);
+    fs::write(root.join("manifest.ail-spec.txt"), &manifest)
+        .map_err(|error| format!("failed to write ail-spec manifest: {error}"))?;
+    fs::write(
+        root.join("manifest.fingerprint.txt"),
+        format!("{}\n", ail_artifact_fingerprint(&manifest)),
+    )
+    .map_err(|error| format!("failed to write ail-spec manifest fingerprint: {error}"))?;
+    Ok(())
 }
 
 fn render_ail_interview_manifest(artifacts: &AilInterviewArtifactSet<'_>) -> String {
@@ -7547,6 +7624,12 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
         return Ok(0);
     }
     if command == "ail-spec" && cli_options.ail_core_file.is_some() {
+        let core_file = cli_options
+            .ail_core_file
+            .as_ref()
+            .ok_or_else(|| "ail-spec requires --core-file <path>".to_string())?;
+        let source_core_text = fs::read_to_string(core_file)
+            .map_err(|error| format!("failed to read {core_file}: {error}"))?;
         let core = parse_cli_ail_core(cli_options)?;
         let diagnostics = check_ail_core(&core);
         if !diagnostics.is_empty() {
@@ -7556,7 +7639,47 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
             }
             return Ok(1);
         }
-        println!("{}", render_ail_spec_from_core(&core));
+        let rendered_spec_text = format!("{}\n", render_ail_spec_from_core(&core));
+        if let Some(artifact_dir) = &cli_options.artifact_dir {
+            let roundtrip_document = parse_ail_spec_text(&rendered_spec_text)?;
+            let roundtrip_core = elaborate_ail_core(
+                &ail::ail::AilPackage {
+                    metadata: core.package.clone(),
+                    root: std::path::PathBuf::new(),
+                    spec_path: std::path::PathBuf::new(),
+                    spec_text: String::new(),
+                    imports: Vec::new(),
+                },
+                &roundtrip_document,
+            );
+            let roundtrip_diagnostics = check_ail_core(&roundtrip_core);
+            if !roundtrip_diagnostics.is_empty() {
+                println!("ail-spec roundtrip diagnostics:");
+                for diagnostic in roundtrip_diagnostics {
+                    println!("{diagnostic}");
+                }
+                return Ok(1);
+            }
+            let source_core_hash = ail_core_hash(&core);
+            let roundtrip_core_hash = ail_core_hash(&roundtrip_core);
+            if source_core_hash != roundtrip_core_hash {
+                return Err(format!(
+                    "ail-spec roundtrip hash mismatch: source {source_core_hash}, roundtrip {roundtrip_core_hash}"
+                ));
+            }
+            let roundtrip_core_text = format!("{}\n", render_ail_core(&roundtrip_core));
+            write_ail_spec_artifacts(
+                artifact_dir,
+                AilSpecArtifactSet {
+                    source_core_text: &source_core_text,
+                    rendered_spec_text: &rendered_spec_text,
+                    roundtrip_core_text: &roundtrip_core_text,
+                    source_core_hash: &source_core_hash,
+                    roundtrip_core_hash: &roundtrip_core_hash,
+                },
+            )?;
+        }
+        print!("{rendered_spec_text}");
         return Ok(0);
     }
     if command == "ail-patch" && cli_options.ail_core_file.is_some() {
@@ -8335,6 +8458,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
             if !matches!(
                 command,
                 "ail-interview"
+                    | "ail-spec"
                     | "ail-build"
                     | "ail-pass"
                     | "ail-lower"

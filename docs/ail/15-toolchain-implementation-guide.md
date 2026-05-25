@@ -772,7 +772,16 @@ candidate grounded in that artifact, repairs once on checker diagnostics, and
 prints only the accepted AIL-Spec. With `--core-file`, it skips the LLM and
 renders checked AIL-Core back into canonical AIL-Spec. This makes
 requirements-to-spec and core-to-spec conversion reviewable artifact boundaries
-instead of internal `ail-build` details.
+instead of internal `ail-build` details. With
+`ail-spec --core-file <checked-core> --artifact-dir <dir>`, the command writes
+`source.ail-core.txt`, `source.ail-core.fingerprint.txt`,
+`rendered.ail-spec.md`, `rendered.ail-spec.fingerprint.txt`,
+`roundtrip.ail-core.txt`, `roundtrip.ail-core.fingerprint.txt`,
+`manifest.ail-spec.txt`, and `manifest.fingerprint.txt`. The manifest records
+the source Core artifact, rendered Spec artifact, reparsed Core artifact, and
+the source and round-trip semantic hashes. If the rendered Spec reparses to a
+different checked Core hash, the command fails instead of writing a successful
+IR-to-Spec conversion bundle.
 `ail-patch --core-file <path> <patch.json>` reads a saved checked AIL-Core
 artifact and a stage-0 `ail-core.patch.v0` JSON patch, applies supported
 `add_node`, `remove_node`, `add_edge`, `remove_edge`,
