@@ -804,6 +804,33 @@ fn ail_bootstrap_source_bundle_text(package_manifest_text: &str, spec_text: &str
     format!("ail-package.md:\n{package_manifest_text}\nspec.ail-spec.md:\n{spec_text}")
 }
 
+fn append_package_dependency_report(
+    dependency_report_text: Option<String>,
+    package_dependency_report_text: Option<&str>,
+) -> Option<String> {
+    match (dependency_report_text, package_dependency_report_text) {
+        (Some(dependency_report_text), Some(package_dependency_report_text)) => Some(format!(
+            "{dependency_report_text}\n{package_dependency_report_text}"
+        )),
+        (Some(dependency_report_text), None) => Some(dependency_report_text),
+        (None, Some(package_dependency_report_text)) => {
+            Some(package_dependency_report_text.to_string())
+        }
+        (None, None) => None,
+    }
+}
+
+fn append_source_package_dependency_report(
+    dependency_report_text: String,
+    source_artifacts: Option<&AilSourcePackageArtifacts>,
+) -> String {
+    append_package_dependency_report(
+        Some(dependency_report_text),
+        source_artifacts.and_then(|artifacts| artifacts.package_dependency_report_text.as_deref()),
+    )
+    .expect("base dependency report must remain present")
+}
+
 fn load_ail_source_package_artifacts(
     path: &str,
     context: &str,
@@ -3029,6 +3056,10 @@ fn run_ail_lower_agent_verify_manifest(
     } else {
         None
     };
+    let dependency_report_text = append_package_dependency_report(
+        dependency_report_text,
+        source_artifacts.and_then(|artifacts| artifacts.package_dependency_report_text.as_deref()),
+    );
     let empty_agent_trace: &[String] = &[];
     let manifest_text = render_ail_lower_manifest(&AilLowerArtifactSet {
         source_manifest_text: source_artifacts.map(|artifacts| artifacts.manifest_text.as_str()),
@@ -6335,8 +6366,10 @@ fn run_ail_compile_from_core(
         let core_text = format!("{}\n", render_ail_core(core));
         let wasm_contract_report_text =
             render_ail_compile_wasm_contract_report(&bytecode, action, target)?;
-        let dependency_report_text =
-            render_ail_compile_wasm_contract_dependency_report(&bytecode, action, target)?;
+        let dependency_report_text = append_source_package_dependency_report(
+            render_ail_compile_wasm_contract_dependency_report(&bytecode, action, target)?,
+            source_artifacts,
+        );
         let agent_run = if let Some(agent_path) = &cli_options.ail_build_agent {
             let (agent_bytecode, agent_bytecode_text) = load_verified_ail_build_agent(agent_path)?;
             let empty_agent_trace: &[String] = &[];
@@ -6417,12 +6450,15 @@ fn run_ail_compile_from_core(
                 &executable,
                 agent_native_artifacts.as_slice(),
             )?;
-            let dependency_report_text = render_ail_compile_dependency_report(
-                action,
-                target,
-                &executable,
-                agent_native_artifacts.as_slice(),
-            )?;
+            let dependency_report_text = append_source_package_dependency_report(
+                render_ail_compile_dependency_report(
+                    action,
+                    target,
+                    &executable,
+                    agent_native_artifacts.as_slice(),
+                )?,
+                source_artifacts,
+            );
             let empty_agent_trace: &[String] = &[];
             let manifest_text = render_ail_compile_manifest(&AilCompileArtifactSet {
                 source_manifest_text: source_artifacts
@@ -6462,8 +6498,10 @@ fn run_ail_compile_from_core(
         } else {
             let native_bytecode_report_text =
                 render_ail_compile_native_bytecode_report(action, target, &executable, &[])?;
-            let dependency_report_text =
-                render_ail_compile_dependency_report(action, target, &executable, &[])?;
+            let dependency_report_text = append_source_package_dependency_report(
+                render_ail_compile_dependency_report(action, target, &executable, &[])?,
+                source_artifacts,
+            );
             (
                 None,
                 Vec::new(),
@@ -6505,8 +6543,10 @@ fn run_ail_compile_wasm_contract_bundle(
 ) -> Result<u8, String> {
     let wasm_contract_report_text =
         render_ail_compile_wasm_contract_bundle_report(bytecode, target)?;
-    let dependency_report_text =
-        render_ail_compile_wasm_contract_bundle_dependency_report(bytecode, target)?;
+    let dependency_report_text = append_source_package_dependency_report(
+        render_ail_compile_wasm_contract_bundle_dependency_report(bytecode, target)?,
+        source_artifacts,
+    );
     let agent_run = if let Some(agent_path) = agent_path {
         let (agent_bytecode, agent_bytecode_text) = load_verified_ail_build_agent(agent_path)?;
         let empty_agent_trace: &[String] = &[];
@@ -6600,11 +6640,14 @@ fn run_ail_compile_bundle_from_core(
                 target_executables.as_slice(),
                 agent_native_artifacts.as_slice(),
             )?;
-            let dependency_report_text = render_ail_compile_bundle_dependency_report(
-                target,
-                target_executables.as_slice(),
-                agent_native_artifacts.as_slice(),
-            )?;
+            let dependency_report_text = append_source_package_dependency_report(
+                render_ail_compile_bundle_dependency_report(
+                    target,
+                    target_executables.as_slice(),
+                    agent_native_artifacts.as_slice(),
+                )?,
+                source_artifacts,
+            );
             let empty_agent_trace: &[String] = &[];
             let manifest_text = render_ail_compile_bundle_manifest(&AilCompileBundleArtifactSet {
                 source_manifest_text: source_artifacts
@@ -6648,11 +6691,14 @@ fn run_ail_compile_bundle_from_core(
                 target_executables.as_slice(),
                 &[],
             )?;
-            let dependency_report_text = render_ail_compile_bundle_dependency_report(
-                target,
-                target_executables.as_slice(),
-                &[],
-            )?;
+            let dependency_report_text = append_source_package_dependency_report(
+                render_ail_compile_bundle_dependency_report(
+                    target,
+                    target_executables.as_slice(),
+                    &[],
+                )?,
+                source_artifacts,
+            );
             (
                 None,
                 Vec::new(),
@@ -7826,6 +7872,11 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
     if command == "ail-conformance" {
         let result = run_ail_conformance(&package)?;
         let report_text = render_ail_conformance_report(&result);
+        let package_dependency_report_text = if package.imports.is_empty() {
+            None
+        } else {
+            Some(render_ail_package_dependency_report(&package)?)
+        };
         let mut agent_native_artifacts = Vec::new();
         let mut native_bytecode_report_text = None;
         let mut dependency_report_text = None;
@@ -7843,6 +7894,10 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
                     agent_native_artifacts.as_slice(),
                 )?);
             }
+            dependency_report_text = append_package_dependency_report(
+                dependency_report_text,
+                package_dependency_report_text.as_deref(),
+            );
             let empty_agent_trace: &[String] = &[];
             let manifest_text = render_ail_conformance_manifest(
                 &result,
@@ -7869,6 +7924,10 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
                 },
             )?)
         } else {
+            dependency_report_text = append_package_dependency_report(
+                dependency_report_text,
+                package_dependency_report_text.as_deref(),
+            );
             None
         };
         if let Some(artifact_dir) = &cli_options.artifact_dir {
@@ -8256,6 +8315,10 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
             } else {
                 (None, Vec::new(), None, None)
             };
+            let dependency_report_text = append_package_dependency_report(
+                dependency_report_text,
+                source_artifacts.package_dependency_report_text.as_deref(),
+            );
             if let Some(artifact_dir) = &cli_options.artifact_dir {
                 write_ail_lower_artifacts(
                     artifact_dir,

@@ -6823,6 +6823,55 @@ fn cli_ail_lower_accepts_saved_core_file_artifact() {
 }
 
 #[test]
+fn cli_ail_lower_records_dependency_report_for_imported_package_graph() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("support_composed.ail");
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-lower-imported-package-dependencies-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-lower",
+            &package,
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let dependency_report = fs::read_to_string(artifact_dir.join("dependency-report.txt")).unwrap();
+    assert!(
+        dependency_report.contains("AIL-Package-Dependency-Report:"),
+        "{dependency_report}"
+    );
+    assert!(
+        dependency_report.contains(
+            "resolved-import Shared path=../support_shared.ail requirement=none name=support-shared version=0.1.0"
+        ),
+        "{dependency_report}"
+    );
+    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-lower.txt")).unwrap();
+    assert!(
+        manifest.contains(&format!(
+            "dependencies dependency-report.txt {}",
+            fnv64_fingerprint(&dependency_report)
+        )),
+        "{manifest}"
+    );
+
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
 fn cli_ail_spec_accepts_saved_core_file_artifact() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
@@ -8091,6 +8140,120 @@ When emit trace happens:
     );
     assert!(manifest.contains("wasm-contract wasm-contract-report.txt"));
     assert!(!manifest.contains("target wasm32-unknown-sandbox-wasm target.elf"));
+
+    fs::remove_dir_all(root).unwrap();
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
+fn cli_ail_compile_records_dependency_report_for_imported_package_graph() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let unique_suffix = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let root = std::env::temp_dir().join(format!(
+        "ail-compile-imported-package-root-{}-{unique_suffix}",
+        std::process::id()
+    ));
+    let shared = root.join("shared");
+    let app = root.join("app");
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-compile-imported-package-dependencies-{}-{unique_suffix}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&root);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&shared).unwrap();
+    fs::create_dir_all(&app).unwrap();
+    fs::write(
+        shared.join("ail-package.md"),
+        r#"name: shared-types
+version: 0.1.0
+profile: Application
+entry: spec.ail-spec.md
+features: things
+conformance: first-slice
+"#,
+    )
+    .unwrap();
+    fs::write(
+        shared.join("spec.ail-spec.md"),
+        r#"The application Shared Types manages shared declarations.
+
+A User has:
+
+- id: Text
+"#,
+    )
+    .unwrap();
+    fs::write(
+        app.join("ail-package.md"),
+        r#"name: imported-compile-app
+version: 0.1.0
+profile: Application
+entry: spec.ail-spec.md
+features: imports, actions, traces
+imports: ../shared as Shared
+conformance: first-slice
+target-support:
+  wasm32-unknown-sandbox-wasm: supported-with-host-imports
+"#,
+    )
+    .unwrap();
+    fs::write(
+        app.join("spec.ail-spec.md"),
+        r#"The application Imported Compile App manages imported compile evidence.
+
+Action: Close ticket.
+
+When a support agent closes a ticket:
+
+- the system records a trace event named TicketClosed
+"#,
+    )
+    .unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-compile",
+            app.to_str().unwrap(),
+            "--action",
+            "CloseTicket",
+            "--target",
+            "wasm32-unknown-sandbox-wasm",
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let dependency_report = fs::read_to_string(artifact_dir.join("dependency-report.txt")).unwrap();
+    assert!(
+        dependency_report.contains("AIL-Compile-Dependency-Report:")
+            && dependency_report.contains("AIL-Package-Dependency-Report:"),
+        "{dependency_report}"
+    );
+    assert!(
+        dependency_report.contains(
+            "resolved-import Shared path=../shared requirement=none name=shared-types version=0.1.0"
+        ),
+        "{dependency_report}"
+    );
+    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-compile.txt")).unwrap();
+    assert!(
+        manifest.contains(&format!(
+            "dependencies dependency-report.txt {}",
+            fnv64_fingerprint(&dependency_report)
+        )),
+        "{manifest}"
+    );
 
     fs::remove_dir_all(root).unwrap();
     fs::remove_dir_all(artifact_dir).unwrap();
@@ -14292,6 +14455,55 @@ fn cli_ail_conformance_writes_auditable_artifacts() {
     let manifest_fingerprint =
         fs::read_to_string(artifact_dir.join("manifest.fingerprint.txt")).unwrap();
     assert_eq!(manifest_fingerprint.trim(), fnv64_fingerprint(&manifest));
+
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
+fn cli_ail_conformance_records_dependency_report_for_imported_package_graph() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("support_composed.ail");
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-conformance-imported-package-dependencies-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-conformance",
+            &package,
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let dependency_report = fs::read_to_string(artifact_dir.join("dependency-report.txt")).unwrap();
+    assert!(
+        dependency_report.contains("AIL-Package-Dependency-Report:"),
+        "{dependency_report}"
+    );
+    assert!(
+        dependency_report.contains(
+            "resolved-import Shared path=../support_shared.ail requirement=none name=support-shared version=0.1.0"
+        ),
+        "{dependency_report}"
+    );
+    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-conformance.txt")).unwrap();
+    assert!(
+        manifest.contains(&format!(
+            "dependencies dependency-report.txt {}",
+            fnv64_fingerprint(&dependency_report)
+        )),
+        "{manifest}"
+    );
 
     fs::remove_dir_all(artifact_dir).unwrap();
 }
