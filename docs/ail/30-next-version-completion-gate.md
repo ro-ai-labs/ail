@@ -489,7 +489,10 @@ Missing v0.2 evidence includes:
 - at least 100 semantically distinct replayable prompt-to-artifact examples
   with non-reused response and extracted-artifact fingerprints
 - broad live-captured LLM/Codex executor transcripts replacing the current
-  repeated support-ticket seed artifacts
+  repeated checked-fixture seed artifacts
+- real e2e UI-profile and imported-package examples; the checked seed corpus
+  still uses metadata coverage for those surfaces where the current replay path
+  cannot yet lower the full profile or imported type graph
 - richer rejected-output coverage for prompt-envelope, profile mismatch,
   hallucinated capability, missing trace, unsupported target, invalid interop,
   permission/capability, and package resolution diagnostics in the e2e corpus

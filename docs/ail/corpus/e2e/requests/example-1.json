@@ -1,1 +1,1 @@
-{"artifact_kind": "ail-spec", "instruction": "Produce the stored AIL-Spec candidate for deterministic replay.", "prompt_file": "docs/ail/prompts/requirements.system.md", "prompt_version": "ail-prompts.v0.2", "semantic_task": "support-ticket-1"}
+{"artifact_kind": "ail-spec", "instruction": "Produce the stored AIL-Spec candidate for deterministic replay.", "prompt_file": "docs/ail/prompts/requirements.system.md", "prompt_version": "ail-prompts.v0.2", "semantic_task": "stdlib-collections-1"}

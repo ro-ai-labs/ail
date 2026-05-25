@@ -1,92 +1,92 @@
-# Support Ticket AIL-Spec Example
+# C Interop AIL-Spec Example
 
-The application Support Tickets manages customer support tickets, assignments,
-updates, internal notes, and overdue-ticket review.
+The application C Interop manages ABI-safe host bindings.
 
-The application has these users:
+C library: zlib.
 
-- Customer
-- Support agent
-- Support manager
+The library imports function compress2.
 
-A User has:
+compress2 needs:
 
-- id: Text
-- role: State<Customer, SupportAgent, SupportManager>
-- email: Text
+- dest: Pointer<UInt8> borrowed mutable
+- dest_len: Pointer<UInt64> borrowed mutable
+- source: Pointer<UInt8> borrowed
+- source_len: UInt64
+- level: Int
 
-A Ticket has:
+compress2 produces:
 
-- id: Text
-- title: Text
-- status: State<New, Open, Assigned, Closed, Overdue>
-- customer: User
-- assignee: Option<User>
-- created_at: Time
-- due_at: Time
-- public_updates: List<Text>
-- internal notes: Secret<List<Text>>
+- status: CInt
 
-The application shows:
+compress2 maps errno or status codes:
 
-- an open ticket queue for support agents
-- an Overdue tickets view for support managers
-- a customer-visible ticket history that includes public updates and never
-  includes internal notes
+- Z_OK maps to success
+- Z_MEM_ERROR maps to Failure.OutOfMemory
+- Z_BUF_ERROR maps to Failure.OutputBufferTooSmall
 
-Action: Create ticket.
+compress2 requires capability:
 
-When a customer creates a ticket:
+- call zlib compress2
 
-- the system requires the customer id and title
-- the system creates a Ticket with status New
-- the system records the customer as the ticket customer
-- the system records an initial public update
-- the system guarantees internal notes are empty and secret
-- the system records a trace event named TicketCreated
+compress2 records trace event named ForeignCallCompress2
 
-Action: Assign ticket.
+C library: libc.
 
-When a support agent assigns a ticket:
+The library imports function qsort.
 
-- the system requires the ticket to exist
-- the system requires the ticket status to be New or Open
-- the system requires the assignee role to be SupportAgent or SupportManager
-- the system changes the ticket assignee
-- the system changes the status to Assigned
-- the system records a public update
-- the system guarantees the assignee can see internal notes
-- the system records a trace event named TicketAssigned
+qsort needs:
 
-Action: Close ticket.
+- base: Pointer<Void> borrowed mutable
+- count: UInt64
+- width: UInt64
+- comparator: Callback<Pointer<Void>,Pointer<Void>,CInt> borrowed callback noescape
 
-When a support agent closes a ticket:
+qsort produces:
 
-- the system requires the ticket to exist
-- the system requires the ticket status not to be Closed
-- the system changes the ticket status to Closed
-- the system records a public update
-- the system does not reveal internal notes to the customer
-- the system guarantees closed tickets do not appear in the open ticket queue
-- the system records a trace event named TicketClosed
+- status: CInt
 
-When the scheduler marks overdue tickets:
+qsort maps errno or status codes:
 
-- the system reads tickets whose status is New, Open, or Assigned
-- the system requires the current time to be later than due_at
-- the system changes the ticket status to Overdue
-- the system records a public update
-- the system records a trace event named TicketOverdue
+- OK maps to success
+- EINVAL maps to Failure.InvalidComparator
 
-Failure NotFound happens when a ticket id does not match a stored ticket:
+qsort requires capability:
 
-- the system changes no ticket data
-- the caller sees "Ticket not found"
-- the trace records TicketNotFound
+- call libc qsort
 
-Failure PermissionDenied happens when a user tries to see internal notes without
-support staff permission:
+qsort records trace event named ForeignCallbackCompared
 
-- the system reveals no secret value
-- the caller sees "Permission denied"
-- the trace records InternalNotesDenied
+System component: Packet header layout.
+
+The component uses:
+
+- packet header: Buffer
+
+The component lays out:
+
+- packet header: repr(C), size 4, align 2, offsets version=0 flags=1 length=2, target wasm32-unknown-sandbox-wasm
+
+The component records:
+
+- PacketHeaderLayoutChecked
+
+Action: Compress payload.
+
+When compress payload happens:
+
+- the system records a trace event named PayloadCompressed
+
+Failure OutOfMemory happens when zlib reports memory exhaustion:
+
+- the caller sees "Out of memory"
+- the trace records ForeignOutOfMemory
+
+Failure OutputBufferTooSmall happens when zlib reports the output buffer is too small:
+
+- the caller sees "Output buffer too small"
+- the trace records ForeignOutputBufferTooSmall
+
+Failure InvalidComparator happens when libc rejects the callback comparator:
+
+- the caller sees "Invalid comparator"
+- the trace records ForeignInvalidComparator

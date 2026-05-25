@@ -1,92 +1,28 @@
-# Support Ticket AIL-Spec Example
+# Option Map AIL-Spec Example
 
-The application Support Tickets manages customer support tickets, assignments,
-updates, internal notes, and overdue-ticket review.
+Package: ail.std.collections.
 
-The application has these users:
+Type: Option<T>.
 
-- Customer
-- Support agent
-- Support manager
+Option has variants:
 
-A User has:
+- Some(value: T)
+- None
 
-- id: Text
-- role: State<Customer, SupportAgent, SupportManager>
-- email: Text
+Function: Option.map.
 
-A Ticket has:
+The function needs:
 
-- id: Text
-- title: Text
-- status: State<New, Open, Assigned, Closed, Overdue>
-- customer: User
-- assignee: Option<User>
-- created_at: Time
-- due_at: Time
-- public_updates: List<Text>
-- internal notes: Secret<List<Text>>
+- option: Option<T>
+- mapper: Text
 
-The application shows:
+The function produces:
 
-- an open ticket queue for support agents
-- an Overdue tickets view for support managers
-- a customer-visible ticket history that includes public updates and never
-  includes internal notes
+- result: Option<U>
 
-Action: Create ticket.
+When Option.map runs:
 
-When a customer creates a ticket:
-
-- the system requires the customer id and title
-- the system creates a Ticket with status New
-- the system records the customer as the ticket customer
-- the system records an initial public update
-- the system guarantees internal notes are empty and secret
-- the system records a trace event named TicketCreated
-
-Action: Assign ticket.
-
-When a support agent assigns a ticket:
-
-- the system requires the ticket to exist
-- the system requires the ticket status to be New or Open
-- the system requires the assignee role to be SupportAgent or SupportManager
-- the system changes the ticket assignee
-- the system changes the status to Assigned
-- the system records a public update
-- the system guarantees the assignee can see internal notes
-- the system records a trace event named TicketAssigned
-
-Action: Close ticket.
-
-When a support agent closes a ticket:
-
-- the system requires the ticket to exist
-- the system requires the ticket status not to be Closed
-- the system changes the ticket status to Closed
-- the system records a public update
-- the system does not reveal internal notes to the customer
-- the system guarantees closed tickets do not appear in the open ticket queue
-- the system records a trace event named TicketClosed
-
-When the scheduler marks overdue tickets:
-
-- the system reads tickets whose status is New, Open, or Assigned
-- the system requires the current time to be later than due_at
-- the system changes the ticket status to Overdue
-- the system records a public update
-- the system records a trace event named TicketOverdue
-
-Failure NotFound happens when a ticket id does not match a stored ticket:
-
-- the system changes no ticket data
-- the caller sees "Ticket not found"
-- the trace records TicketNotFound
-
-Failure PermissionDenied happens when a user tries to see internal notes without
-support staff permission:
-
-- the system reveals no secret value
-- the caller sees "Permission denied"
-- the trace records InternalNotesDenied
+- if the option is Some(value), the function calls mapper with value
+- the function returns Some(mapped value)
+- if the option is None, the function returns None
+- the function records a trace event named OptionMapEvaluated

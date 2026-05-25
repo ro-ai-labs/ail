@@ -23,12 +23,17 @@ live LLM access. The current corpus stores:
 - `responses/`: stored model/agent response artifacts.
 
 This is a checked seed corpus, not final v0.2 release evidence. The current
-seed intentionally reuses the Support Ticket accepted response across many
-entries so the replay harness, artifact writing, and coverage thresholds can be
-verified while broader LLM/Codex captures are added. The replay report exposes
-that reuse with duplicate response and extracted-artifact fingerprint counts.
-Those duplicate counts must be driven to zero before claiming the final v0.2
-prompt-to-artifact release gate.
+seed intentionally reuses a small catalog of checked fixture responses across
+many entries so the replay harness, artifact writing, and coverage thresholds
+can be verified while broader LLM/Codex captures are added. The replay report
+exposes that reuse with duplicate response and extracted-artifact fingerprint
+counts. Those duplicate counts must be driven to zero before claiming the final
+v0.2 prompt-to-artifact release gate.
+
+Some seed entries use surface metadata to keep threshold checks active while
+the replay path catches up to full UI-profile lowering and imported-package
+type resolution. Those entries are scaffolding, not final release coverage for
+those surfaces.
 
 Replay with:
 

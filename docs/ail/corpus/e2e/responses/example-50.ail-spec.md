@@ -1,92 +1,59 @@
-# Support Ticket AIL-Spec Example
+# Refund Tool AIL-Spec Example
 
-The application Support Tickets manages customer support tickets, assignments,
-updates, internal notes, and overdue-ticket review.
+Tool: Refund customer payment.
 
-The application has these users:
+The AI Agent may request Refund customer payment when:
 
-- Customer
-- Support agent
-- Support manager
+- the order exists
+- the payment was captured
+- the refund amount is not greater than the captured amount
 
-A User has:
+The tool needs:
 
-- id: Text
-- role: State<Customer, SupportAgent, SupportManager>
-- email: Text
+- order id: Text
+- refund amount: Money
+- reason: Text
+- payment token: Secret<Text>
 
-A Ticket has:
+The tool produces:
 
-- id: Text
-- title: Text
-- status: State<New, Open, Assigned, Closed, Overdue>
-- customer: User
-- assignee: Option<User>
-- created_at: Time
-- due_at: Time
-- public_updates: List<Text>
-- internal notes: Secret<List<Text>>
+- refund id: Text
 
-The application shows:
+The tool can:
 
-- an open ticket queue for support agents
-- an Overdue tickets view for support managers
-- a customer-visible ticket history that includes public updates and never
-  includes internal notes
+- read the order
+- read the payment record
+- call PaymentProvider.refund
+- write a RefundLedger entry
+- create a human review task when approval is required
 
-Action: Create ticket.
+The tool must not:
 
-When a customer creates a ticket:
+- reveal the payment token
+- refund more than the captured amount
 
-- the system requires the customer id and title
-- the system creates a Ticket with status New
-- the system records the customer as the ticket customer
-- the system records an initial public update
-- the system guarantees internal notes are empty and secret
-- the system records a trace event named TicketCreated
+The tool requires permission:
 
-Action: Assign ticket.
+- requester may create refunds
 
-When a support agent assigns a ticket:
+The tool requires approval:
 
-- the system requires the ticket to exist
-- the system requires the ticket status to be New or Open
-- the system requires the assignee role to be SupportAgent or SupportManager
-- the system changes the ticket assignee
-- the system changes the status to Assigned
-- the system records a public update
-- the system guarantees the assignee can see internal notes
-- the system records a trace event named TicketAssigned
+- manager approval when the refund amount is over USD 500
 
-Action: Close ticket.
+The tool records:
 
-When a support agent closes a ticket:
+- RefundCustomerPaymentRequested
 
-- the system requires the ticket to exist
-- the system requires the ticket status not to be Closed
-- the system changes the ticket status to Closed
-- the system records a public update
-- the system does not reveal internal notes to the customer
-- the system guarantees closed tickets do not appear in the open ticket queue
-- the system records a trace event named TicketClosed
+The tool guarantees:
 
-When the scheduler marks overdue tickets:
+- Refund amount is less than or equal to the captured amount
+- payment token is redacted from all agent-visible output
+- every external call is represented in the audit trace
 
-- the system reads tickets whose status is New, Open, or Assigned
-- the system requires the current time to be later than due_at
-- the system changes the ticket status to Overdue
-- the system records a public update
-- the system records a trace event named TicketOverdue
+Failure ProviderRejected happens when PaymentProvider rejects the refund:
 
-Failure NotFound happens when a ticket id does not match a stored ticket:
-
-- the system changes no ticket data
-- the caller sees "Ticket not found"
-- the trace records TicketNotFound
-
-Failure PermissionDenied happens when a user tries to see internal notes without
-support staff permission:
-
-- the system reveals no secret value
-- the caller sees "Permission denied"
-- the trace records InternalNotesDenied
+- the system records failure ProviderRejected
+- the system writes no successful RefundLedger entry
+- the customer is not notified automatically
+- a human review task is created
+- the trace records RefundProviderRejected

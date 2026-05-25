@@ -4,10 +4,10 @@ This checked seed corpus stores deterministic prompt and response transcripts
 for the `ail-e2e-corpus` release verifier.
 
 ## End-To-End Example: example-0
-semantic-task: support-ticket-0
+semantic-task: stdlib-collections-0
 profile: Application
 surface-tags: standard-library
-package: examples/support_ticket.ail
+package: examples/ail_std_collections.ail
 prompt-file: docs/ail/prompts/interview.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
@@ -17,16 +17,14 @@ request-file: requests/example-0.json
 response-file: responses/example-0.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
-target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+target: vm
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-1
-semantic-task: support-ticket-1
+semantic-task: stdlib-collections-1
 profile: Application
 surface-tags: standard-library
-package: examples/support_ticket.ail
+package: examples/ail_std_collections.ail
 prompt-file: docs/ail/prompts/requirements.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
@@ -36,16 +34,14 @@ request-file: requests/example-1.json
 response-file: responses/example-1.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
-target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+target: vm
 endpoint-label: local-endpoint-alt
 
 ## End-To-End Example: example-2
-semantic-task: support-ticket-2
+semantic-task: stdlib-collections-2
 profile: Application
 surface-tags: standard-library
-package: examples/support_ticket.ail
+package: examples/ail_std_collections.ail
 prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
@@ -55,16 +51,14 @@ request-file: requests/example-2.json
 response-file: responses/example-2.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
-target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+target: vm
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-3
-semantic-task: support-ticket-3
+semantic-task: stdlib-collections-3
 profile: Application
 surface-tags: standard-library
-package: examples/support_ticket.ail
+package: examples/ail_std_collections.ail
 prompt-file: docs/ail/prompts/core-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:0175222e4a84bec4
@@ -74,16 +68,14 @@ request-file: requests/example-3.json
 response-file: responses/example-3.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
-target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+target: vm
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-4
-semantic-task: support-ticket-4
+semantic-task: stdlib-collections-4
 profile: Application
 surface-tags: standard-library
-package: examples/support_ticket.ail
+package: examples/ail_std_collections.ail
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:c9700f2c2e57e49e
@@ -93,16 +85,14 @@ request-file: requests/example-4.json
 response-file: responses/example-4.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
-target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+target: vm
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-5
-semantic-task: support-ticket-5
+semantic-task: stdlib-collections-5
 profile: Application
 surface-tags: standard-library
-package: examples/support_ticket.ail
+package: examples/ail_std_collections.ail
 prompt-file: docs/ail/prompts/core-to-spec.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:9f447e07620792b2
@@ -112,16 +102,14 @@ request-file: requests/example-5.json
 response-file: responses/example-5.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
-target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+target: vm
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-6
-semantic-task: support-ticket-6
+semantic-task: stdlib-collections-6
 profile: Application
 surface-tags: standard-library
-package: examples/support_ticket.ail
+package: examples/ail_std_collections.ail
 prompt-file: docs/ail/prompts/core-to-summary.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:49f26ec41d722633
@@ -131,16 +119,14 @@ request-file: requests/example-6.json
 response-file: responses/example-6.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
-target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+target: vm
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-7
-semantic-task: support-ticket-7
+semantic-task: stdlib-collections-7
 profile: Application
 surface-tags: standard-library
-package: examples/support_ticket.ail
+package: examples/ail_std_collections.ail
 prompt-file: docs/ail/prompts/flow-patch.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:30136a21ab8d8eb6
@@ -150,16 +136,14 @@ request-file: requests/example-7.json
 response-file: responses/example-7.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
-target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+target: vm
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-8
-semantic-task: support-ticket-8
+semantic-task: stdlib-collections-8
 profile: Application
 surface-tags: standard-library
-package: examples/support_ticket.ail
+package: examples/ail_std_collections.ail
 prompt-file: docs/ail/prompts/trace-debug.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:f5fffd069da83242
@@ -169,16 +153,14 @@ request-file: requests/example-8.json
 response-file: responses/example-8.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
-target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+target: vm
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-9
-semantic-task: support-ticket-9
+semantic-task: stdlib-collections-9
 profile: Application
 surface-tags: standard-library
-package: examples/support_ticket.ail
+package: examples/ail_std_collections.ail
 prompt-file: docs/ail/prompts/interop.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:87f6dd1772d48729
@@ -188,16 +170,14 @@ request-file: requests/example-9.json
 response-file: responses/example-9.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
-target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+target: vm
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-10
-semantic-task: support-ticket-10
+semantic-task: support-shared-10
 profile: Application
 surface-tags: package-import
-package: examples/support_ticket.ail
+package: examples/support_shared.ail
 prompt-file: docs/ail/prompts/interview.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
@@ -207,16 +187,14 @@ request-file: requests/example-10.json
 response-file: responses/example-10.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
-target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+target: vm
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-11
-semantic-task: support-ticket-11
+semantic-task: support-shared-11
 profile: Application
 surface-tags: package-import
-package: examples/support_ticket.ail
+package: examples/support_shared.ail
 prompt-file: docs/ail/prompts/requirements.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
@@ -226,16 +204,14 @@ request-file: requests/example-11.json
 response-file: responses/example-11.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
-target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+target: vm
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-12
-semantic-task: support-ticket-12
+semantic-task: support-shared-12
 profile: Application
 surface-tags: package-import
-package: examples/support_ticket.ail
+package: examples/support_shared.ail
 prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
@@ -245,16 +221,14 @@ request-file: requests/example-12.json
 response-file: responses/example-12.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
-target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+target: vm
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-13
-semantic-task: support-ticket-13
+semantic-task: support-shared-13
 profile: Application
 surface-tags: package-import
-package: examples/support_ticket.ail
+package: examples/support_shared.ail
 prompt-file: docs/ail/prompts/core-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:0175222e4a84bec4
@@ -264,16 +238,14 @@ request-file: requests/example-13.json
 response-file: responses/example-13.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
-target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+target: vm
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-14
-semantic-task: support-ticket-14
+semantic-task: support-shared-14
 profile: Application
 surface-tags: package-import
-package: examples/support_ticket.ail
+package: examples/support_shared.ail
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:c9700f2c2e57e49e
@@ -283,16 +255,14 @@ request-file: requests/example-14.json
 response-file: responses/example-14.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
-target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+target: vm
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-15
-semantic-task: support-ticket-15
+semantic-task: support-shared-15
 profile: Application
 surface-tags: package-import
-package: examples/support_ticket.ail
+package: examples/support_shared.ail
 prompt-file: docs/ail/prompts/core-to-spec.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:9f447e07620792b2
@@ -302,16 +272,14 @@ request-file: requests/example-15.json
 response-file: responses/example-15.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
-target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+target: vm
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-16
-semantic-task: support-ticket-16
+semantic-task: support-shared-16
 profile: Application
 surface-tags: package-import
-package: examples/support_ticket.ail
+package: examples/support_shared.ail
 prompt-file: docs/ail/prompts/core-to-summary.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:49f26ec41d722633
@@ -321,16 +289,14 @@ request-file: requests/example-16.json
 response-file: responses/example-16.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
-target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+target: vm
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-17
-semantic-task: support-ticket-17
+semantic-task: support-shared-17
 profile: Application
 surface-tags: package-import
-package: examples/support_ticket.ail
+package: examples/support_shared.ail
 prompt-file: docs/ail/prompts/flow-patch.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:30136a21ab8d8eb6
@@ -340,16 +306,14 @@ request-file: requests/example-17.json
 response-file: responses/example-17.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
-target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+target: vm
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-18
-semantic-task: support-ticket-18
+semantic-task: support-shared-18
 profile: Application
 surface-tags: package-import
-package: examples/support_ticket.ail
+package: examples/support_shared.ail
 prompt-file: docs/ail/prompts/trace-debug.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:f5fffd069da83242
@@ -359,16 +323,14 @@ request-file: requests/example-18.json
 response-file: responses/example-18.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
-target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+target: vm
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-19
-semantic-task: support-ticket-19
+semantic-task: support-shared-19
 profile: Application
 surface-tags: package-import
-package: examples/support_ticket.ail
+package: examples/support_shared.ail
 prompt-file: docs/ail/prompts/interop.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:87f6dd1772d48729
@@ -378,16 +340,14 @@ request-file: requests/example-19.json
 response-file: responses/example-19.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
-target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+target: vm
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-20
-semantic-task: support-ticket-20
+semantic-task: option-map-ui-surface-20
 profile: Application
 surface-tags: ui
-package: examples/support_ticket.ail
+package: examples/option_map.ail
 prompt-file: docs/ail/prompts/interview.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
@@ -397,16 +357,14 @@ request-file: requests/example-20.json
 response-file: responses/example-20.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
-target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+target: vm
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-21
-semantic-task: support-ticket-21
+semantic-task: option-map-ui-surface-21
 profile: Application
 surface-tags: ui
-package: examples/support_ticket.ail
+package: examples/option_map.ail
 prompt-file: docs/ail/prompts/requirements.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
@@ -416,16 +374,14 @@ request-file: requests/example-21.json
 response-file: responses/example-21.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
-target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+target: vm
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-22
-semantic-task: support-ticket-22
+semantic-task: option-map-ui-surface-22
 profile: Application
 surface-tags: ui
-package: examples/support_ticket.ail
+package: examples/option_map.ail
 prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
@@ -435,16 +391,14 @@ request-file: requests/example-22.json
 response-file: responses/example-22.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
-target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+target: vm
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-23
-semantic-task: support-ticket-23
+semantic-task: option-map-ui-surface-23
 profile: Application
 surface-tags: ui
-package: examples/support_ticket.ail
+package: examples/option_map.ail
 prompt-file: docs/ail/prompts/core-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:0175222e4a84bec4
@@ -454,16 +408,14 @@ request-file: requests/example-23.json
 response-file: responses/example-23.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
-target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+target: vm
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-24
-semantic-task: support-ticket-24
+semantic-task: option-map-ui-surface-24
 profile: Application
 surface-tags: ui
-package: examples/support_ticket.ail
+package: examples/option_map.ail
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:c9700f2c2e57e49e
@@ -473,16 +425,14 @@ request-file: requests/example-24.json
 response-file: responses/example-24.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
-target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+target: vm
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-25
-semantic-task: support-ticket-25
+semantic-task: c-interop-25
 profile: Application
 surface-tags: c-host-interop
-package: examples/support_ticket.ail
+package: examples/c_interop.ail
 prompt-file: docs/ail/prompts/core-to-spec.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:9f447e07620792b2
@@ -492,16 +442,15 @@ request-file: requests/example-25.json
 response-file: responses/example-25.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
-target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+target: wasm32-unknown-sandbox-wasm
+vm-action: CompressPayload
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-26
-semantic-task: support-ticket-26
+semantic-task: c-interop-26
 profile: Application
 surface-tags: c-host-interop
-package: examples/support_ticket.ail
+package: examples/c_interop.ail
 prompt-file: docs/ail/prompts/core-to-summary.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:49f26ec41d722633
@@ -511,16 +460,15 @@ request-file: requests/example-26.json
 response-file: responses/example-26.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
-target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+target: wasm32-unknown-sandbox-wasm
+vm-action: CompressPayload
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-27
-semantic-task: support-ticket-27
+semantic-task: c-interop-27
 profile: Application
 surface-tags: c-host-interop
-package: examples/support_ticket.ail
+package: examples/c_interop.ail
 prompt-file: docs/ail/prompts/flow-patch.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:30136a21ab8d8eb6
@@ -530,16 +478,15 @@ request-file: requests/example-27.json
 response-file: responses/example-27.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
-target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+target: wasm32-unknown-sandbox-wasm
+vm-action: CompressPayload
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-28
-semantic-task: support-ticket-28
+semantic-task: c-interop-28
 profile: Application
 surface-tags: c-host-interop
-package: examples/support_ticket.ail
+package: examples/c_interop.ail
 prompt-file: docs/ail/prompts/trace-debug.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:f5fffd069da83242
@@ -549,16 +496,15 @@ request-file: requests/example-28.json
 response-file: responses/example-28.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
-target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+target: wasm32-unknown-sandbox-wasm
+vm-action: CompressPayload
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-29
-semantic-task: support-ticket-29
+semantic-task: c-interop-29
 profile: Application
 surface-tags: c-host-interop
-package: examples/support_ticket.ail
+package: examples/c_interop.ail
 prompt-file: docs/ail/prompts/interop.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:87f6dd1772d48729
@@ -568,9 +514,8 @@ request-file: requests/example-29.json
 response-file: responses/example-29.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
-target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+target: wasm32-unknown-sandbox-wasm
+vm-action: CompressPayload
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-30
@@ -669,10 +614,10 @@ runtime-state: ticket.id=T-1;ticket.status=Open
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-35
-semantic-task: support-ticket-35
+semantic-task: runtime-generic-35
 profile: Application
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/runtime_generic.ail
 prompt-file: docs/ail/prompts/core-to-spec.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:9f447e07620792b2
@@ -683,15 +628,15 @@ response-file: responses/example-35.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: PrioritizeTicket
+runtime-state: ticket.id=T-1;ticket.priority=Low
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-36
-semantic-task: support-ticket-36
+semantic-task: runtime-generic-36
 profile: Application
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/runtime_generic.ail
 prompt-file: docs/ail/prompts/core-to-summary.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:49f26ec41d722633
@@ -702,15 +647,15 @@ response-file: responses/example-36.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: PrioritizeTicket
+runtime-state: ticket.id=T-1;ticket.priority=Low
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-37
-semantic-task: support-ticket-37
+semantic-task: runtime-generic-37
 profile: Application
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/runtime_generic.ail
 prompt-file: docs/ail/prompts/flow-patch.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:30136a21ab8d8eb6
@@ -721,15 +666,15 @@ response-file: responses/example-37.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: PrioritizeTicket
+runtime-state: ticket.id=T-1;ticket.priority=Low
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-38
-semantic-task: support-ticket-38
+semantic-task: runtime-generic-38
 profile: Application
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/runtime_generic.ail
 prompt-file: docs/ail/prompts/trace-debug.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:f5fffd069da83242
@@ -740,15 +685,15 @@ response-file: responses/example-38.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: PrioritizeTicket
+runtime-state: ticket.id=T-1;ticket.priority=Low
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-39
-semantic-task: support-ticket-39
+semantic-task: runtime-generic-39
 profile: Application
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/runtime_generic.ail
 prompt-file: docs/ail/prompts/interop.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:87f6dd1772d48729
@@ -759,15 +704,15 @@ response-file: responses/example-39.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: PrioritizeTicket
+runtime-state: ticket.id=T-1;ticket.priority=Low
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-40
-semantic-task: support-ticket-40
+semantic-task: refund-tool-40
 profile: AgentTool
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/refund_tool.ail
 prompt-file: docs/ail/prompts/interview.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
@@ -778,15 +723,15 @@ response-file: responses/example-40.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: RefundCustomerPayment
+runtime-state: order.id=O-1;payment.captured=true;refund.amount=100
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-41
-semantic-task: support-ticket-41
+semantic-task: refund-tool-41
 profile: AgentTool
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/refund_tool.ail
 prompt-file: docs/ail/prompts/requirements.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
@@ -797,15 +742,15 @@ response-file: responses/example-41.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: RefundCustomerPayment
+runtime-state: order.id=O-1;payment.captured=true;refund.amount=100
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-42
-semantic-task: support-ticket-42
+semantic-task: refund-tool-42
 profile: AgentTool
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/refund_tool.ail
 prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
@@ -816,15 +761,15 @@ response-file: responses/example-42.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: RefundCustomerPayment
+runtime-state: order.id=O-1;payment.captured=true;refund.amount=100
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-43
-semantic-task: support-ticket-43
+semantic-task: refund-tool-43
 profile: AgentTool
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/refund_tool.ail
 prompt-file: docs/ail/prompts/core-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:0175222e4a84bec4
@@ -835,15 +780,15 @@ response-file: responses/example-43.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: RefundCustomerPayment
+runtime-state: order.id=O-1;payment.captured=true;refund.amount=100
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-44
-semantic-task: support-ticket-44
+semantic-task: refund-tool-44
 profile: AgentTool
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/refund_tool.ail
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:c9700f2c2e57e49e
@@ -854,15 +799,15 @@ response-file: responses/example-44.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: RefundCustomerPayment
+runtime-state: order.id=O-1;payment.captured=true;refund.amount=100
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-45
-semantic-task: support-ticket-45
+semantic-task: refund-tool-45
 profile: AgentTool
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/refund_tool.ail
 prompt-file: docs/ail/prompts/core-to-spec.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:9f447e07620792b2
@@ -873,15 +818,15 @@ response-file: responses/example-45.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: RefundCustomerPayment
+runtime-state: order.id=O-1;payment.captured=true;refund.amount=100
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-46
-semantic-task: support-ticket-46
+semantic-task: refund-tool-46
 profile: AgentTool
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/refund_tool.ail
 prompt-file: docs/ail/prompts/core-to-summary.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:49f26ec41d722633
@@ -892,15 +837,15 @@ response-file: responses/example-46.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: RefundCustomerPayment
+runtime-state: order.id=O-1;payment.captured=true;refund.amount=100
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-47
-semantic-task: support-ticket-47
+semantic-task: refund-tool-47
 profile: AgentTool
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/refund_tool.ail
 prompt-file: docs/ail/prompts/flow-patch.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:30136a21ab8d8eb6
@@ -911,15 +856,15 @@ response-file: responses/example-47.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: RefundCustomerPayment
+runtime-state: order.id=O-1;payment.captured=true;refund.amount=100
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-48
-semantic-task: support-ticket-48
+semantic-task: refund-tool-48
 profile: AgentTool
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/refund_tool.ail
 prompt-file: docs/ail/prompts/trace-debug.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:f5fffd069da83242
@@ -930,15 +875,15 @@ response-file: responses/example-48.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: RefundCustomerPayment
+runtime-state: order.id=O-1;payment.captured=true;refund.amount=100
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-49
-semantic-task: support-ticket-49
+semantic-task: refund-tool-49
 profile: AgentTool
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/refund_tool.ail
 prompt-file: docs/ail/prompts/interop.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:87f6dd1772d48729
@@ -949,15 +894,15 @@ response-file: responses/example-49.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: RefundCustomerPayment
+runtime-state: order.id=O-1;payment.captured=true;refund.amount=100
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-50
-semantic-task: support-ticket-50
+semantic-task: refund-tool-50
 profile: AgentTool
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/refund_tool.ail
 prompt-file: docs/ail/prompts/interview.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
@@ -968,15 +913,15 @@ response-file: responses/example-50.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: RefundCustomerPayment
+runtime-state: order.id=O-1;payment.captured=true;refund.amount=100
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-51
-semantic-task: support-ticket-51
+semantic-task: refund-tool-51
 profile: AgentTool
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/refund_tool.ail
 prompt-file: docs/ail/prompts/requirements.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
@@ -987,15 +932,15 @@ response-file: responses/example-51.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: RefundCustomerPayment
+runtime-state: order.id=O-1;payment.captured=true;refund.amount=100
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-52
-semantic-task: support-ticket-52
+semantic-task: refund-tool-52
 profile: AgentTool
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/refund_tool.ail
 prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
@@ -1006,15 +951,15 @@ response-file: responses/example-52.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: RefundCustomerPayment
+runtime-state: order.id=O-1;payment.captured=true;refund.amount=100
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-53
-semantic-task: support-ticket-53
+semantic-task: refund-tool-53
 profile: AgentTool
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/refund_tool.ail
 prompt-file: docs/ail/prompts/core-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:0175222e4a84bec4
@@ -1025,15 +970,15 @@ response-file: responses/example-53.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: RefundCustomerPayment
+runtime-state: order.id=O-1;payment.captured=true;refund.amount=100
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-54
-semantic-task: support-ticket-54
+semantic-task: refund-tool-54
 profile: AgentTool
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/refund_tool.ail
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:c9700f2c2e57e49e
@@ -1044,15 +989,15 @@ response-file: responses/example-54.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: RefundCustomerPayment
+runtime-state: order.id=O-1;payment.captured=true;refund.amount=100
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-55
-semantic-task: support-ticket-55
+semantic-task: compiler-pass-55
 profile: Compiler
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/compiler_pass.ail
 prompt-file: docs/ail/prompts/core-to-spec.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:9f447e07620792b2
@@ -1063,15 +1008,14 @@ response-file: responses/example-55.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: InferReadPermissions
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-56
-semantic-task: support-ticket-56
+semantic-task: compiler-pass-56
 profile: Compiler
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/compiler_pass.ail
 prompt-file: docs/ail/prompts/core-to-summary.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:49f26ec41d722633
@@ -1082,15 +1026,14 @@ response-file: responses/example-56.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: InferReadPermissions
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-57
-semantic-task: support-ticket-57
+semantic-task: compiler-pass-57
 profile: Compiler
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/compiler_pass.ail
 prompt-file: docs/ail/prompts/flow-patch.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:30136a21ab8d8eb6
@@ -1101,15 +1044,14 @@ response-file: responses/example-57.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: InferReadPermissions
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-58
-semantic-task: support-ticket-58
+semantic-task: compiler-pass-58
 profile: Compiler
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/compiler_pass.ail
 prompt-file: docs/ail/prompts/trace-debug.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:f5fffd069da83242
@@ -1120,15 +1062,14 @@ response-file: responses/example-58.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: InferReadPermissions
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-59
-semantic-task: support-ticket-59
+semantic-task: compiler-pass-59
 profile: Compiler
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/compiler_pass.ail
 prompt-file: docs/ail/prompts/interop.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:87f6dd1772d48729
@@ -1139,15 +1080,14 @@ response-file: responses/example-59.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: InferReadPermissions
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-60
-semantic-task: support-ticket-60
+semantic-task: compiler-pass-60
 profile: Compiler
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/compiler_pass.ail
 prompt-file: docs/ail/prompts/interview.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
@@ -1158,15 +1098,14 @@ response-file: responses/example-60.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: InferReadPermissions
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-61
-semantic-task: support-ticket-61
+semantic-task: compiler-pass-61
 profile: Compiler
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/compiler_pass.ail
 prompt-file: docs/ail/prompts/requirements.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
@@ -1177,15 +1116,14 @@ response-file: responses/example-61.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: InferReadPermissions
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-62
-semantic-task: support-ticket-62
+semantic-task: compiler-pass-62
 profile: Compiler
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/compiler_pass.ail
 prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
@@ -1196,15 +1134,14 @@ response-file: responses/example-62.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: InferReadPermissions
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-63
-semantic-task: support-ticket-63
+semantic-task: compiler-pass-63
 profile: Compiler
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/compiler_pass.ail
 prompt-file: docs/ail/prompts/core-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:0175222e4a84bec4
@@ -1215,15 +1152,14 @@ response-file: responses/example-63.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: InferReadPermissions
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-64
-semantic-task: support-ticket-64
+semantic-task: compiler-pass-64
 profile: Compiler
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/compiler_pass.ail
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:c9700f2c2e57e49e
@@ -1234,15 +1170,14 @@ response-file: responses/example-64.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: InferReadPermissions
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-65
-semantic-task: support-ticket-65
+semantic-task: network-driver-65
 profile: System
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/network_driver.ail
 prompt-file: docs/ail/prompts/core-to-spec.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:9f447e07620792b2
@@ -1253,15 +1188,13 @@ response-file: responses/example-65.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-66
-semantic-task: support-ticket-66
+semantic-task: network-driver-66
 profile: System
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/network_driver.ail
 prompt-file: docs/ail/prompts/core-to-summary.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:49f26ec41d722633
@@ -1272,15 +1205,13 @@ response-file: responses/example-66.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-67
-semantic-task: support-ticket-67
+semantic-task: network-driver-67
 profile: System
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/network_driver.ail
 prompt-file: docs/ail/prompts/flow-patch.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:30136a21ab8d8eb6
@@ -1291,15 +1222,13 @@ response-file: responses/example-67.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-68
-semantic-task: support-ticket-68
+semantic-task: network-driver-68
 profile: System
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/network_driver.ail
 prompt-file: docs/ail/prompts/trace-debug.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:f5fffd069da83242
@@ -1310,15 +1239,13 @@ response-file: responses/example-68.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-69
-semantic-task: support-ticket-69
+semantic-task: network-driver-69
 profile: System
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/network_driver.ail
 prompt-file: docs/ail/prompts/interop.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:87f6dd1772d48729
@@ -1329,15 +1256,13 @@ response-file: responses/example-69.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-70
-semantic-task: support-ticket-70
+semantic-task: network-driver-70
 profile: System
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/network_driver.ail
 prompt-file: docs/ail/prompts/interview.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
@@ -1348,15 +1273,13 @@ response-file: responses/example-70.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-71
-semantic-task: support-ticket-71
+semantic-task: network-driver-71
 profile: System
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/network_driver.ail
 prompt-file: docs/ail/prompts/requirements.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
@@ -1367,15 +1290,13 @@ response-file: responses/example-71.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-72
-semantic-task: support-ticket-72
+semantic-task: network-driver-72
 profile: System
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/network_driver.ail
 prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
@@ -1386,15 +1307,13 @@ response-file: responses/example-72.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-73
-semantic-task: support-ticket-73
+semantic-task: network-driver-73
 profile: System
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/network_driver.ail
 prompt-file: docs/ail/prompts/core-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:0175222e4a84bec4
@@ -1405,15 +1324,13 @@ response-file: responses/example-73.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-74
-semantic-task: support-ticket-74
+semantic-task: network-driver-74
 profile: System
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/network_driver.ail
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:c9700f2c2e57e49e
@@ -1424,15 +1341,13 @@ response-file: responses/example-74.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-75
-semantic-task: support-ticket-75
+semantic-task: secret-access-75
 profile: System
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/secret_access.ail
 prompt-file: docs/ail/prompts/core-to-spec.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:9f447e07620792b2
@@ -1443,15 +1358,15 @@ response-file: responses/example-75.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: ViewInternalNotes
+runtime-state: ticket.id=T-1;requester.role=SupportAgent
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-76
-semantic-task: support-ticket-76
+semantic-task: secret-access-76
 profile: System
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/secret_access.ail
 prompt-file: docs/ail/prompts/core-to-summary.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:49f26ec41d722633
@@ -1462,15 +1377,15 @@ response-file: responses/example-76.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: ViewInternalNotes
+runtime-state: ticket.id=T-1;requester.role=SupportAgent
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-77
-semantic-task: support-ticket-77
+semantic-task: secret-access-77
 profile: System
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/secret_access.ail
 prompt-file: docs/ail/prompts/flow-patch.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:30136a21ab8d8eb6
@@ -1481,15 +1396,15 @@ response-file: responses/example-77.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: ViewInternalNotes
+runtime-state: ticket.id=T-1;requester.role=SupportAgent
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-78
-semantic-task: support-ticket-78
+semantic-task: secret-access-78
 profile: System
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/secret_access.ail
 prompt-file: docs/ail/prompts/trace-debug.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:f5fffd069da83242
@@ -1500,15 +1415,15 @@ response-file: responses/example-78.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: ViewInternalNotes
+runtime-state: ticket.id=T-1;requester.role=SupportAgent
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-79
-semantic-task: support-ticket-79
+semantic-task: secret-access-79
 profile: System
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/secret_access.ail
 prompt-file: docs/ail/prompts/interop.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:87f6dd1772d48729
@@ -1519,15 +1434,15 @@ response-file: responses/example-79.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: ViewInternalNotes
+runtime-state: ticket.id=T-1;requester.role=SupportAgent
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-80
-semantic-task: support-ticket-80
+semantic-task: repeated-task-80
 profile: System
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/repeated_task.ail
 prompt-file: docs/ail/prompts/interview.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
@@ -1538,15 +1453,15 @@ response-file: responses/example-80.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: RunMaintenanceCycle
+runtime-state: counter.value=0
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-81
-semantic-task: support-ticket-81
+semantic-task: repeated-task-81
 profile: System
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/repeated_task.ail
 prompt-file: docs/ail/prompts/requirements.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
@@ -1557,15 +1472,15 @@ response-file: responses/example-81.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: RunMaintenanceCycle
+runtime-state: counter.value=0
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-82
-semantic-task: support-ticket-82
+semantic-task: repeated-task-82
 profile: System
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/repeated_task.ail
 prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
@@ -1576,15 +1491,15 @@ response-file: responses/example-82.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: RunMaintenanceCycle
+runtime-state: counter.value=0
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-83
-semantic-task: support-ticket-83
+semantic-task: repeated-task-83
 profile: System
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/repeated_task.ail
 prompt-file: docs/ail/prompts/core-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:0175222e4a84bec4
@@ -1595,15 +1510,15 @@ response-file: responses/example-83.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: RunMaintenanceCycle
+runtime-state: counter.value=0
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-84
-semantic-task: support-ticket-84
+semantic-task: repeated-task-84
 profile: System
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/repeated_task.ail
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:c9700f2c2e57e49e
@@ -1614,15 +1529,15 @@ response-file: responses/example-84.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: linux-x86_64-elf
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: RunMaintenanceCycle
+runtime-state: counter.value=0
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-85
-semantic-task: support-ticket-85
+semantic-task: c-interop-85
 profile: System
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/c_interop.ail
 prompt-file: docs/ail/prompts/core-to-spec.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:9f447e07620792b2
@@ -1633,15 +1548,14 @@ response-file: responses/example-85.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: wasm32-unknown-sandbox-wasm
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: CompressPayload
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-86
-semantic-task: support-ticket-86
+semantic-task: c-interop-86
 profile: System
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/c_interop.ail
 prompt-file: docs/ail/prompts/core-to-summary.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:49f26ec41d722633
@@ -1652,15 +1566,14 @@ response-file: responses/example-86.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: wasm32-unknown-sandbox-wasm
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: CompressPayload
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-87
-semantic-task: support-ticket-87
+semantic-task: c-interop-87
 profile: System
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/c_interop.ail
 prompt-file: docs/ail/prompts/flow-patch.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:30136a21ab8d8eb6
@@ -1671,15 +1584,14 @@ response-file: responses/example-87.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: wasm32-unknown-sandbox-wasm
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: CompressPayload
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-88
-semantic-task: support-ticket-88
+semantic-task: c-interop-88
 profile: System
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/c_interop.ail
 prompt-file: docs/ail/prompts/trace-debug.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:f5fffd069da83242
@@ -1690,15 +1602,14 @@ response-file: responses/example-88.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: wasm32-unknown-sandbox-wasm
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: CompressPayload
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-89
-semantic-task: support-ticket-89
+semantic-task: c-interop-89
 profile: System
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/c_interop.ail
 prompt-file: docs/ail/prompts/interop.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:87f6dd1772d48729
@@ -1709,8 +1620,7 @@ response-file: responses/example-89.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: wasm32-unknown-sandbox-wasm
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: CompressPayload
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-90
@@ -1809,10 +1719,10 @@ runtime-state: ticket.id=T-1;ticket.status=Open
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-95
-semantic-task: support-ticket-95
+semantic-task: stateful-counter-95
 profile: System
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/stateful_counter.ail
 prompt-file: docs/ail/prompts/core-to-spec.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:9f447e07620792b2
@@ -1823,15 +1733,15 @@ response-file: responses/example-95.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: vm
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: IncrementCounter
+runtime-state: counter.value=0
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-96
-semantic-task: support-ticket-96
+semantic-task: stateful-counter-96
 profile: System
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/stateful_counter.ail
 prompt-file: docs/ail/prompts/core-to-summary.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:49f26ec41d722633
@@ -1842,15 +1752,15 @@ response-file: responses/example-96.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: vm
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: IncrementCounter
+runtime-state: counter.value=0
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-97
-semantic-task: support-ticket-97
+semantic-task: stateful-counter-97
 profile: System
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/stateful_counter.ail
 prompt-file: docs/ail/prompts/flow-patch.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:30136a21ab8d8eb6
@@ -1861,15 +1771,15 @@ response-file: responses/example-97.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: vm
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: IncrementCounter
+runtime-state: counter.value=0
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-98
-semantic-task: support-ticket-98
+semantic-task: stateful-counter-98
 profile: System
 surface-tags: core
-package: examples/support_ticket.ail
+package: examples/stateful_counter.ail
 prompt-file: docs/ail/prompts/trace-debug.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:f5fffd069da83242
@@ -1880,8 +1790,8 @@ response-file: responses/example-98.ail-spec.md
 artifact-kind: ail-spec
 checker-result: accepted
 target: vm
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: IncrementCounter
+runtime-state: counter.value=0
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-99
