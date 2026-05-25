@@ -106,6 +106,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
             | "ail-build"
             | "ail-pass"
             | "ail-bootstrap"
+            | "ail-e2e-corpus"
             | "ail-prompt-corpus"
             | "ail-patch"
             | "ail-flow-edit"
@@ -116,7 +117,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
 }
 
 fn usage() -> String {
-    "usage: ail <ail-check|ail-core|ail-flow|ail-flow-edit|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-interview|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-bootstrap|ail-prompt-corpus|ail-patch> <path> [patch|target-package] [--action name] [--prompt text] [--interview-file path] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--base-model name] [--target-model name] [--out path] [--all-actions] [--diagnostics-json] [--artifact-dir path] [--llm-endpoint url] [key=value ...]\nsaved-core usage: ail <ail-spec|ail-lower|ail-compile|ail-run|ail-build> --core-file <checked-core> [--action name] [--target target] [--out path] [--artifact-dir path] [key=value ...]\nwasm-contract usage: ail ail-compile <package-or-artifact.ailbc.json> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir> OR ail ail-compile --core-file <checked-core> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir>\ncore-patch usage: ail ail-patch --core-file <checked-core> <ail-core.patch.json>\nflow-edit usage: ail ail-flow-edit --core-file <checked-core> <ail-flow.edit.json>\nail-pass usage: ail ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR ail ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]\nail-bootstrap usage: ail ail-bootstrap <toolchain-agent-package> --pass <compiler-pass-package> --agent <toolchain-agent-package> --target linux-x86_64-elf --artifact-dir <dir>\nail-prompt-corpus usage: ail ail-prompt-corpus <corpus-file-or-dir> --artifact-dir <dir>"
+    "usage: ail <ail-check|ail-core|ail-flow|ail-flow-edit|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-interview|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-bootstrap|ail-prompt-corpus|ail-e2e-corpus|ail-patch> <path> [patch|target-package] [--action name] [--prompt text] [--interview-file path] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--base-model name] [--target-model name] [--out path] [--all-actions] [--diagnostics-json] [--artifact-dir path] [--llm-endpoint url] [key=value ...]\nsaved-core usage: ail <ail-spec|ail-lower|ail-compile|ail-run|ail-build> --core-file <checked-core> [--action name] [--target target] [--out path] [--artifact-dir path] [key=value ...]\nwasm-contract usage: ail ail-compile <package-or-artifact.ailbc.json> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir> OR ail ail-compile --core-file <checked-core> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir>\ncore-patch usage: ail ail-patch --core-file <checked-core> <ail-core.patch.json>\nflow-edit usage: ail ail-flow-edit --core-file <checked-core> <ail-flow.edit.json>\nail-pass usage: ail ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR ail ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]\nail-bootstrap usage: ail ail-bootstrap <toolchain-agent-package> --pass <compiler-pass-package> --agent <toolchain-agent-package> --target linux-x86_64-elf --artifact-dir <dir>\nail-prompt-corpus usage: ail ail-prompt-corpus <corpus-file-or-dir> --artifact-dir <dir>\nail-e2e-corpus usage: ail ail-e2e-corpus <corpus-dir> --artifact-dir <dir>"
         .to_string()
 }
 
@@ -1037,6 +1038,50 @@ fn run_ail_prompt_corpus_command(path: &str, cli_options: &CliOptions) -> Result
         )?;
     }
     print!("{report_text}");
+    Ok(0)
+}
+
+fn count_ail_e2e_corpus_examples(path: &std::path::Path) -> Result<usize, String> {
+    if path.is_file() {
+        let text = fs::read_to_string(path).map_err(|error| {
+            format!("failed to read e2e corpus file {}: {error}", path.display())
+        })?;
+        return Ok(text
+            .lines()
+            .filter(|line| line.starts_with("## End-To-End Example: "))
+            .count());
+    }
+
+    let mut count = 0usize;
+    for entry in fs::read_dir(path)
+        .map_err(|error| format!("failed to read e2e corpus dir {}: {error}", path.display()))?
+    {
+        let entry =
+            entry.map_err(|error| format!("failed to read e2e corpus dir entry: {error}"))?;
+        let entry_path = entry.path();
+        if entry_path.is_dir() {
+            count += count_ail_e2e_corpus_examples(&entry_path)?;
+        } else if entry_path
+            .extension()
+            .is_some_and(|extension| extension == "md")
+        {
+            count += count_ail_e2e_corpus_examples(&entry_path)?;
+        }
+    }
+    Ok(count)
+}
+
+fn run_ail_e2e_corpus_command(path: &str, cli_options: &CliOptions) -> Result<u8, String> {
+    let Some(_artifact_dir) = &cli_options.artifact_dir else {
+        return Err("ail-e2e-corpus requires --artifact-dir".to_string());
+    };
+    let example_count = count_ail_e2e_corpus_examples(std::path::Path::new(path))?;
+    if example_count < 100 {
+        return Err(format!(
+            "ail-e2e-corpus requires at least 100 examples; found {example_count}"
+        ));
+    }
+    println!("ail-e2e-corpus examples {example_count}");
     Ok(0)
 }
 
@@ -8548,6 +8593,9 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
     if command == "ail-prompt-corpus" {
         return run_ail_prompt_corpus_command(path, cli_options);
     }
+    if command == "ail-e2e-corpus" {
+        return run_ail_e2e_corpus_command(path, cli_options);
+    }
     if command == "ail-pass" {
         return run_ail_pass_command(path, cli_options);
     }
@@ -9506,6 +9554,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
                     | "ail-conformance"
                     | "ail-bootstrap"
                     | "ail-prompt-corpus"
+                    | "ail-e2e-corpus"
             ) {
                 return Err(usage());
             }
