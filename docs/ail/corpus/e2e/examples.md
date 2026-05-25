@@ -1803,44 +1803,42 @@ vm-action: IncrementCounter
 runtime-state: counter.value=0
 
 ## End-To-End Example: example-97
-semantic-task: stateful-counter-97
+semantic-task: stateful-counter-live-codex-flow-patch-97
 profile: System
 surface-tags: core
 package: examples/stateful_counter.ail
 prompt-file: docs/ail/prompts/flow-patch.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:30136a21ab8d8eb6
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-97.json
-response-file: responses/example-97.ail-spec.md
+response-file: responses/example-97.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: vm
 vm-action: IncrementCounter
 runtime-state: counter.value=0
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-98
-semantic-task: stateful-counter-98
+semantic-task: stateful-counter-live-codex-trace-debug-98
 profile: System
 surface-tags: core
 package: examples/stateful_counter.ail
 prompt-file: docs/ail/prompts/trace-debug.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:f5fffd069da83242
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-98.json
-response-file: responses/example-98.ail-spec.md
+response-file: responses/example-98.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: vm
 vm-action: IncrementCounter
 runtime-state: counter.value=0
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-99
 semantic-task: support-ticket-rejected
