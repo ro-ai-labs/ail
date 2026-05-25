@@ -1653,6 +1653,114 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
     format!("{}\n", lines.join("\n"))
 }
 
+fn push_ail_e2e_entry_artifact_lines(
+    lines: &mut Vec<String>,
+    prefix: &str,
+    evaluation: &AilE2eCorpusEvaluation,
+) {
+    let entry = &evaluation.entry;
+    if let Some(request_fingerprint) = &evaluation.request_fingerprint {
+        lines.push(format!(
+            "{prefix} {} request examples/{}/request.fingerprint.txt {}",
+            entry.id, entry.id, request_fingerprint
+        ));
+    }
+    if let Some(response_fingerprint) = &evaluation.response_fingerprint {
+        lines.push(format!(
+            "{prefix} {} response examples/{}/response.fingerprint.txt {}",
+            entry.id, entry.id, response_fingerprint
+        ));
+    }
+    if let Some(extracted_artifact_fingerprint) = &evaluation.extracted_artifact_fingerprint {
+        lines.push(format!(
+            "{prefix} {} extracted-artifact examples/{}/artifact.fingerprint.txt {}",
+            entry.id, entry.id, extracted_artifact_fingerprint
+        ));
+    }
+    if let Some(core_text) = &evaluation.checked_core_text {
+        lines.push(format!(
+            "{prefix} {} checked-core examples/{}/checked.ail-core.txt {}",
+            entry.id,
+            entry.id,
+            ail_artifact_fingerprint(core_text)
+        ));
+    }
+    if let Some(bytecode_text) = &evaluation.bytecode_text {
+        lines.push(format!(
+            "{prefix} {} bytecode examples/{}/artifact.ailbc.json {}",
+            entry.id,
+            entry.id,
+            ail_artifact_fingerprint(bytecode_text)
+        ));
+    }
+    if let Some(vm_trace_text) = &evaluation.vm_trace_text {
+        lines.push(format!(
+            "{prefix} {} vm-trace examples/{}/vm-trace.txt {}",
+            entry.id,
+            entry.id,
+            ail_artifact_fingerprint(vm_trace_text)
+        ));
+    }
+    for executable in &evaluation.native_executables {
+        lines.push(format!(
+            "{prefix} {} native {} examples/{}/{} {}",
+            entry.id,
+            executable.target_name,
+            entry.id,
+            executable.file_name,
+            ail_artifact_fingerprint_bytes(&executable.bytes)
+        ));
+    }
+    if let Some(target_report_text) = &evaluation.target_report_text {
+        lines.push(format!(
+            "{prefix} {} target-report examples/{}/target-report.txt {}",
+            entry.id,
+            entry.id,
+            ail_artifact_fingerprint(target_report_text)
+        ));
+    }
+    if let Some(diagnostics_text) = &evaluation.diagnostics_text {
+        lines.push(format!(
+            "{prefix} {} diagnostics examples/{}/diagnostics.txt {}",
+            entry.id,
+            entry.id,
+            ail_artifact_fingerprint(diagnostics_text)
+        ));
+    }
+}
+
+fn render_ail_e2e_corpus_manifest(
+    report_text: &str,
+    evaluations: &[AilE2eCorpusEvaluation],
+) -> String {
+    let mut lines = vec![
+        "AIL-E2E-Corpus-Manifest:".to_string(),
+        format!(
+            "report e2e-corpus-report.txt {}",
+            ail_artifact_fingerprint(report_text)
+        ),
+    ];
+    for evaluation in evaluations {
+        let entry = &evaluation.entry;
+        let checker_result = entry
+            .fields
+            .get("checker-result")
+            .map(String::as_str)
+            .unwrap_or("unknown");
+        let target = entry
+            .fields
+            .get("target")
+            .map(String::as_str)
+            .unwrap_or("unknown");
+        lines.push(format!(
+            "entry {} checker-result {} target {}",
+            entry.id, checker_result, target
+        ));
+        push_ail_e2e_entry_artifact_lines(&mut lines, "entry-artifact", evaluation);
+    }
+    format!("{}\n", lines.join("\n"))
+}
+
 fn ail_e2e_semantic_task_family(semantic_task: &str) -> String {
     if let Some((family, suffix)) = semantic_task.rsplit_once('-')
         && !family.is_empty()
@@ -1830,6 +1938,14 @@ fn write_ail_e2e_corpus_artifacts(
         format!("{}\n", ail_artifact_fingerprint(report_text)),
     )
     .map_err(|error| format!("failed to write e2e corpus report fingerprint: {error}"))?;
+    let manifest_text = render_ail_e2e_corpus_manifest(report_text, evaluations);
+    fs::write(root.join("manifest.ail-e2e-corpus.txt"), &manifest_text)
+        .map_err(|error| format!("failed to write e2e corpus manifest: {error}"))?;
+    fs::write(
+        root.join("manifest.fingerprint.txt"),
+        format!("{}\n", ail_artifact_fingerprint(&manifest_text)),
+    )
+    .map_err(|error| format!("failed to write e2e corpus manifest fingerprint: {error}"))?;
     for evaluation in evaluations {
         if evaluation.request_fingerprint.is_some()
             || evaluation.response_fingerprint.is_some()

@@ -20996,6 +20996,36 @@ fn cli_ail_e2e_corpus_writes_report_for_metadata_complete_corpus() {
     let report_fingerprint =
         fs::read_to_string(artifact_dir.join("e2e-corpus-report.fingerprint.txt")).unwrap();
     assert_eq!(report_fingerprint.trim(), fnv64_fingerprint(&report));
+    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-e2e-corpus.txt")).unwrap();
+    assert!(manifest.contains("AIL-E2E-Corpus-Manifest:"), "{manifest}");
+    assert!(
+        manifest.contains(&format!(
+            "report e2e-corpus-report.txt {}",
+            report_fingerprint.trim()
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains("entry example-0 checker-result accepted target linux-x86_64-elf"),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "entry-artifact example-0 bytecode examples/example-0/artifact.ailbc.json {}",
+            bytecode_fingerprint.trim()
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "entry-artifact example-85 target-report examples/example-85/target-report.txt {}",
+            wasm_target_report_fingerprint.trim()
+        )),
+        "{manifest}"
+    );
+    let manifest_fingerprint =
+        fs::read_to_string(artifact_dir.join("manifest.fingerprint.txt")).unwrap();
+    assert_eq!(manifest_fingerprint.trim(), fnv64_fingerprint(&manifest));
 
     let _ = fs::remove_dir_all(corpus_dir);
     let _ = fs::remove_dir_all(artifact_dir);
