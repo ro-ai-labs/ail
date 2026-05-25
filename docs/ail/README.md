@@ -93,6 +93,7 @@ one of these version surfaces or add a versioned surface through
 - `../../examples/network_driver.ail/spec.ail-spec.md`
 - `examples/network-driver.ail-core.md`
 - `../../examples/recursive_factorial.ail/spec.ail-spec.md`
+- `../../examples/option_map.ail/spec.ail-spec.md`
 - `../../examples/stateful_counter.ail/spec.ail-spec.md`
 - `25-example-inventory.md`
 

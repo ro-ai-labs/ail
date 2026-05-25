@@ -30,6 +30,7 @@ section must name the changed version surface.
 | Network Driver | System | draft/default | `examples/network_driver.ail/` | accepted system target | AIL-Spec package, docs AIL-Core, AIL-Flow renderer, trace runtime, accepted/rejected fixtures |
 | Toolchain Agent | Application | draft/default | `examples/ail_toolchain_agent.ail/` | accepted self-hosting path target | requirements capture, spec drafting, core lowering, pass execution, bytecode, native backend, prompt portability reports |
 | Recursive Factorial | Application | draft/default | `examples/recursive_factorial.ail/` | accepted executable-semantics fixture | AIL-Spec, AIL-Core, recursive function bytecode, VM trace runtime |
+| Option Map | Application | draft/default | `examples/option_map.ail/` | accepted executable-semantics fixture | AIL-Spec, AIL-Core, collection-transform bytecode, VM trace runtime |
 | Stateful Counter | Application | draft/default | `examples/stateful_counter.ail/` | accepted executable-semantics fixture | AIL-Spec, AIL-Core, integer-state bytecode, VM trace runtime |
 
 ## Support Ticket
@@ -135,6 +136,19 @@ Verification:
 
 ```bash
 cargo test --test ail_toolchain ail_spec_lowers_function_surface_into_runnable_bytecode
+```
+
+## Option Map
+
+Artifacts:
+
+- `examples/option_map.ail/ail-package.md`
+- `examples/option_map.ail/spec.ail-spec.md`
+
+Verification:
+
+```bash
+cargo test --test ail_toolchain ail_standard_library_option_map_executes_collection_transform_bytecode
 ```
 
 ## Stateful Counter

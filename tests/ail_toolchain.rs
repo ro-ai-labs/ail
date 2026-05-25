@@ -990,29 +990,8 @@ compress2 records trace event named ForeignCallCompress2
 
 #[test]
 fn ail_standard_library_option_type_parses_into_core() {
-    let mut package = load_ail_package_dir(fixture("support_ticket.ail")).unwrap();
-    package.metadata.name = "ail.std.collections".to_string();
-    package.metadata.profile = "Meta".to_string();
-    let spec = r#"Package: ail.std.collections.
-
-Type: Option<T>.
-
-Option has variants:
-
-- Some(value: T)
-- None
-
-Function: Option.map.
-
-When Option.map runs:
-
-- if the option is Some(value), the function calls mapper with value
-- the function returns Some(mapped value)
-- if the option is None, the function returns None
-- the function records a trace event named OptionMapEvaluated
-"#;
-
-    let document = parse_ail_spec_text(spec).unwrap();
+    let package = load_ail_package_dir(fixture("option_map.ail")).unwrap();
+    let document = parse_ail_package_document(&package).unwrap();
     let core = elaborate_ail_core(&package, &document);
     assert_eq!(check_ail_core(&core), Vec::<String>::new());
     let rendered_core = render_ail_core(&core);
@@ -1041,6 +1020,76 @@ When Option.map runs:
     assert_eq!(
         render_ail_core(&elaborate_ail_core(&package, &reparsed)),
         rendered_core
+    );
+}
+
+#[test]
+fn ail_standard_library_option_map_executes_collection_transform_bytecode() {
+    let package = load_ail_package_dir(fixture("option_map.ail")).unwrap();
+    let document = parse_ail_package_document(&package).unwrap();
+    let bytecode = compile_ail_bytecode(&package, &document).unwrap();
+    assert_eq!(verify_ail_bytecode(&bytecode), Vec::<String>::new());
+    let rendered = render_ail_bytecode(&bytecode);
+    assert!(rendered.contains(r#""opcode":"OPTION_MAP""#), "{rendered}");
+
+    let some_run = run_ail_bytecode_action(
+        &bytecode,
+        "Option.map",
+        BTreeMap::from([
+            ("option.variant".to_string(), "Some".to_string()),
+            ("option.value".to_string(), "41".to_string()),
+            ("mapper.result".to_string(), "42".to_string()),
+        ]),
+    )
+    .unwrap();
+    assert_eq!(some_run.status, "succeeded");
+    assert_eq!(
+        some_run
+            .final_state
+            .get("result.variant")
+            .map(String::as_str),
+        Some("Some")
+    );
+    assert_eq!(
+        some_run.final_state.get("result.value").map(String::as_str),
+        Some("42")
+    );
+    assert!(
+        some_run
+            .trace
+            .contains(&"option map Some(value) with mapper -> Some(mapped value)".to_string()),
+        "{:?}",
+        some_run.trace
+    );
+    assert!(
+        some_run
+            .trace
+            .contains(&"trace OptionMapEvaluated".to_string()),
+        "{:?}",
+        some_run.trace
+    );
+
+    let none_run = run_ail_bytecode_action(
+        &bytecode,
+        "Option.map",
+        BTreeMap::from([("option.variant".to_string(), "None".to_string())]),
+    )
+    .unwrap();
+    assert_eq!(none_run.status, "succeeded");
+    assert_eq!(
+        none_run
+            .final_state
+            .get("result.variant")
+            .map(String::as_str),
+        Some("None")
+    );
+    assert_eq!(none_run.final_state.get("result.value"), None);
+    assert!(
+        none_run
+            .trace
+            .contains(&"option map None -> None".to_string()),
+        "{:?}",
+        none_run.trace
     );
 }
 

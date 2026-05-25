@@ -142,6 +142,7 @@ AIL packages live under [examples](examples):
 - `secret_access.ail`
 - `runtime_generic.ail`
 - `recursive_factorial.ail`
+- `option_map.ail`
 - `stateful_counter.ail`
 - `network_driver.ail`
 - `compiler_pass.ail`

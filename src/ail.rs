@@ -8567,6 +8567,9 @@ fn compile_ail_function_bytecode(function: &AilFunction) -> AilBytecodeAction {
             &[("value", return_value.clone())],
         ));
     }
+    if function_is_option_map(function) {
+        instructions.push(AilBytecodeInstruction::new("OPTION_MAP", &[]));
+    }
     for event in &function.traces {
         instructions.push(AilBytecodeInstruction::new(
             "EMIT_TRACE",
@@ -8578,6 +8581,23 @@ fn compile_ail_function_bytecode(function: &AilFunction) -> AilBytecodeAction {
         name: function.name.clone(),
         instructions,
     }
+}
+
+fn function_is_option_map(function: &AilFunction) -> bool {
+    function.name == "Option.map"
+        && (function.calls.iter().any(|call| call.target == "mapper")
+            || function
+                .branches
+                .iter()
+                .any(|branch| branch.contains("function calls mapper with value")))
+        && function
+            .returns
+            .iter()
+            .any(|return_value| return_value == "Some(mapped value)")
+        && function
+            .returns
+            .iter()
+            .any(|return_value| return_value == "None")
 }
 
 fn compile_ail_action_bytecode(document: &AilDocument, action: &AilAction) -> AilBytecodeAction {
@@ -9199,6 +9219,7 @@ fn ail_bytecode_required_operands(opcode: &str) -> Option<&'static [&'static str
         "FUNCTION_BRANCH" => Some(&["condition"]),
         "FUNCTION_CALL" => Some(&["target", "text"]),
         "FUNCTION_RETURN" => Some(&["value"]),
+        "OPTION_MAP" => Some(&[]),
         "TOOL_BEGIN" => Some(&["tool", "label"]),
         "TOOL_REQUIREMENT" => Some(&["text"]),
         "TOOL_INPUT" => Some(&["name", "type", "secret"]),
@@ -9566,6 +9587,32 @@ fn run_verified_ail_bytecode_action(
                 final_state.insert(key.to_string(), next.to_string());
                 trace.push(format!("add {key} by {delta} -> {next}"));
             }
+            "OPTION_MAP" => match final_state.get("option.variant").map(String::as_str) {
+                Some("Some") => {
+                    let mapped = final_state
+                        .get("mapper.result")
+                        .cloned()
+                        .ok_or_else(|| "OPTION_MAP missing mapper.result".to_string())?;
+                    final_state.insert("result.variant".to_string(), "Some".to_string());
+                    final_state.insert("result.value".to_string(), mapped);
+                    trace.push(
+                        "option map Some(value) with mapper -> Some(mapped value)".to_string(),
+                    );
+                }
+                Some("None") => {
+                    final_state.insert("result.variant".to_string(), "None".to_string());
+                    final_state.remove("result.value");
+                    trace.push("option map None -> None".to_string());
+                }
+                Some(other) => {
+                    return Err(format!(
+                        "OPTION_MAP option.variant must be Some or None, got {other}"
+                    ));
+                }
+                None => {
+                    return Err("OPTION_MAP missing option.variant".to_string());
+                }
+            },
             "REQUIRE_EXISTS" => {
                 let key = ail_bytecode_operand(instruction, "key");
                 let rule = ail_bytecode_operand(instruction, "rule");
