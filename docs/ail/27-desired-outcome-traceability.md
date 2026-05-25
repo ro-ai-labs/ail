@@ -26,6 +26,7 @@ outcome is supported only by strategy prose.
 | Semantic safety | `02`, `06`, `21`, `23`, `26` | safety classes, approval schema, audit trace | high-risk refund and C pointer examples | safety diagnostics | safety review trace |
 | Reference governance | `14`, `16`, `24`, `28` | rule identifiers, authority levels, version notes | rule-to-diagnostic entry | primary diagnostic per checker rule | conformance fixture per normative rule |
 | First complete version | `15`, `16`, `27`, `29` | v0.1 release evidence bundle | prompt-to-native Support Ticket build | release audit command set | all v0.1 gate commands and artifacts |
+| Package and host-boundary portability | `20`, `21`, `22`, `23`, `30` | v0.2 release evidence bundle, package dependency report, host-contract reports | imported Support Ticket package, C interop fixture, UI workflow fixture | package, FFI, UI, backend, and prompt-corpus diagnostics | all v0.2 gate commands and artifacts |
 
 ## Traceability Rules
 

@@ -47,6 +47,7 @@ the rest of the suite.
 28. `27-desired-outcome-traceability.md`
 29. `28-language-reference-style.md`
 30. `29-first-version-completion-gate.md`
+31. `30-next-version-completion-gate.md`
 
 ## Specification Contract
 
@@ -108,6 +109,9 @@ one of these version surfaces or add a versioned surface through
   versioning, and conformance-link rules
 - `29-first-version-completion-gate.md`: v0.1 completion definition, evidence
   gates, release audit commands, and required release artifacts
+- `30-next-version-completion-gate.md`: v0.2 package and host-boundary
+  portability definition, evidence gates, release audit commands, and required
+  release artifacts
 
 ## Implementation Start
 
@@ -116,3 +120,4 @@ Use `15-toolchain-implementation-guide.md` as the implementation reference and
 vertical slice is the support-ticket package, followed by agent-tool, systems,
 compiler-pass, conformance, and native Linux ELF workflows.
 Use `29-first-version-completion-gate.md` before claiming AIL v0.1 complete.
+Use `30-next-version-completion-gate.md` before claiming AIL v0.2 complete.
