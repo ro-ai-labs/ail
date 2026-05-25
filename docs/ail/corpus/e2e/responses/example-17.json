@@ -1,0 +1,5 @@
+{
+  "agent": "codex-ail-spec-writer",
+  "content": "# Composed Support AIL-Spec Example\n\nThe application Composed Support Tickets manages support tickets with shared users.\n\nA Ticket has:\n\n- id: Text\n- customer: Shared.User\n- status: State<Open, Closed>\n\nAction: Close ticket.\n\nWhen a support agent closes a ticket:\n\n- the system requires the ticket to exist\n- the system changes the ticket status to Closed\n- the system guarantees closed tickets are hidden from the active queue\n- the system records a trace event named TicketClosedScenario017\n",
+  "model": "codex-subagent-default"
+}
