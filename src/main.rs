@@ -1379,13 +1379,39 @@ fn evaluate_ail_e2e_corpus_entry(
     } else {
         Vec::new()
     };
-    let target_report_text = if native_executables.is_empty() {
-        None
-    } else {
-        Some(render_ail_e2e_native_target_report(
+    let contract_action_name = entry
+        .fields
+        .get("vm-action")
+        .filter(|action_name| !action_name.is_empty())
+        .map(String::as_str)
+        .or_else(|| bytecode.actions.keys().next().map(String::as_str));
+    let target_report_text = match target {
+        "linux-x86_64-elf" if !native_executables.is_empty() => Some(
+            render_ail_e2e_native_target_report(target, native_executables.as_slice())?,
+        ),
+        "wasm32-unknown-sandbox-wasm" => Some(render_ail_compile_wasm_contract_report(
+            &bytecode,
+            contract_action_name.ok_or_else(|| {
+                format!(
+                    "e2e corpus entry {} target {target} requires a bytecode action",
+                    entry.id
+                )
+            })?,
             target,
-            native_executables.as_slice(),
-        )?)
+        )?),
+        "aarch64-apple-darwin-libsystem-macho" => {
+            Some(render_ail_compile_darwin_macho_contract_report(
+                &bytecode,
+                contract_action_name.ok_or_else(|| {
+                    format!(
+                        "e2e corpus entry {} target {target} requires a bytecode action",
+                        entry.id
+                    )
+                })?,
+                target,
+            )?)
+        }
+        _ => None,
     };
     Ok(AilE2eCorpusEvaluation {
         entry: entry.clone(),

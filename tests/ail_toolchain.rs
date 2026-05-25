@@ -20798,6 +20798,38 @@ fn cli_ail_e2e_corpus_writes_report_for_metadata_complete_corpus() {
         target_report_fingerprint.trim(),
         fnv64_fingerprint(&target_report)
     );
+    let wasm_target_report =
+        fs::read_to_string(artifact_dir.join("examples/example-85/target-report.txt")).unwrap();
+    assert!(
+        wasm_target_report.contains("AIL-Wasm-Contract-Report:")
+            && wasm_target_report.contains("target wasm32-unknown-sandbox-wasm")
+            && wasm_target_report.contains("action CloseTicket")
+            && wasm_target_report.contains("executable-wasm-module none"),
+        "{wasm_target_report}"
+    );
+    let wasm_target_report_fingerprint =
+        fs::read_to_string(artifact_dir.join("examples/example-85/target-report.fingerprint.txt"))
+            .unwrap();
+    assert_eq!(
+        wasm_target_report_fingerprint.trim(),
+        fnv64_fingerprint(&wasm_target_report)
+    );
+    let darwin_target_report =
+        fs::read_to_string(artifact_dir.join("examples/example-90/target-report.txt")).unwrap();
+    assert!(
+        darwin_target_report.contains("AIL-Darwin-MachO-Contract-Report:")
+            && darwin_target_report.contains("target aarch64-apple-darwin-libsystem-macho")
+            && darwin_target_report.contains("action CloseTicket")
+            && darwin_target_report.contains("executable-macho-module none"),
+        "{darwin_target_report}"
+    );
+    let darwin_target_report_fingerprint =
+        fs::read_to_string(artifact_dir.join("examples/example-90/target-report.fingerprint.txt"))
+            .unwrap();
+    assert_eq!(
+        darwin_target_report_fingerprint.trim(),
+        fnv64_fingerprint(&darwin_target_report)
+    );
     assert!(
         report.contains(&format!(
             "entry-artifact example-0 request examples/example-0/request.fingerprint.txt {}",
@@ -20851,6 +20883,20 @@ fn cli_ail_e2e_corpus_writes_report_for_metadata_complete_corpus() {
         report.contains(&format!(
             "entry-artifact example-0 target-report examples/example-0/target-report.txt {}",
             target_report_fingerprint.trim()
+        )),
+        "{report}"
+    );
+    assert!(
+        report.contains(&format!(
+            "entry-artifact example-85 target-report examples/example-85/target-report.txt {}",
+            wasm_target_report_fingerprint.trim()
+        )),
+        "{report}"
+    );
+    assert!(
+        report.contains(&format!(
+            "entry-artifact example-90 target-report examples/example-90/target-report.txt {}",
+            darwin_target_report_fingerprint.trim()
         )),
         "{report}"
     );
