@@ -236,64 +236,61 @@ runtime-state: ticket.id=T-1;ticket.status=Open
 endpoint-label: local-endpoint
 
 ## End-To-End Example: example-13
-semantic-task: support-composed-13
+semantic-task: support-composed-live-codex-core-draft-13
 profile: Application
 surface-tags: package-import
 package: examples/support_composed.ail
 prompt-file: docs/ail/prompts/core-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:0175222e4a84bec4
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-13.json
-response-file: responses/example-13.ail-spec.md
+response-file: responses/example-13.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: vm
 vm-action: CloseTicket
 runtime-state: ticket.id=T-1;ticket.status=Open
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-14
-semantic-task: support-composed-14
+semantic-task: support-composed-live-codex-diagnostic-repair-14
 profile: Application
 surface-tags: package-import
 package: examples/support_composed.ail
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:c9700f2c2e57e49e
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-14.json
-response-file: responses/example-14.ail-spec.md
+response-file: responses/example-14.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: vm
 vm-action: CloseTicket
 runtime-state: ticket.id=T-1;ticket.status=Open
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-15
-semantic-task: support-composed-15
+semantic-task: support-composed-live-codex-core-to-spec-15
 profile: Application
 surface-tags: package-import
 package: examples/support_composed.ail
 prompt-file: docs/ail/prompts/core-to-spec.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:9f447e07620792b2
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-15.json
-response-file: responses/example-15.ail-spec.md
+response-file: responses/example-15.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: vm
 vm-action: CloseTicket
 runtime-state: ticket.id=T-1;ticket.status=Open
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-16
 semantic-task: support-composed-16
