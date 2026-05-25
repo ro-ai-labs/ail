@@ -43,6 +43,26 @@ instructions use `--prompt-file`. The committed
 schema-shaped live capture inputs for `spec-draft.system.md`. Replay still does
 not call a live model.
 
+Recorded Codex or skill-agent transcripts are promoted through a separate
+offline import command:
+
+```sh
+python3 scripts/capture_codex_e2e_transcript.py \
+  --base-corpus docs/ail/corpus/e2e \
+  --output-dir /tmp/ail-e2e-live-codex-corpus \
+  --entry-id example-99 \
+  --executor-label codex-ail-spec-writer \
+  --semantic-task support-ticket-live-codex-99 \
+  --request-json-file /tmp/codex-request.json \
+  --response-json-file /tmp/codex-response.json \
+  --checker-result accepted
+```
+
+That importer stores the provided request and response JSON, marks the entry
+`executor-family: codex-skill-agent` and `capture-origin: live-codex`, clears
+HTTP endpoint metadata, and then relies on the same offline replay command for
+spec -> Core -> bytecode -> VM and target evidence.
+
 The generated files are committed so release verification does not depend on
 live LLM access. The current corpus stores:
 

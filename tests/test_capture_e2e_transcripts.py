@@ -305,6 +305,107 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             shutil.rmtree(input_json.parent, ignore_errors=True)
             shutil.rmtree(task_prompt.parent, ignore_errors=True)
 
+    def test_capture_codex_transcript_imports_live_codex_entry(self):
+        output_dir = Path(tempfile.mkdtemp(prefix="ail-e2e-live-codex-capture-"))
+        artifact_dir = Path(tempfile.mkdtemp(prefix="ail-e2e-live-codex-capture-artifacts-"))
+        transcript_dir = Path(tempfile.mkdtemp(prefix="ail-e2e-live-codex-transcript-"))
+        try:
+            request_json = transcript_dir / "request.json"
+            response_json = transcript_dir / "response.json"
+            request_json.write_text(
+                json.dumps(
+                    {
+                        "agent": "codex-ail-spec-writer",
+                        "model": "codex-test-model",
+                        "task": "Draft and validate the Support Ticket AIL-Spec.",
+                    },
+                    indent=2,
+                    sort_keys=True,
+                )
+                + "\n"
+            )
+            response_json.write_text(
+                json.dumps(
+                    {
+                        "content": (
+                            ROOT / "examples" / "support_ticket.ail" / "spec.ail-spec.md"
+                        ).read_text(),
+                        "model": "codex-test-model",
+                    },
+                    indent=2,
+                    sort_keys=True,
+                )
+                + "\n"
+            )
+
+            capture = subprocess.run(
+                [
+                    "python3",
+                    "scripts/capture_codex_e2e_transcript.py",
+                    "--base-corpus",
+                    "docs/ail/corpus/e2e",
+                    "--output-dir",
+                    str(output_dir),
+                    "--entry-id",
+                    "example-99",
+                    "--executor-label",
+                    "codex-ail-spec-writer-test",
+                    "--semantic-task",
+                    "support-ticket-live-codex-capture-99",
+                    "--request-json-file",
+                    str(request_json),
+                    "--response-json-file",
+                    str(response_json),
+                    "--checker-result",
+                    "accepted",
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(capture.returncode, 0, capture.stderr)
+
+            examples = (output_dir / "examples.md").read_text()
+            self.assertIn("semantic-task: support-ticket-live-codex-capture-99", examples)
+            self.assertIn("executor-family: codex-skill-agent", examples)
+            self.assertIn("capture-origin: live-codex", examples)
+            self.assertIn("executor-label: codex-ail-spec-writer-test", examples)
+            example_99 = examples.split("## End-To-End Example: example-99", 1)[1]
+            self.assertNotIn("endpoint-label:", example_99)
+
+            request = json.loads((output_dir / "requests" / "example-99.json").read_text())
+            self.assertEqual(request["agent"], "codex-ail-spec-writer")
+            response = json.loads((output_dir / "responses" / "example-99.json").read_text())
+            self.assertIn("AIL-Spec", response["content"])
+
+            replay = subprocess.run(
+                [
+                    "cargo",
+                    "run",
+                    "--quiet",
+                    "--",
+                    "ail-e2e-corpus",
+                    str(output_dir),
+                    "--artifact-dir",
+                    str(artifact_dir),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(replay.returncode, 0, replay.stderr)
+            report = (artifact_dir / "e2e-corpus-report.txt").read_text()
+            self.assertIn("capture-origin-count deterministic-seed 98", report)
+            self.assertIn("capture-origin-count live-llm 1", report)
+            self.assertIn("capture-origin-count live-codex 1", report)
+            self.assertIn("checker-result-count accepted 100", report)
+            self.assertIn("entry example-99", report)
+            self.assertIn("capture-origin live-codex", report)
+        finally:
+            shutil.rmtree(output_dir, ignore_errors=True)
+            shutil.rmtree(artifact_dir, ignore_errors=True)
+            shutil.rmtree(transcript_dir, ignore_errors=True)
+
 
 if __name__ == "__main__":
     unittest.main()

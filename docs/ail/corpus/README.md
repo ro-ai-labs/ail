@@ -147,3 +147,9 @@ duplicate response, extracted-artifact, and target-report counts to zero, and
 must replace broad `deterministic-seed` coverage with `live-llm` and
 `live-codex` transcript captures except for any explicitly documented shared
 artifact that is not counted as semantic-release coverage.
+
+Live HTTP model transcripts are captured with
+`scripts/capture_e2e_transcripts.py`. Recorded Codex or skill-agent transcripts
+are imported with `scripts/capture_codex_e2e_transcript.py`, which marks the
+entry `executor-family: codex-skill-agent` and `capture-origin: live-codex`
+while keeping replay offline and reproducible.
