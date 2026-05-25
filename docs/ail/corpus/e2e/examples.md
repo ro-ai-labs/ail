@@ -91,40 +91,38 @@ checker-result: accepted
 target: vm
 
 ## End-To-End Example: example-5
-semantic-task: stdlib-collections-5
+semantic-task: stdlib-collections-live-codex-core-to-spec-5
 profile: Application
 surface-tags: standard-library
 package: examples/ail_std_collections.ail
 prompt-file: docs/ail/prompts/core-to-spec.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:9f447e07620792b2
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-5.json
-response-file: responses/example-5.ail-spec.md
+response-file: responses/example-5.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: vm
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-6
-semantic-task: stdlib-collections-6
+semantic-task: stdlib-collections-live-codex-core-to-summary-6
 profile: Application
 surface-tags: standard-library
 package: examples/ail_std_collections.ail
 prompt-file: docs/ail/prompts/core-to-summary.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:49f26ec41d722633
-executor-family: llm-http
-executor-label: local-executor
-capture-origin: deterministic-seed
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
 request-file: requests/example-6.json
-response-file: responses/example-6.ail-spec.md
+response-file: responses/example-6.json
 artifact-kind: ail-spec
 checker-result: accepted
 target: vm
-endpoint-label: local-endpoint
 
 ## End-To-End Example: example-7
 semantic-task: stdlib-collections-live-codex-flow-patch-7
