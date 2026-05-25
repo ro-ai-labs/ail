@@ -990,6 +990,136 @@ compress2 records trace event named ForeignCallCompress2
 }
 
 #[test]
+fn cli_ail_ffi_checks_struct_layout_fixture() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let output = Command::new(binary)
+        .args(["ail-conformance", &fixture("c_interop.ail")])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("accepted: struct-layout-minimal.ail-spec.md"),
+        "{stdout}"
+    );
+}
+
+#[test]
+fn cli_ail_ffi_checks_callback_lifetime_fixture() {
+    let package = load_ail_package_dir(fixture("c_interop.ail")).unwrap();
+    let document = parse_ail_package_document(&package).unwrap();
+    let core = elaborate_ail_core(&package, &document);
+    assert_eq!(check_ail_core(&core), Vec::<String>::new());
+    let rendered = render_ail_core(&core);
+    assert!(
+        rendered.contains(
+            "node ExternalBinding libc.qsort [binding_kind=CFunction,library=libc,symbol=qsort]"
+        ),
+        "{rendered}"
+    );
+    assert!(
+        rendered.contains("node Input libc.qsort.comparator : Callback<Pointer<Void>,Pointer<Void>,CInt> [ownership=borrowed callback noescape]"),
+        "{rendered}"
+    );
+    assert!(
+        rendered.contains(
+            "edge records_trace ExternalBinding:libc.qsort -> Trace:ForeignCallbackCompared"
+        ),
+        "{rendered}"
+    );
+}
+
+#[test]
+fn cli_ail_ffi_rejects_borrowed_pointer_escape() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let output = Command::new(binary)
+        .args(["ail-conformance", &fixture("c_interop.ail")])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("rejected: borrowed-pointer-escape.ail-spec.md AIL-FFI-OWNERSHIP-001"),
+        "{stdout}"
+    );
+}
+
+#[test]
+fn cli_ail_ffi_rejects_missing_status_map() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let output = Command::new(binary)
+        .args(["ail-conformance", &fixture("c_interop.ail")])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("rejected: missing-status-map.ail-spec.md AIL-FFI-ERRNO-001"),
+        "{stdout}"
+    );
+}
+
+#[test]
+fn cli_ail_ffi_records_foreign_call_trace_contract() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let unique_suffix = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-c-interop-wasm-contract-{}-{unique_suffix}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+    let output = Command::new(binary)
+        .args([
+            "ail-compile",
+            &fixture("c_interop.ail"),
+            "--target",
+            "wasm32-unknown-sandbox-wasm",
+            "--all-actions",
+            "--agent",
+            &fixture("ail_toolchain_agent.ail"),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let contract_report =
+        fs::read_to_string(artifact_dir.join("wasm-contract-report.txt")).unwrap();
+    assert!(
+        contract_report.contains("host-import-trace zlib.compress2 ForeignCallCompress2"),
+        "{contract_report}"
+    );
+    assert!(
+        contract_report.contains("host-import-trace libc.qsort ForeignCallbackCompared"),
+        "{contract_report}"
+    );
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
 fn ail_standard_library_option_type_parses_into_core() {
     let package = load_ail_package_dir(fixture("option_map.ail")).unwrap();
     let document = parse_ail_package_document(&package).unwrap();

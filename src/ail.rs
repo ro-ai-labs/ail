@@ -3501,6 +3501,9 @@ pub fn check_ail_core_diagnostics(core: &AilCore) -> Vec<AilDiagnostic> {
     diagnostics.extend(check_system_effect_resource_regions(core));
     diagnostics.extend(check_system_use_after_release(core));
     diagnostics.extend(check_system_use_after_move(core));
+    diagnostics.extend(check_external_binding_trace_coverage(core));
+    diagnostics.extend(check_external_binding_status_maps(core));
+    diagnostics.extend(check_external_binding_pointer_ownership(core));
     for action in core.graph.nodes.iter().filter(|node| node.kind == "Action") {
         if !has_outgoing_edge(&core.graph, "records_trace", &action.id) {
             diagnostics.push(
@@ -7352,7 +7355,7 @@ fn compile_ail_document_bytecode(
     document: &AilDocument,
 ) -> Result<AilBytecodeProgram, String> {
     let actions = match package.metadata.profile.as_str() {
-        "Application" => {
+        "Application" | "C interop" => {
             let mut actions = document
                 .actions
                 .iter()
@@ -7382,7 +7385,7 @@ fn compile_ail_document_bytecode(
             .collect(),
         profile => {
             return Err(format!(
-                "ail-lower currently supports Application, AgentTool, Compiler, and System packages, not {profile}"
+                "ail-lower currently supports Application, C interop, AgentTool, Compiler, and System packages, not {profile}"
             ));
         }
     };
@@ -13780,6 +13783,115 @@ fn check_tool_trace_coverage(core: &AilCore) -> Vec<AilDiagnostic> {
         .collect()
 }
 
+fn check_external_binding_trace_coverage(core: &AilCore) -> Vec<AilDiagnostic> {
+    core.graph
+        .nodes
+        .iter()
+        .filter(|node| node.kind == "ExternalBinding")
+        .filter(|binding| !has_outgoing_edge(&core.graph, "records_trace", &binding.id))
+        .map(|binding| {
+            AilDiagnostic::error(
+                "AIL-TRACE-001",
+                format!(
+                    "external binding {} is missing foreign-call trace coverage",
+                    binding.name
+                ),
+            )
+            .with_source_provenance(node_provenance(core, &binding.id))
+            .with_affected_graph_item(format!("node:{}", binding.id))
+            .with_repair_suggestion(format!(
+                "Add a trace event to external binding {}.",
+                binding.name
+            ))
+        })
+        .collect()
+}
+
+fn check_external_binding_status_maps(core: &AilCore) -> Vec<AilDiagnostic> {
+    let node_by_id = graph_node_by_id(core);
+    core.graph
+        .nodes
+        .iter()
+        .filter(|node| node.kind == "ExternalBinding")
+        .filter(|binding| {
+            let has_status_output = core.graph.edges.iter().any(|edge| {
+                edge.kind == "has_output"
+                    && edge.source == binding.id
+                    && node_by_id.get(&edge.target).is_some_and(|output| {
+                        output.type_name.as_deref() == Some("CInt")
+                            || output.name.rsplit('.').next() == Some("status")
+                    })
+            });
+            let has_status_map = has_outgoing_edge(&core.graph, "maps_status", &binding.id)
+                || has_outgoing_edge(&core.graph, "may_fail_with", &binding.id);
+            has_status_output && !has_status_map
+        })
+        .map(|binding| {
+            AilDiagnostic::error(
+                "AIL-FFI-ERRNO-001",
+                format!(
+                    "external binding {} returns status without errno or status mapping",
+                    binding.name
+                ),
+            )
+            .with_source_provenance(node_provenance(core, &binding.id))
+            .with_affected_graph_item(format!("node:{}", binding.id))
+            .with_repair_suggestion(format!(
+                "Add a '{} maps errno or status codes:' section.",
+                binding.name.rsplit('.').next().unwrap_or(&binding.name)
+            ))
+        })
+        .collect()
+}
+
+fn check_external_binding_pointer_ownership(core: &AilCore) -> Vec<AilDiagnostic> {
+    let node_by_id = graph_node_by_id(core);
+    let mut diagnostics = Vec::new();
+    for edge in core
+        .graph
+        .edges
+        .iter()
+        .filter(|edge| edge.kind == "has_input")
+    {
+        let Some(binding) = node_by_id.get(&edge.source) else {
+            continue;
+        };
+        if binding.kind != "ExternalBinding" {
+            continue;
+        }
+        let Some(input) = node_by_id.get(&edge.target) else {
+            continue;
+        };
+        let ownership = input
+            .attributes
+            .get("ownership")
+            .map(String::as_str)
+            .unwrap_or("");
+        if ownership.contains("borrowed")
+            && (ownership.contains("escaping")
+                || ownership.contains("stores")
+                || ownership.contains("after return"))
+        {
+            diagnostics.push(
+                AilDiagnostic::error(
+                    "AIL-FFI-OWNERSHIP-001",
+                    format!(
+                        "borrowed pointer {} cannot escape the C call boundary",
+                        input.name
+                    ),
+                )
+                .with_source_provenance(node_provenance(core, &input.id))
+                .with_affected_graph_item(format!("node:{}", input.id))
+                .with_repair_suggestion(format!(
+                    "Use owned pointer ownership for {} or remove the escape behavior.",
+                    input.name
+                )),
+            );
+        }
+    }
+    diagnostics
+}
+
 fn check_tool_approval_mentions(core: &AilCore) -> Vec<AilDiagnostic> {
     let node_by_id = graph_node_by_id(core);
     core.graph
@@ -15363,6 +15475,9 @@ fn is_known_ail_type(type_name: &str, declared_types: &BTreeSet<&str>) -> bool {
             .split(',')
             .map(str::trim)
             .all(|value| !value.is_empty());
+    }
+    if type_name.starts_with("Callback<") && type_name.ends_with('>') {
+        return true;
     }
     for wrapper in ["Option", "List", "Secret", "Pointer", "Nullable", "NonNull"] {
         if let Some(inner) = generic_inner(type_name, wrapper) {

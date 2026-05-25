@@ -163,18 +163,20 @@ Evidence:
 
 - C function imports lower into `ExternalBinding` Core nodes with inputs,
   outputs, status maps, failures, capabilities, traces, ABI, and library
-  metadata.
-- Struct layout fixtures record size, alignment, field offsets, and target ABI.
-- Callback fixtures record lifetime, reentrancy, allowed effects, and failure
-  propagation.
+  metadata. Current package evidence lives in `examples/c_interop.ail`.
+- Struct layout fixtures record size, alignment, field offsets, and target ABI
+  through `struct-layout-minimal.ail-spec.md`.
+- Callback fixtures record lifetime, noescape ownership, allowed effects, and
+  failure propagation through the `libc.qsort` binding.
 - Ownership-transfer fixtures require release semantics.
 - Rejected fixtures cover borrowed pointer escape, nullable-to-non-null
   mismatch, mutable pointer aliasing, missing status map, missing trace, and
-  secret leakage across a foreign boundary.
+  secret leakage across a foreign boundary. Current evidence includes rejected
+  borrowed-pointer escape, missing status-map, and missing trace fixtures.
 - Wasm contract reports enumerate all host imports and preserve trace
   requirements.
-- VM or contract execution evidence records a foreign-call trace for at least
-  one deterministic host-boundary fixture.
+- Contract evidence records foreign-call traces for deterministic host-boundary
+  fixtures.
 
 Minimum proof commands:
 
@@ -383,6 +385,8 @@ already covers parts of this gate:
   that effect class
 - manifest preservation of capability grants
 - C binding parsing into `ExternalBinding` Core nodes
+- C interop package fixtures for external bindings, struct layout, callbacks,
+  missing status maps, missing traces, and borrowed pointer escape
 - route parsing into UI Core nodes
 - Wasm contract reports with host import enumeration
 - Linux native executable artifacts
@@ -392,7 +396,8 @@ Missing v0.2 evidence includes:
 
 - registry package fetching and registry identity resolution
 - standard library packages as first-class package fixtures
-- struct layout, callback, ownership-transfer, and unsafe-pointer FFI fixtures
+- ownership-transfer, nullable/non-null, mutable pointer aliasing, and
+  secret-leakage FFI fixtures
 - UI forms, dashboards, workflows, accessibility diagnostics, and flow blocks
 - Darwin Mach-O contract artifacts
 - stored prompt portability corpus across model labels

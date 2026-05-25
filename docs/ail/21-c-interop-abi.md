@@ -71,8 +71,12 @@ required capabilities, and trace events, then lowers them into checked AIL-Core
 `ExternalBinding` graphs. Non-failure maps use `StatusMap` nodes and
 `maps_status` edges; failure maps use `may_fail_with` edges. AIL-Bytecode
 preserves the external binding metadata so the Wasm sandbox contract report can
-enumerate declared host imports. The VM and native backends do not yet call or
-link foreign symbols; executable FFI calls remain a later backend step.
+enumerate declared host imports. The `examples/c_interop.ail` package is the
+v0.2 fixture package for this profile; it includes `zlib.compress2`,
+`libc.qsort`, struct-layout metadata, callback noescape ownership, accepted
+and rejected conformance fixtures, and Wasm host-contract trace evidence. The
+VM and native backends do not yet call or link foreign symbols; executable FFI
+calls remain a later backend step.
 
 ## Supported C Surface
 
@@ -230,6 +234,8 @@ Unsafe C interop requires:
 
 ## Accepted Fixtures
 
+Current package fixtures live under `examples/c_interop.ail`.
+
 C library import:
 
 ```text
@@ -273,3 +279,11 @@ Diagnostic:
 ```text
 AIL-FFI-OWNERSHIP-001 borrowed pointer cannot escape the call boundary
 ```
+
+Current checker evidence includes:
+
+- `cli_ail_ffi_checks_struct_layout_fixture`
+- `cli_ail_ffi_checks_callback_lifetime_fixture`
+- `cli_ail_ffi_rejects_borrowed_pointer_escape`
+- `cli_ail_ffi_rejects_missing_status_map`
+- `cli_ail_ffi_records_foreign_call_trace_contract`
