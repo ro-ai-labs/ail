@@ -376,6 +376,8 @@ def run_chapter_checks(chapter: ManualChapter, include_live: bool) -> int:
         return 0
     for command in commands:
         print(f"running {command.label}: {command.shell_line()}")
+        for evidence in command.evidence:
+            print(f"evidence {evidence}")
         completed = subprocess.run(command.command, check=False)
         if completed.returncode != 0:
             return completed.returncode

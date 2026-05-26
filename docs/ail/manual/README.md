@@ -28,6 +28,12 @@ Run every deterministic authoring chapter as one local audit:
 python3 scripts/run_ail_interactive_manual.py --all --run-checks
 ```
 
+Run the v0.3 authoring gate chapter directly:
+
+```sh
+python3 scripts/run_ail_interactive_manual.py --chapter v03-authoring-gate --run-checks
+```
+
 Run the prompt interaction checks:
 
 ```sh

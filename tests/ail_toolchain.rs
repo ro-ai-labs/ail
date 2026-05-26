@@ -1228,6 +1228,59 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
 }
 
 #[test]
+fn script_ail_interactive_manual_v03_authoring_gate_run_checks_succeeds() {
+    let manual_index = fs::read_to_string(format!(
+        "{}/docs/ail/manual/README.md",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .unwrap();
+    assert!(
+        manual_index.contains(
+            "python3 scripts/run_ail_interactive_manual.py --chapter v03-authoring-gate --run-checks"
+        ),
+        "{manual_index}"
+    );
+    let v03_gate = fs::read_to_string(format!(
+        "{}/docs/ail/31-v03-learning-and-authoring-gate.md",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .unwrap();
+    assert!(
+        v03_gate.contains(
+            "python3 scripts/run_ail_interactive_manual.py --chapter v03-authoring-gate --run-checks"
+        ),
+        "{v03_gate}"
+    );
+
+    let script = format!(
+        "{}/scripts/run_ail_interactive_manual.py",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let output = Command::new("python3")
+        .args([&script, "--chapter", "v03-authoring-gate", "--run-checks"])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    for required in [
+        "running run-user-story-mode-checks",
+        "running run-examples-release-checks",
+        "running run-prompt-interaction-checks",
+        "running run-agent-entrypoint-checks",
+        "AIL-Examples-Report:",
+        "AIL-Prompt-Corpus-Portability-Report:",
+        "agent-trace.txt",
+    ] {
+        assert!(stdout.contains(required), "{required}\n{stdout}");
+    }
+}
+
+#[test]
 fn script_v03_prompt_llm_harness_help_lists_all_prompts_and_dry_run() {
     let script = format!(
         "{}/scripts/run_v03_prompt_llm_harness.py",

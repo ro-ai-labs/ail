@@ -137,8 +137,13 @@ entries, and coverage across `story-to-spec`, `spec-to-story`, and
 
 ## Required Learning Artifacts
 
-Before claiming v0.3 complete, the repository should add package-local README
-files for the main teaching packages:
+Every `examples/*.ail/` package directory must include a package-local README
+guide. These guides are part of the authoring surface, not optional prose:
+support-only packages explain imported semantics, rejected diagnostic packages
+explain useful failure paths, and counted catalog packages explain replay
+artifacts.
+
+The current required guide set is:
 
 - `examples/support_ticket.ail/README.md`
 - `examples/support_composed.ail/README.md`
@@ -159,6 +164,13 @@ files for the main teaching packages:
 - `examples/ail_std_effects.ail/README.md`
 - `examples/ail_std_security.ail/README.md`
 - `examples/ail_std_runtime.ail/README.md`
+- `examples/ail_toolchain_agent.ail/README.md`
+- `examples/incident_identity.ail/README.md`
+- `examples/incident_notifications.ail/README.md`
+- `examples/incident_policy.ail/README.md`
+- `examples/missing_registry_import.ail/README.md`
+- `examples/recursive_factorial.ail/README.md`
+- `examples/support_shared.ail/README.md`
 
 Each README should state the purpose, concepts taught, files to inspect,
 expected replay artifacts, rejected fixtures where applicable, and the next
@@ -166,14 +178,11 @@ example to read.
 
 ## Learning Guides
 
-Current progress: the learning guide inventory above covers the highest-volume
-repeated families, package composition, compiler passes, system drivers,
-C interop, backend portability, UI workflows, AgentTool safety, deterministic
-state, scheduled runtime work, generic runtime flow, secret access,
-incident-response workflows, standard-library packages, and the transitional
-Option Map UI-tagged generic surface. The inventory is checked by
-`example_learning_readmes_cover_repeated_family_gaps`, which also verifies that
-`examples/README.md` links the same guides.
+Current progress: all 26 package directories now have local guides. The
+inventory is checked by `example_learning_readmes_cover_repeated_family_gaps`
+for the high-volume teaching paths and by
+`example_package_directories_all_have_learning_guides` for complete package
+coverage, required section headings, and top-level `examples/README.md` links.
 
 The `ail-examples` replay bundle must also write deterministic story artifacts:
 
@@ -189,6 +198,7 @@ counts plus per-entry preservation lines.
 ## Minimum Proof Commands
 
 ```bash
+python3 scripts/run_ail_interactive_manual.py --chapter v03-authoring-gate --run-checks
 cargo test cli_ail_e2e_corpus_requires_replay_metadata
 cargo test cli_ail_e2e_corpus_requires_capability_level_thresholds
 cargo test cli_ail_e2e_corpus_requires_user_story_metadata
@@ -197,6 +207,7 @@ cargo test cli_ail_e2e_corpus_requires_story_diversity
 cargo test cli_ail_e2e_corpus_requires_accepted_example_for_each_prompt_file
 cargo test cli_ail_e2e_corpus_requires_v03_signal_diversity
 cargo test cli_ail_e2e_corpus_replays_checked_live_release_corpus
+cargo test --test ail_toolchain script_ail_interactive_manual_v03_authoring_gate_run_checks_succeeds
 cargo run -- ail-examples examples --artifact-dir /tmp/ail-v03-learning-examples --release-evidence
 git diff --check -- examples docs/ail src tests scripts
 ```
