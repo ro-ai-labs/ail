@@ -520,6 +520,10 @@ already covers parts of this gate:
   unsupported-target backend diagnostic example and one rejected invalid
   interop diagnostic example and one rejected permission/capability diagnostic
   example, plus one rejected package-resolution diagnostic example
+- example catalog entries now carry `use-case`, `capability-level`,
+  `capability-under-test`, `distinctness-claim`, and `v0.3-signal` metadata;
+  replay reports count low-level, mid-level, and high-level coverage so prompt
+  matrices cannot silently stand in for a useful learning corpus
 - four replay-clean live LLM captures for the Standard Collections, Support
   Ticket, and Refund Tool packages, using schema-shaped prompt input or
   constrained prose prompting with an OpenAI-compatible chat-completions
@@ -568,6 +572,9 @@ already covers parts of this gate:
   the audit manifest records `ok` for cargo format, diff whitespace, check,
   tests, clippy, conformance fixtures, build, Wasm host contract, Darwin
   contract, spec round-trip, bootstrap, and example release evidence
+
+Post-v0.2 learning work is tracked in
+`31-v03-learning-and-authoring-gate.md`.
 
 Missing v0.2 evidence includes:
 

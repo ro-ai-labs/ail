@@ -48,6 +48,7 @@ the rest of the suite.
 29. `28-language-reference-style.md`
 30. `29-first-version-completion-gate.md`
 31. `30-next-version-completion-gate.md`
+32. `31-v03-learning-and-authoring-gate.md`
 
 ## Specification Contract
 
@@ -83,16 +84,17 @@ one of these version surfaces or add a versioned surface through
 
 ## Examples
 
-- `examples/support-ticket.ail-spec.md`
-- `examples/support-ticket.ail-core.md`
+- `../../examples/README.md`
+- `../../examples/examples.md`
 - `../../examples/support_ticket.ail/spec.ail-spec.md`
+- `../../examples/support_ticket.ail/checked.ail-core.md`
 - `../../examples/ail_toolchain_agent.ail/spec.ail-spec.md`
-- `examples/refund-tool.ail-spec.md`
-- `examples/refund-tool.ail-core.md`
-- `examples/compiler-pass.ail-spec.md`
-- `examples/compiler-pass.ail-core.md`
+- `../../examples/refund_tool.ail/spec.ail-spec.md`
+- `../../examples/refund_tool.ail/checked.ail-core.md`
+- `../../examples/compiler_pass.ail/spec.ail-spec.md`
+- `../../examples/compiler_pass.ail/checked.ail-core.md`
 - `../../examples/network_driver.ail/spec.ail-spec.md`
-- `examples/network-driver.ail-core.md`
+- `../../examples/network_driver.ail/checked.ail-core.md`
 - `../../examples/recursive_factorial.ail/spec.ail-spec.md`
 - `../../examples/option_map.ail/spec.ail-spec.md`
 - `../../examples/stateful_counter.ail/spec.ail-spec.md`
@@ -112,6 +114,8 @@ one of these version surfaces or add a versioned surface through
 - `30-next-version-completion-gate.md`: v0.2 package and host-boundary
   portability definition, evidence gates, release audit commands, and required
   release artifacts
+- `31-v03-learning-and-authoring-gate.md`: v0.3 learning, authoring, and
+  example-usefulness bar that builds on the v0.2 release evidence
 
 ## Implementation Start
 
@@ -121,3 +125,5 @@ vertical slice is the support-ticket package, followed by agent-tool, systems,
 compiler-pass, conformance, and native Linux ELF workflows.
 Use `29-first-version-completion-gate.md` before claiming AIL v0.1 complete.
 Use `30-next-version-completion-gate.md` before claiming AIL v0.2 complete.
+Use `31-v03-learning-and-authoring-gate.md` to decide how examples should move
+the bar for AIL v0.3.

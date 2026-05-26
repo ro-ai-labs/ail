@@ -4,11 +4,42 @@ This checked catalog stores prompt and response transcripts for the
 `ail-examples` release verifier. Every counted example is replayed through the
 prompt-to-artifact path and produces deterministic verification evidence.
 
+## Use-Case Coverage Summary
+
+Every entry below carries learning metadata:
+
+- `use-case`: the practical scenario the example exists to teach or prove.
+- `capability-level`: `low-level`, `mid-level`, or `high-level`.
+- `capability-under-test`: the concrete AIL surface under pressure.
+- `distinctness-claim`: why this entry is useful even when it shares a package
+  with another prompt-surface example.
+- `v0.3-signal`: what the example tells us to improve in the next language and
+  toolchain version.
+
+Current capability-level coverage is:
+
+- `low-level`: C/host interop, compiler passes, network/system effects, and
+  backend portability.
+- `mid-level`: standard library packages, package imports, runtime generics,
+  secret/permission checks, and deterministic state.
+- `high-level`: application workflows, AgentTool safety, UI workflows,
+  scheduled work, and diagnostic repair paths.
+
+The catalog intentionally contains prompt-surface matrices over some packages.
+Those entries are useful only when their `distinctness-claim` identifies the
+prompt, target, diagnostic, checker assertion, or human-review path being
+validated.
+
 ## End-To-End Example: example-0
 semantic-task: stdlib-collections-live-codex-interview-0
 profile: Application
 surface-tags: standard-library
 package: examples/ail_std_collections.ail
+use-case: Standard library collection semantics with generic Option/List/Map behavior.
+capability-level: mid-level
+capability-under-test: stdlib-generics
+distinctness-claim: stdlib-collections-live-codex-interview-0 exercises docs/ail/prompts/interview.system.md over stdlib-generics.
+v0.3-signal: Generics need reusable conformance fixtures and teachable stdlib walkthroughs.
 prompt-file: docs/ail/prompts/interview.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
@@ -26,6 +57,11 @@ semantic-task: stdlib-collections-live-spec-input-1
 profile: Application
 surface-tags: standard-library
 package: examples/ail_std_collections.ail
+use-case: Standard library collection semantics with generic Option/List/Map behavior.
+capability-level: mid-level
+capability-under-test: stdlib-generics
+distinctness-claim: stdlib-collections-live-spec-input-1 exercises docs/ail/prompts/requirements.system.md over stdlib-generics.
+v0.3-signal: Generics need reusable conformance fixtures and teachable stdlib walkthroughs.
 prompt-file: docs/ail/prompts/requirements.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
@@ -44,6 +80,11 @@ semantic-task: stdlib-collections-live-spec-input-2
 profile: Application
 surface-tags: standard-library
 package: examples/ail_std_collections.ail
+use-case: Standard library collection semantics with generic Option/List/Map behavior.
+capability-level: mid-level
+capability-under-test: stdlib-generics
+distinctness-claim: stdlib-collections-live-spec-input-2 exercises docs/ail/prompts/spec-draft.system.md over stdlib-generics.
+v0.3-signal: Generics need reusable conformance fixtures and teachable stdlib walkthroughs.
 prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
@@ -62,6 +103,11 @@ semantic-task: stdlib-collections-live-codex-core-draft-3
 profile: Application
 surface-tags: standard-library
 package: examples/ail_std_collections.ail
+use-case: Standard library collection semantics with generic Option/List/Map behavior.
+capability-level: mid-level
+capability-under-test: stdlib-generics
+distinctness-claim: stdlib-collections-live-codex-core-draft-3 exercises docs/ail/prompts/core-draft.system.md over stdlib-generics.
+v0.3-signal: Generics need reusable conformance fixtures and teachable stdlib walkthroughs.
 prompt-file: docs/ail/prompts/core-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:0175222e4a84bec4
@@ -79,6 +125,11 @@ semantic-task: stdlib-collections-live-codex-diagnostic-repair-4
 profile: Application
 surface-tags: standard-library
 package: examples/ail_std_collections.ail
+use-case: Standard library collection semantics with generic Option/List/Map behavior.
+capability-level: mid-level
+capability-under-test: stdlib-generics
+distinctness-claim: stdlib-collections-live-codex-diagnostic-repair-4 exercises docs/ail/prompts/diagnostic-repair.system.md over stdlib-generics.
+v0.3-signal: Generics need reusable conformance fixtures and teachable stdlib walkthroughs.
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:c9700f2c2e57e49e
@@ -96,6 +147,11 @@ semantic-task: stdlib-collections-live-codex-core-to-spec-5
 profile: Application
 surface-tags: standard-library
 package: examples/ail_std_collections.ail
+use-case: Standard library collection semantics with generic Option/List/Map behavior.
+capability-level: mid-level
+capability-under-test: stdlib-generics
+distinctness-claim: stdlib-collections-live-codex-core-to-spec-5 exercises docs/ail/prompts/core-to-spec.system.md over stdlib-generics.
+v0.3-signal: Generics need reusable conformance fixtures and teachable stdlib walkthroughs.
 prompt-file: docs/ail/prompts/core-to-spec.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:9f447e07620792b2
@@ -113,6 +169,11 @@ semantic-task: stdlib-collections-live-codex-core-to-summary-6
 profile: Application
 surface-tags: standard-library
 package: examples/ail_std_collections.ail
+use-case: Standard library collection semantics with generic Option/List/Map behavior.
+capability-level: mid-level
+capability-under-test: stdlib-generics
+distinctness-claim: stdlib-collections-live-codex-core-to-summary-6 exercises docs/ail/prompts/core-to-summary.system.md over stdlib-generics.
+v0.3-signal: Generics need reusable conformance fixtures and teachable stdlib walkthroughs.
 prompt-file: docs/ail/prompts/core-to-summary.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:49f26ec41d722633
@@ -130,6 +191,11 @@ semantic-task: stdlib-collections-live-codex-flow-patch-7
 profile: Application
 surface-tags: standard-library
 package: examples/ail_std_collections.ail
+use-case: Standard library collection semantics with generic Option/List/Map behavior.
+capability-level: mid-level
+capability-under-test: stdlib-generics
+distinctness-claim: stdlib-collections-live-codex-flow-patch-7 exercises docs/ail/prompts/flow-patch.system.md over stdlib-generics.
+v0.3-signal: Generics need reusable conformance fixtures and teachable stdlib walkthroughs.
 prompt-file: docs/ail/prompts/flow-patch.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:30136a21ab8d8eb6
@@ -147,6 +213,11 @@ semantic-task: stdlib-collections-live-codex-trace-debug-8
 profile: Application
 surface-tags: standard-library
 package: examples/ail_std_collections.ail
+use-case: Standard library collection semantics with generic Option/List/Map behavior.
+capability-level: mid-level
+capability-under-test: stdlib-generics
+distinctness-claim: stdlib-collections-live-codex-trace-debug-8 exercises docs/ail/prompts/trace-debug.system.md over stdlib-generics.
+v0.3-signal: Generics need reusable conformance fixtures and teachable stdlib walkthroughs.
 prompt-file: docs/ail/prompts/trace-debug.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:f5fffd069da83242
@@ -164,6 +235,11 @@ semantic-task: stdlib-collections-live-codex-interop-9
 profile: Application
 surface-tags: standard-library
 package: examples/ail_std_collections.ail
+use-case: Standard library collection semantics with generic Option/List/Map behavior.
+capability-level: mid-level
+capability-under-test: stdlib-generics
+distinctness-claim: stdlib-collections-live-codex-interop-9 exercises docs/ail/prompts/interop.system.md over stdlib-generics.
+v0.3-signal: Generics need reusable conformance fixtures and teachable stdlib walkthroughs.
 prompt-file: docs/ail/prompts/interop.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:87f6dd1772d48729
@@ -181,6 +257,11 @@ semantic-task: support-composed-live-codex-interview-10
 profile: Application
 surface-tags: package-import
 package: examples/support_composed.ail
+use-case: Package composition with explicit imports and capability grants.
+capability-level: mid-level
+capability-under-test: package-imports
+distinctness-claim: support-composed-live-codex-interview-10 exercises docs/ail/prompts/interview.system.md over package-imports.
+v0.3-signal: Package graphs need clearer authoring guidance and dependency review views.
 prompt-file: docs/ail/prompts/interview.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
@@ -200,6 +281,11 @@ semantic-task: support-composed-live-codex-requirements-11
 profile: Application
 surface-tags: package-import
 package: examples/support_composed.ail
+use-case: Package composition with explicit imports and capability grants.
+capability-level: mid-level
+capability-under-test: package-imports
+distinctness-claim: support-composed-live-codex-requirements-11 exercises docs/ail/prompts/requirements.system.md over package-imports.
+v0.3-signal: Package graphs need clearer authoring guidance and dependency review views.
 prompt-file: docs/ail/prompts/requirements.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
@@ -219,6 +305,11 @@ semantic-task: support-composed-live-codex-spec-draft-12
 profile: Application
 surface-tags: package-import
 package: examples/support_composed.ail
+use-case: Package composition with explicit imports and capability grants.
+capability-level: mid-level
+capability-under-test: package-imports
+distinctness-claim: support-composed-live-codex-spec-draft-12 exercises docs/ail/prompts/spec-draft.system.md over package-imports.
+v0.3-signal: Package graphs need clearer authoring guidance and dependency review views.
 prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
@@ -238,6 +329,11 @@ semantic-task: support-composed-live-codex-core-draft-13
 profile: Application
 surface-tags: package-import
 package: examples/support_composed.ail
+use-case: Package composition with explicit imports and capability grants.
+capability-level: mid-level
+capability-under-test: package-imports
+distinctness-claim: support-composed-live-codex-core-draft-13 exercises docs/ail/prompts/core-draft.system.md over package-imports.
+v0.3-signal: Package graphs need clearer authoring guidance and dependency review views.
 prompt-file: docs/ail/prompts/core-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:0175222e4a84bec4
@@ -257,6 +353,11 @@ semantic-task: support-composed-live-codex-diagnostic-repair-14
 profile: Application
 surface-tags: package-import
 package: examples/support_composed.ail
+use-case: Package composition with explicit imports and capability grants.
+capability-level: mid-level
+capability-under-test: package-imports
+distinctness-claim: support-composed-live-codex-diagnostic-repair-14 exercises docs/ail/prompts/diagnostic-repair.system.md over package-imports.
+v0.3-signal: Package graphs need clearer authoring guidance and dependency review views.
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:c9700f2c2e57e49e
@@ -276,6 +377,11 @@ semantic-task: support-composed-live-codex-core-to-spec-15
 profile: Application
 surface-tags: package-import
 package: examples/support_composed.ail
+use-case: Package composition with explicit imports and capability grants.
+capability-level: mid-level
+capability-under-test: package-imports
+distinctness-claim: support-composed-live-codex-core-to-spec-15 exercises docs/ail/prompts/core-to-spec.system.md over package-imports.
+v0.3-signal: Package graphs need clearer authoring guidance and dependency review views.
 prompt-file: docs/ail/prompts/core-to-spec.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:9f447e07620792b2
@@ -295,6 +401,11 @@ semantic-task: support-composed-live-codex-core-to-summary-16
 profile: Application
 surface-tags: package-import
 package: examples/support_composed.ail
+use-case: Package composition with explicit imports and capability grants.
+capability-level: mid-level
+capability-under-test: package-imports
+distinctness-claim: support-composed-live-codex-core-to-summary-16 exercises docs/ail/prompts/core-to-summary.system.md over package-imports.
+v0.3-signal: Package graphs need clearer authoring guidance and dependency review views.
 prompt-file: docs/ail/prompts/core-to-summary.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:49f26ec41d722633
@@ -314,6 +425,11 @@ semantic-task: support-composed-live-codex-flow-patch-17
 profile: Application
 surface-tags: package-import
 package: examples/support_composed.ail
+use-case: Package composition with explicit imports and capability grants.
+capability-level: mid-level
+capability-under-test: package-imports
+distinctness-claim: support-composed-live-codex-flow-patch-17 exercises docs/ail/prompts/flow-patch.system.md over package-imports.
+v0.3-signal: Package graphs need clearer authoring guidance and dependency review views.
 prompt-file: docs/ail/prompts/flow-patch.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:30136a21ab8d8eb6
@@ -333,6 +449,11 @@ semantic-task: support-composed-live-codex-trace-debug-18
 profile: Application
 surface-tags: package-import
 package: examples/support_composed.ail
+use-case: Package composition with explicit imports and capability grants.
+capability-level: mid-level
+capability-under-test: package-imports
+distinctness-claim: support-composed-live-codex-trace-debug-18 exercises docs/ail/prompts/trace-debug.system.md over package-imports.
+v0.3-signal: Package graphs need clearer authoring guidance and dependency review views.
 prompt-file: docs/ail/prompts/trace-debug.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:f5fffd069da83242
@@ -352,6 +473,11 @@ semantic-task: support-composed-live-codex-interop-19
 profile: Application
 surface-tags: package-import
 package: examples/support_composed.ail
+use-case: Package composition with explicit imports and capability grants.
+capability-level: mid-level
+capability-under-test: package-imports
+distinctness-claim: support-composed-live-codex-interop-19 exercises docs/ail/prompts/interop.system.md over package-imports.
+v0.3-signal: Package graphs need clearer authoring guidance and dependency review views.
 prompt-file: docs/ail/prompts/interop.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:87f6dd1772d48729
@@ -371,6 +497,11 @@ semantic-task: option-map-live-codex-interview-20
 profile: Application
 surface-tags: ui
 package: examples/option_map.ail
+use-case: Small transform used to exercise typed option mapping and UI-tagged prompt surfaces.
+capability-level: high-level
+capability-under-test: ui-surface-coverage
+distinctness-claim: option-map-live-codex-interview-20 exercises docs/ail/prompts/interview.system.md over ui-surface-coverage.
+v0.3-signal: UI examples need richer package-local walkthroughs and stricter semantic tagging.
 prompt-file: docs/ail/prompts/interview.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
@@ -388,6 +519,11 @@ semantic-task: option-map-live-codex-requirements-21
 profile: Application
 surface-tags: ui
 package: examples/option_map.ail
+use-case: Small transform used to exercise typed option mapping and UI-tagged prompt surfaces.
+capability-level: high-level
+capability-under-test: ui-surface-coverage
+distinctness-claim: option-map-live-codex-requirements-21 exercises docs/ail/prompts/requirements.system.md over ui-surface-coverage.
+v0.3-signal: UI examples need richer package-local walkthroughs and stricter semantic tagging.
 prompt-file: docs/ail/prompts/requirements.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
@@ -405,6 +541,11 @@ semantic-task: option-map-live-codex-spec-draft-22
 profile: Application
 surface-tags: ui
 package: examples/option_map.ail
+use-case: Small transform used to exercise typed option mapping and UI-tagged prompt surfaces.
+capability-level: high-level
+capability-under-test: ui-surface-coverage
+distinctness-claim: option-map-live-codex-spec-draft-22 exercises docs/ail/prompts/spec-draft.system.md over ui-surface-coverage.
+v0.3-signal: UI examples need richer package-local walkthroughs and stricter semantic tagging.
 prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
@@ -422,6 +563,11 @@ semantic-task: option-map-live-codex-core-draft-23
 profile: Application
 surface-tags: ui
 package: examples/option_map.ail
+use-case: Small transform used to exercise typed option mapping and UI-tagged prompt surfaces.
+capability-level: high-level
+capability-under-test: ui-surface-coverage
+distinctness-claim: option-map-live-codex-core-draft-23 exercises docs/ail/prompts/core-draft.system.md over ui-surface-coverage.
+v0.3-signal: UI examples need richer package-local walkthroughs and stricter semantic tagging.
 prompt-file: docs/ail/prompts/core-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:0175222e4a84bec4
@@ -439,6 +585,11 @@ semantic-task: option-map-live-codex-diagnostic-repair-24
 profile: Application
 surface-tags: ui
 package: examples/option_map.ail
+use-case: Small transform used to exercise typed option mapping and UI-tagged prompt surfaces.
+capability-level: high-level
+capability-under-test: ui-surface-coverage
+distinctness-claim: option-map-live-codex-diagnostic-repair-24 exercises docs/ail/prompts/diagnostic-repair.system.md over ui-surface-coverage.
+v0.3-signal: UI examples need richer package-local walkthroughs and stricter semantic tagging.
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:c9700f2c2e57e49e
@@ -456,6 +607,11 @@ semantic-task: c-interop-live-codex-core-to-spec-25
 profile: Application
 surface-tags: c-host-interop
 package: examples/c_interop.ail
+use-case: Checked C and host interop with ABI, ownership, status, and trace contracts.
+capability-level: low-level
+capability-under-test: c-host-interop
+distinctness-claim: c-interop-live-codex-core-to-spec-25 exercises docs/ail/prompts/core-to-spec.system.md over c-host-interop.
+v0.3-signal: Interop needs deeper unsafe-boundary tutorials and more ABI fixture diversity.
 prompt-file: docs/ail/prompts/core-to-spec.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:9f447e07620792b2
@@ -474,6 +630,11 @@ semantic-task: c-interop-live-codex-core-to-summary-26
 profile: Application
 surface-tags: c-host-interop
 package: examples/c_interop.ail
+use-case: Checked C and host interop with ABI, ownership, status, and trace contracts.
+capability-level: low-level
+capability-under-test: c-host-interop
+distinctness-claim: c-interop-live-codex-core-to-summary-26 exercises docs/ail/prompts/core-to-summary.system.md over c-host-interop.
+v0.3-signal: Interop needs deeper unsafe-boundary tutorials and more ABI fixture diversity.
 prompt-file: docs/ail/prompts/core-to-summary.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:49f26ec41d722633
@@ -492,6 +653,11 @@ semantic-task: c-interop-live-codex-flow-patch-27
 profile: Application
 surface-tags: c-host-interop
 package: examples/c_interop.ail
+use-case: Checked C and host interop with ABI, ownership, status, and trace contracts.
+capability-level: low-level
+capability-under-test: c-host-interop
+distinctness-claim: c-interop-live-codex-flow-patch-27 exercises docs/ail/prompts/flow-patch.system.md over c-host-interop.
+v0.3-signal: Interop needs deeper unsafe-boundary tutorials and more ABI fixture diversity.
 prompt-file: docs/ail/prompts/flow-patch.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:30136a21ab8d8eb6
@@ -510,6 +676,11 @@ semantic-task: c-interop-live-codex-trace-debug-28
 profile: Application
 surface-tags: c-host-interop
 package: examples/c_interop.ail
+use-case: Checked C and host interop with ABI, ownership, status, and trace contracts.
+capability-level: low-level
+capability-under-test: c-host-interop
+distinctness-claim: c-interop-live-codex-trace-debug-28 exercises docs/ail/prompts/trace-debug.system.md over c-host-interop.
+v0.3-signal: Interop needs deeper unsafe-boundary tutorials and more ABI fixture diversity.
 prompt-file: docs/ail/prompts/trace-debug.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:f5fffd069da83242
@@ -528,6 +699,11 @@ semantic-task: c-interop-live-codex-interop-29
 profile: Application
 surface-tags: c-host-interop
 package: examples/c_interop.ail
+use-case: Checked C and host interop with ABI, ownership, status, and trace contracts.
+capability-level: low-level
+capability-under-test: c-host-interop
+distinctness-claim: c-interop-live-codex-interop-29 exercises docs/ail/prompts/interop.system.md over c-host-interop.
+v0.3-signal: Interop needs deeper unsafe-boundary tutorials and more ABI fixture diversity.
 prompt-file: docs/ail/prompts/interop.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:87f6dd1772d48729
@@ -546,6 +722,11 @@ semantic-task: support-ticket-live-codex-interview-30
 profile: Application
 surface-tags: backend-portability
 package: examples/support_ticket.ail
+use-case: Application workflow for support-ticket actions, permissions, failures, and traces.
+capability-level: high-level
+capability-under-test: application-workflow
+distinctness-claim: support-ticket-live-codex-interview-30 exercises docs/ail/prompts/interview.system.md over application-workflow.
+v0.3-signal: Application examples need user-story walkthroughs from intent to runtime trace.
 prompt-file: docs/ail/prompts/interview.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
@@ -565,6 +746,11 @@ semantic-task: support-ticket-live-codex-requirements-31
 profile: Application
 surface-tags: backend-portability
 package: examples/support_ticket.ail
+use-case: Application workflow for support-ticket actions, permissions, failures, and traces.
+capability-level: high-level
+capability-under-test: application-workflow
+distinctness-claim: support-ticket-live-codex-requirements-31 exercises docs/ail/prompts/requirements.system.md over application-workflow.
+v0.3-signal: Application examples need user-story walkthroughs from intent to runtime trace.
 prompt-file: docs/ail/prompts/requirements.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
@@ -584,6 +770,11 @@ semantic-task: support-ticket-live-spec-input-32
 profile: Application
 surface-tags: backend-portability
 package: examples/support_ticket.ail
+use-case: Application workflow for support-ticket actions, permissions, failures, and traces.
+capability-level: high-level
+capability-under-test: application-workflow
+distinctness-claim: support-ticket-live-spec-input-32 exercises docs/ail/prompts/spec-draft.system.md over application-workflow.
+v0.3-signal: Application examples need user-story walkthroughs from intent to runtime trace.
 prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
@@ -604,6 +795,11 @@ semantic-task: support-ticket-live-codex-core-draft-33
 profile: Application
 surface-tags: backend-portability
 package: examples/support_ticket.ail
+use-case: Application workflow for support-ticket actions, permissions, failures, and traces.
+capability-level: high-level
+capability-under-test: application-workflow
+distinctness-claim: support-ticket-live-codex-core-draft-33 exercises docs/ail/prompts/core-draft.system.md over application-workflow.
+v0.3-signal: Application examples need user-story walkthroughs from intent to runtime trace.
 prompt-file: docs/ail/prompts/core-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:0175222e4a84bec4
@@ -623,6 +819,11 @@ semantic-task: support-ticket-live-codex-diagnostic-repair-34
 profile: Application
 surface-tags: backend-portability
 package: examples/support_ticket.ail
+use-case: Application workflow for support-ticket actions, permissions, failures, and traces.
+capability-level: high-level
+capability-under-test: application-workflow
+distinctness-claim: support-ticket-live-codex-diagnostic-repair-34 exercises docs/ail/prompts/diagnostic-repair.system.md over application-workflow.
+v0.3-signal: Application examples need user-story walkthroughs from intent to runtime trace.
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:c9700f2c2e57e49e
@@ -642,6 +843,11 @@ semantic-task: runtime-generic-live-codex-core-to-spec-35
 profile: Application
 surface-tags: core
 package: examples/runtime_generic.ail
+use-case: Runtime generic value flow through typed actions and traceable outcomes.
+capability-level: mid-level
+capability-under-test: runtime-generics
+distinctness-claim: runtime-generic-live-codex-core-to-spec-35 exercises docs/ail/prompts/core-to-spec.system.md over runtime-generics.
+v0.3-signal: Generic runtime behavior needs clearer type-inference explanations.
 prompt-file: docs/ail/prompts/core-to-spec.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:9f447e07620792b2
@@ -661,6 +867,11 @@ semantic-task: runtime-generic-live-codex-core-to-summary-36
 profile: Application
 surface-tags: core
 package: examples/runtime_generic.ail
+use-case: Runtime generic value flow through typed actions and traceable outcomes.
+capability-level: mid-level
+capability-under-test: runtime-generics
+distinctness-claim: runtime-generic-live-codex-core-to-summary-36 exercises docs/ail/prompts/core-to-summary.system.md over runtime-generics.
+v0.3-signal: Generic runtime behavior needs clearer type-inference explanations.
 prompt-file: docs/ail/prompts/core-to-summary.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:49f26ec41d722633
@@ -680,6 +891,11 @@ semantic-task: runtime-generic-live-codex-flow-patch-37
 profile: Application
 surface-tags: core
 package: examples/runtime_generic.ail
+use-case: Runtime generic value flow through typed actions and traceable outcomes.
+capability-level: mid-level
+capability-under-test: runtime-generics
+distinctness-claim: runtime-generic-live-codex-flow-patch-37 exercises docs/ail/prompts/flow-patch.system.md over runtime-generics.
+v0.3-signal: Generic runtime behavior needs clearer type-inference explanations.
 prompt-file: docs/ail/prompts/flow-patch.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:30136a21ab8d8eb6
@@ -699,6 +915,11 @@ semantic-task: runtime-generic-live-codex-trace-debug-38
 profile: Application
 surface-tags: core
 package: examples/runtime_generic.ail
+use-case: Runtime generic value flow through typed actions and traceable outcomes.
+capability-level: mid-level
+capability-under-test: runtime-generics
+distinctness-claim: runtime-generic-live-codex-trace-debug-38 exercises docs/ail/prompts/trace-debug.system.md over runtime-generics.
+v0.3-signal: Generic runtime behavior needs clearer type-inference explanations.
 prompt-file: docs/ail/prompts/trace-debug.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:f5fffd069da83242
@@ -718,6 +939,11 @@ semantic-task: runtime-generic-live-codex-interop-39
 profile: Application
 surface-tags: core
 package: examples/runtime_generic.ail
+use-case: Runtime generic value flow through typed actions and traceable outcomes.
+capability-level: mid-level
+capability-under-test: runtime-generics
+distinctness-claim: runtime-generic-live-codex-interop-39 exercises docs/ail/prompts/interop.system.md over runtime-generics.
+v0.3-signal: Generic runtime behavior needs clearer type-inference explanations.
 prompt-file: docs/ail/prompts/interop.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:87f6dd1772d48729
@@ -737,6 +963,11 @@ semantic-task: refund-tool-live-codex-interview-40
 profile: AgentTool
 surface-tags: core
 package: examples/refund_tool.ail
+use-case: Agent tool for payment refund approval with permissions and capability checks.
+capability-level: high-level
+capability-under-test: agent-tool-safety
+distinctness-claim: refund-tool-live-codex-interview-40 exercises docs/ail/prompts/interview.system.md over agent-tool-safety.
+v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
 prompt-file: docs/ail/prompts/interview.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
@@ -756,6 +987,11 @@ semantic-task: refund-tool-live-codex-requirements-41
 profile: AgentTool
 surface-tags: core
 package: examples/refund_tool.ail
+use-case: Agent tool for payment refund approval with permissions and capability checks.
+capability-level: high-level
+capability-under-test: agent-tool-safety
+distinctness-claim: refund-tool-live-codex-requirements-41 exercises docs/ail/prompts/requirements.system.md over agent-tool-safety.
+v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
 prompt-file: docs/ail/prompts/requirements.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
@@ -775,6 +1011,11 @@ semantic-task: refund-tool-live-codex-spec-draft-42
 profile: AgentTool
 surface-tags: core
 package: examples/refund_tool.ail
+use-case: Agent tool for payment refund approval with permissions and capability checks.
+capability-level: high-level
+capability-under-test: agent-tool-safety
+distinctness-claim: refund-tool-live-codex-spec-draft-42 exercises docs/ail/prompts/spec-draft.system.md over agent-tool-safety.
+v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
 prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
@@ -794,6 +1035,11 @@ semantic-task: refund-tool-live-codex-core-draft-43
 profile: AgentTool
 surface-tags: core
 package: examples/refund_tool.ail
+use-case: Agent tool for payment refund approval with permissions and capability checks.
+capability-level: high-level
+capability-under-test: agent-tool-safety
+distinctness-claim: refund-tool-live-codex-core-draft-43 exercises docs/ail/prompts/core-draft.system.md over agent-tool-safety.
+v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
 prompt-file: docs/ail/prompts/core-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:0175222e4a84bec4
@@ -813,6 +1059,11 @@ semantic-task: refund-tool-live-codex-diagnostic-repair-44
 profile: AgentTool
 surface-tags: core
 package: examples/refund_tool.ail
+use-case: Agent tool for payment refund approval with permissions and capability checks.
+capability-level: high-level
+capability-under-test: agent-tool-safety
+distinctness-claim: refund-tool-live-codex-diagnostic-repair-44 exercises docs/ail/prompts/diagnostic-repair.system.md over agent-tool-safety.
+v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:c9700f2c2e57e49e
@@ -832,6 +1083,11 @@ semantic-task: refund-tool-live-codex-core-to-spec-45
 profile: AgentTool
 surface-tags: core
 package: examples/refund_tool.ail
+use-case: Agent tool for payment refund approval with permissions and capability checks.
+capability-level: high-level
+capability-under-test: agent-tool-safety
+distinctness-claim: refund-tool-live-codex-core-to-spec-45 exercises docs/ail/prompts/core-to-spec.system.md over agent-tool-safety.
+v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
 prompt-file: docs/ail/prompts/core-to-spec.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:9f447e07620792b2
@@ -851,6 +1107,11 @@ semantic-task: refund-tool-live-codex-core-to-summary-46
 profile: AgentTool
 surface-tags: core
 package: examples/refund_tool.ail
+use-case: Agent tool for payment refund approval with permissions and capability checks.
+capability-level: high-level
+capability-under-test: agent-tool-safety
+distinctness-claim: refund-tool-live-codex-core-to-summary-46 exercises docs/ail/prompts/core-to-summary.system.md over agent-tool-safety.
+v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
 prompt-file: docs/ail/prompts/core-to-summary.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:49f26ec41d722633
@@ -870,6 +1131,11 @@ semantic-task: refund-tool-live-codex-flow-patch-47
 profile: AgentTool
 surface-tags: core
 package: examples/refund_tool.ail
+use-case: Agent tool for payment refund approval with permissions and capability checks.
+capability-level: high-level
+capability-under-test: agent-tool-safety
+distinctness-claim: refund-tool-live-codex-flow-patch-47 exercises docs/ail/prompts/flow-patch.system.md over agent-tool-safety.
+v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
 prompt-file: docs/ail/prompts/flow-patch.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:30136a21ab8d8eb6
@@ -889,6 +1155,11 @@ semantic-task: refund-tool-live-codex-trace-debug-48
 profile: AgentTool
 surface-tags: core
 package: examples/refund_tool.ail
+use-case: Agent tool for payment refund approval with permissions and capability checks.
+capability-level: high-level
+capability-under-test: agent-tool-safety
+distinctness-claim: refund-tool-live-codex-trace-debug-48 exercises docs/ail/prompts/trace-debug.system.md over agent-tool-safety.
+v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
 prompt-file: docs/ail/prompts/trace-debug.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:f5fffd069da83242
@@ -908,6 +1179,11 @@ semantic-task: refund-tool-live-codex-interop-49
 profile: AgentTool
 surface-tags: core
 package: examples/refund_tool.ail
+use-case: Agent tool for payment refund approval with permissions and capability checks.
+capability-level: high-level
+capability-under-test: agent-tool-safety
+distinctness-claim: refund-tool-live-codex-interop-49 exercises docs/ail/prompts/interop.system.md over agent-tool-safety.
+v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
 prompt-file: docs/ail/prompts/interop.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:87f6dd1772d48729
@@ -927,6 +1203,11 @@ semantic-task: refund-tool-live-codex-interview-50
 profile: AgentTool
 surface-tags: core
 package: examples/refund_tool.ail
+use-case: Agent tool for payment refund approval with permissions and capability checks.
+capability-level: high-level
+capability-under-test: agent-tool-safety
+distinctness-claim: refund-tool-live-codex-interview-50 exercises docs/ail/prompts/interview.system.md over agent-tool-safety.
+v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
 prompt-file: docs/ail/prompts/interview.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
@@ -946,6 +1227,11 @@ semantic-task: refund-tool-live-codex-requirements-51
 profile: AgentTool
 surface-tags: core
 package: examples/refund_tool.ail
+use-case: Agent tool for payment refund approval with permissions and capability checks.
+capability-level: high-level
+capability-under-test: agent-tool-safety
+distinctness-claim: refund-tool-live-codex-requirements-51 exercises docs/ail/prompts/requirements.system.md over agent-tool-safety.
+v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
 prompt-file: docs/ail/prompts/requirements.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
@@ -965,6 +1251,11 @@ semantic-task: refund-tool-live-spec-input-52
 profile: AgentTool
 surface-tags: core
 package: examples/refund_tool.ail
+use-case: Agent tool for payment refund approval with permissions and capability checks.
+capability-level: high-level
+capability-under-test: agent-tool-safety
+distinctness-claim: refund-tool-live-spec-input-52 exercises docs/ail/prompts/spec-draft.system.md over agent-tool-safety.
+v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
 prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
@@ -985,6 +1276,11 @@ semantic-task: refund-tool-live-codex-core-draft-53
 profile: AgentTool
 surface-tags: core
 package: examples/refund_tool.ail
+use-case: Agent tool for payment refund approval with permissions and capability checks.
+capability-level: high-level
+capability-under-test: agent-tool-safety
+distinctness-claim: refund-tool-live-codex-core-draft-53 exercises docs/ail/prompts/core-draft.system.md over agent-tool-safety.
+v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
 prompt-file: docs/ail/prompts/core-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:0175222e4a84bec4
@@ -1004,6 +1300,11 @@ semantic-task: refund-tool-live-codex-diagnostic-repair-54
 profile: AgentTool
 surface-tags: core
 package: examples/refund_tool.ail
+use-case: Agent tool for payment refund approval with permissions and capability checks.
+capability-level: high-level
+capability-under-test: agent-tool-safety
+distinctness-claim: refund-tool-live-codex-diagnostic-repair-54 exercises docs/ail/prompts/diagnostic-repair.system.md over agent-tool-safety.
+v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:c9700f2c2e57e49e
@@ -1023,6 +1324,11 @@ semantic-task: compiler-pass-live-codex-core-to-spec-55
 profile: Compiler
 surface-tags: core
 package: examples/compiler_pass.ail
+use-case: Compiler pass semantics that transform AIL-Core with checked traces.
+capability-level: low-level
+capability-under-test: compiler-pass
+distinctness-claim: compiler-pass-live-codex-core-to-spec-55 exercises docs/ail/prompts/core-to-spec.system.md over compiler-pass.
+v0.3-signal: Self-hosting needs pass-composition examples and fixed-point checks.
 prompt-file: docs/ail/prompts/core-to-spec.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:9f447e07620792b2
@@ -1041,6 +1347,11 @@ semantic-task: compiler-pass-live-codex-core-to-summary-56
 profile: Compiler
 surface-tags: core
 package: examples/compiler_pass.ail
+use-case: Compiler pass semantics that transform AIL-Core with checked traces.
+capability-level: low-level
+capability-under-test: compiler-pass
+distinctness-claim: compiler-pass-live-codex-core-to-summary-56 exercises docs/ail/prompts/core-to-summary.system.md over compiler-pass.
+v0.3-signal: Self-hosting needs pass-composition examples and fixed-point checks.
 prompt-file: docs/ail/prompts/core-to-summary.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:49f26ec41d722633
@@ -1059,6 +1370,11 @@ semantic-task: compiler-pass-live-codex-flow-patch-57
 profile: Compiler
 surface-tags: core
 package: examples/compiler_pass.ail
+use-case: Compiler pass semantics that transform AIL-Core with checked traces.
+capability-level: low-level
+capability-under-test: compiler-pass
+distinctness-claim: compiler-pass-live-codex-flow-patch-57 exercises docs/ail/prompts/flow-patch.system.md over compiler-pass.
+v0.3-signal: Self-hosting needs pass-composition examples and fixed-point checks.
 prompt-file: docs/ail/prompts/flow-patch.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:30136a21ab8d8eb6
@@ -1077,6 +1393,11 @@ semantic-task: compiler-pass-live-codex-trace-debug-58
 profile: Compiler
 surface-tags: core
 package: examples/compiler_pass.ail
+use-case: Compiler pass semantics that transform AIL-Core with checked traces.
+capability-level: low-level
+capability-under-test: compiler-pass
+distinctness-claim: compiler-pass-live-codex-trace-debug-58 exercises docs/ail/prompts/trace-debug.system.md over compiler-pass.
+v0.3-signal: Self-hosting needs pass-composition examples and fixed-point checks.
 prompt-file: docs/ail/prompts/trace-debug.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:f5fffd069da83242
@@ -1095,6 +1416,11 @@ semantic-task: compiler-pass-live-codex-interop-59
 profile: Compiler
 surface-tags: core
 package: examples/compiler_pass.ail
+use-case: Compiler pass semantics that transform AIL-Core with checked traces.
+capability-level: low-level
+capability-under-test: compiler-pass
+distinctness-claim: compiler-pass-live-codex-interop-59 exercises docs/ail/prompts/interop.system.md over compiler-pass.
+v0.3-signal: Self-hosting needs pass-composition examples and fixed-point checks.
 prompt-file: docs/ail/prompts/interop.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:87f6dd1772d48729
@@ -1113,6 +1439,11 @@ semantic-task: compiler-pass-live-codex-interview-60
 profile: Compiler
 surface-tags: core
 package: examples/compiler_pass.ail
+use-case: Compiler pass semantics that transform AIL-Core with checked traces.
+capability-level: low-level
+capability-under-test: compiler-pass
+distinctness-claim: compiler-pass-live-codex-interview-60 exercises docs/ail/prompts/interview.system.md over compiler-pass.
+v0.3-signal: Self-hosting needs pass-composition examples and fixed-point checks.
 prompt-file: docs/ail/prompts/interview.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
@@ -1131,6 +1462,11 @@ semantic-task: compiler-pass-live-codex-requirements-61
 profile: Compiler
 surface-tags: core
 package: examples/compiler_pass.ail
+use-case: Compiler pass semantics that transform AIL-Core with checked traces.
+capability-level: low-level
+capability-under-test: compiler-pass
+distinctness-claim: compiler-pass-live-codex-requirements-61 exercises docs/ail/prompts/requirements.system.md over compiler-pass.
+v0.3-signal: Self-hosting needs pass-composition examples and fixed-point checks.
 prompt-file: docs/ail/prompts/requirements.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
@@ -1149,6 +1485,11 @@ semantic-task: compiler-pass-live-codex-spec-draft-62
 profile: Compiler
 surface-tags: core
 package: examples/compiler_pass.ail
+use-case: Compiler pass semantics that transform AIL-Core with checked traces.
+capability-level: low-level
+capability-under-test: compiler-pass
+distinctness-claim: compiler-pass-live-codex-spec-draft-62 exercises docs/ail/prompts/spec-draft.system.md over compiler-pass.
+v0.3-signal: Self-hosting needs pass-composition examples and fixed-point checks.
 prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
@@ -1167,6 +1508,11 @@ semantic-task: compiler-pass-live-codex-core-draft-63
 profile: Compiler
 surface-tags: core
 package: examples/compiler_pass.ail
+use-case: Compiler pass semantics that transform AIL-Core with checked traces.
+capability-level: low-level
+capability-under-test: compiler-pass
+distinctness-claim: compiler-pass-live-codex-core-draft-63 exercises docs/ail/prompts/core-draft.system.md over compiler-pass.
+v0.3-signal: Self-hosting needs pass-composition examples and fixed-point checks.
 prompt-file: docs/ail/prompts/core-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:0175222e4a84bec4
@@ -1185,6 +1531,11 @@ semantic-task: compiler-pass-live-codex-diagnostic-repair-64
 profile: Compiler
 surface-tags: core
 package: examples/compiler_pass.ail
+use-case: Compiler pass semantics that transform AIL-Core with checked traces.
+capability-level: low-level
+capability-under-test: compiler-pass
+distinctness-claim: compiler-pass-live-codex-diagnostic-repair-64 exercises docs/ail/prompts/diagnostic-repair.system.md over compiler-pass.
+v0.3-signal: Self-hosting needs pass-composition examples and fixed-point checks.
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:c9700f2c2e57e49e
@@ -1203,6 +1554,11 @@ semantic-task: ui-workflow-live-codex-core-to-spec-65
 profile: UI
 surface-tags: ui
 package: examples/ui_workflow.ail
+use-case: Accessible route, form, dashboard, and workflow semantics for a user-facing app.
+capability-level: high-level
+capability-under-test: ui-workflow
+distinctness-claim: ui-workflow-live-codex-core-to-spec-65 exercises docs/ail/prompts/core-to-spec.system.md over ui-workflow.
+v0.3-signal: UI authoring needs stronger visual review artifacts and accessibility exercises.
 prompt-file: docs/ail/prompts/core-to-spec.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:9f447e07620792b2
@@ -1222,6 +1578,11 @@ semantic-task: network-driver-live-codex-core-to-summary-66
 profile: System
 surface-tags: core
 package: examples/network_driver.ail
+use-case: System-level network driver boundary with effects, capabilities, and packets.
+capability-level: low-level
+capability-under-test: system-driver
+distinctness-claim: network-driver-live-codex-core-to-summary-66 exercises docs/ail/prompts/core-to-summary.system.md over system-driver.
+v0.3-signal: Systems profile needs hardware-facing contracts and scheduler/interrupt examples.
 prompt-file: docs/ail/prompts/core-to-summary.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:49f26ec41d722633
@@ -1239,6 +1600,11 @@ semantic-task: network-driver-live-codex-flow-patch-67
 profile: System
 surface-tags: core
 package: examples/network_driver.ail
+use-case: System-level network driver boundary with effects, capabilities, and packets.
+capability-level: low-level
+capability-under-test: system-driver
+distinctness-claim: network-driver-live-codex-flow-patch-67 exercises docs/ail/prompts/flow-patch.system.md over system-driver.
+v0.3-signal: Systems profile needs hardware-facing contracts and scheduler/interrupt examples.
 prompt-file: docs/ail/prompts/flow-patch.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:30136a21ab8d8eb6
@@ -1256,6 +1622,11 @@ semantic-task: network-driver-live-codex-trace-debug-68
 profile: System
 surface-tags: core
 package: examples/network_driver.ail
+use-case: System-level network driver boundary with effects, capabilities, and packets.
+capability-level: low-level
+capability-under-test: system-driver
+distinctness-claim: network-driver-live-codex-trace-debug-68 exercises docs/ail/prompts/trace-debug.system.md over system-driver.
+v0.3-signal: Systems profile needs hardware-facing contracts and scheduler/interrupt examples.
 prompt-file: docs/ail/prompts/trace-debug.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:f5fffd069da83242
@@ -1273,6 +1644,11 @@ semantic-task: network-driver-live-codex-interop-69
 profile: System
 surface-tags: core
 package: examples/network_driver.ail
+use-case: System-level network driver boundary with effects, capabilities, and packets.
+capability-level: low-level
+capability-under-test: system-driver
+distinctness-claim: network-driver-live-codex-interop-69 exercises docs/ail/prompts/interop.system.md over system-driver.
+v0.3-signal: Systems profile needs hardware-facing contracts and scheduler/interrupt examples.
 prompt-file: docs/ail/prompts/interop.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:87f6dd1772d48729
@@ -1290,6 +1666,11 @@ semantic-task: network-driver-live-codex-interview-70
 profile: System
 surface-tags: core
 package: examples/network_driver.ail
+use-case: System-level network driver boundary with effects, capabilities, and packets.
+capability-level: low-level
+capability-under-test: system-driver
+distinctness-claim: network-driver-live-codex-interview-70 exercises docs/ail/prompts/interview.system.md over system-driver.
+v0.3-signal: Systems profile needs hardware-facing contracts and scheduler/interrupt examples.
 prompt-file: docs/ail/prompts/interview.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
@@ -1307,6 +1688,11 @@ semantic-task: network-driver-live-codex-requirements-71
 profile: System
 surface-tags: core
 package: examples/network_driver.ail
+use-case: System-level network driver boundary with effects, capabilities, and packets.
+capability-level: low-level
+capability-under-test: system-driver
+distinctness-claim: network-driver-live-codex-requirements-71 exercises docs/ail/prompts/requirements.system.md over system-driver.
+v0.3-signal: Systems profile needs hardware-facing contracts and scheduler/interrupt examples.
 prompt-file: docs/ail/prompts/requirements.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
@@ -1324,6 +1710,11 @@ semantic-task: network-driver-live-codex-spec-draft-72
 profile: System
 surface-tags: core
 package: examples/network_driver.ail
+use-case: System-level network driver boundary with effects, capabilities, and packets.
+capability-level: low-level
+capability-under-test: system-driver
+distinctness-claim: network-driver-live-codex-spec-draft-72 exercises docs/ail/prompts/spec-draft.system.md over system-driver.
+v0.3-signal: Systems profile needs hardware-facing contracts and scheduler/interrupt examples.
 prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
@@ -1341,6 +1732,11 @@ semantic-task: network-driver-live-codex-core-draft-73
 profile: System
 surface-tags: core
 package: examples/network_driver.ail
+use-case: System-level network driver boundary with effects, capabilities, and packets.
+capability-level: low-level
+capability-under-test: system-driver
+distinctness-claim: network-driver-live-codex-core-draft-73 exercises docs/ail/prompts/core-draft.system.md over system-driver.
+v0.3-signal: Systems profile needs hardware-facing contracts and scheduler/interrupt examples.
 prompt-file: docs/ail/prompts/core-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:0175222e4a84bec4
@@ -1358,6 +1754,11 @@ semantic-task: network-driver-live-codex-diagnostic-repair-74
 profile: System
 surface-tags: core
 package: examples/network_driver.ail
+use-case: System-level network driver boundary with effects, capabilities, and packets.
+capability-level: low-level
+capability-under-test: system-driver
+distinctness-claim: network-driver-live-codex-diagnostic-repair-74 exercises docs/ail/prompts/diagnostic-repair.system.md over system-driver.
+v0.3-signal: Systems profile needs hardware-facing contracts and scheduler/interrupt examples.
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:c9700f2c2e57e49e
@@ -1375,6 +1776,11 @@ semantic-task: secret-access-live-codex-core-to-spec-75
 profile: System
 surface-tags: core
 package: examples/secret_access.ail
+use-case: Secret and permission semantics for guarded internal data access.
+capability-level: mid-level
+capability-under-test: security-permissions
+distinctness-claim: secret-access-live-codex-core-to-spec-75 exercises docs/ail/prompts/core-to-spec.system.md over security-permissions.
+v0.3-signal: Security examples need threat-model annotations and audit trails.
 prompt-file: docs/ail/prompts/core-to-spec.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:9f447e07620792b2
@@ -1394,6 +1800,11 @@ semantic-task: secret-access-live-codex-core-to-summary-76
 profile: System
 surface-tags: core
 package: examples/secret_access.ail
+use-case: Secret and permission semantics for guarded internal data access.
+capability-level: mid-level
+capability-under-test: security-permissions
+distinctness-claim: secret-access-live-codex-core-to-summary-76 exercises docs/ail/prompts/core-to-summary.system.md over security-permissions.
+v0.3-signal: Security examples need threat-model annotations and audit trails.
 prompt-file: docs/ail/prompts/core-to-summary.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:49f26ec41d722633
@@ -1413,6 +1824,11 @@ semantic-task: secret-access-live-codex-flow-patch-77
 profile: System
 surface-tags: core
 package: examples/secret_access.ail
+use-case: Secret and permission semantics for guarded internal data access.
+capability-level: mid-level
+capability-under-test: security-permissions
+distinctness-claim: secret-access-live-codex-flow-patch-77 exercises docs/ail/prompts/flow-patch.system.md over security-permissions.
+v0.3-signal: Security examples need threat-model annotations and audit trails.
 prompt-file: docs/ail/prompts/flow-patch.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:30136a21ab8d8eb6
@@ -1432,6 +1848,11 @@ semantic-task: secret-access-live-codex-trace-debug-78
 profile: System
 surface-tags: core
 package: examples/secret_access.ail
+use-case: Secret and permission semantics for guarded internal data access.
+capability-level: mid-level
+capability-under-test: security-permissions
+distinctness-claim: secret-access-live-codex-trace-debug-78 exercises docs/ail/prompts/trace-debug.system.md over security-permissions.
+v0.3-signal: Security examples need threat-model annotations and audit trails.
 prompt-file: docs/ail/prompts/trace-debug.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:f5fffd069da83242
@@ -1451,6 +1872,11 @@ semantic-task: secret-access-live-codex-interop-79
 profile: System
 surface-tags: core
 package: examples/secret_access.ail
+use-case: Secret and permission semantics for guarded internal data access.
+capability-level: mid-level
+capability-under-test: security-permissions
+distinctness-claim: secret-access-live-codex-interop-79 exercises docs/ail/prompts/interop.system.md over security-permissions.
+v0.3-signal: Security examples need threat-model annotations and audit trails.
 prompt-file: docs/ail/prompts/interop.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:87f6dd1772d48729
@@ -1470,6 +1896,11 @@ semantic-task: repeated-task-live-codex-interview-80
 profile: System
 surface-tags: core
 package: examples/repeated_task.ail
+use-case: Scheduled repeated maintenance workflow with stateful trace evidence.
+capability-level: high-level
+capability-under-test: scheduled-workflow
+distinctness-claim: repeated-task-live-codex-interview-80 exercises docs/ail/prompts/interview.system.md over scheduled-workflow.
+v0.3-signal: Workflow examples need temporal policies and retry/backoff semantics.
 prompt-file: docs/ail/prompts/interview.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
@@ -1489,6 +1920,11 @@ semantic-task: repeated-task-live-codex-requirements-81
 profile: System
 surface-tags: core
 package: examples/repeated_task.ail
+use-case: Scheduled repeated maintenance workflow with stateful trace evidence.
+capability-level: high-level
+capability-under-test: scheduled-workflow
+distinctness-claim: repeated-task-live-codex-requirements-81 exercises docs/ail/prompts/requirements.system.md over scheduled-workflow.
+v0.3-signal: Workflow examples need temporal policies and retry/backoff semantics.
 prompt-file: docs/ail/prompts/requirements.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
@@ -1508,6 +1944,11 @@ semantic-task: repeated-task-live-codex-spec-draft-82
 profile: System
 surface-tags: core
 package: examples/repeated_task.ail
+use-case: Scheduled repeated maintenance workflow with stateful trace evidence.
+capability-level: high-level
+capability-under-test: scheduled-workflow
+distinctness-claim: repeated-task-live-codex-spec-draft-82 exercises docs/ail/prompts/spec-draft.system.md over scheduled-workflow.
+v0.3-signal: Workflow examples need temporal policies and retry/backoff semantics.
 prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
@@ -1527,6 +1968,11 @@ semantic-task: repeated-task-live-codex-core-draft-83
 profile: System
 surface-tags: core
 package: examples/repeated_task.ail
+use-case: Scheduled repeated maintenance workflow with stateful trace evidence.
+capability-level: high-level
+capability-under-test: scheduled-workflow
+distinctness-claim: repeated-task-live-codex-core-draft-83 exercises docs/ail/prompts/core-draft.system.md over scheduled-workflow.
+v0.3-signal: Workflow examples need temporal policies and retry/backoff semantics.
 prompt-file: docs/ail/prompts/core-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:0175222e4a84bec4
@@ -1546,6 +1992,11 @@ semantic-task: repeated-task-live-codex-diagnostic-repair-84
 profile: System
 surface-tags: core
 package: examples/repeated_task.ail
+use-case: Scheduled repeated maintenance workflow with stateful trace evidence.
+capability-level: high-level
+capability-under-test: scheduled-workflow
+distinctness-claim: repeated-task-live-codex-diagnostic-repair-84 exercises docs/ail/prompts/diagnostic-repair.system.md over scheduled-workflow.
+v0.3-signal: Workflow examples need temporal policies and retry/backoff semantics.
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:c9700f2c2e57e49e
@@ -1565,6 +2016,11 @@ semantic-task: c-interop-live-codex-core-to-spec-85
 profile: System
 surface-tags: core
 package: examples/c_interop.ail
+use-case: Checked C and host interop with ABI, ownership, status, and trace contracts.
+capability-level: low-level
+capability-under-test: c-host-interop
+distinctness-claim: c-interop-live-codex-core-to-spec-85 exercises docs/ail/prompts/core-to-spec.system.md over c-host-interop.
+v0.3-signal: Interop needs deeper unsafe-boundary tutorials and more ABI fixture diversity.
 prompt-file: docs/ail/prompts/core-to-spec.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:9f447e07620792b2
@@ -1583,6 +2039,11 @@ semantic-task: c-interop-live-codex-core-to-summary-86
 profile: System
 surface-tags: core
 package: examples/c_interop.ail
+use-case: Checked C and host interop with ABI, ownership, status, and trace contracts.
+capability-level: low-level
+capability-under-test: c-host-interop
+distinctness-claim: c-interop-live-codex-core-to-summary-86 exercises docs/ail/prompts/core-to-summary.system.md over c-host-interop.
+v0.3-signal: Interop needs deeper unsafe-boundary tutorials and more ABI fixture diversity.
 prompt-file: docs/ail/prompts/core-to-summary.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:49f26ec41d722633
@@ -1601,6 +2062,11 @@ semantic-task: c-interop-live-codex-flow-patch-87
 profile: System
 surface-tags: core
 package: examples/c_interop.ail
+use-case: Checked C and host interop with ABI, ownership, status, and trace contracts.
+capability-level: low-level
+capability-under-test: c-host-interop
+distinctness-claim: c-interop-live-codex-flow-patch-87 exercises docs/ail/prompts/flow-patch.system.md over c-host-interop.
+v0.3-signal: Interop needs deeper unsafe-boundary tutorials and more ABI fixture diversity.
 prompt-file: docs/ail/prompts/flow-patch.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:30136a21ab8d8eb6
@@ -1619,6 +2085,11 @@ semantic-task: c-interop-live-codex-trace-debug-88
 profile: System
 surface-tags: core
 package: examples/c_interop.ail
+use-case: Checked C and host interop with ABI, ownership, status, and trace contracts.
+capability-level: low-level
+capability-under-test: c-host-interop
+distinctness-claim: c-interop-live-codex-trace-debug-88 exercises docs/ail/prompts/trace-debug.system.md over c-host-interop.
+v0.3-signal: Interop needs deeper unsafe-boundary tutorials and more ABI fixture diversity.
 prompt-file: docs/ail/prompts/trace-debug.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:f5fffd069da83242
@@ -1637,6 +2108,11 @@ semantic-task: c-interop-live-codex-interop-89
 profile: System
 surface-tags: core
 package: examples/c_interop.ail
+use-case: Checked C and host interop with ABI, ownership, status, and trace contracts.
+capability-level: low-level
+capability-under-test: c-host-interop
+distinctness-claim: c-interop-live-codex-interop-89 exercises docs/ail/prompts/interop.system.md over c-host-interop.
+v0.3-signal: Interop needs deeper unsafe-boundary tutorials and more ABI fixture diversity.
 prompt-file: docs/ail/prompts/interop.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:87f6dd1772d48729
@@ -1655,6 +2131,11 @@ semantic-task: support-ticket-live-codex-interview-90
 profile: System
 surface-tags: core
 package: examples/support_ticket.ail
+use-case: Application workflow for support-ticket actions, permissions, failures, and traces.
+capability-level: high-level
+capability-under-test: application-workflow
+distinctness-claim: support-ticket-live-codex-interview-90 exercises docs/ail/prompts/interview.system.md over application-workflow.
+v0.3-signal: Application examples need user-story walkthroughs from intent to runtime trace.
 prompt-file: docs/ail/prompts/interview.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
@@ -1674,6 +2155,11 @@ semantic-task: support-ticket-live-codex-requirements-91
 profile: System
 surface-tags: core
 package: examples/support_ticket.ail
+use-case: Application workflow for support-ticket actions, permissions, failures, and traces.
+capability-level: high-level
+capability-under-test: application-workflow
+distinctness-claim: support-ticket-live-codex-requirements-91 exercises docs/ail/prompts/requirements.system.md over application-workflow.
+v0.3-signal: Application examples need user-story walkthroughs from intent to runtime trace.
 prompt-file: docs/ail/prompts/requirements.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
@@ -1693,6 +2179,11 @@ semantic-task: support-ticket-live-codex-spec-92
 profile: System
 surface-tags: core
 package: examples/support_ticket.ail
+use-case: Application workflow for support-ticket actions, permissions, failures, and traces.
+capability-level: high-level
+capability-under-test: application-workflow
+distinctness-claim: support-ticket-live-codex-spec-92 exercises docs/ail/prompts/spec-draft.system.md over application-workflow.
+v0.3-signal: Application examples need user-story walkthroughs from intent to runtime trace.
 prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
@@ -1712,6 +2203,11 @@ semantic-task: support-ticket-live-codex-core-draft-93
 profile: System
 surface-tags: core
 package: examples/support_ticket.ail
+use-case: Application workflow for support-ticket actions, permissions, failures, and traces.
+capability-level: high-level
+capability-under-test: application-workflow
+distinctness-claim: support-ticket-live-codex-core-draft-93 exercises docs/ail/prompts/core-draft.system.md over application-workflow.
+v0.3-signal: Application examples need user-story walkthroughs from intent to runtime trace.
 prompt-file: docs/ail/prompts/core-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:0175222e4a84bec4
@@ -1731,6 +2227,11 @@ semantic-task: support-ticket-live-codex-diagnostic-repair-94
 profile: System
 surface-tags: core
 package: examples/support_ticket.ail
+use-case: Application workflow for support-ticket actions, permissions, failures, and traces.
+capability-level: high-level
+capability-under-test: application-workflow
+distinctness-claim: support-ticket-live-codex-diagnostic-repair-94 exercises docs/ail/prompts/diagnostic-repair.system.md over application-workflow.
+v0.3-signal: Application examples need user-story walkthroughs from intent to runtime trace.
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:c9700f2c2e57e49e
@@ -1750,6 +2251,11 @@ semantic-task: stateful-counter-live-codex-core-to-spec-95
 profile: System
 surface-tags: core
 package: examples/stateful_counter.ail
+use-case: Minimal state mutation that proves deterministic VM/native behavior.
+capability-level: mid-level
+capability-under-test: stateful-runtime
+distinctness-claim: stateful-counter-live-codex-core-to-spec-95 exercises docs/ail/prompts/core-to-spec.system.md over stateful-runtime.
+v0.3-signal: State examples need clearer persistence and concurrency boundaries.
 prompt-file: docs/ail/prompts/core-to-spec.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:9f447e07620792b2
@@ -1769,6 +2275,11 @@ semantic-task: stateful-counter-live-codex-core-to-summary-96
 profile: System
 surface-tags: core
 package: examples/stateful_counter.ail
+use-case: Minimal state mutation that proves deterministic VM/native behavior.
+capability-level: mid-level
+capability-under-test: stateful-runtime
+distinctness-claim: stateful-counter-live-codex-core-to-summary-96 exercises docs/ail/prompts/core-to-summary.system.md over stateful-runtime.
+v0.3-signal: State examples need clearer persistence and concurrency boundaries.
 prompt-file: docs/ail/prompts/core-to-summary.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:49f26ec41d722633
@@ -1788,6 +2299,11 @@ semantic-task: stateful-counter-live-codex-flow-patch-97
 profile: System
 surface-tags: core
 package: examples/stateful_counter.ail
+use-case: Minimal state mutation that proves deterministic VM/native behavior.
+capability-level: mid-level
+capability-under-test: stateful-runtime
+distinctness-claim: stateful-counter-live-codex-flow-patch-97 exercises docs/ail/prompts/flow-patch.system.md over stateful-runtime.
+v0.3-signal: State examples need clearer persistence and concurrency boundaries.
 prompt-file: docs/ail/prompts/flow-patch.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:30136a21ab8d8eb6
@@ -1807,6 +2323,11 @@ semantic-task: stateful-counter-live-codex-trace-debug-98
 profile: System
 surface-tags: core
 package: examples/stateful_counter.ail
+use-case: Minimal state mutation that proves deterministic VM/native behavior.
+capability-level: mid-level
+capability-under-test: stateful-runtime
+distinctness-claim: stateful-counter-live-codex-trace-debug-98 exercises docs/ail/prompts/trace-debug.system.md over stateful-runtime.
+v0.3-signal: State examples need clearer persistence and concurrency boundaries.
 prompt-file: docs/ail/prompts/trace-debug.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:f5fffd069da83242
@@ -1826,6 +2347,11 @@ semantic-task: support-ticket-live-codex-rejected-99
 profile: System
 surface-tags: core
 package: examples/support_ticket.ail
+use-case: Rejected semantic-drift case used to verify diagnostic teaching coverage.
+capability-level: high-level
+capability-under-test: diagnostic-semantic-drift
+distinctness-claim: support-ticket-live-codex-rejected-99 exercises docs/ail/prompts/interop.system.md over diagnostic-semantic-drift.
+v0.3-signal: Rejected examples need repair tutorials that convert diagnostics into corrected specs.
 prompt-file: docs/ail/prompts/interop.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:87f6dd1772d48729
@@ -1847,6 +2373,11 @@ semantic-task: stateful-counter-live-codex-accepted-100
 profile: System
 surface-tags: core
 package: examples/stateful_counter.ail
+use-case: Minimal state mutation that proves deterministic VM/native behavior.
+capability-level: mid-level
+capability-under-test: stateful-runtime
+distinctness-claim: stateful-counter-live-codex-accepted-100 exercises docs/ail/prompts/interop.system.md over stateful-runtime.
+v0.3-signal: State examples need clearer persistence and concurrency boundaries.
 prompt-file: docs/ail/prompts/interop.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:87f6dd1772d48729
@@ -1866,6 +2397,11 @@ semantic-task: support-ticket-profile-mismatch-rejected-101
 profile: System
 surface-tags: core
 package: examples/support_ticket.ail
+use-case: Rejected profile-mismatch case used to verify diagnostic teaching coverage.
+capability-level: high-level
+capability-under-test: diagnostic-profile-mismatch
+distinctness-claim: support-ticket-profile-mismatch-rejected-101 exercises docs/ail/prompts/spec-draft.system.md over diagnostic-profile-mismatch.
+v0.3-signal: Rejected examples need repair tutorials that convert diagnostics into corrected specs.
 prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
@@ -1887,6 +2423,11 @@ semantic-task: support-ticket-missing-trace-rejected-102
 profile: System
 surface-tags: core
 package: examples/support_ticket.ail
+use-case: Rejected missing-trace case used to verify diagnostic teaching coverage.
+capability-level: high-level
+capability-under-test: diagnostic-missing-trace
+distinctness-claim: support-ticket-missing-trace-rejected-102 exercises docs/ail/prompts/spec-draft.system.md over diagnostic-missing-trace.
+v0.3-signal: Rejected examples need repair tutorials that convert diagnostics into corrected specs.
 prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
@@ -1908,6 +2449,11 @@ semantic-task: refund-tool-hallucinated-capability-rejected-103
 profile: AgentTool
 surface-tags: tool,capability
 package: examples/refund_tool.ail
+use-case: Rejected hallucinated-capability case used to verify diagnostic teaching coverage.
+capability-level: high-level
+capability-under-test: diagnostic-hallucinated-capability
+distinctness-claim: refund-tool-hallucinated-capability-rejected-103 exercises docs/ail/prompts/diagnostic-repair.system.md over diagnostic-hallucinated-capability.
+v0.3-signal: Rejected examples need repair tutorials that convert diagnostics into corrected specs.
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:c9700f2c2e57e49e
@@ -1929,6 +2475,11 @@ semantic-task: system-linux-syscall-darwin-unsupported-104
 profile: System
 surface-tags: system,backend
 package: examples/darwin_linux_effect.ail
+use-case: Rejected unsupported-target case used to verify diagnostic teaching coverage.
+capability-level: low-level
+capability-under-test: diagnostic-unsupported-target
+distinctness-claim: system-linux-syscall-darwin-unsupported-104 exercises docs/ail/prompts/spec-draft.system.md over diagnostic-unsupported-target.
+v0.3-signal: Rejected examples need repair tutorials that convert diagnostics into corrected specs.
 prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
@@ -1950,6 +2501,11 @@ semantic-task: c-interop-nullable-nonnull-rejected-105
 profile: System
 surface-tags: c-interop,ffi
 package: examples/c_interop.ail
+use-case: Rejected invalid-interop case used to verify diagnostic teaching coverage.
+capability-level: low-level
+capability-under-test: diagnostic-invalid-interop
+distinctness-claim: c-interop-nullable-nonnull-rejected-105 exercises docs/ail/prompts/interop.system.md over diagnostic-invalid-interop.
+v0.3-signal: Rejected examples need repair tutorials that convert diagnostics into corrected specs.
 prompt-file: docs/ail/prompts/interop.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:87f6dd1772d48729
@@ -1971,6 +2527,11 @@ semantic-task: network-driver-effect-without-capability-rejected-106
 profile: System
 surface-tags: system,capability
 package: examples/network_driver.ail
+use-case: Rejected permission-capability case used to verify diagnostic teaching coverage.
+capability-level: low-level
+capability-under-test: diagnostic-permission-capability
+distinctness-claim: network-driver-effect-without-capability-rejected-106 exercises docs/ail/prompts/spec-draft.system.md over diagnostic-permission-capability.
+v0.3-signal: Rejected examples need repair tutorials that convert diagnostics into corrected specs.
 prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
@@ -1992,6 +2553,11 @@ semantic-task: package-registry-missing-import-rejected-107
 profile: Application
 surface-tags: package-import,registry
 package: examples/missing_registry_import.ail
+use-case: Rejected package-resolution case used to verify diagnostic teaching coverage.
+capability-level: mid-level
+capability-under-test: diagnostic-package-resolution
+distinctness-claim: package-registry-missing-import-rejected-107 exercises docs/ail/prompts/requirements.system.md over diagnostic-package-resolution.
+v0.3-signal: Rejected examples need repair tutorials that convert diagnostics into corrected specs.
 prompt-file: docs/ail/prompts/requirements.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
@@ -2013,6 +2579,11 @@ semantic-task: ui-workflow-live-codex-spec-draft-108
 profile: UI
 surface-tags: ui
 package: examples/ui_workflow.ail
+use-case: Accessible route, form, dashboard, and workflow semantics for a user-facing app.
+capability-level: high-level
+capability-under-test: ui-workflow
+distinctness-claim: ui-workflow-live-codex-spec-draft-108 exercises docs/ail/prompts/spec-draft.system.md over ui-workflow.
+v0.3-signal: UI authoring needs stronger visual review artifacts and accessibility exercises.
 prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
@@ -2032,6 +2603,11 @@ semantic-task: ui-workflow-live-codex-requirements-109
 profile: UI
 surface-tags: ui
 package: examples/ui_workflow.ail
+use-case: Accessible route, form, dashboard, and workflow semantics for a user-facing app.
+capability-level: high-level
+capability-under-test: ui-workflow
+distinctness-claim: ui-workflow-live-codex-requirements-109 exercises docs/ail/prompts/requirements.system.md over ui-workflow.
+v0.3-signal: UI authoring needs stronger visual review artifacts and accessibility exercises.
 prompt-file: docs/ail/prompts/requirements.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
@@ -2051,6 +2627,11 @@ semantic-task: stateful-counter-live-codex-repair-110
 profile: System
 surface-tags: core,repair
 package: examples/stateful_counter.ail
+use-case: Minimal state mutation that proves deterministic VM/native behavior.
+capability-level: mid-level
+capability-under-test: stateful-runtime
+distinctness-claim: stateful-counter-live-codex-repair-110 exercises docs/ail/prompts/repair.system.md over stateful-runtime.
+v0.3-signal: State examples need clearer persistence and concurrency boundaries.
 prompt-file: docs/ail/prompts/repair.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:6d171ea7c34f3e31

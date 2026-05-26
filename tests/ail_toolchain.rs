@@ -69,6 +69,11 @@ fn e2e_corpus_entry_text(index: usize, overrides: &[(&str, &str)]) -> String {
         30..=34 => "backend-portability",
         _ => "core",
     };
+    let capability_level = match index {
+        0..=29 | 55..=74 | 85..=94 => "low-level",
+        35..=39 | 75..=84 | 95..=99 => "mid-level",
+        _ => "high-level",
+    };
     let target = match index {
         85..=89 => "wasm32-unknown-sandbox-wasm",
         90..=94 => "aarch64-apple-darwin-libsystem-macho",
@@ -84,6 +89,20 @@ fn e2e_corpus_entry_text(index: usize, overrides: &[(&str, &str)]) -> String {
         ("semantic-task", format!("support-ticket-{index}")),
         ("profile", profile.to_string()),
         ("surface-tags", surface_tags.to_string()),
+        (
+            "use-case",
+            format!("Synthetic support-ticket scenario {index} for verifier coverage."),
+        ),
+        ("capability-level", capability_level.to_string()),
+        ("capability-under-test", "application-workflow".to_string()),
+        (
+            "distinctness-claim",
+            format!("Example {index} validates this capability through its own prompt surface."),
+        ),
+        (
+            "v0.3-signal",
+            format!("Scenario {index} records a future learning gap for example coverage."),
+        ),
         ("package", "examples/support_ticket.ail".to_string()),
         ("prompt-file", prompt_file.to_string()),
         ("prompt-version", "ail-prompts.v0.2".to_string()),
@@ -20035,6 +20054,18 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
+        report.contains("capability-level-count low-level 32"),
+        "{report}"
+    );
+    assert!(
+        report.contains("capability-level-count mid-level 37"),
+        "{report}"
+    );
+    assert!(
+        report.contains("capability-level-count high-level 42"),
+        "{report}"
+    );
+    assert!(
         report.contains("failure-taxonomy-count semantic-drift 1"),
         "{report}"
     );
@@ -21562,6 +21593,11 @@ fn cli_ail_e2e_corpus_requires_llm_and_codex_executor_families() {
              semantic-task: support-ticket-{index}\n\
              profile: Application\n\
              package: examples/support_ticket.ail\n\
+             use-case: Support-ticket verifier scenario {index}\n\
+             capability-level: high-level\n\
+             capability-under-test: application-workflow\n\
+             distinctness-claim: Example {index} validates executor coverage.\n\
+             v0.3-signal: Executor coverage should become a documented learning dimension.\n\
              prompt-file: docs/ail/prompts/spec-draft.system.md\n\
              prompt-version: ail-prompts.v0.2\n\
              prompt-fingerprint: fnv64:spec-draft\n\
@@ -21624,6 +21660,11 @@ fn cli_ail_e2e_corpus_requires_rejected_example_diagnostics() {
              semantic-task: support-ticket-{index}\n\
              profile: Application\n\
              package: examples/support_ticket.ail\n\
+             use-case: Support-ticket accepted scenario {index}\n\
+             capability-level: high-level\n\
+             capability-under-test: application-workflow\n\
+             distinctness-claim: Accepted example {index} validates diagnostic threshold setup.\n\
+             v0.3-signal: Accepted examples should explain the diagnostic they protect against.\n\
              prompt-file: docs/ail/prompts/spec-draft.system.md\n\
              prompt-version: ail-prompts.v0.2\n\
              prompt-fingerprint: fnv64:spec-draft\n\
@@ -21643,6 +21684,11 @@ fn cli_ail_e2e_corpus_requires_rejected_example_diagnostics() {
          semantic-task: support-ticket-rejected\n\
          profile: Application\n\
          package: examples/support_ticket.ail\n\
+         use-case: Rejected support-ticket diagnostic scenario\n\
+         capability-level: high-level\n\
+         capability-under-test: diagnostic-replay\n\
+         distinctness-claim: Rejected example validates required diagnostic metadata.\n\
+         v0.3-signal: Rejected examples need repair tutorials.\n\
          prompt-file: docs/ail/prompts/spec-draft.system.md\n\
          prompt-version: ail-prompts.v0.2\n\
          prompt-fingerprint: fnv64:spec-draft\n\
@@ -21714,6 +21760,11 @@ fn cli_ail_e2e_corpus_requires_full_prompt_pack_coverage() {
              semantic-task: support-ticket-{index}\n\
              profile: Application\n\
              package: examples/support_ticket.ail\n\
+             use-case: Support-ticket prompt coverage scenario {index}\n\
+             capability-level: high-level\n\
+             capability-under-test: prompt-surface-coverage\n\
+             distinctness-claim: Example {index} validates prompt-pack coverage requirements.\n\
+             v0.3-signal: Prompt matrices should be separated from semantic use-case diversity.\n\
              prompt-file: docs/ail/prompts/spec-draft.system.md\n\
              prompt-version: ail-prompts.v0.2\n\
              prompt-fingerprint: fnv64:spec-draft\n\
@@ -21839,6 +21890,56 @@ fn cli_ail_e2e_corpus_requires_surface_thresholds() {
     assert!(
         stderr.contains(
             "ail-examples requires at least 10 standard-library or package-import examples; found 0"
+        ),
+        "{stderr}"
+    );
+
+    let _ = fs::remove_dir_all(corpus_dir);
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
+fn cli_ail_e2e_corpus_requires_capability_level_thresholds() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let corpus_dir = std::env::temp_dir().join(format!(
+        "ail-examples-capability-level-{}",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-examples-capability-level-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&corpus_dir);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&corpus_dir).unwrap();
+    let mut corpus_text = String::new();
+    for index in 0..100 {
+        corpus_text.push_str(&e2e_corpus_entry_text(
+            index,
+            &[("capability-level", "high-level")],
+        ));
+    }
+    fs::write(corpus_dir.join("examples.md"), corpus_text).unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-examples",
+            corpus_dir.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains(
+            "ail-examples requires at least 20 capability-level low-level examples; found 0"
         ),
         "{stderr}"
     );

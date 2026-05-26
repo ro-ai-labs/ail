@@ -641,7 +641,11 @@ fn parse_ail_prompt_corpus_entries(
             && let Some((key, value)) = line.split_once(':')
         {
             let key = key.trim();
-            if !key.is_empty() && key.chars().all(|ch| ch.is_ascii_lowercase() || ch == '-') {
+            if !key.is_empty()
+                && key.chars().all(|ch| {
+                    ch.is_ascii_lowercase() || ch.is_ascii_digit() || ch == '-' || ch == '.'
+                })
+            {
                 current_fields.insert(key.to_string(), value.trim().to_string());
             }
         }
@@ -1121,7 +1125,11 @@ fn parse_ail_e2e_corpus_entries(
             && let Some((key, value)) = line.split_once(':')
         {
             let key = key.trim();
-            if !key.is_empty() && key.chars().all(|ch| ch.is_ascii_lowercase() || ch == '-') {
+            if !key.is_empty()
+                && key.chars().all(|ch| {
+                    ch.is_ascii_lowercase() || ch.is_ascii_digit() || ch == '-' || ch == '.'
+                })
+            {
                 current_fields.insert(key.to_string(), value.trim().to_string());
             }
         }
@@ -1144,6 +1152,11 @@ fn ail_e2e_corpus_entry_from_fields(
     for field in [
         "semantic-task",
         "profile",
+        "use-case",
+        "capability-level",
+        "capability-under-test",
+        "distinctness-claim",
+        "v0.3-signal",
         "package",
         "prompt-file",
         "prompt-version",
@@ -1179,6 +1192,15 @@ fn ail_e2e_corpus_entry_from_fields(
     ) {
         return Err(format!(
             "examples catalog entry {id} has unknown target {target}"
+        ));
+    }
+    let capability_level = fields
+        .get("capability-level")
+        .map(String::as_str)
+        .unwrap_or_default();
+    if !matches!(capability_level, "low-level" | "mid-level" | "high-level") {
+        return Err(format!(
+            "examples catalog entry {id} has unknown capability-level {capability_level}"
         ));
     }
     let executor_family = fields
@@ -1682,6 +1704,7 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
     ];
     for (field, label) in [
         ("profile", "profile-count"),
+        ("capability-level", "capability-level-count"),
         ("prompt-file", "prompt-count"),
         ("executor-family", "executor-family-count"),
         ("capture-origin", "capture-origin-count"),
@@ -2250,6 +2273,29 @@ fn validate_ail_e2e_corpus_release_coverage(entries: &[AilE2eCorpusEntry]) -> Re
         if found < required_count {
             return Err(format!(
                 "ail-examples requires at least {required_count} surface-tag {required_surface} examples; found {found}"
+            ));
+        }
+    }
+    let mut capability_level_counts = BTreeMap::new();
+    for entry in entries {
+        if let Some(capability_level) = entry.fields.get("capability-level") {
+            *capability_level_counts
+                .entry(capability_level.as_str())
+                .or_insert(0usize) += 1;
+        }
+    }
+    for (required_level, required_count) in [
+        ("low-level", 20usize),
+        ("mid-level", 20usize),
+        ("high-level", 20usize),
+    ] {
+        let found = capability_level_counts
+            .get(required_level)
+            .copied()
+            .unwrap_or(0);
+        if found < required_count {
+            return Err(format!(
+                "ail-examples requires at least {required_count} capability-level {required_level} examples; found {found}"
             ));
         }
     }

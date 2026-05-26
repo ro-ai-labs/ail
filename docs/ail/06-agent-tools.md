@@ -142,5 +142,5 @@ does not exceed the captured amount.
 
 The related examples are:
 
-- `examples/refund-tool.ail-spec.md`
-- `examples/refund-tool.ail-core.md`
+- `../../examples/refund_tool.ail/spec.ail-spec.md`
+- `../../examples/refund_tool.ail/checked.ail-core.md`
