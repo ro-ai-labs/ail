@@ -1423,6 +1423,8 @@ fn examples_agents_include_prompt_review_contract() {
         "executor-family: codex-skill-agent",
         "target artifact: AIL-Prompt-Interaction-Review",
         "Do not promote generated content into ./examples",
+        "prompt-envelope-valid-count",
+        "prompt-envelope-invalid-count",
         "ail-examples examples --artifact-dir",
         "cargo run -- ail-v03-roadmap examples",
         "v03-roadmap.txt",
@@ -1538,6 +1540,21 @@ fn script_v03_prompt_llm_harness_help_lists_all_prompts_and_dry_run() {
             "python3 scripts/run_v03_prompt_llm_harness.py --review-artifacts /tmp/ail-v03-prompt-llm"
         ),
         "{prompt_docs}"
+    );
+    assert!(
+        prompt_docs.contains("prompt-envelope-valid-count")
+            && prompt_docs.contains("prompt-envelope-invalid-count"),
+        "{prompt_docs}"
+    );
+    let prompt_manual = fs::read_to_string(format!(
+        "{}/docs/ail/manual/03-prompt-interaction.md",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .unwrap();
+    assert!(
+        prompt_manual.contains("prompt-envelope-valid-count")
+            && prompt_manual.contains("prompt-envelope-invalid-count"),
+        "{prompt_manual}"
     );
 }
 

@@ -148,6 +148,67 @@ def extract_content(response: dict[str, object]) -> str:
     return ""
 
 
+def prompt_envelope_json(content: str) -> tuple[dict[str, object] | None, str]:
+    candidate = content.strip()
+    if not candidate:
+        return None, "prompt response content is empty"
+    if candidate.startswith("```"):
+        lines = candidate.splitlines()
+        if lines:
+            lines = lines[1:]
+        if lines and lines[-1].strip().startswith("```"):
+            lines = lines[:-1]
+        candidate = "\n".join(lines).strip()
+    try:
+        value = json.loads(candidate)
+    except json.JSONDecodeError:
+        start = candidate.find("{")
+        end = candidate.rfind("}")
+        if start == -1 or end <= start:
+            return None, "prompt response must be a JSON prompt-pack envelope"
+        try:
+            value = json.loads(candidate[start : end + 1])
+        except json.JSONDecodeError as error:
+            return None, f"prompt response contains invalid JSON envelope: {error}"
+    if not isinstance(value, dict):
+        return None, "prompt response envelope must be a JSON object"
+    return value, ""
+
+
+def classify_prompt_content(content: str) -> tuple[str, str]:
+    envelope, error = prompt_envelope_json(content)
+    if envelope is None:
+        return "empty" if not content.strip() else "invalid", error
+    artifact_kind = envelope.get("artifact_kind")
+    if not isinstance(artifact_kind, str) or not artifact_kind.strip():
+        return "invalid", "prompt envelope artifact_kind must be a non-empty string"
+    artifact_text = envelope.get("artifact_text", "")
+    if not isinstance(artifact_text, str):
+        return "invalid", "prompt envelope artifact_text must be a string"
+    questions_value = envelope.get("questions", [])
+    if not isinstance(questions_value, list) or not all(
+        isinstance(question, str) for question in questions_value
+    ):
+        return "invalid", "prompt envelope questions must be a list of strings"
+    questions = [
+        question.strip() for question in questions_value if question.strip()
+    ]
+    has_artifact = bool(artifact_text.strip())
+    has_questions = bool(questions)
+    if has_artifact and has_questions:
+        return "invalid", "prompt envelope cannot contain both artifact_text and questions"
+    if not has_artifact and not has_questions:
+        return "invalid", "prompt envelope must contain artifact_text or questions"
+    checker_handoff = envelope.get("checker_handoff")
+    if not isinstance(checker_handoff, dict):
+        return "invalid", "prompt envelope checker_handoff must be an object"
+    if checker_handoff.get("must_check") is not True:
+        return "invalid", "prompt envelope checker_handoff.must_check must be true"
+    if has_questions:
+        return "prompt-envelope-questions", ""
+    return "prompt-envelope-artifact", ""
+
+
 def write_text(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text)
@@ -195,8 +256,15 @@ def review_artifacts(args: argparse.Namespace, paths: list[Path]) -> int:
     errors: list[str] = []
     fingerprint_checks = 0
     content_nonempty = 0
+    content_kind_counts = {
+        "prompt-envelope-artifact": 0,
+        "prompt-envelope-questions": 0,
+        "invalid": 0,
+        "empty": 0,
+    }
     manifest_text = read_required_text(artifact_root / "manifest.v03-prompt-llm.txt", errors)
     report_text = read_required_text(artifact_root / "prompt-llm-harness-report.txt", errors)
+    report_lines = report_text.splitlines()
 
     for path, fingerprint_path in [
         (
@@ -232,6 +300,8 @@ def review_artifacts(args: argparse.Namespace, paths: list[Path]) -> int:
         request = load_json(request_path, errors)
         response = load_json(response_path, errors)
         content = read_required_text(content_path, errors)
+        content_kind, content_error = classify_prompt_content(content)
+        content_kind_counts[content_kind] = content_kind_counts.get(content_kind, 0) + 1
         for artifact_path in [request_path, response_path, content_path]:
             if check_fingerprint(artifact_path, errors):
                 fingerprint_checks += 1
@@ -247,10 +317,18 @@ def review_artifacts(args: argparse.Namespace, paths: list[Path]) -> int:
             content_nonempty += 1
         else:
             errors.append(f"empty content {rel}")
+        if content_kind in {"invalid", "empty"}:
+            errors.append(f"invalid prompt envelope {rel}: {content_error}")
         if rel not in report_text:
             errors.append(f"report missing prompt {rel}")
         if fnv64(prompt_text) not in report_text:
             errors.append(f"report missing prompt fingerprint {rel}")
+        prompt_report_line = next(
+            (line for line in report_lines if line.startswith(f"prompt {rel} ")),
+            "",
+        )
+        if prompt_report_line and f"content-kind {content_kind}" not in prompt_report_line:
+            errors.append(f"report content-kind mismatch {rel}: expected {content_kind}")
         if f"artifact {rel}" not in manifest_text:
             errors.append(f"manifest missing prompt artifact {rel}")
 
@@ -258,6 +336,23 @@ def review_artifacts(args: argparse.Namespace, paths: list[Path]) -> int:
     print(f"artifact-dir {artifact_root}")
     print(f"prompt-count {len(paths)}")
     print(f"content-nonempty-count {content_nonempty}")
+    valid_count = (
+        content_kind_counts["prompt-envelope-artifact"]
+        + content_kind_counts["prompt-envelope-questions"]
+    )
+    print(f"prompt-envelope-valid-count {valid_count}")
+    print(
+        "prompt-envelope-artifact-count "
+        f"{content_kind_counts['prompt-envelope-artifact']}"
+    )
+    print(
+        "prompt-envelope-questions-count "
+        f"{content_kind_counts['prompt-envelope-questions']}"
+    )
+    print(
+        "prompt-envelope-invalid-count "
+        f"{content_kind_counts['invalid'] + content_kind_counts['empty']}"
+    )
     print(f"fingerprint-check-count {fingerprint_checks}")
     if errors:
         print("review-result rejected")
@@ -357,6 +452,7 @@ def run_live(args: argparse.Namespace, paths: list[Path]) -> int:
         ) + "\n"
         response_text = json.dumps(response, indent=2, sort_keys=True) + "\n"
         content_text = extract_content(response) + "\n"
+        content_kind, _content_error = classify_prompt_content(content_text)
         request_path = artifact_root / "requests" / f"{stem}.json"
         response_path = artifact_root / "responses" / f"{stem}.json"
         content_path = artifact_root / "content" / f"{stem}.txt"
@@ -373,6 +469,7 @@ def run_live(args: argparse.Namespace, paths: list[Path]) -> int:
             "prompt "
             f"{rel} prompt-fingerprint {fnv64(prompt_text)} "
             f"response-fingerprint {fnv64(response_text)} "
+            f"content-kind {content_kind} "
             f"content-bytes {len(content_text.encode())}"
         )
         manifest_lines.append(

@@ -40,7 +40,31 @@ def write_text(path, text):
     path.write_text(text)
 
 
-def write_prompt_llm_review_fixture(artifact_dir, empty_content_for=None):
+def prompt_probe_envelope(prompt_name):
+    stem = prompt_name.removesuffix(".system.md")
+    return (
+        json.dumps(
+            {
+                "artifact_kind": "AIL-Prompt-Probe",
+                "artifact_text": "",
+                "questions": [f"What semantics should {stem} preserve?"],
+                "assumptions": [],
+                "provenance": [f"test:{stem}"],
+                "checker_handoff": {
+                    "must_check": True,
+                    "expected_profile": "Application",
+                    "expected_features": [],
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n"
+    )
+
+
+def write_prompt_llm_review_fixture(
+    artifact_dir, empty_content_for=None, invalid_content_for=None
+):
     artifact_dir.mkdir(parents=True, exist_ok=True)
     models_text = (
         json.dumps({"object": "list", "data": [{"id": "test-model"}]}, sort_keys=True)
@@ -63,7 +87,15 @@ def write_prompt_llm_review_fixture(artifact_dir, empty_content_for=None):
         prompt_rel = f"docs/ail/prompts/{prompt_name}"
         prompt_text = prompt_path.read_text()
         stem = prompt_name.removesuffix(".system.md")
-        content = "" if empty_content_for == prompt_name else f"Blocking questions for {stem}.\n"
+        if empty_content_for == prompt_name:
+            content = ""
+            content_kind = "empty"
+        elif invalid_content_for == prompt_name:
+            content = f"Raw non-envelope output for {stem}.\n"
+            content_kind = "invalid"
+        else:
+            content = prompt_probe_envelope(prompt_name)
+            content_kind = "prompt-envelope-questions"
         response = {"choices": [{"message": {"content": content.strip()}}], "model": "test-model"}
         request_text = json.dumps(
             {
@@ -103,7 +135,8 @@ def write_prompt_llm_review_fixture(artifact_dir, empty_content_for=None):
         )
         report_lines.append(
             f"prompt {prompt_rel} prompt-fingerprint {fnv64(prompt_text)} "
-            f"response-fingerprint {fnv64(response_text)} content-bytes {len(content_text.encode())}"
+            f"response-fingerprint {fnv64(response_text)} "
+            f"content-kind {content_kind} content-bytes {len(content_text.encode())}"
         )
         manifest_lines.append(
             f"artifact {prompt_rel} "
@@ -276,6 +309,8 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             self.assertIn("AIL-Prompt-LLM-Harness-Review:", review.stdout)
             self.assertIn("prompt-count 11", review.stdout)
             self.assertIn("content-nonempty-count 11", review.stdout)
+            self.assertIn("prompt-envelope-valid-count 11", review.stdout)
+            self.assertIn("prompt-envelope-questions-count 11", review.stdout)
             self.assertIn("review-result accepted", review.stdout)
         finally:
             shutil.rmtree(artifact_dir, ignore_errors=True)
@@ -307,6 +342,37 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
                 "empty content docs/ail/prompts/requirements.system.md",
                 review.stdout,
             )
+        finally:
+            shutil.rmtree(artifact_dir, ignore_errors=True)
+
+    def test_prompt_llm_harness_review_rejects_raw_non_envelope_content(self):
+        artifact_dir = Path(tempfile.mkdtemp(prefix="ail-prompt-llm-review-invalid-"))
+        try:
+            write_prompt_llm_review_fixture(
+                artifact_dir, invalid_content_for="requirements.system.md"
+            )
+            review = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_prompt_llm_harness.py",
+                    "--review-artifacts",
+                    str(artifact_dir),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertNotEqual(
+                review.returncode,
+                0,
+                f"stdout:\n{review.stdout}\nstderr:\n{review.stderr}",
+            )
+            self.assertIn("review-result rejected", review.stdout)
+            self.assertIn(
+                "invalid prompt envelope docs/ail/prompts/requirements.system.md",
+                review.stdout,
+            )
+            self.assertIn("prompt-envelope-invalid-count 1", review.stdout)
         finally:
             shutil.rmtree(artifact_dir, ignore_errors=True)
 

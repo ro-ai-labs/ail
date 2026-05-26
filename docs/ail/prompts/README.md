@@ -44,5 +44,9 @@ python3 scripts/run_v03_prompt_llm_harness.py --review-artifacts /tmp/ail-v03-pr
 ```
 
 The review mode is offline. It checks the required prompt set, manifest,
-report, request/response/content files, prompt fingerprints, and artifact
-fingerprints, and it rejects any prompt probe with empty extracted content.
+report, request/response/content files, prompt fingerprints, artifact
+fingerprints, and prompt-pack envelope shape. A hosted probe is not accepted
+only because it is non-empty: extracted content must classify as either
+`prompt-envelope-artifact` or `prompt-envelope-questions`. The review prints
+`prompt-envelope-valid-count`, `prompt-envelope-questions-count`, and
+`prompt-envelope-invalid-count`, and rejects empty or raw non-envelope output.

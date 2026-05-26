@@ -56,6 +56,9 @@ python3 scripts/run_v03_prompt_llm_harness.py
 python3 scripts/run_v03_prompt_llm_harness.py --review-artifacts /tmp/ail-v03-prompt-llm
 ```
 
-Review mode checks request, response, content, report, manifest, and fingerprint
-artifacts for each required system prompt.
-
+Review mode checks request, response, content, report, manifest, fingerprint
+artifacts, and prompt-pack envelope shape for each required system prompt. It
+prints `prompt-envelope-valid-count`, `prompt-envelope-questions-count`, and
+`prompt-envelope-invalid-count`; a non-empty raw model response is still
+rejected when it is not a valid prompt-pack envelope or blocking-question
+envelope.
