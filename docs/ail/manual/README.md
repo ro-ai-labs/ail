@@ -46,6 +46,12 @@ Print the hosted prompt-pack harness without contacting the model:
 python3 scripts/run_v03_prompt_llm_harness.py --dry-run
 ```
 
+Review completed hosted User Story mode artifacts before promotion:
+
+```sh
+python3 scripts/run_v03_story_llm_harness.py --review-artifacts /tmp/ail-v03-story-llm
+```
+
 Run deterministic local checks for a chapter:
 
 ```sh

@@ -1039,6 +1039,7 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         "scripts/run_ail_interactive_manual.py --all --run-checks",
         "scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run-checks",
         "scripts/run_v03_prompt_llm_harness.py --dry-run",
+        "scripts/run_v03_story_llm_harness.py --review-artifacts /tmp/ail-v03-story-llm",
         "user-story-mode",
         "examples-release",
         "prompt-interaction",
@@ -1122,6 +1123,7 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "evidence manifest.ail-story.txt",
         "evidence agent-trace.txt",
         "python3 scripts/run_v03_story_llm_harness.py --dry-run",
+        "python3 scripts/run_v03_story_llm_harness.py --review-artifacts /tmp/ail-v03-story-llm",
         "live false",
     ] {
         assert!(

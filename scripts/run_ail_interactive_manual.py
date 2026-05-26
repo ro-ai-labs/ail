@@ -80,6 +80,21 @@ BASE_CHAPTERS: tuple[ManualChapter, ...] = (
                 live=True,
             ),
             ManualCommand(
+                label="review-story-mode-live-artifacts",
+                command=(
+                    "python3",
+                    "scripts/run_v03_story_llm_harness.py",
+                    "--review-artifacts",
+                    "/tmp/ail-v03-story-llm",
+                ),
+                live=True,
+                evidence=(
+                    "story-mode-report.txt",
+                    "manifest.ail-story.txt",
+                    "agent-trace.txt",
+                ),
+            ),
+            ManualCommand(
                 label="direct-ail-story-live",
                 command=(
                     "cargo",
