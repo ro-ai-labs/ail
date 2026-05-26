@@ -1,0 +1,25 @@
+{
+  "agent_contract": "examples/agents/codex-ail-spec-writer.md",
+  "agent_contract_version": "0.1.0",
+  "codex_model": "codex-subagent-default",
+  "executor_label": "codex-ail-spec-writer",
+  "input": {
+    "package_manifest_file": "examples/incident_response.ail/ail-package.md",
+    "required_features": [
+      "imports",
+      "actions",
+      "routes",
+      "forms",
+      "dashboards",
+      "workflows",
+      "traces",
+      "multi-module stories"
+    ],
+    "requirements_source": "inline checked requirements from active AIL examples expansion"
+  },
+  "package": "examples/incident_response.ail",
+  "profile": "Application",
+  "prompt_file": "docs/ail/prompts/spec-draft.system.md",
+  "prompt_version": "ail-prompts.v0.2",
+  "task": "Draft canonical AIL-Spec text for incident response scenario 112, preserving multi-module identity, policy, notification, command-center, dashboard, workflow, and trace semantics."
+}

@@ -130,11 +130,11 @@ response JSON files. The batch output still must be replayed with
 The generated files are committed so release verification does not depend on
 live LLM access. The current corpus stores:
 
-- `examples.md`: 111 manifest entries with prompt, executor, profile, surface,
+- `examples.md`: 116 manifest entries with prompt, executor, profile, surface,
   use-case, capability-level, capability-under-test, program scale, program
   domain, module/spec/story counts, interaction metadata, user-story metadata,
   story journey, distinctness, capture-origin, checker-result, target, and
-  v0.3 learning metadata. One hundred three entries are accepted
+  v0.3 learning metadata. One hundred eight entries are accepted
   prompt-to-artifact examples that replay through checked Core, bytecode, VM
   trace, and binary or target-contract evidence; eight entries are rejected
   diagnostic examples.
@@ -148,9 +148,9 @@ live LLM access. The current corpus stores:
   `live-codex` transcript imports.
 
 This is checked release evidence with four replay-clean live LLM
-captures and one hundred seven replay-clean live Codex skill-agent captures. The
+captures and one hundred twelve replay-clean live Codex skill-agent captures. The
 current corpus marks zero entries `capture-origin: deterministic-seed`, four
-entries `capture-origin: live-llm`, and one hundred seven `codex-ail-spec-writer`
+entries `capture-origin: live-llm`, and one hundred twelve `codex-ail-spec-writer`
 entries `capture-origin: live-codex`. The replay report exposes
 capability-level counts, program-scale counts, story-journey counts,
 program-domain counts, story-evidence counts, capture-origin counts, response,
@@ -180,6 +180,12 @@ spec-draft, and requirements prompt surfaces. Other UI-tagged seed entries still
 use surface metadata to keep threshold checks active. Package-import seed
 entries replay through package-aware import resolution and compile the composed
 support package through checked Core, bytecode, and VM trace artifacts.
+
+The corpus also includes `incident_response.ail`, a multi-module application
+that imports identity, policy, and notification support packages and exercises
+incident declaration, escalation, responder notification, dashboards, command
+routes, lifecycle workflow, VM traces, Wasm contracts, and Darwin contract
+evidence across five user-story families.
 
 Replay with:
 

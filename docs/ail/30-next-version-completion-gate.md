@@ -512,8 +512,8 @@ already covers parts of this gate:
   model/executor manifest covering executor families, endpoint labels,
   executor labels, capture origins, executor/origin pairs, executor/endpoint
   pairs, and per-entry semantic task provenance
-- checked 111-entry live release examples under `examples`,
-  including 103 accepted prompt-to-artifact examples plus one rejected
+- checked 116-entry live release examples under `examples`,
+  including 108 accepted prompt-to-artifact examples plus one rejected
   semantic-drift diagnostic example and one rejected profile-mismatch
   diagnostic example, one rejected missing-trace diagnostic example, and one
   rejected hallucinated-capability diagnostic example, plus one rejected
@@ -539,14 +539,15 @@ already covers parts of this gate:
   Ticket, and Refund Tool packages, using schema-shaped prompt input or
   constrained prose prompting with an OpenAI-compatible chat-completions
   endpoint with thinking disabled
-- one hundred seven replay-clean live Codex `codex-ail-spec-writer` captures for the
+- one hundred twelve replay-clean live Codex `codex-ail-spec-writer` captures for the
   Standard Collections, Composed Support, Refund Tool, Support Ticket,
   Stateful Counter, UI Workflow, C Interop, Network Driver, Compiler Pass,
-  Secret Access, Repeated Task, and Runtime Generic packages, imported from
-  recorded Codex sub-agent transcripts and replayed through the Darwin
-  target-contract, VM, Wasm host-boundary target-contract, package-import,
-  AgentTool, compiler, C interop system, secret access, repeated-task,
-  runtime-generic, repair, and Linux native target paths
+  Secret Access, Repeated Task, Runtime Generic, and Incident Response
+  packages, imported from recorded Codex sub-agent transcripts and replayed
+  through the Darwin target-contract, VM, Wasm host-boundary target-contract,
+  package-import, AgentTool, compiler, C interop system, secret access,
+  repeated-task, runtime-generic, repair, multi-module incident workflow, and
+  Linux native target paths
 - a recorded Codex/skill-agent transcript importer that promotes stored request
   and response JSON into `capture-origin: live-codex` corpus entries for
   offline replay
@@ -568,6 +569,10 @@ already covers parts of this gate:
   checked Core, semantic-contract bytecode, VM trace, and Wasm target-contract
   artifacts across the core-to-spec, spec-draft, and requirements prompt
   surfaces
+- five Incident Response release entries replay a multi-module application
+  with identity, policy, and notification imports through checked Core,
+  bytecode, VM trace, Wasm target-contract, Darwin target-contract, workflow,
+  dashboard, form, route, and regenerated-story evidence
 - rejected-output example replay supports prompt-envelope diagnostics through
   stored transcript artifacts, including `AIL-PROMPT-001` diagnostics for
   malformed prompt envelopes and profile-mismatch checker handoffs, and
@@ -581,7 +586,7 @@ already covers parts of this gate:
   /tmp/ail-story-drift-clean-e3b98dd`; its
   `release-audit-manifest.fingerprint.txt` is `fnv64:53927850defd07e8`, and
   the audit manifest records `ok` for cargo format, diff whitespace, check,
-  tests, clippy, conformance fixtures, build, Wasm host contract, Darwin
+  tests, clippy, conformance fixtures including Incident Response, build, Wasm host contract, Darwin
   contract, spec round-trip, bootstrap, and example release evidence
 
 Post-v0.2 learning work is tracked in

@@ -3995,3 +3995,187 @@ checker-result: accepted
 target: linux-x86_64-elf
 vm-action: IncrementCounter
 runtime-state: counter.value=110
+## End-To-End Example: example-111
+semantic-task: incident-response-live-codex-111
+profile: Application
+surface-tags: application-workflow,ui,package-import,multi-module
+package: examples/incident_response.ail
+use-case: Multi-module incident declaration with identity, policy, notification, workflow, and command-center surfaces.
+capability-level: high-level
+capability-under-test: multi-module-incident-workflow
+program-scale: multi-module-system
+program-domain: application
+module-count: 4
+spec-count: 4
+story-count: 5
+interacts-with: incident_identity,incident_policy,incident_notifications,incident_response
+user-story-id: incident-response-declare-story
+user-story: As an incident commander I can review incident declaration across identity, policy, and notification modules so that intake behavior remains semantically similar to the checked spec.
+acceptance-criteria: checked incident response spec exists; checked core exists; bytecode exists; target or VM evidence exists; user-story metadata matches catalog
+story-evidence: vm-trace
+story-file: stories/example-111.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
+distinctness-claim: incident-response-live-codex-111 validates incident-response multi-module behavior through docs/ail/prompts/interview.system.md and vm evidence.
+v0.3-signal: Complex systems need richer story graphs that span imported modules, UI surfaces, workflows, target contracts, and regenerated story views.
+prompt-file: docs/ail/prompts/interview.system.md
+prompt-version: ail-prompts.v0.2
+prompt-fingerprint: fnv64:5ca61a4509169980
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
+request-file: requests/example-111.json
+response-file: responses/example-111.json
+artifact-kind: ail-spec
+checker-result: accepted
+target: vm
+vm-action: DeclareIncident
+runtime-state: incident.id=INC-1;incident.status=Declared;incident.severity=Sev1
+
+## End-To-End Example: example-112
+semantic-task: incident-response-live-codex-112
+profile: Application
+surface-tags: application-workflow,ui,package-import,multi-module
+package: examples/incident_response.ail
+use-case: Incident escalation across policy review, responder notification, Wasm target contract, and private-note protection.
+capability-level: high-level
+capability-under-test: multi-module-incident-workflow
+program-scale: multi-module-system
+program-domain: application
+module-count: 4
+spec-count: 4
+story-count: 5
+interacts-with: incident_identity,incident_policy,incident_notifications,incident_response
+user-story-id: incident-response-escalation-story
+user-story: As an incident commander I can review escalation workflows that notify responders without exposing private notes.
+acceptance-criteria: checked incident response spec exists; checked core exists; bytecode exists; target or VM evidence exists; user-story metadata matches catalog
+story-evidence: target-report
+story-file: stories/example-112.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
+distinctness-claim: incident-response-live-codex-112 validates incident-response multi-module behavior through docs/ail/prompts/spec-draft.system.md and wasm32-unknown-sandbox-wasm evidence.
+v0.3-signal: Complex systems need richer story graphs that span imported modules, UI surfaces, workflows, target contracts, and regenerated story views.
+prompt-file: docs/ail/prompts/spec-draft.system.md
+prompt-version: ail-prompts.v0.2
+prompt-fingerprint: fnv64:b23778093326102c
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
+request-file: requests/example-112.json
+response-file: responses/example-112.json
+artifact-kind: ail-spec
+checker-result: accepted
+target: wasm32-unknown-sandbox-wasm
+vm-action: EscalateIncident
+runtime-state: incident.id=INC-1;incident.status=Declared;incident.severity=Sev1
+
+## End-To-End Example: example-113
+semantic-task: incident-response-live-codex-113
+profile: Application
+surface-tags: application-workflow,ui,package-import,multi-module
+package: examples/incident_response.ail
+use-case: Spec-to-story regeneration for a multi-feature incident lifecycle with VM trace evidence.
+capability-level: high-level
+capability-under-test: multi-module-incident-workflow
+program-scale: multi-module-system
+program-domain: application
+module-count: 4
+spec-count: 4
+story-count: 5
+interacts-with: incident_identity,incident_policy,incident_notifications,incident_response
+user-story-id: incident-response-story-regeneration
+user-story: As a service owner I can regenerate a user-story view from the checked incident response spec and keep the workflow meaning intact.
+acceptance-criteria: checked incident response spec exists; checked core exists; bytecode exists; target or VM evidence exists; user-story metadata matches catalog
+story-evidence: vm-trace
+story-file: stories/example-113.md
+story-journey: spec-to-story
+story-roundtrip: semantic-similar
+distinctness-claim: incident-response-live-codex-113 validates incident-response multi-module behavior through docs/ail/prompts/core-to-summary.system.md and vm evidence.
+v0.3-signal: Complex systems need richer story graphs that span imported modules, UI surfaces, workflows, target contracts, and regenerated story views.
+prompt-file: docs/ail/prompts/core-to-summary.system.md
+prompt-version: ail-prompts.v0.2
+prompt-fingerprint: fnv64:49f26ec41d722633
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
+request-file: requests/example-113.json
+response-file: responses/example-113.json
+artifact-kind: ail-spec
+checker-result: accepted
+target: vm
+vm-action: CompleteIncidentLifecycle
+runtime-state: incident.id=INC-1;incident.status=Declared;incident.severity=Sev1
+
+## End-To-End Example: example-114
+semantic-task: incident-response-live-codex-114
+profile: Application
+surface-tags: application-workflow,ui,package-import,multi-module
+package: examples/incident_response.ail
+use-case: Story amendment for incident lifecycle behavior across Darwin target-contract evidence.
+capability-level: high-level
+capability-under-test: multi-module-incident-workflow
+program-scale: multi-module-system
+program-domain: application
+module-count: 4
+spec-count: 4
+story-count: 5
+interacts-with: incident_identity,incident_policy,incident_notifications,incident_response
+user-story-id: incident-response-amendment-story
+user-story: As a reviewer I can amend the incident lifecycle story and verify the spec still preserves escalation, notification, and postmortem steps.
+acceptance-criteria: checked incident response spec exists; checked core exists; bytecode exists; target or VM evidence exists; user-story metadata matches catalog
+story-evidence: target-report
+story-file: stories/example-114.md
+story-journey: story-amendment
+story-roundtrip: semantic-similar
+distinctness-claim: incident-response-live-codex-114 validates incident-response multi-module behavior through docs/ail/prompts/flow-patch.system.md and aarch64-apple-darwin-libsystem-macho evidence.
+v0.3-signal: Complex systems need richer story graphs that span imported modules, UI surfaces, workflows, target contracts, and regenerated story views.
+prompt-file: docs/ail/prompts/flow-patch.system.md
+prompt-version: ail-prompts.v0.2
+prompt-fingerprint: fnv64:30136a21ab8d8eb6
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
+request-file: requests/example-114.json
+response-file: responses/example-114.json
+artifact-kind: ail-spec
+checker-result: accepted
+target: aarch64-apple-darwin-libsystem-macho
+vm-action: ResolveIncident
+runtime-state: incident.id=INC-1;incident.status=Mitigating;incident.severity=Sev1
+
+## End-To-End Example: example-115
+semantic-task: incident-response-live-codex-115
+profile: Application
+surface-tags: application-workflow,ui,package-import,multi-module
+package: examples/incident_response.ail
+use-case: Service-owner dashboard and command-center workflow checked against Wasm target-contract evidence.
+capability-level: high-level
+capability-under-test: multi-module-incident-workflow
+program-scale: multi-module-system
+program-domain: application
+module-count: 4
+spec-count: 4
+story-count: 5
+interacts-with: incident_identity,incident_policy,incident_notifications,incident_response
+user-story-id: incident-response-dashboard-story
+user-story: As a service owner I can inspect dashboard and command-center stories that coordinate multiple incident modules.
+acceptance-criteria: checked incident response spec exists; checked core exists; bytecode exists; target or VM evidence exists; user-story metadata matches catalog
+story-evidence: target-report
+story-file: stories/example-115.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
+distinctness-claim: incident-response-live-codex-115 validates incident-response multi-module behavior through docs/ail/prompts/requirements.system.md and wasm32-unknown-sandbox-wasm evidence.
+v0.3-signal: Complex systems need richer story graphs that span imported modules, UI surfaces, workflows, target contracts, and regenerated story views.
+prompt-file: docs/ail/prompts/requirements.system.md
+prompt-version: ail-prompts.v0.2
+prompt-fingerprint: fnv64:68e966969e0b1c12
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
+request-file: requests/example-115.json
+response-file: responses/example-115.json
+artifact-kind: ail-spec
+checker-result: accepted
+target: wasm32-unknown-sandbox-wasm
+vm-action: StartPostmortem
+runtime-state: incident.id=INC-1;incident.status=Declared;incident.severity=Sev1

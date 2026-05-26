@@ -146,6 +146,20 @@ def build_v02_audit_plan(bundle_root: Path) -> list[AuditStep]:
             "manifest.ail-conformance.txt",
         ),
         AuditStep(
+            "conformance-incident-response",
+            [
+                "cargo",
+                "run",
+                "--",
+                "ail-conformance",
+                "examples/incident_response.ail",
+                "--artifact-dir",
+                str(artifacts / "v02-conformance-incident-response"),
+            ],
+            artifacts / "v02-conformance-incident-response",
+            "manifest.ail-conformance.txt",
+        ),
+        AuditStep(
             "build-support",
             [
                 "cargo",

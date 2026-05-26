@@ -20185,9 +20185,9 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         String::from_utf8_lossy(&output.stderr)
     );
     let report = fs::read_to_string(artifact_dir.join("e2e-corpus-report.txt")).unwrap();
-    assert!(report.contains("entry-count 111"), "{report}");
+    assert!(report.contains("entry-count 116"), "{report}");
     assert!(
-        report.contains("checker-result-count accepted 103"),
+        report.contains("checker-result-count accepted 108"),
         "{report}"
     );
     assert!(
@@ -20203,7 +20203,7 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("capability-level-count high-level 42"),
+        report.contains("capability-level-count high-level 47"),
         "{report}"
     );
     assert!(
@@ -20247,7 +20247,7 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("capture-origin-count live-codex 107"),
+        report.contains("capture-origin-count live-codex 112"),
         "{report}"
     );
     assert!(
@@ -20914,9 +20914,36 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
             && report.contains("entry-artifact example-110 native linux-x86_64-elf"),
         "{report}"
     );
+    assert!(
+        report.contains("entry example-111")
+            && report.contains("semantic-task incident-response-live-codex-111")
+            && report.contains("entry-artifact example-111 checked-core")
+            && report.contains("capture-origin live-codex"),
+        "{report}"
+    );
+    assert!(
+        report.contains("entry example-112")
+            && report.contains("semantic-task incident-response-live-codex-112")
+            && report.contains("entry-artifact example-112 target-report")
+            && report.contains("target wasm32-unknown-sandbox-wasm"),
+        "{report}"
+    );
+    assert!(
+        report.contains("entry example-114")
+            && report.contains("semantic-task incident-response-live-codex-114")
+            && report.contains("entry-artifact example-114 vm-trace")
+            && report.contains("target aarch64-apple-darwin-libsystem-macho"),
+        "{report}"
+    );
+    assert!(
+        report.contains("program-domain-count application 10")
+            && report.contains("program-scale-count multi-module-system 53")
+            && report.contains("story-roundtrip-count semantic-similar 108"),
+        "{report}"
+    );
     assert!(report.contains("profile-count UI 3"), "{report}");
     assert!(
-        report.contains("target-count wasm32-unknown-sandbox-wasm 14"),
+        report.contains("target-count wasm32-unknown-sandbox-wasm 16"),
         "{report}"
     );
     assert!(
@@ -21005,9 +21032,9 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
     let model_executor_manifest =
         fs::read_to_string(artifact_dir.join("model-executor-manifest.txt")).unwrap();
     assert!(
-        model_executor_manifest.contains("entry-count 111")
-            && model_executor_manifest.contains("executor-family codex-skill-agent count 107")
-            && model_executor_manifest.contains("capture-origin live-codex count 107")
+        model_executor_manifest.contains("entry-count 116")
+            && model_executor_manifest.contains("executor-family codex-skill-agent count 112")
+            && model_executor_manifest.contains("capture-origin live-codex count 112")
             && model_executor_manifest.contains(
                 "entry example-100 semantic-task stateful-counter-live-codex-accepted-100"
             )
@@ -21037,7 +21064,11 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
             && model_executor_manifest
                 .contains("entry example-109 semantic-task ui-workflow-live-codex-requirements-109")
             && model_executor_manifest
-                .contains("entry example-110 semantic-task stateful-counter-live-codex-repair-110"),
+                .contains("entry example-110 semantic-task stateful-counter-live-codex-repair-110")
+            && model_executor_manifest
+                .contains("entry example-111 semantic-task incident-response-live-codex-111")
+            && model_executor_manifest
+                .contains("entry example-115 semantic-task incident-response-live-codex-115"),
         "{model_executor_manifest}"
     );
 
