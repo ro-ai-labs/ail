@@ -34,8 +34,15 @@ The live form contacts `http://inteligentia-pro-1:8080/v1/models`, then probes
 each prompt file through `http://inteligentia-pro-1:8080/v1/chat/completions`
 with task-specific probes. Each request records `probe-label` and
 `probe-fingerprint` metadata so review can distinguish useful prompt-surface
-coverage from a generic smoke prompt. The harness writes request, response,
-extracted content, report, manifest, and fingerprint artifacts under
+coverage from a generic smoke prompt. The user probe also includes an inline
+envelope contract with the exact `artifact_kind`, `artifact_text`, `questions`,
+and `checker_handoff` shape expected by the offline reviewer. Chat-completion
+requests include an OpenAI-compatible JSON mode hint,
+`response_format: {"type":"json_object"}`, when the endpoint is
+`/v1/chat/completions`. The default live budget is `--max-tokens 768`, which
+is large enough for the current task-specific probes to complete compact
+envelopes on the hosted llama.cpp server. The harness writes request,
+response, extracted content, report, manifest, and fingerprint artifacts under
 `/tmp/ail-v03-prompt-llm`. The output is evidence for prompt interaction review
 only; generated text still has to pass the deterministic checker before it can
 be promoted into `./examples`.

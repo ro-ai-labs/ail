@@ -34,6 +34,8 @@ Return an `AIL-Prompt-Interaction-Review` report that records:
 - prompt files reviewed and their fingerprints when available
 - prompt-specific probe labels/fingerprints and expected `artifact_kind`
   validation status
+- whether hosted requests include the inline envelope contract, JSON mode
+  request hint, and adequate token budget for complete envelopes
 - prompt-envelope validation counts from the prompt harness review, including
   `prompt-envelope-valid-count` and `prompt-envelope-invalid-count`
 - story id, semantic-anchor count, manifest checks, and agent trace status when

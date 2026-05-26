@@ -48,7 +48,6 @@ _PROMPT_HARNESS_SPEC = importlib.util.spec_from_file_location(
 _PROMPT_HARNESS = importlib.util.module_from_spec(_PROMPT_HARNESS_SPEC)
 assert _PROMPT_HARNESS_SPEC.loader is not None
 _PROMPT_HARNESS_SPEC.loader.exec_module(_PROMPT_HARNESS)
-PROMPT_PROBES = _PROMPT_HARNESS.PROMPT_PROBES
 
 
 def fnv64(text):
@@ -116,7 +115,8 @@ def write_prompt_llm_review_fixture(
         prompt_rel = f"docs/ail/prompts/{prompt_name}"
         prompt_text = prompt_path.read_text()
         stem = prompt_name.removesuffix(".system.md")
-        probe_label, probe_text = PROMPT_PROBES[prompt_name]
+        probe_label, _base_probe_text = _PROMPT_HARNESS.prompt_probe(prompt_name, None)
+        probe_text = _PROMPT_HARNESS.render_user_probe(prompt_name, None)
         probe_fingerprint = fnv64(probe_text)
         if mismatched_probe_for == prompt_name:
             probe_label = "generic-live-probe"
@@ -485,6 +485,29 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             self.assertIn("prompt-envelope-invalid-count 1", review.stdout)
         finally:
             shutil.rmtree(artifact_dir, ignore_errors=True)
+
+    def test_prompt_llm_harness_request_shapes_envelope_contract_and_json_mode(self):
+        prompt_name = "requirements.system.md"
+        _label, base_probe = _PROMPT_HARNESS.prompt_probe(prompt_name, None)
+        probe_text = _PROMPT_HARNESS.render_user_probe(prompt_name, None)
+        self.assertIn(base_probe.strip(), probe_text)
+        self.assertIn('"artifact_kind": "AIL-Requirements"', probe_text)
+        self.assertIn('"artifact_text": ""', probe_text)
+        self.assertIn('"questions": ["..."]', probe_text)
+        self.assertIn('"checker_handoff"', probe_text)
+        self.assertIn('"must_check": true', probe_text)
+        self.assertIn("questions must be an array of strings", probe_text)
+        self.assertIn("Return JSON only", probe_text)
+
+        body = _PROMPT_HARNESS.completion_body(
+            "http://127.0.0.1:8080/v1/chat/completions",
+            "system prompt",
+            probe_text,
+            64,
+            None,
+        )
+        self.assertEqual(body["response_format"], {"type": "json_object"})
+        self.assertEqual(body["messages"][1]["content"], probe_text)
 
     def test_story_llm_harness_review_accepts_complete_artifact_bundle(self):
         artifact_dir = Path(tempfile.mkdtemp(prefix="ail-story-llm-review-"))

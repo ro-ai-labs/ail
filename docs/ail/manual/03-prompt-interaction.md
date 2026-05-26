@@ -54,6 +54,14 @@ interview clarification, requirements drafting, canonical spec drafting,
 AIL-Core lowering, repair, diagnostic repair, round-trip rendering, human
 summary, flow patching, trace debugging, and C interop questions.
 
+For live chat-completion requests, the harness appends an inline envelope
+contract to each user probe and asks the endpoint for JSON mode with
+`response_format: {"type":"json_object"}`. The envelope contract is part of the
+fingerprinted probe text, so review can detect stale or generic prompt
+requests. The default live budget is `--max-tokens 768`; lower budgets are
+useful for failure probes, but may cut off verbose valid envelopes before
+`checker_handoff` is emitted.
+
 Run it only when `http://inteligentia-pro-1:8080/` is reachable and the output
 will be reviewed:
 

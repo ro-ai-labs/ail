@@ -21,6 +21,7 @@ DEFAULT_SERVER = "http://inteligentia-pro-1:8080/"
 DEFAULT_ENDPOINT = "http://inteligentia-pro-1:8080/v1/chat/completions"
 DEFAULT_PROMPT_DIR = "docs/ail/prompts"
 DEFAULT_ARTIFACT_DIR = "/tmp/ail-v03-prompt-llm"
+DEFAULT_MAX_TOKENS = 768
 REQUIRED_PROMPTS = (
     "interview.system.md",
     "requirements.system.md",
@@ -257,6 +258,40 @@ def expected_artifact_kind(prompt_name: str) -> str:
         raise SystemExit(f"missing expected artifact kind for prompt {prompt_name}") from None
 
 
+def prompt_envelope_contract(prompt_name: str) -> str:
+    artifact_kind = expected_artifact_kind(prompt_name)
+    return f"""Envelope contract:
+Return JSON only. Do not wrap the JSON in Markdown. Use exactly this top-level
+shape:
+{{
+  "artifact_kind": "{artifact_kind}",
+  "artifact_text": "",
+  "questions": ["..."],
+  "assumptions": [],
+  "provenance": [],
+  "checker_handoff": {{
+    "must_check": true,
+    "expected_profile": "Application",
+    "expected_features": []
+  }}
+}}
+
+Rules:
+- artifact_kind must be "{artifact_kind}".
+- Use artifact_text for a drafted artifact, or questions for blocking
+  questions, not both.
+- questions must be an array of strings, not objects.
+- checker_handoff.must_check must be true.
+- Do not include any keys outside this envelope unless the checker can ignore
+  them without changing semantics.
+"""
+
+
+def render_user_probe(prompt_name: str, override: str | None) -> str:
+    _label, probe_text = prompt_probe(prompt_name, override)
+    return f"{probe_text.rstrip()}\n\n{prompt_envelope_contract(prompt_name).rstrip()}\n"
+
+
 def request_user_probe(body: object) -> str:
     if not isinstance(body, dict):
         return ""
@@ -292,6 +327,7 @@ def completion_body(
             "temperature": 0.0,
             "stream": False,
             "chat_template_kwargs": {"enable_thinking": False},
+            "response_format": {"type": "json_object"},
         }
         if model:
             body["model"] = model
@@ -495,7 +531,8 @@ def review_artifacts(args: argparse.Namespace, paths: list[Path]) -> int:
         rel = relative(prompt_path)
         stem = prompt_path.name.removesuffix(".system.md")
         prompt_text = prompt_path.read_text()
-        expected_probe_label, expected_probe = prompt_probe(prompt_path.name, args.probe)
+        expected_probe_label, _expected_probe = prompt_probe(prompt_path.name, args.probe)
+        expected_probe = render_user_probe(prompt_path.name, args.probe)
         expected_probe_fingerprint = fnv64(expected_probe)
         request_path = artifact_root / "requests" / f"{stem}.json"
         response_path = artifact_root / "responses" / f"{stem}.json"
@@ -606,7 +643,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         help=f"Artifact directory (default: {DEFAULT_ARTIFACT_DIR})",
     )
     parser.add_argument("--model", help="Optional model id for OpenAI-compatible servers")
-    parser.add_argument("--max-tokens", type=int, default=512)
+    parser.add_argument("--max-tokens", type=int, default=DEFAULT_MAX_TOKENS)
     parser.add_argument(
         "--probe",
         help=(
@@ -637,11 +674,13 @@ def print_dry_run(args: argparse.Namespace, paths: list[Path]) -> None:
     print(f"endpoint {args.endpoint}")
     print(f"prompt-dir {args.prompt_dir}")
     print(f"artifact-dir {args.artifact_dir}")
+    print(f"max-tokens {args.max_tokens}")
     for path in paths:
         probe_label, probe_text = prompt_probe(path.name, args.probe)
+        user_probe = render_user_probe(path.name, args.probe)
         print(
             f"prompt {relative(path)} "
-            f"probe-label {probe_label} probe-fingerprint {fnv64(probe_text)}"
+            f"probe-label {probe_label} probe-fingerprint {fnv64(user_probe)}"
         )
 
 
@@ -666,10 +705,11 @@ def run_live(args: argparse.Namespace, paths: list[Path]) -> int:
         prompt_text = path.read_text()
         rel = relative(path)
         stem = path.name.removesuffix(".system.md")
-        probe_label, probe_text = prompt_probe(path.name, args.probe)
-        probe_fingerprint = fnv64(probe_text)
+        probe_label, _probe_text = prompt_probe(path.name, args.probe)
+        user_probe = render_user_probe(path.name, args.probe)
+        probe_fingerprint = fnv64(user_probe)
         body = completion_body(
-            args.endpoint, prompt_text, probe_text, args.max_tokens, args.model
+            args.endpoint, prompt_text, user_probe, args.max_tokens, args.model
         )
         response = request_json(args.endpoint, body)
         request_text = json.dumps(

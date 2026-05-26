@@ -1511,6 +1511,7 @@ fn script_v03_prompt_llm_harness_help_lists_all_prompts_and_dry_run() {
         "AIL-Prompt-LLM-Harness:",
         "model-check curl -sS http://inteligentia-pro-1:8080/v1/models",
         "endpoint http://inteligentia-pro-1:8080/v1/chat/completions",
+        "max-tokens 768",
         "prompt docs/ail/prompts/interview.system.md",
         "probe-label interview-clarify-refund-tool",
         "probe-fingerprint fnv64:",
@@ -1557,7 +1558,9 @@ fn script_v03_prompt_llm_harness_help_lists_all_prompts_and_dry_run() {
         prompt_docs.contains("prompt-envelope-valid-count")
             && prompt_docs.contains("prompt-envelope-invalid-count")
             && prompt_docs.contains("probe-label")
-            && prompt_docs.contains("task-specific probes"),
+            && prompt_docs.contains("task-specific probes")
+            && prompt_docs.contains("envelope contract")
+            && prompt_docs.contains("JSON mode"),
         "{prompt_docs}"
     );
     let prompt_manual = fs::read_to_string(format!(
@@ -1569,7 +1572,9 @@ fn script_v03_prompt_llm_harness_help_lists_all_prompts_and_dry_run() {
         prompt_manual.contains("prompt-envelope-valid-count")
             && prompt_manual.contains("prompt-envelope-invalid-count")
             && prompt_manual.contains("probe-label")
-            && prompt_manual.contains("task-specific probes"),
+            && prompt_manual.contains("task-specific probes")
+            && prompt_manual.contains("envelope contract")
+            && prompt_manual.contains("JSON mode"),
         "{prompt_manual}"
     );
 }
