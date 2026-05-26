@@ -86,8 +86,8 @@ response JSON files. The batch output still must be replayed with
 The generated files are committed so release verification does not depend on
 live LLM access. The current corpus stores:
 
-- `examples.md`: 110 manifest entries with prompt, executor, profile, surface,
-  capture-origin, checker-result, and target metadata. One hundred two entries are
+- `examples.md`: 111 manifest entries with prompt, executor, profile, surface,
+  capture-origin, checker-result, and target metadata. One hundred three entries are
   accepted prompt-to-artifact examples that replay through checked Core,
   bytecode, VM trace, and binary or target-contract evidence; eight entries are
   rejected diagnostic examples.
@@ -98,9 +98,9 @@ live LLM access. The current corpus stores:
   `live-codex` transcript imports.
 
 This is a checked release-evidence corpus with four replay-clean live LLM
-captures and one hundred six replay-clean live Codex skill-agent captures. The
+captures and one hundred seven replay-clean live Codex skill-agent captures. The
 current corpus marks zero entries `capture-origin: deterministic-seed`, four
-entries `capture-origin: live-llm`, and one hundred six `codex-ail-spec-writer`
+entries `capture-origin: live-llm`, and one hundred seven `codex-ail-spec-writer`
 entries `capture-origin: live-codex`. The replay report exposes
 capture-origin counts plus response,
 extracted-artifact, checked Core, bytecode, VM trace, native, target-report,

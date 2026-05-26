@@ -2179,6 +2179,7 @@ fn validate_ail_e2e_corpus_release_coverage(entries: &[AilE2eCorpusEntry]) -> Re
         "docs/ail/prompts/requirements.system.md",
         "docs/ail/prompts/spec-draft.system.md",
         "docs/ail/prompts/core-draft.system.md",
+        "docs/ail/prompts/repair.system.md",
         "docs/ail/prompts/diagnostic-repair.system.md",
         "docs/ail/prompts/core-to-spec.system.md",
         "docs/ail/prompts/core-to-summary.system.md",

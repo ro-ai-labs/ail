@@ -46,6 +46,7 @@ fn e2e_corpus_entry_text(index: usize, overrides: &[(&str, &str)]) -> String {
         "docs/ail/prompts/requirements.system.md",
         "docs/ail/prompts/spec-draft.system.md",
         "docs/ail/prompts/core-draft.system.md",
+        "docs/ail/prompts/repair.system.md",
         "docs/ail/prompts/diagnostic-repair.system.md",
         "docs/ail/prompts/core-to-spec.system.md",
         "docs/ail/prompts/core-to-summary.system.md",
@@ -20024,9 +20025,9 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         String::from_utf8_lossy(&output.stderr)
     );
     let report = fs::read_to_string(artifact_dir.join("e2e-corpus-report.txt")).unwrap();
-    assert!(report.contains("entry-count 110"), "{report}");
+    assert!(report.contains("entry-count 111"), "{report}");
     assert!(
-        report.contains("checker-result-count accepted 102"),
+        report.contains("checker-result-count accepted 103"),
         "{report}"
     );
     assert!(
@@ -20074,7 +20075,7 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("capture-origin-count live-codex 106"),
+        report.contains("capture-origin-count live-codex 107"),
         "{report}"
     );
     assert!(
@@ -20733,6 +20734,14 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
             && report.contains("entry-artifact example-107 diagnostics"),
         "{report}"
     );
+    assert!(
+        report.contains("entry example-110")
+            && report.contains("semantic-task stateful-counter-live-codex-repair-110")
+            && report.contains("prompt-count docs/ail/prompts/repair.system.md 1")
+            && report.contains("entry-artifact example-110 bytecode")
+            && report.contains("entry-artifact example-110 native linux-x86_64-elf"),
+        "{report}"
+    );
     assert!(report.contains("profile-count UI 3"), "{report}");
     assert!(
         report.contains("target-count wasm32-unknown-sandbox-wasm 14"),
@@ -20824,9 +20833,9 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
     let model_executor_manifest =
         fs::read_to_string(artifact_dir.join("model-executor-manifest.txt")).unwrap();
     assert!(
-        model_executor_manifest.contains("entry-count 110")
-            && model_executor_manifest.contains("executor-family codex-skill-agent count 106")
-            && model_executor_manifest.contains("capture-origin live-codex count 106")
+        model_executor_manifest.contains("entry-count 111")
+            && model_executor_manifest.contains("executor-family codex-skill-agent count 107")
+            && model_executor_manifest.contains("capture-origin live-codex count 107")
             && model_executor_manifest.contains(
                 "entry example-100 semantic-task stateful-counter-live-codex-accepted-100"
             )
@@ -20854,7 +20863,9 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
             && model_executor_manifest
                 .contains("entry example-108 semantic-task ui-workflow-live-codex-spec-draft-108")
             && model_executor_manifest
-                .contains("entry example-109 semantic-task ui-workflow-live-codex-requirements-109"),
+                .contains("entry example-109 semantic-task ui-workflow-live-codex-requirements-109")
+            && model_executor_manifest
+                .contains("entry example-110 semantic-task stateful-counter-live-codex-repair-110"),
         "{model_executor_manifest}"
     );
 
@@ -22225,7 +22236,7 @@ fn cli_ail_e2e_corpus_writes_report_for_metadata_complete_corpus() {
     assert!(report.contains("profile-count Compiler 10"), "{report}");
     assert!(report.contains("profile-count System 35"), "{report}");
     assert!(
-        report.contains("prompt-count docs/ail/prompts/spec-draft.system.md 10"),
+        report.contains("prompt-count docs/ail/prompts/spec-draft.system.md 9"),
         "{report}"
     );
     assert!(

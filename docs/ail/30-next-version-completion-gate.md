@@ -291,7 +291,7 @@ Evidence:
   user intent, profile, package surface, required feature, target contract, or
   expected diagnostic.
 - The corpus spans every required prompt-pack surface: interview,
-  requirements, spec draft, repair, core draft, core-to-spec,
+  requirements, spec draft, core draft, repair, core-to-spec,
   core-to-summary, flow patch, trace-debug, diagnostic repair, and interop.
 - The corpus spans Application, AgentTool, Compiler, System, standard-library,
   package-import, UI, C/host interop, Wasm contract, Darwin contract, and
@@ -512,8 +512,8 @@ already covers parts of this gate:
   model/executor manifest covering executor families, endpoint labels,
   executor labels, capture origins, executor/origin pairs, executor/endpoint
   pairs, and per-entry semantic task provenance
-- checked 110-entry e2e live release corpus under `docs/ail/corpus/e2e`,
-  including 102 accepted prompt-to-artifact examples plus one rejected
+- checked 111-entry e2e live release corpus under `docs/ail/corpus/e2e`,
+  including 103 accepted prompt-to-artifact examples plus one rejected
   semantic-drift diagnostic example and one rejected profile-mismatch
   diagnostic example, one rejected missing-trace diagnostic example, and one
   rejected hallucinated-capability diagnostic example, plus one rejected
@@ -524,14 +524,14 @@ already covers parts of this gate:
   Ticket, and Refund Tool packages, using schema-shaped prompt input or
   constrained prose prompting with an OpenAI-compatible chat-completions
   endpoint with thinking disabled
-- one hundred six replay-clean live Codex `codex-ail-spec-writer` captures for the
+- one hundred seven replay-clean live Codex `codex-ail-spec-writer` captures for the
   Standard Collections, Composed Support, Refund Tool, Support Ticket,
   Stateful Counter, UI Workflow, C Interop, Network Driver, Compiler Pass,
   Secret Access, Repeated Task, and Runtime Generic packages, imported from
   recorded Codex sub-agent transcripts and replayed through the Darwin
   target-contract, VM, Wasm host-boundary target-contract, package-import,
   AgentTool, compiler, C interop system, secret access, repeated-task,
-  runtime-generic, and Linux native target paths
+  runtime-generic, repair, and Linux native target paths
 - a recorded Codex/skill-agent transcript importer that promotes stored request
   and response JSON into `capture-origin: live-codex` corpus entries for
   offline replay
@@ -561,10 +561,10 @@ already covers parts of this gate:
   unsupported target effects and C interop diagnostics for invalid nullable
   pointer contracts, plus System profile diagnostics for missing capabilities
   and package-loader diagnostics for unresolved registry imports
-- clean-worktree v0.2 release audit run at commit `6a9fb09`, generated with
+- v0.2 release audit run for the repair-surface corpus, generated with
   `python3 scripts/run_v02_release_audit.py --bundle-root
-  /tmp/ail-v02-release-audit-clean-checkout-6a9fb09`; its
-  `release-audit-manifest.fingerprint.txt` is `fnv64:678102260122a9a1`, and
+  /tmp/ail-v02-release-audit-repair-surface`; its
+  `release-audit-manifest.fingerprint.txt` is `fnv64:1402688ddfddd7d3`, and
   the audit manifest records `ok` for cargo format, diff whitespace, check,
   tests, clippy, conformance fixtures, build, Wasm host contract, Darwin
   contract, spec round-trip, bootstrap, and e2e corpus release evidence

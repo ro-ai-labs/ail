@@ -2044,3 +2044,22 @@ checker-result: accepted
 target: wasm32-unknown-sandbox-wasm
 vm-action: CreateTicketForm
 runtime-state: ticket.title=Incident 109
+
+## End-To-End Example: example-110
+semantic-task: stateful-counter-live-codex-repair-110
+profile: System
+surface-tags: core,repair
+package: examples/stateful_counter.ail
+prompt-file: docs/ail/prompts/repair.system.md
+prompt-version: ail-prompts.v0.2
+prompt-fingerprint: fnv64:6d171ea7c34f3e31
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
+request-file: requests/example-110.json
+response-file: responses/example-110.json
+artifact-kind: ail-spec
+checker-result: accepted
+target: linux-x86_64-elf
+vm-action: IncrementCounter
+runtime-state: counter.value=110

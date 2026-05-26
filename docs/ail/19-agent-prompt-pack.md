@@ -18,6 +18,7 @@ Required prompt files:
 - `prompts/requirements.system.md`
 - `prompts/spec-draft.system.md`
 - `prompts/core-draft.system.md`
+- `prompts/repair.system.md`
 - `prompts/diagnostic-repair.system.md`
 - `prompts/core-to-spec.system.md`
 - `prompts/core-to-summary.system.md`

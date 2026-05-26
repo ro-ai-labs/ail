@@ -11,6 +11,7 @@ Prompt files:
 - `requirements.system.md`
 - `spec-draft.system.md`
 - `core-draft.system.md`
+- `repair.system.md`
 - `diagnostic-repair.system.md`
 - `core-to-spec.system.md`
 - `core-to-summary.system.md`
