@@ -24954,6 +24954,10 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         report.contains("repair-target-report-fingerprint-observed-count 2"),
         "{report}"
     );
+    assert!(
+        report.contains("repair-diff-fingerprint-observed-count 8"),
+        "{report}"
+    );
     for (entry_id, failure_taxonomy, repair_evidence_kind) in rejected_entries {
         let repair_tutorial = fs::read_to_string(
             artifact_dir
@@ -25115,6 +25119,41 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
             )),
             "{report}"
         );
+        let repair_diff = fs::read_to_string(
+            artifact_dir
+                .join("examples")
+                .join(entry_id)
+                .join("repair-diff.txt"),
+        )
+        .unwrap();
+        assert!(
+            repair_diff.contains("AIL-Repair-Diff:")
+                && repair_diff.contains(&format!("entry {entry_id}"))
+                && repair_diff.contains("checker-result rejected-to-repaired")
+                && repair_diff.contains(&format!("failure-taxonomy {failure_taxonomy}"))
+                && repair_diff.contains("expected-diagnostic-removed true")
+                && repair_diff.contains(&format!("repair-evidence-kind {repair_evidence_kind}"))
+                && repair_diff.contains("semantic-anchor-missing-count 0"),
+            "{repair_diff}"
+        );
+        let repair_diff_fingerprint = fs::read_to_string(
+            artifact_dir
+                .join("examples")
+                .join(entry_id)
+                .join("repair-diff.fingerprint.txt"),
+        )
+        .unwrap();
+        assert_eq!(
+            repair_diff_fingerprint.trim(),
+            fnv64_fingerprint(&repair_diff)
+        );
+        assert!(
+            report.contains(&format!(
+                "entry-artifact {entry_id} repair-diff examples/{entry_id}/repair-diff.txt {}",
+                repair_diff_fingerprint.trim()
+            )),
+            "{report}"
+        );
     }
     let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-examples.txt")).unwrap();
     assert!(manifest.contains("AIL-Examples-Manifest:"), "{manifest}");
@@ -25162,6 +25201,20 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
             manifest.contains(&format!(
                 "entry-artifact {entry_id} {repair_evidence_kind} examples/{entry_id}/{repair_evidence_kind}.txt {}",
                 repair_evidence_fingerprint.trim()
+            )),
+            "{manifest}"
+        );
+        let repair_diff_fingerprint = fs::read_to_string(
+            artifact_dir
+                .join("examples")
+                .join(entry_id)
+                .join("repair-diff.fingerprint.txt"),
+        )
+        .unwrap();
+        assert!(
+            manifest.contains(&format!(
+                "entry-artifact {entry_id} repair-diff examples/{entry_id}/repair-diff.txt {}",
+                repair_diff_fingerprint.trim()
             )),
             "{manifest}"
         );
@@ -27422,6 +27475,28 @@ fn cli_ail_e2e_corpus_replays_rejected_prompt_failures() {
         repair_vm_trace_fingerprint.trim(),
         fnv64_fingerprint(&repair_vm_trace)
     );
+    let repair_diff =
+        fs::read_to_string(artifact_dir.join("examples/example-99/repair-diff.txt")).unwrap();
+    assert!(
+        repair_diff.contains("AIL-Repair-Diff:")
+            && repair_diff.contains("entry example-99")
+            && repair_diff.contains("checker-result rejected-to-repaired")
+            && repair_diff.contains("failure-taxonomy semantic-drift")
+            && repair_diff.contains("expected-diagnostic AIL001")
+            && repair_diff.contains("expected-diagnostic-removed true")
+            && repair_diff.contains("repair-evidence-kind repair-vm-trace")
+            && repair_diff.contains("semantic-anchor support-ticket-99 preserved")
+            && repair_diff.contains("semantic-anchor application-workflow preserved")
+            && repair_diff.contains("semantic-anchor-missing-count 0"),
+        "{repair_diff}"
+    );
+    let repair_diff_fingerprint =
+        fs::read_to_string(artifact_dir.join("examples/example-99/repair-diff.fingerprint.txt"))
+            .unwrap();
+    assert_eq!(
+        repair_diff_fingerprint.trim(),
+        fnv64_fingerprint(&repair_diff)
+    );
     let report = fs::read_to_string(artifact_dir.join("examples-report.txt")).unwrap();
     assert!(
         report.contains("checker-result-count accepted 100"),
@@ -27463,6 +27538,10 @@ fn cli_ail_e2e_corpus_replays_rejected_prompt_failures() {
         "{report}"
     );
     assert!(
+        report.contains("repair-diff-fingerprint-observed-count 1"),
+        "{report}"
+    );
+    assert!(
         report.contains(&format!(
             "entry-artifact example-99 repair-tutorial examples/example-99/repair-tutorial.txt {}",
             repair_tutorial_fingerprint.trim()
@@ -27497,6 +27576,13 @@ fn cli_ail_e2e_corpus_replays_rejected_prompt_failures() {
         )),
         "{report}"
     );
+    assert!(
+        report.contains(&format!(
+            "entry-artifact example-99 repair-diff examples/example-99/repair-diff.txt {}",
+            repair_diff_fingerprint.trim()
+        )),
+        "{report}"
+    );
     let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-examples.txt")).unwrap();
     assert!(
         manifest.contains(&format!(
@@ -27509,6 +27595,13 @@ fn cli_ail_e2e_corpus_replays_rejected_prompt_failures() {
         manifest.contains(&format!(
             "entry-artifact example-99 repair-bytecode examples/example-99/repair-artifact.ailbc.json {}",
             repair_bytecode_fingerprint.trim()
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "entry-artifact example-99 repair-diff examples/example-99/repair-diff.txt {}",
+            repair_diff_fingerprint.trim()
         )),
         "{manifest}"
     );

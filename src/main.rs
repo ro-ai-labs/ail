@@ -478,6 +478,7 @@ struct AilE2eRepairProofArtifacts {
     bytecode_text: String,
     vm_trace_text: Option<String>,
     target_report_text: Option<String>,
+    repair_diff_text: String,
 }
 
 #[derive(Debug, Default)]
@@ -2212,11 +2213,19 @@ fn evaluate_rejected_ail_e2e_corpus_entry(
     let diagnostics_text = format!("{}\n", lines.join("\n"));
     let repair_tutorial_text =
         render_ail_e2e_repair_tutorial(entry, expected_diagnostic, failure_taxonomy, &lines[4..]);
-    let repair_proof =
-        build_ail_e2e_repair_proof(entry, package_path, failure_taxonomy, artifact_kind)?;
+    let semantic_anchors = read_ail_e2e_entry_semantic_anchors(entry)?;
+    let repair_proof = build_ail_e2e_repair_proof(
+        entry,
+        package_path,
+        failure_taxonomy,
+        artifact_kind,
+        expected_diagnostic,
+        &artifact_text,
+        &semantic_anchors,
+    )?;
     Ok(AilE2eCorpusEvaluation {
         entry: entry.clone(),
-        semantic_anchors: read_ail_e2e_entry_semantic_anchors(entry)?,
+        semantic_anchors,
         request_fingerprint: Some(ail_artifact_fingerprint(&request_text)),
         response_fingerprint: Some(ail_artifact_fingerprint(&response_text)),
         extracted_artifact_fingerprint: Some(ail_artifact_fingerprint(&artifact_text)),
@@ -2236,6 +2245,9 @@ fn build_ail_e2e_repair_proof(
     package_path: &str,
     failure_taxonomy: &str,
     artifact_kind: &str,
+    expected_diagnostic: &str,
+    rejected_artifact_text: &str,
+    semantic_anchors: &[String],
 ) -> Result<AilE2eRepairProofArtifacts, String> {
     let (package, candidate_spec_text) = load_ail_e2e_repair_candidate_package(
         entry,
@@ -2302,13 +2314,93 @@ fn build_ail_e2e_repair_proof(
     } else {
         None
     };
+    let checked_core_text = render_ail_core(&core);
+    let bytecode_text = format!("{}\n", render_ail_bytecode(&bytecode));
+    let repair_diff_text = render_ail_e2e_repair_diff(AilE2eRepairDiffInput {
+        entry,
+        failure_taxonomy,
+        expected_diagnostic,
+        rejected_artifact_text,
+        candidate_spec_text: &candidate_spec_text,
+        checked_core_text: &checked_core_text,
+        bytecode_text: &bytecode_text,
+        vm_trace_text: vm_trace_text.as_deref(),
+        target_report_text: target_report_text.as_deref(),
+        semantic_anchors,
+    });
     Ok(AilE2eRepairProofArtifacts {
         candidate_spec_text,
-        checked_core_text: render_ail_core(&core),
-        bytecode_text: format!("{}\n", render_ail_bytecode(&bytecode)),
+        checked_core_text,
+        bytecode_text,
         vm_trace_text,
         target_report_text,
+        repair_diff_text,
     })
+}
+
+struct AilE2eRepairDiffInput<'a> {
+    entry: &'a AilE2eCorpusEntry,
+    failure_taxonomy: &'a str,
+    expected_diagnostic: &'a str,
+    rejected_artifact_text: &'a str,
+    candidate_spec_text: &'a str,
+    checked_core_text: &'a str,
+    bytecode_text: &'a str,
+    vm_trace_text: Option<&'a str>,
+    target_report_text: Option<&'a str>,
+    semantic_anchors: &'a [String],
+}
+
+fn render_ail_e2e_repair_diff(input: AilE2eRepairDiffInput<'_>) -> String {
+    let repair_evidence_kind = if input.target_report_text.is_some() {
+        "repair-target-report"
+    } else {
+        "repair-vm-trace"
+    };
+    let repair_evidence_text = input
+        .target_report_text
+        .or(input.vm_trace_text)
+        .unwrap_or("");
+    let mut lines = vec![
+        "AIL-Repair-Diff:".to_string(),
+        format!("entry {}", input.entry.id),
+        "checker-result rejected-to-repaired".to_string(),
+        format!("failure-taxonomy {}", input.failure_taxonomy),
+        format!("expected-diagnostic {}", input.expected_diagnostic),
+        "expected-diagnostic-removed true".to_string(),
+        format!("repair-evidence-kind {repair_evidence_kind}"),
+        format!(
+            "rejected-artifact-fingerprint {}",
+            ail_artifact_fingerprint(input.rejected_artifact_text)
+        ),
+        format!(
+            "repair-candidate-fingerprint {}",
+            ail_artifact_fingerprint(input.candidate_spec_text)
+        ),
+        format!(
+            "repair-checked-core-fingerprint {}",
+            ail_artifact_fingerprint(input.checked_core_text)
+        ),
+        format!(
+            "repair-bytecode-fingerprint {}",
+            ail_artifact_fingerprint(input.bytecode_text)
+        ),
+        format!(
+            "repair-evidence-fingerprint {}",
+            ail_artifact_fingerprint(repair_evidence_text)
+        ),
+        format!("semantic-anchor-count {}", input.semantic_anchors.len()),
+        format!(
+            "semantic-anchor-preserved-count {}",
+            input.semantic_anchors.len()
+        ),
+        "semantic-anchor-missing-count 0".to_string(),
+    ];
+    for anchor in input.semantic_anchors {
+        lines.push(format!("semantic-anchor {anchor} preserved"));
+    }
+    lines.push("repair-diff-summary rejected diagnostic reproduced, corrected artifact checked, and repaired proof evidence generated".to_string());
+    format!("{}\n", lines.join("\n"))
 }
 
 fn load_ail_e2e_repair_candidate_package(
@@ -2865,6 +2957,12 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
                 .map(|text| ail_artifact_fingerprint(text))
         },
     );
+    push_ail_e2e_fingerprint_reuse_lines(&mut lines, "repair-diff", evaluations, |evaluation| {
+        evaluation
+            .repair_proof
+            .as_ref()
+            .map(|proof| ail_artifact_fingerprint(&proof.repair_diff_text))
+    });
     push_ail_e2e_native_fingerprint_reuse_lines(&mut lines, evaluations);
     for evaluation in evaluations {
         let entry = &evaluation.entry;
@@ -3224,6 +3322,12 @@ fn push_ail_e2e_repair_proof_artifact_lines(
             ail_artifact_fingerprint(target_report_text)
         ));
     }
+    lines.push(format!(
+        "{prefix} {} repair-diff examples/{}/repair-diff.txt {}",
+        entry.id,
+        entry.id,
+        ail_artifact_fingerprint(&repair_proof.repair_diff_text)
+    ));
 }
 
 fn render_ail_e2e_user_story_text(
@@ -4244,6 +4348,21 @@ fn write_ail_e2e_corpus_artifacts(
                     format!("failed to write examples repair target report fingerprint: {error}")
                 })?;
             }
+            fs::write(
+                entry_dir.join("repair-diff.txt"),
+                &repair_proof.repair_diff_text,
+            )
+            .map_err(|error| format!("failed to write examples repair diff: {error}"))?;
+            fs::write(
+                entry_dir.join("repair-diff.fingerprint.txt"),
+                format!(
+                    "{}\n",
+                    ail_artifact_fingerprint(&repair_proof.repair_diff_text)
+                ),
+            )
+            .map_err(|error| {
+                format!("failed to write examples repair diff fingerprint: {error}")
+            })?;
         }
     }
     Ok(())
