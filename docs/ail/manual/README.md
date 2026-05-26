@@ -28,6 +28,12 @@ Run the prompt interaction checks:
 python3 scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run-checks
 ```
 
+Print the hosted prompt-pack harness without contacting the model:
+
+```sh
+python3 scripts/run_v03_prompt_llm_harness.py --dry-run
+```
+
 Run deterministic local checks for a chapter:
 
 ```sh
@@ -52,6 +58,7 @@ be reviewed before promotion into `./examples`.
 - `examples-release`: full `./examples` replay with release evidence and
   learning metadata.
 - `prompt-interaction`: prompt-pack and stored transcript inspection for system
-  prompt interaction testing.
+  prompt interaction testing, plus an opt-in hosted llama.cpp prompt-pack
+  harness.
 - `agent-entrypoint`: Codex agent role files and the AIL toolchain-agent package
   that participates in the authoring pipeline.

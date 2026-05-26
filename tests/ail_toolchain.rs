@@ -909,6 +909,7 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         "scripts/run_ail_interactive_manual.py --list",
         "scripts/run_ail_interactive_manual.py --chapter user-story-mode --dry-run",
         "scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run-checks",
+        "scripts/run_v03_prompt_llm_harness.py --dry-run",
         "user-story-mode",
         "examples-release",
         "prompt-interaction",
@@ -1013,6 +1014,7 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "id prompt-interaction",
         "cargo run -- ail-prompt-corpus docs/ail/corpus/prompts",
         "cargo run -- ail-examples examples",
+        "python3 scripts/run_v03_prompt_llm_harness.py --dry-run",
         "manifest.ail-prompt-corpus.txt",
         "AIL-Examples-Report",
     ] {
@@ -1044,6 +1046,69 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         assert!(
             agent_stdout.contains(required),
             "{required}\n{agent_stdout}"
+        );
+    }
+}
+
+#[test]
+fn script_v03_prompt_llm_harness_help_lists_all_prompts_and_dry_run() {
+    let script = format!(
+        "{}/scripts/run_v03_prompt_llm_harness.py",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let output = Command::new("python3")
+        .args([&script, "--help"])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    for required in [
+        "prompt-pack",
+        "--dry-run",
+        "--endpoint",
+        "--prompt-dir",
+        "http://inteligentia-pro-1:8080",
+        "/v1/chat/completions",
+    ] {
+        assert!(stdout.contains(required), "{required}\n{stdout}");
+    }
+
+    let dry_run = Command::new("python3")
+        .args([&script, "--dry-run"])
+        .output()
+        .unwrap();
+    assert!(
+        dry_run.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&dry_run.stdout),
+        String::from_utf8_lossy(&dry_run.stderr)
+    );
+    let dry_run_stdout = String::from_utf8_lossy(&dry_run.stdout);
+    for required in [
+        "AIL-Prompt-LLM-Harness:",
+        "model-check curl -sS http://inteligentia-pro-1:8080/v1/models",
+        "endpoint http://inteligentia-pro-1:8080/v1/chat/completions",
+        "prompt docs/ail/prompts/interview.system.md",
+        "prompt docs/ail/prompts/requirements.system.md",
+        "prompt docs/ail/prompts/spec-draft.system.md",
+        "prompt docs/ail/prompts/core-draft.system.md",
+        "prompt docs/ail/prompts/repair.system.md",
+        "prompt docs/ail/prompts/diagnostic-repair.system.md",
+        "prompt docs/ail/prompts/core-to-spec.system.md",
+        "prompt docs/ail/prompts/core-to-summary.system.md",
+        "prompt docs/ail/prompts/flow-patch.system.md",
+        "prompt docs/ail/prompts/trace-debug.system.md",
+        "prompt docs/ail/prompts/interop.system.md",
+        "artifact-dir /tmp/ail-v03-prompt-llm",
+    ] {
+        assert!(
+            dry_run_stdout.contains(required),
+            "{required}\n{dry_run_stdout}"
         );
     }
 }

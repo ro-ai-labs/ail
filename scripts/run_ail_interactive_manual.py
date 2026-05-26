@@ -148,6 +148,10 @@ CHAPTERS: tuple[ManualChapter, ...] = (
                 ),
             ),
             ManualCommand(
+                label="show-prompt-pack-live-command",
+                command=("python3", "scripts/run_v03_prompt_llm_harness.py", "--dry-run"),
+            ),
+            ManualCommand(
                 label="replay-examples-prompt-surfaces",
                 command=(
                     "cargo",
@@ -164,6 +168,11 @@ CHAPTERS: tuple[ManualChapter, ...] = (
             ManualCommand(
                 label="inspect-capture-help",
                 command=("python3", "scripts/capture_example_transcripts.py", "--help"),
+            ),
+            ManualCommand(
+                label="run-prompt-pack-live",
+                command=("python3", "scripts/run_v03_prompt_llm_harness.py"),
+                live=True,
             ),
         ),
     ),

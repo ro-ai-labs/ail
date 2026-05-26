@@ -23,3 +23,16 @@ Every prompt uses the common output envelope in `19-agent-prompt-pack.md`.
 `ail-prompt-corpus docs/ail/corpus/prompts` requires at least one accepted
 stored output for each prompt file above, and `ail-examples examples` requires
 the same prompt-file surface in the end-to-end examples set.
+
+For opt-in hosted model probing, use the v0.3 prompt LLM harness:
+
+```sh
+python3 scripts/run_v03_prompt_llm_harness.py --dry-run
+```
+
+The live form contacts `http://inteligentia-pro-1:8080/v1/models`, then probes
+each prompt file through `http://inteligentia-pro-1:8080/v1/chat/completions`
+and writes request, response, extracted content, report, manifest, and
+fingerprint artifacts under `/tmp/ail-v03-prompt-llm`. The output is evidence
+for prompt interaction review only; generated text still has to pass the
+deterministic checker before it can be promoted into `./examples`.
