@@ -11588,8 +11588,22 @@ pub fn draft_ail_requirements(
     user_prompt: &str,
     endpoint: &str,
 ) -> Result<String, String> {
+    match draft_ail_requirements_response(package, user_prompt, endpoint)? {
+        crate::llm::LlmArtifactResponse::Artifact(artifact_text) => Ok(artifact_text),
+        crate::llm::LlmArtifactResponse::Questions(questions) => Err(format!(
+            "model returned blocking questions:\n- {}",
+            questions.join("\n- ")
+        )),
+    }
+}
+
+pub fn draft_ail_requirements_response(
+    package: &AilPackage,
+    user_prompt: &str,
+    endpoint: &str,
+) -> Result<crate::llm::LlmArtifactResponse, String> {
     let prompt = build_ail_requirements_prompt(package, user_prompt);
-    crate::llm::invoke_llm_text_for_artifact(
+    crate::llm::invoke_llm_artifact_response(
         endpoint,
         &prompt,
         "AIL-Requirements",
@@ -13430,6 +13444,10 @@ fn render_ail_interview_questions(questions: &[String]) -> String {
         lines.push(format!("- {}", question.trim()));
     }
     lines.join("\n")
+}
+
+pub fn render_ail_interview_questions_artifact(questions: &[String]) -> String {
+    render_ail_interview_questions(questions)
 }
 
 fn normalize_ail_interview_artifact(artifact_text: &str) -> String {

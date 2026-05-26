@@ -1085,6 +1085,8 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         "artifact.ailbc.json",
         "manifest.ail-story.txt",
         "agent-trace.txt",
+        "story-questions.ail-interview.md",
+        "ail-story blocking questions",
         "http://inteligentia-pro-1:8080/",
         "http://inteligentia-pro-1:8080/v1/chat/completions",
     ] {
@@ -1190,8 +1192,10 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "cargo run -- ail-story examples/support_ticket.ail",
         "cargo test cli_ail_story_builds_checked_artifacts_from_story_file --test ail_toolchain",
         "cargo test cli_ail_story_agent_records_story_entrypoint_before_compile --test ail_toolchain",
+        "cargo test cli_ail_story_surfaces_blocking_questions_as_story_artifact --test ail_toolchain",
         "evidence manifest.ail-story.txt",
         "evidence agent-trace.txt",
+        "evidence story-questions.ail-interview.md",
         "python3 scripts/run_v03_story_llm_harness.py --dry-run",
         "python3 scripts/run_v03_story_llm_harness.py --review-artifacts /tmp/ail-v03-story-llm",
         "live false",
@@ -1378,6 +1382,7 @@ fn script_ail_interactive_manual_v03_authoring_gate_run_checks_succeeds() {
         "running run-agent-entrypoint-checks",
         "AIL-Examples-Report:",
         "AIL-Prompt-Corpus-Portability-Report:",
+        "story-questions.ail-interview.md",
         "agent-trace.txt",
     ] {
         assert!(stdout.contains(required), "{required}\n{stdout}");
@@ -19910,6 +19915,114 @@ fn cli_ail_story_agent_records_story_entrypoint_before_compile() {
         story_manifest.contains("entrypoint ail-story"),
         "{story_manifest}"
     );
+
+    fs::remove_file(story_file).unwrap();
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
+fn cli_ail_story_surfaces_blocking_questions_as_story_artifact() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("support_ticket.ail");
+    let unique_suffix = format!(
+        "{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
+    let story_file = std::env::temp_dir().join(format!("ail-story-questions-{unique_suffix}.md"));
+    let artifact_dir =
+        std::env::temp_dir().join(format!("ail-story-questions-artifacts-{unique_suffix}"));
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::write(
+        &story_file,
+        concat!(
+            "# Support Ticket Questions Story\n\n",
+            "user-story-id: support-ticket-questions-story\n",
+            "user-story: As a reviewer I can stop story authoring when required semantics are missing.\n",
+            "acceptance-criteria: blocking questions are preserved; no bytecode is emitted\n",
+            "semantic-anchors: Support Tickets; Close ticket; TicketClosed; blocking questions\n"
+        ),
+    )
+    .unwrap();
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let envelope = concat!(
+        "{",
+        "\"artifact_kind\":\"AIL-Requirements\",",
+        "\"artifact_text\":\"\",",
+        "\"questions\":[\"Which user roles may close tickets?\",\"Which trace events must be emitted?\"],",
+        "\"assumptions\":[],",
+        "\"provenance\":[\"mock:story-questions\"],",
+        "\"checker_handoff\":{\"must_check\":true,\"expected_profile\":\"Application\",\"expected_features\":[]}",
+        "}"
+    );
+    let response_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(envelope)
+    );
+    let server = serve_one_chat_response(listener, response_body);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-story",
+            &package,
+            "--story-file",
+            story_file.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+            "--llm-endpoint",
+            &format!("http://127.0.0.1:{}/v1/chat/completions", addr.port()),
+        ])
+        .output()
+        .unwrap();
+
+    let request_body = server.join().unwrap();
+    assert_eq!(output.status.code(), Some(1));
+    assert!(
+        request_body.contains("USER STORY MODE INPUT"),
+        "{request_body}"
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.is_empty(), "{stderr}");
+    assert!(stdout.contains("ail-story blocking questions:"), "{stdout}");
+    assert!(
+        stdout.contains("Which user roles may close tickets?"),
+        "{stdout}"
+    );
+    assert!(
+        stdout.contains("Which trace events must be emitted?"),
+        "{stdout}"
+    );
+    assert!(!artifact_dir.join("artifact.ailbc.json").exists());
+    assert!(!artifact_dir.join("checked.ail-core.txt").exists());
+
+    let questions =
+        fs::read_to_string(artifact_dir.join("story-questions.ail-interview.md")).unwrap();
+    assert!(questions.starts_with("AIL-Interview:\n"), "{questions}");
+    assert!(
+        questions.contains("- Which user roles may close tickets?"),
+        "{questions}"
+    );
+    let questions_fingerprint =
+        fs::read_to_string(artifact_dir.join("story-questions.fingerprint.txt")).unwrap();
+    assert_eq!(questions_fingerprint.trim(), fnv64_fingerprint(&questions));
+    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-story.txt")).unwrap();
+    assert!(manifest.contains("AIL-Story-Manifest:"), "{manifest}");
+    assert!(manifest.contains("entrypoint ail-story"), "{manifest}");
+    assert!(
+        manifest.contains(&format!(
+            "story-questions story-questions.ail-interview.md {}",
+            questions_fingerprint.trim()
+        )),
+        "{manifest}"
+    );
+    let manifest_fingerprint =
+        fs::read_to_string(artifact_dir.join("manifest.ail-story.fingerprint.txt")).unwrap();
+    assert_eq!(manifest_fingerprint.trim(), fnv64_fingerprint(&manifest));
 
     fs::remove_file(story_file).unwrap();
     fs::remove_dir_all(artifact_dir).unwrap();

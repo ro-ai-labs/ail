@@ -17,7 +17,8 @@ python3 scripts/run_ail_interactive_manual.py --chapter user-story-mode --run-ch
 
 These checks exercise the local `ail-story` path with a stubbed chat endpoint
 and verify both the plain story authoring path and the toolchain-agent
-entrypoint path.
+entrypoint path. They also verify the blocking-question branch where the model
+needs clarification before requirements can be trusted.
 
 ## Story-First Run
 
@@ -46,7 +47,7 @@ contacting an LLM.
 
 ## Artifact Walkthrough
 
-After a successful run, inspect these files:
+After a successful compile run, inspect these files:
 
 ```text
 /tmp/ail-user-story-mode/story.source.md
@@ -67,6 +68,12 @@ After a successful run, inspect these files:
 semantic-anchor count. `manifest.ail-story.txt` fingerprints story, generated
 requirements, accepted spec, checked Core, bytecode, and the underlying
 `ail-build` manifest.
+
+When the requirements prompt returns blocking questions instead of an
+`AIL-Requirements` artifact, `ail-story` prints `ail-story blocking questions:`,
+writes `story-questions.ail-interview.md`, fingerprints it, records it in
+`manifest.ail-story.txt`, and exits before `checked.ail-core.txt` or
+`artifact.ailbc.json` can be emitted.
 
 `agent-trace.txt` should include:
 

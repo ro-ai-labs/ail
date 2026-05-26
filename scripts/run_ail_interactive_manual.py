@@ -75,6 +75,20 @@ BASE_CHAPTERS: tuple[ManualChapter, ...] = (
                 ),
             ),
             ManualCommand(
+                label="verify-story-blocking-questions-local",
+                command=(
+                    "cargo",
+                    "test",
+                    "cli_ail_story_surfaces_blocking_questions_as_story_artifact",
+                    "--test",
+                    "ail_toolchain",
+                ),
+                evidence=(
+                    "story-questions.ail-interview.md",
+                    "manifest.ail-story.txt",
+                ),
+            ),
+            ManualCommand(
                 label="run-story-mode-live",
                 command=("python3", "scripts/run_v03_story_llm_harness.py"),
                 live=True,
@@ -291,6 +305,7 @@ V03_AUTHORING_GATE = ManualChapter(
             evidence=(
                 "story-mode-report.txt",
                 "manifest.ail-story.txt",
+                "story-questions.ail-interview.md",
                 "agent-trace.txt",
             ),
         ),

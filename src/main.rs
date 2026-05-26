@@ -7,12 +7,13 @@ use ail::ail::{
     AilBytecodeProgram, DEFAULT_BASE_LLM_ENDPOINT, ail_core_hash, ail_document_from_core,
     apply_ail_core_patch_text, apply_ail_flow_edit_text, apply_ail_patch, check_ail_core,
     check_ail_requirements, compile_ail_bytecode_native_elf, compile_ail_core_bytecode,
-    compile_ail_core_native_elf, draft_ail_interview, draft_ail_requirements, draft_ail_spec,
-    draft_ail_spec_from_requirements, elaborate_ail_core, load_ail_package_dir, parse_ail_bytecode,
-    parse_ail_core_text, parse_ail_package_document, parse_ail_package_spec_text,
-    parse_ail_patch_text, parse_ail_spec_text, render_ail_bytecode, render_ail_core,
-    render_ail_flow_view, render_ail_package_dependency_report, render_ail_runtime_state_lines,
-    render_ail_spec, render_ail_spec_from_core, repair_ail_requirements_from_diagnostics,
+    compile_ail_core_native_elf, draft_ail_interview, draft_ail_requirements_response,
+    draft_ail_spec, draft_ail_spec_from_requirements, elaborate_ail_core, load_ail_package_dir,
+    parse_ail_bytecode, parse_ail_core_text, parse_ail_package_document,
+    parse_ail_package_spec_text, parse_ail_patch_text, parse_ail_spec_text, render_ail_bytecode,
+    render_ail_core, render_ail_flow_view, render_ail_interview_questions_artifact,
+    render_ail_package_dependency_report, render_ail_runtime_state_lines, render_ail_spec,
+    render_ail_spec_from_core, repair_ail_requirements_from_diagnostics,
     repair_ail_spec_from_diagnostics, run_ail_bytecode_action, run_ail_compiler_pass_on_core,
     run_ail_conformance, verify_ail_bytecode,
 };
@@ -46,6 +47,14 @@ struct AilInterviewArtifactSet<'a> {
     package_name: &'a str,
     package_version: &'a str,
     interview_text: &'a str,
+}
+
+enum AilRequirementsDraftOutcome {
+    Requirements {
+        text: String,
+        diagnostics: Vec<ail::ail::AilDiagnostic>,
+    },
+    Questions(Vec<String>),
 }
 
 struct AilSpecArtifactSet<'a> {
@@ -342,6 +351,14 @@ struct AilStoryManifestArtifactSet<'a> {
     core_text: &'a str,
     bytecode_text: &'a str,
     build_manifest_text: Option<&'a str>,
+}
+
+struct AilStoryQuestionsManifestArtifactSet<'a> {
+    story_source_text: &'a str,
+    story_normalized_text: &'a str,
+    story_report_text: &'a str,
+    story_questions_text: &'a str,
+    agent_trace_text: Option<&'a str>,
 }
 
 struct AilCompileArtifactSet<'a> {
@@ -5424,12 +5441,121 @@ fn render_ail_story_manifest(artifacts: &AilStoryManifestArtifactSet<'_>) -> Str
     format!("{}\n", lines.join("\n"))
 }
 
+fn render_ail_story_questions_manifest(
+    artifacts: &AilStoryQuestionsManifestArtifactSet<'_>,
+) -> String {
+    let mut lines = vec![
+        "AIL-Story-Manifest:".to_string(),
+        "entrypoint ail-story".to_string(),
+        format!(
+            "story-source story.source.md {}",
+            ail_artifact_fingerprint(artifacts.story_source_text)
+        ),
+        format!(
+            "story-normalized story.normalized.md {}",
+            ail_artifact_fingerprint(artifacts.story_normalized_text)
+        ),
+        format!(
+            "story-report story-mode-report.txt {}",
+            ail_artifact_fingerprint(artifacts.story_report_text)
+        ),
+        format!(
+            "story-questions story-questions.ail-interview.md {}",
+            ail_artifact_fingerprint(artifacts.story_questions_text)
+        ),
+    ];
+    if let Some(agent_trace_text) = artifacts.agent_trace_text {
+        lines.push(format!(
+            "agent-trace agent-trace.txt {}",
+            ail_artifact_fingerprint(agent_trace_text)
+        ));
+    }
+    format!("{}\n", lines.join("\n"))
+}
+
 fn read_required_story_build_artifact(
     root: &std::path::Path,
     file_name: &str,
 ) -> Result<String, String> {
     fs::read_to_string(root.join(file_name))
         .map_err(|error| format!("failed to read ail-story build artifact {file_name}: {error}"))
+}
+
+fn write_ail_story_question_artifacts(
+    artifact_dir: &str,
+    artifacts: AilStoryModeArtifactSet<'_>,
+    questions_text: &str,
+    agent_trace: Option<&[String]>,
+) -> Result<(), String> {
+    let root = std::path::Path::new(artifact_dir);
+    fs::create_dir_all(root).map_err(|error| {
+        format!("failed to create ail-story artifact dir {artifact_dir}: {error}")
+    })?;
+    let story_source_text = ensure_trailing_newline(artifacts.story_source_text.to_string());
+    let story_normalized_text =
+        ensure_trailing_newline(artifacts.story_normalized_text.to_string());
+    let story_report_text = render_ail_story_mode_report(&artifacts);
+    let story_questions_text = ensure_trailing_newline(questions_text.to_string());
+    fs::write(root.join("story.source.md"), &story_source_text)
+        .map_err(|error| format!("failed to write ail-story source story artifact: {error}"))?;
+    fs::write(
+        root.join("story.source.fingerprint.txt"),
+        format!("{}\n", ail_artifact_fingerprint(&story_source_text)),
+    )
+    .map_err(|error| {
+        format!("failed to write ail-story source story fingerprint artifact: {error}")
+    })?;
+    fs::write(root.join("story.normalized.md"), &story_normalized_text)
+        .map_err(|error| format!("failed to write ail-story normalized story artifact: {error}"))?;
+    fs::write(
+        root.join("story.normalized.fingerprint.txt"),
+        format!("{}\n", ail_artifact_fingerprint(&story_normalized_text)),
+    )
+    .map_err(|error| {
+        format!("failed to write ail-story normalized story fingerprint artifact: {error}")
+    })?;
+    fs::write(root.join("story-mode-report.txt"), &story_report_text)
+        .map_err(|error| format!("failed to write ail-story mode report artifact: {error}"))?;
+    fs::write(
+        root.join("story-mode-report.fingerprint.txt"),
+        format!("{}\n", ail_artifact_fingerprint(&story_report_text)),
+    )
+    .map_err(|error| {
+        format!("failed to write ail-story mode report fingerprint artifact: {error}")
+    })?;
+    fs::write(
+        root.join("story-questions.ail-interview.md"),
+        &story_questions_text,
+    )
+    .map_err(|error| format!("failed to write ail-story questions artifact: {error}"))?;
+    fs::write(
+        root.join("story-questions.fingerprint.txt"),
+        format!("{}\n", ail_artifact_fingerprint(&story_questions_text)),
+    )
+    .map_err(|error| {
+        format!("failed to write ail-story questions fingerprint artifact: {error}")
+    })?;
+    let agent_trace_text = agent_trace.map(|trace| format!("{}\n", trace.join("\n")));
+    if let Some(agent_trace_text) = agent_trace_text.as_deref() {
+        fs::write(root.join("agent-trace.txt"), agent_trace_text)
+            .map_err(|error| format!("failed to write ail-story agent trace artifact: {error}"))?;
+    }
+    let manifest_text =
+        render_ail_story_questions_manifest(&AilStoryQuestionsManifestArtifactSet {
+            story_source_text: &story_source_text,
+            story_normalized_text: &story_normalized_text,
+            story_report_text: &story_report_text,
+            story_questions_text: &story_questions_text,
+            agent_trace_text: agent_trace_text.as_deref(),
+        });
+    fs::write(root.join("manifest.ail-story.txt"), &manifest_text)
+        .map_err(|error| format!("failed to write ail-story manifest artifact: {error}"))?;
+    fs::write(
+        root.join("manifest.ail-story.fingerprint.txt"),
+        format!("{}\n", ail_artifact_fingerprint(&manifest_text)),
+    )
+    .map_err(|error| format!("failed to write ail-story manifest fingerprint artifact: {error}"))?;
+    Ok(())
 }
 
 fn write_ail_story_mode_artifacts(
@@ -9800,14 +9926,11 @@ fn native_elf_dependency_identity(bytes: &[u8]) -> Result<&'static str, String> 
     Ok("standalone-linux-syscall-elf")
 }
 
-fn draft_checked_ail_requirements_for_package(
-    package: &ail::ail::AilPackage,
+fn grounded_ail_requirements_prompt(
     prompt: &str,
-    endpoint: &str,
     agent_requirements_context: Option<&str>,
-    retry_prompt_envelope_errors: bool,
-) -> Result<(String, Vec<ail::ail::AilDiagnostic>), String> {
-    let grounded_prompt = if let Some(agent_requirements_context) =
+) -> String {
+    if let Some(agent_requirements_context) =
         agent_requirements_context.filter(|context| !context.trim().is_empty())
     {
         format!(
@@ -9822,16 +9945,44 @@ fn draft_checked_ail_requirements_for_package(
         )
     } else {
         prompt.to_string()
-    };
-    let mut requirements = match draft_ail_requirements(package, &grounded_prompt, endpoint) {
-        Ok(requirements) => requirements,
-        Err(error) if retry_prompt_envelope_errors && is_prompt_envelope_protocol_error(&error) => {
-            let retry_prompt =
-                prompt_envelope_retry_prompt(&grounded_prompt, &error, "AIL-Requirements");
-            draft_ail_requirements(package, &retry_prompt, endpoint)?
-        }
-        Err(error) => return Err(error),
-    };
+    }
+}
+
+fn blocking_questions_error(questions: &[String]) -> String {
+    format!(
+        "model returned blocking questions:\n- {}",
+        questions.join("\n- ")
+    )
+}
+
+fn draft_checked_ail_requirements_for_package_or_questions(
+    package: &ail::ail::AilPackage,
+    prompt: &str,
+    endpoint: &str,
+    agent_requirements_context: Option<&str>,
+    retry_prompt_envelope_errors: bool,
+) -> Result<AilRequirementsDraftOutcome, String> {
+    let grounded_prompt = grounded_ail_requirements_prompt(prompt, agent_requirements_context);
+    let mut requirements =
+        match draft_ail_requirements_response(package, &grounded_prompt, endpoint) {
+            Ok(ail::llm::LlmArtifactResponse::Artifact(requirements)) => requirements,
+            Ok(ail::llm::LlmArtifactResponse::Questions(questions)) => {
+                return Ok(AilRequirementsDraftOutcome::Questions(questions));
+            }
+            Err(error)
+                if retry_prompt_envelope_errors && is_prompt_envelope_protocol_error(&error) =>
+            {
+                let retry_prompt =
+                    prompt_envelope_retry_prompt(&grounded_prompt, &error, "AIL-Requirements");
+                match draft_ail_requirements_response(package, &retry_prompt, endpoint)? {
+                    ail::llm::LlmArtifactResponse::Artifact(requirements) => requirements,
+                    ail::llm::LlmArtifactResponse::Questions(questions) => {
+                        return Ok(AilRequirementsDraftOutcome::Questions(questions));
+                    }
+                }
+            }
+            Err(error) => return Err(error),
+        };
     let mut diagnostics = check_ail_requirements(package, &requirements);
     if !diagnostics.is_empty() {
         requirements = repair_ail_requirements_from_diagnostics(
@@ -9843,7 +9994,31 @@ fn draft_checked_ail_requirements_for_package(
         )?;
         diagnostics = check_ail_requirements(package, &requirements);
     }
-    Ok((requirements, diagnostics))
+    Ok(AilRequirementsDraftOutcome::Requirements {
+        text: requirements,
+        diagnostics,
+    })
+}
+
+fn draft_checked_ail_requirements_for_package(
+    package: &ail::ail::AilPackage,
+    prompt: &str,
+    endpoint: &str,
+    agent_requirements_context: Option<&str>,
+    retry_prompt_envelope_errors: bool,
+) -> Result<(String, Vec<ail::ail::AilDiagnostic>), String> {
+    match draft_checked_ail_requirements_for_package_or_questions(
+        package,
+        prompt,
+        endpoint,
+        agent_requirements_context,
+        retry_prompt_envelope_errors,
+    )? {
+        AilRequirementsDraftOutcome::Requirements { text, diagnostics } => Ok((text, diagnostics)),
+        AilRequirementsDraftOutcome::Questions(questions) => {
+            Err(blocking_questions_error(&questions))
+        }
+    }
 }
 
 fn prompt_with_saved_interview_answers(
@@ -11504,13 +11679,38 @@ fn run_ail_story_command(
     let agent_requirements_context = agent_start
         .as_ref()
         .map(render_ail_build_agent_requirements_context);
-    let (requirements, requirements_diagnostics) = draft_checked_ail_requirements_for_package(
+    let requirements_outcome = draft_checked_ail_requirements_for_package_or_questions(
         package,
         &requirements_prompt,
         endpoint,
         agent_requirements_context.as_deref(),
         true,
     )?;
+    let (requirements, requirements_diagnostics) = match requirements_outcome {
+        AilRequirementsDraftOutcome::Requirements { text, diagnostics } => (text, diagnostics),
+        AilRequirementsDraftOutcome::Questions(questions) => {
+            let questions_text = render_ail_interview_questions_artifact(&questions);
+            println!("ail-story blocking questions:");
+            println!("{questions_text}");
+            if let Some(artifact_dir) = cli_options.artifact_dir.as_deref() {
+                write_ail_story_question_artifacts(
+                    artifact_dir,
+                    AilStoryModeArtifactSet {
+                        package_name: &package.metadata.name,
+                        package_version: &package.metadata.version,
+                        story_file,
+                        story_source_text: &story_source_text,
+                        story_normalized_text: &normalized_story_text,
+                        story_fields: &normalized_story_fields,
+                        llm_endpoint: cli_options.llm_endpoint.as_deref(),
+                    },
+                    &questions_text,
+                    agent_start.as_ref().map(|agent| agent.trace.as_slice()),
+                )?;
+            }
+            return Ok(1);
+        }
+    };
     if !requirements_diagnostics.is_empty() {
         println!("ail-story requirements diagnostics:");
         for diagnostic in requirements_diagnostics {

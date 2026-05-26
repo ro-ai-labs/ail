@@ -81,8 +81,8 @@ be reviewed before promotion into `./examples`.
 ## Chapters
 
 - `user-story-mode`: story-first authoring with `ail-story`, checked
-  requirements, accepted spec, checked Core, bytecode, and agent trace. Prose:
-  `01-user-story-mode.md`.
+  requirements, blocking-question evidence, accepted spec, checked Core,
+  bytecode, and agent trace. Prose: `01-user-story-mode.md`.
 - `examples-release`: full `./examples` replay with release evidence and
   learning metadata. Prose: `02-examples-release.md`.
 - `prompt-interaction`: prompt-pack and stored transcript inspection for system

@@ -42,6 +42,7 @@ The gate should surface:
 ```text
 story-mode-report.txt
 manifest.ail-story.txt
+story-questions.ail-interview.md
 agent-trace.txt
 examples-report.txt
 v03-roadmap.txt
@@ -54,4 +55,3 @@ agent.ailbc.json
 Passing this chapter is not the same as declaring AIL v0.3 complete. It is the
 current deterministic authoring audit used to decide which missing behavior
 should be implemented next.
-
