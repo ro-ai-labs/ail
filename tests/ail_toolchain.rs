@@ -252,8 +252,12 @@ fn write_e2e_transcript_files(root: &std::path::Path, count: usize) {
 }
 
 fn e2e_story_file_text(index: usize) -> String {
+    e2e_story_file_text_with_overrides(index, &[])
+}
+
+fn e2e_story_file_text_with_overrides(index: usize, overrides: &[(&str, &str)]) -> String {
     let mut fields = BTreeMap::new();
-    for line in e2e_corpus_entry_text(index, &[]).lines() {
+    for line in e2e_corpus_entry_text(index, overrides).lines() {
         if let Some((key, value)) = line.split_once(": ") {
             fields.insert(key.to_string(), value.to_string());
         }
@@ -24549,6 +24553,70 @@ fn cli_ail_e2e_corpus_requires_v03_signal_to_name_next_improvement() {
 }
 
 #[test]
+fn cli_ail_e2e_corpus_requires_repeated_story_family_diversity() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let corpus_dir = std::env::temp_dir().join(format!(
+        "ail-examples-repeated-story-family-{}",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-examples-repeated-story-family-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&corpus_dir);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&corpus_dir).unwrap();
+    write_e2e_transcript_files(&corpus_dir, 100);
+
+    let collapsed_family_overrides = &[
+        ("prompt-file", "docs/ail/prompts/interview.system.md"),
+        ("story-journey", "story-to-spec"),
+    ];
+    let mut corpus_text = String::new();
+    for index in 0..100 {
+        if index % 12 == 0 {
+            corpus_text.push_str(&e2e_corpus_entry_text(index, collapsed_family_overrides));
+            fs::write(
+                corpus_dir
+                    .join("stories")
+                    .join(format!("example-{index}.md")),
+                e2e_story_file_text_with_overrides(index, collapsed_family_overrides),
+            )
+            .unwrap();
+        } else {
+            corpus_text.push_str(&e2e_corpus_entry_text(index, &[]));
+        }
+    }
+    fs::write(corpus_dir.join("examples.md"), corpus_text).unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-examples",
+            corpus_dir.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains(
+            "ail-examples repeated user-story-id support-ticket-story-0 has 9 entries but only 1 prompt files and 1 story journeys"
+        ),
+        "{stderr}"
+    );
+
+    let _ = fs::remove_dir_all(corpus_dir);
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
 fn cli_ail_e2e_corpus_requires_llm_endpoint_label() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let corpus_dir =
@@ -26045,6 +26113,13 @@ fn cli_ail_e2e_corpus_writes_report_for_metadata_complete_corpus() {
     );
     assert!(
         report.contains("semantic-anchor-missing-count 0"),
+        "{report}"
+    );
+    assert!(report.contains("story-family-count 12"), "{report}");
+    assert!(
+        report.contains(
+            "story-family support-ticket-story-0 entries 9 prompt-files 9 story-journeys 3"
+        ),
         "{report}"
     );
     assert!(

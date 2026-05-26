@@ -94,6 +94,12 @@ executor, or human-review path. This does not make the corpus v0.3-complete,
 but it prevents new entries from being counted when they are only labels around
 a passing replay.
 
+Repeated story families are checked across entries. Any `user-story-id` family
+with at least five entries must cover at least three prompt files and at least
+two story journeys, and the report must emit `story-family-count` plus
+per-family entry, prompt-file, and story-journey counts. This allows useful
+prompt matrices while rejecting label-only repetition.
+
 The v0.3 usefulness gate must preserve domain breadth. At minimum, the release
 verifier requires coverage for OS utilities, C interop, compiler passes,
 runtime behavior, package graphs, application workflows, agent tools,

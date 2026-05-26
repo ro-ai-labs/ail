@@ -449,6 +449,13 @@ struct AilE2eCorpusEvaluation {
     native_executables: Vec<AilNativeArtifact>,
 }
 
+#[derive(Debug, Default)]
+struct AilE2eStoryFamilyDimensions {
+    entry_count: usize,
+    prompt_files: BTreeSet<String>,
+    story_journeys: BTreeSet<String>,
+}
+
 struct AilBootstrapArtifactSet<'a> {
     target_name: &'a str,
     toolchain_source_manifest_text: &'a str,
@@ -2268,6 +2275,20 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
     lines.push(format!(
         "semantic-anchor-missing-count {semantic_anchor_missing_count}"
     ));
+    let story_family_dimensions =
+        ail_e2e_story_family_dimensions(evaluations.iter().map(|evaluation| &evaluation.entry));
+    lines.push(format!(
+        "story-family-count {}",
+        story_family_dimensions.len()
+    ));
+    for (story_id, dimensions) in story_family_dimensions {
+        lines.push(format!(
+            "story-family {story_id} entries {} prompt-files {} story-journeys {}",
+            dimensions.entry_count,
+            dimensions.prompt_files.len(),
+            dimensions.story_journeys.len()
+        ));
+    }
     push_ail_e2e_fingerprint_reuse_lines(&mut lines, "request", evaluations, |evaluation| {
         evaluation.request_fingerprint.clone()
     });
@@ -2788,6 +2809,31 @@ fn ail_e2e_semantic_task_family(semantic_task: &str) -> String {
     semantic_task.to_string()
 }
 
+fn ail_e2e_story_family_dimensions<'a, I>(
+    entries: I,
+) -> BTreeMap<String, AilE2eStoryFamilyDimensions>
+where
+    I: IntoIterator<Item = &'a AilE2eCorpusEntry>,
+{
+    let mut dimensions = BTreeMap::new();
+    for entry in entries {
+        let Some(story_id) = entry.fields.get("user-story-id") else {
+            continue;
+        };
+        let family = dimensions
+            .entry(story_id.to_string())
+            .or_insert_with(AilE2eStoryFamilyDimensions::default);
+        family.entry_count += 1;
+        if let Some(prompt_file) = entry.fields.get("prompt-file") {
+            family.prompt_files.insert(prompt_file.to_string());
+        }
+        if let Some(story_journey) = entry.fields.get("story-journey") {
+            family.story_journeys.insert(story_journey.to_string());
+        }
+    }
+    dimensions
+}
+
 fn validate_ail_e2e_corpus_release_coverage(entries: &[AilE2eCorpusEntry]) -> Result<(), String> {
     let semantic_tasks = entries
         .iter()
@@ -3085,6 +3131,18 @@ fn validate_ail_e2e_corpus_release_coverage(entries: &[AilE2eCorpusEntry]) -> Re
             "ail-examples requires one high-level application-workflow user-story-id family with at least two entries"
                 .to_string(),
         );
+    }
+    for (story_id, dimensions) in ail_e2e_story_family_dimensions(entries) {
+        if dimensions.entry_count >= 5
+            && (dimensions.prompt_files.len() < 3 || dimensions.story_journeys.len() < 2)
+        {
+            return Err(format!(
+                "ail-examples repeated user-story-id {story_id} has {} entries but only {} prompt files and {} story journeys; repeated families with at least 5 entries require at least 3 prompt files and 2 story journeys",
+                dimensions.entry_count,
+                dimensions.prompt_files.len(),
+                dimensions.story_journeys.len()
+            ));
+        }
     }
     let mut target_counts = BTreeMap::new();
     for entry in entries {
