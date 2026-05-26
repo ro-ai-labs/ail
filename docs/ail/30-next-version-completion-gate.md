@@ -581,14 +581,15 @@ already covers parts of this gate:
   unsupported target effects and C interop diagnostics for invalid nullable
   pointer contracts, plus System profile diagnostics for missing capabilities
   and package-loader diagnostics for unresolved registry imports
-- clean-worktree v0.2 release audit run at commit `d090932`, generated with
+- clean-worktree v0.2 release audit run at commit `ea37eeb`, generated with
   `python3 scripts/run_v02_release_audit.py --bundle-root
-  /tmp/ail-semantic-anchor-threshold-clean-d090932`; its
-  `release-audit-manifest.fingerprint.txt` is `fnv64:c19e5d0f76e9c851`, and
+  /tmp/ail-semantic-anchor-report-clean-ea37eeb`; its
+  `release-audit-manifest.fingerprint.txt` is `fnv64:45832a2198c7ad64`, and
   the audit manifest records `ok` for cargo format, diff whitespace, check,
   tests, clippy, conformance fixtures including Incident Response, build, Wasm
   host contract, Darwin contract, spec round-trip, bootstrap, and example
-  release evidence, including the release semantic-anchor story coverage gate
+  release evidence, including the release semantic-anchor story coverage and
+  replay-report anchor evidence gates
 
 Post-v0.2 learning work is tracked in
 `31-v03-learning-and-authoring-gate.md`.
