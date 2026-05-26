@@ -259,7 +259,7 @@ fn e2e_story_file_text(index: usize) -> String {
         }
     }
     format!(
-        "# Example {index} User Story\n\nuser-story-id: {}\nuser-story: {}\nacceptance-criteria: {}\nstory-journey: {}\nstory-roundtrip: {}\nstory-evidence: {}\nprogram-domain: {}\nmodule-count: {}\nspec-count: {}\nstory-count: {}\ninteracts-with: {}\n",
+        "# Example {index} User Story\n\nuser-story-id: {}\nuser-story: {}\nacceptance-criteria: {}\nstory-journey: {}\nstory-roundtrip: {}\nstory-evidence: {}\nprogram-domain: {}\nmodule-count: {}\nspec-count: {}\nstory-count: {}\ninteracts-with: {}\nsemantic-anchors: {}; {}; {}\n",
         fields.get("user-story-id").unwrap(),
         fields.get("user-story").unwrap(),
         fields.get("acceptance-criteria").unwrap(),
@@ -271,6 +271,9 @@ fn e2e_story_file_text(index: usize) -> String {
         fields.get("spec-count").unwrap(),
         fields.get("story-count").unwrap(),
         fields.get("interacts-with").unwrap(),
+        fields.get("semantic-task").unwrap(),
+        fields.get("capability-under-test").unwrap(),
+        fields.get("prompt-file").unwrap(),
     )
 }
 
@@ -25216,6 +25219,18 @@ fn cli_ail_e2e_corpus_release_evidence_requires_semantic_anchor_story_coverage()
     let _ = fs::remove_dir_all(&artifact_dir);
     fs::create_dir_all(&corpus_dir).unwrap();
     write_e2e_transcript_files(&corpus_dir, 100);
+    for index in 0..100 {
+        let story_path = corpus_dir
+            .join("stories")
+            .join(format!("example-{index}.md"));
+        let story_text = fs::read_to_string(&story_path).unwrap();
+        let story_without_anchors = story_text
+            .lines()
+            .filter(|line| !line.starts_with("semantic-anchors:"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        fs::write(&story_path, format!("{story_without_anchors}\n")).unwrap();
+    }
     let mut corpus_text = String::new();
     for index in 0..100 {
         let capture_origin = if index == 99 {
@@ -25952,6 +25967,26 @@ fn cli_ail_e2e_corpus_writes_report_for_metadata_complete_corpus() {
         "{report}"
     );
     assert!(
+        report.contains("semantic-anchor-story-count 100"),
+        "{report}"
+    );
+    assert!(
+        report.contains("semantic-anchor-total-count 300"),
+        "{report}"
+    );
+    assert!(
+        report.contains("semantic-anchor-preserved-count 300"),
+        "{report}"
+    );
+    assert!(
+        report.contains("semantic-anchor-missing-count 0"),
+        "{report}"
+    );
+    assert!(
+        report.contains("entry-semantic-anchor-preservation example-0 preserved 3 missing 0"),
+        "{report}"
+    );
+    assert!(
         report.contains("executor-family codex-skill-agent"),
         "{report}"
     );
@@ -25961,6 +25996,12 @@ fn cli_ail_e2e_corpus_writes_report_for_metadata_complete_corpus() {
         user_story.contains("AIL-User-Story:")
             && user_story.contains("id support-ticket-story-0")
             && user_story.contains("story-roundtrip semantic-similar"),
+        "{user_story}"
+    );
+    assert!(
+        user_story.contains(
+            "semantic-anchors support-ticket-0; application-workflow; docs/ail/prompts/interview.system.md"
+        ),
         "{user_story}"
     );
     let user_story_fingerprint =

@@ -2247,6 +2247,27 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
     lines.push(format!(
         "semantic-anchor-story-count {semantic_anchor_story_count}"
     ));
+    let mut semantic_anchor_total_count = 0usize;
+    let mut semantic_anchor_preserved_count = 0usize;
+    let mut semantic_anchor_missing_count = 0usize;
+    for evaluation in evaluations {
+        let story_text =
+            render_ail_e2e_user_story_text(&evaluation.entry, &evaluation.semantic_anchors);
+        let (preserved_count, missing_count) =
+            ail_e2e_semantic_anchor_preservation_counts(&story_text, &evaluation.semantic_anchors);
+        semantic_anchor_total_count += evaluation.semantic_anchors.len();
+        semantic_anchor_preserved_count += preserved_count;
+        semantic_anchor_missing_count += missing_count;
+    }
+    lines.push(format!(
+        "semantic-anchor-total-count {semantic_anchor_total_count}"
+    ));
+    lines.push(format!(
+        "semantic-anchor-preserved-count {semantic_anchor_preserved_count}"
+    ));
+    lines.push(format!(
+        "semantic-anchor-missing-count {semantic_anchor_missing_count}"
+    ));
     push_ail_e2e_fingerprint_reuse_lines(&mut lines, "request", evaluations, |evaluation| {
         evaluation.request_fingerprint.clone()
     });
@@ -2392,6 +2413,16 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
             ));
         }
         let story_text = render_ail_e2e_user_story_text(entry, &evaluation.semantic_anchors);
+        if !evaluation.semantic_anchors.is_empty() {
+            let (preserved_count, missing_count) = ail_e2e_semantic_anchor_preservation_counts(
+                &story_text,
+                &evaluation.semantic_anchors,
+            );
+            lines.push(format!(
+                "entry-semantic-anchor-preservation {} preserved {} missing {}",
+                entry.id, preserved_count, missing_count
+            ));
+        }
         lines.push(format!(
             "entry-artifact {} user-story examples/{}/user-story.txt {}",
             entry.id,
@@ -2400,6 +2431,17 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
         ));
     }
     format!("{}\n", lines.join("\n"))
+}
+
+fn ail_e2e_semantic_anchor_preservation_counts(
+    story_text: &str,
+    semantic_anchors: &[String],
+) -> (usize, usize) {
+    let preserved_count = semantic_anchors
+        .iter()
+        .filter(|anchor| story_text.contains(anchor.as_str()))
+        .count();
+    (preserved_count, semantic_anchors.len() - preserved_count)
 }
 
 fn push_ail_e2e_fingerprint_reuse_lines<F>(

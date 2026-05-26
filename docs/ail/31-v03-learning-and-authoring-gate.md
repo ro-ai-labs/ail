@@ -159,7 +159,9 @@ The `ail-examples` replay bundle must also write deterministic story artifacts:
 
 The story artifact is derived from catalog metadata and fingerprinted in the
 same report and manifest as request, response, checked Core, bytecode, VM
-trace, native, target-report, and diagnostics artifacts.
+trace, native, target-report, and diagnostics artifacts. The report must also
+summarize semantic-anchor preservation with total, preserved, and missing
+counts plus per-entry preservation lines.
 
 ## Minimum Proof Commands
 
