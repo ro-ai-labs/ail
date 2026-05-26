@@ -114,35 +114,40 @@ entries, and coverage across `story-to-spec`, `spec-to-story`, and
 Before claiming v0.3 complete, the repository should add package-local README
 files for the main teaching packages:
 
-- `examples/support_ticket.ail`
-- `examples/support_composed.ail`
-- `examples/refund_tool.ail`
-- `examples/stateful_counter.ail`
-- `examples/compiler_pass.ail`
-- `examples/network_driver.ail`
-- `examples/c_interop.ail`
-- `examples/ui_workflow.ail`
-- `examples/incident_response.ail`
-- `examples/ail_std_core.ail`
-- `examples/ail_std_collections.ail`
-- `examples/ail_std_effects.ail`
-- `examples/ail_std_security.ail`
-- `examples/ail_std_runtime.ail`
+- `examples/support_ticket.ail/README.md`
+- `examples/support_composed.ail/README.md`
+- `examples/compiler_pass.ail/README.md`
+- `examples/network_driver.ail/README.md`
+- `examples/c_interop.ail/README.md`
+- `examples/darwin_linux_effect.ail/README.md`
+- `examples/ui_workflow.ail/README.md`
+- `examples/refund_tool.ail/README.md`
+- `examples/stateful_counter.ail/README.md`
+- `examples/repeated_task.ail/README.md`
+- `examples/runtime_generic.ail/README.md`
+- `examples/secret_access.ail/README.md`
+- `examples/incident_response.ail/README.md`
+- `examples/ail_std_core.ail/README.md`
+- `examples/ail_std_collections.ail/README.md`
+- `examples/option_map.ail/README.md`
+- `examples/ail_std_effects.ail/README.md`
+- `examples/ail_std_security.ail/README.md`
+- `examples/ail_std_runtime.ail/README.md`
 
 Each README should state the purpose, concepts taught, files to inspect,
 expected replay artifacts, rejected fixtures where applicable, and the next
 example to read.
 
-Current progress: `examples/support_ticket.ail/README.md`,
-`examples/support_composed.ail/README.md`,
-`examples/compiler_pass.ail/README.md`,
-`examples/ui_workflow.ail/README.md`,
-`examples/refund_tool.ail/README.md`,
-`examples/stateful_counter.ail/README.md`, and all five
-`examples/ail_std_*.ail/README.md` guides cover the highest-volume repeated
-families, the package-composition baseline, the Compiler profile baseline, the
-UI profile baseline, and the standard-library baseline, and are checked by
-`example_learning_readmes_cover_repeated_family_gaps`.
+## Learning Guides
+
+Current progress: the learning guide inventory above covers the highest-volume
+repeated families, package composition, compiler passes, system drivers,
+C interop, backend portability, UI workflows, AgentTool safety, deterministic
+state, scheduled runtime work, generic runtime flow, secret access,
+incident-response workflows, standard-library packages, and the transitional
+Option Map UI-tagged generic surface. The inventory is checked by
+`example_learning_readmes_cover_repeated_family_gaps`, which also verifies that
+`examples/README.md` links the same guides.
 
 The `ail-examples` replay bundle must also write deterministic story artifacts:
 

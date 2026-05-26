@@ -322,6 +322,11 @@ fn assert_e2e_corpus_override_failure(
 #[test]
 fn example_learning_readmes_cover_repeated_family_gaps() {
     let examples_readme = fs::read_to_string(fixture("README.md")).unwrap();
+    let v03_gate = fs::read_to_string(format!(
+        "{}/docs/ail/31-v03-learning-and-authoring-gate.md",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .unwrap();
     for required in [
         "## Learning Guides",
         "support_ticket.ail/README.md",
@@ -348,6 +353,7 @@ fn example_learning_readmes_cover_repeated_family_gaps() {
             examples_readme.contains(required),
             "{required}\n{examples_readme}"
         );
+        assert!(v03_gate.contains(required), "{required}\n{v03_gate}");
     }
 
     let support_readme = fs::read_to_string(fixture("support_ticket.ail/README.md")).unwrap();
