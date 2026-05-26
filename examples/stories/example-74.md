@@ -6,6 +6,7 @@ acceptance-criteria: checked spec exists; checked core exists; bytecode exists; 
 story-journey: story-amendment
 story-roundtrip: semantic-similar
 story-evidence: target-report
+semantic-anchors: Network packet receiver; rx buffer; read network device; release rx buffer; PacketReceived; system-driver; diagnostic-repair.system.md
 program-domain: system-driver
 module-count: 1
 spec-count: 1

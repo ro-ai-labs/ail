@@ -1795,6 +1795,66 @@ fn example_low_level_stories_record_semantic_anchors() {
         fs::read_to_string(fixture("darwin_linux_effect.ail/spec.ail-spec.md")).unwrap();
     for (story_file, grounding_text, required_anchors) in [
         (
+            "stories/example-25.md",
+            c_interop_spec.as_str(),
+            [
+                "compress2",
+                "qsort",
+                "Pointer<UInt8>",
+                "Callback",
+                "Packet header layout",
+                "core-to-spec.system.md",
+            ],
+        ),
+        (
+            "stories/example-26.md",
+            c_interop_spec.as_str(),
+            [
+                "compress2",
+                "qsort",
+                "Pointer<UInt8>",
+                "Callback",
+                "Packet header layout",
+                "core-to-summary.system.md",
+            ],
+        ),
+        (
+            "stories/example-27.md",
+            c_interop_spec.as_str(),
+            [
+                "compress2",
+                "qsort",
+                "Pointer<UInt8>",
+                "Callback",
+                "Packet header layout",
+                "flow-patch.system.md",
+            ],
+        ),
+        (
+            "stories/example-28.md",
+            c_interop_spec.as_str(),
+            [
+                "compress2",
+                "qsort",
+                "Pointer<UInt8>",
+                "Callback",
+                "Packet header layout",
+                "trace-debug.system.md",
+            ],
+        ),
+        (
+            "stories/example-29.md",
+            c_interop_spec.as_str(),
+            [
+                "compress2",
+                "qsort",
+                "Pointer<UInt8>",
+                "Callback",
+                "Packet header layout",
+                "interop.system.md",
+            ],
+        ),
+        (
             "stories/example-66.md",
             network_spec.as_str(),
             [
@@ -1807,6 +1867,30 @@ fn example_low_level_stories_record_semantic_anchors() {
             ],
         ),
         (
+            "stories/example-67.md",
+            network_spec.as_str(),
+            [
+                "Network packet receiver",
+                "rx buffer",
+                "read network device",
+                "write rx buffer",
+                "PacketReceived",
+                "flow-patch.system.md",
+            ],
+        ),
+        (
+            "stories/example-68.md",
+            network_spec.as_str(),
+            [
+                "Network packet receiver",
+                "packet metadata",
+                "read network device",
+                "release rx buffer",
+                "PacketReceived",
+                "trace-debug.system.md",
+            ],
+        ),
+        (
             "stories/example-69.md",
             network_spec.as_str(),
             [
@@ -1816,6 +1900,66 @@ fn example_low_level_stories_record_semantic_anchors() {
                 "access network device",
                 "interop.system.md",
                 "target-report",
+            ],
+        ),
+        (
+            "stories/example-70.md",
+            network_spec.as_str(),
+            [
+                "Network packet receiver",
+                "rx buffer",
+                "packet metadata",
+                "network device",
+                "PacketReceived",
+                "interview.system.md",
+            ],
+        ),
+        (
+            "stories/example-71.md",
+            network_spec.as_str(),
+            [
+                "Network packet receiver",
+                "rx buffer",
+                "packet metadata",
+                "network device",
+                "PacketReceived",
+                "requirements.system.md",
+            ],
+        ),
+        (
+            "stories/example-72.md",
+            network_spec.as_str(),
+            [
+                "Network packet receiver",
+                "rx buffer",
+                "packet metadata",
+                "network device",
+                "PacketReceived",
+                "spec-draft.system.md",
+            ],
+        ),
+        (
+            "stories/example-73.md",
+            network_spec.as_str(),
+            [
+                "Network packet receiver",
+                "rx buffer",
+                "packet metadata",
+                "network device",
+                "PacketReceived",
+                "core-draft.system.md",
+            ],
+        ),
+        (
+            "stories/example-74.md",
+            network_spec.as_str(),
+            [
+                "Network packet receiver",
+                "rx buffer",
+                "read network device",
+                "release rx buffer",
+                "PacketReceived",
+                "diagnostic-repair.system.md",
             ],
         ),
         (
@@ -1840,6 +1984,42 @@ fn example_low_level_stories_record_semantic_anchors() {
                 "Callback",
                 "Packet header layout",
                 "spec-to-story",
+            ],
+        ),
+        (
+            "stories/example-86.md",
+            c_interop_spec.as_str(),
+            [
+                "compress2",
+                "qsort",
+                "Pointer<UInt8>",
+                "Callback",
+                "Packet header layout",
+                "core-to-summary.system.md",
+            ],
+        ),
+        (
+            "stories/example-87.md",
+            c_interop_spec.as_str(),
+            [
+                "compress2",
+                "qsort",
+                "Pointer<UInt8>",
+                "Callback",
+                "Packet header layout",
+                "flow-patch.system.md",
+            ],
+        ),
+        (
+            "stories/example-88.md",
+            c_interop_spec.as_str(),
+            [
+                "compress2",
+                "qsort",
+                "Pointer<UInt8>",
+                "Callback",
+                "Packet header layout",
+                "trace-debug.system.md",
             ],
         ),
         (
@@ -22628,12 +22808,18 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("semantic-anchor-story-count 85")
+        report.contains("semantic-anchor-story-count 100")
             && report.contains(
                 "entry-semantic-anchors example-0 Option<T>; Result<T; E>; Map<K; V>; Option.map; OptionMapEvaluated; interview.system.md"
             )
             && report.contains(
                 "entry-semantic-anchors example-55 InferReadPermissions; AIL-Core graph; ReadPermissionAdded; SecretReadNeedsHumanConfirmation; compiler-pass; core-to-spec.system.md"
+            )
+            && report.contains(
+                "entry-semantic-anchors example-25 compress2; qsort; Pointer<UInt8>; Callback; Packet header layout; c-interop; core-to-spec.system.md"
+            )
+            && report.contains(
+                "entry-semantic-anchors example-67 Network packet receiver; rx buffer; read network device; write rx buffer; PacketReceived; system-driver; flow-patch.system.md"
             )
             && report.contains(
                 "entry-semantic-anchors example-35 Runtime Tickets; Prioritize ticket; TicketPrioritized; ticket.priority=Low; runtime-generics; core-to-spec.system.md"

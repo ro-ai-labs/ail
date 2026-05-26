@@ -6,6 +6,7 @@ acceptance-criteria: checked spec exists; checked core exists; bytecode exists; 
 story-journey: story-amendment
 story-roundtrip: semantic-similar
 story-evidence: target-report
+semantic-anchors: compress2; qsort; Pointer<UInt8>; Callback; Packet header layout; c-interop; interop.system.md
 program-domain: c-interop
 module-count: 1
 spec-count: 1
