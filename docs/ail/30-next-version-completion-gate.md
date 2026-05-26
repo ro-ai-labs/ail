@@ -380,24 +380,36 @@ Before claiming AIL v0.2 complete, run this command set from the repository
 root and preserve the output as release evidence:
 
 ```bash
+python3 scripts/run_v02_release_audit.py --bundle-root /tmp/ail-v02-release-evidence
+```
+
+The runner writes `release-audit-manifest.txt`,
+`release-audit-manifest.fingerprint.txt`, per-command logs, and all
+artifact directories under the bundle root. It fails if any command fails or if
+an artifact-producing command does not write its expected manifest and
+`manifest.fingerprint.txt`.
+
+The runner expands to this command set:
+
+```bash
 cargo fmt --check
 git diff --check
 cargo check
 cargo test
 cargo clippy --all-targets -- -D warnings
-cargo run -- ail-conformance examples/support_ticket.ail --artifact-dir /tmp/ail-v02-conformance-support
-cargo run -- ail-conformance examples/refund_tool.ail --artifact-dir /tmp/ail-v02-conformance-refund
-cargo run -- ail-conformance examples/compiler_pass.ail --artifact-dir /tmp/ail-v02-conformance-compiler
-cargo run -- ail-conformance examples/network_driver.ail --artifact-dir /tmp/ail-v02-conformance-system
-cargo run -- ail-conformance examples/ail_std_collections.ail --artifact-dir /tmp/ail-v02-conformance-std-collections
-cargo run -- ail-conformance examples/c_interop.ail --artifact-dir /tmp/ail-v02-conformance-c-interop
-cargo run -- ail-conformance examples/ui_workflow.ail --artifact-dir /tmp/ail-v02-conformance-ui
-cargo run -- ail-build examples/support_ticket.ail --prompt "Build an AIL support ticket bytecode artifact with imported package and UI host-boundary evidence" --agent examples/ail_toolchain_agent.ail --artifact-dir /tmp/ail-v02-build-support --target linux-x86_64-elf --action CloseTicket --out /tmp/ail-v02-close-ticket
-cargo run -- ail-compile examples/c_interop.ail --target wasm32-unknown-sandbox-wasm --all-actions --agent examples/ail_toolchain_agent.ail --artifact-dir /tmp/ail-v02-wasm-host-contract
-cargo run -- ail-compile examples/support_ticket.ail --target aarch64-apple-darwin-libsystem-macho --action CloseTicket --artifact-dir /tmp/ail-v02-darwin-contract
-cargo run -- ail-spec --core-file /tmp/ail-v02-build-support/checked.ail-core.txt --artifact-dir /tmp/ail-v02-spec-roundtrip
-cargo run -- ail-bootstrap examples/ail_toolchain_agent.ail --pass examples/compiler_pass.ail --agent examples/ail_toolchain_agent.ail --target linux-x86_64-elf --artifact-dir /tmp/ail-v02-bootstrap
-cargo run -- ail-e2e-corpus docs/ail/corpus/e2e --artifact-dir /tmp/ail-v02-e2e-corpus --release-evidence
+cargo run -- ail-conformance examples/support_ticket.ail --artifact-dir /tmp/ail-v02-release-evidence/artifacts/v02-conformance-support
+cargo run -- ail-conformance examples/refund_tool.ail --artifact-dir /tmp/ail-v02-release-evidence/artifacts/v02-conformance-refund
+cargo run -- ail-conformance examples/compiler_pass.ail --artifact-dir /tmp/ail-v02-release-evidence/artifacts/v02-conformance-compiler
+cargo run -- ail-conformance examples/network_driver.ail --artifact-dir /tmp/ail-v02-release-evidence/artifacts/v02-conformance-system
+cargo run -- ail-conformance examples/ail_std_collections.ail --artifact-dir /tmp/ail-v02-release-evidence/artifacts/v02-conformance-std-collections
+cargo run -- ail-conformance examples/c_interop.ail --artifact-dir /tmp/ail-v02-release-evidence/artifacts/v02-conformance-c-interop
+cargo run -- ail-conformance examples/ui_workflow.ail --artifact-dir /tmp/ail-v02-release-evidence/artifacts/v02-conformance-ui
+cargo run -- ail-build examples/support_ticket.ail --spec-file examples/support_ticket.ail/spec.ail-spec.md --agent examples/ail_toolchain_agent.ail --artifact-dir /tmp/ail-v02-release-evidence/artifacts/v02-build-support --target linux-x86_64-elf --action CloseTicket --out /tmp/ail-v02-release-evidence/artifacts/v02-close-ticket
+cargo run -- ail-compile examples/c_interop.ail --target wasm32-unknown-sandbox-wasm --all-actions --agent examples/ail_toolchain_agent.ail --artifact-dir /tmp/ail-v02-release-evidence/artifacts/v02-wasm-host-contract
+cargo run -- ail-compile examples/support_ticket.ail --target aarch64-apple-darwin-libsystem-macho --action CloseTicket --artifact-dir /tmp/ail-v02-release-evidence/artifacts/v02-darwin-contract
+cargo run -- ail-spec --core-file /tmp/ail-v02-release-evidence/artifacts/v02-build-support/checked.ail-core.txt --artifact-dir /tmp/ail-v02-release-evidence/artifacts/v02-spec-roundtrip
+cargo run -- ail-bootstrap examples/ail_toolchain_agent.ail --pass examples/compiler_pass.ail --agent examples/ail_toolchain_agent.ail --target linux-x86_64-elf --artifact-dir /tmp/ail-v02-release-evidence/artifacts/v02-bootstrap
+cargo run -- ail-e2e-corpus docs/ail/corpus/e2e --artifact-dir /tmp/ail-v02-release-evidence/artifacts/v02-e2e-corpus --release-evidence
 ```
 
 The release audit fails if any command fails, if a named command does not
@@ -408,6 +420,8 @@ fingerprint files.
 
 The v0.2 release evidence bundle must contain:
 
+- top-level `release-audit-manifest.txt`,
+  `release-audit-manifest.fingerprint.txt`, and per-command stdout/stderr logs
 - v0.1 release evidence regenerated on the v0.2 tree
 - conformance artifact directory for each v0.2 profile or package fixture
 - package dependency report and fingerprint for imported-package builds
@@ -416,7 +430,9 @@ The v0.2 release evidence bundle must contain:
 - UI profile conformance report and fingerprint
 - Wasm host-contract report, dependency report, manifest, and fingerprints
 - Darwin Mach-O contract report, dependency report, manifest, and fingerprints
-- full prompt-to-native build artifact directory for Support Ticket
+- full checked-spec-to-native build artifact directory for Support Ticket,
+  with prompt-to-artifact coverage proven by the prompt corpus and e2e corpus
+  artifacts
 - `ail-spec --core-file` round-trip artifact directory
 - VM bytecode artifact and fingerprint
 - native ELF artifact and fingerprint
@@ -507,6 +523,9 @@ already covers parts of this gate:
   offline replay
 - a batch capture runner that applies multiple live LLM captures and recorded
   Codex transcript imports to one corpus copy before replay
+- a v0.2 release-audit runner that expands the audit command set, writes a
+  top-level fingerprinted manifest, stores per-command logs, and verifies each
+  artifact-producing command's manifest and `manifest.fingerprint.txt`
 - named Codex skill-agent contracts for requirements writing, spec writing, and
   diagnostic repair under `docs/ail/corpus/e2e/agents/`
 - checked e2e release corpus responses and extracted artifacts have zero
@@ -521,7 +540,8 @@ already covers parts of this gate:
 
 Missing v0.2 evidence includes:
 
-- v0.2-specific release evidence bundle
+- v0.2-specific release evidence bundle generated by a full
+  `scripts/run_v02_release_audit.py` run from a clean checkout
 - broader live-captured UI-profile transcripts beyond the current single
   semantic-contract replay
 - richer rejected-output coverage for prompt-envelope, profile mismatch,
