@@ -891,10 +891,30 @@ fn example_ui_workflow_stories_record_semantic_anchors() {
 fn docs_ail_manual_links_user_story_mode_chapter() {
     let docs_index =
         fs::read_to_string(format!("{}/docs/ail/README.md", env!("CARGO_MANIFEST_DIR"))).unwrap();
+    assert!(docs_index.contains("manual/README.md"), "{docs_index}");
     assert!(
         docs_index.contains("manual/01-user-story-mode.md"),
         "{docs_index}"
     );
+    let manual_index = fs::read_to_string(format!(
+        "{}/docs/ail/manual/README.md",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .unwrap();
+    for required in [
+        "AIL Interactive Manual",
+        "scripts/run_ail_interactive_manual.py --list",
+        "scripts/run_ail_interactive_manual.py --chapter user-story-mode --dry-run",
+        "user-story-mode",
+        "examples-release",
+        "prompt-interaction",
+        "agent-entrypoint",
+    ] {
+        assert!(
+            manual_index.contains(required),
+            "{required}\n{manual_index}"
+        );
+    }
     let manual = fs::read_to_string(format!(
         "{}/docs/ail/manual/01-user-story-mode.md",
         env!("CARGO_MANIFEST_DIR")
@@ -915,6 +935,59 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         "http://inteligentia-pro-1:8080/v1/chat/completions",
     ] {
         assert!(manual.contains(required), "{required}\n{manual}");
+    }
+}
+
+#[test]
+fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
+    let script = format!(
+        "{}/scripts/run_ail_interactive_manual.py",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let list = Command::new("python3")
+        .args([&script, "--list"])
+        .output()
+        .unwrap();
+    assert!(
+        list.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&list.stdout),
+        String::from_utf8_lossy(&list.stderr)
+    );
+    let list_stdout = String::from_utf8_lossy(&list.stdout);
+    for required in [
+        "AIL-Interactive-Manual:",
+        "chapter user-story-mode",
+        "chapter examples-release",
+        "chapter prompt-interaction",
+        "chapter agent-entrypoint",
+    ] {
+        assert!(list_stdout.contains(required), "{required}\n{list_stdout}");
+    }
+
+    let dry_run = Command::new("python3")
+        .args([&script, "--chapter", "user-story-mode", "--dry-run"])
+        .output()
+        .unwrap();
+    assert!(
+        dry_run.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&dry_run.stdout),
+        String::from_utf8_lossy(&dry_run.stderr)
+    );
+    let dry_run_stdout = String::from_utf8_lossy(&dry_run.stdout);
+    for required in [
+        "AIL-Interactive-Manual-Chapter:",
+        "id user-story-mode",
+        "doc docs/ail/manual/01-user-story-mode.md",
+        "cargo run -- ail-story examples/support_ticket.ail",
+        "python3 scripts/run_v03_story_llm_harness.py --dry-run",
+        "live false",
+    ] {
+        assert!(
+            dry_run_stdout.contains(required),
+            "{required}\n{dry_run_stdout}"
+        );
     }
 }
 

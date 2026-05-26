@@ -103,6 +103,8 @@ one of these version surfaces or add a versioned surface through
 
 ## Manual
 
+- `manual/README.md`: interactive manual index and deterministic runner for
+  authoring chapters.
 - `manual/01-user-story-mode.md`: story-first authoring with `ail-story`,
   checked requirements, accepted spec, checked Core, bytecode, agent trace, and
   live llama.cpp harness evidence.
