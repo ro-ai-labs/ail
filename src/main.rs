@@ -1432,7 +1432,14 @@ fn evaluate_rejected_ail_e2e_corpus_entry(
         let diagnostics = match parse_ail_package_spec_text(&package, &spec_text) {
             Ok(document) => {
                 let core = elaborate_ail_core(&package, &document);
-                check_ail_core(&core)
+                let mut diagnostics = check_ail_core(&core);
+                if diagnostics.is_empty()
+                    && let Some(target) = entry.fields.get("target")
+                    && let Err(error) = check_darwin_macho_contract_supported_effects(&core, target)
+                {
+                    diagnostics.push(error);
+                }
+                diagnostics
             }
             Err(error) => vec![format!("parse-error {error}")],
         };

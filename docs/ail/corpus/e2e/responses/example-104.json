@@ -1,0 +1,5 @@
+{
+  "agent": "codex-ail-spec-writer",
+  "content": "# Darwin Linux Effect AIL-Spec Example\n\nThe application Darwin Linux Effect App manages target-specific effects.\n\nSystem component: Linux syscall bridge.\n\nThe component requires capability:\n\n- call linux syscall exit\n\nThe component performs:\n\n- linux syscall exit\n\nAction: Linux exit.\n\nWhen linux exit happens:\n\n- the system records a trace event named LinuxExit",
+  "model": "codex-subagent-default"
+}

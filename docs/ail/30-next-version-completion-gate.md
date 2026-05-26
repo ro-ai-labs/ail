@@ -512,16 +512,17 @@ already covers parts of this gate:
   model/executor manifest covering executor families, endpoint labels,
   executor labels, capture origins, executor/origin pairs, executor/endpoint
   pairs, and per-entry semantic task provenance
-- checked 104-entry e2e live release corpus under `docs/ail/corpus/e2e`,
+- checked 105-entry e2e live release corpus under `docs/ail/corpus/e2e`,
   including 100 accepted prompt-to-artifact examples plus one rejected
   semantic-drift diagnostic example and one rejected profile-mismatch
   diagnostic example, one rejected missing-trace diagnostic example, and one
-  rejected hallucinated-capability diagnostic example
+  rejected hallucinated-capability diagnostic example, plus one rejected
+  unsupported-target backend diagnostic example
 - four replay-clean live LLM captures for the Standard Collections, Support
   Ticket, and Refund Tool packages, using schema-shaped prompt input or
   constrained prose prompting with an OpenAI-compatible chat-completions
   endpoint with thinking disabled
-- one hundred replay-clean live Codex `codex-ail-spec-writer` captures for the
+- one hundred one replay-clean live Codex `codex-ail-spec-writer` captures for the
   Standard Collections, Composed Support, Refund Tool, Support Ticket,
   Stateful Counter, UI Workflow, C Interop, Network Driver, Compiler Pass,
   Secret Access, Repeated Task, and Runtime Generic packages, imported from
@@ -552,7 +553,8 @@ already covers parts of this gate:
   stored transcript artifacts, including `AIL-PROMPT-001` diagnostics for
   malformed prompt envelopes and profile-mismatch checker handoffs, and
   checked AIL-Spec diagnostics for missing trace coverage and hallucinated
-  capability or permission references
+  capability or permission references, plus Darwin backend diagnostics for
+  unsupported target effects
 
 Missing v0.2 evidence includes:
 
@@ -560,8 +562,8 @@ Missing v0.2 evidence includes:
   `scripts/run_v02_release_audit.py` run from a clean checkout
 - broader live-captured UI-profile transcripts beyond the current single
   semantic-contract replay
-- richer rejected-output coverage for unsupported target, invalid interop,
-  permission/capability, and package resolution diagnostics in the e2e corpus
+- richer rejected-output coverage for invalid interop, permission/capability,
+  and package resolution diagnostics in the e2e corpus
 
 ## Completion Decision Rule
 

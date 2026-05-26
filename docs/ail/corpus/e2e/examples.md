@@ -1922,3 +1922,24 @@ vm-action: RefundCustomerPayment
 runtime-state: order.id=O-1;refund.amount=750
 expected-diagnostic: AIL019
 failure-taxonomy: hallucinated-capability
+
+## End-To-End Example: example-104
+semantic-task: system-linux-syscall-darwin-unsupported-104
+profile: System
+surface-tags: system,backend
+package: docs/ail/corpus/e2e/packages/darwin_linux_effect.ail
+prompt-file: docs/ail/prompts/spec-draft.system.md
+prompt-version: ail-prompts.v0.2
+prompt-fingerprint: fnv64:b23778093326102c
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
+request-file: requests/example-104.json
+response-file: responses/example-104.json
+artifact-kind: ail-spec
+checker-result: rejected
+target: aarch64-apple-darwin-libsystem-macho
+vm-action: LinuxExit
+runtime-state: system.mode=test
+expected-diagnostic: AIL-BACKEND-001
+failure-taxonomy: unsupported-target

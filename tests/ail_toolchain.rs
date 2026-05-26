@@ -20024,13 +20024,13 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         String::from_utf8_lossy(&output.stderr)
     );
     let report = fs::read_to_string(artifact_dir.join("e2e-corpus-report.txt")).unwrap();
-    assert!(report.contains("entry-count 104"), "{report}");
+    assert!(report.contains("entry-count 105"), "{report}");
     assert!(
         report.contains("checker-result-count accepted 100"),
         "{report}"
     );
     assert!(
-        report.contains("checker-result-count rejected 4"),
+        report.contains("checker-result-count rejected 5"),
         "{report}"
     );
     assert!(
@@ -20050,6 +20050,10 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
+        report.contains("failure-taxonomy-count unsupported-target 1"),
+        "{report}"
+    );
+    assert!(
         !report.contains("capture-origin-count deterministic-seed"),
         "{report}"
     );
@@ -20058,7 +20062,7 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("capture-origin-count live-codex 100"),
+        report.contains("capture-origin-count live-codex 101"),
         "{report}"
     );
     assert!(
@@ -20680,6 +20684,12 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
             && report.contains("entry-artifact example-103 diagnostics"),
         "{report}"
     );
+    assert!(
+        report.contains("entry example-104")
+            && report.contains("semantic-task system-linux-syscall-darwin-unsupported-104")
+            && report.contains("entry-artifact example-104 diagnostics"),
+        "{report}"
+    );
     assert!(report.contains("profile-count UI 1"), "{report}");
     assert!(
         report.contains("target-count wasm32-unknown-sandbox-wasm 11"),
@@ -20731,6 +20741,14 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         ),
         "{hallucinated_capability_diagnostics}"
     );
+    let unsupported_target_diagnostics =
+        fs::read_to_string(artifact_dir.join("examples/example-104/diagnostics.txt")).unwrap();
+    assert!(
+        unsupported_target_diagnostics.contains(
+            "AIL-BACKEND-001 target aarch64-apple-darwin-libsystem-macho does not support Linux-only syscall effect 'linux syscall exit'"
+        ),
+        "{unsupported_target_diagnostics}"
+    );
     let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-e2e-corpus.txt")).unwrap();
     assert!(manifest.contains("AIL-E2E-Corpus-Manifest:"), "{manifest}");
     assert!(
@@ -20740,9 +20758,9 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
     let model_executor_manifest =
         fs::read_to_string(artifact_dir.join("model-executor-manifest.txt")).unwrap();
     assert!(
-        model_executor_manifest.contains("entry-count 104")
-            && model_executor_manifest.contains("executor-family codex-skill-agent count 100")
-            && model_executor_manifest.contains("capture-origin live-codex count 100")
+        model_executor_manifest.contains("entry-count 105")
+            && model_executor_manifest.contains("executor-family codex-skill-agent count 101")
+            && model_executor_manifest.contains("capture-origin live-codex count 101")
             && model_executor_manifest.contains(
                 "entry example-100 semantic-task stateful-counter-live-codex-accepted-100"
             )
@@ -20754,6 +20772,9 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
             )
             && model_executor_manifest.contains(
                 "entry example-103 semantic-task refund-tool-hallucinated-capability-rejected-103"
+            )
+            && model_executor_manifest.contains(
+                "entry example-104 semantic-task system-linux-syscall-darwin-unsupported-104"
             ),
         "{model_executor_manifest}"
     );
