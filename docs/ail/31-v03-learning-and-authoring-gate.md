@@ -199,16 +199,20 @@ The `ail-examples` replay bundle must also write deterministic story artifacts:
 
 - `examples/<entry-id>/user-story.txt`
 - `examples/<entry-id>/user-story.fingerprint.txt`
+- `examples/<entry-id>/repair-tutorial.txt` for rejected entries
+- `examples/<entry-id>/repair-tutorial.fingerprint.txt` for rejected entries
 - `v03-roadmap.txt`
 - `v03-roadmap.fingerprint.txt`
 
 The story artifact is derived from catalog metadata and fingerprinted in the
 same report and manifest as request, response, checked Core, bytecode, VM
-trace, native, target-report, and diagnostics artifacts. The report must also
-summarize semantic-anchor preservation with total, preserved, and missing
-counts plus per-entry preservation lines. The roadmap artifact is fingerprinted
-and listed in `manifest.ail-examples.txt` beside the examples report and
-model-executor manifest.
+trace, native, target-report, diagnostics, and repair-tutorial artifacts. The
+repair tutorial is derived from rejected-entry metadata and diagnostics so the
+corpus teaches how to move from a failed prompt/spec response to a corrected
+spec. The report must also summarize semantic-anchor preservation with total,
+preserved, and missing counts plus per-entry preservation lines. The roadmap
+artifact is fingerprinted and listed in `manifest.ail-examples.txt` beside the
+examples report and model-executor manifest.
 
 ## Minimum Proof Commands
 
@@ -245,8 +249,9 @@ as prose. The current examples reveal these next-version gaps:
 - Compiler/self-hosting examples need pass composition and fixed-point checks.
 - Systems examples need hardware-facing contracts, scheduler or interrupt
   semantics, and clearer unsupported-target migration guidance.
-- Rejected examples need repair tutorials that turn diagnostics into corrected
-  specs.
+- Rejected examples now emit repair tutorials; the next bar is to add corrected
+  follow-up specs and prove diagnostic-to-fix loops end in checked Core,
+  bytecode, and runtime or target evidence.
 - Incident-response examples show that complex systems need richer story
   graphs across imported modules, UI surfaces, workflow transitions, target
   contracts, and regenerated story views.

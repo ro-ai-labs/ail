@@ -465,6 +465,7 @@ struct AilE2eCorpusEvaluation {
     vm_trace_text: Option<String>,
     target_report_text: Option<String>,
     diagnostics_text: Option<String>,
+    repair_tutorial_text: Option<String>,
     native_executables: Vec<AilNativeArtifact>,
 }
 
@@ -2197,6 +2198,9 @@ fn evaluate_rejected_ail_e2e_corpus_entry(
     for diagnostic in diagnostics {
         lines.push(format!("diagnostic {diagnostic}"));
     }
+    let diagnostics_text = format!("{}\n", lines.join("\n"));
+    let repair_tutorial_text =
+        render_ail_e2e_repair_tutorial(entry, expected_diagnostic, failure_taxonomy, &lines[4..]);
     Ok(AilE2eCorpusEvaluation {
         entry: entry.clone(),
         semantic_anchors: read_ail_e2e_entry_semantic_anchors(entry)?,
@@ -2207,9 +2211,48 @@ fn evaluate_rejected_ail_e2e_corpus_entry(
         bytecode_text: None,
         vm_trace_text: None,
         target_report_text: None,
-        diagnostics_text: Some(format!("{}\n", lines.join("\n"))),
+        diagnostics_text: Some(diagnostics_text),
+        repair_tutorial_text: Some(repair_tutorial_text),
         native_executables: Vec::new(),
     })
+}
+
+fn render_ail_e2e_repair_tutorial(
+    entry: &AilE2eCorpusEntry,
+    expected_diagnostic: &str,
+    failure_taxonomy: &str,
+    diagnostic_lines: &[String],
+) -> String {
+    let field = |key: &str| {
+        entry
+            .fields
+            .get(key)
+            .map(String::as_str)
+            .unwrap_or("unknown")
+    };
+    let mut lines = vec![
+        "AIL-Repair-Tutorial:".to_string(),
+        format!("entry {}", entry.id),
+        "checker-result rejected".to_string(),
+        format!("semantic-task {}", field("semantic-task")),
+        format!("package {}", field("package")),
+        format!("prompt-file {}", field("prompt-file")),
+        format!("story-file {}", field("story-file")),
+        format!("failure-taxonomy {failure_taxonomy}"),
+        format!("expected-diagnostic {expected_diagnostic}"),
+        "diagnostic-summary:".to_string(),
+    ];
+    lines.extend(diagnostic_lines.iter().cloned());
+    lines.extend([
+        "repair-plan:".to_string(),
+        "repair-step 1 Preserve the rejected transcript, diagnostics, and story as review evidence."
+            .to_string(),
+        "repair-step 2 Draft a corrected spec that removes the expected diagnostic while preserving semantic anchors."
+            .to_string(),
+        "repair-step 3 Replay ail-examples for this corpus and promote the corrected artifact only after checked Core, bytecode, and target or VM evidence pass."
+            .to_string(),
+    ]);
+    format!("{}\n", lines.join("\n"))
 }
 
 fn evaluate_ail_e2e_corpus_entry(
@@ -2246,6 +2289,7 @@ fn evaluate_ail_e2e_corpus_entry(
             vm_trace_text: None,
             target_report_text: None,
             diagnostics_text: None,
+            repair_tutorial_text: None,
             native_executables: Vec::new(),
         });
     }
@@ -2341,6 +2385,7 @@ fn evaluate_ail_e2e_corpus_entry(
         vm_trace_text,
         target_report_text,
         diagnostics_text: None,
+        repair_tutorial_text: None,
         native_executables,
     })
 }
@@ -2536,6 +2581,17 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
             .as_ref()
             .map(|text| ail_artifact_fingerprint(text))
     });
+    push_ail_e2e_fingerprint_reuse_lines(
+        &mut lines,
+        "repair-tutorial",
+        evaluations,
+        |evaluation| {
+            evaluation
+                .repair_tutorial_text
+                .as_ref()
+                .map(|text| ail_artifact_fingerprint(text))
+        },
+    );
     push_ail_e2e_native_fingerprint_reuse_lines(&mut lines, evaluations);
     for evaluation in evaluations {
         let entry = &evaluation.entry;
@@ -2629,6 +2685,14 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
                 entry.id,
                 entry.id,
                 ail_artifact_fingerprint(diagnostics_text)
+            ));
+        }
+        if let Some(repair_tutorial_text) = &evaluation.repair_tutorial_text {
+            lines.push(format!(
+                "entry-artifact {} repair-tutorial examples/{}/repair-tutorial.txt {}",
+                entry.id,
+                entry.id,
+                ail_artifact_fingerprint(repair_tutorial_text)
             ));
         }
         if !evaluation.semantic_anchors.is_empty() {
@@ -2817,6 +2881,14 @@ fn push_ail_e2e_entry_artifact_lines(
             entry.id,
             entry.id,
             ail_artifact_fingerprint(diagnostics_text)
+        ));
+    }
+    if let Some(repair_tutorial_text) = &evaluation.repair_tutorial_text {
+        lines.push(format!(
+            "{prefix} {} repair-tutorial examples/{}/repair-tutorial.txt {}",
+            entry.id,
+            entry.id,
+            ail_artifact_fingerprint(repair_tutorial_text)
         ));
     }
     let story_text = render_ail_e2e_user_story_text(entry, &evaluation.semantic_anchors);
@@ -3751,6 +3823,21 @@ fn write_ail_e2e_corpus_artifacts(
             )
             .map_err(|error| {
                 format!("failed to write examples diagnostics fingerprint: {error}")
+            })?;
+        }
+        if let Some(repair_tutorial_text) = &evaluation.repair_tutorial_text {
+            let entry_dir = root.join("examples").join(&evaluation.entry.id);
+            fs::create_dir_all(&entry_dir).map_err(|error| {
+                format!("failed to create examples entry artifact dir: {error}")
+            })?;
+            fs::write(entry_dir.join("repair-tutorial.txt"), repair_tutorial_text)
+                .map_err(|error| format!("failed to write examples repair tutorial: {error}"))?;
+            fs::write(
+                entry_dir.join("repair-tutorial.fingerprint.txt"),
+                format!("{}\n", ail_artifact_fingerprint(repair_tutorial_text)),
+            )
+            .map_err(|error| {
+                format!("failed to write examples repair tutorial fingerprint: {error}")
             })?;
         }
     }

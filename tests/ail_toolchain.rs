@@ -24920,12 +24920,81 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
             .contains("AIL registry import shared-lib as Shared was not found in registry index"),
         "{package_resolution_diagnostics}"
     );
+    let rejected_entries = [
+        ("example-99", "semantic-drift"),
+        ("example-101", "profile-mismatch"),
+        ("example-102", "missing-trace"),
+        ("example-103", "hallucinated-capability"),
+        ("example-104", "unsupported-target"),
+        ("example-105", "invalid-interop"),
+        ("example-106", "permission-capability"),
+        ("example-107", "package-resolution"),
+    ];
+    assert!(
+        report.contains("repair-tutorial-fingerprint-observed-count 8"),
+        "{report}"
+    );
+    for (entry_id, failure_taxonomy) in rejected_entries {
+        let repair_tutorial = fs::read_to_string(
+            artifact_dir
+                .join("examples")
+                .join(entry_id)
+                .join("repair-tutorial.txt"),
+        )
+        .unwrap();
+        assert!(
+            repair_tutorial.contains("AIL-Repair-Tutorial:")
+                && repair_tutorial.contains(&format!("entry {entry_id}"))
+                && repair_tutorial.contains("checker-result rejected")
+                && repair_tutorial.contains(&format!("failure-taxonomy {failure_taxonomy}"))
+                && repair_tutorial.contains("expected-diagnostic ")
+                && repair_tutorial.contains("diagnostic ")
+                && repair_tutorial.contains("repair-step 1 Preserve the rejected transcript")
+                && repair_tutorial.contains("repair-step 2 Draft a corrected spec")
+                && repair_tutorial.contains("repair-step 3 Replay ail-examples"),
+            "{repair_tutorial}"
+        );
+        let repair_tutorial_fingerprint = fs::read_to_string(
+            artifact_dir
+                .join("examples")
+                .join(entry_id)
+                .join("repair-tutorial.fingerprint.txt"),
+        )
+        .unwrap();
+        assert_eq!(
+            repair_tutorial_fingerprint.trim(),
+            fnv64_fingerprint(&repair_tutorial)
+        );
+        assert!(
+            report.contains(&format!(
+                "entry-artifact {entry_id} repair-tutorial examples/{entry_id}/repair-tutorial.txt {}",
+                repair_tutorial_fingerprint.trim()
+            )),
+            "{report}"
+        );
+    }
     let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-examples.txt")).unwrap();
     assert!(manifest.contains("AIL-Examples-Manifest:"), "{manifest}");
     assert!(
         manifest.contains("entry example-99 checker-result rejected target vm"),
         "{manifest}"
     );
+    for (entry_id, _) in rejected_entries {
+        let repair_tutorial_fingerprint = fs::read_to_string(
+            artifact_dir
+                .join("examples")
+                .join(entry_id)
+                .join("repair-tutorial.fingerprint.txt"),
+        )
+        .unwrap();
+        assert!(
+            manifest.contains(&format!(
+                "entry-artifact {entry_id} repair-tutorial examples/{entry_id}/repair-tutorial.txt {}",
+                repair_tutorial_fingerprint.trim()
+            )),
+            "{manifest}"
+        );
+    }
     let model_executor_manifest =
         fs::read_to_string(artifact_dir.join("model-executor-manifest.txt")).unwrap();
     assert!(
@@ -27092,6 +27161,33 @@ fn cli_ail_e2e_corpus_replays_rejected_prompt_failures() {
         diagnostics_fingerprint.trim(),
         fnv64_fingerprint(&diagnostics)
     );
+    let repair_tutorial =
+        fs::read_to_string(artifact_dir.join("examples/example-99/repair-tutorial.txt")).unwrap();
+    assert!(
+        repair_tutorial.contains("AIL-Repair-Tutorial:")
+            && repair_tutorial.contains("entry example-99")
+            && repair_tutorial.contains("checker-result rejected")
+            && repair_tutorial.contains("semantic-task support-ticket-rejected")
+            && repair_tutorial.contains("package examples/support_ticket.ail")
+            && repair_tutorial.contains("prompt-file docs/ail/prompts/interview.system.md")
+            && repair_tutorial.contains("story-file stories/example-99.md")
+            && repair_tutorial.contains("failure-taxonomy semantic-drift")
+            && repair_tutorial.contains("expected-diagnostic AIL001")
+            && repair_tutorial
+                .contains("diagnostic AIL001 unknown requirement reference 'account'")
+            && repair_tutorial.contains("repair-step 1 Preserve the rejected transcript")
+            && repair_tutorial.contains("repair-step 2 Draft a corrected spec")
+            && repair_tutorial.contains("repair-step 3 Replay ail-examples"),
+        "{repair_tutorial}"
+    );
+    let repair_tutorial_fingerprint = fs::read_to_string(
+        artifact_dir.join("examples/example-99/repair-tutorial.fingerprint.txt"),
+    )
+    .unwrap();
+    assert_eq!(
+        repair_tutorial_fingerprint.trim(),
+        fnv64_fingerprint(&repair_tutorial)
+    );
     let report = fs::read_to_string(artifact_dir.join("examples-report.txt")).unwrap();
     assert!(
         report.contains("checker-result-count accepted 100"),
@@ -27111,6 +27207,25 @@ fn cli_ail_e2e_corpus_replays_rejected_prompt_failures() {
             diagnostics_fingerprint.trim()
         )),
         "{report}"
+    );
+    assert!(
+        report.contains("repair-tutorial-fingerprint-observed-count 1"),
+        "{report}"
+    );
+    assert!(
+        report.contains(&format!(
+            "entry-artifact example-99 repair-tutorial examples/example-99/repair-tutorial.txt {}",
+            repair_tutorial_fingerprint.trim()
+        )),
+        "{report}"
+    );
+    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-examples.txt")).unwrap();
+    assert!(
+        manifest.contains(&format!(
+            "entry-artifact example-99 repair-tutorial examples/example-99/repair-tutorial.txt {}",
+            repair_tutorial_fingerprint.trim()
+        )),
+        "{manifest}"
     );
 
     let _ = fs::remove_dir_all(corpus_dir);
