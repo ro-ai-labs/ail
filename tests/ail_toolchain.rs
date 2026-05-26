@@ -330,6 +330,7 @@ fn example_learning_readmes_cover_repeated_family_gaps() {
         "network_driver.ail/README.md",
         "c_interop.ail/README.md",
         "darwin_linux_effect.ail/README.md",
+        "ui_workflow.ail/README.md",
         "refund_tool.ail/README.md",
         "stateful_counter.ail/README.md",
         "incident_response.ail/README.md",
@@ -479,6 +480,32 @@ fn example_learning_readmes_cover_repeated_family_gaps() {
         assert!(
             portability_readme.contains(required),
             "{required}\n{portability_readme}"
+        );
+    }
+
+    let ui_workflow_readme = fs::read_to_string(fixture("ui_workflow.ail/README.md")).unwrap();
+    for required in [
+        "# UI Workflow Example",
+        "## Purpose",
+        "## Concepts Taught",
+        "## Files To Inspect",
+        "## Expected Replay Artifacts",
+        "## Rejected Fixtures",
+        "## Next Example To Read",
+        "## v0.3 Learning Signal",
+        "UI profile",
+        "routes",
+        "forms",
+        "dashboards",
+        "accessibility",
+        "Provider call before Manager approval",
+        "wasm32-unknown-sandbox-wasm",
+        "example-65",
+        "example-109",
+    ] {
+        assert!(
+            ui_workflow_readme.contains(required),
+            "{required}\n{ui_workflow_readme}"
         );
     }
 

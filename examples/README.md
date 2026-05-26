@@ -61,6 +61,9 @@ the teaching path through repeated example families:
 - `darwin_linux_effect.ail/README.md`: target portability, Linux syscall
   effects, Darwin target contract evidence, and unsupported-target
   diagnostics.
+- `ui_workflow.ail/README.md`: UI profile routes, forms, dashboards,
+  accessibility, workflow ordering, Wasm target contracts, and rejected UI
+  fixture gaps.
 - `refund_tool.ail/README.md`: AgentTool safety, approvals, policy review,
   secret handling, and repair-tutorial gaps.
 - `stateful_counter.ail/README.md`: deterministic state, persistence,
