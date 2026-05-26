@@ -16,6 +16,7 @@ commands that prove the examples still replay end to end.
 - Story files: 116
 - Stored request transcripts: 116
 - Stored response artifacts: 116
+- Package README guides: 26
 
 The authoritative replay manifest is `examples/examples.md`. Package
 directories provide source manifests, specifications, support packages,
@@ -78,10 +79,7 @@ The examples directory has four layers:
 - stored transcripts and inputs: `examples/requests/`, `examples/responses/`,
   and `examples/inputs/`
 
-Codex-style executor contracts live under `examples/agents/`. Package-local
-teaching guides live in package `README.md` files when the package is a main
-teaching path. Support-only packages are still listed in this inventory even
-when they do not yet have a guide.
+Codex-style executor contracts live under `examples/agents/`. Every package directory has a local README.md guide, including support-only packages and rejected diagnostic packages. This keeps imported modules teachable instead of leaving them visible only through the packages that consume them.
 
 ## Required Verification
 
@@ -115,6 +113,8 @@ When adding, renaming, or deleting an `examples/*.ail/` directory, update:
 
 `docs_example_inventory_names_every_package_directory` derives the package
 list from disk and rejects inventory drift.
+`example_package_directories_all_have_learning_guides` derives the same package
+list and rejects missing package-local guides.
 
 ## Last Conformance Result
 

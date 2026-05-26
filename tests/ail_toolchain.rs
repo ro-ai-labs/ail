@@ -830,6 +830,63 @@ fn docs_example_inventory_names_every_package_directory() {
 }
 
 #[test]
+fn example_package_directories_all_have_learning_guides() {
+    let examples_dir = format!("{}/examples", env!("CARGO_MANIFEST_DIR"));
+    let examples_readme = fs::read_to_string(fixture("README.md")).unwrap();
+    let inventory = fs::read_to_string(format!(
+        "{}/docs/ail/25-example-inventory.md",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .unwrap();
+    assert!(
+        examples_readme.contains("All 26 package directories include a README.md guide"),
+        "{examples_readme}"
+    );
+    assert!(
+        inventory.contains("Every package directory has a local README.md guide"),
+        "{inventory}"
+    );
+
+    let mut package_dirs = Vec::new();
+    for entry in fs::read_dir(&examples_dir).unwrap() {
+        let entry = entry.unwrap();
+        if !entry.file_type().unwrap().is_dir() {
+            continue;
+        }
+        let name = entry.file_name().to_string_lossy().into_owned();
+        if name.ends_with(".ail") {
+            package_dirs.push(name);
+        }
+    }
+    package_dirs.sort();
+
+    for package in package_dirs {
+        let readme_path = format!("{examples_dir}/{package}/README.md");
+        let readme = fs::read_to_string(&readme_path).unwrap_or_else(|error| {
+            panic!("{readme_path}: {error}");
+        });
+        for required in [
+            "## Purpose",
+            "## Concepts Taught",
+            "## Files To Inspect",
+            "## Expected Replay Artifacts",
+            "## Rejected Fixtures",
+            "## Next Example To Read",
+            "## v0.3 Learning Signal",
+        ] {
+            assert!(
+                readme.contains(required),
+                "{readme_path} {required}\n{readme}"
+            );
+        }
+        assert!(
+            examples_readme.contains(&format!("{package}/README.md")),
+            "{package}\n{examples_readme}"
+        );
+    }
+}
+
+#[test]
 fn example_incident_stories_record_semantic_anchors() {
     let spec = fs::read_to_string(fixture("incident_response.ail/spec.ail-spec.md")).unwrap();
     let package = fs::read_to_string(fixture("incident_response.ail/ail-package.md")).unwrap();

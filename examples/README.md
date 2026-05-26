@@ -43,17 +43,25 @@ The current ladder is:
 ## Learning Guides
 
 The catalog is the authoritative replay manifest, but package-local READMEs are
-the teaching path through repeated example families:
+the teaching path through repeated example families and support modules.
+All 26 package directories include a README.md guide.
 
+- `ail_toolchain_agent.ail/README.md`: AIL-authored agent participation in
+  requirements, spec, Core, bytecode, target, manifest, and prompt-portability
+  review.
 - `support_ticket.ail/README.md`: Application workflow baseline, scheduler
   behavior, ticket state transitions, secret internal notes, native binary
   evidence, and rejected diagnostic gaps.
 - `support_composed.ail/README.md`: package composition, explicit imports,
   shared user types, package-aware compile evidence, VM traces, and rejected
   package-graph gaps.
+- `support_shared.ail/README.md`: reusable support-domain user and
+  permission-denied declarations imported by composed support packages.
 - `compiler_pass.ail/README.md`: Compiler profile pass semantics,
   `InferReadPermissions`, AIL-Core graph transforms, native pass evidence, and
   fixed-point self-hosting gaps.
+- `recursive_factorial.ail/README.md`: compact recursive function and
+  arithmetic bytecode fixture for executable semantics.
 - `network_driver.ail/README.md`: low-level System profile resources,
   ownership, borrowing, device effects, and missing-capability diagnostics.
 - `c_interop.ail/README.md`: C ABI, pointer ownership, callbacks, layout,
@@ -77,6 +85,15 @@ the teaching path through repeated example families:
 - `incident_response.ail/README.md`: high-level multi-module incident response
   with identity, policy, notification, UI, workflow, target-contract, and story
   journey evidence.
+- `incident_identity.ail/README.md`: responder, commander, service-owner,
+  user, and team support types imported by incident response.
+- `incident_policy.ail/README.md`: service-tier and escalation-policy support
+  definitions for incident workflows.
+- `incident_notifications.ail/README.md`: AgentTool notification support
+  contract with pager-token secrecy, provider calls, approvals, and audit
+  traces.
+- `missing_registry_import.ail/README.md`: rejected package-resolution fixture
+  for unresolved registry import diagnostics.
 - `ail_std_core.ail/README.md`: standard-library primitive contracts,
   `Identity.copy`, trace coverage, and accepted fixture evidence.
 - `ail_std_collections.ail/README.md`: generic collection and result types,
