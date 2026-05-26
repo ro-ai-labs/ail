@@ -20,3 +20,6 @@ Prompt files:
 - `interop.system.md`
 
 Every prompt uses the common output envelope in `19-agent-prompt-pack.md`.
+`ail-prompt-corpus docs/ail/corpus/prompts` requires at least one accepted
+stored output for each prompt file above, and `ail-examples examples` requires
+the same prompt-file surface in the end-to-end examples set.

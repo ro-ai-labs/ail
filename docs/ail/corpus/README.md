@@ -64,8 +64,15 @@ against expected diagnostics or semantic drift, and writes:
 - `accepted/<entry>.ail-core.txt`
 - `accepted/<entry>.ail-core.fingerprint.txt`
 
-The portability report records semantic task labels, model labels, prompt
-fingerprints, artifact fingerprints, checker results, and failure taxonomy.
+The prompt portability corpus is also a prompt-pack coverage gate. It refuses a
+corpus unless every file in `docs/ail/prompts/` has at least one accepted stored
+output, and the portability report records each required prompt file as
+`covered` or `missing`. This keeps prompt-interaction evidence aligned with the
+same prompt-pack surface that `ail-examples` requires.
+
+The portability report records semantic task labels, model labels, required
+prompt-file coverage, prompt-file counts, prompt fingerprints, artifact
+fingerprints, checker results, and failure taxonomy.
 
 The full example set is checked offline with:
 

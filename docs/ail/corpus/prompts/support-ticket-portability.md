@@ -63,7 +63,19 @@ failure-taxonomy: none
 semantic-task: support-ticket-private-notes
 task: repair
 model-label: base-local
-prompt-file: docs/ail/prompts/diagnostic-repair.system.md
+prompt-file: docs/ail/prompts/repair.system.md
+checker-result: accepted
+artifact-kind: ail-spec
+package: examples/support_ticket.ail
+output-file: examples/support_ticket.ail/spec.ail-spec.md
+failure-taxonomy: none
+
+## Stored Output: support-ticket-core-draft-base
+
+semantic-task: support-ticket-private-notes
+task: core-draft
+model-label: base-local
+prompt-file: docs/ail/prompts/core-draft.system.md
 checker-result: accepted
 artifact-kind: ail-spec
 package: examples/support_ticket.ail
@@ -76,6 +88,18 @@ semantic-task: support-ticket-private-notes
 task: core-to-spec
 model-label: base-local
 prompt-file: docs/ail/prompts/core-to-spec.system.md
+checker-result: accepted
+artifact-kind: ail-spec
+package: examples/support_ticket.ail
+output-file: examples/support_ticket.ail/spec.ail-spec.md
+failure-taxonomy: none
+
+## Stored Output: support-ticket-core-to-summary-base
+
+semantic-task: support-ticket-private-notes
+task: core-to-summary
+model-label: base-local
+prompt-file: docs/ail/prompts/core-to-summary.system.md
 checker-result: accepted
 artifact-kind: ail-spec
 package: examples/support_ticket.ail
@@ -112,6 +136,18 @@ semantic-task: support-ticket-private-notes
 task: trace-debug
 model-label: base-local
 prompt-file: docs/ail/prompts/trace-debug.system.md
+checker-result: accepted
+artifact-kind: ail-spec
+package: examples/support_ticket.ail
+output-file: examples/support_ticket.ail/spec.ail-spec.md
+failure-taxonomy: none
+
+## Stored Output: support-ticket-interop-base
+
+semantic-task: support-ticket-private-notes
+task: interop
+model-label: base-local
+prompt-file: docs/ail/prompts/interop.system.md
 checker-result: accepted
 artifact-kind: ail-spec
 package: examples/support_ticket.ail

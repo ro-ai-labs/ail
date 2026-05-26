@@ -56,6 +56,20 @@ struct AilSpecArtifactSet<'a> {
     roundtrip_core_hash: &'a str,
 }
 
+const REQUIRED_AIL_PROMPT_FILES: [&str; 11] = [
+    "docs/ail/prompts/interview.system.md",
+    "docs/ail/prompts/requirements.system.md",
+    "docs/ail/prompts/spec-draft.system.md",
+    "docs/ail/prompts/core-draft.system.md",
+    "docs/ail/prompts/repair.system.md",
+    "docs/ail/prompts/diagnostic-repair.system.md",
+    "docs/ail/prompts/core-to-spec.system.md",
+    "docs/ail/prompts/core-to-summary.system.md",
+    "docs/ail/prompts/flow-patch.system.md",
+    "docs/ail/prompts/trace-debug.system.md",
+    "docs/ail/prompts/interop.system.md",
+];
+
 fn main() -> ExitCode {
     match run(env::args().skip(1).collect()) {
         Ok(code) => ExitCode::from(code),
@@ -932,6 +946,8 @@ fn validate_stored_prompt_envelope_output(stored_output: &str) -> String {
 fn render_ail_prompt_corpus_report(evaluations: &[AilPromptCorpusEvaluation]) -> String {
     let mut semantic_tasks = BTreeMap::<String, BTreeSet<String>>::new();
     let mut accepted_tasks = BTreeSet::<String>::new();
+    let mut accepted_prompt_files = BTreeSet::<String>::new();
+    let mut prompt_file_counts = BTreeMap::<String, usize>::new();
     let mut model_labels = BTreeSet::<String>::new();
     for evaluation in evaluations {
         semantic_tasks
@@ -939,8 +955,12 @@ fn render_ail_prompt_corpus_report(evaluations: &[AilPromptCorpusEvaluation]) ->
             .or_default()
             .insert(evaluation.entry.model_label.clone());
         model_labels.insert(evaluation.entry.model_label.clone());
+        *prompt_file_counts
+            .entry(evaluation.entry.prompt_file.clone())
+            .or_insert(0usize) += 1;
         if evaluation.entry.checker_result == "accepted" {
             accepted_tasks.insert(evaluation.entry.task.clone());
+            accepted_prompt_files.insert(evaluation.entry.prompt_file.clone());
         }
     }
     let mut lines = vec![
@@ -961,6 +981,21 @@ fn render_ail_prompt_corpus_report(evaluations: &[AilPromptCorpusEvaluation]) ->
     }
     for task in accepted_tasks {
         lines.push(format!("accepted-task {task}"));
+    }
+    lines.push(format!(
+        "required-prompt-file-count {}",
+        REQUIRED_AIL_PROMPT_FILES.len()
+    ));
+    for prompt_file in REQUIRED_AIL_PROMPT_FILES {
+        let status = if accepted_prompt_files.contains(prompt_file) {
+            "covered"
+        } else {
+            "missing"
+        };
+        lines.push(format!("required-prompt-file {prompt_file} {status}"));
+    }
+    for (prompt_file, count) in prompt_file_counts {
+        lines.push(format!("prompt-file-count {prompt_file} {count}"));
     }
     for evaluation in evaluations {
         let prompt_fingerprint = fs::read_to_string(&evaluation.entry.prompt_file)
@@ -1073,12 +1108,31 @@ fn write_ail_prompt_corpus_artifacts(
     Ok(())
 }
 
+fn validate_ail_prompt_corpus_prompt_coverage(
+    evaluations: &[AilPromptCorpusEvaluation],
+) -> Result<(), String> {
+    let accepted_prompt_files = evaluations
+        .iter()
+        .filter(|evaluation| evaluation.entry.checker_result == "accepted")
+        .map(|evaluation| evaluation.entry.prompt_file.as_str())
+        .collect::<BTreeSet<_>>();
+    for required_prompt in REQUIRED_AIL_PROMPT_FILES {
+        if !accepted_prompt_files.contains(required_prompt) {
+            return Err(format!(
+                "ail-prompt-corpus requires prompt-file {required_prompt}"
+            ));
+        }
+    }
+    Ok(())
+}
+
 fn run_ail_prompt_corpus_command(path: &str, cli_options: &CliOptions) -> Result<u8, String> {
     let entries = load_ail_prompt_corpus_entries(path)?;
     let mut evaluations = Vec::new();
     for entry in &entries {
         evaluations.push(evaluate_ail_prompt_corpus_entry(entry)?);
     }
+    validate_ail_prompt_corpus_prompt_coverage(&evaluations)?;
     let report_text = render_ail_prompt_corpus_report(&evaluations);
     let manifest_text = render_ail_prompt_corpus_manifest(path, &report_text, &evaluations);
     if let Some(artifact_dir) = &cli_options.artifact_dir {
@@ -2732,19 +2786,7 @@ fn validate_ail_e2e_corpus_release_coverage(entries: &[AilE2eCorpusEntry]) -> Re
         .iter()
         .filter_map(|entry| entry.fields.get("prompt-file").map(String::as_str))
         .collect::<BTreeSet<_>>();
-    for required_prompt in [
-        "docs/ail/prompts/interview.system.md",
-        "docs/ail/prompts/requirements.system.md",
-        "docs/ail/prompts/spec-draft.system.md",
-        "docs/ail/prompts/core-draft.system.md",
-        "docs/ail/prompts/repair.system.md",
-        "docs/ail/prompts/diagnostic-repair.system.md",
-        "docs/ail/prompts/core-to-spec.system.md",
-        "docs/ail/prompts/core-to-summary.system.md",
-        "docs/ail/prompts/flow-patch.system.md",
-        "docs/ail/prompts/trace-debug.system.md",
-        "docs/ail/prompts/interop.system.md",
-    ] {
+    for required_prompt in REQUIRED_AIL_PROMPT_FILES {
         if !prompt_files.contains(required_prompt) {
             return Err(format!(
                 "ail-examples requires prompt-file {required_prompt}"

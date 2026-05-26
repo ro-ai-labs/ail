@@ -22663,14 +22663,35 @@ fn cli_ail_prompt_corpus_accepts_checked_outputs() {
         "interview",
         "requirements",
         "spec-draft",
+        "core-draft",
         "repair",
         "core-to-spec",
+        "core-to-summary",
         "flow-patch",
         "diagnostic-repair",
         "trace-debug",
+        "interop",
     ] {
         assert!(
             stdout.contains(&format!("accepted-task {task}")),
+            "{stdout}"
+        );
+    }
+    for prompt_file in [
+        "docs/ail/prompts/interview.system.md",
+        "docs/ail/prompts/requirements.system.md",
+        "docs/ail/prompts/spec-draft.system.md",
+        "docs/ail/prompts/core-draft.system.md",
+        "docs/ail/prompts/repair.system.md",
+        "docs/ail/prompts/diagnostic-repair.system.md",
+        "docs/ail/prompts/core-to-spec.system.md",
+        "docs/ail/prompts/core-to-summary.system.md",
+        "docs/ail/prompts/flow-patch.system.md",
+        "docs/ail/prompts/trace-debug.system.md",
+        "docs/ail/prompts/interop.system.md",
+    ] {
+        assert!(
+            stdout.contains(&format!("required-prompt-file {prompt_file} covered")),
             "{stdout}"
         );
     }
@@ -22744,6 +22765,101 @@ fn cli_ail_prompt_corpus_rejects_semantic_drift_outputs() {
     );
 
     fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
+fn cli_ail_prompt_corpus_requires_prompt_pack_coverage() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let root = std::env::temp_dir().join(format!(
+        "ail-prompt-corpus-missing-prompt-{}",
+        std::process::id()
+    ));
+    let artifact_dir = root.join("artifacts");
+    let _ = fs::remove_dir_all(&root);
+    fs::create_dir_all(&root).unwrap();
+    let corpus_path = root.join("corpus.md");
+    let mut corpus_text = "# Prompt Fixture: Missing Interop\n\n".to_string();
+    for (id, task, prompt_file) in [
+        (
+            "support-ticket-interview-base",
+            "interview",
+            "docs/ail/prompts/interview.system.md",
+        ),
+        (
+            "support-ticket-requirements-base",
+            "requirements",
+            "docs/ail/prompts/requirements.system.md",
+        ),
+        (
+            "support-ticket-spec-draft-base",
+            "spec-draft",
+            "docs/ail/prompts/spec-draft.system.md",
+        ),
+        (
+            "support-ticket-core-draft-base",
+            "core-draft",
+            "docs/ail/prompts/core-draft.system.md",
+        ),
+        (
+            "support-ticket-repair-base",
+            "repair",
+            "docs/ail/prompts/repair.system.md",
+        ),
+        (
+            "support-ticket-diagnostic-repair-base",
+            "diagnostic-repair",
+            "docs/ail/prompts/diagnostic-repair.system.md",
+        ),
+        (
+            "support-ticket-core-to-spec-base",
+            "core-to-spec",
+            "docs/ail/prompts/core-to-spec.system.md",
+        ),
+        (
+            "support-ticket-core-to-summary-base",
+            "core-to-summary",
+            "docs/ail/prompts/core-to-summary.system.md",
+        ),
+        (
+            "support-ticket-flow-patch-base",
+            "flow-patch",
+            "docs/ail/prompts/flow-patch.system.md",
+        ),
+        (
+            "support-ticket-trace-debug-base",
+            "trace-debug",
+            "docs/ail/prompts/trace-debug.system.md",
+        ),
+    ] {
+        corpus_text.push_str(&format!(
+            "## Stored Output: {id}\n\nsemantic-task: support-ticket-private-notes\ntask: {task}\nmodel-label: base-local\nprompt-file: {prompt_file}\nchecker-result: accepted\nartifact-kind: ail-spec\npackage: examples/support_ticket.ail\noutput-file: examples/support_ticket.ail/spec.ail-spec.md\nfailure-taxonomy: none\n\n"
+        ));
+    }
+    fs::write(&corpus_path, corpus_text).unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-prompt-corpus",
+            corpus_path.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr
+            .contains("ail-prompt-corpus requires prompt-file docs/ail/prompts/interop.system.md"),
+        "{stderr}"
+    );
+
+    fs::remove_dir_all(root).unwrap();
 }
 
 #[test]
@@ -23935,7 +24051,7 @@ fn cli_ail_e2e_corpus_replays_imported_package_specs() {
                 ("semantic-task", "support-composed-import-10"),
                 (
                     "distinctness-claim",
-                    "support-composed-import-10 validates application-workflow imported package replay.",
+                    "support-composed-import-10 validates application-workflow imported package artifact replay.",
                 ),
                 ("package", "examples/support_composed.ail"),
                 ("response-file", "responses/example-10.json"),
@@ -24017,7 +24133,7 @@ fn cli_ail_e2e_corpus_replays_ui_profile_specs() {
                 ("semantic-task", "ui-workflow-profile-65"),
                 (
                     "distinctness-claim",
-                    "ui-workflow-profile-65 validates application-workflow UI profile replay.",
+                    "ui-workflow-profile-65 validates application-workflow UI profile artifact replay.",
                 ),
                 ("profile", "UI"),
                 ("surface-tags", "ui"),
@@ -24099,7 +24215,7 @@ fn cli_ail_e2e_corpus_requires_100_distinct_semantic_examples() {
                 ("semantic-task", "support-ticket-duplicate"),
                 (
                     "distinctness-claim",
-                    "support-ticket-duplicate validates application-workflow through duplicate semantic-task threshold coverage.",
+                    "support-ticket-duplicate validates application-workflow through duplicate semantic-task checker threshold coverage.",
                 ),
             ],
         ));
