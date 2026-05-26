@@ -18881,6 +18881,161 @@ fn cli_ail_story_rejects_missing_semantic_anchors_before_llm_request() {
 }
 
 #[test]
+fn cli_ail_story_builds_checked_artifacts_from_story_file() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("support_ticket.ail");
+    let unique_suffix = format!(
+        "{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
+    let story_file = std::env::temp_dir().join(format!("ail-story-build-{unique_suffix}.md"));
+    let artifact_dir =
+        std::env::temp_dir().join(format!("ail-story-build-artifacts-{unique_suffix}"));
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::write(
+        &story_file,
+        concat!(
+            "# Support Ticket Story\n\n",
+            "user-story-id: support-ticket-story\n",
+            "user-story: As a support agent I can close a support ticket from a story while preserving audit traces.\n",
+            "acceptance-criteria: checked requirements exist; checked spec exists; bytecode exists\n",
+            "semantic-anchors: Support Tickets; Close ticket; TicketClosed; internal notes\n"
+        ),
+    )
+    .unwrap();
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let requirements = concat!(
+        "AIL-Requirements:\n",
+        "- The application manages support tickets.\n",
+        "- Ticket fields include id, title, status, and secret internal notes.\n",
+        "- The CloseTicket action requires ticket id input and ticket status not to be Closed.\n",
+        "- Failure NotFound happens when ticket id is missing and records TicketNotFound.\n",
+        "- The action guarantees closed tickets do not appear in the open queue.\n",
+        "- The action records trace event TicketClosed.\n"
+    );
+    let requirements_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(requirements)
+    );
+    let response_spec = fs::read_to_string(format!("{package}/spec.ail-spec.md")).unwrap();
+    let spec_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(&format!("```ail\n{response_spec}\n```"))
+    );
+    let server = serve_chat_responses(listener, vec![requirements_body, spec_body]);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-story",
+            &package,
+            "--story-file",
+            story_file.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+            "--llm-endpoint",
+            &format!("http://127.0.0.1:{}/v1/chat/completions", addr.port()),
+        ])
+        .output()
+        .unwrap();
+
+    let request_bodies = server.join().unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(request_bodies.len(), 2);
+    assert!(
+        request_bodies[0].contains("USER STORY MODE INPUT"),
+        "{}",
+        request_bodies[0]
+    );
+    assert!(
+        request_bodies[0].contains("story is authoring input, not trusted code"),
+        "{}",
+        request_bodies[0]
+    );
+    assert!(
+        request_bodies[0].contains("As a support agent I can close a support ticket"),
+        "{}",
+        request_bodies[0]
+    );
+    assert!(
+        request_bodies[0].contains(
+            "semantic-anchors: Support Tickets; Close ticket; TicketClosed; internal notes"
+        ),
+        "{}",
+        request_bodies[0]
+    );
+    assert!(
+        request_bodies[1].contains("Preserve these story semantic anchors"),
+        "{}",
+        request_bodies[1]
+    );
+    assert!(
+        request_bodies[1].contains("Support Tickets; Close ticket; TicketClosed; internal notes"),
+        "{}",
+        request_bodies[1]
+    );
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stdout_bytecode = parse_ail_bytecode(&stdout).unwrap();
+    assert_eq!(verify_ail_bytecode(&stdout_bytecode), Vec::<String>::new());
+    assert!(artifact_dir.join("story.source.md").is_file());
+    assert!(artifact_dir.join("story.normalized.md").is_file());
+    assert!(artifact_dir.join("story-mode-report.txt").is_file());
+    assert!(artifact_dir.join("manifest.ail-story.txt").is_file());
+    let normalized_story = fs::read_to_string(artifact_dir.join("story.normalized.md")).unwrap();
+    assert!(normalized_story.contains("story-journey: story-to-spec"));
+    assert!(normalized_story.contains("story-roundtrip: semantic-similar"));
+    assert!(
+        normalized_story.contains(
+            "semantic-anchors: Support Tickets; Close ticket; TicketClosed; internal notes"
+        ),
+        "{normalized_story}"
+    );
+    let requirements_artifact =
+        fs::read_to_string(artifact_dir.join("requirements.ail-requirements.md")).unwrap();
+    assert_eq!(requirements_artifact, requirements.trim());
+    let spec_artifact = fs::read_to_string(artifact_dir.join("accepted.ail-spec.md")).unwrap();
+    assert!(spec_artifact.contains("Action: Close ticket."));
+    let bytecode_artifact = fs::read_to_string(artifact_dir.join("artifact.ailbc.json")).unwrap();
+    assert_eq!(bytecode_artifact, stdout);
+    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-story.txt")).unwrap();
+    assert!(manifest.contains("AIL-Story-Manifest:"), "{manifest}");
+    assert!(manifest.contains("entrypoint ail-story"), "{manifest}");
+    assert!(
+        manifest.contains("story-source story.source.md"),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains("story-normalized story.normalized.md"),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains("requirements requirements.ail-requirements.md"),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains("bytecode artifact.ailbc.json"),
+        "{manifest}"
+    );
+    let report = fs::read_to_string(artifact_dir.join("story-mode-report.txt")).unwrap();
+    assert!(report.contains("package: support-ticket"));
+    assert!(report.contains("user-story-id: support-ticket-story"));
+    assert!(report.contains("semantic-anchor-count: 4"));
+
+    fs::remove_file(story_file).unwrap();
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
 fn cli_ail_interview_surfaces_prompt_envelope_questions_as_artifact() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");

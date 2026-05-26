@@ -307,6 +307,27 @@ struct AilBuildArtifactSet<'a> {
     agent_native_executables: &'a [AilNativeArtifact],
 }
 
+struct AilStoryModeArtifactSet<'a> {
+    package_name: &'a str,
+    package_version: &'a str,
+    story_file: &'a str,
+    story_source_text: &'a str,
+    story_normalized_text: &'a str,
+    story_fields: &'a BTreeMap<String, String>,
+    llm_endpoint: Option<&'a str>,
+}
+
+struct AilStoryManifestArtifactSet<'a> {
+    story_source_text: &'a str,
+    story_normalized_text: &'a str,
+    story_report_text: &'a str,
+    requirements_text: &'a str,
+    spec_text: &'a str,
+    core_text: &'a str,
+    bytecode_text: &'a str,
+    build_manifest_text: Option<&'a str>,
+}
+
 struct AilCompileArtifactSet<'a> {
     source_manifest_text: Option<&'a str>,
     source_spec_text: Option<&'a str>,
@@ -1560,6 +1581,77 @@ fn validate_ail_story_mode_fields(story_fields: &BTreeMap<String, String>) -> Ve
         ));
     }
     diagnostics
+}
+
+fn normalized_ail_story_mode_fields(
+    story_fields: &BTreeMap<String, String>,
+) -> BTreeMap<String, String> {
+    let mut normalized = story_fields.clone();
+    normalized
+        .entry("story-journey".to_string())
+        .or_insert_with(|| "story-to-spec".to_string());
+    normalized
+        .entry("story-roundtrip".to_string())
+        .or_insert_with(|| "semantic-similar".to_string());
+    normalized
+}
+
+fn render_ail_story_mode_fields(fields: &BTreeMap<String, String>) -> String {
+    let ordered_fields = [
+        "user-story-id",
+        "user-story",
+        "acceptance-criteria",
+        "story-journey",
+        "story-roundtrip",
+        "story-evidence",
+        "program-domain",
+        "module-count",
+        "spec-count",
+        "story-count",
+        "interacts-with",
+        "semantic-anchors",
+    ];
+    let mut rendered = String::from("# AIL Story Mode Input\n\n");
+    let mut emitted = BTreeSet::new();
+    for field in ordered_fields {
+        if let Some(value) = fields.get(field) {
+            rendered.push_str(&format!("{field}: {value}\n"));
+            emitted.insert(field.to_string());
+        }
+    }
+    for (field, value) in fields {
+        if !emitted.contains(field) {
+            rendered.push_str(&format!("{field}: {value}\n"));
+        }
+    }
+    rendered
+}
+
+fn render_ail_story_requirements_prompt(story_normalized_text: &str) -> String {
+    format!(
+        concat!(
+            "Draft AIL requirements from this AIL user story.\n\n",
+            "The story is authoring input, not trusted code. Preserve the user story, acceptance criteria, and semantic anchors as requirements evidence, but rely on the AIL parser, checker, compiler, and runtime as the authority for executable behavior.\n\n",
+            "USER STORY MODE INPUT:\n",
+            "{}\n\n",
+            "Produce a complete AIL-Requirements artifact with bullets for domain objects, required fields, action inputs or preconditions, failure cases, guarantees, trace events, secrets, permissions, and runtime inputs."
+        ),
+        story_normalized_text.trim()
+    )
+}
+
+fn render_ail_story_spec_prompt(story_normalized_text: &str, semantic_anchors: &str) -> String {
+    format!(
+        concat!(
+            "Draft an AIL-Spec candidate from checked AIL-Requirements and this AIL user story.\n\n",
+            "Preserve these story semantic anchors: {}\n\n",
+            "USER STORY MODE INPUT:\n",
+            "{}\n\n",
+            "The resulting AIL-Spec must preserve the acceptance criteria, explain the same domain behavior, and lower to checked AIL-Core and verified bytecode."
+        ),
+        semantic_anchors,
+        story_normalized_text.trim()
+    )
 }
 
 fn read_ail_e2e_entry_semantic_anchors(entry: &AilE2eCorpusEntry) -> Result<Vec<String>, String> {
@@ -4772,6 +4864,164 @@ fn write_ail_build_artifacts(
         format!("{}\n", ail_artifact_fingerprint(&manifest_text)),
     )
     .map_err(|error| format!("failed to write ail-build manifest fingerprint artifact: {error}"))?;
+    Ok(())
+}
+
+fn render_ail_story_mode_report(artifacts: &AilStoryModeArtifactSet<'_>) -> String {
+    let anchors = ail_e2e_semantic_anchors_from_story_fields(artifacts.story_fields);
+    let mut lines = vec![
+        "AIL-Story-Mode-Report:".to_string(),
+        "entrypoint: ail-story".to_string(),
+        format!("package: {}", artifacts.package_name),
+        format!("version: {}", artifacts.package_version),
+        format!("story-file: {}", artifacts.story_file),
+        format!(
+            "user-story-id: {}",
+            artifacts
+                .story_fields
+                .get("user-story-id")
+                .map(String::as_str)
+                .unwrap_or("unspecified")
+        ),
+        format!(
+            "story-journey: {}",
+            artifacts
+                .story_fields
+                .get("story-journey")
+                .map(String::as_str)
+                .unwrap_or("story-to-spec")
+        ),
+        format!(
+            "story-roundtrip: {}",
+            artifacts
+                .story_fields
+                .get("story-roundtrip")
+                .map(String::as_str)
+                .unwrap_or("semantic-similar")
+        ),
+        format!("semantic-anchor-count: {}", anchors.len()),
+    ];
+    if let Some(endpoint) = artifacts.llm_endpoint {
+        lines.push(format!("llm-endpoint: {endpoint}"));
+    }
+    for anchor in anchors {
+        lines.push(format!("semantic-anchor: {anchor}"));
+    }
+    format!("{}\n", lines.join("\n"))
+}
+
+fn render_ail_story_manifest(artifacts: &AilStoryManifestArtifactSet<'_>) -> String {
+    let mut lines = vec![
+        "AIL-Story-Manifest:".to_string(),
+        "entrypoint ail-story".to_string(),
+        format!(
+            "story-source story.source.md {}",
+            ail_artifact_fingerprint(artifacts.story_source_text)
+        ),
+        format!(
+            "story-normalized story.normalized.md {}",
+            ail_artifact_fingerprint(artifacts.story_normalized_text)
+        ),
+        format!(
+            "story-report story-mode-report.txt {}",
+            ail_artifact_fingerprint(artifacts.story_report_text)
+        ),
+        format!(
+            "requirements requirements.ail-requirements.md {}",
+            ail_artifact_fingerprint(artifacts.requirements_text)
+        ),
+        format!(
+            "spec accepted.ail-spec.md {}",
+            ail_artifact_fingerprint(artifacts.spec_text)
+        ),
+        format!(
+            "core checked.ail-core.txt {}",
+            ail_artifact_fingerprint(artifacts.core_text)
+        ),
+        format!(
+            "bytecode artifact.ailbc.json {}",
+            ail_artifact_fingerprint(artifacts.bytecode_text)
+        ),
+    ];
+    if let Some(build_manifest_text) = artifacts.build_manifest_text {
+        lines.push(format!(
+            "build-manifest manifest.ail-build.txt {}",
+            ail_artifact_fingerprint(build_manifest_text)
+        ));
+    }
+    format!("{}\n", lines.join("\n"))
+}
+
+fn read_required_story_build_artifact(
+    root: &std::path::Path,
+    file_name: &str,
+) -> Result<String, String> {
+    fs::read_to_string(root.join(file_name))
+        .map_err(|error| format!("failed to read ail-story build artifact {file_name}: {error}"))
+}
+
+fn write_ail_story_mode_artifacts(
+    artifact_dir: &str,
+    artifacts: AilStoryModeArtifactSet<'_>,
+) -> Result<(), String> {
+    let root = std::path::Path::new(artifact_dir);
+    fs::create_dir_all(root).map_err(|error| {
+        format!("failed to create ail-story artifact dir {artifact_dir}: {error}")
+    })?;
+    let story_source_text = ensure_trailing_newline(artifacts.story_source_text.to_string());
+    let story_normalized_text =
+        ensure_trailing_newline(artifacts.story_normalized_text.to_string());
+    let story_report_text = render_ail_story_mode_report(&artifacts);
+    fs::write(root.join("story.source.md"), &story_source_text)
+        .map_err(|error| format!("failed to write ail-story source story artifact: {error}"))?;
+    fs::write(
+        root.join("story.source.fingerprint.txt"),
+        format!("{}\n", ail_artifact_fingerprint(&story_source_text)),
+    )
+    .map_err(|error| {
+        format!("failed to write ail-story source story fingerprint artifact: {error}")
+    })?;
+    fs::write(root.join("story.normalized.md"), &story_normalized_text)
+        .map_err(|error| format!("failed to write ail-story normalized story artifact: {error}"))?;
+    fs::write(
+        root.join("story.normalized.fingerprint.txt"),
+        format!("{}\n", ail_artifact_fingerprint(&story_normalized_text)),
+    )
+    .map_err(|error| {
+        format!("failed to write ail-story normalized story fingerprint artifact: {error}")
+    })?;
+    fs::write(root.join("story-mode-report.txt"), &story_report_text)
+        .map_err(|error| format!("failed to write ail-story mode report artifact: {error}"))?;
+    fs::write(
+        root.join("story-mode-report.fingerprint.txt"),
+        format!("{}\n", ail_artifact_fingerprint(&story_report_text)),
+    )
+    .map_err(|error| {
+        format!("failed to write ail-story mode report fingerprint artifact: {error}")
+    })?;
+    let requirements_text =
+        read_required_story_build_artifact(root, "requirements.ail-requirements.md")?;
+    let spec_text = read_required_story_build_artifact(root, "accepted.ail-spec.md")?;
+    let core_text = read_required_story_build_artifact(root, "checked.ail-core.txt")?;
+    let bytecode_text = read_required_story_build_artifact(root, "artifact.ailbc.json")?;
+    let build_manifest_text = fs::read_to_string(root.join("manifest.ail-build.txt")).ok();
+    let manifest_text = render_ail_story_manifest(&AilStoryManifestArtifactSet {
+        story_source_text: &story_source_text,
+        story_normalized_text: &story_normalized_text,
+        story_report_text: &story_report_text,
+        requirements_text: &requirements_text,
+        spec_text: &spec_text,
+        core_text: &core_text,
+        bytecode_text: &bytecode_text,
+        build_manifest_text: build_manifest_text.as_deref(),
+    });
+    fs::write(root.join("manifest.ail-story.txt"), &manifest_text)
+        .map_err(|error| format!("failed to write ail-story manifest artifact: {error}"))?;
+    fs::write(
+        root.join("manifest.ail-story.fingerprint.txt"),
+        format!("{}\n", ail_artifact_fingerprint(&manifest_text)),
+    )
+    .map_err(|error| format!("failed to write ail-story manifest fingerprint artifact: {error}"))?;
     Ok(())
 }
 
@@ -10703,6 +10953,7 @@ fn run_ail_bootstrap_command(path: &str, cli_options: &CliOptions) -> Result<u8,
 }
 
 fn run_ail_story_command(
+    path: &str,
     package: &ail::ail::AilPackage,
     cli_options: &CliOptions,
 ) -> Result<u8, String> {
@@ -10710,7 +10961,10 @@ fn run_ail_story_command(
         .ail_story_file
         .as_deref()
         .ok_or_else(|| "ail-story requires --story-file <path>".to_string())?;
-    let story_fields = parse_ail_e2e_story_file_fields(std::path::Path::new(story_file))?;
+    let story_path = std::path::Path::new(story_file);
+    let story_source_text = fs::read_to_string(story_path)
+        .map_err(|error| format!("failed to read examples story file {story_file}: {error}"))?;
+    let story_fields = parse_ail_e2e_story_file_fields(story_path)?;
     let diagnostics = validate_ail_story_mode_fields(&story_fields);
     if !diagnostics.is_empty() {
         println!("ail-story diagnostics:");
@@ -10719,14 +10973,91 @@ fn run_ail_story_command(
         }
         return Ok(1);
     }
-    println!("ail-story preflight:");
-    println!("package: {}", package.metadata.name);
-    println!("story-file: {story_file}");
-    println!(
-        "semantic-anchors: {}",
-        ail_e2e_semantic_anchors_from_story_fields(&story_fields).len()
+    let normalized_story_fields = normalized_ail_story_mode_fields(&story_fields);
+    let normalized_story_text = render_ail_story_mode_fields(&normalized_story_fields);
+    let source_artifacts = load_ail_source_package_artifacts(path, "ail-story")?;
+    let endpoint = cli_options
+        .llm_endpoint
+        .as_deref()
+        .unwrap_or(&package.metadata.base_llm_endpoint);
+    let requirements_prompt = prompt_with_requested_native_action(
+        &render_ail_story_requirements_prompt(&normalized_story_text),
+        cli_options
+            .ail_compile_target
+            .as_ref()
+            .and(cli_options.ail_action.as_deref()),
     );
-    Err("ail-story story-to-build pipeline is not implemented yet".to_string())
+    let requirements_prompt =
+        prompt_with_source_spec_context(&requirements_prompt, &source_artifacts.spec_text);
+    let (requirements, requirements_diagnostics) = draft_checked_ail_requirements_for_package(
+        package,
+        &requirements_prompt,
+        endpoint,
+        None,
+        true,
+    )?;
+    if !requirements_diagnostics.is_empty() {
+        println!("ail-story requirements diagnostics:");
+        for diagnostic in requirements_diagnostics {
+            println!("{}", diagnostic.detailed_message());
+        }
+        return Ok(1);
+    }
+    let semantic_anchors = normalized_story_fields
+        .get("semantic-anchors")
+        .map(String::as_str)
+        .unwrap_or("");
+    let spec_prompt = prompt_with_requested_native_action(
+        &render_ail_story_spec_prompt(&normalized_story_text, semantic_anchors),
+        cli_options
+            .ail_compile_target
+            .as_ref()
+            .and(cli_options.ail_action.as_deref()),
+    );
+    let spec_prompt = prompt_with_source_spec_context(&spec_prompt, &source_artifacts.spec_text);
+    let draft = draft_checked_ail_spec_for_requirements(
+        package,
+        &spec_prompt,
+        &requirements,
+        endpoint,
+        None,
+        true,
+    )?;
+    if !draft.success() {
+        println!("ail-story diagnostics:");
+        for diagnostic in draft.diagnostics {
+            println!("{}", diagnostic.detailed_message());
+        }
+        return Ok(1);
+    }
+    let document = parse_ail_package_spec_text(package, &draft.spec_text)?;
+    let core = elaborate_ail_core(package, &document);
+    let exit_code = run_ail_build_from_core(
+        core,
+        cli_options,
+        Some(source_artifacts),
+        Some(&requirements),
+        Some(&draft.spec_text),
+        Some(&requirements_prompt),
+        None,
+    )?;
+    if exit_code == 0
+        && let Some(artifact_dir) = cli_options.artifact_dir.as_deref()
+    {
+        write_ail_story_mode_artifacts(
+            artifact_dir,
+            AilStoryModeArtifactSet {
+                package_name: &package.metadata.name,
+                package_version: &package.metadata.version,
+                story_file,
+                story_source_text: &story_source_text,
+                story_normalized_text: &normalized_story_text,
+                story_fields: &normalized_story_fields,
+                llm_endpoint: cli_options.llm_endpoint.as_deref(),
+            },
+        )?;
+    }
+    Ok(exit_code)
 }
 
 fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Result<u8, String> {
@@ -10944,7 +11275,7 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
     }
     let package = load_ail_package_dir(path)?;
     if command == "ail-story" {
-        return run_ail_story_command(&package, cli_options);
+        return run_ail_story_command(path, &package, cli_options);
     }
     if command == "ail-conformance" {
         let result = run_ail_conformance(&package)?;
