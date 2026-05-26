@@ -1901,3 +1901,24 @@ vm-action: CloseTicket
 runtime-state: ticket.id=T-1;ticket.status=Open
 expected-diagnostic: AIL-TRACE-001
 failure-taxonomy: missing-trace
+
+## End-To-End Example: example-103
+semantic-task: refund-tool-hallucinated-capability-rejected-103
+profile: AgentTool
+surface-tags: tool,capability
+package: examples/refund_tool.ail
+prompt-file: docs/ail/prompts/diagnostic-repair.system.md
+prompt-version: ail-prompts.v0.2
+prompt-fingerprint: fnv64:c9700f2c2e57e49e
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
+request-file: requests/example-103.json
+response-file: responses/example-103.json
+artifact-kind: ail-spec
+checker-result: rejected
+target: vm
+vm-action: RefundCustomerPayment
+runtime-state: order.id=O-1;refund.amount=750
+expected-diagnostic: AIL019
+failure-taxonomy: hallucinated-capability
