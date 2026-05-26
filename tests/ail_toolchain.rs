@@ -360,7 +360,8 @@ fn example_learning_readmes_cover_repeated_family_gaps() {
         "scheduler",
         "secret internal notes",
         "overdue tickets",
-        "example-80",
+        "example-30",
+        "example-90",
         "example-99",
     ] {
         assert!(
@@ -780,6 +781,171 @@ fn example_ui_workflow_stories_record_semantic_anchors() {
             assert!(
                 spec.contains(anchor) || package.contains(anchor) || catalog.contains(anchor),
                 "{story_file} anchor {anchor} is not grounded in UI workflow spec/package/catalog"
+            );
+        }
+    }
+}
+
+#[test]
+fn example_support_ticket_stories_record_semantic_anchors() {
+    let spec = fs::read_to_string(fixture("support_ticket.ail/spec.ail-spec.md")).unwrap();
+    let package = fs::read_to_string(fixture("support_ticket.ail/ail-package.md")).unwrap();
+    let catalog = fs::read_to_string(fixture("examples.md")).unwrap();
+    for (story_file, required_anchors) in [
+        (
+            "stories/example-30.md",
+            [
+                "Support Tickets",
+                "Close ticket",
+                "TicketClosed",
+                "internal notes",
+                "linux-x86_64-elf",
+                "interview.system.md",
+            ],
+        ),
+        (
+            "stories/example-31.md",
+            [
+                "Support Tickets",
+                "Close ticket",
+                "TicketClosed",
+                "open ticket queue",
+                "linux-x86_64-elf",
+                "requirements.system.md",
+            ],
+        ),
+        (
+            "stories/example-32.md",
+            [
+                "Support Tickets",
+                "Close ticket",
+                "TicketClosed",
+                "customer-visible ticket history",
+                "linux-x86_64-elf",
+                "spec-draft.system.md",
+            ],
+        ),
+        (
+            "stories/example-33.md",
+            [
+                "Support Tickets",
+                "Close ticket",
+                "TicketClosed",
+                "internal notes",
+                "linux-x86_64-elf",
+                "core-draft.system.md",
+            ],
+        ),
+        (
+            "stories/example-34.md",
+            [
+                "Support Tickets",
+                "Close ticket",
+                "TicketClosed",
+                "internal notes",
+                "linux-x86_64-elf",
+                "diagnostic-repair.system.md",
+            ],
+        ),
+        (
+            "stories/example-90.md",
+            [
+                "Support Tickets",
+                "Close ticket",
+                "TicketClosed",
+                "internal notes",
+                "aarch64-apple-darwin-libsystem-macho",
+                "interview.system.md",
+            ],
+        ),
+        (
+            "stories/example-91.md",
+            [
+                "Support Tickets",
+                "Close ticket",
+                "TicketClosed",
+                "open ticket queue",
+                "aarch64-apple-darwin-libsystem-macho",
+                "requirements.system.md",
+            ],
+        ),
+        (
+            "stories/example-92.md",
+            [
+                "Support Tickets",
+                "Close ticket",
+                "TicketClosed",
+                "customer-visible ticket history",
+                "aarch64-apple-darwin-libsystem-macho",
+                "spec-draft.system.md",
+            ],
+        ),
+        (
+            "stories/example-93.md",
+            [
+                "Support Tickets",
+                "Close ticket",
+                "TicketClosed",
+                "internal notes",
+                "aarch64-apple-darwin-libsystem-macho",
+                "core-draft.system.md",
+            ],
+        ),
+        (
+            "stories/example-94.md",
+            [
+                "Support Tickets",
+                "Close ticket",
+                "TicketClosed",
+                "internal notes",
+                "aarch64-apple-darwin-libsystem-macho",
+                "diagnostic-repair.system.md",
+            ],
+        ),
+        (
+            "stories/example-99.md",
+            [
+                "semantic-drift",
+                "AIL001",
+                "diagnostic-semantic-drift",
+                "CloseTicket",
+                "interop.system.md",
+                "diagnostics",
+            ],
+        ),
+        (
+            "stories/example-101.md",
+            [
+                "profile-mismatch",
+                "AIL-PROMPT-001",
+                "prompt-envelope",
+                "CloseTicket",
+                "spec-draft.system.md",
+                "diagnostics",
+            ],
+        ),
+        (
+            "stories/example-102.md",
+            [
+                "missing-trace",
+                "AIL-TRACE-001",
+                "diagnostic-missing-trace",
+                "CloseTicket",
+                "spec-draft.system.md",
+                "diagnostics",
+            ],
+        ),
+    ] {
+        let story = fs::read_to_string(fixture(story_file)).unwrap();
+        assert!(story.contains("semantic-anchors:"), "{story_file}\n{story}");
+        for anchor in required_anchors {
+            assert!(
+                story.contains(anchor),
+                "{story_file} missing semantic anchor {anchor}\n{story}"
+            );
+            assert!(
+                spec.contains(anchor) || package.contains(anchor) || catalog.contains(anchor),
+                "{story_file} anchor {anchor} is not grounded in support ticket spec/package/catalog"
             );
         }
     }
@@ -21627,7 +21793,7 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("semantic-anchor-story-count 22")
+        report.contains("semantic-anchor-story-count 35")
             && report.contains(
                 "entry-semantic-anchors example-111 Incident; Declare incident; IncidentDeclared; incident_identity; incident_policy; incident_notifications"
             ),

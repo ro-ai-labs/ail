@@ -42,8 +42,10 @@ coverage.
 - `../examples.md`: entries in the support-ticket families cover application
   prompt surfaces, targets, live LLM captures, rejected diagnostics, and repair
   paths.
-- `../stories/example-80.md` through `../stories/example-84.md`: application
-  workflow stories tied to target reports.
+- `../stories/example-30.md` through `../stories/example-34.md`: Application
+  profile workflow stories tied to Linux target reports.
+- `../stories/example-90.md` through `../stories/example-94.md`: System
+  profile workflow stories tied to Darwin target-contract reports.
 - `../stories/example-99.md`, `../stories/example-101.md`, and
   `../stories/example-102.md`: rejected or prompt-envelope story paths for
   semantic drift, profile mismatch, and missing trace coverage.
@@ -58,10 +60,11 @@ cargo run -- ail-examples examples --artifact-dir /tmp/ail-support-ticket-exampl
 
 Useful artifacts after replay include:
 
-- `examples/example-80/checked.ail-core.txt`
-- `examples/example-80/artifact.ailbc.json`
-- `examples/example-80/target-report.txt`
-- `examples/example-80/user-story.txt`
+- `examples/example-30/checked.ail-core.txt`
+- `examples/example-30/artifact.ailbc.json`
+- `examples/example-30/target-report.txt`
+- `examples/example-30/user-story.txt`
+- `examples/example-90/target-report.txt`
 - `examples/example-99/diagnostics.txt`
 - `examples/example-101/diagnostics.txt`
 - `examples/example-102/diagnostics.txt`
@@ -101,9 +104,10 @@ larger multi-module application benchmark.
 
 ## v0.3 Learning Signal
 
-Support Ticket is replay-clean and useful as the Application baseline, but it
-is still too concentrated around one workflow. v0.3 should turn it into a
-guided application tutorial with package-local rejected fixtures, explicit
-story amendment examples, semantic-anchor coverage for the core ticket actions,
-and a comparison between prompt-surface replay, package-import replay, and
-native binary evidence.
+Support Ticket is replay-clean and useful as the Application baseline. Its
+accepted and diagnostic story files now carry semantic anchors for the core
+ticket action, secret internal notes, prompt surfaces, target reports, and
+diagnostic failure taxonomies. v0.3 should turn it into a guided application
+tutorial with package-local rejected fixtures, explicit story amendment
+examples, and a comparison between prompt-surface replay, package-import
+replay, and native binary evidence.

@@ -11,3 +11,4 @@ module-count: 1
 spec-count: 1
 story-count: 1
 interacts-with: none
+semantic-anchors: semantic-drift; AIL001; diagnostic-semantic-drift; CloseTicket; interop.system.md; diagnostics

@@ -11,3 +11,4 @@ module-count: 3
 spec-count: 3
 story-count: 3
 interacts-with: libsystem,elf-loader,wasm-sandbox
+semantic-anchors: Support Tickets; Close ticket; TicketClosed; internal notes; aarch64-apple-darwin-libsystem-macho; core-draft.system.md

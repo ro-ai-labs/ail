@@ -11,3 +11,4 @@ module-count: 1
 spec-count: 1
 story-count: 1
 interacts-with: none
+semantic-anchors: profile-mismatch; AIL-PROMPT-001; prompt-envelope; CloseTicket; spec-draft.system.md; diagnostics

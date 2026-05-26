@@ -11,3 +11,4 @@ module-count: 3
 spec-count: 3
 story-count: 3
 interacts-with: libsystem,elf-loader,wasm-sandbox
+semantic-anchors: Support Tickets; Close ticket; TicketClosed; internal notes; linux-x86_64-elf; interview.system.md

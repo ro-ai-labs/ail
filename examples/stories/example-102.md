@@ -11,3 +11,4 @@ module-count: 1
 spec-count: 1
 story-count: 1
 interacts-with: none
+semantic-anchors: missing-trace; AIL-TRACE-001; diagnostic-missing-trace; CloseTicket; spec-draft.system.md; diagnostics
