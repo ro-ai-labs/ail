@@ -4,18 +4,19 @@ use std::fs;
 use std::process::{Command, ExitCode};
 
 use ail::ail::{
-    AilBytecodeProgram, DEFAULT_BASE_LLM_ENDPOINT, ail_core_hash, ail_document_from_core,
-    apply_ail_core_patch_text, apply_ail_flow_edit_text, apply_ail_patch, check_ail_core,
-    check_ail_requirements, compile_ail_bytecode_native_elf, compile_ail_core_bytecode,
-    compile_ail_core_native_elf, draft_ail_interview, draft_ail_requirements_response,
-    draft_ail_spec, draft_ail_spec_from_requirements, elaborate_ail_core, load_ail_package_dir,
-    parse_ail_bytecode, parse_ail_core_text, parse_ail_package_document,
-    parse_ail_package_spec_text, parse_ail_patch_text, parse_ail_spec_text, render_ail_bytecode,
-    render_ail_core, render_ail_flow_view, render_ail_interview_questions_artifact,
-    render_ail_package_dependency_report, render_ail_runtime_state_lines, render_ail_spec,
-    render_ail_spec_from_core, repair_ail_requirements_from_diagnostics,
-    repair_ail_spec_from_diagnostics, run_ail_bytecode_action, run_ail_compiler_pass_on_core,
-    run_ail_conformance, verify_ail_bytecode,
+    AilBytecodeProgram, AilPackage, AilPackageMetadata, DEFAULT_BASE_LLM_ENDPOINT, ail_core_hash,
+    ail_document_from_core, apply_ail_core_patch_text, apply_ail_flow_edit_text, apply_ail_patch,
+    check_ail_core, check_ail_requirements, compile_ail_bytecode_native_elf,
+    compile_ail_core_bytecode, compile_ail_core_native_elf, draft_ail_interview,
+    draft_ail_requirements_response, draft_ail_spec, draft_ail_spec_from_requirements,
+    elaborate_ail_core, load_ail_package_dir, parse_ail_bytecode, parse_ail_core_text,
+    parse_ail_package_document, parse_ail_package_spec_text, parse_ail_patch_text,
+    parse_ail_spec_text, render_ail_bytecode, render_ail_core, render_ail_flow_view,
+    render_ail_interview_questions_artifact, render_ail_package_dependency_report,
+    render_ail_runtime_state_lines, render_ail_spec, render_ail_spec_from_core,
+    repair_ail_requirements_from_diagnostics, repair_ail_spec_from_diagnostics,
+    run_ail_bytecode_action, run_ail_compiler_pass_on_core, run_ail_conformance,
+    verify_ail_bytecode,
 };
 use ail::core_model::json_string;
 
@@ -466,7 +467,17 @@ struct AilE2eCorpusEvaluation {
     target_report_text: Option<String>,
     diagnostics_text: Option<String>,
     repair_tutorial_text: Option<String>,
+    repair_proof: Option<AilE2eRepairProofArtifacts>,
     native_executables: Vec<AilNativeArtifact>,
+}
+
+#[derive(Debug, Clone)]
+struct AilE2eRepairProofArtifacts {
+    candidate_spec_text: String,
+    checked_core_text: String,
+    bytecode_text: String,
+    vm_trace_text: Option<String>,
+    target_report_text: Option<String>,
 }
 
 #[derive(Debug, Default)]
@@ -2201,6 +2212,8 @@ fn evaluate_rejected_ail_e2e_corpus_entry(
     let diagnostics_text = format!("{}\n", lines.join("\n"));
     let repair_tutorial_text =
         render_ail_e2e_repair_tutorial(entry, expected_diagnostic, failure_taxonomy, &lines[4..]);
+    let repair_proof =
+        build_ail_e2e_repair_proof(entry, package_path, failure_taxonomy, artifact_kind)?;
     Ok(AilE2eCorpusEvaluation {
         entry: entry.clone(),
         semantic_anchors: read_ail_e2e_entry_semantic_anchors(entry)?,
@@ -2213,7 +2226,208 @@ fn evaluate_rejected_ail_e2e_corpus_entry(
         target_report_text: None,
         diagnostics_text: Some(diagnostics_text),
         repair_tutorial_text: Some(repair_tutorial_text),
+        repair_proof: Some(repair_proof),
         native_executables: Vec::new(),
+    })
+}
+
+fn build_ail_e2e_repair_proof(
+    entry: &AilE2eCorpusEntry,
+    package_path: &str,
+    failure_taxonomy: &str,
+    artifact_kind: &str,
+) -> Result<AilE2eRepairProofArtifacts, String> {
+    let (package, candidate_spec_text) = load_ail_e2e_repair_candidate_package(
+        entry,
+        package_path,
+        failure_taxonomy,
+        artifact_kind,
+    )?;
+    let document =
+        parse_ail_package_spec_text(&package, &candidate_spec_text).map_err(|error| {
+            format!(
+                "examples catalog rejected entry {} repair candidate failed to parse: {error}",
+                entry.id
+            )
+        })?;
+    let core = elaborate_ail_core(&package, &document);
+    let diagnostics = check_ail_core(&core);
+    if !diagnostics.is_empty() {
+        return Err(format!(
+            "examples catalog rejected entry {} repair candidate still has diagnostics:\n{}",
+            entry.id,
+            diagnostics.join("\n")
+        ));
+    }
+    let target = entry
+        .fields
+        .get("target")
+        .map(String::as_str)
+        .unwrap_or_default();
+    if let Err(error) = check_darwin_macho_contract_supported_effects(&core, target) {
+        return Err(format!(
+            "examples catalog rejected entry {} repair candidate failed target check: {error}",
+            entry.id
+        ));
+    }
+    let bytecode = compile_ail_core_bytecode(&core)?;
+    let bytecode_diagnostics = verify_ail_bytecode(&bytecode);
+    if !bytecode_diagnostics.is_empty() {
+        return Err(format!(
+            "examples catalog rejected entry {} repair candidate has bytecode diagnostics:\n{}",
+            entry.id,
+            bytecode_diagnostics.join("\n")
+        ));
+    }
+    let repair_action_name = ail_e2e_repair_action_name(entry, &bytecode)?;
+    let target_report_text = match target {
+        "wasm32-unknown-sandbox-wasm" => Some(render_ail_compile_wasm_contract_report(
+            &bytecode,
+            &repair_action_name,
+            target,
+        )?),
+        "aarch64-apple-darwin-libsystem-macho" => {
+            Some(render_ail_compile_darwin_macho_contract_report(
+                &bytecode,
+                &repair_action_name,
+                target,
+            )?)
+        }
+        _ => None,
+    };
+    let vm_trace_text = if target_report_text.is_none() {
+        let runtime_state = parse_ail_e2e_runtime_state(entry)?;
+        let run = run_ail_bytecode_action(&bytecode, &repair_action_name, runtime_state)?;
+        Some(format!("{}\n", run.trace.join("\n")))
+    } else {
+        None
+    };
+    Ok(AilE2eRepairProofArtifacts {
+        candidate_spec_text,
+        checked_core_text: render_ail_core(&core),
+        bytecode_text: format!("{}\n", render_ail_bytecode(&bytecode)),
+        vm_trace_text,
+        target_report_text,
+    })
+}
+
+fn load_ail_e2e_repair_candidate_package(
+    entry: &AilE2eCorpusEntry,
+    package_path: &str,
+    failure_taxonomy: &str,
+    artifact_kind: &str,
+) -> Result<(AilPackage, String), String> {
+    if failure_taxonomy == "package-resolution" {
+        return synthesize_package_resolution_repair_candidate(entry, package_path);
+    }
+    let package = load_ail_package_dir(package_path).map_err(|error| {
+        format!(
+            "examples catalog rejected entry {} repair package failed to load: {error}",
+            entry.id
+        )
+    })?;
+    let mut candidate_spec_text = package.spec_text.clone();
+    if failure_taxonomy == "unsupported-target" {
+        candidate_spec_text = candidate_spec_text
+            .replace("- call linux syscall exit", "- call darwin process exit")
+            .replace("- linux syscall exit", "- darwin process exit");
+    }
+    if artifact_kind == "prompt-envelope" {
+        candidate_spec_text = package.spec_text.clone();
+    }
+    Ok((package, candidate_spec_text))
+}
+
+fn synthesize_package_resolution_repair_candidate(
+    entry: &AilE2eCorpusEntry,
+    package_path: &str,
+) -> Result<(AilPackage, String), String> {
+    let root = std::path::PathBuf::from(package_path);
+    let metadata_path = root.join("ail-package.md");
+    let metadata_text = fs::read_to_string(&metadata_path).map_err(|error| {
+        format!(
+            "examples catalog rejected entry {} repair package failed to read {}: {error}",
+            entry.id,
+            metadata_path.display()
+        )
+    })?;
+    let field = |key: &str| ail_simple_metadata_field(&metadata_text, key);
+    let entry_file = field("entry").unwrap_or_else(|| "spec.ail-spec.md".to_string());
+    let spec_path = root.join(&entry_file);
+    let candidate_spec_text = fs::read_to_string(&spec_path).map_err(|error| {
+        format!(
+            "examples catalog rejected entry {} repair package failed to read {}: {error}",
+            entry.id,
+            spec_path.display()
+        )
+    })?;
+    let repaired_spec_text = candidate_spec_text.replace(
+        "shared-lib to resolve from the registry index",
+        "the corrected local dependency to be available",
+    );
+    let target = entry
+        .fields
+        .get("target")
+        .cloned()
+        .unwrap_or_else(|| "vm".to_string());
+    let mut target_support = BTreeMap::new();
+    target_support.insert(target, "supported".to_string());
+    let package = AilPackage {
+        metadata: AilPackageMetadata {
+            name: field("name").unwrap_or_else(|| "missing-registry-import".to_string()),
+            version: field("version").unwrap_or_else(|| "0.2.0".to_string()),
+            profile: field("profile").unwrap_or_else(|| "Application".to_string()),
+            entry: entry_file,
+            features: vec!["repair-proof".to_string()],
+            imports: Vec::new(),
+            capability_grants: Vec::new(),
+            conformance: field("conformance").unwrap_or_else(|| "v0.2".to_string()),
+            prompt_pack: None,
+            registry: None,
+            target_support,
+            schema_version: field("schema-version"),
+            safety_level: field("safety-level"),
+            base_llm_endpoint: DEFAULT_BASE_LLM_ENDPOINT.to_string(),
+        },
+        root,
+        spec_path,
+        spec_text: repaired_spec_text.clone(),
+        imports: Vec::new(),
+    };
+    Ok((package, repaired_spec_text))
+}
+
+fn ail_simple_metadata_field(text: &str, key: &str) -> Option<String> {
+    for line in text.lines() {
+        let Some((field, value)) = line.split_once(':') else {
+            continue;
+        };
+        if field.trim() == key {
+            let value = value.trim();
+            if !value.is_empty() {
+                return Some(value.to_string());
+            }
+        }
+    }
+    None
+}
+
+fn ail_e2e_repair_action_name(
+    entry: &AilE2eCorpusEntry,
+    bytecode: &AilBytecodeProgram,
+) -> Result<String, String> {
+    if let Some(action_name) = entry
+        .fields
+        .get("vm-action")
+        .filter(|action_name| bytecode.actions.contains_key(action_name.as_str()))
+    {
+        return Ok(action_name.clone());
+    }
+    bytecode.actions.keys().next().cloned().ok_or_else(|| {
+        format!(
+            "examples catalog rejected entry {} repair candidate has no bytecode actions",
+            entry.id
+        )
     })
 }
 
@@ -2290,6 +2504,7 @@ fn evaluate_ail_e2e_corpus_entry(
             target_report_text: None,
             diagnostics_text: None,
             repair_tutorial_text: None,
+            repair_proof: None,
             native_executables: Vec::new(),
         });
     }
@@ -2386,6 +2601,7 @@ fn evaluate_ail_e2e_corpus_entry(
         target_report_text,
         diagnostics_text: None,
         repair_tutorial_text: None,
+        repair_proof: None,
         native_executables,
     })
 }
@@ -2592,6 +2808,63 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
                 .map(|text| ail_artifact_fingerprint(text))
         },
     );
+    push_ail_e2e_fingerprint_reuse_lines(
+        &mut lines,
+        "repair-candidate",
+        evaluations,
+        |evaluation| {
+            evaluation
+                .repair_proof
+                .as_ref()
+                .map(|proof| ail_artifact_fingerprint(&proof.candidate_spec_text))
+        },
+    );
+    push_ail_e2e_fingerprint_reuse_lines(
+        &mut lines,
+        "repair-checked-core",
+        evaluations,
+        |evaluation| {
+            evaluation
+                .repair_proof
+                .as_ref()
+                .map(|proof| ail_artifact_fingerprint(&proof.checked_core_text))
+        },
+    );
+    push_ail_e2e_fingerprint_reuse_lines(
+        &mut lines,
+        "repair-bytecode",
+        evaluations,
+        |evaluation| {
+            evaluation
+                .repair_proof
+                .as_ref()
+                .map(|proof| ail_artifact_fingerprint(&proof.bytecode_text))
+        },
+    );
+    push_ail_e2e_fingerprint_reuse_lines(
+        &mut lines,
+        "repair-vm-trace",
+        evaluations,
+        |evaluation| {
+            evaluation
+                .repair_proof
+                .as_ref()
+                .and_then(|proof| proof.vm_trace_text.as_ref())
+                .map(|text| ail_artifact_fingerprint(text))
+        },
+    );
+    push_ail_e2e_fingerprint_reuse_lines(
+        &mut lines,
+        "repair-target-report",
+        evaluations,
+        |evaluation| {
+            evaluation
+                .repair_proof
+                .as_ref()
+                .and_then(|proof| proof.target_report_text.as_ref())
+                .map(|text| ail_artifact_fingerprint(text))
+        },
+    );
     push_ail_e2e_native_fingerprint_reuse_lines(&mut lines, evaluations);
     for evaluation in evaluations {
         let entry = &evaluation.entry;
@@ -2694,6 +2967,14 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
                 entry.id,
                 ail_artifact_fingerprint(repair_tutorial_text)
             ));
+        }
+        if let Some(repair_proof) = &evaluation.repair_proof {
+            push_ail_e2e_repair_proof_artifact_lines(
+                &mut lines,
+                "entry-artifact",
+                entry,
+                repair_proof,
+            );
         }
         if !evaluation.semantic_anchors.is_empty() {
             lines.push(format!(
@@ -2891,6 +3172,9 @@ fn push_ail_e2e_entry_artifact_lines(
             ail_artifact_fingerprint(repair_tutorial_text)
         ));
     }
+    if let Some(repair_proof) = &evaluation.repair_proof {
+        push_ail_e2e_repair_proof_artifact_lines(lines, prefix, entry, repair_proof);
+    }
     let story_text = render_ail_e2e_user_story_text(entry, &evaluation.semantic_anchors);
     lines.push(format!(
         "{prefix} {} user-story examples/{}/user-story.txt {}",
@@ -2898,6 +3182,48 @@ fn push_ail_e2e_entry_artifact_lines(
         entry.id,
         ail_artifact_fingerprint(&story_text)
     ));
+}
+
+fn push_ail_e2e_repair_proof_artifact_lines(
+    lines: &mut Vec<String>,
+    prefix: &str,
+    entry: &AilE2eCorpusEntry,
+    repair_proof: &AilE2eRepairProofArtifacts,
+) {
+    lines.push(format!(
+        "{prefix} {} repair-candidate examples/{}/repair-candidate.ail-spec.md {}",
+        entry.id,
+        entry.id,
+        ail_artifact_fingerprint(&repair_proof.candidate_spec_text)
+    ));
+    lines.push(format!(
+        "{prefix} {} repair-checked-core examples/{}/repair-checked.ail-core.txt {}",
+        entry.id,
+        entry.id,
+        ail_artifact_fingerprint(&repair_proof.checked_core_text)
+    ));
+    lines.push(format!(
+        "{prefix} {} repair-bytecode examples/{}/repair-artifact.ailbc.json {}",
+        entry.id,
+        entry.id,
+        ail_artifact_fingerprint(&repair_proof.bytecode_text)
+    ));
+    if let Some(vm_trace_text) = &repair_proof.vm_trace_text {
+        lines.push(format!(
+            "{prefix} {} repair-vm-trace examples/{}/repair-vm-trace.txt {}",
+            entry.id,
+            entry.id,
+            ail_artifact_fingerprint(vm_trace_text)
+        ));
+    }
+    if let Some(target_report_text) = &repair_proof.target_report_text {
+        lines.push(format!(
+            "{prefix} {} repair-target-report examples/{}/repair-target-report.txt {}",
+            entry.id,
+            entry.id,
+            ail_artifact_fingerprint(target_report_text)
+        ));
+    }
 }
 
 fn render_ail_e2e_user_story_text(
@@ -3839,6 +4165,85 @@ fn write_ail_e2e_corpus_artifacts(
             .map_err(|error| {
                 format!("failed to write examples repair tutorial fingerprint: {error}")
             })?;
+        }
+        if let Some(repair_proof) = &evaluation.repair_proof {
+            let entry_dir = root.join("examples").join(&evaluation.entry.id);
+            fs::create_dir_all(&entry_dir).map_err(|error| {
+                format!("failed to create examples entry artifact dir: {error}")
+            })?;
+            fs::write(
+                entry_dir.join("repair-candidate.ail-spec.md"),
+                &repair_proof.candidate_spec_text,
+            )
+            .map_err(|error| format!("failed to write examples repair candidate spec: {error}"))?;
+            fs::write(
+                entry_dir.join("repair-candidate.fingerprint.txt"),
+                format!(
+                    "{}\n",
+                    ail_artifact_fingerprint(&repair_proof.candidate_spec_text)
+                ),
+            )
+            .map_err(|error| {
+                format!("failed to write examples repair candidate fingerprint: {error}")
+            })?;
+            fs::write(
+                entry_dir.join("repair-checked.ail-core.txt"),
+                &repair_proof.checked_core_text,
+            )
+            .map_err(|error| format!("failed to write examples repair checked core: {error}"))?;
+            fs::write(
+                entry_dir.join("repair-checked.ail-core.fingerprint.txt"),
+                format!(
+                    "{}\n",
+                    ail_artifact_fingerprint(&repair_proof.checked_core_text)
+                ),
+            )
+            .map_err(|error| {
+                format!("failed to write examples repair checked core fingerprint: {error}")
+            })?;
+            fs::write(
+                entry_dir.join("repair-artifact.ailbc.json"),
+                &repair_proof.bytecode_text,
+            )
+            .map_err(|error| format!("failed to write examples repair bytecode: {error}"))?;
+            fs::write(
+                entry_dir.join("repair-artifact.ailbc.fingerprint.txt"),
+                format!(
+                    "{}\n",
+                    ail_artifact_fingerprint(&repair_proof.bytecode_text)
+                ),
+            )
+            .map_err(|error| {
+                format!("failed to write examples repair bytecode fingerprint: {error}")
+            })?;
+            if let Some(vm_trace_text) = &repair_proof.vm_trace_text {
+                fs::write(entry_dir.join("repair-vm-trace.txt"), vm_trace_text).map_err(
+                    |error| format!("failed to write examples repair vm trace: {error}"),
+                )?;
+                fs::write(
+                    entry_dir.join("repair-vm-trace.fingerprint.txt"),
+                    format!("{}\n", ail_artifact_fingerprint(vm_trace_text)),
+                )
+                .map_err(|error| {
+                    format!("failed to write examples repair vm trace fingerprint: {error}")
+                })?;
+            }
+            if let Some(target_report_text) = &repair_proof.target_report_text {
+                fs::write(
+                    entry_dir.join("repair-target-report.txt"),
+                    target_report_text,
+                )
+                .map_err(|error| {
+                    format!("failed to write examples repair target report: {error}")
+                })?;
+                fs::write(
+                    entry_dir.join("repair-target-report.fingerprint.txt"),
+                    format!("{}\n", ail_artifact_fingerprint(target_report_text)),
+                )
+                .map_err(|error| {
+                    format!("failed to write examples repair target report fingerprint: {error}")
+                })?;
+            }
         }
     }
     Ok(())

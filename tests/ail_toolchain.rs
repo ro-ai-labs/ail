@@ -24921,20 +24921,40 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{package_resolution_diagnostics}"
     );
     let rejected_entries = [
-        ("example-99", "semantic-drift"),
-        ("example-101", "profile-mismatch"),
-        ("example-102", "missing-trace"),
-        ("example-103", "hallucinated-capability"),
-        ("example-104", "unsupported-target"),
-        ("example-105", "invalid-interop"),
-        ("example-106", "permission-capability"),
-        ("example-107", "package-resolution"),
+        ("example-99", "semantic-drift", "repair-vm-trace"),
+        ("example-101", "profile-mismatch", "repair-vm-trace"),
+        ("example-102", "missing-trace", "repair-vm-trace"),
+        ("example-103", "hallucinated-capability", "repair-vm-trace"),
+        ("example-104", "unsupported-target", "repair-target-report"),
+        ("example-105", "invalid-interop", "repair-target-report"),
+        ("example-106", "permission-capability", "repair-vm-trace"),
+        ("example-107", "package-resolution", "repair-vm-trace"),
     ];
     assert!(
         report.contains("repair-tutorial-fingerprint-observed-count 8"),
         "{report}"
     );
-    for (entry_id, failure_taxonomy) in rejected_entries {
+    assert!(
+        report.contains("repair-candidate-fingerprint-observed-count 8"),
+        "{report}"
+    );
+    assert!(
+        report.contains("repair-checked-core-fingerprint-observed-count 8"),
+        "{report}"
+    );
+    assert!(
+        report.contains("repair-bytecode-fingerprint-observed-count 8"),
+        "{report}"
+    );
+    assert!(
+        report.contains("repair-vm-trace-fingerprint-observed-count 6"),
+        "{report}"
+    );
+    assert!(
+        report.contains("repair-target-report-fingerprint-observed-count 2"),
+        "{report}"
+    );
+    for (entry_id, failure_taxonomy, repair_evidence_kind) in rejected_entries {
         let repair_tutorial = fs::read_to_string(
             artifact_dir
                 .join("examples")
@@ -24972,6 +24992,129 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
             )),
             "{report}"
         );
+        let repair_candidate = fs::read_to_string(
+            artifact_dir
+                .join("examples")
+                .join(entry_id)
+                .join("repair-candidate.ail-spec.md"),
+        )
+        .unwrap();
+        assert!(
+            repair_candidate.contains("AIL-Spec Example")
+                || repair_candidate.contains("Action:")
+                || repair_candidate.contains("Tool:")
+                || repair_candidate.contains("System component:"),
+            "{repair_candidate}"
+        );
+        let repair_candidate_fingerprint = fs::read_to_string(
+            artifact_dir
+                .join("examples")
+                .join(entry_id)
+                .join("repair-candidate.fingerprint.txt"),
+        )
+        .unwrap();
+        assert_eq!(
+            repair_candidate_fingerprint.trim(),
+            fnv64_fingerprint(&repair_candidate)
+        );
+        let repair_core = fs::read_to_string(
+            artifact_dir
+                .join("examples")
+                .join(entry_id)
+                .join("repair-checked.ail-core.txt"),
+        )
+        .unwrap();
+        assert!(repair_core.contains("package:"), "{repair_core}");
+        let repair_core_fingerprint = fs::read_to_string(
+            artifact_dir
+                .join("examples")
+                .join(entry_id)
+                .join("repair-checked.ail-core.fingerprint.txt"),
+        )
+        .unwrap();
+        assert_eq!(
+            repair_core_fingerprint.trim(),
+            fnv64_fingerprint(&repair_core)
+        );
+        let repair_bytecode = fs::read_to_string(
+            artifact_dir
+                .join("examples")
+                .join(entry_id)
+                .join("repair-artifact.ailbc.json"),
+        )
+        .unwrap();
+        let parsed_repair_bytecode = parse_ail_bytecode(&repair_bytecode).unwrap();
+        assert_eq!(
+            verify_ail_bytecode(&parsed_repair_bytecode),
+            Vec::<String>::new()
+        );
+        let repair_bytecode_fingerprint = fs::read_to_string(
+            artifact_dir
+                .join("examples")
+                .join(entry_id)
+                .join("repair-artifact.ailbc.fingerprint.txt"),
+        )
+        .unwrap();
+        assert_eq!(
+            repair_bytecode_fingerprint.trim(),
+            fnv64_fingerprint(&repair_bytecode)
+        );
+        let repair_evidence = match repair_evidence_kind {
+            "repair-vm-trace" => fs::read_to_string(
+                artifact_dir
+                    .join("examples")
+                    .join(entry_id)
+                    .join("repair-vm-trace.txt"),
+            )
+            .unwrap(),
+            "repair-target-report" => fs::read_to_string(
+                artifact_dir
+                    .join("examples")
+                    .join(entry_id)
+                    .join("repair-target-report.txt"),
+            )
+            .unwrap(),
+            other => panic!("unknown repair evidence kind {other}"),
+        };
+        let repair_evidence_fingerprint = fs::read_to_string(
+            artifact_dir
+                .join("examples")
+                .join(entry_id)
+                .join(format!("{repair_evidence_kind}.fingerprint.txt")),
+        )
+        .unwrap();
+        assert_eq!(
+            repair_evidence_fingerprint.trim(),
+            fnv64_fingerprint(&repair_evidence)
+        );
+        assert!(
+            report.contains(&format!(
+                "entry-artifact {entry_id} repair-candidate examples/{entry_id}/repair-candidate.ail-spec.md {}",
+                repair_candidate_fingerprint.trim()
+            )),
+            "{report}"
+        );
+        assert!(
+            report.contains(&format!(
+                "entry-artifact {entry_id} repair-checked-core examples/{entry_id}/repair-checked.ail-core.txt {}",
+                repair_core_fingerprint.trim()
+            )),
+            "{report}"
+        );
+        assert!(
+            report.contains(&format!(
+                "entry-artifact {entry_id} repair-bytecode examples/{entry_id}/repair-artifact.ailbc.json {}",
+                repair_bytecode_fingerprint.trim()
+            )),
+            "{report}"
+        );
+        assert!(
+            report.contains(&format!(
+                "entry-artifact {entry_id} {repair_evidence_kind} examples/{entry_id}/{repair_evidence_kind}.txt {}",
+                repair_evidence_fingerprint.trim()
+            )),
+            "{report}"
+        );
     }
     let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-examples.txt")).unwrap();
     assert!(manifest.contains("AIL-Examples-Manifest:"), "{manifest}");
@@ -24979,7 +25122,7 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         manifest.contains("entry example-99 checker-result rejected target vm"),
         "{manifest}"
     );
-    for (entry_id, _) in rejected_entries {
+    for (entry_id, _, repair_evidence_kind) in rejected_entries {
         let repair_tutorial_fingerprint = fs::read_to_string(
             artifact_dir
                 .join("examples")
@@ -24991,6 +25134,34 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
             manifest.contains(&format!(
                 "entry-artifact {entry_id} repair-tutorial examples/{entry_id}/repair-tutorial.txt {}",
                 repair_tutorial_fingerprint.trim()
+            )),
+            "{manifest}"
+        );
+        let repair_bytecode_fingerprint = fs::read_to_string(
+            artifact_dir
+                .join("examples")
+                .join(entry_id)
+                .join("repair-artifact.ailbc.fingerprint.txt"),
+        )
+        .unwrap();
+        assert!(
+            manifest.contains(&format!(
+                "entry-artifact {entry_id} repair-bytecode examples/{entry_id}/repair-artifact.ailbc.json {}",
+                repair_bytecode_fingerprint.trim()
+            )),
+            "{manifest}"
+        );
+        let repair_evidence_fingerprint = fs::read_to_string(
+            artifact_dir
+                .join("examples")
+                .join(entry_id)
+                .join(format!("{repair_evidence_kind}.fingerprint.txt")),
+        )
+        .unwrap();
+        assert!(
+            manifest.contains(&format!(
+                "entry-artifact {entry_id} {repair_evidence_kind} examples/{entry_id}/{repair_evidence_kind}.txt {}",
+                repair_evidence_fingerprint.trim()
             )),
             "{manifest}"
         );
@@ -27188,6 +27359,69 @@ fn cli_ail_e2e_corpus_replays_rejected_prompt_failures() {
         repair_tutorial_fingerprint.trim(),
         fnv64_fingerprint(&repair_tutorial)
     );
+    let repair_candidate =
+        fs::read_to_string(artifact_dir.join("examples/example-99/repair-candidate.ail-spec.md"))
+            .unwrap();
+    assert!(
+        repair_candidate.contains("Action: Close ticket.")
+            && repair_candidate.contains("TicketClosed"),
+        "{repair_candidate}"
+    );
+    let repair_candidate_fingerprint = fs::read_to_string(
+        artifact_dir.join("examples/example-99/repair-candidate.fingerprint.txt"),
+    )
+    .unwrap();
+    assert_eq!(
+        repair_candidate_fingerprint.trim(),
+        fnv64_fingerprint(&repair_candidate)
+    );
+    let repair_core =
+        fs::read_to_string(artifact_dir.join("examples/example-99/repair-checked.ail-core.txt"))
+            .unwrap();
+    assert!(
+        repair_core.contains("package: support-ticket")
+            && repair_core.contains("node Action CloseTicket"),
+        "{repair_core}"
+    );
+    let repair_core_fingerprint = fs::read_to_string(
+        artifact_dir.join("examples/example-99/repair-checked.ail-core.fingerprint.txt"),
+    )
+    .unwrap();
+    assert_eq!(
+        repair_core_fingerprint.trim(),
+        fnv64_fingerprint(&repair_core)
+    );
+    let repair_bytecode =
+        fs::read_to_string(artifact_dir.join("examples/example-99/repair-artifact.ailbc.json"))
+            .unwrap();
+    let parsed_repair_bytecode = parse_ail_bytecode(&repair_bytecode).unwrap();
+    assert_eq!(
+        verify_ail_bytecode(&parsed_repair_bytecode),
+        Vec::<String>::new()
+    );
+    let repair_bytecode_fingerprint = fs::read_to_string(
+        artifact_dir.join("examples/example-99/repair-artifact.ailbc.fingerprint.txt"),
+    )
+    .unwrap();
+    assert_eq!(
+        repair_bytecode_fingerprint.trim(),
+        fnv64_fingerprint(&repair_bytecode)
+    );
+    let repair_vm_trace =
+        fs::read_to_string(artifact_dir.join("examples/example-99/repair-vm-trace.txt")).unwrap();
+    assert!(
+        repair_vm_trace.contains("action CloseTicket started")
+            && repair_vm_trace.contains("trace TicketClosed"),
+        "{repair_vm_trace}"
+    );
+    let repair_vm_trace_fingerprint = fs::read_to_string(
+        artifact_dir.join("examples/example-99/repair-vm-trace.fingerprint.txt"),
+    )
+    .unwrap();
+    assert_eq!(
+        repair_vm_trace_fingerprint.trim(),
+        fnv64_fingerprint(&repair_vm_trace)
+    );
     let report = fs::read_to_string(artifact_dir.join("examples-report.txt")).unwrap();
     assert!(
         report.contains("checker-result-count accepted 100"),
@@ -27213,9 +27447,53 @@ fn cli_ail_e2e_corpus_replays_rejected_prompt_failures() {
         "{report}"
     );
     assert!(
+        report.contains("repair-candidate-fingerprint-observed-count 1"),
+        "{report}"
+    );
+    assert!(
+        report.contains("repair-checked-core-fingerprint-observed-count 1"),
+        "{report}"
+    );
+    assert!(
+        report.contains("repair-bytecode-fingerprint-observed-count 1"),
+        "{report}"
+    );
+    assert!(
+        report.contains("repair-vm-trace-fingerprint-observed-count 1"),
+        "{report}"
+    );
+    assert!(
         report.contains(&format!(
             "entry-artifact example-99 repair-tutorial examples/example-99/repair-tutorial.txt {}",
             repair_tutorial_fingerprint.trim()
+        )),
+        "{report}"
+    );
+    assert!(
+        report.contains(&format!(
+            "entry-artifact example-99 repair-candidate examples/example-99/repair-candidate.ail-spec.md {}",
+            repair_candidate_fingerprint.trim()
+        )),
+        "{report}"
+    );
+    assert!(
+        report.contains(&format!(
+            "entry-artifact example-99 repair-checked-core examples/example-99/repair-checked.ail-core.txt {}",
+            repair_core_fingerprint.trim()
+        )),
+        "{report}"
+    );
+    assert!(
+        report.contains(&format!(
+            "entry-artifact example-99 repair-bytecode examples/example-99/repair-artifact.ailbc.json {}",
+            repair_bytecode_fingerprint.trim()
+        )),
+        "{report}"
+    );
+    assert!(
+        report.contains(&format!(
+            "entry-artifact example-99 repair-vm-trace examples/example-99/repair-vm-trace.txt {}",
+            repair_vm_trace_fingerprint.trim()
         )),
         "{report}"
     );
@@ -27224,6 +27502,13 @@ fn cli_ail_e2e_corpus_replays_rejected_prompt_failures() {
         manifest.contains(&format!(
             "entry-artifact example-99 repair-tutorial examples/example-99/repair-tutorial.txt {}",
             repair_tutorial_fingerprint.trim()
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "entry-artifact example-99 repair-bytecode examples/example-99/repair-artifact.ailbc.json {}",
+            repair_bytecode_fingerprint.trim()
         )),
         "{manifest}"
     );
