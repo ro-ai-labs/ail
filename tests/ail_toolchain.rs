@@ -326,6 +326,7 @@ fn example_learning_readmes_cover_repeated_family_gaps() {
         "## Learning Guides",
         "support_ticket.ail/README.md",
         "support_composed.ail/README.md",
+        "compiler_pass.ail/README.md",
         "network_driver.ail/README.md",
         "c_interop.ail/README.md",
         "darwin_linux_effect.ail/README.md",
@@ -384,6 +385,31 @@ fn example_learning_readmes_cover_repeated_family_gaps() {
         assert!(
             support_composed_readme.contains(required),
             "{required}\n{support_composed_readme}"
+        );
+    }
+
+    let compiler_pass_readme =
+        fs::read_to_string(fixture("compiler_pass.ail/README.md")).unwrap();
+    for required in [
+        "# Compiler Pass Example",
+        "## Purpose",
+        "## Concepts Taught",
+        "## Files To Inspect",
+        "## Expected Replay Artifacts",
+        "## Rejected Fixtures",
+        "## Next Example To Read",
+        "## v0.3 Learning Signal",
+        "Compiler profile",
+        "InferReadPermissions",
+        "AIL-Core graph",
+        "SecretReadNeedsHumanConfirmation",
+        "fixed-point",
+        "example-55",
+        "example-64",
+    ] {
+        assert!(
+            compiler_pass_readme.contains(required),
+            "{required}\n{compiler_pass_readme}"
         );
     }
 
