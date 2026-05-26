@@ -72,6 +72,8 @@ requirements, accepted spec, checked Core, bytecode, and the underlying
 
 ```text
 entrypoint=ail-story
+buildrequest.story-id=<story id>
+buildrequest.semantic-anchors=<anchor list>
 action CaptureRequirements started
 action PrepareSpecDraft started
 action AcceptSpecDraft started
@@ -79,9 +81,9 @@ action CompileApplication started
 action VerifyBytecodeArtifact started
 ```
 
-This proves the AI Agent entry point is participating before the LLM prompts
-and after bytecode emission, while the compiler and verifier remain the
-authority.
+This proves the AI Agent entry point received the story identity and semantic
+anchors before the LLM prompts and kept participating after bytecode emission,
+while the compiler and verifier remain the authority.
 
 ## Native Target Variant
 

@@ -11242,14 +11242,36 @@ fn run_ail_story_command(
     let requirements_prompt =
         prompt_with_source_spec_context(&requirements_prompt, &source_artifacts.spec_text);
     let mut agent_start = if let Some(agent_path) = cli_options.ail_build_agent.as_deref() {
+        let story_id = normalized_story_fields
+            .get("user-story-id")
+            .map(String::as_str)
+            .unwrap_or("unspecified");
+        let semantic_anchors = normalized_story_fields
+            .get("semantic-anchors")
+            .map(String::as_str)
+            .unwrap_or("");
         let mut agent_start =
             run_ail_build_agent_capture(agent_path, &package.metadata.name, &requirements_prompt)?;
         agent_start
             .trace
             .insert(0, "entrypoint=ail-story".to_string());
+        agent_start
+            .trace
+            .insert(1, format!("buildrequest.story-id={story_id}"));
+        agent_start.trace.insert(
+            2,
+            format!("buildrequest.semantic-anchors={semantic_anchors}"),
+        );
         agent_start.state.insert(
             "buildrequest.entrypoint".to_string(),
             "ail-story".to_string(),
+        );
+        agent_start
+            .state
+            .insert("buildrequest.story-id".to_string(), story_id.to_string());
+        agent_start.state.insert(
+            "buildrequest.semantic-anchors".to_string(),
+            semantic_anchors.to_string(),
         );
         agent_start.state.insert(
             "buildrequest.story".to_string(),

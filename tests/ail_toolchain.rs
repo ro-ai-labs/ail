@@ -19421,6 +19421,17 @@ fn cli_ail_story_agent_records_story_entrypoint_before_compile() {
         request_bodies[0]
     );
     assert!(
+        request_bodies[0].contains("buildrequest.story-id=support-ticket-agent-story"),
+        "{}",
+        request_bodies[0]
+    );
+    assert!(
+        request_bodies[0]
+            .contains("buildrequest.semantic-anchors=Support Tickets; Close ticket; TicketClosed; toolchain agent"),
+        "{}",
+        request_bodies[0]
+    );
+    assert!(
         request_bodies[1].contains("AGENT SPEC CONTEXT:"),
         "{}",
         request_bodies[1]
@@ -19430,11 +19441,32 @@ fn cli_ail_story_agent_records_story_entrypoint_before_compile() {
         "{}",
         request_bodies[1]
     );
+    assert!(
+        request_bodies[1].contains("buildrequest.story-id=support-ticket-agent-story"),
+        "{}",
+        request_bodies[1]
+    );
+    assert!(
+        request_bodies[1]
+            .contains("buildrequest.semantic-anchors=Support Tickets; Close ticket; TicketClosed; toolchain agent"),
+        "{}",
+        request_bodies[1]
+    );
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let bytecode = parse_ail_bytecode(&stdout).unwrap();
     assert_eq!(verify_ail_bytecode(&bytecode), Vec::<String>::new());
     let agent_trace = fs::read_to_string(artifact_dir.join("agent-trace.txt")).unwrap();
+    assert!(
+        agent_trace.contains("buildrequest.story-id=support-ticket-agent-story"),
+        "{agent_trace}"
+    );
+    assert!(
+        agent_trace.contains(
+            "buildrequest.semantic-anchors=Support Tickets; Close ticket; TicketClosed; toolchain agent"
+        ),
+        "{agent_trace}"
+    );
     let entrypoint_index = agent_trace
         .find("entrypoint=ail-story")
         .unwrap_or_else(|| panic!("{agent_trace}"));
