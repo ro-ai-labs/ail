@@ -99,7 +99,9 @@ field records that reason in the catalog instead of leaving it implicit.
 `ail-examples` enforces a minimum usefulness bar: `use-case` and `v0.3-signal`
 must be substantive, `v0.3-signal` must identify a needed or recommended next
 step, and `distinctness-claim` must name the entry's `semantic-task` and
-`capability-under-test`.
+`capability-under-test` plus a concrete differentiating axis such as prompt
+surface, target, checker assertion, diagnostic, story journey, artifact,
+executor, or human-review path.
 
 User stories are also first-class. A story can start the development flow
 (`story-to-spec`), be regenerated from a checked spec or Core artifact

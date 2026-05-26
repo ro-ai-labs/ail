@@ -87,9 +87,12 @@ human-review path being validated.
 The v0.2 verifier now enforces the first version of this usefulness bar:
 `use-case` and `v0.3-signal` must be substantive, `v0.3-signal` must describe
 a needed or recommended next-version improvement, and `distinctness-claim`
-must name both the entry's `semantic-task` and its `capability-under-test`.
-This does not make the corpus v0.3-complete, but it prevents new entries from
-being counted when they are only labels around a passing replay.
+must name both the entry's `semantic-task`, its `capability-under-test`, and a
+concrete differentiating axis such as prompt behavior, target artifact,
+checker assertion, diagnostic, user-story journey, generated artifact,
+executor, or human-review path. This does not make the corpus v0.3-complete,
+but it prevents new entries from being counted when they are only labels around
+a passing replay.
 
 The v0.3 usefulness gate must preserve domain breadth. At minimum, the release
 verifier requires coverage for OS utilities, C interop, compiler passes,

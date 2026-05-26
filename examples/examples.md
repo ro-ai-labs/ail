@@ -47,8 +47,8 @@ Current capability-level coverage is:
 
 The catalog intentionally contains prompt-surface matrices over some packages.
 Those entries are useful only when their `distinctness-claim` identifies the
-prompt, target, diagnostic, checker assertion, or human-review path being
-validated.
+prompt, target, diagnostic, checker assertion, story journey, artifact,
+executor, or human-review path being validated.
 
 ## Example: example-0
 semantic-task: stdlib-collections-live-codex-interview-0

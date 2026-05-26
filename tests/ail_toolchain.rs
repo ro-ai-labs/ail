@@ -24202,6 +24202,19 @@ fn cli_ail_e2e_corpus_requires_distinctness_to_name_task_and_capability() {
 }
 
 #[test]
+fn cli_ail_e2e_corpus_requires_distinctness_to_name_useful_axis() {
+    assert_e2e_corpus_override_failure(
+        "distinctness-useful-axis",
+        0,
+        &[(
+            "distinctness-claim",
+            "support-ticket-0 validates application-workflow because it is different from the other entries.",
+        )],
+        "examples catalog entry example-0 distinctness-claim must name a differentiating prompt, target, checker, diagnostic, story, artifact, executor, or human-review axis",
+    );
+}
+
+#[test]
 fn cli_ail_e2e_corpus_requires_v03_learning_signal() {
     assert_e2e_corpus_override_failure(
         "v03-learning-signal",

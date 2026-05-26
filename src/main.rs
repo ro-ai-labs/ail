@@ -1438,6 +1438,11 @@ fn ail_e2e_validate_usefulness_metadata(
             "examples catalog entry {id} distinctness-claim must name semantic-task and capability-under-test"
         ));
     }
+    if !ail_e2e_distinctness_claim_names_axis(distinctness_claim) {
+        return Err(format!(
+            "examples catalog entry {id} distinctness-claim must name a differentiating prompt, target, checker, diagnostic, story, artifact, executor, or human-review axis"
+        ));
+    }
     let v03_signal = fields
         .get("v0.3-signal")
         .map(String::as_str)
@@ -1457,6 +1462,31 @@ fn ail_e2e_validate_usefulness_metadata(
         ));
     }
     Ok(())
+}
+
+fn ail_e2e_distinctness_claim_names_axis(claim: &str) -> bool {
+    let claim = claim.to_ascii_lowercase();
+    [
+        "prompt",
+        "target",
+        "checker",
+        "diagnostic",
+        "story",
+        "human-review",
+        "human review",
+        "artifact",
+        "executor",
+        "agent",
+        "runtime",
+        "vm",
+        "wasm",
+        "linux",
+        "darwin",
+        "evidence",
+        "surface",
+    ]
+    .iter()
+    .any(|axis| claim.contains(axis))
 }
 
 fn ail_e2e_positive_count_field(
