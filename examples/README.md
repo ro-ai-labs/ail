@@ -76,6 +76,9 @@ the teaching path through repeated example families:
 - `ail_std_collections.ail/README.md`: generic collection and result types,
   `Option.map`, standard-library replay entries, and rejected generic payload
   diagnostics.
+- `option_map.ail/README.md`: focused `Option.map` transform, UI-tagged
+  prompt surfaces, checked Core evidence, and semantic-anchor gaps for richer
+  UI workflows.
 - `ail_std_effects.ail/README.md`: declared resource effects, read/write and
   network effect traces, and host-effect repair gaps.
 - `ail_std_security.ail/README.md`: `Secret<T>`, permission and capability

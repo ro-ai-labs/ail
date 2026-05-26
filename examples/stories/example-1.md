@@ -11,3 +11,4 @@ module-count: 3
 spec-count: 3
 story-count: 3
 interacts-with: ail_std.option,ail_std.list,ail_std.map
+semantic-anchors: Option<T>; Result<T,E>; Map<K,V>; Option.map; OptionMapEvaluated; requirements.system.md

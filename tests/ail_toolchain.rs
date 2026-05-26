@@ -336,6 +336,7 @@ fn example_learning_readmes_cover_repeated_family_gaps() {
         "incident_response.ail/README.md",
         "ail_std_core.ail/README.md",
         "ail_std_collections.ail/README.md",
+        "option_map.ail/README.md",
         "ail_std_effects.ail/README.md",
         "ail_std_security.ail/README.md",
         "ail_std_runtime.ail/README.md",
@@ -417,6 +418,29 @@ fn example_learning_readmes_cover_repeated_family_gaps() {
         assert!(
             compiler_pass_readme.contains(required),
             "{required}\n{compiler_pass_readme}"
+        );
+    }
+
+    let option_map_readme = fs::read_to_string(fixture("option_map.ail/README.md")).unwrap();
+    for required in [
+        "# Option Map Example",
+        "## Purpose",
+        "## Concepts Taught",
+        "## Files To Inspect",
+        "## Expected Replay Artifacts",
+        "## Rejected Fixtures",
+        "## Next Example To Read",
+        "## v0.3 Learning Signal",
+        "Option<T>",
+        "Option.map",
+        "OptionMapEvaluated",
+        "ui.form",
+        "example-20",
+        "example-24",
+    ] {
+        assert!(
+            option_map_readme.contains(required),
+            "{required}\n{option_map_readme}"
         );
     }
 
@@ -1092,6 +1116,228 @@ fn example_support_composed_stories_record_semantic_anchors() {
                     || shared_spec.contains(anchor)
                     || catalog.contains(anchor),
                 "{story_file} anchor {anchor} is not grounded in support composed spec/package/shared spec/catalog"
+            );
+        }
+    }
+}
+
+#[test]
+fn example_stdlib_and_option_map_stories_record_semantic_anchors() {
+    let stdlib_spec = fs::read_to_string(fixture("ail_std_collections.ail/spec.ail-spec.md")).unwrap();
+    let stdlib_package =
+        fs::read_to_string(fixture("ail_std_collections.ail/ail-package.md")).unwrap();
+    let option_map_spec = fs::read_to_string(fixture("option_map.ail/spec.ail-spec.md")).unwrap();
+    let option_map_package = fs::read_to_string(fixture("option_map.ail/ail-package.md")).unwrap();
+    let catalog = fs::read_to_string(fixture("examples.md")).unwrap();
+    for (story_file, grounding_text, package_text, required_anchors) in [
+        (
+            "stories/example-0.md",
+            stdlib_spec.as_str(),
+            stdlib_package.as_str(),
+            [
+                "Option<T>",
+                "Result<T,E>",
+                "Map<K,V>",
+                "Option.map",
+                "OptionMapEvaluated",
+                "interview.system.md",
+            ],
+        ),
+        (
+            "stories/example-1.md",
+            stdlib_spec.as_str(),
+            stdlib_package.as_str(),
+            [
+                "Option<T>",
+                "Result<T,E>",
+                "Map<K,V>",
+                "Option.map",
+                "OptionMapEvaluated",
+                "requirements.system.md",
+            ],
+        ),
+        (
+            "stories/example-2.md",
+            stdlib_spec.as_str(),
+            stdlib_package.as_str(),
+            [
+                "Option<T>",
+                "Result<T,E>",
+                "Map<K,V>",
+                "Option.map",
+                "OptionMapEvaluated",
+                "spec-draft.system.md",
+            ],
+        ),
+        (
+            "stories/example-3.md",
+            stdlib_spec.as_str(),
+            stdlib_package.as_str(),
+            [
+                "Option<T>",
+                "Result<T,E>",
+                "Map<K,V>",
+                "Option.map",
+                "OptionMapEvaluated",
+                "core-draft.system.md",
+            ],
+        ),
+        (
+            "stories/example-4.md",
+            stdlib_spec.as_str(),
+            stdlib_package.as_str(),
+            [
+                "Option<T>",
+                "Result<T,E>",
+                "Map<K,V>",
+                "Option.map",
+                "OptionMapEvaluated",
+                "diagnostic-repair.system.md",
+            ],
+        ),
+        (
+            "stories/example-5.md",
+            stdlib_spec.as_str(),
+            stdlib_package.as_str(),
+            [
+                "Option<T>",
+                "Result<T,E>",
+                "Map<K,V>",
+                "Option.map",
+                "OptionMapEvaluated",
+                "core-to-spec.system.md",
+            ],
+        ),
+        (
+            "stories/example-6.md",
+            stdlib_spec.as_str(),
+            stdlib_package.as_str(),
+            [
+                "Option<T>",
+                "Result<T,E>",
+                "Map<K,V>",
+                "Option.map",
+                "OptionMapEvaluated",
+                "core-to-summary.system.md",
+            ],
+        ),
+        (
+            "stories/example-7.md",
+            stdlib_spec.as_str(),
+            stdlib_package.as_str(),
+            [
+                "Option<T>",
+                "Result<T,E>",
+                "Map<K,V>",
+                "Option.map",
+                "OptionMapEvaluated",
+                "flow-patch.system.md",
+            ],
+        ),
+        (
+            "stories/example-8.md",
+            stdlib_spec.as_str(),
+            stdlib_package.as_str(),
+            [
+                "Option<T>",
+                "Result<T,E>",
+                "Map<K,V>",
+                "Option.map",
+                "OptionMapEvaluated",
+                "trace-debug.system.md",
+            ],
+        ),
+        (
+            "stories/example-9.md",
+            stdlib_spec.as_str(),
+            stdlib_package.as_str(),
+            [
+                "Option<T>",
+                "Result<T,E>",
+                "Map<K,V>",
+                "Option.map",
+                "OptionMapEvaluated",
+                "interop.system.md",
+            ],
+        ),
+        (
+            "stories/example-20.md",
+            option_map_spec.as_str(),
+            option_map_package.as_str(),
+            [
+                "Option<T>",
+                "Option.map",
+                "OptionMapEvaluated",
+                "ui.form",
+                "ui.route",
+                "interview.system.md",
+            ],
+        ),
+        (
+            "stories/example-21.md",
+            option_map_spec.as_str(),
+            option_map_package.as_str(),
+            [
+                "Option<T>",
+                "Option.map",
+                "OptionMapEvaluated",
+                "ui.form",
+                "ui.state",
+                "requirements.system.md",
+            ],
+        ),
+        (
+            "stories/example-22.md",
+            option_map_spec.as_str(),
+            option_map_package.as_str(),
+            [
+                "Option<T>",
+                "Option.map",
+                "OptionMapEvaluated",
+                "ui.form",
+                "ui.route",
+                "spec-draft.system.md",
+            ],
+        ),
+        (
+            "stories/example-23.md",
+            option_map_spec.as_str(),
+            option_map_package.as_str(),
+            [
+                "Option<T>",
+                "Option.map",
+                "OptionMapEvaluated",
+                "ui.route",
+                "ui.state",
+                "core-draft.system.md",
+            ],
+        ),
+        (
+            "stories/example-24.md",
+            option_map_spec.as_str(),
+            option_map_package.as_str(),
+            [
+                "Option<T>",
+                "Option.map",
+                "OptionMapEvaluated",
+                "ui.form",
+                "ui.state",
+                "diagnostic-repair.system.md",
+            ],
+        ),
+    ] {
+        let story = fs::read_to_string(fixture(story_file)).unwrap();
+        assert!(story.contains("semantic-anchors:"), "{story_file}\n{story}");
+        for anchor in required_anchors {
+            assert!(
+                story.contains(anchor),
+                "{story_file} missing semantic anchor {anchor}\n{story}"
+            );
+            assert!(
+                grounding_text.contains(anchor)
+                    || package_text.contains(anchor)
+                    || catalog.contains(anchor),
+                "{story_file} anchor {anchor} is not grounded in package spec/package metadata/catalog"
             );
         }
     }
@@ -21939,7 +22185,10 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("semantic-anchor-story-count 45")
+        report.contains("semantic-anchor-story-count 60")
+            && report.contains(
+                "entry-semantic-anchors example-0 Option<T>; Result<T; E>; Map<K; V>; Option.map; OptionMapEvaluated; interview.system.md"
+            )
             && report.contains(
                 "entry-semantic-anchors example-10 support-composed; support_shared; Shared.User; Close ticket; TicketClosed; active queue; interview.system.md"
             )

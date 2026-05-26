@@ -11,3 +11,4 @@ module-count: 3
 spec-count: 3
 story-count: 3
 interacts-with: ui.form,ui.route,ui.state
+semantic-anchors: Option<T>; Option.map; OptionMapEvaluated; ui.route; ui.state; core-draft.system.md
