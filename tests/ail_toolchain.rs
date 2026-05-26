@@ -1018,6 +1018,31 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
             "{required}\n{prompt_stdout}"
         );
     }
+
+    let agent_dry_run = Command::new("python3")
+        .args([&script, "--chapter", "agent-entrypoint", "--dry-run"])
+        .output()
+        .unwrap();
+    assert!(
+        agent_dry_run.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&agent_dry_run.stdout),
+        String::from_utf8_lossy(&agent_dry_run.stderr)
+    );
+    let agent_stdout = String::from_utf8_lossy(&agent_dry_run.stdout);
+    for required in [
+        "id agent-entrypoint",
+        "cargo run -- ail-check examples/ail_toolchain_agent.ail",
+        "cargo test ail_toolchain_agent_package_lowers_to_verified_bytecode --test ail_toolchain",
+        "cargo test cli_ail_build_runs_toolchain_agent_bytecode --test ail_toolchain",
+        "evidence agent.ailbc.json",
+        "evidence agent-trace.txt",
+    ] {
+        assert!(
+            agent_stdout.contains(required),
+            "{required}\n{agent_stdout}"
+        );
+    }
 }
 
 #[test]

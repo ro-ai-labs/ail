@@ -181,6 +181,31 @@ CHAPTERS: tuple[ManualChapter, ...] = (
                 label="check-toolchain-agent",
                 command=("cargo", "run", "--", "ail-check", "examples/ail_toolchain_agent.ail"),
             ),
+            ManualCommand(
+                label="verify-toolchain-agent-package",
+                command=(
+                    "cargo",
+                    "test",
+                    "ail_toolchain_agent_package_lowers_to_verified_bytecode",
+                    "--test",
+                    "ail_toolchain",
+                ),
+                evidence=("agent.ailbc.json",),
+            ),
+            ManualCommand(
+                label="verify-agent-build-entrypoint",
+                command=(
+                    "cargo",
+                    "test",
+                    "cli_ail_build_runs_toolchain_agent_bytecode",
+                    "--test",
+                    "ail_toolchain",
+                ),
+                evidence=(
+                    "agent.ailbc.json",
+                    "agent-trace.txt",
+                ),
+            ),
         ),
     ),
 )

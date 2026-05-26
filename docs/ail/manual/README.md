@@ -34,6 +34,12 @@ Run deterministic local checks for a chapter:
 python3 scripts/run_ail_interactive_manual.py --chapter examples-release --run-checks
 ```
 
+Run deterministic agent-entrypoint checks:
+
+```sh
+python3 scripts/run_ail_interactive_manual.py --chapter agent-entrypoint --run-checks
+```
+
 Live LLM chapters are opt-in. Add `--include-live` only when
 `http://inteligentia-pro-1:8080/` is reachable and the generated artifacts will
 be reviewed before promotion into `./examples`.

@@ -17,6 +17,19 @@ The trusted boundary stays unchanged: Codex may draft or repair an artifact,
 but only `ail-examples` replay proves spec -> Core -> bytecode -> VM and
 target evidence.
 
+## Deterministic Entrypoint Checks
+
+Run the manual chapter checks without contacting a live model:
+
+```sh
+python3 scripts/run_ail_interactive_manual.py --chapter agent-entrypoint --run-checks
+```
+
+The chapter checks the Codex-style agent contract files, checks
+`examples/ail_toolchain_agent.ail`, verifies that the toolchain-agent package
+lowers to bytecode, and verifies that `ail-build` writes `agent.ailbc.json` and
+`agent-trace.txt` while the agent participates in the build entrypoint.
+
 ## Agent Contracts
 
 | executor-label | Contract | Primary output | Replay requirement |
