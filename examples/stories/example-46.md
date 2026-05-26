@@ -6,6 +6,7 @@ acceptance-criteria: checked spec exists; checked core exists; bytecode exists; 
 story-journey: spec-to-story
 story-roundtrip: semantic-similar
 story-evidence: target-report
+semantic-anchors: Refund customer payment; payment token; PaymentProvider.refund; RefundLedger; manager approval; agent-tool; core-to-summary.system.md
 program-domain: agent-tool
 module-count: 3
 spec-count: 3

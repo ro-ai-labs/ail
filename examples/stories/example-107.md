@@ -6,6 +6,7 @@ acceptance-criteria: expected diagnostic exists; diagnostic artifact exists; rep
 story-journey: diagnostic-story
 story-roundtrip: diagnostic-preserving
 story-evidence: diagnostics
+semantic-anchors: missing-registry-import; shared-lib; registry index; SharedImportResolved; package-resolution; diagnostic-story; diagnostics
 program-domain: diagnostic
 module-count: 1
 spec-count: 1

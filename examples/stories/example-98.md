@@ -6,6 +6,7 @@ acceptance-criteria: checked spec exists; checked core exists; bytecode exists; 
 story-journey: story-amendment
 story-roundtrip: semantic-similar
 story-evidence: vm-trace
+semantic-anchors: Counter; Increment counter; counter value; CounterIncremented; IncrementCounter; runtime; trace-debug.system.md
 program-domain: runtime
 module-count: 1
 spec-count: 1

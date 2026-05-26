@@ -2080,6 +2080,14 @@ fn example_stateful_and_agent_tool_stories_record_semantic_anchors() {
     let stateful_spec =
         fs::read_to_string(fixture("stateful_counter.ail/spec.ail-spec.md")).unwrap();
     let refund_spec = fs::read_to_string(fixture("refund_tool.ail/spec.ail-spec.md")).unwrap();
+    let refund_core = fs::read_to_string(fixture("refund_tool.ail/checked.ail-core.md")).unwrap();
+    let refund_grounding = format!("{refund_spec}\n{refund_core}");
+    let package_resolution_spec =
+        fs::read_to_string(fixture("missing_registry_import.ail/spec.ail-spec.md")).unwrap();
+    let package_resolution_manifest =
+        fs::read_to_string(fixture("missing_registry_import.ail/ail-package.md")).unwrap();
+    let package_resolution_grounding =
+        format!("{package_resolution_spec}\n{package_resolution_manifest}");
     for (story_file, grounding_text, required_anchors) in [
         (
             "stories/example-95.md",
@@ -2094,6 +2102,18 @@ fn example_stateful_and_agent_tool_stories_record_semantic_anchors() {
             ],
         ),
         (
+            "stories/example-96.md",
+            stateful_spec.as_str(),
+            [
+                "Counter",
+                "Increment counter",
+                "counter value",
+                "CounterIncremented",
+                "IncrementCounter",
+                "core-to-summary.system.md",
+            ],
+        ),
+        (
             "stories/example-97.md",
             stateful_spec.as_str(),
             [
@@ -2103,6 +2123,30 @@ fn example_stateful_and_agent_tool_stories_record_semantic_anchors() {
                 "story-amendment",
                 "flow-patch.system.md",
                 "vm-trace",
+            ],
+        ),
+        (
+            "stories/example-98.md",
+            stateful_spec.as_str(),
+            [
+                "Counter",
+                "Increment counter",
+                "counter value",
+                "CounterIncremented",
+                "IncrementCounter",
+                "trace-debug.system.md",
+            ],
+        ),
+        (
+            "stories/example-100.md",
+            stateful_spec.as_str(),
+            [
+                "Counter",
+                "Increment counter",
+                "counter value",
+                "CounterIncremented",
+                "IncrementCounter",
+                "stateful-counter-live-codex-accepted-100",
             ],
         ),
         (
@@ -2119,7 +2163,7 @@ fn example_stateful_and_agent_tool_stories_record_semantic_anchors() {
         ),
         (
             "stories/example-45.md",
-            refund_spec.as_str(),
+            refund_grounding.as_str(),
             [
                 "Refund customer payment",
                 "payment token",
@@ -2130,8 +2174,80 @@ fn example_stateful_and_agent_tool_stories_record_semantic_anchors() {
             ],
         ),
         (
+            "stories/example-40.md",
+            refund_grounding.as_str(),
+            [
+                "Refund customer payment",
+                "RefundCustomerPaymentRequested",
+                "RequesterMayCreateRefunds",
+                "RefundLedger",
+                "PaymentProvider",
+                "interview.system.md",
+            ],
+        ),
+        (
+            "stories/example-41.md",
+            refund_grounding.as_str(),
+            [
+                "Refund customer payment",
+                "RefundCustomerPaymentRequested",
+                "RequesterMayCreateRefunds",
+                "RefundLedger",
+                "PaymentProvider",
+                "requirements.system.md",
+            ],
+        ),
+        (
+            "stories/example-42.md",
+            refund_grounding.as_str(),
+            [
+                "Refund customer payment",
+                "RefundCustomerPaymentRequested",
+                "RequesterMayCreateRefunds",
+                "RefundLedger",
+                "PaymentProvider",
+                "spec-draft.system.md",
+            ],
+        ),
+        (
+            "stories/example-43.md",
+            refund_grounding.as_str(),
+            [
+                "Refund customer payment",
+                "RefundCustomerPaymentRequested",
+                "RequesterMayCreateRefunds",
+                "RefundLedger",
+                "PaymentProvider",
+                "core-draft.system.md",
+            ],
+        ),
+        (
+            "stories/example-44.md",
+            refund_grounding.as_str(),
+            [
+                "Refund customer payment",
+                "RefundCustomerPaymentRequested",
+                "RequesterMayCreateRefunds",
+                "RefundLedger",
+                "PaymentProvider",
+                "diagnostic-repair.system.md",
+            ],
+        ),
+        (
+            "stories/example-46.md",
+            refund_grounding.as_str(),
+            [
+                "Refund customer payment",
+                "payment token",
+                "PaymentProvider.refund",
+                "RefundLedger",
+                "manager approval",
+                "core-to-summary.system.md",
+            ],
+        ),
+        (
             "stories/example-47.md",
-            refund_spec.as_str(),
+            refund_grounding.as_str(),
             [
                 "refund amount",
                 "captured amount",
@@ -2142,8 +2258,80 @@ fn example_stateful_and_agent_tool_stories_record_semantic_anchors() {
             ],
         ),
         (
+            "stories/example-49.md",
+            refund_grounding.as_str(),
+            [
+                "Refund customer payment",
+                "RefundProviderCalled",
+                "RefundLedgerWritten",
+                "RefundProviderRejected",
+                "PaymentProvider",
+                "interop.system.md",
+            ],
+        ),
+        (
+            "stories/example-50.md",
+            refund_grounding.as_str(),
+            [
+                "Refund customer payment",
+                "RefundCustomerPaymentRequested",
+                "RequesterMayCreateRefunds",
+                "RefundLedger",
+                "PaymentProvider",
+                "interview.system.md",
+            ],
+        ),
+        (
+            "stories/example-51.md",
+            refund_grounding.as_str(),
+            [
+                "Refund customer payment",
+                "RefundCustomerPaymentRequested",
+                "RequesterMayCreateRefunds",
+                "RefundLedger",
+                "PaymentProvider",
+                "requirements.system.md",
+            ],
+        ),
+        (
+            "stories/example-52.md",
+            refund_grounding.as_str(),
+            [
+                "Refund customer payment",
+                "RefundCustomerPaymentRequested",
+                "RequesterMayCreateRefunds",
+                "RefundLedger",
+                "PaymentProvider",
+                "spec-input",
+            ],
+        ),
+        (
+            "stories/example-53.md",
+            refund_grounding.as_str(),
+            [
+                "Refund customer payment",
+                "RefundCustomerPaymentRequested",
+                "RequesterMayCreateRefunds",
+                "RefundLedger",
+                "PaymentProvider",
+                "core-draft.system.md",
+            ],
+        ),
+        (
+            "stories/example-54.md",
+            refund_grounding.as_str(),
+            [
+                "Refund customer payment",
+                "RefundCustomerPaymentRequested",
+                "RequesterMayCreateRefunds",
+                "RefundLedger",
+                "PaymentProvider",
+                "diagnostic-repair.system.md",
+            ],
+        ),
+        (
             "stories/example-48.md",
-            refund_spec.as_str(),
+            refund_grounding.as_str(),
             [
                 "ProviderRejected",
                 "RefundProviderRejected",
@@ -2155,13 +2343,25 @@ fn example_stateful_and_agent_tool_stories_record_semantic_anchors() {
         ),
         (
             "stories/example-103.md",
-            refund_spec.as_str(),
+            refund_grounding.as_str(),
             [
                 "refund-tool-hallucinated-capability",
                 "RefundCustomerPayment",
                 "diagnostic-hallucinated-capability",
                 "diagnostic-story",
                 "AIL019",
+                "diagnostics",
+            ],
+        ),
+        (
+            "stories/example-107.md",
+            package_resolution_grounding.as_str(),
+            [
+                "missing-registry-import",
+                "shared-lib",
+                "registry index",
+                "SharedImportResolved",
+                "diagnostic-story",
                 "diagnostics",
             ],
         ),
@@ -22808,7 +23008,7 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("semantic-anchor-story-count 100")
+        report.contains("semantic-anchor-story-count 116")
             && report.contains(
                 "entry-semantic-anchors example-0 Option<T>; Result<T; E>; Map<K; V>; Option.map; OptionMapEvaluated; interview.system.md"
             )
@@ -22820,6 +23020,15 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
             )
             && report.contains(
                 "entry-semantic-anchors example-67 Network packet receiver; rx buffer; read network device; write rx buffer; PacketReceived; system-driver; flow-patch.system.md"
+            )
+            && report.contains(
+                "entry-semantic-anchors example-40 Refund customer payment; RefundCustomerPaymentRequested; RequesterMayCreateRefunds; RefundLedger; PaymentProvider; agent-tool; interview.system.md"
+            )
+            && report.contains(
+                "entry-semantic-anchors example-96 Counter; Increment counter; counter value; CounterIncremented; IncrementCounter; runtime; core-to-summary.system.md"
+            )
+            && report.contains(
+                "entry-semantic-anchors example-107 missing-registry-import; shared-lib; registry index; SharedImportResolved; package-resolution; diagnostic-story; diagnostics"
             )
             && report.contains(
                 "entry-semantic-anchors example-35 Runtime Tickets; Prioritize ticket; TicketPrioritized; ticket.priority=Low; runtime-generics; core-to-spec.system.md"
