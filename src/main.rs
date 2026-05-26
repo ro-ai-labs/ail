@@ -1495,7 +1495,11 @@ fn parse_ail_e2e_story_file_fields(
     Ok(fields)
 }
 
-fn validate_ail_e2e_corpus_story_files(entries: &[AilE2eCorpusEntry]) -> Result<(), String> {
+fn validate_ail_e2e_corpus_story_files(
+    entries: &[AilE2eCorpusEntry],
+    require_release_semantic_anchors: bool,
+) -> Result<(), String> {
+    let mut semantic_anchor_story_count = 0usize;
     for entry in entries {
         let story_path = ail_e2e_entry_resolved_path(entry, "story-file")?;
         let story_fields = parse_ail_e2e_story_file_fields(&story_path)?;
@@ -1527,6 +1531,26 @@ fn validate_ail_e2e_corpus_story_files(entries: &[AilE2eCorpusEntry]) -> Result<
                 ));
             }
         }
+        if let Some(semantic_anchors) = story_fields.get("semantic-anchors") {
+            let semantic_anchor_count = semantic_anchors
+                .split([',', ';'])
+                .filter(|anchor| !anchor.trim().is_empty())
+                .count();
+            if semantic_anchor_count > 0 && semantic_anchor_count < 3 {
+                return Err(format!(
+                    "examples catalog entry {} story-file semantic-anchors must list at least 3 anchors",
+                    entry.id
+                ));
+            }
+            if semantic_anchor_count >= 3 {
+                semantic_anchor_story_count += 1;
+            }
+        }
+    }
+    if require_release_semantic_anchors && semantic_anchor_story_count < 10 {
+        return Err(format!(
+            "ail-examples --release-evidence requires at least 10 semantic-anchor story files; found {semantic_anchor_story_count}"
+        ));
     }
     Ok(())
 }
@@ -3063,7 +3087,7 @@ fn run_ail_e2e_corpus_command(path: &str, cli_options: &CliOptions) -> Result<u8
         validate_ail_e2e_corpus_live_release_evidence(&entries)?;
     }
     validate_ail_e2e_corpus_transcript_files(&entries)?;
-    validate_ail_e2e_corpus_story_files(&entries)?;
+    validate_ail_e2e_corpus_story_files(&entries, cli_options.release_evidence)?;
     let mut evaluations = Vec::new();
     for entry in &entries {
         evaluations.push(evaluate_ail_e2e_corpus_entry(entry)?);

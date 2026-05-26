@@ -22796,6 +22796,61 @@ fn cli_ail_e2e_corpus_requires_story_file_spectrum_metadata() {
 }
 
 #[test]
+fn cli_ail_e2e_corpus_release_evidence_requires_semantic_anchor_story_coverage() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let corpus_dir = std::env::temp_dir().join(format!(
+        "ail-examples-release-semantic-anchor-{}",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-examples-release-semantic-anchor-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&corpus_dir);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&corpus_dir).unwrap();
+    write_e2e_transcript_files(&corpus_dir, 100);
+    let mut corpus_text = String::new();
+    for index in 0..100 {
+        let capture_origin = if index == 99 {
+            "live-codex"
+        } else {
+            "live-llm"
+        };
+        corpus_text.push_str(&e2e_corpus_entry_text(
+            index,
+            &[("capture-origin", capture_origin)],
+        ));
+    }
+    fs::write(corpus_dir.join("examples.md"), corpus_text).unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-examples",
+            corpus_dir.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+            "--release-evidence",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("ail-examples --release-evidence requires at least 10 semantic-anchor story files; found 0"),
+        "{stderr}"
+    );
+
+    let _ = fs::remove_dir_all(corpus_dir);
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
 fn cli_ail_e2e_corpus_rejects_unknown_story_evidence() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let corpus_dir = std::env::temp_dir().join(format!(
