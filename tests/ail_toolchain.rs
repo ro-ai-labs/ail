@@ -325,6 +325,7 @@ fn example_learning_readmes_cover_repeated_family_gaps() {
     for required in [
         "## Learning Guides",
         "support_ticket.ail/README.md",
+        "support_composed.ail/README.md",
         "network_driver.ail/README.md",
         "c_interop.ail/README.md",
         "darwin_linux_effect.ail/README.md",
@@ -358,6 +359,31 @@ fn example_learning_readmes_cover_repeated_family_gaps() {
         assert!(
             support_readme.contains(required),
             "{required}\n{support_readme}"
+        );
+    }
+
+    let support_composed_readme =
+        fs::read_to_string(fixture("support_composed.ail/README.md")).unwrap();
+    for required in [
+        "# Support Composed Example",
+        "## Purpose",
+        "## Concepts Taught",
+        "## Files To Inspect",
+        "## Expected Replay Artifacts",
+        "## Rejected Fixtures",
+        "## Next Example To Read",
+        "## v0.3 Learning Signal",
+        "package composition",
+        "explicit imports",
+        "Shared.User",
+        "support_shared",
+        "VM trace",
+        "example-10",
+        "example-19",
+    ] {
+        assert!(
+            support_composed_readme.contains(required),
+            "{required}\n{support_composed_readme}"
         );
     }
 
