@@ -1985,3 +1985,24 @@ vm-action: NetworkPacketReceiver
 runtime-state: network.device=eth0;rx.buffer=empty
 expected-diagnostic: AIL021
 failure-taxonomy: permission-capability
+
+## End-To-End Example: example-107
+semantic-task: package-registry-missing-import-rejected-107
+profile: Application
+surface-tags: package-import,registry
+package: docs/ail/corpus/e2e/packages/missing_registry_import.ail
+prompt-file: docs/ail/prompts/requirements.system.md
+prompt-version: ail-prompts.v0.2
+prompt-fingerprint: fnv64:68e966969e0b1c12
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
+request-file: requests/example-107.json
+response-file: responses/example-107.json
+artifact-kind: ail-spec
+checker-result: rejected
+target: vm
+vm-action: ResolveSharedImport
+runtime-state: registry.index=missing-shared-lib
+expected-diagnostic: AIL registry import shared-lib as Shared was not found in registry index
+failure-taxonomy: package-resolution

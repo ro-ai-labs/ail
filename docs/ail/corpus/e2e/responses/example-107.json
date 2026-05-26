@@ -1,0 +1,5 @@
+{
+  "agent": "codex-ail-spec-writer",
+  "content": "# Missing Registry Import AIL-Spec Example\n\nThe application Missing Registry Import manages package resolution evidence.\n\nAction: Resolve shared import.\n\nWhen the package resolver checks imports:\n\n- the system requires shared-lib to resolve from the registry index\n- the system records a trace event named SharedImportResolved",
+  "model": "codex-subagent-default"
+}

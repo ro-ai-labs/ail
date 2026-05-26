@@ -1428,20 +1428,23 @@ fn evaluate_rejected_ail_e2e_corpus_entry(
         )
     } else {
         let spec_text = extract_ail_e2e_response_artifact_text(&response_text);
-        let package = load_ail_package_dir(package_path)?;
-        let diagnostics = match parse_ail_package_spec_text(&package, &spec_text) {
-            Ok(document) => {
-                let core = elaborate_ail_core(&package, &document);
-                let mut diagnostics = check_ail_core(&core);
-                if diagnostics.is_empty()
-                    && let Some(target) = entry.fields.get("target")
-                    && let Err(error) = check_darwin_macho_contract_supported_effects(&core, target)
-                {
-                    diagnostics.push(error);
+        let diagnostics = match load_ail_package_dir(package_path) {
+            Ok(package) => match parse_ail_package_spec_text(&package, &spec_text) {
+                Ok(document) => {
+                    let core = elaborate_ail_core(&package, &document);
+                    let mut diagnostics = check_ail_core(&core);
+                    if diagnostics.is_empty()
+                        && let Some(target) = entry.fields.get("target")
+                        && let Err(error) =
+                            check_darwin_macho_contract_supported_effects(&core, target)
+                    {
+                        diagnostics.push(error);
+                    }
+                    diagnostics
                 }
-                diagnostics
-            }
-            Err(error) => vec![format!("parse-error {error}")],
+                Err(error) => vec![format!("parse-error {error}")],
+            },
+            Err(error) => vec![error],
         };
         (spec_text, diagnostics)
     };
