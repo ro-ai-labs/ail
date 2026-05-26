@@ -546,6 +546,9 @@ already covers parts of this gate:
   bytecode, and VM trace artifacts
 - real UI-profile e2e release entry replays `ui_workflow.ail` through checked
   Core, semantic-contract bytecode, VM trace, and Wasm target-contract artifacts
+- e2e rejected-output replay supports prompt-envelope diagnostics through
+  stored transcript artifacts, including `AIL-PROMPT-001` diagnostics for
+  malformed prompt envelopes
 
 Missing v0.2 evidence includes:
 
@@ -553,8 +556,8 @@ Missing v0.2 evidence includes:
   `scripts/run_v02_release_audit.py` run from a clean checkout
 - broader live-captured UI-profile transcripts beyond the current single
   semantic-contract replay
-- richer rejected-output coverage for prompt-envelope, profile mismatch,
-  hallucinated capability, missing trace, unsupported target, invalid interop,
+- richer rejected-output coverage for profile mismatch, hallucinated
+  capability, missing trace, unsupported target, invalid interop,
   permission/capability, and package resolution diagnostics in the e2e corpus
 
 ## Completion Decision Rule

@@ -22395,6 +22395,94 @@ fn cli_ail_e2e_corpus_writes_report_for_metadata_complete_corpus() {
 }
 
 #[test]
+fn cli_ail_e2e_corpus_replays_rejected_prompt_envelope_failures() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let corpus_dir = std::env::temp_dir().join(format!(
+        "ail-e2e-corpus-rejected-envelope-{}",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-e2e-corpus-rejected-envelope-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&corpus_dir);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&corpus_dir).unwrap();
+    write_e2e_transcript_files(&corpus_dir, 101);
+    fs::write(
+        corpus_dir.join("requests").join("rejected-envelope.json"),
+        r#"{"prompt":"rejected prompt envelope"}"#,
+    )
+    .unwrap();
+    fs::write(
+        corpus_dir.join("responses").join("rejected-envelope.json"),
+        r#"{"artifact_kind":"AIL-Spec Canonical","artifact_text":"Action: Close ticket.","questions":["Who can close tickets?"],"checker_handoff":{"must_check":true,"expected_profile":"Application"}}"#,
+    )
+    .unwrap();
+    let mut corpus_text = String::new();
+    for index in 0..101 {
+        if index == 100 {
+            corpus_text.push_str(&e2e_corpus_entry_text(
+                index,
+                &[
+                    ("semantic-task", "support-ticket-prompt-envelope-rejected"),
+                    ("executor-family", "codex-skill-agent"),
+                    ("endpoint-label", ""),
+                    ("request-file", "requests/rejected-envelope.json"),
+                    ("response-file", "responses/rejected-envelope.json"),
+                    ("artifact-kind", "prompt-envelope"),
+                    ("checker-result", "rejected"),
+                    ("expected-diagnostic", "AIL-PROMPT-001"),
+                    ("failure-taxonomy", "prompt-envelope"),
+                ],
+            ));
+        } else {
+            corpus_text.push_str(&e2e_corpus_entry_text(index, &[]));
+        }
+    }
+    fs::write(corpus_dir.join("examples.md"), corpus_text).unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-e2e-corpus",
+            corpus_dir.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let diagnostics =
+        fs::read_to_string(artifact_dir.join("examples/example-100/diagnostics.txt")).unwrap();
+    assert!(
+        diagnostics.contains("checker-result rejected")
+            && diagnostics.contains("expected-diagnostic AIL-PROMPT-001")
+            && diagnostics.contains(
+                "AIL-PROMPT-001 prompt envelope cannot contain both artifact_text and questions"
+            ),
+        "{diagnostics}"
+    );
+    let report = fs::read_to_string(artifact_dir.join("e2e-corpus-report.txt")).unwrap();
+    assert!(
+        report.contains("checker-result-count accepted 100")
+            && report.contains("checker-result-count rejected 1")
+            && report.contains("failure-taxonomy-count prompt-envelope 1")
+            && report.contains(
+                "entry-artifact example-100 diagnostics examples/example-100/diagnostics.txt"
+            ),
+        "{report}"
+    );
+
+    let _ = fs::remove_dir_all(corpus_dir);
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
 fn cli_ail_build_agent_verifies_bytecode_artifact_after_compile() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");

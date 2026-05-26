@@ -106,7 +106,10 @@ capture-origin counts plus response,
 extracted-artifact, checked Core, bytecode, VM trace, native, target-report,
 and diagnostics fingerprint reuse. Response, extracted-artifact, and
 target-report duplicate counts must remain zero before claiming the v0.2
-prompt-to-artifact release gate. The artifact bundle also writes
+prompt-to-artifact release gate. Rejected e2e replay includes stored
+prompt-envelope diagnostics for malformed model outputs; broader rejected
+taxonomy coverage is still tracked by the v0.2 completion gate. The artifact
+bundle also writes
 `model-executor-manifest.txt` and
 `model-executor-manifest.fingerprint.txt`, which enumerate executor families,
 executor labels, endpoint labels, capture origins, executor/origin pairs,

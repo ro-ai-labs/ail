@@ -1216,7 +1216,7 @@ fn ail_e2e_corpus_entry_from_fields(
         .unwrap_or_default();
     if !matches!(
         artifact_kind,
-        "ail-requirements" | "ail-spec" | "ail-core" | "ail-flow-patch"
+        "ail-requirements" | "ail-spec" | "ail-core" | "ail-flow-patch" | "prompt-envelope"
     ) {
         return Err(format!(
             "e2e corpus entry {id} has unknown artifact-kind {artifact_kind}"
@@ -1398,7 +1398,7 @@ fn evaluate_rejected_ail_e2e_corpus_entry(
         .get("artifact-kind")
         .map(String::as_str)
         .unwrap_or_default();
-    if artifact_kind != "ail-spec" {
+    if artifact_kind != "ail-spec" && artifact_kind != "prompt-envelope" {
         return Err(format!(
             "e2e corpus rejected entry {} has unsupported artifact-kind {artifact_kind}",
             entry.id
@@ -1421,14 +1421,22 @@ fn evaluate_rejected_ail_e2e_corpus_entry(
         )
     })?;
     let (request_text, response_text) = read_ail_e2e_entry_transcripts(entry)?;
-    let spec_text = extract_ail_e2e_response_artifact_text(&response_text);
-    let package = load_ail_package_dir(package_path)?;
-    let diagnostics = match parse_ail_package_spec_text(&package, &spec_text) {
-        Ok(document) => {
-            let core = elaborate_ail_core(&package, &document);
-            check_ail_core(&core)
-        }
-        Err(error) => vec![format!("parse-error {error}")],
+    let (artifact_text, diagnostics) = if artifact_kind == "prompt-envelope" {
+        (
+            response_text.clone(),
+            vec![validate_stored_prompt_envelope_output(&response_text)],
+        )
+    } else {
+        let spec_text = extract_ail_e2e_response_artifact_text(&response_text);
+        let package = load_ail_package_dir(package_path)?;
+        let diagnostics = match parse_ail_package_spec_text(&package, &spec_text) {
+            Ok(document) => {
+                let core = elaborate_ail_core(&package, &document);
+                check_ail_core(&core)
+            }
+            Err(error) => vec![format!("parse-error {error}")],
+        };
+        (spec_text, diagnostics)
     };
     if diagnostics.is_empty() {
         return Err(format!(
@@ -1459,7 +1467,7 @@ fn evaluate_rejected_ail_e2e_corpus_entry(
         entry: entry.clone(),
         request_fingerprint: Some(ail_artifact_fingerprint(&request_text)),
         response_fingerprint: Some(ail_artifact_fingerprint(&response_text)),
-        extracted_artifact_fingerprint: Some(ail_artifact_fingerprint(&spec_text)),
+        extracted_artifact_fingerprint: Some(ail_artifact_fingerprint(&artifact_text)),
         checked_core_text: None,
         bytecode_text: None,
         vm_trace_text: None,
