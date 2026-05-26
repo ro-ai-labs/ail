@@ -44,6 +44,10 @@ For v0.3, every new example should either add a genuinely new use case or make
 an existing use case more useful by testing a different prompt surface, target,
 checker assertion, diagnostic, or human-review path. The `distinctness-claim`
 field records that reason in the catalog instead of leaving it implicit.
+`ail-examples` enforces a minimum usefulness bar: `use-case` and `v0.3-signal`
+must be substantive, `v0.3-signal` must identify a needed or recommended next
+step, and `distinctness-claim` must name the entry's `semantic-task` and
+`capability-under-test`.
 
 User stories are also first-class. A story can start the development flow
 (`story-to-spec`), be regenerated from a checked spec or Core artifact

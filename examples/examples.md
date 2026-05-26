@@ -4016,7 +4016,7 @@ story-evidence: vm-trace
 story-file: stories/example-111.md
 story-journey: story-to-spec
 story-roundtrip: semantic-similar
-distinctness-claim: incident-response-live-codex-111 validates incident-response multi-module behavior through docs/ail/prompts/interview.system.md and vm evidence.
+distinctness-claim: incident-response-live-codex-111 validates incident-response multi-module behavior through docs/ail/prompts/interview.system.md and vm evidence. It covers multi-module-incident-workflow.
 v0.3-signal: Complex systems need richer story graphs that span imported modules, UI surfaces, workflows, target contracts, and regenerated story views.
 prompt-file: docs/ail/prompts/interview.system.md
 prompt-version: ail-prompts.v0.2
@@ -4053,7 +4053,7 @@ story-evidence: target-report
 story-file: stories/example-112.md
 story-journey: story-to-spec
 story-roundtrip: semantic-similar
-distinctness-claim: incident-response-live-codex-112 validates incident-response multi-module behavior through docs/ail/prompts/spec-draft.system.md and wasm32-unknown-sandbox-wasm evidence.
+distinctness-claim: incident-response-live-codex-112 validates incident-response multi-module behavior through docs/ail/prompts/spec-draft.system.md and wasm32-unknown-sandbox-wasm evidence. It covers multi-module-incident-workflow.
 v0.3-signal: Complex systems need richer story graphs that span imported modules, UI surfaces, workflows, target contracts, and regenerated story views.
 prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
@@ -4090,7 +4090,7 @@ story-evidence: vm-trace
 story-file: stories/example-113.md
 story-journey: spec-to-story
 story-roundtrip: semantic-similar
-distinctness-claim: incident-response-live-codex-113 validates incident-response multi-module behavior through docs/ail/prompts/core-to-summary.system.md and vm evidence.
+distinctness-claim: incident-response-live-codex-113 validates incident-response multi-module behavior through docs/ail/prompts/core-to-summary.system.md and vm evidence. It covers multi-module-incident-workflow.
 v0.3-signal: Complex systems need richer story graphs that span imported modules, UI surfaces, workflows, target contracts, and regenerated story views.
 prompt-file: docs/ail/prompts/core-to-summary.system.md
 prompt-version: ail-prompts.v0.2
@@ -4127,7 +4127,7 @@ story-evidence: target-report
 story-file: stories/example-114.md
 story-journey: story-amendment
 story-roundtrip: semantic-similar
-distinctness-claim: incident-response-live-codex-114 validates incident-response multi-module behavior through docs/ail/prompts/flow-patch.system.md and aarch64-apple-darwin-libsystem-macho evidence.
+distinctness-claim: incident-response-live-codex-114 validates incident-response multi-module behavior through docs/ail/prompts/flow-patch.system.md and aarch64-apple-darwin-libsystem-macho evidence. It covers multi-module-incident-workflow.
 v0.3-signal: Complex systems need richer story graphs that span imported modules, UI surfaces, workflows, target contracts, and regenerated story views.
 prompt-file: docs/ail/prompts/flow-patch.system.md
 prompt-version: ail-prompts.v0.2
@@ -4164,7 +4164,7 @@ story-evidence: target-report
 story-file: stories/example-115.md
 story-journey: story-to-spec
 story-roundtrip: semantic-similar
-distinctness-claim: incident-response-live-codex-115 validates incident-response multi-module behavior through docs/ail/prompts/requirements.system.md and wasm32-unknown-sandbox-wasm evidence.
+distinctness-claim: incident-response-live-codex-115 validates incident-response multi-module behavior through docs/ail/prompts/requirements.system.md and wasm32-unknown-sandbox-wasm evidence. It covers multi-module-incident-workflow.
 v0.3-signal: Complex systems need richer story graphs that span imported modules, UI surfaces, workflows, target contracts, and regenerated story views.
 prompt-file: docs/ail/prompts/requirements.system.md
 prompt-version: ail-prompts.v0.2

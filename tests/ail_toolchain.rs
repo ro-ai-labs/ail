@@ -164,11 +164,15 @@ fn e2e_corpus_entry_text(index: usize, overrides: &[(&str, &str)]) -> String {
         ("story-roundtrip", "semantic-similar".to_string()),
         (
             "distinctness-claim",
-            format!("Example {index} validates this capability through its own prompt surface."),
+            format!(
+                "support-ticket-{index} validates application-workflow through its own prompt surface."
+            ),
         ),
         (
             "v0.3-signal",
-            format!("Scenario {index} records a future learning gap for example coverage."),
+            format!(
+                "Scenario {index} should become a documented future learning gap for example coverage."
+            ),
         ),
         ("package", "examples/support_ticket.ail".to_string()),
         ("prompt-file", prompt_file.to_string()),
@@ -21233,6 +21237,10 @@ fn cli_ail_e2e_corpus_replays_imported_package_specs() {
             10,
             &[
                 ("semantic-task", "support-composed-import-10"),
+                (
+                    "distinctness-claim",
+                    "support-composed-import-10 validates application-workflow imported package replay.",
+                ),
                 ("package", "examples/support_composed.ail"),
                 ("response-file", "responses/example-10.json"),
                 ("target", "vm"),
@@ -21311,6 +21319,10 @@ fn cli_ail_e2e_corpus_replays_ui_profile_specs() {
             65,
             &[
                 ("semantic-task", "ui-workflow-profile-65"),
+                (
+                    "distinctness-claim",
+                    "ui-workflow-profile-65 validates application-workflow UI profile replay.",
+                ),
                 ("profile", "UI"),
                 ("surface-tags", "ui"),
                 ("package", "examples/ui_workflow.ail"),
@@ -21387,7 +21399,13 @@ fn cli_ail_e2e_corpus_requires_100_distinct_semantic_examples() {
     for index in 0..100 {
         corpus_text.push_str(&e2e_corpus_entry_text(
             index,
-            &[("semantic-task", "support-ticket-duplicate")],
+            &[
+                ("semantic-task", "support-ticket-duplicate"),
+                (
+                    "distinctness-claim",
+                    "support-ticket-duplicate validates application-workflow through duplicate semantic-task threshold coverage.",
+                ),
+            ],
         ));
     }
     fs::write(corpus_dir.join("examples.md"), corpus_text).unwrap();
@@ -21560,6 +21578,52 @@ fn cli_ail_e2e_corpus_requires_prompt_version_metadata() {
 
     let _ = fs::remove_dir_all(corpus_dir);
     let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
+fn cli_ail_e2e_corpus_requires_useful_use_case_metadata() {
+    assert_e2e_corpus_override_failure(
+        "useful-use-case-metadata",
+        0,
+        &[("use-case", "Toy example.")],
+        "examples catalog entry example-0 use-case must describe a concrete useful scenario",
+    );
+}
+
+#[test]
+fn cli_ail_e2e_corpus_requires_distinctness_to_name_task_and_capability() {
+    assert_e2e_corpus_override_failure(
+        "distinctness-task-capability",
+        0,
+        &[(
+            "distinctness-claim",
+            "This example is different from the others.",
+        )],
+        "examples catalog entry example-0 distinctness-claim must name semantic-task and capability-under-test",
+    );
+}
+
+#[test]
+fn cli_ail_e2e_corpus_requires_v03_learning_signal() {
+    assert_e2e_corpus_override_failure(
+        "v03-learning-signal",
+        0,
+        &[("v0.3-signal", "This records future notes for reviewers.")],
+        "examples catalog entry example-0 v0.3-signal must describe a concrete next-version learning",
+    );
+}
+
+#[test]
+fn cli_ail_e2e_corpus_requires_v03_signal_to_name_next_improvement() {
+    assert_e2e_corpus_override_failure(
+        "v03-signal-next-improvement",
+        0,
+        &[(
+            "v0.3-signal",
+            "Future documentation records this example for reviewers and learning archives.",
+        )],
+        "examples catalog entry example-0 v0.3-signal must name a needed, required, or recommended next-version improvement",
+    );
 }
 
 #[test]
@@ -21765,7 +21829,7 @@ fn cli_ail_e2e_corpus_requires_llm_and_codex_executor_families() {
              semantic-task: support-ticket-{index}\n\
              profile: Application\n\
              package: examples/support_ticket.ail\n\
-             use-case: Support-ticket verifier scenario {index}\n\
+             use-case: Support-ticket verifier scenario {index} for checking executor-family coverage across replay metadata.\n\
              capability-level: high-level\n\
              capability-under-test: application-workflow\n\
              program-scale: multi-module-system\n\
@@ -21781,7 +21845,7 @@ fn cli_ail_e2e_corpus_requires_llm_and_codex_executor_families() {
              story-file: stories/example-{index}.md\n\
              story-journey: story-to-spec\n\
              story-roundtrip: semantic-similar\n\
-             distinctness-claim: Example {index} validates executor coverage.\n\
+             distinctness-claim: support-ticket-{index} validates application-workflow executor coverage.\n\
              v0.3-signal: Executor coverage should become a documented learning dimension.\n\
              prompt-file: docs/ail/prompts/spec-draft.system.md\n\
              prompt-version: ail-prompts.v0.2\n\
@@ -21845,7 +21909,7 @@ fn cli_ail_e2e_corpus_requires_rejected_example_diagnostics() {
              semantic-task: support-ticket-{index}\n\
              profile: Application\n\
              package: examples/support_ticket.ail\n\
-             use-case: Support-ticket accepted scenario {index}\n\
+             use-case: Support-ticket accepted scenario {index} for checking rejected-example diagnostic thresholds.\n\
              capability-level: high-level\n\
              capability-under-test: application-workflow\n\
              program-scale: multi-module-system\n\
@@ -21861,7 +21925,7 @@ fn cli_ail_e2e_corpus_requires_rejected_example_diagnostics() {
              story-file: stories/accepted-{index}.md\n\
              story-journey: story-to-spec\n\
              story-roundtrip: semantic-similar\n\
-             distinctness-claim: Accepted example {index} validates diagnostic threshold setup.\n\
+             distinctness-claim: support-ticket-{index} validates application-workflow diagnostic threshold setup.\n\
              v0.3-signal: Accepted examples should explain the diagnostic they protect against.\n\
              prompt-file: docs/ail/prompts/spec-draft.system.md\n\
              prompt-version: ail-prompts.v0.2\n\
@@ -21882,7 +21946,7 @@ fn cli_ail_e2e_corpus_requires_rejected_example_diagnostics() {
          semantic-task: support-ticket-rejected\n\
          profile: Application\n\
          package: examples/support_ticket.ail\n\
-         use-case: Rejected support-ticket diagnostic scenario\n\
+         use-case: Rejected support-ticket diagnostic scenario for checking required diagnostic metadata.\n\
          capability-level: high-level\n\
          capability-under-test: diagnostic-replay\n\
          program-scale: module\n\
@@ -21898,8 +21962,8 @@ fn cli_ail_e2e_corpus_requires_rejected_example_diagnostics() {
          story-file: stories/rejected-0.md\n\
          story-journey: diagnostic-story\n\
          story-roundtrip: diagnostic-preserving\n\
-         distinctness-claim: Rejected example validates required diagnostic metadata.\n\
-         v0.3-signal: Rejected examples need repair tutorials.\n\
+         distinctness-claim: support-ticket-rejected validates diagnostic-replay required diagnostic metadata.\n\
+         v0.3-signal: Rejected examples need repair tutorials that explain expected diagnostics and corrected specs.\n\
          prompt-file: docs/ail/prompts/spec-draft.system.md\n\
          prompt-version: ail-prompts.v0.2\n\
          prompt-fingerprint: fnv64:spec-draft\n\
@@ -21971,7 +22035,7 @@ fn cli_ail_e2e_corpus_requires_full_prompt_pack_coverage() {
              semantic-task: support-ticket-{index}\n\
              profile: Application\n\
              package: examples/support_ticket.ail\n\
-             use-case: Support-ticket prompt coverage scenario {index}\n\
+             use-case: Support-ticket prompt coverage scenario {index} for checking prompt-pack threshold enforcement.\n\
              capability-level: high-level\n\
              capability-under-test: prompt-surface-coverage\n\
              program-scale: multi-module-system\n\
@@ -21987,7 +22051,7 @@ fn cli_ail_e2e_corpus_requires_full_prompt_pack_coverage() {
              story-file: stories/example-{index}.md\n\
              story-journey: story-to-spec\n\
              story-roundtrip: semantic-similar\n\
-             distinctness-claim: Example {index} validates prompt-pack coverage requirements.\n\
+             distinctness-claim: support-ticket-{index} validates prompt-surface-coverage requirements.\n\
              v0.3-signal: Prompt matrices should be separated from semantic use-case diversity.\n\
              prompt-file: docs/ail/prompts/spec-draft.system.md\n\
              prompt-version: ail-prompts.v0.2\n\
@@ -22812,6 +22876,10 @@ fn cli_ail_e2e_corpus_replays_rejected_prompt_failures() {
                 index,
                 &[
                     ("semantic-task", "support-ticket-rejected"),
+                    (
+                        "distinctness-claim",
+                        "support-ticket-rejected validates application-workflow rejected diagnostic replay.",
+                    ),
                     ("request-file", "requests/rejected-0.json"),
                     ("response-file", "responses/rejected-0.json"),
                     ("checker-result", "rejected"),
@@ -23331,6 +23399,10 @@ fn cli_ail_e2e_corpus_replays_rejected_prompt_envelope_failures() {
                 index,
                 &[
                     ("semantic-task", "support-ticket-prompt-envelope-rejected"),
+                    (
+                        "distinctness-claim",
+                        "support-ticket-prompt-envelope-rejected validates application-workflow prompt-envelope diagnostics.",
+                    ),
                     ("executor-family", "codex-skill-agent"),
                     ("endpoint-label", ""),
                     ("request-file", "requests/rejected-envelope.json"),

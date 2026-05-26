@@ -1187,6 +1187,7 @@ fn ail_e2e_corpus_entry_from_fields(
             return Err(format!("examples catalog entry {id} is missing {field}"));
         }
     }
+    ail_e2e_validate_usefulness_metadata(&id, fields)?;
     let checker_result = fields
         .get("checker-result")
         .map(String::as_str)
@@ -1378,6 +1379,57 @@ fn ail_e2e_corpus_entry_from_fields(
         source_file: source_file.to_string(),
         fields: fields.clone(),
     })
+}
+
+fn ail_e2e_validate_usefulness_metadata(
+    id: &str,
+    fields: &BTreeMap<String, String>,
+) -> Result<(), String> {
+    let use_case = fields
+        .get("use-case")
+        .map(String::as_str)
+        .unwrap_or_default();
+    if use_case.chars().count() < 50 {
+        return Err(format!(
+            "examples catalog entry {id} use-case must describe a concrete useful scenario"
+        ));
+    }
+    let distinctness_claim = fields
+        .get("distinctness-claim")
+        .map(String::as_str)
+        .unwrap_or_default();
+    let semantic_task = fields
+        .get("semantic-task")
+        .map(String::as_str)
+        .unwrap_or_default();
+    let capability = fields
+        .get("capability-under-test")
+        .map(String::as_str)
+        .unwrap_or_default();
+    if !distinctness_claim.contains(semantic_task) || !distinctness_claim.contains(capability) {
+        return Err(format!(
+            "examples catalog entry {id} distinctness-claim must name semantic-task and capability-under-test"
+        ));
+    }
+    let v03_signal = fields
+        .get("v0.3-signal")
+        .map(String::as_str)
+        .unwrap_or_default();
+    if v03_signal.chars().count() < 50 {
+        return Err(format!(
+            "examples catalog entry {id} v0.3-signal must describe a concrete next-version learning"
+        ));
+    }
+    let normalized_signal = v03_signal.to_ascii_lowercase();
+    if !["need", "should", "must", "require"]
+        .iter()
+        .any(|keyword| normalized_signal.contains(keyword))
+    {
+        return Err(format!(
+            "examples catalog entry {id} v0.3-signal must name a needed, required, or recommended next-version improvement"
+        ));
+    }
+    Ok(())
 }
 
 fn ail_e2e_positive_count_field(
