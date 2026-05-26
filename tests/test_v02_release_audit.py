@@ -31,8 +31,8 @@ class V02ReleaseAuditTest(unittest.TestCase):
         self.assertIn("conformance-support", names)
         self.assertIn("build-support", names)
         self.assertIn("spec-roundtrip", names)
-        self.assertIn("e2e-corpus", names)
-        e2e_step = plan[names.index("e2e-corpus")]
+        self.assertIn("examples", names)
+        e2e_step = plan[names.index("examples")]
         self.assertIn("model-executor-manifest.txt", e2e_step.required_files)
         self.assertIn("model-executor-manifest.fingerprint.txt", e2e_step.required_files)
         build_command = plan[names.index("build-support")].command
@@ -127,12 +127,12 @@ class V02ReleaseAuditTest(unittest.TestCase):
             self.assertIn("mode dry-run", manifest)
             self.assertIn("step cargo-test command cargo test", manifest)
             self.assertIn(
-                "step e2e-corpus command cargo run -- ail-e2e-corpus "
-                "docs/ail/corpus/e2e",
+                "step examples command cargo run -- ail-examples "
+                "examples",
                 manifest,
             )
             self.assertIn(
-                f"artifact-dir {bundle_root / 'artifacts' / 'v02-e2e-corpus'}",
+                f"artifact-dir {bundle_root / 'artifacts' / 'v02-examples'}",
                 manifest,
             )
             self.assertEqual(

@@ -107,6 +107,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
             | "ail-build"
             | "ail-pass"
             | "ail-bootstrap"
+            | "ail-examples"
             | "ail-e2e-corpus"
             | "ail-prompt-corpus"
             | "ail-patch"
@@ -118,7 +119,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
 }
 
 fn usage() -> String {
-    "usage: ail <ail-check|ail-core|ail-flow|ail-flow-edit|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-interview|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-bootstrap|ail-prompt-corpus|ail-e2e-corpus|ail-patch> <path> [patch|target-package] [--action name] [--prompt text] [--interview-file path] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--base-model name] [--target-model name] [--out path] [--all-actions] [--diagnostics-json] [--artifact-dir path] [--llm-endpoint url] [--release-evidence] [key=value ...]\nsaved-core usage: ail <ail-spec|ail-lower|ail-compile|ail-run|ail-build> --core-file <checked-core> [--action name] [--target target] [--out path] [--artifact-dir path] [key=value ...]\nwasm-contract usage: ail ail-compile <package-or-artifact.ailbc.json> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir> OR ail ail-compile --core-file <checked-core> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir>\ncore-patch usage: ail ail-patch --core-file <checked-core> <ail-core.patch.json>\nflow-edit usage: ail ail-flow-edit --core-file <checked-core> <ail-flow.edit.json>\nail-pass usage: ail ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR ail ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]\nail-bootstrap usage: ail ail-bootstrap <toolchain-agent-package> --pass <compiler-pass-package> --agent <toolchain-agent-package> --target linux-x86_64-elf --artifact-dir <dir>\nail-prompt-corpus usage: ail ail-prompt-corpus <corpus-file-or-dir> --artifact-dir <dir>\nail-e2e-corpus usage: ail ail-e2e-corpus <corpus-dir> --artifact-dir <dir> [--release-evidence]"
+    "usage: ail <ail-check|ail-core|ail-flow|ail-flow-edit|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-interview|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-bootstrap|ail-prompt-corpus|ail-examples|ail-e2e-corpus|ail-patch> <path> [patch|target-package] [--action name] [--prompt text] [--interview-file path] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--base-model name] [--target-model name] [--out path] [--all-actions] [--diagnostics-json] [--artifact-dir path] [--llm-endpoint url] [--release-evidence] [key=value ...]\nsaved-core usage: ail <ail-spec|ail-lower|ail-compile|ail-run|ail-build> --core-file <checked-core> [--action name] [--target target] [--out path] [--artifact-dir path] [key=value ...]\nwasm-contract usage: ail ail-compile <package-or-artifact.ailbc.json> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir> OR ail ail-compile --core-file <checked-core> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir>\ncore-patch usage: ail ail-patch --core-file <checked-core> <ail-core.patch.json>\nflow-edit usage: ail ail-flow-edit --core-file <checked-core> <ail-flow.edit.json>\nail-pass usage: ail ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR ail ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]\nail-bootstrap usage: ail ail-bootstrap <toolchain-agent-package> --pass <compiler-pass-package> --agent <toolchain-agent-package> --target linux-x86_64-elf --artifact-dir <dir>\nail-prompt-corpus usage: ail ail-prompt-corpus <corpus-file-or-dir> --artifact-dir <dir>\nail-examples usage: ail ail-examples examples --artifact-dir <dir> [--release-evidence]\nail-e2e-corpus usage: ail ail-e2e-corpus <corpus-dir> --artifact-dir <dir> [--release-evidence] (compatibility alias for ail-examples)"
         .to_string()
 }
 
@@ -1067,17 +1068,23 @@ fn run_ail_prompt_corpus_command(path: &str, cli_options: &CliOptions) -> Result
 fn load_ail_e2e_corpus_entries(path: &std::path::Path) -> Result<Vec<AilE2eCorpusEntry>, String> {
     if path.is_file() {
         let text = fs::read_to_string(path).map_err(|error| {
-            format!("failed to read e2e corpus file {}: {error}", path.display())
+            format!(
+                "failed to read examples catalog file {}: {error}",
+                path.display()
+            )
         })?;
         return parse_ail_e2e_corpus_entries(&path.to_string_lossy(), &text);
     }
 
     let mut entries = Vec::new();
-    for entry in fs::read_dir(path)
-        .map_err(|error| format!("failed to read e2e corpus dir {}: {error}", path.display()))?
-    {
+    for entry in fs::read_dir(path).map_err(|error| {
+        format!(
+            "failed to read examples catalog dir {}: {error}",
+            path.display()
+        )
+    })? {
         let entry =
-            entry.map_err(|error| format!("failed to read e2e corpus dir entry: {error}"))?;
+            entry.map_err(|error| format!("failed to read examples catalog dir entry: {error}"))?;
         let entry_path = entry.path();
         if entry_path.is_dir()
             || entry_path
@@ -1151,7 +1158,7 @@ fn ail_e2e_corpus_entry_from_fields(
         "target",
     ] {
         if fields.get(field).is_none_or(|value| value.is_empty()) {
-            return Err(format!("e2e corpus entry {id} is missing {field}"));
+            return Err(format!("examples catalog entry {id} is missing {field}"));
         }
     }
     let checker_result = fields
@@ -1160,7 +1167,7 @@ fn ail_e2e_corpus_entry_from_fields(
         .unwrap_or_default();
     if !matches!(checker_result, "accepted" | "rejected") {
         return Err(format!(
-            "e2e corpus entry {id} has unknown checker-result {checker_result}"
+            "examples catalog entry {id} has unknown checker-result {checker_result}"
         ));
     }
     let target = fields.get("target").map(String::as_str).unwrap_or_default();
@@ -1170,7 +1177,9 @@ fn ail_e2e_corpus_entry_from_fields(
             | "wasm32-unknown-sandbox-wasm"
             | "aarch64-apple-darwin-libsystem-macho"
     ) {
-        return Err(format!("e2e corpus entry {id} has unknown target {target}"));
+        return Err(format!(
+            "examples catalog entry {id} has unknown target {target}"
+        ));
     }
     let executor_family = fields
         .get("executor-family")
@@ -1181,7 +1190,7 @@ fn ail_e2e_corpus_entry_from_fields(
         "llm-http" | "ail-toolchain-agent" | "codex-skill-agent"
     ) {
         return Err(format!(
-            "e2e corpus entry {id} has unknown executor-family {executor_family}"
+            "examples catalog entry {id} has unknown executor-family {executor_family}"
         ));
     }
     let capture_origin = fields
@@ -1193,7 +1202,7 @@ fn ail_e2e_corpus_entry_from_fields(
         "deterministic-seed" | "live-llm" | "live-codex"
     ) {
         return Err(format!(
-            "e2e corpus entry {id} has unknown capture-origin {capture_origin}"
+            "examples catalog entry {id} has unknown capture-origin {capture_origin}"
         ));
     }
     let endpoint_label = fields
@@ -1202,12 +1211,12 @@ fn ail_e2e_corpus_entry_from_fields(
         .unwrap_or_default();
     if executor_family == "llm-http" && endpoint_label.is_empty() {
         return Err(format!(
-            "e2e corpus llm-http entry {id} is missing endpoint-label"
+            "examples catalog llm-http entry {id} is missing endpoint-label"
         ));
     }
     if executor_family != "llm-http" && !endpoint_label.is_empty() {
         return Err(format!(
-            "e2e corpus offline executor entry {id} must not set endpoint-label"
+            "examples catalog offline executor entry {id} must not set endpoint-label"
         ));
     }
     let artifact_kind = fields
@@ -1219,7 +1228,7 @@ fn ail_e2e_corpus_entry_from_fields(
         "ail-requirements" | "ail-spec" | "ail-core" | "ail-flow-patch" | "prompt-envelope"
     ) {
         return Err(format!(
-            "e2e corpus entry {id} has unknown artifact-kind {artifact_kind}"
+            "examples catalog entry {id} has unknown artifact-kind {artifact_kind}"
         ));
     }
     if fields
@@ -1228,7 +1237,9 @@ fn ail_e2e_corpus_entry_from_fields(
     {
         for field in ["expected-diagnostic", "failure-taxonomy"] {
             if fields.get(field).is_none_or(|value| value.is_empty()) {
-                return Err(format!("e2e corpus rejected entry {id} is missing {field}"));
+                return Err(format!(
+                    "examples catalog rejected entry {id} is missing {field}"
+                ));
             }
         }
     }
@@ -1251,7 +1262,7 @@ fn validate_ail_e2e_corpus_transcript_files(entries: &[AilE2eCorpusEntry]) -> Re
             let resolved_path = source_dir.join(path);
             if !resolved_path.is_file() {
                 return Err(format!(
-                    "e2e corpus entry {} {field} {path} is missing",
+                    "examples catalog entry {} {field} {path} is missing",
                     entry.id
                 ));
             }
@@ -1271,7 +1282,7 @@ fn ail_e2e_entry_relative_path(entry: &AilE2eCorpusEntry, field: &str) -> Result
         .fields
         .get(field)
         .cloned()
-        .ok_or_else(|| format!("e2e corpus entry {} is missing {field}", entry.id))
+        .ok_or_else(|| format!("examples catalog entry {} is missing {field}", entry.id))
 }
 
 fn ail_e2e_entry_resolved_path(
@@ -1376,14 +1387,14 @@ fn read_ail_e2e_entry_transcripts(entry: &AilE2eCorpusEntry) -> Result<(String, 
     let request_path = ail_e2e_entry_resolved_path(entry, "request-file")?;
     let request_text = fs::read_to_string(&request_path).map_err(|error| {
         format!(
-            "failed to read e2e corpus request {}: {error}",
+            "failed to read examples catalog request {}: {error}",
             request_path.display()
         )
     })?;
     let response_path = ail_e2e_entry_resolved_path(entry, "response-file")?;
     let response_text = fs::read_to_string(&response_path).map_err(|error| {
         format!(
-            "failed to read e2e corpus response {}: {error}",
+            "failed to read examples catalog response {}: {error}",
             response_path.display()
         )
     })?;
@@ -1400,23 +1411,23 @@ fn evaluate_rejected_ail_e2e_corpus_entry(
         .unwrap_or_default();
     if artifact_kind != "ail-spec" && artifact_kind != "prompt-envelope" {
         return Err(format!(
-            "e2e corpus rejected entry {} has unsupported artifact-kind {artifact_kind}",
+            "examples catalog rejected entry {} has unsupported artifact-kind {artifact_kind}",
             entry.id
         ));
     }
     let package_path = entry
         .fields
         .get("package")
-        .ok_or_else(|| format!("e2e corpus entry {} is missing package", entry.id))?;
+        .ok_or_else(|| format!("examples catalog entry {} is missing package", entry.id))?;
     let expected_diagnostic = entry.fields.get("expected-diagnostic").ok_or_else(|| {
         format!(
-            "e2e corpus rejected entry {} is missing expected-diagnostic",
+            "examples catalog rejected entry {} is missing expected-diagnostic",
             entry.id
         )
     })?;
     let failure_taxonomy = entry.fields.get("failure-taxonomy").ok_or_else(|| {
         format!(
-            "e2e corpus rejected entry {} is missing failure-taxonomy",
+            "examples catalog rejected entry {} is missing failure-taxonomy",
             entry.id
         )
     })?;
@@ -1450,7 +1461,7 @@ fn evaluate_rejected_ail_e2e_corpus_entry(
     };
     if diagnostics.is_empty() {
         return Err(format!(
-            "e2e corpus rejected entry {} was accepted without diagnostics",
+            "examples catalog rejected entry {} was accepted without diagnostics",
             entry.id
         ));
     }
@@ -1459,7 +1470,7 @@ fn evaluate_rejected_ail_e2e_corpus_entry(
         .any(|diagnostic| diagnostic.contains(expected_diagnostic))
     {
         return Err(format!(
-            "e2e corpus rejected entry {} expected diagnostic {expected_diagnostic} was not produced:\n{}",
+            "examples catalog rejected entry {} expected diagnostic {expected_diagnostic} was not produced:\n{}",
             entry.id,
             diagnostics.join("\n")
         ));
@@ -1500,7 +1511,7 @@ fn evaluate_ail_e2e_corpus_entry(
     }
     if checker_result != "accepted" {
         return Err(format!(
-            "e2e corpus entry {} has unknown checker-result {checker_result}",
+            "examples catalog entry {} has unknown checker-result {checker_result}",
             entry.id
         ));
     }
@@ -1526,7 +1537,7 @@ fn evaluate_ail_e2e_corpus_entry(
     let package_path = entry
         .fields
         .get("package")
-        .ok_or_else(|| format!("e2e corpus entry {} is missing package", entry.id))?;
+        .ok_or_else(|| format!("examples catalog entry {} is missing package", entry.id))?;
     let (request_text, response_text) = read_ail_e2e_entry_transcripts(entry)?;
     let spec_text = extract_ail_e2e_response_artifact_text(&response_text);
     let package = load_ail_package_dir(package_path)?;
@@ -1535,7 +1546,7 @@ fn evaluate_ail_e2e_corpus_entry(
     let diagnostics = check_ail_core(&core);
     if !diagnostics.is_empty() {
         return Err(format!(
-            "e2e corpus accepted entry {} has diagnostics:\n{}",
+            "examples catalog accepted entry {} has diagnostics:\n{}",
             entry.id,
             diagnostics.join("\n")
         ));
@@ -1544,7 +1555,7 @@ fn evaluate_ail_e2e_corpus_entry(
     let bytecode_diagnostics = verify_ail_bytecode(&bytecode);
     if !bytecode_diagnostics.is_empty() {
         return Err(format!(
-            "e2e corpus accepted entry {} has bytecode diagnostics:\n{}",
+            "examples catalog accepted entry {} has bytecode diagnostics:\n{}",
             entry.id,
             bytecode_diagnostics.join("\n")
         ));
@@ -1584,7 +1595,7 @@ fn evaluate_ail_e2e_corpus_entry(
             &bytecode,
             contract_action_name.ok_or_else(|| {
                 format!(
-                    "e2e corpus entry {} target {target} requires a bytecode action",
+                    "examples catalog entry {} target {target} requires a bytecode action",
                     entry.id
                 )
             })?,
@@ -1595,7 +1606,7 @@ fn evaluate_ail_e2e_corpus_entry(
                 &bytecode,
                 contract_action_name.ok_or_else(|| {
                     format!(
-                        "e2e corpus entry {} target {target} requires a bytecode action",
+                        "examples catalog entry {} target {target} requires a bytecode action",
                         entry.id
                     )
                 })?,
@@ -1656,7 +1667,7 @@ fn parse_ail_e2e_runtime_state(
     {
         insert_runtime_state_arg(assignment, &mut runtime_state).map_err(|error| {
             format!(
-                "e2e corpus entry {} has invalid runtime-state assignment {assignment}: {error}",
+                "examples catalog entry {} has invalid runtime-state assignment {assignment}: {error}",
                 entry.id
             )
         })?;
@@ -2141,7 +2152,7 @@ fn validate_ail_e2e_corpus_release_coverage(entries: &[AilE2eCorpusEntry]) -> Re
         .collect::<BTreeSet<_>>();
     if semantic_tasks.len() < 100 {
         return Err(format!(
-            "ail-e2e-corpus requires at least 100 distinct semantic-task entries; found {}",
+            "ail-examples requires at least 100 distinct semantic-task entries; found {}",
             semantic_tasks.len()
         ));
     }
@@ -2156,7 +2167,7 @@ fn validate_ail_e2e_corpus_release_coverage(entries: &[AilE2eCorpusEntry]) -> Re
         .count();
     if accepted_count < 100 {
         return Err(format!(
-            "ail-e2e-corpus requires at least 100 accepted prompt-to-artifact examples; found {accepted_count}"
+            "ail-examples requires at least 100 accepted prompt-to-artifact examples; found {accepted_count}"
         ));
     }
     let executor_families = entries
@@ -2166,7 +2177,7 @@ fn validate_ail_e2e_corpus_release_coverage(entries: &[AilE2eCorpusEntry]) -> Re
     for required_executor in ["llm-http", "codex-skill-agent"] {
         if !executor_families.contains(required_executor) {
             return Err(format!(
-                "ail-e2e-corpus requires executor-family {required_executor}"
+                "ail-examples requires executor-family {required_executor}"
             ));
         }
     }
@@ -2189,7 +2200,7 @@ fn validate_ail_e2e_corpus_release_coverage(entries: &[AilE2eCorpusEntry]) -> Re
     ] {
         if !prompt_files.contains(required_prompt) {
             return Err(format!(
-                "ail-e2e-corpus requires prompt-file {required_prompt}"
+                "ail-examples requires prompt-file {required_prompt}"
             ));
         }
     }
@@ -2208,7 +2219,7 @@ fn validate_ail_e2e_corpus_release_coverage(entries: &[AilE2eCorpusEntry]) -> Re
         let found = profile_counts.get(required_profile).copied().unwrap_or(0);
         if found < required_count {
             return Err(format!(
-                "ail-e2e-corpus requires at least {required_count} profile {required_profile} examples; found {found}"
+                "ail-examples requires at least {required_count} profile {required_profile} examples; found {found}"
             ));
         }
     }
@@ -2227,7 +2238,7 @@ fn validate_ail_e2e_corpus_release_coverage(entries: &[AilE2eCorpusEntry]) -> Re
         + surface_counts.get("package-import").copied().unwrap_or(0);
     if stdlib_or_package_import < 10 {
         return Err(format!(
-            "ail-e2e-corpus requires at least 10 standard-library or package-import examples; found {stdlib_or_package_import}"
+            "ail-examples requires at least 10 standard-library or package-import examples; found {stdlib_or_package_import}"
         ));
     }
     for (required_surface, required_count) in [
@@ -2238,7 +2249,7 @@ fn validate_ail_e2e_corpus_release_coverage(entries: &[AilE2eCorpusEntry]) -> Re
         let found = surface_counts.get(required_surface).copied().unwrap_or(0);
         if found < required_count {
             return Err(format!(
-                "ail-e2e-corpus requires at least {required_count} surface-tag {required_surface} examples; found {found}"
+                "ail-examples requires at least {required_count} surface-tag {required_surface} examples; found {found}"
             ));
         }
     }
@@ -2257,7 +2268,7 @@ fn validate_ail_e2e_corpus_release_coverage(entries: &[AilE2eCorpusEntry]) -> Re
         let found = target_counts.get(required_target).copied().unwrap_or(0);
         if found < 5 {
             return Err(format!(
-                "ail-e2e-corpus requires at least 5 target {required_target} examples; found {found}"
+                "ail-examples requires at least 5 target {required_target} examples; found {found}"
             ));
         }
     }
@@ -2294,7 +2305,7 @@ fn validate_ail_e2e_corpus_release_coverage(entries: &[AilE2eCorpusEntry]) -> Re
         .any(|executor_endpoint_labels| executor_endpoint_labels.len() >= 2)
     {
         return Err(
-            "ail-e2e-corpus requires one semantic-task family with at least two llm-http executor/endpoint labels"
+            "ail-examples requires one semantic-task family with at least two llm-http executor/endpoint labels"
                 .to_string(),
         );
     }
@@ -2318,7 +2329,7 @@ fn validate_ail_e2e_corpus_live_release_evidence(
         .unwrap_or(0);
     if deterministic_seed_count > 0 {
         return Err(format!(
-            "ail-e2e-corpus --release-evidence requires zero deterministic-seed entries; found {deterministic_seed_count}"
+            "ail-examples --release-evidence requires zero deterministic-seed entries; found {deterministic_seed_count}"
         ));
     }
     for entry in entries {
@@ -2334,13 +2345,13 @@ fn validate_ail_e2e_corpus_live_release_evidence(
             .unwrap_or_default();
         if executor_family == "llm-http" && capture_origin != "live-llm" {
             return Err(format!(
-                "ail-e2e-corpus --release-evidence llm-http entry {} must use capture-origin live-llm",
+                "ail-examples --release-evidence llm-http entry {} must use capture-origin live-llm",
                 entry.id
             ));
         }
         if executor_family == "codex-skill-agent" && capture_origin != "live-codex" {
             return Err(format!(
-                "ail-e2e-corpus --release-evidence codex-skill-agent entry {} must use capture-origin live-codex",
+                "ail-examples --release-evidence codex-skill-agent entry {} must use capture-origin live-codex",
                 entry.id
             ));
         }
@@ -2353,7 +2364,7 @@ fn validate_ail_e2e_corpus_live_release_evidence(
             == 0
         {
             return Err(format!(
-                "ail-e2e-corpus --release-evidence requires capture-origin {required_capture_origin}"
+                "ail-examples --release-evidence requires capture-origin {required_capture_origin}"
             ));
         }
     }
@@ -2367,14 +2378,14 @@ fn write_ail_e2e_corpus_artifacts(
 ) -> Result<(), String> {
     let root = std::path::Path::new(artifact_dir);
     fs::create_dir_all(root)
-        .map_err(|error| format!("failed to create ail-e2e-corpus artifact dir: {error}"))?;
+        .map_err(|error| format!("failed to create ail-examples artifact dir: {error}"))?;
     fs::write(root.join("e2e-corpus-report.txt"), report_text)
-        .map_err(|error| format!("failed to write e2e corpus report: {error}"))?;
+        .map_err(|error| format!("failed to write examples catalog report: {error}"))?;
     fs::write(
         root.join("e2e-corpus-report.fingerprint.txt"),
         format!("{}\n", ail_artifact_fingerprint(report_text)),
     )
-    .map_err(|error| format!("failed to write e2e corpus report fingerprint: {error}"))?;
+    .map_err(|error| format!("failed to write examples catalog report fingerprint: {error}"))?;
     let model_executor_manifest_text = render_ail_e2e_model_executor_manifest(evaluations);
     fs::write(
         root.join("model-executor-manifest.txt"),
@@ -2391,13 +2402,13 @@ fn write_ail_e2e_corpus_artifacts(
     .map_err(|error| format!("failed to write e2e model executor manifest fingerprint: {error}"))?;
     let manifest_text =
         render_ail_e2e_corpus_manifest(report_text, &model_executor_manifest_text, evaluations);
-    fs::write(root.join("manifest.ail-e2e-corpus.txt"), &manifest_text)
-        .map_err(|error| format!("failed to write e2e corpus manifest: {error}"))?;
+    fs::write(root.join("manifest.ail-examples.txt"), &manifest_text)
+        .map_err(|error| format!("failed to write examples catalog manifest: {error}"))?;
     fs::write(
         root.join("manifest.fingerprint.txt"),
         format!("{}\n", ail_artifact_fingerprint(&manifest_text)),
     )
-    .map_err(|error| format!("failed to write e2e corpus manifest fingerprint: {error}"))?;
+    .map_err(|error| format!("failed to write examples catalog manifest fingerprint: {error}"))?;
     for evaluation in evaluations {
         if evaluation.request_fingerprint.is_some()
             || evaluation.response_fingerprint.is_some()
@@ -2522,13 +2533,13 @@ fn write_ail_e2e_corpus_artifacts(
 
 fn run_ail_e2e_corpus_command(path: &str, cli_options: &CliOptions) -> Result<u8, String> {
     let Some(artifact_dir) = &cli_options.artifact_dir else {
-        return Err("ail-e2e-corpus requires --artifact-dir".to_string());
+        return Err("ail-examples requires --artifact-dir".to_string());
     };
     let entries = load_ail_e2e_corpus_entries(std::path::Path::new(path))?;
     let example_count = entries.len();
     if example_count < 100 {
         return Err(format!(
-            "ail-e2e-corpus requires at least 100 examples; found {example_count}"
+            "ail-examples requires at least 100 examples; found {example_count}"
         ));
     }
     validate_ail_e2e_corpus_release_coverage(&entries)?;
@@ -10062,7 +10073,7 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
     if command == "ail-prompt-corpus" {
         return run_ail_prompt_corpus_command(path, cli_options);
     }
-    if command == "ail-e2e-corpus" {
+    if matches!(command, "ail-examples" | "ail-e2e-corpus") {
         return run_ail_e2e_corpus_command(path, cli_options);
     }
     if command == "ail-pass" {
@@ -11013,7 +11024,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
             continue;
         }
         if arg == "--release-evidence" {
-            if command != "ail-e2e-corpus" {
+            if !matches!(command, "ail-examples" | "ail-e2e-corpus") {
                 return Err(usage());
             }
             release_evidence = true;
@@ -11032,6 +11043,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
                     | "ail-conformance"
                     | "ail-bootstrap"
                     | "ail-prompt-corpus"
+                    | "ail-examples"
                     | "ail-e2e-corpus"
             ) {
                 return Err(usage());

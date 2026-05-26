@@ -319,14 +319,14 @@ Evidence:
   applicable, prompt fingerprint, request fingerprint, response fingerprint,
   artifact fingerprint, checker result, compile result, target result, capture
   origin, and failure taxonomy.
-- The e2e corpus report includes duplicate-fingerprint counts for request,
+- The example replay report includes duplicate-fingerprint counts for request,
   response, extracted artifact, checked Core, bytecode, VM trace, native,
   target-report, diagnostics artifacts, and capture-origin buckets. Final
   release evidence requires zero duplicate response, extracted-artifact, and
   target-report entries, plus broad `live-llm` and `live-codex` capture-origin
   coverage unless this file names a specific shared artifact as intentional
   non-release scaffolding.
-- The e2e corpus artifact bundle includes `model-executor-manifest.txt` and
+- The example artifact bundle includes `model-executor-manifest.txt` and
   `model-executor-manifest.fingerprint.txt`, covering executor families,
   executor labels, endpoint labels, capture origins, executor/origin pairs,
   executor/endpoint pairs, and per-entry semantic task provenance.
@@ -350,7 +350,7 @@ cargo test cli_ail_e2e_corpus_replays_rejected_prompt_failures
 cargo test cli_ail_e2e_corpus_release_evidence_rejects_deterministic_seed_corpus
 cargo test cli_ail_e2e_corpus_release_evidence_accepts_live_corpus
 cargo test cli_ail_e2e_corpus_release_evidence_requires_live_codex_for_codex_executor
-cargo run -- ail-e2e-corpus docs/ail/corpus/e2e --artifact-dir /tmp/ail-v02-e2e-corpus --release-evidence
+cargo run -- ail-examples examples --artifact-dir /tmp/ail-v02-examples --release-evidence
 ```
 
 ### 7. Diagnostics And Governance Coverage
@@ -413,7 +413,7 @@ cargo run -- ail-compile examples/c_interop.ail --target wasm32-unknown-sandbox-
 cargo run -- ail-compile examples/support_ticket.ail --target aarch64-apple-darwin-libsystem-macho --action CloseTicket --artifact-dir /tmp/ail-v02-release-evidence/artifacts/v02-darwin-contract
 cargo run -- ail-spec --core-file /tmp/ail-v02-release-evidence/artifacts/v02-build-support/checked.ail-core.txt --artifact-dir /tmp/ail-v02-release-evidence/artifacts/v02-spec-roundtrip
 cargo run -- ail-bootstrap examples/ail_toolchain_agent.ail --pass examples/compiler_pass.ail --agent examples/ail_toolchain_agent.ail --target linux-x86_64-elf --artifact-dir /tmp/ail-v02-release-evidence/artifacts/v02-bootstrap
-cargo run -- ail-e2e-corpus docs/ail/corpus/e2e --artifact-dir /tmp/ail-v02-release-evidence/artifacts/v02-e2e-corpus --release-evidence
+cargo run -- ail-examples examples --artifact-dir /tmp/ail-v02-release-evidence/artifacts/v02-examples --release-evidence
 ```
 
 The release audit fails if any command fails, if a named command does not
@@ -435,7 +435,7 @@ The v0.2 release evidence bundle must contain:
 - Wasm host-contract report, dependency report, manifest, and fingerprints
 - Darwin Mach-O contract report, dependency report, manifest, and fingerprints
 - full checked-spec-to-native build artifact directory for Support Ticket,
-  with prompt-to-artifact coverage proven by the prompt corpus and e2e corpus
+  with prompt-to-artifact coverage proven by the prompt corpus and example
   artifacts
 - `ail-spec --core-file` round-trip artifact directory
 - VM bytecode artifact and fingerprint
@@ -505,14 +505,14 @@ already covers parts of this gate:
   profile-mismatch, hallucinated-capability, missing-trace, and semantic-drift
   taxonomy
 - prompt-envelope checks and prompt-to-native build evidence
-- `ail-e2e-corpus` replay verifier, threshold tests, stored transcript replay,
+- `ail-examples` replay verifier, threshold tests, stored transcript replay,
   accepted prompt-output compilation to bytecode, VM traces, Linux native
   artifacts, Wasm and Darwin target-contract reports, rejected-output replay,
   top-level manifest/report fingerprints, and a fingerprinted
   model/executor manifest covering executor families, endpoint labels,
   executor labels, capture origins, executor/origin pairs, executor/endpoint
   pairs, and per-entry semantic task provenance
-- checked 111-entry e2e live release corpus under `docs/ail/corpus/e2e`,
+- checked 111-entry live release examples under `examples`,
   including 103 accepted prompt-to-artifact examples plus one rejected
   semantic-drift diagnostic example and one rejected profile-mismatch
   diagnostic example, one rejected missing-trace diagnostic example, and one
@@ -541,19 +541,19 @@ already covers parts of this gate:
   top-level fingerprinted manifest, stores per-command logs, and verifies each
   artifact-producing command's manifest and `manifest.fingerprint.txt`
 - named Codex skill-agent contracts for requirements writing, spec writing, and
-  diagnostic repair under `docs/ail/corpus/e2e/agents/`
-- checked e2e release corpus responses and extracted artifacts have zero
+  diagnostic repair under `examples/agents/`
+- checked release example responses and extracted artifacts have zero
   duplicate fingerprints after deterministic per-scenario trace specialization;
   target reports also have zero duplicate fingerprints after contract reports
   started recording the compiled bytecode fingerprint
-- package-import e2e release entries replay through package-aware import
+- package-import release entries replay through package-aware import
   resolution and compile the composed support package through checked Core,
   bytecode, and VM trace artifacts
-- three real UI-profile e2e release entries replay `ui_workflow.ail` through
+- three real UI-profile release entries replay `ui_workflow.ail` through
   checked Core, semantic-contract bytecode, VM trace, and Wasm target-contract
   artifacts across the core-to-spec, spec-draft, and requirements prompt
   surfaces
-- e2e rejected-output replay supports prompt-envelope diagnostics through
+- rejected-output example replay supports prompt-envelope diagnostics through
   stored transcript artifacts, including `AIL-PROMPT-001` diagnostics for
   malformed prompt envelopes and profile-mismatch checker handoffs, and
   checked AIL-Spec diagnostics for missing trace coverage and hallucinated
@@ -567,7 +567,7 @@ already covers parts of this gate:
   `release-audit-manifest.fingerprint.txt` is `fnv64:e3a40d5809847e9e`, and
   the audit manifest records `ok` for cargo format, diff whitespace, check,
   tests, clippy, conformance fixtures, build, Wasm host contract, Darwin
-  contract, spec round-trip, bootstrap, and e2e corpus release evidence
+  contract, spec round-trip, bootstrap, and example release evidence
 
 Missing v0.2 evidence includes:
 

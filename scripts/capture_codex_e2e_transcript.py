@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Promote one recorded Codex/skill-agent transcript into an AIL e2e corpus copy."""
+"""Promote one recorded Codex/skill-agent transcript into an AIL examples copy."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Copy a recorded Codex transcript into an offline ail-e2e-corpus directory."
+        description="Copy a recorded Codex transcript into an offline AIL examples directory."
     )
     parser.add_argument("--base-corpus", required=True)
     parser.add_argument("--output-dir", required=True)

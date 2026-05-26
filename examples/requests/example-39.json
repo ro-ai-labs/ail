@@ -1,0 +1,25 @@
+{
+  "agent_contract": "examples/agents/codex-ail-spec-writer.md",
+  "agent_contract_version": "0.1.0",
+  "codex_model": "codex-subagent-default",
+  "executor_label": "codex-ail-spec-writer",
+  "input": {
+    "manifest": "# AIL Package\n\nname: runtime-generic\nversion: 0.1.0\nprofile: Application\nentry: spec.ail-spec.md\nfeatures: things, actions, guarantees, traces\nconformance: first-slice\n",
+    "package_manifest_file": "examples/runtime_generic.ail/ail-package.md",
+    "required_features": [
+      "things",
+      "actions",
+      "failures",
+      "guarantees",
+      "traces",
+      "generic-field-writes",
+      "target-friendly-runtime"
+    ],
+    "requirements": "Draft the complete canonical AIL-Spec for the runtime-generic package interop surface. Preserve the Runtime Tickets application, Ticket and SupportTicket types, the PrioritizeTicket runtime action, the generic priority field write to High, requirements that the ticket exists and is not already High, explicit failure behavior for missing tickets and already-prioritized tickets, trace events, and target-friendly behavior suitable for VM and native target replay."
+  },
+  "package": "examples/runtime_generic.ail",
+  "profile": "Application",
+  "prompt_file": "docs/ail/prompts/interop.system.md",
+  "prompt_version": "ail-prompts.v0.2",
+  "task": "Draft a complete canonical AIL-Spec for the runtime generic package interop surface, including PrioritizeTicket, generic field writes, requirements, failures, traces, and target-friendly behavior."
+}

@@ -1,0 +1,21 @@
+{
+  "agent_contract": "examples/agents/codex-ail-spec-writer.md",
+  "agent_contract_version": "0.1.0",
+  "codex_model": "codex-subagent-default",
+  "executor_label": "codex-ail-spec-writer",
+  "input": {
+    "package_manifest_file": "examples/missing_registry_import.ail/ail-package.md",
+    "required_features": [
+      "package-imports",
+      "registry-resolution",
+      "versioned-imports",
+      "diagnostics"
+    ],
+    "requirements_source": "inline checked requirements from active AIL v0.2 rejected-output capture session"
+  },
+  "package": "examples/missing_registry_import.ail",
+  "profile": "Application",
+  "prompt_file": "docs/ail/prompts/requirements.system.md",
+  "prompt_version": "ail-prompts.v0.2",
+  "task": "Replay a rejected package-resolution capture where the package imports shared-lib from a registry index that only contains other-lib."
+}

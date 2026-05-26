@@ -1,6 +1,6 @@
 # Accepted Core Fixture: Support Ticket
 
-source: `docs/ail/examples/support-ticket.ail-core.md`
+source: `examples/support_ticket.ail/checked.ail-core.md`
 expected: accepted
 profile: Application
 

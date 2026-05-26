@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Apply a batch of live LLM and Codex transcript captures to one e2e corpus copy."""
+"""Apply a batch of live LLM and Codex transcript captures to one examples copy."""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Capture multiple transcript entries into one offline ail-e2e-corpus copy."
+        description="Capture multiple transcript entries into one offline AIL examples copy."
     )
     parser.add_argument("--base-corpus", required=True)
     parser.add_argument("--output-dir", required=True)

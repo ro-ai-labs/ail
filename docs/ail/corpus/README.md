@@ -32,11 +32,11 @@ Directory contract:
 - `roundtrip/`: equivalence fixtures
 - `interop/`: C/ABI and external binding fixtures
 - `selfhost/`: AIL-Meta and fixed-point fixtures
-- `e2e/`: prompt-to-artifact examples that replay model or agent outputs
-  through checked requirements or AIL-Spec, checked AIL-Core, bytecode,
-  execution or target-contract artifacts, manifests, and fingerprints
-- `e2e/agents/`: Codex-style skill-agent contracts for `live-codex`
-  transcript evidence
+
+Complete examples do not live under `docs/ail/corpus/`. They live under
+`examples/`, where each counted example is expected to replay through the
+prompt-to-artifact path. The docs corpus is reserved for smaller fixtures that
+exercise individual checker, prompt, round-trip, interop, or trace behavior.
 
 Corpus acceptance metrics:
 
@@ -67,51 +67,51 @@ against expected diagnostics or semantic drift, and writes:
 The portability report records semantic task labels, model labels, prompt
 fingerprints, artifact fingerprints, checker results, and failure taxonomy.
 
-End-to-end release corpus entries are checked offline with:
+The full example set is checked offline with:
 
 ```bash
-cargo run -- ail-e2e-corpus docs/ail/corpus/e2e --artifact-dir /tmp/ail-e2e-corpus
+cargo run -- ail-examples examples --artifact-dir /tmp/ail-examples
 ```
 
 Seed replay uses the default mode above. Final v0.2 release evidence must use
 the stricter release mode:
 
 ```bash
-cargo run -- ail-e2e-corpus docs/ail/corpus/e2e --artifact-dir /tmp/ail-e2e-corpus --release-evidence
+cargo run -- ail-examples examples --artifact-dir /tmp/ail-examples --release-evidence
 ```
 
 `--release-evidence` refuses deterministic seed entries and requires both
-`live-llm` and `live-codex` capture origins. This keeps the checked seed corpus
-useful for verifier development without letting it satisfy the live
+`live-llm` and `live-codex` capture origins. This keeps generated example
+copies useful for verifier development without letting them satisfy the live
 prompt-to-artifact release gate.
 
 To capture live LLM evidence without changing the offline replay contract, copy
-the seed corpus and replace one entry with a stored HTTP completion transcript:
+`examples/` and replace one entry with a stored HTTP completion transcript:
 
 ```bash
 python3 scripts/capture_e2e_transcripts.py \
-  --base-corpus docs/ail/corpus/e2e \
+  --base-corpus examples \
   --output-dir /tmp/ail-e2e-live-corpus \
   --entry-id example-30 \
   --endpoint http://inteligentia-pro-1:8080/v1/chat/completions \
   --endpoint-label inteligentia-pro-1-qwen3.6-35b-chat \
   --executor-label unsloth-qwen3.6-35b-a3b-gguf-chat \
   --semantic-task support-ticket-live-capture-30 \
-  --prompt-file docs/ail/corpus/e2e/inputs/support-ticket-spec-draft.task.txt \
-  --input-json-file docs/ail/corpus/e2e/inputs/support-ticket-spec-draft.json
+  --prompt-file examples/inputs/support-ticket-spec-draft.task.txt \
+  --input-json-file examples/inputs/support-ticket-spec-draft.json
 ```
 
 The capture helper supports both llama.cpp `/completion` and OpenAI-compatible
 `/v1/chat/completions` endpoints. Chat-completion captures store the raw
 `choices[0].message.content` response and disable model thinking through
-`chat_template_kwargs.enable_thinking=false`. The captured corpus is then
-replayed with `ail-e2e-corpus`; replay must remain offline and must read only
+`chat_template_kwargs.enable_thinking=false`. The captured example copy is then
+replayed with `ail-examples`; replay must remain offline and must read only
 the stored request/response transcripts. Prompt surfaces that define an input
 schema, such as `spec-draft.system.md`, should use `--input-json-file` so the
 stored request contains the expected schema payload rather than a bare natural
 language instruction.
 
-The `ail-e2e-corpus` verifier is the v0.2 release gate for prompt reliability.
+The `ail-examples` verifier is the v0.2 release gate for prompt reliability.
 It must not call a live model endpoint in replay mode. It reads stored
 transcripts produced by HTTP LLM executors, AIL toolchain agents, or
 Codex-style skill agents, extracts the deterministic AIL artifact, validates
@@ -119,7 +119,8 @@ the prompt envelope, checks requirements or AIL-Spec, lowers to checked
 AIL-Core, emits bytecode, verifies VM behavior, and writes either a Linux
 native artifact or a target-contract report.
 
-The v0.2 release corpus must contain at least 100 distinct end-to-end examples.
+The v0.2 release examples must contain at least 100 distinct end-to-end
+examples.
 Each counted example records:
 
 - semantic task id

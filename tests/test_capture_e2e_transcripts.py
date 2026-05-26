@@ -51,7 +51,7 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
                     "python3",
                     "scripts/capture_e2e_transcripts.py",
                     "--base-corpus",
-                    "docs/ail/corpus/e2e",
+                    "examples",
                     "--output-dir",
                     str(output_dir),
                     "--entry-id",
@@ -95,7 +95,7 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
                     "run",
                     "--quiet",
                     "--",
-                    "ail-e2e-corpus",
+                    "ail-examples",
                     str(output_dir),
                     "--artifact-dir",
                     str(artifact_dir),
@@ -108,7 +108,7 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             report = (artifact_dir / "e2e-corpus-report.txt").read_text()
             self.assertNotIn("capture-origin-count deterministic-seed", report)
             self.assertIn("capture-origin-count live-llm 5", report)
-            self.assertIn("capture-origin-count live-codex 95", report)
+            self.assertIn("capture-origin-count live-codex 106", report)
             self.assertIn(
                 "entry example-30 source "
                 + str(output_dir / "examples.md")
@@ -145,7 +145,7 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
                     "python3",
                     "scripts/capture_e2e_transcripts.py",
                     "--base-corpus",
-                    "docs/ail/corpus/e2e",
+                    "examples",
                     "--output-dir",
                     str(output_dir),
                     "--entry-id",
@@ -183,7 +183,7 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
                     "run",
                     "--quiet",
                     "--",
-                    "ail-e2e-corpus",
+                    "ail-examples",
                     str(output_dir),
                     "--artifact-dir",
                     str(artifact_dir),
@@ -195,7 +195,7 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             self.assertEqual(replay.returncode, 0, replay.stderr)
             report = (artifact_dir / "e2e-corpus-report.txt").read_text()
             self.assertIn("capture-origin-count live-llm 4", report)
-            self.assertIn("capture-origin-count live-codex 96", report)
+            self.assertIn("capture-origin-count live-codex 107", report)
             self.assertIn("entry example-32", report)
         finally:
             _CompletionHandler.response_payload = None
@@ -249,7 +249,7 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
                     "python3",
                     "scripts/capture_e2e_transcripts.py",
                     "--base-corpus",
-                    "docs/ail/corpus/e2e",
+                    "examples",
                     "--output-dir",
                     str(output_dir),
                     "--entry-id",
@@ -287,7 +287,7 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
                     "run",
                     "--quiet",
                     "--",
-                    "ail-e2e-corpus",
+                    "ail-examples",
                     str(output_dir),
                     "--artifact-dir",
                     str(artifact_dir),
@@ -345,7 +345,7 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
                     "python3",
                     "scripts/capture_codex_e2e_transcript.py",
                     "--base-corpus",
-                    "docs/ail/corpus/e2e",
+                    "examples",
                     "--output-dir",
                     str(output_dir),
                     "--entry-id",
@@ -386,7 +386,7 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
                     "run",
                     "--quiet",
                     "--",
-                    "ail-e2e-corpus",
+                    "ail-examples",
                     str(output_dir),
                     "--artifact-dir",
                     str(artifact_dir),
@@ -399,8 +399,8 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             report = (artifact_dir / "e2e-corpus-report.txt").read_text()
             self.assertNotIn("capture-origin-count deterministic-seed", report)
             self.assertIn("capture-origin-count live-llm 4", report)
-            self.assertIn("capture-origin-count live-codex 96", report)
-            self.assertIn("checker-result-count accepted 100", report)
+            self.assertIn("capture-origin-count live-codex 107", report)
+            self.assertIn("checker-result-count accepted 104", report)
             self.assertIn("entry example-99", report)
             self.assertIn("capture-origin live-codex", report)
         finally:
@@ -434,7 +434,7 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
                 json.dumps(
                     {
                         "agent_contract": (
-                            "docs/ail/corpus/e2e/agents/codex-ail-spec-writer.md"
+                            "examples/agents/codex-ail-spec-writer.md"
                         ),
                         "agent_contract_version": "0.1.0",
                         "executor_label": "codex-ail-spec-writer-test",
@@ -490,7 +490,7 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
                     "python3",
                     "scripts/capture_e2e_batch.py",
                     "--base-corpus",
-                    "docs/ail/corpus/e2e",
+                    "examples",
                     "--output-dir",
                     str(output_dir),
                     "--plan-json",
@@ -515,7 +515,7 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
                     "run",
                     "--quiet",
                     "--",
-                    "ail-e2e-corpus",
+                    "ail-examples",
                     str(output_dir),
                     "--artifact-dir",
                     str(artifact_dir),
@@ -528,7 +528,7 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             report = (artifact_dir / "e2e-corpus-report.txt").read_text()
             self.assertNotIn("capture-origin-count deterministic-seed", report)
             self.assertIn("capture-origin-count live-llm 5", report)
-            self.assertIn("capture-origin-count live-codex 95", report)
+            self.assertIn("capture-origin-count live-codex 106", report)
             self.assertIn("entry example-30", report)
             self.assertIn("entry example-32", report)
             self.assertIn("entry example-99", report)

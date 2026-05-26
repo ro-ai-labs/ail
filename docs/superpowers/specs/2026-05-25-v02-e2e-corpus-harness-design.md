@@ -1,4 +1,4 @@
-# AIL v0.2 End-To-End Corpus Harness Design
+# AIL v0.2 Examples Harness Design
 
 ## Purpose
 
@@ -18,11 +18,11 @@ and target outputs.
 The first implementation target is a new verifier command:
 
 ```bash
-cargo run -- ail-e2e-corpus docs/ail/corpus/e2e --artifact-dir /tmp/ail-e2e-corpus
+cargo run -- ail-examples examples --artifact-dir /tmp/ail-e2e-corpus
 ```
 
 The command reads corpus manifests and transcript files from
-`docs/ail/corpus/e2e`, replays each stored output, and writes a release bundle.
+`examples`, replays each stored output, and writes a release bundle.
 It does not call HTTP endpoints or Codex during replay.
 
 Live capture is a separate mode or helper. Live capture may call configured
@@ -146,7 +146,7 @@ not rely on conversational memory or an unstored agent decision as proof.
 
 ## Implementation Slices
 
-1. Add parser and tests for the `docs/ail/corpus/e2e` manifest format.
+1. Add parser and tests for the `examples` manifest format.
 2. Add offline replay for accepted AIL-Spec outputs through Core and bytecode.
 3. Add target generation for VM, Linux ELF, Wasm contract, and Darwin contract.
 4. Add rejected-output replay with expected diagnostics and failure taxonomy.

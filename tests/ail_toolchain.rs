@@ -20004,15 +20004,15 @@ fn cli_ail_prompt_corpus_writes_portability_report() {
 fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let artifact_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-seed-artifacts-{}",
+        "ail-examples-seed-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&artifact_dir);
 
     let output = Command::new(binary)
         .args([
-            "ail-e2e-corpus",
-            "docs/ail/corpus/e2e",
+            "ail-examples",
+            "examples",
             "--artifact-dir",
             artifact_dir.to_str().unwrap(),
         ])
@@ -20824,7 +20824,7 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
             .contains("AIL registry import shared-lib as Shared was not found in registry index"),
         "{package_resolution_diagnostics}"
     );
-    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-e2e-corpus.txt")).unwrap();
+    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-examples.txt")).unwrap();
     assert!(manifest.contains("AIL-E2E-Corpus-Manifest:"), "{manifest}");
     assert!(
         manifest.contains("entry example-99 checker-result rejected target vm"),
@@ -20876,15 +20876,15 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
 fn cli_ail_e2e_corpus_release_evidence_accepts_live_corpus() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let artifact_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-release-seed-artifacts-{}",
+        "ail-examples-release-seed-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&artifact_dir);
 
     let output = Command::new(binary)
         .args([
-            "ail-e2e-corpus",
-            "docs/ail/corpus/e2e",
+            "ail-examples",
+            "examples",
             "--artifact-dir",
             artifact_dir.to_str().unwrap(),
             "--release-evidence",
@@ -20905,11 +20905,11 @@ fn cli_ail_e2e_corpus_release_evidence_accepts_live_corpus() {
 fn cli_ail_e2e_corpus_release_evidence_rejects_deterministic_seed_corpus() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let corpus_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-release-deterministic-origin-{}",
+        "ail-examples-release-deterministic-origin-{}",
         std::process::id()
     ));
     let artifact_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-release-deterministic-origin-artifacts-{}",
+        "ail-examples-release-deterministic-origin-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&corpus_dir);
@@ -20923,7 +20923,7 @@ fn cli_ail_e2e_corpus_release_evidence_rejects_deterministic_seed_corpus() {
 
     let output = Command::new(binary)
         .args([
-            "ail-e2e-corpus",
+            "ail-examples",
             corpus_dir.to_str().unwrap(),
             "--artifact-dir",
             artifact_dir.to_str().unwrap(),
@@ -20940,7 +20940,7 @@ fn cli_ail_e2e_corpus_release_evidence_rejects_deterministic_seed_corpus() {
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
         stderr.contains(
-            "ail-e2e-corpus --release-evidence requires zero deterministic-seed entries; found 100"
+            "ail-examples --release-evidence requires zero deterministic-seed entries; found 100"
         ),
         "{stderr}"
     );
@@ -20953,11 +20953,11 @@ fn cli_ail_e2e_corpus_release_evidence_rejects_deterministic_seed_corpus() {
 fn cli_ail_e2e_corpus_release_evidence_requires_live_codex_for_codex_executor() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let corpus_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-release-codex-origin-{}",
+        "ail-examples-release-codex-origin-{}",
         std::process::id()
     ));
     let artifact_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-release-codex-origin-artifacts-{}",
+        "ail-examples-release-codex-origin-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&corpus_dir);
@@ -20974,7 +20974,7 @@ fn cli_ail_e2e_corpus_release_evidence_requires_live_codex_for_codex_executor() 
 
     let output = Command::new(binary)
         .args([
-            "ail-e2e-corpus",
+            "ail-examples",
             corpus_dir.to_str().unwrap(),
             "--artifact-dir",
             artifact_dir.to_str().unwrap(),
@@ -20991,7 +20991,7 @@ fn cli_ail_e2e_corpus_release_evidence_requires_live_codex_for_codex_executor() 
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
         stderr.contains(
-            "ail-e2e-corpus --release-evidence codex-skill-agent entry example-99 must use capture-origin live-codex"
+            "ail-examples --release-evidence codex-skill-agent entry example-99 must use capture-origin live-codex"
         ),
         "{stderr}"
     );
@@ -21004,11 +21004,11 @@ fn cli_ail_e2e_corpus_release_evidence_requires_live_codex_for_codex_executor() 
 fn cli_ail_e2e_corpus_replays_imported_package_specs() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let corpus_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-imported-package-{}",
+        "ail-examples-imported-package-{}",
         std::process::id()
     ));
     let artifact_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-imported-package-artifacts-{}",
+        "ail-examples-imported-package-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&corpus_dir);
@@ -21042,7 +21042,7 @@ fn cli_ail_e2e_corpus_replays_imported_package_specs() {
 
     let output = Command::new(binary)
         .args([
-            "ail-e2e-corpus",
+            "ail-examples",
             corpus_dir.to_str().unwrap(),
             "--artifact-dir",
             artifact_dir.to_str().unwrap(),
@@ -21084,9 +21084,9 @@ fn cli_ail_e2e_corpus_replays_imported_package_specs() {
 fn cli_ail_e2e_corpus_replays_ui_profile_specs() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let corpus_dir =
-        std::env::temp_dir().join(format!("ail-e2e-corpus-ui-profile-{}", std::process::id()));
+        std::env::temp_dir().join(format!("ail-examples-ui-profile-{}", std::process::id()));
     let artifact_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-ui-profile-artifacts-{}",
+        "ail-examples-ui-profile-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&corpus_dir);
@@ -21122,7 +21122,7 @@ fn cli_ail_e2e_corpus_replays_ui_profile_specs() {
 
     let output = Command::new(binary)
         .args([
-            "ail-e2e-corpus",
+            "ail-examples",
             corpus_dir.to_str().unwrap(),
             "--artifact-dir",
             artifact_dir.to_str().unwrap(),
@@ -21170,11 +21170,11 @@ fn cli_ail_e2e_corpus_replays_ui_profile_specs() {
 fn cli_ail_e2e_corpus_requires_100_distinct_semantic_examples() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let corpus_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-semantic-threshold-{}",
+        "ail-examples-semantic-threshold-{}",
         std::process::id()
     ));
     let artifact_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-semantic-threshold-artifacts-{}",
+        "ail-examples-semantic-threshold-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&corpus_dir);
@@ -21191,7 +21191,7 @@ fn cli_ail_e2e_corpus_requires_100_distinct_semantic_examples() {
 
     let output = Command::new(binary)
         .args([
-            "ail-e2e-corpus",
+            "ail-examples",
             corpus_dir.to_str().unwrap(),
             "--artifact-dir",
             artifact_dir.to_str().unwrap(),
@@ -21206,9 +21206,8 @@ fn cli_ail_e2e_corpus_requires_100_distinct_semantic_examples() {
     );
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.contains(
-            "ail-e2e-corpus requires at least 100 distinct semantic-task entries; found 1"
-        ),
+        stderr
+            .contains("ail-examples requires at least 100 distinct semantic-task entries; found 1"),
         "{stderr}"
     );
 
@@ -21220,11 +21219,11 @@ fn cli_ail_e2e_corpus_requires_100_distinct_semantic_examples() {
 fn cli_ail_e2e_corpus_requires_100_accepted_prompt_to_artifact_examples() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let corpus_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-accepted-threshold-{}",
+        "ail-examples-accepted-threshold-{}",
         std::process::id()
     ));
     let artifact_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-accepted-threshold-artifacts-{}",
+        "ail-examples-accepted-threshold-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&corpus_dir);
@@ -21247,7 +21246,7 @@ fn cli_ail_e2e_corpus_requires_100_accepted_prompt_to_artifact_examples() {
 
     let output = Command::new(binary)
         .args([
-            "ail-e2e-corpus",
+            "ail-examples",
             corpus_dir.to_str().unwrap(),
             "--artifact-dir",
             artifact_dir.to_str().unwrap(),
@@ -21263,7 +21262,7 @@ fn cli_ail_e2e_corpus_requires_100_accepted_prompt_to_artifact_examples() {
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
         stderr.contains(
-            "ail-e2e-corpus requires at least 100 accepted prompt-to-artifact examples; found 99"
+            "ail-examples requires at least 100 accepted prompt-to-artifact examples; found 99"
         ),
         "{stderr}"
     );
@@ -21276,9 +21275,9 @@ fn cli_ail_e2e_corpus_requires_100_accepted_prompt_to_artifact_examples() {
 fn cli_ail_e2e_corpus_requires_replay_metadata() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let corpus_dir =
-        std::env::temp_dir().join(format!("ail-e2e-corpus-metadata-{}", std::process::id()));
+        std::env::temp_dir().join(format!("ail-examples-metadata-{}", std::process::id()));
     let artifact_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-metadata-artifacts-{}",
+        "ail-examples-metadata-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&corpus_dir);
@@ -21292,7 +21291,7 @@ fn cli_ail_e2e_corpus_requires_replay_metadata() {
 
     let output = Command::new(binary)
         .args([
-            "ail-e2e-corpus",
+            "ail-examples",
             corpus_dir.to_str().unwrap(),
             "--artifact-dir",
             artifact_dir.to_str().unwrap(),
@@ -21307,7 +21306,7 @@ fn cli_ail_e2e_corpus_requires_replay_metadata() {
     );
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.contains("e2e corpus entry example-0 is missing semantic-task"),
+        stderr.contains("examples catalog entry example-0 is missing semantic-task"),
         "{stderr}"
     );
 
@@ -21319,11 +21318,11 @@ fn cli_ail_e2e_corpus_requires_replay_metadata() {
 fn cli_ail_e2e_corpus_requires_prompt_version_metadata() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let corpus_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-prompt-version-{}",
+        "ail-examples-prompt-version-{}",
         std::process::id()
     ));
     let artifact_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-prompt-version-artifacts-{}",
+        "ail-examples-prompt-version-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&corpus_dir);
@@ -21337,7 +21336,7 @@ fn cli_ail_e2e_corpus_requires_prompt_version_metadata() {
 
     let output = Command::new(binary)
         .args([
-            "ail-e2e-corpus",
+            "ail-examples",
             corpus_dir.to_str().unwrap(),
             "--artifact-dir",
             artifact_dir.to_str().unwrap(),
@@ -21352,7 +21351,7 @@ fn cli_ail_e2e_corpus_requires_prompt_version_metadata() {
     );
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.contains("e2e corpus entry example-0 is missing prompt-version"),
+        stderr.contains("examples catalog entry example-0 is missing prompt-version"),
         "{stderr}"
     );
 
@@ -21363,12 +21362,10 @@ fn cli_ail_e2e_corpus_requires_prompt_version_metadata() {
 #[test]
 fn cli_ail_e2e_corpus_requires_llm_endpoint_label() {
     let binary = env!("CARGO_BIN_EXE_ail");
-    let corpus_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-llm-endpoint-{}",
-        std::process::id()
-    ));
+    let corpus_dir =
+        std::env::temp_dir().join(format!("ail-examples-llm-endpoint-{}", std::process::id()));
     let artifact_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-llm-endpoint-artifacts-{}",
+        "ail-examples-llm-endpoint-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&corpus_dir);
@@ -21382,7 +21379,7 @@ fn cli_ail_e2e_corpus_requires_llm_endpoint_label() {
 
     let output = Command::new(binary)
         .args([
-            "ail-e2e-corpus",
+            "ail-examples",
             corpus_dir.to_str().unwrap(),
             "--artifact-dir",
             artifact_dir.to_str().unwrap(),
@@ -21397,7 +21394,7 @@ fn cli_ail_e2e_corpus_requires_llm_endpoint_label() {
     );
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.contains("e2e corpus llm-http entry example-0 is missing endpoint-label"),
+        stderr.contains("examples catalog llm-http entry example-0 is missing endpoint-label"),
         "{stderr}"
     );
 
@@ -21409,11 +21406,11 @@ fn cli_ail_e2e_corpus_requires_llm_endpoint_label() {
 fn cli_ail_e2e_corpus_requires_capture_origin() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let corpus_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-capture-origin-{}",
+        "ail-examples-capture-origin-{}",
         std::process::id()
     ));
     let artifact_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-capture-origin-artifacts-{}",
+        "ail-examples-capture-origin-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&corpus_dir);
@@ -21428,7 +21425,7 @@ fn cli_ail_e2e_corpus_requires_capture_origin() {
 
     let output = Command::new(binary)
         .args([
-            "ail-e2e-corpus",
+            "ail-examples",
             corpus_dir.to_str().unwrap(),
             "--artifact-dir",
             artifact_dir.to_str().unwrap(),
@@ -21443,7 +21440,7 @@ fn cli_ail_e2e_corpus_requires_capture_origin() {
     );
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.contains("e2e corpus entry example-0 is missing capture-origin"),
+        stderr.contains("examples catalog entry example-0 is missing capture-origin"),
         "{stderr}"
     );
 
@@ -21455,11 +21452,11 @@ fn cli_ail_e2e_corpus_requires_capture_origin() {
 fn cli_ail_e2e_corpus_rejects_unknown_capture_origin() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let corpus_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-unknown-capture-origin-{}",
+        "ail-examples-unknown-capture-origin-{}",
         std::process::id()
     ));
     let artifact_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-unknown-capture-origin-artifacts-{}",
+        "ail-examples-unknown-capture-origin-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&corpus_dir);
@@ -21474,7 +21471,7 @@ fn cli_ail_e2e_corpus_rejects_unknown_capture_origin() {
 
     let output = Command::new(binary)
         .args([
-            "ail-e2e-corpus",
+            "ail-examples",
             corpus_dir.to_str().unwrap(),
             "--artifact-dir",
             artifact_dir.to_str().unwrap(),
@@ -21489,7 +21486,7 @@ fn cli_ail_e2e_corpus_rejects_unknown_capture_origin() {
     );
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.contains("e2e corpus entry example-0 has unknown capture-origin simulated"),
+        stderr.contains("examples catalog entry example-0 has unknown capture-origin simulated"),
         "{stderr}"
     );
 
@@ -21501,11 +21498,11 @@ fn cli_ail_e2e_corpus_rejects_unknown_capture_origin() {
 fn cli_ail_e2e_corpus_rejects_offline_executor_endpoint_label() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let corpus_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-offline-endpoint-{}",
+        "ail-examples-offline-endpoint-{}",
         std::process::id()
     ));
     let artifact_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-offline-endpoint-artifacts-{}",
+        "ail-examples-offline-endpoint-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&corpus_dir);
@@ -21519,7 +21516,7 @@ fn cli_ail_e2e_corpus_rejects_offline_executor_endpoint_label() {
 
     let output = Command::new(binary)
         .args([
-            "ail-e2e-corpus",
+            "ail-examples",
             corpus_dir.to_str().unwrap(),
             "--artifact-dir",
             artifact_dir.to_str().unwrap(),
@@ -21534,7 +21531,9 @@ fn cli_ail_e2e_corpus_rejects_offline_executor_endpoint_label() {
     );
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.contains("e2e corpus offline executor entry example-99 must not set endpoint-label"),
+        stderr.contains(
+            "examples catalog offline executor entry example-99 must not set endpoint-label"
+        ),
         "{stderr}"
     );
 
@@ -21546,11 +21545,11 @@ fn cli_ail_e2e_corpus_rejects_offline_executor_endpoint_label() {
 fn cli_ail_e2e_corpus_requires_llm_and_codex_executor_families() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let corpus_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-executor-coverage-{}",
+        "ail-examples-executor-coverage-{}",
         std::process::id()
     ));
     let artifact_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-executor-coverage-artifacts-{}",
+        "ail-examples-executor-coverage-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&corpus_dir);
@@ -21581,7 +21580,7 @@ fn cli_ail_e2e_corpus_requires_llm_and_codex_executor_families() {
 
     let output = Command::new(binary)
         .args([
-            "ail-e2e-corpus",
+            "ail-examples",
             corpus_dir.to_str().unwrap(),
             "--artifact-dir",
             artifact_dir.to_str().unwrap(),
@@ -21596,7 +21595,7 @@ fn cli_ail_e2e_corpus_requires_llm_and_codex_executor_families() {
     );
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.contains("ail-e2e-corpus requires executor-family codex-skill-agent"),
+        stderr.contains("ail-examples requires executor-family codex-skill-agent"),
         "{stderr}"
     );
 
@@ -21608,11 +21607,11 @@ fn cli_ail_e2e_corpus_requires_llm_and_codex_executor_families() {
 fn cli_ail_e2e_corpus_requires_rejected_example_diagnostics() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let corpus_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-rejected-diagnostics-{}",
+        "ail-examples-rejected-diagnostics-{}",
         std::process::id()
     ));
     let artifact_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-rejected-diagnostics-artifacts-{}",
+        "ail-examples-rejected-diagnostics-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&corpus_dir);
@@ -21660,7 +21659,7 @@ fn cli_ail_e2e_corpus_requires_rejected_example_diagnostics() {
 
     let output = Command::new(binary)
         .args([
-            "ail-e2e-corpus",
+            "ail-examples",
             corpus_dir.to_str().unwrap(),
             "--artifact-dir",
             artifact_dir.to_str().unwrap(),
@@ -21675,7 +21674,8 @@ fn cli_ail_e2e_corpus_requires_rejected_example_diagnostics() {
     );
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.contains("e2e corpus rejected entry rejected-0 is missing expected-diagnostic"),
+        stderr
+            .contains("examples catalog rejected entry rejected-0 is missing expected-diagnostic"),
         "{stderr}"
     );
 
@@ -21687,11 +21687,11 @@ fn cli_ail_e2e_corpus_requires_rejected_example_diagnostics() {
 fn cli_ail_e2e_corpus_requires_full_prompt_pack_coverage() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let corpus_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-prompt-coverage-{}",
+        "ail-examples-prompt-coverage-{}",
         std::process::id()
     ));
     let artifact_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-prompt-coverage-artifacts-{}",
+        "ail-examples-prompt-coverage-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&corpus_dir);
@@ -21732,7 +21732,7 @@ fn cli_ail_e2e_corpus_requires_full_prompt_pack_coverage() {
 
     let output = Command::new(binary)
         .args([
-            "ail-e2e-corpus",
+            "ail-examples",
             corpus_dir.to_str().unwrap(),
             "--artifact-dir",
             artifact_dir.to_str().unwrap(),
@@ -21747,7 +21747,7 @@ fn cli_ail_e2e_corpus_requires_full_prompt_pack_coverage() {
     );
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.contains("ail-e2e-corpus requires prompt-file docs/ail/prompts/interview.system.md"),
+        stderr.contains("ail-examples requires prompt-file docs/ail/prompts/interview.system.md"),
         "{stderr}"
     );
 
@@ -21759,11 +21759,11 @@ fn cli_ail_e2e_corpus_requires_full_prompt_pack_coverage() {
 fn cli_ail_e2e_corpus_requires_profile_thresholds() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let corpus_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-profile-coverage-{}",
+        "ail-examples-profile-coverage-{}",
         std::process::id()
     ));
     let artifact_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-profile-coverage-artifacts-{}",
+        "ail-examples-profile-coverage-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&corpus_dir);
@@ -21777,7 +21777,7 @@ fn cli_ail_e2e_corpus_requires_profile_thresholds() {
 
     let output = Command::new(binary)
         .args([
-            "ail-e2e-corpus",
+            "ail-examples",
             corpus_dir.to_str().unwrap(),
             "--artifact-dir",
             artifact_dir.to_str().unwrap(),
@@ -21792,7 +21792,7 @@ fn cli_ail_e2e_corpus_requires_profile_thresholds() {
     );
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.contains("ail-e2e-corpus requires at least 15 profile AgentTool examples; found 0"),
+        stderr.contains("ail-examples requires at least 15 profile AgentTool examples; found 0"),
         "{stderr}"
     );
 
@@ -21804,11 +21804,11 @@ fn cli_ail_e2e_corpus_requires_profile_thresholds() {
 fn cli_ail_e2e_corpus_requires_surface_thresholds() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let corpus_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-surface-coverage-{}",
+        "ail-examples-surface-coverage-{}",
         std::process::id()
     ));
     let artifact_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-surface-coverage-artifacts-{}",
+        "ail-examples-surface-coverage-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&corpus_dir);
@@ -21822,7 +21822,7 @@ fn cli_ail_e2e_corpus_requires_surface_thresholds() {
 
     let output = Command::new(binary)
         .args([
-            "ail-e2e-corpus",
+            "ail-examples",
             corpus_dir.to_str().unwrap(),
             "--artifact-dir",
             artifact_dir.to_str().unwrap(),
@@ -21838,7 +21838,7 @@ fn cli_ail_e2e_corpus_requires_surface_thresholds() {
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
         stderr.contains(
-            "ail-e2e-corpus requires at least 10 standard-library or package-import examples; found 0"
+            "ail-examples requires at least 10 standard-library or package-import examples; found 0"
         ),
         "{stderr}"
     );
@@ -21851,11 +21851,11 @@ fn cli_ail_e2e_corpus_requires_surface_thresholds() {
 fn cli_ail_e2e_corpus_requires_target_thresholds() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let corpus_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-target-coverage-{}",
+        "ail-examples-target-coverage-{}",
         std::process::id()
     ));
     let artifact_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-target-coverage-artifacts-{}",
+        "ail-examples-target-coverage-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&corpus_dir);
@@ -21872,7 +21872,7 @@ fn cli_ail_e2e_corpus_requires_target_thresholds() {
 
     let output = Command::new(binary)
         .args([
-            "ail-e2e-corpus",
+            "ail-examples",
             corpus_dir.to_str().unwrap(),
             "--artifact-dir",
             artifact_dir.to_str().unwrap(),
@@ -21888,7 +21888,7 @@ fn cli_ail_e2e_corpus_requires_target_thresholds() {
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
         stderr.contains(
-            "ail-e2e-corpus requires at least 5 target wasm32-unknown-sandbox-wasm examples; found 0"
+            "ail-examples requires at least 5 target wasm32-unknown-sandbox-wasm examples; found 0"
         ),
         "{stderr}"
     );
@@ -21901,11 +21901,11 @@ fn cli_ail_e2e_corpus_requires_target_thresholds() {
 fn cli_ail_e2e_corpus_requires_llm_endpoint_diversity() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let corpus_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-endpoint-diversity-{}",
+        "ail-examples-endpoint-diversity-{}",
         std::process::id()
     ));
     let artifact_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-endpoint-diversity-artifacts-{}",
+        "ail-examples-endpoint-diversity-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&corpus_dir);
@@ -21926,7 +21926,7 @@ fn cli_ail_e2e_corpus_requires_llm_endpoint_diversity() {
 
     let output = Command::new(binary)
         .args([
-            "ail-e2e-corpus",
+            "ail-examples",
             corpus_dir.to_str().unwrap(),
             "--artifact-dir",
             artifact_dir.to_str().unwrap(),
@@ -21942,7 +21942,7 @@ fn cli_ail_e2e_corpus_requires_llm_endpoint_diversity() {
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
         stderr.contains(
-            "ail-e2e-corpus requires one semantic-task family with at least two llm-http executor/endpoint labels"
+            "ail-examples requires one semantic-task family with at least two llm-http executor/endpoint labels"
         ),
         "{stderr}"
     );
@@ -21955,11 +21955,11 @@ fn cli_ail_e2e_corpus_requires_llm_endpoint_diversity() {
 fn cli_ail_e2e_corpus_rejects_unknown_target() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let corpus_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-unknown-target-{}",
+        "ail-examples-unknown-target-{}",
         std::process::id()
     ));
     let artifact_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-unknown-target-artifacts-{}",
+        "ail-examples-unknown-target-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&corpus_dir);
@@ -21973,7 +21973,7 @@ fn cli_ail_e2e_corpus_rejects_unknown_target() {
 
     let output = Command::new(binary)
         .args([
-            "ail-e2e-corpus",
+            "ail-examples",
             corpus_dir.to_str().unwrap(),
             "--artifact-dir",
             artifact_dir.to_str().unwrap(),
@@ -21988,7 +21988,7 @@ fn cli_ail_e2e_corpus_rejects_unknown_target() {
     );
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.contains("e2e corpus entry example-0 has unknown target unknown-target"),
+        stderr.contains("examples catalog entry example-0 has unknown target unknown-target"),
         "{stderr}"
     );
 
@@ -22000,11 +22000,11 @@ fn cli_ail_e2e_corpus_rejects_unknown_target() {
 fn cli_ail_e2e_corpus_rejects_unknown_checker_result() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let corpus_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-unknown-checker-{}",
+        "ail-examples-unknown-checker-{}",
         std::process::id()
     ));
     let artifact_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-unknown-checker-artifacts-{}",
+        "ail-examples-unknown-checker-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&corpus_dir);
@@ -22018,7 +22018,7 @@ fn cli_ail_e2e_corpus_rejects_unknown_checker_result() {
 
     let output = Command::new(binary)
         .args([
-            "ail-e2e-corpus",
+            "ail-examples",
             corpus_dir.to_str().unwrap(),
             "--artifact-dir",
             artifact_dir.to_str().unwrap(),
@@ -22033,7 +22033,7 @@ fn cli_ail_e2e_corpus_rejects_unknown_checker_result() {
     );
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.contains("e2e corpus entry example-0 has unknown checker-result maybe"),
+        stderr.contains("examples catalog entry example-0 has unknown checker-result maybe"),
         "{stderr}"
     );
 
@@ -22045,11 +22045,11 @@ fn cli_ail_e2e_corpus_rejects_unknown_checker_result() {
 fn cli_ail_e2e_corpus_requires_stored_request_and_response_files() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let corpus_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-missing-transcript-{}",
+        "ail-examples-missing-transcript-{}",
         std::process::id()
     ));
     let artifact_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-missing-transcript-artifacts-{}",
+        "ail-examples-missing-transcript-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&corpus_dir);
@@ -22063,7 +22063,7 @@ fn cli_ail_e2e_corpus_requires_stored_request_and_response_files() {
 
     let output = Command::new(binary)
         .args([
-            "ail-e2e-corpus",
+            "ail-examples",
             corpus_dir.to_str().unwrap(),
             "--artifact-dir",
             artifact_dir.to_str().unwrap(),
@@ -22078,8 +22078,9 @@ fn cli_ail_e2e_corpus_requires_stored_request_and_response_files() {
     );
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr
-            .contains("e2e corpus entry example-0 request-file requests/example-0.json is missing"),
+        stderr.contains(
+            "examples catalog entry example-0 request-file requests/example-0.json is missing"
+        ),
         "{stderr}"
     );
 
@@ -22091,11 +22092,11 @@ fn cli_ail_e2e_corpus_requires_stored_request_and_response_files() {
 fn cli_ail_e2e_corpus_replays_rejected_prompt_failures() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let corpus_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-rejected-replay-{}",
+        "ail-examples-rejected-replay-{}",
         std::process::id()
     ));
     let artifact_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-rejected-replay-artifacts-{}",
+        "ail-examples-rejected-replay-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&corpus_dir);
@@ -22138,7 +22139,7 @@ fn cli_ail_e2e_corpus_replays_rejected_prompt_failures() {
 
     let output = Command::new(binary)
         .args([
-            "ail-e2e-corpus",
+            "ail-examples",
             corpus_dir.to_str().unwrap(),
             "--artifact-dir",
             artifact_dir.to_str().unwrap(),
@@ -22196,11 +22197,11 @@ fn cli_ail_e2e_corpus_replays_rejected_prompt_failures() {
 fn cli_ail_e2e_corpus_writes_report_for_metadata_complete_corpus() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let corpus_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-complete-metadata-{}",
+        "ail-examples-complete-metadata-{}",
         std::process::id()
     ));
     let artifact_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-complete-metadata-artifacts-{}",
+        "ail-examples-complete-metadata-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&corpus_dir);
@@ -22215,7 +22216,7 @@ fn cli_ail_e2e_corpus_writes_report_for_metadata_complete_corpus() {
 
     let output = Command::new(binary)
         .args([
-            "ail-e2e-corpus",
+            "ail-examples",
             corpus_dir.to_str().unwrap(),
             "--artifact-dir",
             artifact_dir.to_str().unwrap(),
@@ -22469,7 +22470,7 @@ fn cli_ail_e2e_corpus_writes_report_for_metadata_complete_corpus() {
     let report_fingerprint =
         fs::read_to_string(artifact_dir.join("e2e-corpus-report.fingerprint.txt")).unwrap();
     assert_eq!(report_fingerprint.trim(), fnv64_fingerprint(&report));
-    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-e2e-corpus.txt")).unwrap();
+    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-examples.txt")).unwrap();
     assert!(manifest.contains("AIL-E2E-Corpus-Manifest:"), "{manifest}");
     assert!(
         manifest.contains(&format!(
@@ -22571,11 +22572,11 @@ fn cli_ail_e2e_corpus_writes_report_for_metadata_complete_corpus() {
 fn cli_ail_e2e_corpus_replays_rejected_prompt_envelope_failures() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let corpus_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-rejected-envelope-{}",
+        "ail-examples-rejected-envelope-{}",
         std::process::id()
     ));
     let artifact_dir = std::env::temp_dir().join(format!(
-        "ail-e2e-corpus-rejected-envelope-artifacts-{}",
+        "ail-examples-rejected-envelope-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&corpus_dir);
@@ -22617,7 +22618,7 @@ fn cli_ail_e2e_corpus_replays_rejected_prompt_envelope_failures() {
 
     let output = Command::new(binary)
         .args([
-            "ail-e2e-corpus",
+            "ail-examples",
             corpus_dir.to_str().unwrap(),
             "--artifact-dir",
             artifact_dir.to_str().unwrap(),

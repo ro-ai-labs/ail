@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Capture one live LLM transcript into a replayable AIL e2e corpus copy."""
+"""Capture one live LLM transcript into a replayable AIL examples copy."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ def fnv64(text: str) -> str:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Capture a live LLM response into an offline ail-e2e-corpus directory."
+        description="Capture a live LLM response into an offline AIL examples directory."
     )
     parser.add_argument("--base-corpus", required=True)
     parser.add_argument("--output-dir", required=True)

@@ -1,0 +1,34 @@
+{
+  "agent_contract": "examples/agents/codex-ail-spec-writer.md",
+  "agent_contract_version": "0.1.0",
+  "codex_model": "codex-subagent-default",
+  "executor_label": "codex-ail-spec-writer",
+  "input": {
+    "imports": [
+      {
+        "alias": "support_ticket",
+        "package": "examples/support_ticket.ail",
+        "purpose": "Reuse the support ticket domain behavior for ticket records, assignment, escalation, and traceable lifecycle events."
+      }
+    ],
+    "manifest": {
+      "package": "support_composed",
+      "profile": "Application",
+      "version": "0.1.0"
+    },
+    "required_features": [
+      "canonical AIL-Spec prose for examples/support_composed.ail",
+      "manifest and import information",
+      "imported support ticket behavior",
+      "close ticket action",
+      "requirements",
+      "failure cases",
+      "trace events"
+    ]
+  },
+  "package": "examples/support_composed.ail",
+  "profile": "Application",
+  "prompt_file": "docs/ail/prompts/spec-draft.system.md",
+  "prompt_version": "ail-prompts.v0.2",
+  "task": "Draft a complete canonical AIL-Spec for the composed support package from schema-shaped spec input, preserving manifest and import information, imported support ticket behavior, the close ticket action, requirements, failures, and trace events."
+}

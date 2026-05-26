@@ -40,8 +40,8 @@ Artifacts:
 
 - `examples/support_ticket.ail/ail-package.md`
 - `examples/support_ticket.ail/spec.ail-spec.md`
-- `docs/ail/examples/support-ticket.ail-spec.md`
-- `docs/ail/examples/support-ticket.ail-core.md`
+- `examples/support_ticket.ail/reference.ail-spec.md`
+- `examples/support_ticket.ail/checked.ail-core.md`
 - `examples/support_ticket.ail/examples/accepted/close-ticket-minimal.ail-spec.md`
 - `examples/support_ticket.ail/examples/rejected/action-without-trace.ail-spec.md`
 - `examples/support_ticket.ail/examples/rejected/failure-without-handling.ail-spec.md`
@@ -67,8 +67,8 @@ Artifacts:
 
 - `examples/refund_tool.ail/ail-package.md`
 - `examples/refund_tool.ail/spec.ail-spec.md`
-- `docs/ail/examples/refund-tool.ail-spec.md`
-- `docs/ail/examples/refund-tool.ail-core.md`
+- `examples/refund_tool.ail/reference.ail-spec.md`
+- `examples/refund_tool.ail/checked.ail-core.md`
 - `examples/refund_tool.ail/examples/accepted/refund-minimal.ail-spec.md`
 - `examples/refund_tool.ail/examples/rejected/approval-without-rule.ail-spec.md`
 - `examples/refund_tool.ail/examples/rejected/permission-without-rule.ail-spec.md`
@@ -88,8 +88,8 @@ Artifacts:
 
 - `examples/compiler_pass.ail/ail-package.md`
 - `examples/compiler_pass.ail/spec.ail-spec.md`
-- `docs/ail/examples/compiler-pass.ail-spec.md`
-- `docs/ail/examples/compiler-pass.ail-core.md`
+- `examples/compiler_pass.ail/reference.ail-spec.md`
+- `examples/compiler_pass.ail/checked.ail-core.md`
 - `examples/compiler_pass.ail/examples/accepted/infer-read-permissions-minimal.ail-spec.md`
 - `examples/compiler_pass.ail/examples/rejected/unknown-value-type.ail-spec.md`
 
@@ -105,7 +105,7 @@ Artifacts:
 
 - `examples/network_driver.ail/ail-package.md`
 - `examples/network_driver.ail/spec.ail-spec.md`
-- `docs/ail/examples/network-driver.ail-core.md`
+- `examples/network_driver.ail/checked.ail-core.md`
 - `examples/network_driver.ail/examples/accepted/packet-receive-minimal.ail-spec.md`
 - `examples/network_driver.ail/examples/accepted/mutable-borrow-minimal.ail-spec.md`
 - `examples/network_driver.ail/examples/accepted/move-resource-minimal.ail-spec.md`

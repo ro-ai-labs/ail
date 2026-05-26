@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the checked v0.2 seed corpus for `ail-e2e-corpus`.
+"""Generate the checked v0.2 examples catalog for `ail-examples`.
 
 The generated corpus is intentionally deterministic: it stores request and
 response transcripts so the release verifier can replay without live model
@@ -11,7 +11,7 @@ import json
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CORPUS = ROOT / "docs" / "ail" / "corpus" / "e2e"
+CORPUS = ROOT / "examples"
 REQUESTS = CORPUS / "requests"
 RESPONSES = CORPUS / "responses"
 
@@ -254,10 +254,11 @@ def main() -> None:
         / "missing-reference.ail-spec.md"
     ).read_text()
     entries = [
-        "# AIL v0.2 End-To-End Seed Corpus",
+        "# AIL v0.2 Example Validation Catalog",
         "",
-        "This checked seed corpus stores deterministic prompt and response transcripts",
-        "for the `ail-e2e-corpus` release verifier.",
+        "This checked catalog stores prompt and response transcripts for the",
+        "`ail-examples` release verifier. Every counted example is replayed through the",
+        "prompt-to-artifact path and produces deterministic verification evidence.",
         "",
     ]
     for index in range(100):
