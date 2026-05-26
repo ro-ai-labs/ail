@@ -36,3 +36,13 @@ and writes request, response, extracted content, report, manifest, and
 fingerprint artifacts under `/tmp/ail-v03-prompt-llm`. The output is evidence
 for prompt interaction review only; generated text still has to pass the
 deterministic checker before it can be promoted into `./examples`.
+
+Review a completed hosted run before promotion:
+
+```sh
+python3 scripts/run_v03_prompt_llm_harness.py --review-artifacts /tmp/ail-v03-prompt-llm
+```
+
+The review mode is offline. It checks the required prompt set, manifest,
+report, request/response/content files, prompt fingerprints, and artifact
+fingerprints, and it rejects any prompt probe with empty extracted content.

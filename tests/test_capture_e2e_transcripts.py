@@ -12,6 +12,116 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
+REQUIRED_PROMPTS = (
+    "interview.system.md",
+    "requirements.system.md",
+    "spec-draft.system.md",
+    "core-draft.system.md",
+    "repair.system.md",
+    "diagnostic-repair.system.md",
+    "core-to-spec.system.md",
+    "core-to-summary.system.md",
+    "flow-patch.system.md",
+    "trace-debug.system.md",
+    "interop.system.md",
+)
+
+
+def fnv64(text):
+    value = 0xCBF29CE484222325
+    for byte in text.encode():
+        value ^= byte
+        value = (value * 0x100000001B3) & 0xFFFFFFFFFFFFFFFF
+    return f"fnv64:{value:016x}"
+
+
+def write_text(path, text):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text)
+
+
+def write_prompt_llm_review_fixture(artifact_dir, empty_content_for=None):
+    artifact_dir.mkdir(parents=True, exist_ok=True)
+    models_text = (
+        json.dumps({"object": "list", "data": [{"id": "test-model"}]}, sort_keys=True)
+        + "\n"
+    )
+    write_text(artifact_dir / "models.json", models_text)
+    write_text(artifact_dir / "models.fingerprint.txt", fnv64(models_text) + "\n")
+    report_lines = [
+        "AIL-Prompt-LLM-Harness:",
+        "endpoint http://127.0.0.1:8080/v1/chat/completions",
+        "models-url http://127.0.0.1:8080/v1/models",
+        f"prompt-count {len(REQUIRED_PROMPTS)}",
+    ]
+    manifest_lines = [
+        "AIL-Prompt-LLM-Harness-Manifest:",
+        "artifact models models.json models.fingerprint.txt",
+    ]
+    for prompt_name in REQUIRED_PROMPTS:
+        prompt_path = ROOT / "docs" / "ail" / "prompts" / prompt_name
+        prompt_rel = f"docs/ail/prompts/{prompt_name}"
+        prompt_text = prompt_path.read_text()
+        stem = prompt_name.removesuffix(".system.md")
+        content = "" if empty_content_for == prompt_name else f"Blocking questions for {stem}.\n"
+        response = {"choices": [{"message": {"content": content.strip()}}], "model": "test-model"}
+        request_text = json.dumps(
+            {
+                "endpoint": "http://127.0.0.1:8080/v1/chat/completions",
+                "method": "POST",
+                "prompt_file": prompt_rel,
+                "prompt_fingerprint": fnv64(prompt_text),
+                "body": {
+                    "messages": [
+                        {"role": "system", "content": prompt_text},
+                        {"role": "user", "content": "AIL prompt-pack live probe."},
+                    ],
+                    "max_tokens": 64,
+                    "temperature": 0.0,
+                    "stream": False,
+                },
+            },
+            indent=2,
+            sort_keys=True,
+        ) + "\n"
+        response_text = json.dumps(response, indent=2, sort_keys=True) + "\n"
+        content_text = content
+        write_text(artifact_dir / "requests" / f"{stem}.json", request_text)
+        write_text(
+            artifact_dir / "requests" / f"{stem}.fingerprint.txt",
+            fnv64(request_text) + "\n",
+        )
+        write_text(artifact_dir / "responses" / f"{stem}.json", response_text)
+        write_text(
+            artifact_dir / "responses" / f"{stem}.fingerprint.txt",
+            fnv64(response_text) + "\n",
+        )
+        write_text(artifact_dir / "content" / f"{stem}.txt", content_text)
+        write_text(
+            artifact_dir / "content" / f"{stem}.fingerprint.txt",
+            fnv64(content_text) + "\n",
+        )
+        report_lines.append(
+            f"prompt {prompt_rel} prompt-fingerprint {fnv64(prompt_text)} "
+            f"response-fingerprint {fnv64(response_text)} content-bytes {len(content_text.encode())}"
+        )
+        manifest_lines.append(
+            f"artifact {prompt_rel} "
+            f"request requests/{stem}.json requests/{stem}.fingerprint.txt "
+            f"response responses/{stem}.json responses/{stem}.fingerprint.txt "
+            f"content content/{stem}.txt content/{stem}.fingerprint.txt"
+        )
+    report_text = "\n".join(report_lines) + "\n"
+    manifest_text = "\n".join(manifest_lines) + "\n"
+    write_text(artifact_dir / "prompt-llm-harness-report.txt", report_text)
+    write_text(
+        artifact_dir / "prompt-llm-harness-report.fingerprint.txt",
+        fnv64(report_text) + "\n",
+    )
+    write_text(artifact_dir / "manifest.v03-prompt-llm.txt", manifest_text)
+    write_text(artifact_dir / "manifest.fingerprint.txt", fnv64(manifest_text) + "\n")
+
+
 class _CompletionHandler(BaseHTTPRequestHandler):
     response_text = ""
     response_payload = None
@@ -64,6 +174,63 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
         self.assertIn("scripts/capture_example_transcripts.py", corpus_readme)
         self.assertIn("scripts/capture_codex_example_transcript.py", corpus_readme)
         self.assertIn("scripts/capture_example_batch.py", corpus_readme)
+
+    def test_prompt_llm_harness_review_accepts_complete_artifact_bundle(self):
+        artifact_dir = Path(tempfile.mkdtemp(prefix="ail-prompt-llm-review-"))
+        try:
+            write_prompt_llm_review_fixture(artifact_dir)
+            review = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_prompt_llm_harness.py",
+                    "--review-artifacts",
+                    str(artifact_dir),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(
+                review.returncode,
+                0,
+                f"stdout:\n{review.stdout}\nstderr:\n{review.stderr}",
+            )
+            self.assertIn("AIL-Prompt-LLM-Harness-Review:", review.stdout)
+            self.assertIn("prompt-count 11", review.stdout)
+            self.assertIn("content-nonempty-count 11", review.stdout)
+            self.assertIn("review-result accepted", review.stdout)
+        finally:
+            shutil.rmtree(artifact_dir, ignore_errors=True)
+
+    def test_prompt_llm_harness_review_rejects_empty_content(self):
+        artifact_dir = Path(tempfile.mkdtemp(prefix="ail-prompt-llm-review-empty-"))
+        try:
+            write_prompt_llm_review_fixture(
+                artifact_dir, empty_content_for="requirements.system.md"
+            )
+            review = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_prompt_llm_harness.py",
+                    "--review-artifacts",
+                    str(artifact_dir),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertNotEqual(
+                review.returncode,
+                0,
+                f"stdout:\n{review.stdout}\nstderr:\n{review.stderr}",
+            )
+            self.assertIn("review-result rejected", review.stdout)
+            self.assertIn(
+                "empty content docs/ail/prompts/requirements.system.md",
+                review.stdout,
+            )
+        finally:
+            shutil.rmtree(artifact_dir, ignore_errors=True)
 
     def test_capture_replaces_seed_entry_with_live_llm_transcript(self):
         output_dir = Path(tempfile.mkdtemp(prefix="ail-examples-live-capture-"))

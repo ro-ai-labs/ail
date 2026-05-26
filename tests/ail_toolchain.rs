@@ -1300,6 +1300,7 @@ fn script_v03_prompt_llm_harness_help_lists_all_prompts_and_dry_run() {
     for required in [
         "prompt-pack",
         "--dry-run",
+        "--review-artifacts",
         "--endpoint",
         "--prompt-dir",
         "http://inteligentia-pro-1:8080",
@@ -1341,6 +1342,18 @@ fn script_v03_prompt_llm_harness_help_lists_all_prompts_and_dry_run() {
             "{required}\n{dry_run_stdout}"
         );
     }
+
+    let prompt_docs = fs::read_to_string(format!(
+        "{}/docs/ail/prompts/README.md",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .unwrap();
+    assert!(
+        prompt_docs.contains(
+            "python3 scripts/run_v03_prompt_llm_harness.py --review-artifacts /tmp/ail-v03-prompt-llm"
+        ),
+        "{prompt_docs}"
+    );
 }
 
 #[test]

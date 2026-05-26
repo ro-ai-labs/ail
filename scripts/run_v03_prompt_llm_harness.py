@@ -153,6 +153,121 @@ def write_text(path: Path, text: str) -> None:
     path.write_text(text)
 
 
+def read_required_text(path: Path, errors: list[str]) -> str:
+    if not path.exists():
+        errors.append(f"missing file {path}")
+        return ""
+    return path.read_text()
+
+
+def check_fingerprint(
+    path: Path, errors: list[str], fingerprint_path: Path | None = None
+) -> bool:
+    text = read_required_text(path, errors)
+    fingerprint_path = fingerprint_path or path.with_suffix(".fingerprint.txt")
+    expected = read_required_text(fingerprint_path, errors).strip()
+    actual = fnv64(text)
+    if expected != actual:
+        errors.append(
+            f"fingerprint mismatch {path}: expected {expected or '<missing>'} got {actual}"
+        )
+        return False
+    return True
+
+
+def load_json(path: Path, errors: list[str]) -> dict[str, object]:
+    text = read_required_text(path, errors)
+    if not text:
+        return {}
+    try:
+        value = json.loads(text)
+    except json.JSONDecodeError as error:
+        errors.append(f"invalid json {path}: {error}")
+        return {}
+    if not isinstance(value, dict):
+        errors.append(f"invalid json {path}: top-level value must be an object")
+        return {}
+    return value
+
+
+def review_artifacts(args: argparse.Namespace, paths: list[Path]) -> int:
+    artifact_root = Path(args.review_artifacts)
+    errors: list[str] = []
+    fingerprint_checks = 0
+    content_nonempty = 0
+    manifest_text = read_required_text(artifact_root / "manifest.v03-prompt-llm.txt", errors)
+    report_text = read_required_text(artifact_root / "prompt-llm-harness-report.txt", errors)
+
+    for path, fingerprint_path in [
+        (
+            artifact_root / "manifest.v03-prompt-llm.txt",
+            artifact_root / "manifest.fingerprint.txt",
+        ),
+        (
+            artifact_root / "prompt-llm-harness-report.txt",
+            artifact_root / "prompt-llm-harness-report.fingerprint.txt",
+        ),
+    ]:
+        if check_fingerprint(path, errors, fingerprint_path):
+            fingerprint_checks += 1
+    if (artifact_root / "models.json").exists():
+        if check_fingerprint(artifact_root / "models.json", errors):
+            fingerprint_checks += 1
+
+    if "AIL-Prompt-LLM-Harness-Manifest:" not in manifest_text:
+        errors.append("manifest missing AIL-Prompt-LLM-Harness-Manifest header")
+    if "AIL-Prompt-LLM-Harness:" not in report_text:
+        errors.append("report missing AIL-Prompt-LLM-Harness header")
+    if f"prompt-count {len(paths)}" not in report_text:
+        errors.append(f"report missing prompt-count {len(paths)}")
+
+    for prompt_path in paths:
+        rel = relative(prompt_path)
+        stem = prompt_path.name.removesuffix(".system.md")
+        prompt_text = prompt_path.read_text()
+        request_path = artifact_root / "requests" / f"{stem}.json"
+        response_path = artifact_root / "responses" / f"{stem}.json"
+        content_path = artifact_root / "content" / f"{stem}.txt"
+
+        request = load_json(request_path, errors)
+        response = load_json(response_path, errors)
+        content = read_required_text(content_path, errors)
+        for artifact_path in [request_path, response_path, content_path]:
+            if check_fingerprint(artifact_path, errors):
+                fingerprint_checks += 1
+
+        if request:
+            if request.get("prompt_file") != rel:
+                errors.append(f"request prompt_file mismatch {rel}")
+            if request.get("prompt_fingerprint") != fnv64(prompt_text):
+                errors.append(f"request prompt_fingerprint mismatch {rel}")
+        if not response:
+            errors.append(f"missing response json {rel}")
+        if content.strip():
+            content_nonempty += 1
+        else:
+            errors.append(f"empty content {rel}")
+        if rel not in report_text:
+            errors.append(f"report missing prompt {rel}")
+        if fnv64(prompt_text) not in report_text:
+            errors.append(f"report missing prompt fingerprint {rel}")
+        if f"artifact {rel}" not in manifest_text:
+            errors.append(f"manifest missing prompt artifact {rel}")
+
+    print("AIL-Prompt-LLM-Harness-Review:")
+    print(f"artifact-dir {artifact_root}")
+    print(f"prompt-count {len(paths)}")
+    print(f"content-nonempty-count {content_nonempty}")
+    print(f"fingerprint-check-count {fingerprint_checks}")
+    if errors:
+        print("review-result rejected")
+        for error in errors:
+            print(f"error {error}")
+        return 1
+    print("review-result accepted")
+    return 0
+
+
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
@@ -188,6 +303,10 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         "--skip-model-check",
         action="store_true",
         help="Skip the /v1/models check before running prompt probes",
+    )
+    parser.add_argument(
+        "--review-artifacts",
+        help="Review an existing prompt LLM harness artifact directory without network access",
     )
     return parser.parse_args(argv)
 
@@ -283,6 +402,8 @@ def run_live(args: argparse.Namespace, paths: list[Path]) -> int:
 def main(argv: list[str]) -> int:
     args = parse_args(argv)
     paths = prompt_paths(args.prompt_dir)
+    if args.review_artifacts:
+        return review_artifacts(args, paths)
     if args.dry_run:
         print_dry_run(args, paths)
         return 0
