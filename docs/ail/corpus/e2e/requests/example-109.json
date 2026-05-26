@@ -1,0 +1,24 @@
+{
+  "agent_contract": "docs/ail/corpus/e2e/agents/codex-ail-spec-writer.md",
+  "agent_contract_version": "0.1.0",
+  "codex_model": "codex-subagent-default",
+  "executor_label": "codex-ail-spec-writer",
+  "input": {
+    "package_manifest_file": "examples/ui_workflow.ail/ail-package.md",
+    "required_features": [
+      "routes",
+      "forms",
+      "dashboards",
+      "workflows",
+      "accessibility",
+      "actions",
+      "traces"
+    ],
+    "requirements_source": "inline checked requirements from active AIL v0.2 e2e capture session"
+  },
+  "package": "examples/ui_workflow.ail",
+  "profile": "UI",
+  "prompt_file": "docs/ail/prompts/requirements.system.md",
+  "prompt_version": "ail-prompts.v0.2",
+  "task": "Convert the UI Workflow requirements into canonical AIL-Spec text that can replay through checked UI profile core, bytecode, VM trace, and Wasm target-contract evidence."
+}

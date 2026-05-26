@@ -512,8 +512,8 @@ already covers parts of this gate:
   model/executor manifest covering executor families, endpoint labels,
   executor labels, capture origins, executor/origin pairs, executor/endpoint
   pairs, and per-entry semantic task provenance
-- checked 108-entry e2e live release corpus under `docs/ail/corpus/e2e`,
-  including 100 accepted prompt-to-artifact examples plus one rejected
+- checked 110-entry e2e live release corpus under `docs/ail/corpus/e2e`,
+  including 102 accepted prompt-to-artifact examples plus one rejected
   semantic-drift diagnostic example and one rejected profile-mismatch
   diagnostic example, one rejected missing-trace diagnostic example, and one
   rejected hallucinated-capability diagnostic example, plus one rejected
@@ -524,7 +524,7 @@ already covers parts of this gate:
   Ticket, and Refund Tool packages, using schema-shaped prompt input or
   constrained prose prompting with an OpenAI-compatible chat-completions
   endpoint with thinking disabled
-- one hundred four replay-clean live Codex `codex-ail-spec-writer` captures for the
+- one hundred six replay-clean live Codex `codex-ail-spec-writer` captures for the
   Standard Collections, Composed Support, Refund Tool, Support Ticket,
   Stateful Counter, UI Workflow, C Interop, Network Driver, Compiler Pass,
   Secret Access, Repeated Task, and Runtime Generic packages, imported from
@@ -549,8 +549,10 @@ already covers parts of this gate:
 - package-import e2e release entries replay through package-aware import
   resolution and compile the composed support package through checked Core,
   bytecode, and VM trace artifacts
-- real UI-profile e2e release entry replays `ui_workflow.ail` through checked
-  Core, semantic-contract bytecode, VM trace, and Wasm target-contract artifacts
+- three real UI-profile e2e release entries replay `ui_workflow.ail` through
+  checked Core, semantic-contract bytecode, VM trace, and Wasm target-contract
+  artifacts across the core-to-spec, spec-draft, and requirements prompt
+  surfaces
 - e2e rejected-output replay supports prompt-envelope diagnostics through
   stored transcript artifacts, including `AIL-PROMPT-001` diagnostics for
   malformed prompt envelopes and profile-mismatch checker handoffs, and
@@ -569,8 +571,7 @@ already covers parts of this gate:
 
 Missing v0.2 evidence includes:
 
-- broader live-captured UI-profile transcripts beyond the current single
-  semantic-contract replay
+- none currently documented
 
 ## Completion Decision Rule
 

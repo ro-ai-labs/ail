@@ -2006,3 +2006,41 @@ vm-action: ResolveSharedImport
 runtime-state: registry.index=missing-shared-lib
 expected-diagnostic: AIL registry import shared-lib as Shared was not found in registry index
 failure-taxonomy: package-resolution
+
+## End-To-End Example: example-108
+semantic-task: ui-workflow-live-codex-spec-draft-108
+profile: UI
+surface-tags: ui
+package: examples/ui_workflow.ail
+prompt-file: docs/ail/prompts/spec-draft.system.md
+prompt-version: ail-prompts.v0.2
+prompt-fingerprint: fnv64:b23778093326102c
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
+request-file: requests/example-108.json
+response-file: responses/example-108.json
+artifact-kind: ail-spec
+checker-result: accepted
+target: wasm32-unknown-sandbox-wasm
+vm-action: CreateTicketForm
+runtime-state: ticket.title=Incident 108
+
+## End-To-End Example: example-109
+semantic-task: ui-workflow-live-codex-requirements-109
+profile: UI
+surface-tags: ui
+package: examples/ui_workflow.ail
+prompt-file: docs/ail/prompts/requirements.system.md
+prompt-version: ail-prompts.v0.2
+prompt-fingerprint: fnv64:68e966969e0b1c12
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
+request-file: requests/example-109.json
+response-file: responses/example-109.json
+artifact-kind: ail-spec
+checker-result: accepted
+target: wasm32-unknown-sandbox-wasm
+vm-action: CreateTicketForm
+runtime-state: ticket.title=Incident 109

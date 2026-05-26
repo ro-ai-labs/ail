@@ -20024,9 +20024,9 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         String::from_utf8_lossy(&output.stderr)
     );
     let report = fs::read_to_string(artifact_dir.join("e2e-corpus-report.txt")).unwrap();
-    assert!(report.contains("entry-count 108"), "{report}");
+    assert!(report.contains("entry-count 110"), "{report}");
     assert!(
-        report.contains("checker-result-count accepted 100"),
+        report.contains("checker-result-count accepted 102"),
         "{report}"
     );
     assert!(
@@ -20074,7 +20074,7 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("capture-origin-count live-codex 104"),
+        report.contains("capture-origin-count live-codex 106"),
         "{report}"
     );
     assert!(
@@ -20248,6 +20248,18 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
     assert!(
         report.contains("entry example-65")
             && report.contains("semantic-task ui-workflow-live-codex-core-to-spec-65")
+            && report.contains("capture-origin live-codex"),
+        "{report}"
+    );
+    assert!(
+        report.contains("entry example-108")
+            && report.contains("semantic-task ui-workflow-live-codex-spec-draft-108")
+            && report.contains("capture-origin live-codex"),
+        "{report}"
+    );
+    assert!(
+        report.contains("entry example-109")
+            && report.contains("semantic-task ui-workflow-live-codex-requirements-109")
             && report.contains("capture-origin live-codex"),
         "{report}"
     );
@@ -20721,9 +20733,9 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
             && report.contains("entry-artifact example-107 diagnostics"),
         "{report}"
     );
-    assert!(report.contains("profile-count UI 1"), "{report}");
+    assert!(report.contains("profile-count UI 3"), "{report}");
     assert!(
-        report.contains("target-count wasm32-unknown-sandbox-wasm 12"),
+        report.contains("target-count wasm32-unknown-sandbox-wasm 14"),
         "{report}"
     );
     assert!(
@@ -20812,9 +20824,9 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
     let model_executor_manifest =
         fs::read_to_string(artifact_dir.join("model-executor-manifest.txt")).unwrap();
     assert!(
-        model_executor_manifest.contains("entry-count 108")
-            && model_executor_manifest.contains("executor-family codex-skill-agent count 104")
-            && model_executor_manifest.contains("capture-origin live-codex count 104")
+        model_executor_manifest.contains("entry-count 110")
+            && model_executor_manifest.contains("executor-family codex-skill-agent count 106")
+            && model_executor_manifest.contains("capture-origin live-codex count 106")
             && model_executor_manifest.contains(
                 "entry example-100 semantic-task stateful-counter-live-codex-accepted-100"
             )
@@ -20838,7 +20850,11 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
             )
             && model_executor_manifest.contains(
                 "entry example-107 semantic-task package-registry-missing-import-rejected-107"
-            ),
+            )
+            && model_executor_manifest
+                .contains("entry example-108 semantic-task ui-workflow-live-codex-spec-draft-108")
+            && model_executor_manifest
+                .contains("entry example-109 semantic-task ui-workflow-live-codex-requirements-109"),
         "{model_executor_manifest}"
     );
 

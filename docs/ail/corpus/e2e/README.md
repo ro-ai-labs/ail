@@ -86,8 +86,8 @@ response JSON files. The batch output still must be replayed with
 The generated files are committed so release verification does not depend on
 live LLM access. The current corpus stores:
 
-- `examples.md`: 108 manifest entries with prompt, executor, profile, surface,
-  capture-origin, checker-result, and target metadata. One hundred entries are
+- `examples.md`: 110 manifest entries with prompt, executor, profile, surface,
+  capture-origin, checker-result, and target metadata. One hundred two entries are
   accepted prompt-to-artifact examples that replay through checked Core,
   bytecode, VM trace, and binary or target-contract evidence; eight entries are
   rejected diagnostic examples.
@@ -98,9 +98,9 @@ live LLM access. The current corpus stores:
   `live-codex` transcript imports.
 
 This is a checked release-evidence corpus with four replay-clean live LLM
-captures and one hundred four replay-clean live Codex skill-agent captures. The
+captures and one hundred six replay-clean live Codex skill-agent captures. The
 current corpus marks zero entries `capture-origin: deterministic-seed`, four
-entries `capture-origin: live-llm`, and one hundred four `codex-ail-spec-writer`
+entries `capture-origin: live-llm`, and one hundred six `codex-ail-spec-writer`
 entries `capture-origin: live-codex`. The replay report exposes
 capture-origin counts plus response,
 extracted-artifact, checked Core, bytecode, VM trace, native, target-report,
@@ -122,13 +122,13 @@ completion gate. The artifact bundle also writes
 executor labels, endpoint labels, capture origins, executor/origin pairs,
 executor/endpoint pairs, and per-entry semantic task provenance.
 
-The seed includes one real `UI` profile replay through `ui_workflow.ail`, which
-lowers UI route, form, dashboard, and workflow semantics into checked Core,
-bytecode, VM trace, and Wasm target-contract artifacts. Other UI-tagged seed
-entries still use surface metadata to keep threshold checks active while
-broader UI captures are added. Package-import seed entries replay through
-package-aware import resolution and compile the composed support package
-through checked Core, bytecode, and VM trace artifacts.
+The seed includes three real `UI` profile replays through `ui_workflow.ail`,
+which lower UI route, form, dashboard, and workflow semantics into checked Core,
+bytecode, VM trace, and Wasm target-contract artifacts across the core-to-spec,
+spec-draft, and requirements prompt surfaces. Other UI-tagged seed entries still
+use surface metadata to keep threshold checks active. Package-import seed
+entries replay through package-aware import resolution and compile the composed
+support package through checked Core, bytecode, and VM trace artifacts.
 
 Replay with:
 
