@@ -218,7 +218,7 @@ curl -sS http://inteligentia-pro-1:8080/v1/models
 cargo run -- ail-story examples/support_ticket.ail \
   --story-file examples/stories/example-30.md \
   --artifact-dir /tmp/ail-v03-story-llm \
-  --llm-endpoint http://inteligentia-pro-1:8080/
+  --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
 ```
 
 The harness is not part of the default unit suite because it depends on
@@ -262,7 +262,8 @@ and a portability report suitable for manual promotion into the corpus.
 
 - Add `docs/ail/manual/01-user-story-mode.md`.
 - Add a small non-default script for live prompt testing against
-  `http://inteligentia-pro-1:8080/`.
+  `http://inteligentia-pro-1:8080/v1/chat/completions`, with model discovery
+  through `http://inteligentia-pro-1:8080/v1/models`.
 - Tests:
   - manual link/path smoke test;
   - script help text smoke test;
@@ -287,7 +288,7 @@ curl -sS http://inteligentia-pro-1:8080/v1/models
 cargo run -- ail-story examples/support_ticket.ail \
   --story-file examples/stories/example-30.md \
   --artifact-dir /tmp/ail-v03-story-llm \
-  --llm-endpoint http://inteligentia-pro-1:8080/
+  --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
 ```
 
 Live LLM evidence is useful for promotion, but the implementation must be

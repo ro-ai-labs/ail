@@ -10,10 +10,12 @@ from __future__ import annotations
 import argparse
 import subprocess
 import sys
+import urllib.parse
 import urllib.request
 
 
-DEFAULT_ENDPOINT = "http://inteligentia-pro-1:8080/"
+DEFAULT_SERVER = "http://inteligentia-pro-1:8080/"
+DEFAULT_ENDPOINT = "http://inteligentia-pro-1:8080/v1/chat/completions"
 DEFAULT_PACKAGE = "examples/support_ticket.ail"
 DEFAULT_STORY_FILE = "examples/stories/example-30.md"
 DEFAULT_AGENT = "examples/ail_toolchain_agent.ail"
@@ -22,6 +24,19 @@ DEFAULT_ARTIFACT_DIR = "/tmp/ail-v03-story-llm"
 
 def endpoint_join(endpoint: str, suffix: str) -> str:
     return endpoint.rstrip("/") + "/" + suffix.lstrip("/")
+
+
+def models_url_for_endpoint(endpoint: str) -> str:
+    parsed = urllib.parse.urlsplit(endpoint)
+    if not parsed.scheme or not parsed.netloc:
+        raise SystemExit(f"invalid endpoint URL: {endpoint}")
+    base_path = parsed.path
+    if "/v1/" in base_path:
+        base_path = base_path.split("/v1/", 1)[0]
+    models_path = endpoint_join(base_path or "/", "/v1/models")
+    return urllib.parse.urlunsplit(
+        (parsed.scheme, parsed.netloc, models_path, "", "")
+    )
 
 
 def build_ail_story_command(args: argparse.Namespace) -> list[str]:
@@ -48,7 +63,7 @@ def build_ail_story_command(args: argparse.Namespace) -> list[str]:
 
 
 def check_models(endpoint: str) -> None:
-    models_url = endpoint_join(endpoint, "/v1/models")
+    models_url = models_url_for_endpoint(endpoint)
     with urllib.request.urlopen(models_url, timeout=10) as response:
         body = response.read().decode("utf-8", errors="replace")
     print(f"models endpoint: {models_url}")
@@ -61,7 +76,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
             "Run ail-story against the v0.3 live llama.cpp endpoint. "
             "Use --dry-run to print commands without network access."
         ),
-        epilog=f"Default live endpoint: {DEFAULT_ENDPOINT}",
+        epilog=f"Default live server: {DEFAULT_SERVER}",
     )
     parser.add_argument(
         "--endpoint",
@@ -117,7 +132,7 @@ def main(argv: list[str]) -> int:
     command = build_ail_story_command(args)
     if args.dry_run:
         print("model check:")
-        print("curl -sS " + endpoint_join(args.endpoint, "/v1/models"))
+        print("curl -sS " + models_url_for_endpoint(args.endpoint))
         print("ail-story:")
         print(" ".join(command))
         print("artifacts:")

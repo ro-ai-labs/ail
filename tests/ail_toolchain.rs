@@ -906,6 +906,7 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         "manifest.ail-story.txt",
         "agent-trace.txt",
         "http://inteligentia-pro-1:8080/",
+        "http://inteligentia-pro-1:8080/v1/chat/completions",
     ] {
         assert!(manual.contains(required), "{required}\n{manual}");
     }
@@ -932,11 +933,32 @@ fn script_v03_story_llm_harness_help_names_endpoint_and_dry_run() {
         "ail-story",
         "--dry-run",
         "--endpoint",
-        "http://inteligentia-pro-1:8080/",
+        "http://inteligentia-pro-1:8080",
+        "/v1/chat/completions",
         "examples/stories/example-30.md",
     ] {
         assert!(stdout.contains(required), "{required}\n{stdout}");
     }
+    let dry_run = Command::new("python3")
+        .args([&script, "--dry-run"])
+        .output()
+        .unwrap();
+    assert!(
+        dry_run.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&dry_run.stdout),
+        String::from_utf8_lossy(&dry_run.stderr)
+    );
+    let dry_run_stdout = String::from_utf8_lossy(&dry_run.stdout);
+    assert!(
+        dry_run_stdout.contains("curl -sS http://inteligentia-pro-1:8080/v1/models"),
+        "{dry_run_stdout}"
+    );
+    assert!(
+        dry_run_stdout
+            .contains("--llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions"),
+        "{dry_run_stdout}"
+    );
 }
 
 #[test]

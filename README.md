@@ -114,10 +114,13 @@ cargo run -- ail-build examples/support_ticket.ail \
   --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
 ```
 
-For llama.cpp-server, `--llm-endpoint http://inteligentia-pro-1:8080/` is
-accepted as shorthand for its `/completion` API. Explicit
-`/completion` and `/v1/chat/completions` paths are also supported; chat
-completion requests disable thinking through `chat_template_kwargs`.
+For llama.cpp-server, the hosted development model is exercised through
+`--llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions`. Root URLs
+such as `http://inteligentia-pro-1:8080/` are accepted as shorthand for
+`/completion`, and explicit `/completion` paths are also supported, but the
+chat-completions path gives the current hosted model the strongest
+artifact-format behavior. Chat completion requests disable thinking through
+`chat_template_kwargs`.
 
 The agent and base LLM are untrusted proposal mechanisms. The trusted boundary
 is checked AIL-Core plus the compiler, verifier, manifests, reports, and

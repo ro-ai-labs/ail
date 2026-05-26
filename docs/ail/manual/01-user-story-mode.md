@@ -19,7 +19,7 @@ cargo run -- ail-story examples/support_ticket.ail \
   --story-file examples/stories/example-30.md \
   --agent examples/ail_toolchain_agent.ail \
   --artifact-dir /tmp/ail-user-story-mode \
-  --llm-endpoint http://inteligentia-pro-1:8080/
+  --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
 ```
 
 The story file must include at least:
@@ -82,7 +82,7 @@ cargo run -- ail-story examples/support_ticket.ail \
   --story-file examples/stories/example-30.md \
   --agent examples/ail_toolchain_agent.ail \
   --artifact-dir /tmp/ail-user-story-mode-native \
-  --llm-endpoint http://inteligentia-pro-1:8080/ \
+  --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions \
   --target linux-x86_64-elf \
   --action CloseTicket \
   --out /tmp/ail-user-story-mode-native/CloseTicket
@@ -109,3 +109,9 @@ The harness is intentionally outside the default test suite because it depends
 on the hosted llama.cpp server and model behavior. Promote a live run into the
 examples corpus only after the generated requirements, spec, Core, bytecode,
 agent trace, and manifest have been reviewed.
+
+The harness probes `http://inteligentia-pro-1:8080/v1/models` and runs
+`ail-story` against `http://inteligentia-pro-1:8080/v1/chat/completions` by
+default. That path has the strongest artifact-format behavior for the hosted
+llama.cpp model; root `/completion` endpoints remain supported for other
+servers but may require prompt/model tuning.
