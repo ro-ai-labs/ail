@@ -20,6 +20,7 @@ class ManualCommand:
     label: str
     command: tuple[str, ...]
     live: bool = False
+    evidence: tuple[str, ...] = ()
 
     def shell_line(self) -> str:
         return " ".join(self.command)
@@ -103,6 +104,36 @@ CHAPTERS: tuple[ManualChapter, ...] = (
                 command=("rg", "--files", "docs/ail/prompts"),
             ),
             ManualCommand(
+                label="run-prompt-corpus",
+                command=(
+                    "cargo",
+                    "run",
+                    "--",
+                    "ail-prompt-corpus",
+                    "docs/ail/corpus/prompts",
+                    "--artifact-dir",
+                    "/tmp/ail-manual-prompt-corpus",
+                ),
+                evidence=(
+                    "prompt-corpus-portability.txt",
+                    "manifest.ail-prompt-corpus.txt",
+                ),
+            ),
+            ManualCommand(
+                label="replay-examples-prompt-surfaces",
+                command=(
+                    "cargo",
+                    "run",
+                    "--",
+                    "ail-examples",
+                    "examples",
+                    "--artifact-dir",
+                    "/tmp/ail-manual-prompt-examples",
+                    "--release-evidence",
+                ),
+                evidence=("AIL-Examples-Report", "prompt-count"),
+            ),
+            ManualCommand(
                 label="inspect-capture-help",
                 command=("python3", "scripts/capture_example_transcripts.py", "--help"),
             ),
@@ -183,6 +214,8 @@ def print_chapter(chapter: ManualChapter, include_live: bool) -> None:
         print(f"step {index} {command.label}")
         print(f"live {str(command.live).lower()}")
         print(command.shell_line())
+        for evidence in command.evidence:
+            print(f"evidence {evidence}")
 
 
 def run_chapter_checks(chapter: ManualChapter, include_live: bool) -> int:

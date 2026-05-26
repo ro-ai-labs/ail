@@ -905,6 +905,7 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         "AIL Interactive Manual",
         "scripts/run_ail_interactive_manual.py --list",
         "scripts/run_ail_interactive_manual.py --chapter user-story-mode --dry-run",
+        "scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run-checks",
         "user-story-mode",
         "examples-release",
         "prompt-interaction",
@@ -987,6 +988,30 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         assert!(
             dry_run_stdout.contains(required),
             "{required}\n{dry_run_stdout}"
+        );
+    }
+
+    let prompt_dry_run = Command::new("python3")
+        .args([&script, "--chapter", "prompt-interaction", "--dry-run"])
+        .output()
+        .unwrap();
+    assert!(
+        prompt_dry_run.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&prompt_dry_run.stdout),
+        String::from_utf8_lossy(&prompt_dry_run.stderr)
+    );
+    let prompt_stdout = String::from_utf8_lossy(&prompt_dry_run.stdout);
+    for required in [
+        "id prompt-interaction",
+        "cargo run -- ail-prompt-corpus docs/ail/corpus/prompts",
+        "cargo run -- ail-examples examples",
+        "manifest.ail-prompt-corpus.txt",
+        "AIL-Examples-Report",
+    ] {
+        assert!(
+            prompt_stdout.contains(required),
+            "{required}\n{prompt_stdout}"
         );
     }
 }
