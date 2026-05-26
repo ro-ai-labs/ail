@@ -123,6 +123,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
             | "ail-story"
             | "ail-pass"
             | "ail-bootstrap"
+            | "ail-agent-contracts"
             | "ail-examples"
             | "ail-e2e-corpus"
             | "ail-prompt-corpus"
@@ -135,7 +136,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
 }
 
 fn usage() -> String {
-    "usage: ail <ail-check|ail-core|ail-flow|ail-flow-edit|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-interview|ail-requirements|ail-spec|ail-draft|ail-build|ail-story|ail-pass|ail-bootstrap|ail-prompt-corpus|ail-examples|ail-patch> <path> [patch|target-package] [--action name] [--prompt text] [--story-file path] [--interview-file path] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--base-model name] [--target-model name] [--out path] [--all-actions] [--diagnostics-json] [--artifact-dir path] [--llm-endpoint url] [--release-evidence] [key=value ...]\nsaved-core usage: ail <ail-spec|ail-lower|ail-compile|ail-run|ail-build> --core-file <checked-core> [--action name] [--target target] [--out path] [--artifact-dir path] [key=value ...]\nwasm-contract usage: ail ail-compile <package-or-artifact.ailbc.json> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir> OR ail ail-compile --core-file <checked-core> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir>\ncore-patch usage: ail ail-patch --core-file <checked-core> <ail-core.patch.json>\nflow-edit usage: ail ail-flow-edit --core-file <checked-core> <ail-flow.edit.json>\nail-pass usage: ail ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR ail ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]\nail-bootstrap usage: ail ail-bootstrap <toolchain-agent-package> --pass <compiler-pass-package> --agent <toolchain-agent-package> --target linux-x86_64-elf --artifact-dir <dir>\nail-story usage: ail ail-story <package> --story-file <story.md> [--artifact-dir <dir>] [--llm-endpoint <url>] [--agent <agent-package-or-bytecode>] [--target <target> --action <ActionName> --out <path>]\nail-prompt-corpus usage: ail ail-prompt-corpus <corpus-file-or-dir> --artifact-dir <dir>\nail-examples usage: ail ail-examples examples --artifact-dir <dir> [--release-evidence]\ncompatibility alias: ail ail-e2e-corpus <examples-dir> --artifact-dir <dir> [--release-evidence]"
+    "usage: ail <ail-check|ail-core|ail-flow|ail-flow-edit|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-interview|ail-requirements|ail-spec|ail-draft|ail-build|ail-story|ail-pass|ail-bootstrap|ail-agent-contracts|ail-prompt-corpus|ail-examples|ail-patch> <path> [patch|target-package] [--action name] [--prompt text] [--story-file path] [--interview-file path] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--base-model name] [--target-model name] [--out path] [--all-actions] [--diagnostics-json] [--artifact-dir path] [--llm-endpoint url] [--release-evidence] [key=value ...]\nsaved-core usage: ail <ail-spec|ail-lower|ail-compile|ail-run|ail-build> --core-file <checked-core> [--action name] [--target target] [--out path] [--artifact-dir path] [key=value ...]\nwasm-contract usage: ail ail-compile <package-or-artifact.ailbc.json> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir> OR ail ail-compile --core-file <checked-core> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir>\ncore-patch usage: ail ail-patch --core-file <checked-core> <ail-core.patch.json>\nflow-edit usage: ail ail-flow-edit --core-file <checked-core> <ail-flow.edit.json>\nail-pass usage: ail ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR ail ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]\nail-bootstrap usage: ail ail-bootstrap <toolchain-agent-package> --pass <compiler-pass-package> --agent <toolchain-agent-package> --target linux-x86_64-elf --artifact-dir <dir>\nail-story usage: ail ail-story <package> --story-file <story.md> [--artifact-dir <dir>] [--llm-endpoint <url>] [--agent <agent-package-or-bytecode>] [--target <target> --action <ActionName> --out <path>]\nail-agent-contracts usage: ail ail-agent-contracts examples/agents\nail-prompt-corpus usage: ail ail-prompt-corpus <corpus-file-or-dir> --artifact-dir <dir>\nail-examples usage: ail ail-examples examples --artifact-dir <dir> [--release-evidence]\ncompatibility alias: ail ail-e2e-corpus <examples-dir> --artifact-dir <dir> [--release-evidence]"
         .to_string()
 }
 
@@ -454,6 +455,16 @@ struct AilE2eStoryFamilyDimensions {
     entry_count: usize,
     prompt_files: BTreeSet<String>,
     story_journeys: BTreeSet<String>,
+}
+
+#[derive(Debug)]
+struct AilAgentContract {
+    label: String,
+    version: String,
+    executor_family: String,
+    target_artifact: String,
+    file_name: String,
+    text: String,
 }
 
 struct AilBootstrapArtifactSet<'a> {
@@ -1151,6 +1162,100 @@ fn run_ail_prompt_corpus_command(path: &str, cli_options: &CliOptions) -> Result
         )?;
     }
     print!("{report_text}");
+    Ok(0)
+}
+
+fn parse_agent_contract_file(
+    root: &std::path::Path,
+    file_name: &str,
+) -> Result<AilAgentContract, String> {
+    let path = root.join(file_name);
+    let text = fs::read_to_string(&path)
+        .map_err(|error| format!("failed to read {}: {error}", path.display()))?;
+    let mut version = String::new();
+    let mut label = String::new();
+    let mut executor_family = String::new();
+    let mut target_artifact = String::new();
+    for line in text.lines() {
+        if let Some(value) = line.strip_prefix("version:") {
+            version = value.trim().to_string();
+        } else if let Some(value) = line.strip_prefix("executor-label:") {
+            label = value.trim().to_string();
+        } else if let Some(value) = line.strip_prefix("executor-family:") {
+            executor_family = value.trim().to_string();
+        } else if let Some(value) = line.strip_prefix("target artifact:") {
+            target_artifact = value.trim().to_string();
+        }
+    }
+    if version.is_empty() {
+        return Err(format!("agent contract {file_name} missing version"));
+    }
+    if label.is_empty() {
+        return Err(format!("agent contract {file_name} missing executor-label"));
+    }
+    if executor_family != "codex-skill-agent" {
+        return Err(format!(
+            "agent contract {file_name} must use executor-family codex-skill-agent"
+        ));
+    }
+    if target_artifact.is_empty() {
+        return Err(format!(
+            "agent contract {file_name} missing target artifact"
+        ));
+    }
+    Ok(AilAgentContract {
+        label,
+        version,
+        executor_family,
+        target_artifact,
+        file_name: file_name.to_string(),
+        text,
+    })
+}
+
+fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
+    let root = std::path::Path::new(path);
+    if !root.is_dir() {
+        return Err(format!("ail-agent-contracts requires a directory: {path}"));
+    }
+    let required_contracts = [
+        "codex-ail-requirements-writer.md",
+        "codex-ail-spec-writer.md",
+        "codex-ail-diagnostic-repairer.md",
+        "codex-ail-prompt-reviewer.md",
+    ];
+    let mut contracts = Vec::new();
+    for file_name in required_contracts {
+        contracts.push(parse_agent_contract_file(root, file_name)?);
+    }
+    let prompt_reviewer = contracts
+        .iter()
+        .find(|contract| contract.label == "codex-ail-prompt-reviewer")
+        .ok_or_else(|| "missing codex-ail-prompt-reviewer contract".to_string())?;
+    for required in [
+        "scripts/run_v03_prompt_llm_harness.py --review-artifacts",
+        "scripts/run_v03_story_llm_harness.py --review-artifacts",
+        "ail-examples examples --artifact-dir",
+    ] {
+        if !prompt_reviewer.text.contains(required) {
+            return Err(format!(
+                "agent contract {} missing {required}",
+                prompt_reviewer.file_name
+            ));
+        }
+    }
+
+    println!("AIL-Agent-Contracts-Report:");
+    println!("contract-count {}", contracts.len());
+    for contract in contracts {
+        println!(
+            "contract {} {} {} {}",
+            contract.label, contract.version, contract.executor_family, contract.target_artifact
+        );
+    }
+    println!("review-command scripts/run_v03_prompt_llm_harness.py --review-artifacts");
+    println!("review-command scripts/run_v03_story_llm_harness.py --review-artifacts");
+    println!("agent-contracts-result accepted");
     Ok(0)
 }
 
@@ -11382,6 +11487,9 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
     }
     if command == "ail-prompt-corpus" {
         return run_ail_prompt_corpus_command(path, cli_options);
+    }
+    if command == "ail-agent-contracts" {
+        return run_ail_agent_contracts_command(path);
     }
     if matches!(command, "ail-examples" | "ail-e2e-corpus") {
         return run_ail_e2e_corpus_command(path, cli_options);

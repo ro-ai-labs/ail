@@ -25,7 +25,8 @@ Run the manual chapter checks without contacting a live model:
 python3 scripts/run_ail_interactive_manual.py --chapter agent-entrypoint --run-checks
 ```
 
-The chapter checks the Codex-style agent contract files, checks
+The chapter checks the Codex-style agent contract files, validates them with
+`cargo run -- ail-agent-contracts examples/agents`, checks
 `examples/ail_toolchain_agent.ail`, verifies that the toolchain-agent package
 lowers to bytecode, and verifies that `ail-build` writes `agent.ailbc.json` and
 `agent-trace.txt` while the agent participates in the build entrypoint.
@@ -37,6 +38,7 @@ lowers to bytecode, and verifies that `ail-build` writes `agent.ailbc.json` and
 | `codex-ail-requirements-writer` | `codex-ail-requirements-writer.md` | AIL-Requirements or blocking questions | prompt envelope validates, then requirements feed a checked spec path |
 | `codex-ail-spec-writer` | `codex-ail-spec-writer.md` | canonical AIL-Spec | parser, checker, Core lowering, bytecode, VM trace, and target evidence pass |
 | `codex-ail-diagnostic-repairer` | `codex-ail-diagnostic-repairer.md` | repaired AIL-Spec or rejected diagnostic explanation | repaired artifact passes or the expected diagnostic is reproduced |
+| `codex-ail-prompt-reviewer` | `codex-ail-prompt-reviewer.md` | Prompt and story harness review report | `scripts/run_v03_prompt_llm_harness.py --review-artifacts`, `scripts/run_v03_story_llm_harness.py --review-artifacts`, then `ail-examples examples --artifact-dir ... --release-evidence` pass before promotion |
 
 ## Request JSON Shape
 

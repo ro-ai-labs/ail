@@ -202,6 +202,14 @@ BASE_CHAPTERS: tuple[ManualChapter, ...] = (
                 command=("rg", "--files", "examples/agents"),
             ),
             ManualCommand(
+                label="validate-agent-contracts",
+                command=("cargo", "run", "--", "ail-agent-contracts", "examples/agents"),
+                evidence=(
+                    "AIL-Agent-Contracts-Report",
+                    "codex-ail-prompt-reviewer.md",
+                ),
+            ),
+            ManualCommand(
                 label="check-toolchain-agent",
                 command=("cargo", "run", "--", "ail-check", "examples/ail_toolchain_agent.ail"),
             ),

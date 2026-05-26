@@ -1171,6 +1171,8 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
     for required in [
         "id agent-entrypoint",
         "cargo run -- ail-check examples/ail_toolchain_agent.ail",
+        "codex-ail-prompt-reviewer.md",
+        "cargo run -- ail-agent-contracts examples/agents",
         "cargo test ail_toolchain_agent_package_lowers_to_verified_bytecode --test ail_toolchain",
         "cargo test cli_ail_build_runs_toolchain_agent_bytecode --test ail_toolchain",
         "evidence agent.ailbc.json",
@@ -1277,6 +1279,78 @@ fn script_ail_interactive_manual_v03_authoring_gate_run_checks_succeeds() {
         "AIL-Examples-Report:",
         "AIL-Prompt-Corpus-Portability-Report:",
         "agent-trace.txt",
+    ] {
+        assert!(stdout.contains(required), "{required}\n{stdout}");
+    }
+}
+
+#[test]
+fn examples_agents_include_prompt_review_contract() {
+    let agent_readme = fs::read_to_string(format!(
+        "{}/examples/agents/README.md",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .unwrap();
+    let prompt_reviewer = fs::read_to_string(format!(
+        "{}/examples/agents/codex-ail-prompt-reviewer.md",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .unwrap();
+    for required in [
+        "codex-ail-prompt-reviewer",
+        "codex-ail-prompt-reviewer.md",
+        "Prompt and story harness review report",
+        "scripts/run_v03_prompt_llm_harness.py --review-artifacts",
+        "scripts/run_v03_story_llm_harness.py --review-artifacts",
+    ] {
+        assert!(
+            agent_readme.contains(required),
+            "{required}\n{agent_readme}"
+        );
+        assert!(
+            prompt_reviewer.contains(required),
+            "{required}\n{prompt_reviewer}"
+        );
+    }
+    for required in [
+        "version: 0.1.0",
+        "executor-label: codex-ail-prompt-reviewer",
+        "executor-family: codex-skill-agent",
+        "target artifact: AIL-Prompt-Interaction-Review",
+        "Do not promote generated content into ./examples",
+        "ail-examples examples --artifact-dir",
+    ] {
+        assert!(
+            prompt_reviewer.contains(required),
+            "{required}\n{prompt_reviewer}"
+        );
+    }
+}
+
+#[test]
+fn cli_ail_agent_contracts_validates_prompt_reviewer_contract() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let output = Command::new(binary)
+        .args(["ail-agent-contracts", "examples/agents"])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    for required in [
+        "AIL-Agent-Contracts-Report:",
+        "contract-count 4",
+        "contract codex-ail-requirements-writer",
+        "contract codex-ail-spec-writer",
+        "contract codex-ail-diagnostic-repairer",
+        "contract codex-ail-prompt-reviewer",
+        "review-command scripts/run_v03_prompt_llm_harness.py --review-artifacts",
+        "review-command scripts/run_v03_story_llm_harness.py --review-artifacts",
+        "agent-contracts-result accepted",
     ] {
         assert!(stdout.contains(required), "{required}\n{stdout}");
     }
