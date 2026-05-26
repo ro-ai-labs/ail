@@ -1522,7 +1522,7 @@ fn validate_ail_e2e_corpus_story_files(
     entries: &[AilE2eCorpusEntry],
     require_release_semantic_anchors: bool,
 ) -> Result<(), String> {
-    let mut semantic_anchor_story_count = 0usize;
+    let mut missing_semantic_anchor_story_count = 0usize;
     for entry in entries {
         let story_path = ail_e2e_entry_resolved_path(entry, "story-file")?;
         let story_fields = parse_ail_e2e_story_file_fields(&story_path)?;
@@ -1561,13 +1561,13 @@ fn validate_ail_e2e_corpus_story_files(
                 entry.id
             ));
         }
-        if semantic_anchor_count >= 3 {
-            semantic_anchor_story_count += 1;
+        if semantic_anchor_count < 3 && require_release_semantic_anchors {
+            missing_semantic_anchor_story_count += 1;
         }
     }
-    if require_release_semantic_anchors && semantic_anchor_story_count < 10 {
+    if require_release_semantic_anchors && missing_semantic_anchor_story_count > 0 {
         return Err(format!(
-            "ail-examples --release-evidence requires at least 10 semantic-anchor story files; found {semantic_anchor_story_count}"
+            "ail-examples --release-evidence requires semantic-anchor story files for every catalog entry; missing {missing_semantic_anchor_story_count}"
         ));
     }
     Ok(())

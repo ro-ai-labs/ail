@@ -399,8 +399,7 @@ fn example_learning_readmes_cover_repeated_family_gaps() {
         );
     }
 
-    let compiler_pass_readme =
-        fs::read_to_string(fixture("compiler_pass.ail/README.md")).unwrap();
+    let compiler_pass_readme = fs::read_to_string(fixture("compiler_pass.ail/README.md")).unwrap();
     for required in [
         "# Compiler Pass Example",
         "## Purpose",
@@ -447,8 +446,7 @@ fn example_learning_readmes_cover_repeated_family_gaps() {
         );
     }
 
-    let repeated_task_readme =
-        fs::read_to_string(fixture("repeated_task.ail/README.md")).unwrap();
+    let repeated_task_readme = fs::read_to_string(fixture("repeated_task.ail/README.md")).unwrap();
     for required in [
         "# Repeated Task Example",
         "## Purpose",
@@ -494,8 +492,7 @@ fn example_learning_readmes_cover_repeated_family_gaps() {
         );
     }
 
-    let secret_access_readme =
-        fs::read_to_string(fixture("secret_access.ail/README.md")).unwrap();
+    let secret_access_readme = fs::read_to_string(fixture("secret_access.ail/README.md")).unwrap();
     for required in [
         "# Secret Access Example",
         "## Purpose",
@@ -1197,7 +1194,8 @@ fn example_support_composed_stories_record_semantic_anchors() {
 
 #[test]
 fn example_stdlib_and_option_map_stories_record_semantic_anchors() {
-    let stdlib_spec = fs::read_to_string(fixture("ail_std_collections.ail/spec.ail-spec.md")).unwrap();
+    let stdlib_spec =
+        fs::read_to_string(fixture("ail_std_collections.ail/spec.ail-spec.md")).unwrap();
     let stdlib_package =
         fs::read_to_string(fixture("ail_std_collections.ail/ail-package.md")).unwrap();
     let option_map_spec = fs::read_to_string(fixture("option_map.ail/spec.ail-spec.md")).unwrap();
@@ -1497,7 +1495,8 @@ fn example_repeated_task_stories_record_semantic_anchors() {
 #[test]
 fn example_runtime_and_secret_stories_record_semantic_anchors() {
     let runtime_spec = fs::read_to_string(fixture("runtime_generic.ail/spec.ail-spec.md")).unwrap();
-    let runtime_package = fs::read_to_string(fixture("runtime_generic.ail/ail-package.md")).unwrap();
+    let runtime_package =
+        fs::read_to_string(fixture("runtime_generic.ail/ail-package.md")).unwrap();
     let secret_spec = fs::read_to_string(fixture("secret_access.ail/spec.ail-spec.md")).unwrap();
     let secret_package = fs::read_to_string(fixture("secret_access.ail/ail-package.md")).unwrap();
     let catalog = fs::read_to_string(fixture("examples.md")).unwrap();
@@ -24504,7 +24503,7 @@ fn cli_ail_e2e_corpus_release_evidence_requires_semantic_anchor_story_coverage()
     );
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.contains("ail-examples --release-evidence requires at least 10 semantic-anchor story files; found 0"),
+        stderr.contains("ail-examples --release-evidence requires semantic-anchor story files for every catalog entry; missing 100"),
         "{stderr}"
     );
 
