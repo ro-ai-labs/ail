@@ -35,6 +35,21 @@ python3 scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run
 python3 scripts/run_ail_interactive_manual.py --chapter agent-entrypoint --run-checks
 ```
 
+Live hosted prompt evidence remains opt-in. When the llama.cpp server is
+reachable, include the live prompt interaction review in the gate dry-run or
+execution:
+
+```sh
+python3 scripts/run_ail_interactive_manual.py --chapter v03-authoring-gate --dry-run --include-live
+python3 scripts/run_ail_interactive_manual.py --chapter v03-authoring-gate --run-checks --include-live
+```
+
+The live gate delegates to:
+
+```sh
+python3 scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run-checks --include-live
+```
+
 ## Evidence
 
 The gate should surface:
@@ -49,6 +64,10 @@ v03-roadmap.txt
 manifest.ail-examples.txt
 prompt-corpus-portability.txt
 manifest.ail-prompt-corpus.txt
+prompt-llm-harness-report.txt
+manifest.v03-prompt-llm.txt
+prompt-envelope-valid-count
+prompt-envelope-invalid-count
 agent.ailbc.json
 ```
 

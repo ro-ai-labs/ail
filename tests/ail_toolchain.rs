@@ -1232,6 +1232,38 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         );
     }
 
+    let prompt_live_dry_run = Command::new("python3")
+        .args([
+            &script,
+            "--chapter",
+            "prompt-interaction",
+            "--dry-run",
+            "--include-live",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        prompt_live_dry_run.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&prompt_live_dry_run.stdout),
+        String::from_utf8_lossy(&prompt_live_dry_run.stderr)
+    );
+    let prompt_live_stdout = String::from_utf8_lossy(&prompt_live_dry_run.stdout);
+    for required in [
+        "step 6 run-prompt-pack-live",
+        "python3 scripts/run_v03_prompt_llm_harness.py",
+        "step 7 review-prompt-pack-live-artifacts",
+        "python3 scripts/run_v03_prompt_llm_harness.py --review-artifacts /tmp/ail-v03-prompt-llm",
+        "evidence prompt-envelope-valid-count",
+        "evidence prompt-envelope-invalid-count",
+        "evidence manifest.v03-prompt-llm.txt",
+    ] {
+        assert!(
+            prompt_live_stdout.contains(required),
+            "{required}\n{prompt_live_stdout}"
+        );
+    }
+
     let agent_dry_run = Command::new("python3")
         .args([&script, "--chapter", "agent-entrypoint", "--dry-run"])
         .output()
@@ -1284,6 +1316,37 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "evidence agent-trace.txt",
     ] {
         assert!(gate_stdout.contains(required), "{required}\n{gate_stdout}");
+    }
+
+    let gate_live_dry_run = Command::new("python3")
+        .args([
+            &script,
+            "--chapter",
+            "v03-authoring-gate",
+            "--dry-run",
+            "--include-live",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        gate_live_dry_run.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&gate_live_dry_run.stdout),
+        String::from_utf8_lossy(&gate_live_dry_run.stderr)
+    );
+    let gate_live_stdout = String::from_utf8_lossy(&gate_live_dry_run.stdout);
+    for required in [
+        "run-prompt-interaction-live-checks",
+        "python3 scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run-checks --include-live",
+        "evidence prompt-llm-harness-report.txt",
+        "evidence manifest.v03-prompt-llm.txt",
+        "evidence prompt-envelope-valid-count",
+        "evidence prompt-envelope-invalid-count",
+    ] {
+        assert!(
+            gate_live_stdout.contains(required),
+            "{required}\n{gate_live_stdout}"
+        );
     }
 
     let all_dry_run = Command::new("python3")

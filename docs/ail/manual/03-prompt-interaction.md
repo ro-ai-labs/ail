@@ -70,6 +70,12 @@ python3 scripts/run_v03_prompt_llm_harness.py
 python3 scripts/run_v03_prompt_llm_harness.py --review-artifacts /tmp/ail-v03-prompt-llm
 ```
 
+The interactive manual includes both commands when live checks are requested:
+
+```sh
+python3 scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run-checks --include-live
+```
+
 Review mode checks request, response, content, report, manifest, fingerprint
 artifacts, prompt-specific probe metadata, expected `artifact_kind` values, and
 prompt-pack envelope shape for each required system prompt. It prints

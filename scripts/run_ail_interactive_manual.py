@@ -234,6 +234,22 @@ BASE_CHAPTERS: tuple[ManualChapter, ...] = (
                 command=("python3", "scripts/run_v03_prompt_llm_harness.py"),
                 live=True,
             ),
+            ManualCommand(
+                label="review-prompt-pack-live-artifacts",
+                command=(
+                    "python3",
+                    "scripts/run_v03_prompt_llm_harness.py",
+                    "--review-artifacts",
+                    "/tmp/ail-v03-prompt-llm",
+                ),
+                live=True,
+                evidence=(
+                    "prompt-llm-harness-report.txt",
+                    "manifest.v03-prompt-llm.txt",
+                    "prompt-envelope-valid-count",
+                    "prompt-envelope-invalid-count",
+                ),
+            ),
         ),
     ),
     ManualChapter(
@@ -366,6 +382,24 @@ V03_AUTHORING_GATE = ManualChapter(
             evidence=(
                 "agent.ailbc.json",
                 "agent-trace.txt",
+            ),
+        ),
+        ManualCommand(
+            label="run-prompt-interaction-live-checks",
+            command=(
+                "python3",
+                "scripts/run_ail_interactive_manual.py",
+                "--chapter",
+                "prompt-interaction",
+                "--run-checks",
+                "--include-live",
+            ),
+            live=True,
+            evidence=(
+                "prompt-llm-harness-report.txt",
+                "manifest.v03-prompt-llm.txt",
+                "prompt-envelope-valid-count",
+                "prompt-envelope-invalid-count",
             ),
         ),
     ),

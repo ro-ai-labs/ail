@@ -78,6 +78,13 @@ Live LLM chapters are opt-in. Add `--include-live` only when
 `http://inteligentia-pro-1:8080/` is reachable and the generated artifacts will
 be reviewed before promotion into `./examples`.
 
+For prompt-pack evidence, `--include-live` runs both the hosted harness and the
+offline artifact review:
+
+```sh
+python3 scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run-checks --include-live
+```
+
 ## Chapters
 
 - `user-story-mode`: story-first authoring with `ail-story`, checked
