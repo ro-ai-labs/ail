@@ -62,6 +62,9 @@ Review completed hosted User Story mode artifacts before promotion:
 python3 scripts/run_v03_story_llm_harness.py --review-artifacts /tmp/ail-v03-story-llm
 ```
 
+The review writes `story-llm-harness-report.txt` and
+`story-llm-harness-report.fingerprint.txt` in the reviewed artifact directory.
+
 Run deterministic local checks for a chapter:
 
 ```sh

@@ -134,6 +134,11 @@ def check_manifest_entries(artifact_root: Path, manifest_text: str, errors: list
     return checked
 
 
+def write_text(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text)
+
+
 def review_artifacts(artifact_dir: str) -> int:
     artifact_root = Path(artifact_dir)
     errors: list[str] = []
@@ -226,20 +231,34 @@ def review_artifacts(artifact_dir: str) -> int:
             except json.JSONDecodeError as error:
                 errors.append(f"invalid json {json_path}: {error}")
 
-    print("AIL-Story-LLM-Harness-Review:")
-    print(f"artifact-dir {artifact_root}")
-    print(f"story-id {story_id or '<missing>'}")
-    print(f"semantic-anchor-count {anchor_count or '<missing>'}")
-    print(f"manifest-entry-check-count {manifest_match_count}")
-    print(f"fingerprint-check-count {fingerprint_checks}")
-    print(f"agent-trace {'present' if agent_trace else 'missing'}")
+    review_lines = [
+        "AIL-Story-LLM-Harness-Review:",
+        f"artifact-dir {artifact_root}",
+        f"story-id {story_id or '<missing>'}",
+        f"semantic-anchor-count {anchor_count or '<missing>'}",
+        f"manifest-entry-check-count {manifest_match_count}",
+        f"fingerprint-check-count {fingerprint_checks}",
+        f"agent-trace {'present' if agent_trace else 'missing'}",
+    ]
     if errors:
-        print("review-result rejected")
+        review_lines.append("review-result rejected")
         for error in errors:
-            print(f"error {error}")
+            review_lines.append(f"error {error}")
+    else:
+        review_lines.append("review-result accepted")
+    review_text = "\n".join(review_lines) + "\n"
+    try:
+        write_text(artifact_root / "story-llm-harness-report.txt", review_text)
+        write_text(
+            artifact_root / "story-llm-harness-report.fingerprint.txt",
+            fnv64(review_text) + "\n",
+        )
+    except OSError as error:
+        print(review_text, end="")
+        print(f"error failed to write story harness review report: {error}")
         return 1
-    print("review-result accepted")
-    return 0
+    print(review_text, end="")
+    return 1 if errors else 0
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:

@@ -103,6 +103,8 @@ BASE_CHAPTERS: tuple[ManualChapter, ...] = (
                 ),
                 live=True,
                 evidence=(
+                    "story-llm-harness-report.txt",
+                    "story-llm-harness-report.fingerprint.txt",
                     "story-mode-report.txt",
                     "manifest.ail-story.txt",
                     "agent-trace.txt",
@@ -382,6 +384,25 @@ V03_AUTHORING_GATE = ManualChapter(
             ),
             evidence=(
                 "agent.ailbc.json",
+                "agent-trace.txt",
+            ),
+        ),
+        ManualCommand(
+            label="run-user-story-mode-live-checks",
+            command=(
+                "python3",
+                "scripts/run_ail_interactive_manual.py",
+                "--chapter",
+                "user-story-mode",
+                "--run-checks",
+                "--include-live",
+            ),
+            live=True,
+            evidence=(
+                "story-llm-harness-report.txt",
+                "story-llm-harness-report.fingerprint.txt",
+                "story-mode-report.txt",
+                "manifest.ail-story.txt",
                 "agent-trace.txt",
             ),
         ),

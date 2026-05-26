@@ -1207,6 +1207,7 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "evidence story-questions.ail-interview.md",
         "python3 scripts/run_v03_story_llm_harness.py --dry-run",
         "python3 scripts/run_v03_story_llm_harness.py --review-artifacts /tmp/ail-v03-story-llm",
+        "evidence story-llm-harness-report.txt",
         "live false",
     ] {
         assert!(
@@ -1346,6 +1347,11 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
     );
     let gate_live_stdout = String::from_utf8_lossy(&gate_live_dry_run.stdout);
     for required in [
+        "run-user-story-mode-live-checks",
+        "python3 scripts/run_ail_interactive_manual.py --chapter user-story-mode --run-checks --include-live",
+        "evidence story-llm-harness-report.txt",
+        "evidence story-llm-harness-report.fingerprint.txt",
+        "evidence story-mode-report.txt",
         "run-prompt-interaction-live-checks",
         "python3 scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run-checks --include-live",
         "evidence prompt-llm-harness-report.txt",
@@ -1743,6 +1749,129 @@ fn script_v03_story_llm_harness_help_names_endpoint_and_dry_run() {
         ),
         "{manual}"
     );
+    assert!(
+        manual.contains("story-llm-harness-report.txt")
+            && manual.contains("story-llm-harness-report.fingerprint.txt"),
+        "{manual}"
+    );
+}
+
+#[test]
+fn script_v03_story_llm_harness_review_writes_fingerprinted_report() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let script = format!(
+        "{}/scripts/run_v03_story_llm_harness.py",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let package = fixture("support_ticket.ail");
+    let agent_package = fixture("ail_toolchain_agent.ail");
+    let unique_suffix = format!(
+        "{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
+    let story_file =
+        std::env::temp_dir().join(format!("ail-story-harness-review-{unique_suffix}.md"));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-story-harness-review-artifacts-{unique_suffix}"
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::write(
+        &story_file,
+        concat!(
+            "# Support Ticket Harness Review Story\n\n",
+            "user-story-id: support-ticket-harness-review-story\n",
+            "user-story: As a reviewer I can preserve story harness review evidence for promotion decisions.\n",
+            "acceptance-criteria: checked requirements exist; checked spec exists; bytecode exists; story harness review report is fingerprinted\n",
+            "semantic-anchors: Support Tickets; Close ticket; TicketClosed; story harness review\n"
+        ),
+    )
+    .unwrap();
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let requirements = concat!(
+        "AIL-Requirements:\n",
+        "- The application manages support tickets.\n",
+        "- Ticket fields include id, title, status, and secret internal notes.\n",
+        "- The CloseTicket action requires ticket id input and ticket status not to be Closed.\n",
+        "- Failure NotFound happens when ticket id is missing and records TicketNotFound.\n",
+        "- The action guarantees closed tickets do not appear in the open queue.\n",
+        "- The action records trace event TicketClosed.\n"
+    );
+    let requirements_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(requirements)
+    );
+    let response_spec = fs::read_to_string(format!("{package}/spec.ail-spec.md")).unwrap();
+    let spec_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(&format!("```ail\n{response_spec}\n```"))
+    );
+    let server = serve_chat_responses(listener, vec![requirements_body, spec_body]);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-story",
+            &package,
+            "--story-file",
+            story_file.to_str().unwrap(),
+            "--agent",
+            &agent_package,
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+            "--llm-endpoint",
+            &format!("http://127.0.0.1:{}/v1/chat/completions", addr.port()),
+        ])
+        .output()
+        .unwrap();
+
+    let request_bodies = server.join().unwrap();
+    assert_eq!(request_bodies.len(), 2);
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let review = Command::new("python3")
+        .args([
+            &script,
+            "--review-artifacts",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        review.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&review.stdout),
+        String::from_utf8_lossy(&review.stderr)
+    );
+    let review_stdout = String::from_utf8_lossy(&review.stdout);
+    assert!(
+        review_stdout.contains("AIL-Story-LLM-Harness-Review:"),
+        "{review_stdout}"
+    );
+    assert!(
+        review_stdout.contains("review-result accepted"),
+        "{review_stdout}"
+    );
+    let review_report =
+        fs::read_to_string(artifact_dir.join("story-llm-harness-report.txt")).unwrap();
+    assert_eq!(review_report, review_stdout);
+    let review_report_fingerprint =
+        fs::read_to_string(artifact_dir.join("story-llm-harness-report.fingerprint.txt")).unwrap();
+    assert_eq!(
+        review_report_fingerprint.trim(),
+        fnv64_fingerprint(&review_report)
+    );
+
+    fs::remove_file(story_file).unwrap();
+    fs::remove_dir_all(artifact_dir).unwrap();
 }
 
 #[test]
