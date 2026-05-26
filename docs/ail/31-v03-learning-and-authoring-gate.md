@@ -109,6 +109,14 @@ two story journeys, and the report must emit `story-family-count` plus
 per-family entry, prompt-file, and story-journey counts. This allows useful
 prompt matrices while rejecting label-only repetition.
 
+Prompt-pack coverage is counted through accepted examples. Every required
+system prompt must have at least one accepted catalog entry so prompt coverage
+means the prompt generated an artifact that replayed through checked Core,
+bytecode, and runtime or target evidence. The report must emit
+`accepted-prompt-count` lines beside raw `prompt-count` lines; rejected-only
+prompt appearances are useful diagnostics, but they cannot prove prompt-to-
+artifact generation for that prompt.
+
 The v0.3 usefulness gate must preserve domain breadth. At minimum, the release
 verifier requires coverage for OS utilities, C interop, compiler passes,
 runtime behavior, package graphs, application workflows, agent tools,
@@ -186,6 +194,7 @@ cargo test cli_ail_e2e_corpus_requires_capability_level_thresholds
 cargo test cli_ail_e2e_corpus_requires_user_story_metadata
 cargo test cli_ail_e2e_corpus_rejects_unknown_story_evidence
 cargo test cli_ail_e2e_corpus_requires_story_diversity
+cargo test cli_ail_e2e_corpus_requires_accepted_example_for_each_prompt_file
 cargo test cli_ail_e2e_corpus_requires_v03_signal_diversity
 cargo test cli_ail_e2e_corpus_replays_checked_live_release_corpus
 cargo run -- ail-examples examples --artifact-dir /tmp/ail-v03-learning-examples --release-evidence

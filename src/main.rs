@@ -2247,6 +2247,23 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
             lines.push(format!("{label} {value} {count}"));
         }
     }
+    let mut accepted_prompt_counts = BTreeMap::new();
+    for evaluation in evaluations {
+        if evaluation
+            .entry
+            .fields
+            .get("checker-result")
+            .is_some_and(|checker_result| checker_result == "accepted")
+            && let Some(prompt_file) = evaluation.entry.fields.get("prompt-file")
+        {
+            *accepted_prompt_counts
+                .entry(prompt_file.as_str())
+                .or_insert(0usize) += 1;
+        }
+    }
+    for (prompt_file, count) in accepted_prompt_counts {
+        lines.push(format!("accepted-prompt-count {prompt_file} {count}"));
+    }
     let mut v03_signal_counts = BTreeMap::new();
     for evaluation in evaluations {
         if let Some(signal) = evaluation.entry.fields.get("v0.3-signal") {
@@ -2901,6 +2918,23 @@ fn validate_ail_e2e_corpus_release_coverage(entries: &[AilE2eCorpusEntry]) -> Re
         if !prompt_files.contains(required_prompt) {
             return Err(format!(
                 "ail-examples requires prompt-file {required_prompt}"
+            ));
+        }
+    }
+    let accepted_prompt_files = entries
+        .iter()
+        .filter(|entry| {
+            entry
+                .fields
+                .get("checker-result")
+                .is_some_and(|checker_result| checker_result == "accepted")
+        })
+        .filter_map(|entry| entry.fields.get("prompt-file").map(String::as_str))
+        .collect::<BTreeSet<_>>();
+    for required_prompt in REQUIRED_AIL_PROMPT_FILES {
+        if !accepted_prompt_files.contains(required_prompt) {
+            return Err(format!(
+                "ail-examples requires accepted example for prompt-file {required_prompt}"
             ));
         }
     }

@@ -528,8 +528,9 @@ already covers parts of this gate:
   `v0.3-signal` metadata; replay reports count low-level, mid-level,
   high-level, utility, module, multi-module system, program domain, story
   journey, and story evidence coverage so prompt matrices cannot silently
-  stand in for a useful learning corpus; each required domain must also span
-  at least three prompt files and at least two story journeys
+  stand in for a useful learning corpus; each required prompt file must have
+  accepted prompt-to-artifact coverage, and each required domain must also
+  span at least three prompt files and at least two story journeys
 - every release example now writes a deterministic `user-story.txt` artifact
   and fingerprint into the replay bundle, tying user-story views to the same
   manifest/report path as checked Core, bytecode, VM traces, target reports,

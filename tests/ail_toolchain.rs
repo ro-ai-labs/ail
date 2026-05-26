@@ -25157,6 +25157,81 @@ fn cli_ail_e2e_corpus_requires_full_prompt_pack_coverage() {
 }
 
 #[test]
+fn cli_ail_e2e_corpus_requires_accepted_example_for_each_prompt_file() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let corpus_dir = std::env::temp_dir().join(format!(
+        "ail-examples-accepted-prompt-coverage-{}",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-examples-accepted-prompt-coverage-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&corpus_dir);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&corpus_dir).unwrap();
+
+    let accepted_prompt_files = [
+        "docs/ail/prompts/interview.system.md",
+        "docs/ail/prompts/requirements.system.md",
+        "docs/ail/prompts/spec-draft.system.md",
+        "docs/ail/prompts/core-draft.system.md",
+        "docs/ail/prompts/repair.system.md",
+        "docs/ail/prompts/diagnostic-repair.system.md",
+        "docs/ail/prompts/core-to-spec.system.md",
+        "docs/ail/prompts/core-to-summary.system.md",
+        "docs/ail/prompts/flow-patch.system.md",
+        "docs/ail/prompts/trace-debug.system.md",
+    ];
+    let mut corpus_text = String::new();
+    for index in 0..100 {
+        corpus_text.push_str(&e2e_corpus_entry_text(
+            index,
+            &[(
+                "prompt-file",
+                accepted_prompt_files[index % accepted_prompt_files.len()],
+            )],
+        ));
+    }
+    corpus_text.push_str(&e2e_corpus_entry_text(
+        100,
+        &[
+            ("prompt-file", "docs/ail/prompts/interop.system.md"),
+            ("checker-result", "rejected"),
+            ("expected-diagnostic", "AIL-PROMPT-001"),
+            ("failure-taxonomy", "invalid-interop"),
+        ],
+    ));
+    fs::write(corpus_dir.join("examples.md"), corpus_text).unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-examples",
+            corpus_dir.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains(
+            "ail-examples requires accepted example for prompt-file docs/ail/prompts/interop.system.md"
+        ),
+        "{stderr}"
+    );
+
+    let _ = fs::remove_dir_all(corpus_dir);
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
 fn cli_ail_e2e_corpus_requires_profile_thresholds() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let corpus_dir = std::env::temp_dir().join(format!(
@@ -26123,6 +26198,10 @@ fn cli_ail_e2e_corpus_writes_report_for_metadata_complete_corpus() {
     assert!(report.contains("profile-count System 35"), "{report}");
     assert!(
         report.contains("prompt-count docs/ail/prompts/spec-draft.system.md 9"),
+        "{report}"
+    );
+    assert!(
+        report.contains("accepted-prompt-count docs/ail/prompts/spec-draft.system.md 9"),
         "{report}"
     );
     assert!(
