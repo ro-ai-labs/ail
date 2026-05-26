@@ -572,10 +572,10 @@ already covers parts of this gate:
   unsupported target effects and C interop diagnostics for invalid nullable
   pointer contracts, plus System profile diagnostics for missing capabilities
   and package-loader diagnostics for unresolved registry imports
-- clean-worktree v0.2 release audit run at commit `01edeb3`, generated with
+- clean-worktree v0.2 release audit run at commit `264765c`, generated with
   `python3 scripts/run_v02_release_audit.py --bundle-root
-  /tmp/ail-useful-examples-clean-01edeb3`; its
-  `release-audit-manifest.fingerprint.txt` is `fnv64:e2403f4083310db9`, and
+  /tmp/ail-user-story-clean-264765c`; its
+  `release-audit-manifest.fingerprint.txt` is `fnv64:d9be2b5dcf6ecf03`, and
   the audit manifest records `ok` for cargo format, diff whitespace, check,
   tests, clippy, conformance fixtures, build, Wasm host contract, Darwin
   contract, spec round-trip, bootstrap, and example release evidence
