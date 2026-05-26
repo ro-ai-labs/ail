@@ -1,0 +1,102 @@
+# Incident Response Example
+
+## Purpose
+
+`incident_response.ail` is the high-level multi-module teaching package for a
+realistic service incident workflow. It shows how AIL can represent an
+application that spans identity, policy, notification, workflow transitions,
+UI command surfaces, secret data, target contracts, VM replay, and regenerated
+user-story views.
+
+The example is meant to prove more than one action. It demonstrates that a
+complex system can be authored as several specs, imported as a package graph,
+checked into Core, lowered into bytecode, and replayed through VM, Wasm, and
+Darwin target-contract evidence while preserving reviewer-facing stories.
+
+## Concepts Taught
+
+- Multi-module application structure with `incident_identity.ail`,
+  `incident_policy.ail`, `incident_notifications.ail`, and
+  `incident_response.ail`.
+- Role modeling for responder, incident commander, and service owner users.
+- Incident state transitions from declaration through postmortem.
+- Policy-sensitive escalation and notification audit behavior.
+- Secret private notes and pager tokens that must not leak to public timeline
+  or agent-visible outputs.
+- UI route, form, dashboard, and workflow semantics in the same package as
+  application actions.
+- Workflow ordering rules that block notification, resolution, and postmortem
+  steps until earlier lifecycle steps have happened.
+- User-story journeys across `story-to-spec`, `spec-to-story`, and
+  `story-amendment`.
+
+## Files To Inspect
+
+- `ail-package.md`: package metadata, imports, profile, features, and target
+  support.
+- `spec.ail-spec.md`: the canonical incident response specification.
+- `../incident_identity.ail/spec.ail-spec.md`: users, roles, teams, email, and
+  pager data.
+- `../incident_policy.ail/spec.ail-spec.md`: services, severity policy, and
+  policy violation failure semantics.
+- `../incident_notifications.ail/spec.ail-spec.md`: AgentTool notification
+  surface, pager token handling, permission, approval, and audit trace.
+- `../examples.md`: entries `example-111` through `example-115` cover the
+  incident response prompt surfaces, targets, and story journeys.
+- `../stories/example-111.md` through `../stories/example-115.md`: generated
+  user-story views for declaration, escalation, lifecycle regeneration,
+  amendment, and dashboard coverage.
+
+## Expected Replay Artifacts
+
+Replay the corpus to inspect the incident artifacts:
+
+```bash
+cargo run -- ail-examples examples --artifact-dir /tmp/ail-incident-response-examples --release-evidence
+```
+
+Useful artifacts to inspect after replay:
+
+- `examples/example-111/checked.ail-core.txt`
+- `examples/example-111/artifact.ailbc.json`
+- `examples/example-111/vm-trace.txt`
+- `examples/example-112/target-report.txt`
+- `examples/example-113/user-story.txt`
+- `examples/example-114/target-report.txt`
+- `examples/example-115/target-report.txt`
+
+The direct conformance check is:
+
+```bash
+cargo run -- ail-conformance examples/incident_response.ail --artifact-dir /tmp/ail-incident-response-conformance
+```
+
+## Rejected Fixtures
+
+This package does not yet include package-local rejected fixtures. That is a
+v0.3 gap. High-value rejected fixtures should cover:
+
+- leaking `private notes` into the public timeline;
+- notification without responder pager or approved channel;
+- escalation without commander review where policy requires it;
+- resolving before mitigation;
+- starting postmortem before resolution;
+- route or dashboard access without the matching role permission.
+
+Those fixtures should become repair tutorials, not only negative checks.
+
+## Next Example To Read
+
+Read `../refund_tool.ail/README.md` before this package if you want the smaller
+AgentTool safety surface first. After this package, the next useful examples
+should be a hardware-facing system package and a richer stateful application
+that teaches persistence, idempotency, locks, and replay after failure.
+
+## v0.3 Learning Signal
+
+Incident Response is the current high-level benchmark for AIL examples. It
+shows that complex systems need richer story graphs across imported modules,
+UI surfaces, workflow transitions, target contracts, and regenerated story
+views. v0.3 should promote this from a passing corpus family into a guided
+walkthrough with rejected fixtures, repair paths, and story-diff artifacts that
+show exactly how a user story amends the checked spec.

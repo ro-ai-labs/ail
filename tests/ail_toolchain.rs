@@ -364,6 +364,30 @@ fn example_learning_readmes_cover_repeated_family_gaps() {
             "{required}\n{stateful_readme}"
         );
     }
+
+    let incident_readme = fs::read_to_string(fixture("incident_response.ail/README.md")).unwrap();
+    for required in [
+        "# Incident Response Example",
+        "## Purpose",
+        "## Concepts Taught",
+        "## Files To Inspect",
+        "## Expected Replay Artifacts",
+        "## Rejected Fixtures",
+        "## Next Example To Read",
+        "## v0.3 Learning Signal",
+        "multi-module",
+        "identity",
+        "policy",
+        "notification",
+        "workflow transitions",
+        "example-111",
+        "example-115",
+    ] {
+        assert!(
+            incident_readme.contains(required),
+            "{required}\n{incident_readme}"
+        );
+    }
 }
 
 fn detailed_ail_diagnostic(core: &ail::ail::AilCore, code: &str, message: &str) -> String {

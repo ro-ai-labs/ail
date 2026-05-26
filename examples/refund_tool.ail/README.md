@@ -86,11 +86,9 @@ diagnostic path for the same domain.
 
 ## Next Example To Read
 
-Read `../incident_response.ail/README.md` after this package once that README
-exists. It should become the natural next step from a single AgentTool to a
-multi-module workflow with identity, policy, notification, dashboard, and
-postmortem surfaces. Until then, use `../incident_response.ail/spec.ail-spec.md`
-as the next high-level reference.
+Read `../incident_response.ail/README.md` after this package. It is the natural
+next step from a single AgentTool to a multi-module workflow with identity,
+policy, notification, dashboard, and postmortem surfaces.
 
 ## v0.3 Learning Signal
 
