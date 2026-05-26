@@ -521,12 +521,14 @@ already covers parts of this gate:
   interop diagnostic example and one rejected permission/capability diagnostic
   example, plus one rejected package-resolution diagnostic example
 - example catalog entries now carry `use-case`, `capability-level`,
-  `capability-under-test`, `program-scale`, `user-story-id`, `user-story`,
-  `acceptance-criteria`, `story-evidence`, `story-journey`,
-  `story-roundtrip`, `distinctness-claim`, and `v0.3-signal` metadata;
-  replay reports count low-level, mid-level, high-level, utility, module,
-  multi-module system, story journey, and story evidence coverage so prompt
-  matrices cannot silently stand in for a useful learning corpus
+  `capability-under-test`, `program-scale`, `program-domain`,
+  `module-count`, `spec-count`, `story-count`, `interacts-with`,
+  `user-story-id`, `user-story`, `acceptance-criteria`, `story-evidence`,
+  `story-journey`, `story-roundtrip`, `distinctness-claim`, and
+  `v0.3-signal` metadata; replay reports count low-level, mid-level,
+  high-level, utility, module, multi-module system, program domain, story
+  journey, and story evidence coverage so prompt matrices cannot silently
+  stand in for a useful learning corpus
 - every release example now writes a deterministic `user-story.txt` artifact
   and fingerprint into the replay bundle, tying user-story views to the same
   manifest/report path as checked Core, bytecode, VM traces, target reports,

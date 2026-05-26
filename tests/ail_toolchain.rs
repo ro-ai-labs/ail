@@ -79,6 +79,24 @@ fn e2e_corpus_entry_text(index: usize, overrides: &[(&str, &str)]) -> String {
         10..=19 | 30..=39 | 65..=84 => "module",
         _ => "multi-module-system",
     };
+    let program_domain = match index {
+        0..=19 => "package-graph",
+        20..=24 | 65 => "ui-workflow",
+        25..=29 | 85..=89 => "c-interop",
+        30..=34 | 90..=94 => "os-utility",
+        35..=39 | 75..=79 | 95..=99 => "runtime",
+        40..=54 => "agent-tool",
+        55..=64 => "compiler",
+        66..=74 => "system-driver",
+        80..=84 => "application",
+        _ => "application",
+    };
+    let (module_count, spec_count, story_count, interacts_with) = match program_scale {
+        "multi-module-system" => ("3", "3", "3", "policy,module,runtime"),
+        "module" if program_domain == "package-graph" => ("2", "2", "2", "support_shared"),
+        "module" => ("1", "1", "1", "none"),
+        _ => ("1", "1", "1", "none"),
+    };
     let target = match index {
         85..=89 => "wasm32-unknown-sandbox-wasm",
         90..=94 => "aarch64-apple-darwin-libsystem-macho",
@@ -122,6 +140,11 @@ fn e2e_corpus_entry_text(index: usize, overrides: &[(&str, &str)]) -> String {
         ("capability-level", capability_level.to_string()),
         ("capability-under-test", "application-workflow".to_string()),
         ("program-scale", program_scale.to_string()),
+        ("program-domain", program_domain.to_string()),
+        ("module-count", module_count.to_string()),
+        ("spec-count", spec_count.to_string()),
+        ("story-count", story_count.to_string()),
+        ("interacts-with", interacts_with.to_string()),
         (
             "user-story-id",
             format!("support-ticket-story-{}", index % 12),
@@ -224,6 +247,51 @@ fn write_e2e_transcript_files(root: &std::path::Path, count: usize) {
         )
         .unwrap();
     }
+}
+
+fn assert_e2e_corpus_override_failure(
+    test_name: &str,
+    index_to_override: usize,
+    overrides: &[(&str, &str)],
+    expected_stderr: &str,
+) {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let corpus_dir =
+        std::env::temp_dir().join(format!("ail-examples-{test_name}-{}", std::process::id()));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-examples-{test_name}-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&corpus_dir);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&corpus_dir).unwrap();
+    write_e2e_transcript_files(&corpus_dir, 100);
+    fs::write(
+        corpus_dir.join("examples.md"),
+        e2e_corpus_text_with_override(index_to_override, overrides),
+    )
+    .unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-examples",
+            corpus_dir.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains(expected_stderr), "{stderr}");
+
+    let _ = fs::remove_dir_all(corpus_dir);
+    let _ = fs::remove_dir_all(artifact_dir);
 }
 
 fn detailed_ail_diagnostic(core: &ail::ail::AilCore, code: &str, message: &str) -> String {
@@ -21649,6 +21717,11 @@ fn cli_ail_e2e_corpus_requires_llm_and_codex_executor_families() {
              capability-level: high-level\n\
              capability-under-test: application-workflow\n\
              program-scale: multi-module-system\n\
+             program-domain: application\n\
+             module-count: 3\n\
+             spec-count: 3\n\
+             story-count: 3\n\
+             interacts-with: ticket.store,policy.audit\n\
              user-story-id: support-ticket-executor-coverage-{index}\n\
              user-story: As a reviewer I can inspect executor coverage scenario {index}.\n\
              acceptance-criteria: checked spec exists; target evidence exists\n\
@@ -21724,6 +21797,11 @@ fn cli_ail_e2e_corpus_requires_rejected_example_diagnostics() {
              capability-level: high-level\n\
              capability-under-test: application-workflow\n\
              program-scale: multi-module-system\n\
+             program-domain: application\n\
+             module-count: 3\n\
+             spec-count: 3\n\
+             story-count: 3\n\
+             interacts-with: ticket.store,policy.audit\n\
              user-story-id: support-ticket-diagnostic-setup-{index}\n\
              user-story: As a reviewer I can inspect accepted diagnostic setup scenario {index}.\n\
              acceptance-criteria: checked spec exists; diagnostic threshold setup exists\n\
@@ -21756,6 +21834,11 @@ fn cli_ail_e2e_corpus_requires_rejected_example_diagnostics() {
          capability-level: high-level\n\
          capability-under-test: diagnostic-replay\n\
          program-scale: module\n\
+         program-domain: application\n\
+         module-count: 3\n\
+         spec-count: 3\n\
+         story-count: 3\n\
+         interacts-with: ticket.store,policy.audit\n\
          user-story-id: support-ticket-rejected-diagnostic\n\
          user-story: As a reviewer I can inspect rejected support-ticket diagnostics.\n\
          acceptance-criteria: expected diagnostic exists; diagnostic artifact exists\n\
@@ -21840,6 +21923,11 @@ fn cli_ail_e2e_corpus_requires_full_prompt_pack_coverage() {
              capability-level: high-level\n\
              capability-under-test: prompt-surface-coverage\n\
              program-scale: multi-module-system\n\
+             program-domain: application\n\
+             module-count: 3\n\
+             spec-count: 3\n\
+             story-count: 3\n\
+             interacts-with: ticket.store,policy.audit\n\
              user-story-id: support-ticket-prompt-coverage-{index}\n\
              user-story: As a reviewer I can inspect prompt coverage scenario {index}.\n\
              acceptance-criteria: prompt pack coverage exists; checked spec exists\n\
@@ -22120,6 +22208,107 @@ fn cli_ail_e2e_corpus_rejects_unknown_story_evidence() {
 
     let _ = fs::remove_dir_all(corpus_dir);
     let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
+fn cli_ail_e2e_corpus_requires_program_domain_metadata() {
+    assert_e2e_corpus_override_failure(
+        "program-domain-metadata",
+        0,
+        &[("program-domain", "")],
+        "examples catalog entry example-0 is missing program-domain",
+    );
+}
+
+#[test]
+fn cli_ail_e2e_corpus_rejects_unknown_program_domain() {
+    assert_e2e_corpus_override_failure(
+        "unknown-program-domain",
+        0,
+        &[("program-domain", "toy")],
+        "examples catalog entry example-0 has unknown program-domain toy",
+    );
+}
+
+#[test]
+fn cli_ail_e2e_corpus_rejects_invalid_spectrum_counts() {
+    assert_e2e_corpus_override_failure(
+        "invalid-module-count",
+        0,
+        &[("module-count", "0")],
+        "examples catalog entry example-0 has invalid module-count 0",
+    );
+}
+
+#[test]
+fn cli_ail_e2e_corpus_requires_multi_module_interactions() {
+    assert_e2e_corpus_override_failure(
+        "multi-module-interaction",
+        20,
+        &[("interacts-with", "none")],
+        "examples catalog entry example-20 multi-module-system must set module-count/spec-count/story-count >= 2 and interacts-with other than none",
+    );
+}
+
+#[test]
+fn cli_ail_e2e_corpus_requires_program_domain_thresholds() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let corpus_dir = std::env::temp_dir().join(format!(
+        "ail-examples-program-domain-coverage-{}",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-examples-program-domain-coverage-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&corpus_dir);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&corpus_dir).unwrap();
+    write_e2e_transcript_files(&corpus_dir, 100);
+    let mut corpus_text = String::new();
+    for index in 0..100 {
+        corpus_text.push_str(&e2e_corpus_entry_text(
+            index,
+            &[("program-domain", "application")],
+        ));
+    }
+    fs::write(corpus_dir.join("examples.md"), corpus_text).unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-examples",
+            corpus_dir.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains(
+            "ail-examples requires at least 5 program-domain os-utility examples; found 0"
+        ),
+        "{stderr}"
+    );
+
+    let _ = fs::remove_dir_all(corpus_dir);
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
+fn cli_ail_e2e_corpus_rejects_shallow_diagnostic_domain() {
+    assert_e2e_corpus_override_failure(
+        "diagnostic-domain-consistency",
+        0,
+        &[("program-domain", "diagnostic")],
+        "examples catalog entry example-0 diagnostic domain must use checker-result rejected or story-evidence diagnostics",
+    );
 }
 
 #[test]

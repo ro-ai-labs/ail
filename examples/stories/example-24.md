@@ -6,3 +6,8 @@ acceptance-criteria: checked spec exists; checked core exists; bytecode exists; 
 story-journey: story-amendment
 story-roundtrip: semantic-similar
 story-evidence: checked-core
+program-domain: ui-workflow
+module-count: 3
+spec-count: 3
+story-count: 3
+interacts-with: ui.form,ui.route,ui.state

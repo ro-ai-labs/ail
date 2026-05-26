@@ -14,10 +14,12 @@ The v0.2 release gate requires at least 100 distinct semantic examples.
 
 The examples are not just a prompt regression set. Each catalog entry declares
 `use-case`, `capability-level`, `capability-under-test`,
-`program-scale`, `user-story-id`, `user-story`, `acceptance-criteria`,
-`story-evidence`, `story-journey`, `story-roundtrip`, `distinctness-claim`,
-and `v0.3-signal` metadata so the verifier can prove that the catalog spans
-useful work from low-level development to high-level workflows.
+`program-scale`, `program-domain`, `module-count`, `spec-count`,
+`story-count`, `interacts-with`, `user-story-id`, `user-story`,
+`acceptance-criteria`, `story-evidence`, `story-journey`,
+`story-roundtrip`, `distinctness-claim`, and `v0.3-signal` metadata so the
+verifier can prove that the catalog spans useful work from low-level
+development to high-level workflows.
 
 The current ladder is:
 
@@ -129,9 +131,10 @@ The generated files are committed so release verification does not depend on
 live LLM access. The current corpus stores:
 
 - `examples.md`: 111 manifest entries with prompt, executor, profile, surface,
-  use-case, capability-level, capability-under-test, program scale, user-story
-  metadata, story journey, distinctness, capture-origin, checker-result,
-  target, and v0.3 learning metadata. One hundred three entries are accepted
+  use-case, capability-level, capability-under-test, program scale, program
+  domain, module/spec/story counts, interaction metadata, user-story metadata,
+  story journey, distinctness, capture-origin, checker-result, target, and
+  v0.3 learning metadata. One hundred three entries are accepted
   prompt-to-artifact examples that replay through checked Core, bytecode, VM
   trace, and binary or target-contract evidence; eight entries are rejected
   diagnostic examples.
@@ -148,7 +151,7 @@ current corpus marks zero entries `capture-origin: deterministic-seed`, four
 entries `capture-origin: live-llm`, and one hundred seven `codex-ail-spec-writer`
 entries `capture-origin: live-codex`. The replay report exposes
 capability-level counts, program-scale counts, story-journey counts,
-story-evidence counts, capture-origin counts, response,
+program-domain counts, story-evidence counts, capture-origin counts, response,
 extracted-artifact, checked Core, bytecode, VM trace, native, target-report,
 and diagnostics fingerprint reuse. Response, extracted-artifact, and
 target-report duplicate counts must remain zero before claiming the v0.2

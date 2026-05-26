@@ -6,3 +6,8 @@ acceptance-criteria: checked spec exists; checked core exists; bytecode exists; 
 story-journey: story-amendment
 story-roundtrip: semantic-similar
 story-evidence: target-report
+program-domain: c-interop
+module-count: 1
+spec-count: 1
+story-count: 1
+interacts-with: none

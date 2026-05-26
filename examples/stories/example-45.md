@@ -6,3 +6,8 @@ acceptance-criteria: checked spec exists; checked core exists; bytecode exists; 
 story-journey: spec-to-story
 story-roundtrip: semantic-similar
 story-evidence: target-report
+program-domain: agent-tool
+module-count: 3
+spec-count: 3
+story-count: 3
+interacts-with: payment.provider,policy.engine,audit.log

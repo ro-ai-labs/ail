@@ -6,3 +6,8 @@ acceptance-criteria: checked spec exists; checked core exists; bytecode exists; 
 story-journey: story-amendment
 story-roundtrip: semantic-similar
 story-evidence: vm-trace
+program-domain: package-graph
+module-count: 2
+spec-count: 2
+story-count: 2
+interacts-with: support_shared

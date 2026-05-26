@@ -1156,6 +1156,11 @@ fn ail_e2e_corpus_entry_from_fields(
         "capability-level",
         "capability-under-test",
         "program-scale",
+        "program-domain",
+        "module-count",
+        "spec-count",
+        "story-count",
+        "interacts-with",
         "user-story-id",
         "user-story",
         "acceptance-criteria",
@@ -1219,6 +1224,56 @@ fn ail_e2e_corpus_entry_from_fields(
         return Err(format!(
             "examples catalog entry {id} has unknown program-scale {program_scale}"
         ));
+    }
+    let program_domain = fields
+        .get("program-domain")
+        .map(String::as_str)
+        .unwrap_or_default();
+    if !matches!(
+        program_domain,
+        "os-utility"
+            | "c-interop"
+            | "compiler"
+            | "runtime"
+            | "package-graph"
+            | "application"
+            | "agent-tool"
+            | "ui-workflow"
+            | "system-driver"
+            | "diagnostic"
+    ) {
+        return Err(format!(
+            "examples catalog entry {id} has unknown program-domain {program_domain}"
+        ));
+    }
+    let module_count = ail_e2e_positive_count_field(&id, fields, "module-count")?;
+    let spec_count = ail_e2e_positive_count_field(&id, fields, "spec-count")?;
+    let story_count = ail_e2e_positive_count_field(&id, fields, "story-count")?;
+    let interacts_with = fields
+        .get("interacts-with")
+        .map(String::as_str)
+        .unwrap_or_default();
+    if program_scale == "multi-module-system"
+        && (module_count < 2 || spec_count < 2 || story_count < 2 || interacts_with == "none")
+    {
+        return Err(format!(
+            "examples catalog entry {id} multi-module-system must set module-count/spec-count/story-count >= 2 and interacts-with other than none"
+        ));
+    }
+    if program_domain == "diagnostic" {
+        let checker_result = fields
+            .get("checker-result")
+            .map(String::as_str)
+            .unwrap_or_default();
+        let story_evidence = fields
+            .get("story-evidence")
+            .map(String::as_str)
+            .unwrap_or_default();
+        if checker_result != "rejected" && story_evidence != "diagnostics" {
+            return Err(format!(
+                "examples catalog entry {id} diagnostic domain must use checker-result rejected or story-evidence diagnostics"
+            ));
+        }
     }
     let story_journey = fields
         .get("story-journey")
@@ -1323,6 +1378,23 @@ fn ail_e2e_corpus_entry_from_fields(
         source_file: source_file.to_string(),
         fields: fields.clone(),
     })
+}
+
+fn ail_e2e_positive_count_field(
+    id: &str,
+    fields: &BTreeMap<String, String>,
+    field: &str,
+) -> Result<usize, String> {
+    let value = fields.get(field).map(String::as_str).unwrap_or_default();
+    let parsed = value
+        .parse::<usize>()
+        .map_err(|_| format!("examples catalog entry {id} has invalid {field} {value}"))?;
+    if parsed == 0 {
+        return Err(format!(
+            "examples catalog entry {id} has invalid {field} {value}"
+        ));
+    }
+    Ok(parsed)
 }
 
 fn validate_ail_e2e_corpus_transcript_files(entries: &[AilE2eCorpusEntry]) -> Result<(), String> {
@@ -1759,6 +1831,7 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
         ("profile", "profile-count"),
         ("capability-level", "capability-level-count"),
         ("program-scale", "program-scale-count"),
+        ("program-domain", "program-domain-count"),
         ("story-evidence", "story-evidence-count"),
         ("story-journey", "story-journey-count"),
         ("story-roundtrip", "story-roundtrip-count"),
@@ -2088,7 +2161,7 @@ fn push_ail_e2e_entry_artifact_lines(
 fn render_ail_e2e_user_story_text(entry: &AilE2eCorpusEntry) -> String {
     let field = |key: &str| entry.fields.get(key).map(String::as_str).unwrap_or("");
     format!(
-        "AIL-User-Story:\nentry {}\nid {}\nstory {}\nacceptance-criteria {}\nuse-case {}\ncapability-under-test {}\nprogram-scale {}\nstory-journey {}\nstory-roundtrip {}\nstory-evidence {}\nsemantic-task {}\n\n",
+        "AIL-User-Story:\nentry {}\nid {}\nstory {}\nacceptance-criteria {}\nuse-case {}\ncapability-under-test {}\nprogram-scale {}\nprogram-domain {}\nmodule-count {}\nspec-count {}\nstory-count {}\ninteracts-with {}\nstory-journey {}\nstory-roundtrip {}\nstory-evidence {}\nsemantic-task {}\n\n",
         entry.id,
         field("user-story-id"),
         field("user-story"),
@@ -2096,6 +2169,11 @@ fn render_ail_e2e_user_story_text(entry: &AilE2eCorpusEntry) -> String {
         field("use-case"),
         field("capability-under-test"),
         field("program-scale"),
+        field("program-domain"),
+        field("module-count"),
+        field("spec-count"),
+        field("story-count"),
+        field("interacts-with"),
         field("story-journey"),
         field("story-roundtrip"),
         field("story-evidence"),
@@ -2410,6 +2488,72 @@ fn validate_ail_e2e_corpus_release_coverage(entries: &[AilE2eCorpusEntry]) -> Re
                 "ail-examples requires at least {required_count} program-scale {required_scale} examples; found {found}"
             ));
         }
+    }
+    let mut program_domain_counts = BTreeMap::new();
+    let mut interactive_entry_count = 0usize;
+    let mut multi_artifact_entry_count = 0usize;
+    for entry in entries {
+        if let Some(program_domain) = entry.fields.get("program-domain") {
+            *program_domain_counts
+                .entry(program_domain.as_str())
+                .or_insert(0usize) += 1;
+        }
+        if entry
+            .fields
+            .get("interacts-with")
+            .is_some_and(|interacts_with| interacts_with != "none")
+        {
+            interactive_entry_count += 1;
+        }
+        let module_count = entry
+            .fields
+            .get("module-count")
+            .and_then(|value| value.parse::<usize>().ok())
+            .unwrap_or(0);
+        let spec_count = entry
+            .fields
+            .get("spec-count")
+            .and_then(|value| value.parse::<usize>().ok())
+            .unwrap_or(0);
+        let story_count = entry
+            .fields
+            .get("story-count")
+            .and_then(|value| value.parse::<usize>().ok())
+            .unwrap_or(0);
+        if module_count >= 2 && spec_count >= 2 && story_count >= 2 {
+            multi_artifact_entry_count += 1;
+        }
+    }
+    for (required_domain, required_count) in [
+        ("os-utility", 5usize),
+        ("c-interop", 5usize),
+        ("compiler", 5usize),
+        ("runtime", 5usize),
+        ("package-graph", 5usize),
+        ("application", 5usize),
+        ("agent-tool", 10usize),
+        ("ui-workflow", 5usize),
+        ("system-driver", 5usize),
+    ] {
+        let found = program_domain_counts
+            .get(required_domain)
+            .copied()
+            .unwrap_or(0);
+        if found < required_count {
+            return Err(format!(
+                "ail-examples requires at least {required_count} program-domain {required_domain} examples; found {found}"
+            ));
+        }
+    }
+    if interactive_entry_count < 20 {
+        return Err(format!(
+            "ail-examples requires at least 20 examples with interacts-with other than none; found {interactive_entry_count}"
+        ));
+    }
+    if multi_artifact_entry_count < 10 {
+        return Err(format!(
+            "ail-examples requires at least 10 examples with module-count/spec-count/story-count >= 2; found {multi_artifact_entry_count}"
+        ));
     }
     let mut story_journey_counts = BTreeMap::new();
     for entry in entries {

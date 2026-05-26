@@ -6,3 +6,8 @@ acceptance-criteria: checked spec exists; checked core exists; bytecode exists; 
 story-journey: story-to-spec
 story-roundtrip: semantic-similar
 story-evidence: target-report
+program-domain: os-utility
+module-count: 3
+spec-count: 3
+story-count: 3
+interacts-with: libsystem,elf-loader,wasm-sandbox

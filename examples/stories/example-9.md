@@ -6,3 +6,8 @@ acceptance-criteria: checked spec exists; checked core exists; bytecode exists; 
 story-journey: story-amendment
 story-roundtrip: semantic-similar
 story-evidence: checked-core
+program-domain: package-graph
+module-count: 3
+spec-count: 3
+story-count: 3
+interacts-with: ail_std.option,ail_std.list,ail_std.map

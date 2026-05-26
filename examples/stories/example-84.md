@@ -6,3 +6,8 @@ acceptance-criteria: checked spec exists; checked core exists; bytecode exists; 
 story-journey: story-amendment
 story-roundtrip: semantic-similar
 story-evidence: target-report
+program-domain: application
+module-count: 3
+spec-count: 3
+story-count: 3
+interacts-with: scheduler,task.store,audit.log

@@ -53,6 +53,13 @@ Each entry in `examples/examples.md` must include:
 - `capability-level`: one of `low-level`, `mid-level`, or `high-level`.
 - `capability-under-test`: concrete AIL surface under pressure.
 - `program-scale`: one of `utility`, `module`, or `multi-module-system`.
+- `program-domain`: one of `os-utility`, `c-interop`, `compiler`,
+  `runtime`, `package-graph`, `application`, `agent-tool`, `ui-workflow`,
+  `system-driver`, or `diagnostic`.
+- `module-count`, `spec-count`, and `story-count`: positive integers; a
+  `multi-module-system` entry must set each value to at least `2`.
+- `interacts-with`: named modules, host contracts, packages, agents, or target
+  surfaces crossed by the example, or `none` for a standalone utility.
 - `user-story-id`: stable story family used to group prompt, target, and
   repair variants.
 - `user-story`: one-line story in reviewer-facing form.
@@ -72,6 +79,13 @@ Prompt-surface matrices are allowed, but they are not automatically useful.
 They count only when the distinctness claim identifies the prompt behavior,
 checker assertion, target artifact, diagnostic, user-story journey, or
 human-review path being validated.
+
+The v0.3 usefulness gate must preserve domain breadth. At minimum, the release
+verifier requires coverage for OS utilities, C interop, compiler passes,
+runtime behavior, package graphs, application workflows, agent tools,
+UI workflows, and system drivers. Diagnostics are also validated when present:
+a diagnostic-domain example must be rejected or carry diagnostic story
+evidence.
 
 The verifier must require at least 10 distinct `user-story-id` values, at least
 one high-level `application-workflow` story family with two or more replayed

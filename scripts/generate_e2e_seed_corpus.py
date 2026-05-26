@@ -64,6 +64,11 @@ ACCEPTED_FIXTURES = {
         "capability_level": "mid-level",
         "use_case": "Standard library collection semantics with generic Option/List/Map behavior.",
         "capability": "stdlib-generics",
+        "program_domain": "package-graph",
+        "module_count": "3",
+        "spec_count": "3",
+        "story_count": "3",
+        "interacts_with": "ail_std.option,ail_std.list,ail_std.map",
         "v03_signal": "Generics need reusable conformance fixtures and teachable stdlib walkthroughs.",
     },
     "package-import": {
@@ -73,6 +78,11 @@ ACCEPTED_FIXTURES = {
         "capability_level": "mid-level",
         "use_case": "Package composition with explicit imports and capability grants.",
         "capability": "package-imports",
+        "program_domain": "package-graph",
+        "module_count": "2",
+        "spec_count": "2",
+        "story_count": "2",
+        "interacts_with": "support_shared",
         "v03_signal": "Package graphs need clearer authoring guidance and dependency review views.",
         "vm_action": "CloseTicket",
         "runtime_state": "ticket.id=T-1;ticket.status=Open",
@@ -84,6 +94,11 @@ ACCEPTED_FIXTURES = {
         "capability_level": "high-level",
         "use_case": "Small UI-tagged transform used to keep UI prompt coverage active.",
         "capability": "ui-surface-coverage",
+        "program_domain": "ui-workflow",
+        "module_count": "3",
+        "spec_count": "3",
+        "story_count": "3",
+        "interacts_with": "ui.form,ui.route,ui.state",
         "v03_signal": "UI examples need richer package-local walkthroughs and stricter semantic tagging.",
     },
     "ui-workflow": {
@@ -93,6 +108,11 @@ ACCEPTED_FIXTURES = {
         "capability_level": "high-level",
         "use_case": "Accessible route, form, dashboard, and workflow semantics for a user-facing app.",
         "capability": "ui-workflow",
+        "program_domain": "ui-workflow",
+        "module_count": "3",
+        "spec_count": "3",
+        "story_count": "3",
+        "interacts_with": "ui.route,ui.form,ui.dashboard",
         "v03_signal": "UI authoring needs stronger visual review artifacts and accessibility exercises.",
         "vm_action": "CreateTicketForm",
         "runtime_state": "ticket.title=Bug",
@@ -104,6 +124,11 @@ ACCEPTED_FIXTURES = {
         "capability_level": "low-level",
         "use_case": "Checked C and host interop with ABI, ownership, status, and trace contracts.",
         "capability": "c-host-interop",
+        "program_domain": "c-interop",
+        "module_count": "1",
+        "spec_count": "1",
+        "story_count": "1",
+        "interacts_with": "none",
         "v03_signal": "Interop needs deeper unsafe-boundary tutorials and more ABI fixture diversity.",
         "vm_action": "CompressPayload",
     },
@@ -114,6 +139,11 @@ ACCEPTED_FIXTURES = {
         "capability_level": "high-level",
         "use_case": "Application workflow for support-ticket actions, permissions, failures, and traces.",
         "capability": "application-workflow",
+        "program_domain": "application",
+        "module_count": "3",
+        "spec_count": "3",
+        "story_count": "3",
+        "interacts_with": "ticket.store,policy.audit,notification.queue",
         "v03_signal": "Application examples need user-story walkthroughs from intent to runtime trace.",
         "vm_action": "CloseTicket",
         "runtime_state": "ticket.id=T-1;ticket.status=Open",
@@ -125,6 +155,11 @@ ACCEPTED_FIXTURES = {
         "capability_level": "mid-level",
         "use_case": "Runtime generic value flow through typed actions and traceable outcomes.",
         "capability": "runtime-generics",
+        "program_domain": "runtime",
+        "module_count": "1",
+        "spec_count": "1",
+        "story_count": "1",
+        "interacts_with": "none",
         "v03_signal": "Generic runtime behavior needs clearer type-inference explanations.",
         "vm_action": "PrioritizeTicket",
         "runtime_state": "ticket.id=T-1;ticket.priority=Low",
@@ -136,6 +171,11 @@ ACCEPTED_FIXTURES = {
         "capability_level": "high-level",
         "use_case": "Agent tool for payment refund approval with permissions and capability checks.",
         "capability": "agent-tool-safety",
+        "program_domain": "agent-tool",
+        "module_count": "3",
+        "spec_count": "3",
+        "story_count": "3",
+        "interacts_with": "payment.provider,policy.engine,audit.log",
         "v03_signal": "AgentTool examples need multi-agent handoff and policy-review exercises.",
         "vm_action": "RefundCustomerPayment",
         "runtime_state": "order.id=O-1;payment.captured=true;refund.amount=100",
@@ -147,6 +187,11 @@ ACCEPTED_FIXTURES = {
         "capability_level": "low-level",
         "use_case": "Compiler pass semantics that transform AIL-Core with checked traces.",
         "capability": "compiler-pass",
+        "program_domain": "compiler",
+        "module_count": "1",
+        "spec_count": "1",
+        "story_count": "1",
+        "interacts_with": "none",
         "v03_signal": "Self-hosting needs pass-composition examples and fixed-point checks.",
         "vm_action": "InferReadPermissions",
     },
@@ -157,6 +202,11 @@ ACCEPTED_FIXTURES = {
         "capability_level": "low-level",
         "use_case": "System-level network driver boundary with effects, capabilities, and packets.",
         "capability": "system-driver",
+        "program_domain": "system-driver",
+        "module_count": "1",
+        "spec_count": "1",
+        "story_count": "1",
+        "interacts_with": "none",
         "v03_signal": "Systems profile needs hardware-facing contracts and scheduler/interrupt examples.",
     },
     "secret-access": {
@@ -166,6 +216,11 @@ ACCEPTED_FIXTURES = {
         "capability_level": "mid-level",
         "use_case": "Secret and permission semantics for guarded internal data access.",
         "capability": "security-permissions",
+        "program_domain": "runtime",
+        "module_count": "1",
+        "spec_count": "1",
+        "story_count": "1",
+        "interacts_with": "none",
         "v03_signal": "Security examples need threat-model annotations and audit trails.",
         "vm_action": "ViewInternalNotes",
         "runtime_state": "ticket.id=T-1;requester.role=SupportAgent",
@@ -177,6 +232,11 @@ ACCEPTED_FIXTURES = {
         "capability_level": "high-level",
         "use_case": "Scheduled repeated maintenance workflow with stateful trace evidence.",
         "capability": "scheduled-workflow",
+        "program_domain": "application",
+        "module_count": "3",
+        "spec_count": "3",
+        "story_count": "3",
+        "interacts_with": "scheduler,task.store,audit.log",
         "v03_signal": "Workflow examples need temporal policies and retry/backoff semantics.",
         "vm_action": "RunMaintenanceCycle",
         "runtime_state": "counter.value=0",
@@ -188,6 +248,11 @@ ACCEPTED_FIXTURES = {
         "capability_level": "mid-level",
         "use_case": "Minimal state mutation that proves deterministic VM/native behavior.",
         "capability": "stateful-runtime",
+        "program_domain": "runtime",
+        "module_count": "1",
+        "spec_count": "1",
+        "story_count": "1",
+        "interacts_with": "none",
         "v03_signal": "State examples need clearer persistence and concurrency boundaries.",
         "vm_action": "IncrementCounter",
         "runtime_state": "counter.value=0",
@@ -283,6 +348,14 @@ def program_scale_for(index: int, fixture: dict[str, str] | None) -> str:
     if capability in {"package-imports", "runtime-generics", "security-permissions", "stateful-runtime"}:
         return "module"
     return "multi-module-system"
+
+
+def program_domain_for(index: int, fixture: dict[str, str] | None) -> str:
+    if fixture is None:
+        return "diagnostic"
+    if 30 <= index <= 34 or 90 <= index <= 94:
+        return "os-utility"
+    return fixture["program_domain"]
 
 
 def story_evidence_for(target: str, checker_result: str, fixture: dict[str, str] | None) -> str:
@@ -406,6 +479,11 @@ def main() -> None:
             f"acceptance-criteria: {acceptance_criteria}\n"
             f"story-journey: {story_journey_for(prompt_file, checker_result)}\n"
             f"story-evidence: {story_evidence}\n"
+            f"program-domain: {program_domain_for(index, fixture)}\n"
+            f"module-count: {'1' if fixture is None else fixture['module_count']}\n"
+            f"spec-count: {'1' if fixture is None else fixture['spec_count']}\n"
+            f"story-count: {'1' if fixture is None else fixture['story_count']}\n"
+            f"interacts-with: {'none' if fixture is None else fixture['interacts_with']}\n"
         )
         fields = {
             "semantic-task": semantic_task,
@@ -420,6 +498,11 @@ def main() -> None:
             if fixture is None
             else fixture["capability"],
             "program-scale": program_scale_for(index, fixture),
+            "program-domain": program_domain_for(index, fixture),
+            "module-count": "1" if fixture is None else fixture["module_count"],
+            "spec-count": "1" if fixture is None else fixture["spec_count"],
+            "story-count": "1" if fixture is None else fixture["story_count"],
+            "interacts-with": "none" if fixture is None else fixture["interacts_with"],
             "user-story-id": story_id,
             "user-story": user_story,
             "acceptance-criteria": acceptance_criteria,

@@ -6,3 +6,8 @@ acceptance-criteria: expected diagnostic exists; diagnostic artifact exists; rep
 story-journey: diagnostic-story
 story-roundtrip: diagnostic-preserving
 story-evidence: diagnostics
+program-domain: diagnostic
+module-count: 1
+spec-count: 1
+story-count: 1
+interacts-with: none
