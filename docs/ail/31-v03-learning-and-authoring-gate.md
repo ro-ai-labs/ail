@@ -137,10 +137,11 @@ Current progress: `examples/support_ticket.ail/README.md`,
 `examples/support_composed.ail/README.md`,
 `examples/compiler_pass.ail/README.md`,
 `examples/ui_workflow.ail/README.md`,
-`examples/refund_tool.ail/README.md`, and
-`examples/stateful_counter.ail/README.md` cover the highest-volume repeated
-families, the package-composition baseline, and the Compiler profile baseline,
-plus the UI profile baseline, and are checked by
+`examples/refund_tool.ail/README.md`,
+`examples/stateful_counter.ail/README.md`, and all five
+`examples/ail_std_*.ail/README.md` guides cover the highest-volume repeated
+families, the package-composition baseline, the Compiler profile baseline, the
+UI profile baseline, and the standard-library baseline, and are checked by
 `example_learning_readmes_cover_repeated_family_gaps`.
 
 The `ail-examples` replay bundle must also write deterministic story artifacts:

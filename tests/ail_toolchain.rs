@@ -334,6 +334,11 @@ fn example_learning_readmes_cover_repeated_family_gaps() {
         "refund_tool.ail/README.md",
         "stateful_counter.ail/README.md",
         "incident_response.ail/README.md",
+        "ail_std_core.ail/README.md",
+        "ail_std_collections.ail/README.md",
+        "ail_std_effects.ail/README.md",
+        "ail_std_security.ail/README.md",
+        "ail_std_runtime.ail/README.md",
     ] {
         assert!(
             examples_readme.contains(required),
@@ -551,6 +556,76 @@ fn example_learning_readmes_cover_repeated_family_gaps() {
             stateful_readme.contains(required),
             "{required}\n{stateful_readme}"
         );
+    }
+
+    let std_readmes = [
+        (
+            "ail_std_core.ail/README.md",
+            [
+                "# AIL Standard Core Example",
+                "Identity.copy",
+                "IdentityCopied",
+                "primitive contracts",
+                "examples/accepted",
+            ],
+        ),
+        (
+            "ail_std_collections.ail/README.md",
+            [
+                "# AIL Standard Collections Example",
+                "Option<T>",
+                "Result<T,E>",
+                "Option.map",
+                "invalid-generic-variant-payload",
+            ],
+        ),
+        (
+            "ail_std_effects.ail/README.md",
+            [
+                "# AIL Standard Effects Example",
+                "ResourceEffect",
+                "Read resource",
+                "Write resource",
+                "NetworkMessageSent",
+            ],
+        ),
+        (
+            "ail_std_security.ail/README.md",
+            [
+                "# AIL Standard Security Example",
+                "SecretEnvelope",
+                "Reveal secret",
+                "Secret<Text>",
+                "secret payload is redacted",
+            ],
+        ),
+        (
+            "ail_std_runtime.ail/README.md",
+            [
+                "# AIL Standard Runtime Example",
+                "RuntimeTask",
+                "Run task",
+                "RuntimeUnavailable",
+                "missing-capability-grant",
+            ],
+        ),
+    ];
+    for (path, required_terms) in std_readmes {
+        let readme = fs::read_to_string(fixture(path)).unwrap();
+        for required in [
+            "## Purpose",
+            "## Concepts Taught",
+            "## Files To Inspect",
+            "## Expected Replay Artifacts",
+            "## Rejected Fixtures",
+            "## Next Example To Read",
+            "## v0.3 Learning Signal",
+        ] {
+            assert!(readme.contains(required), "{path} {required}\n{readme}");
+        }
+        for required in required_terms {
+            assert!(readme.contains(required), "{path} {required}\n{readme}");
+        }
     }
 
     let incident_readme = fs::read_to_string(fixture("incident_response.ail/README.md")).unwrap();

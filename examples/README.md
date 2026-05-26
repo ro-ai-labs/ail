@@ -71,6 +71,17 @@ the teaching path through repeated example families:
 - `incident_response.ail/README.md`: high-level multi-module incident response
   with identity, policy, notification, UI, workflow, target-contract, and story
   journey evidence.
+- `ail_std_core.ail/README.md`: standard-library primitive contracts,
+  `Identity.copy`, trace coverage, and accepted fixture evidence.
+- `ail_std_collections.ail/README.md`: generic collection and result types,
+  `Option.map`, standard-library replay entries, and rejected generic payload
+  diagnostics.
+- `ail_std_effects.ail/README.md`: declared resource effects, read/write and
+  network effect traces, and host-effect repair gaps.
+- `ail_std_security.ail/README.md`: `Secret<T>`, permission and capability
+  requirements, redaction guarantees, and secret-leakage repair gaps.
+- `ail_std_runtime.ail/README.md`: runtime tasks, failure handling,
+  dependency reports, capability grants, and missing-grant diagnostics.
 
 For v0.3, every new example should either add a genuinely new use case or make
 an existing use case more useful by testing a different prompt surface, target,
