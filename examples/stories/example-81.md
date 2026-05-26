@@ -11,3 +11,4 @@ module-count: 3
 spec-count: 3
 story-count: 3
 interacts-with: scheduler,task.store,audit.log
+semantic-anchors: Maintenance Runner; Run maintenance cycle; IncrementCounter; MaintenanceCycleCompleted; scheduled-workflow; requirements.system.md

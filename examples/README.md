@@ -68,6 +68,8 @@ the teaching path through repeated example families:
   secret handling, and repair-tutorial gaps.
 - `stateful_counter.ail/README.md`: deterministic state, persistence,
   idempotency, locking, replay after failure, and native artifact evidence.
+- `repeated_task.ail/README.md`: scheduled-workflow behavior, repeated action
+  lowering, maintenance-cycle trace evidence, and temporal-policy gaps.
 - `incident_response.ail/README.md`: high-level multi-module incident response
   with identity, policy, notification, UI, workflow, target-contract, and story
   journey evidence.

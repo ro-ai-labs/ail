@@ -333,6 +333,7 @@ fn example_learning_readmes_cover_repeated_family_gaps() {
         "ui_workflow.ail/README.md",
         "refund_tool.ail/README.md",
         "stateful_counter.ail/README.md",
+        "repeated_task.ail/README.md",
         "incident_response.ail/README.md",
         "ail_std_core.ail/README.md",
         "ail_std_collections.ail/README.md",
@@ -441,6 +442,30 @@ fn example_learning_readmes_cover_repeated_family_gaps() {
         assert!(
             option_map_readme.contains(required),
             "{required}\n{option_map_readme}"
+        );
+    }
+
+    let repeated_task_readme =
+        fs::read_to_string(fixture("repeated_task.ail/README.md")).unwrap();
+    for required in [
+        "# Repeated Task Example",
+        "## Purpose",
+        "## Concepts Taught",
+        "## Files To Inspect",
+        "## Expected Replay Artifacts",
+        "## Rejected Fixtures",
+        "## Next Example To Read",
+        "## v0.3 Learning Signal",
+        "Run maintenance cycle",
+        "IncrementCounter",
+        "MaintenanceCycleCompleted",
+        "scheduled-workflow",
+        "example-80",
+        "example-84",
+    ] {
+        assert!(
+            repeated_task_readme.contains(required),
+            "{required}\n{repeated_task_readme}"
         );
     }
 
@@ -1338,6 +1363,83 @@ fn example_stdlib_and_option_map_stories_record_semantic_anchors() {
                     || package_text.contains(anchor)
                     || catalog.contains(anchor),
                 "{story_file} anchor {anchor} is not grounded in package spec/package metadata/catalog"
+            );
+        }
+    }
+}
+
+#[test]
+fn example_repeated_task_stories_record_semantic_anchors() {
+    let spec = fs::read_to_string(fixture("repeated_task.ail/spec.ail-spec.md")).unwrap();
+    let package = fs::read_to_string(fixture("repeated_task.ail/ail-package.md")).unwrap();
+    let catalog = fs::read_to_string(fixture("examples.md")).unwrap();
+    for (story_file, required_anchors) in [
+        (
+            "stories/example-80.md",
+            [
+                "Maintenance Runner",
+                "Run maintenance cycle",
+                "IncrementCounter",
+                "MaintenanceCycleCompleted",
+                "scheduled-workflow",
+                "interview.system.md",
+            ],
+        ),
+        (
+            "stories/example-81.md",
+            [
+                "Maintenance Runner",
+                "Run maintenance cycle",
+                "IncrementCounter",
+                "MaintenanceCycleCompleted",
+                "scheduled-workflow",
+                "requirements.system.md",
+            ],
+        ),
+        (
+            "stories/example-82.md",
+            [
+                "Maintenance Runner",
+                "Run maintenance cycle",
+                "IncrementCounter",
+                "MaintenanceCycleCompleted",
+                "scheduled-workflow",
+                "spec-draft.system.md",
+            ],
+        ),
+        (
+            "stories/example-83.md",
+            [
+                "Maintenance Runner",
+                "Run maintenance cycle",
+                "IncrementCounter",
+                "MaintenanceCycleCompleted",
+                "scheduled-workflow",
+                "core-draft.system.md",
+            ],
+        ),
+        (
+            "stories/example-84.md",
+            [
+                "Maintenance Runner",
+                "Run maintenance cycle",
+                "IncrementCounter",
+                "MaintenanceCycleCompleted",
+                "scheduled-workflow",
+                "diagnostic-repair.system.md",
+            ],
+        ),
+    ] {
+        let story = fs::read_to_string(fixture(story_file)).unwrap();
+        assert!(story.contains("semantic-anchors:"), "{story_file}\n{story}");
+        for anchor in required_anchors {
+            assert!(
+                story.contains(anchor),
+                "{story_file} missing semantic anchor {anchor}\n{story}"
+            );
+            assert!(
+                spec.contains(anchor) || package.contains(anchor) || catalog.contains(anchor),
+                "{story_file} anchor {anchor} is not grounded in repeated task spec/package/catalog"
             );
         }
     }
@@ -22185,9 +22287,12 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("semantic-anchor-story-count 60")
+        report.contains("semantic-anchor-story-count 65")
             && report.contains(
                 "entry-semantic-anchors example-0 Option<T>; Result<T; E>; Map<K; V>; Option.map; OptionMapEvaluated; interview.system.md"
+            )
+            && report.contains(
+                "entry-semantic-anchors example-80 Maintenance Runner; Run maintenance cycle; IncrementCounter; MaintenanceCycleCompleted; scheduled-workflow; interview.system.md"
             )
             && report.contains(
                 "entry-semantic-anchors example-10 support-composed; support_shared; Shared.User; Close ticket; TicketClosed; active queue; interview.system.md"
