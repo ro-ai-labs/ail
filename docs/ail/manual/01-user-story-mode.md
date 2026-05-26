@@ -9,6 +9,16 @@ bytecode, and optional agent or target evidence.
 
 Use this chapter when validating the first AIL v0.3 authoring workflow.
 
+Run the deterministic chapter checks without contacting a live model:
+
+```sh
+python3 scripts/run_ail_interactive_manual.py --chapter user-story-mode --run-checks
+```
+
+These checks exercise the local `ail-story` path with a stubbed chat endpoint
+and verify both the plain story authoring path and the toolchain-agent
+entrypoint path.
+
 ## Story-First Run
 
 Start with an existing support-ticket story and write all generated evidence to

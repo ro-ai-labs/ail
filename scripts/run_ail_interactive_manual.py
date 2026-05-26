@@ -47,6 +47,34 @@ CHAPTERS: tuple[ManualChapter, ...] = (
                 command=("python3", "scripts/run_v03_story_llm_harness.py", "--dry-run"),
             ),
             ManualCommand(
+                label="verify-story-mode-local",
+                command=(
+                    "cargo",
+                    "test",
+                    "cli_ail_story_builds_checked_artifacts_from_story_file",
+                    "--test",
+                    "ail_toolchain",
+                ),
+                evidence=(
+                    "story-mode-report.txt",
+                    "manifest.ail-story.txt",
+                ),
+            ),
+            ManualCommand(
+                label="verify-story-agent-entrypoint-local",
+                command=(
+                    "cargo",
+                    "test",
+                    "cli_ail_story_agent_records_story_entrypoint_before_compile",
+                    "--test",
+                    "ail_toolchain",
+                ),
+                evidence=(
+                    "agent-trace.txt",
+                    "manifest.ail-story.txt",
+                ),
+            ),
+            ManualCommand(
                 label="run-story-mode-live",
                 command=("python3", "scripts/run_v03_story_llm_harness.py"),
                 live=True,

@@ -16,6 +16,12 @@ Print the User Story mode walkthrough:
 python3 scripts/run_ail_interactive_manual.py --chapter user-story-mode --dry-run
 ```
 
+Run deterministic User Story mode checks:
+
+```sh
+python3 scripts/run_ail_interactive_manual.py --chapter user-story-mode --run-checks
+```
+
 Run the prompt interaction checks:
 
 ```sh

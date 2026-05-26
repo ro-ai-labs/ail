@@ -982,6 +982,10 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "id user-story-mode",
         "doc docs/ail/manual/01-user-story-mode.md",
         "cargo run -- ail-story examples/support_ticket.ail",
+        "cargo test cli_ail_story_builds_checked_artifacts_from_story_file --test ail_toolchain",
+        "cargo test cli_ail_story_agent_records_story_entrypoint_before_compile --test ail_toolchain",
+        "evidence manifest.ail-story.txt",
+        "evidence agent-trace.txt",
         "python3 scripts/run_v03_story_llm_harness.py --dry-run",
         "live false",
     ] {
