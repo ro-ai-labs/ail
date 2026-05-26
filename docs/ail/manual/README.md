@@ -34,6 +34,10 @@ Run the v0.3 authoring gate chapter directly:
 python3 scripts/run_ail_interactive_manual.py --chapter v03-authoring-gate --run-checks
 ```
 
+The examples replay in this gate writes `v03-roadmap.txt`, which is the
+machine-readable backlog of next-version language, prompt, checker, runtime,
+target, and documentation improvements learned from the corpus.
+
 Run the prompt interaction checks:
 
 ```sh

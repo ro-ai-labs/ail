@@ -38,7 +38,7 @@ lowers to bytecode, and verifies that `ail-build` writes `agent.ailbc.json` and
 | `codex-ail-requirements-writer` | `codex-ail-requirements-writer.md` | AIL-Requirements or blocking questions | prompt envelope validates, then requirements feed a checked spec path |
 | `codex-ail-spec-writer` | `codex-ail-spec-writer.md` | canonical AIL-Spec | parser, checker, Core lowering, bytecode, VM trace, and target evidence pass |
 | `codex-ail-diagnostic-repairer` | `codex-ail-diagnostic-repairer.md` | repaired AIL-Spec or rejected diagnostic explanation | repaired artifact passes or the expected diagnostic is reproduced |
-| `codex-ail-prompt-reviewer` | `codex-ail-prompt-reviewer.md` | Prompt and story harness review report | `scripts/run_v03_prompt_llm_harness.py --review-artifacts`, `scripts/run_v03_story_llm_harness.py --review-artifacts`, then `ail-examples examples --artifact-dir ... --release-evidence` pass before promotion |
+| `codex-ail-prompt-reviewer` | `codex-ail-prompt-reviewer.md` | Prompt and story harness review report | `scripts/run_v03_prompt_llm_harness.py --review-artifacts`, `scripts/run_v03_story_llm_harness.py --review-artifacts`, then `ail-examples examples --artifact-dir ... --release-evidence` writes `v03-roadmap.txt` and passes before promotion |
 
 ## Request JSON Shape
 

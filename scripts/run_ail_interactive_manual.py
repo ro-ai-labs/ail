@@ -133,6 +133,11 @@ BASE_CHAPTERS: tuple[ManualChapter, ...] = (
                     "/tmp/ail-manual-examples",
                     "--release-evidence",
                 ),
+                evidence=(
+                    "examples-report.txt",
+                    "v03-roadmap.txt",
+                    "manifest.ail-examples.txt",
+                ),
             ),
         ),
     ),
@@ -274,6 +279,7 @@ V03_AUTHORING_GATE = ManualChapter(
             ),
             evidence=(
                 "examples-report.txt",
+                "v03-roadmap.txt",
                 "manifest.ail-examples.txt",
                 "model-executor-manifest.txt",
             ),

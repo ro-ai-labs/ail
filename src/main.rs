@@ -457,6 +457,17 @@ struct AilE2eStoryFamilyDimensions {
     story_journeys: BTreeSet<String>,
 }
 
+#[derive(Debug, Default)]
+struct AilV03SignalCoverage {
+    count: usize,
+    entries: BTreeSet<String>,
+    capability_levels: BTreeSet<String>,
+    program_domains: BTreeSet<String>,
+    prompt_files: BTreeSet<String>,
+    story_journeys: BTreeSet<String>,
+    checker_results: BTreeSet<String>,
+}
+
 #[derive(Debug)]
 struct AilAgentContract {
     label: String,
@@ -1236,6 +1247,7 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
         "scripts/run_v03_prompt_llm_harness.py --review-artifacts",
         "scripts/run_v03_story_llm_harness.py --review-artifacts",
         "ail-examples examples --artifact-dir",
+        "v03-roadmap.txt",
     ] {
         if !prompt_reviewer.text.contains(required) {
             return Err(format!(
@@ -1255,6 +1267,7 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
     }
     println!("review-command scripts/run_v03_prompt_llm_harness.py --review-artifacts");
     println!("review-command scripts/run_v03_story_llm_harness.py --review-artifacts");
+    println!("roadmap-artifact v03-roadmap.txt");
     println!("agent-contracts-result accepted");
     Ok(0)
 }
@@ -2790,8 +2803,64 @@ fn render_ail_e2e_user_story_text(
     )
 }
 
+fn ail_join_nonempty_set(values: &BTreeSet<String>) -> String {
+    if values.is_empty() {
+        "none".to_string()
+    } else {
+        values
+            .iter()
+            .map(String::as_str)
+            .collect::<Vec<_>>()
+            .join(",")
+    }
+}
+
+fn render_ail_e2e_v03_roadmap(evaluations: &[AilE2eCorpusEvaluation]) -> String {
+    let mut signals = BTreeMap::new();
+    for evaluation in evaluations {
+        let entry = &evaluation.entry;
+        let Some(signal) = entry.fields.get("v0.3-signal") else {
+            continue;
+        };
+        let coverage: &mut AilV03SignalCoverage = signals.entry(signal.clone()).or_default();
+        coverage.count += 1;
+        coverage.entries.insert(entry.id.clone());
+        for (field, target) in [
+            ("capability-level", &mut coverage.capability_levels),
+            ("program-domain", &mut coverage.program_domains),
+            ("prompt-file", &mut coverage.prompt_files),
+            ("story-journey", &mut coverage.story_journeys),
+            ("checker-result", &mut coverage.checker_results),
+        ] {
+            if let Some(value) = entry.fields.get(field) {
+                target.insert(value.clone());
+            }
+        }
+    }
+
+    let mut lines = vec![
+        "AIL-v0.3-Roadmap:".to_string(),
+        format!("entry-count {}", evaluations.len()),
+        format!("signal-count {}", signals.len()),
+    ];
+    for (signal, coverage) in signals {
+        lines.push(format!(
+            "signal {signal} count {} capability-levels {} program-domains {} story-journeys {} prompt-files {} checker-results {} entries {}",
+            coverage.count,
+            ail_join_nonempty_set(&coverage.capability_levels),
+            ail_join_nonempty_set(&coverage.program_domains),
+            ail_join_nonempty_set(&coverage.story_journeys),
+            ail_join_nonempty_set(&coverage.prompt_files),
+            ail_join_nonempty_set(&coverage.checker_results),
+            ail_join_nonempty_set(&coverage.entries)
+        ));
+    }
+    format!("{}\n", lines.join("\n"))
+}
+
 fn render_ail_e2e_corpus_manifest(
     report_text: &str,
+    roadmap_text: &str,
     model_executor_manifest_text: &str,
     evaluations: &[AilE2eCorpusEvaluation],
 ) -> String {
@@ -2804,6 +2873,10 @@ fn render_ail_e2e_corpus_manifest(
         format!(
             "model-executor model-executor-manifest.txt {}",
             ail_artifact_fingerprint(model_executor_manifest_text)
+        ),
+        format!(
+            "roadmap v03-roadmap.txt {}",
+            ail_artifact_fingerprint(roadmap_text)
         ),
     ];
     for evaluation in evaluations {
@@ -3439,6 +3512,14 @@ fn write_ail_e2e_corpus_artifacts(
         format!("{}\n", ail_artifact_fingerprint(report_text)),
     )
     .map_err(|error| format!("failed to write examples catalog report fingerprint: {error}"))?;
+    let roadmap_text = render_ail_e2e_v03_roadmap(evaluations);
+    fs::write(root.join("v03-roadmap.txt"), &roadmap_text)
+        .map_err(|error| format!("failed to write examples v0.3 roadmap: {error}"))?;
+    fs::write(
+        root.join("v03-roadmap.fingerprint.txt"),
+        format!("{}\n", ail_artifact_fingerprint(&roadmap_text)),
+    )
+    .map_err(|error| format!("failed to write examples v0.3 roadmap fingerprint: {error}"))?;
     let model_executor_manifest_text = render_ail_e2e_model_executor_manifest(evaluations);
     fs::write(
         root.join("model-executor-manifest.txt"),
@@ -3455,8 +3536,12 @@ fn write_ail_e2e_corpus_artifacts(
     .map_err(|error| {
         format!("failed to write examples model executor manifest fingerprint: {error}")
     })?;
-    let manifest_text =
-        render_ail_e2e_corpus_manifest(report_text, &model_executor_manifest_text, evaluations);
+    let manifest_text = render_ail_e2e_corpus_manifest(
+        report_text,
+        &roadmap_text,
+        &model_executor_manifest_text,
+        evaluations,
+    );
     fs::write(root.join("manifest.ail-examples.txt"), &manifest_text)
         .map_err(|error| format!("failed to write examples catalog manifest: {error}"))?;
     fs::write(

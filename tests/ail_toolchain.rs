@@ -1203,6 +1203,7 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "python3 scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run-checks",
         "python3 scripts/run_ail_interactive_manual.py --chapter agent-entrypoint --run-checks",
         "evidence examples-report.txt",
+        "evidence v03-roadmap.txt",
         "evidence agent-trace.txt",
     ] {
         assert!(gate_stdout.contains(required), "{required}\n{gate_stdout}");
@@ -1319,6 +1320,7 @@ fn examples_agents_include_prompt_review_contract() {
         "target artifact: AIL-Prompt-Interaction-Review",
         "Do not promote generated content into ./examples",
         "ail-examples examples --artifact-dir",
+        "v03-roadmap.txt",
     ] {
         assert!(
             prompt_reviewer.contains(required),
@@ -1350,6 +1352,7 @@ fn cli_ail_agent_contracts_validates_prompt_reviewer_contract() {
         "contract codex-ail-prompt-reviewer",
         "review-command scripts/run_v03_prompt_llm_harness.py --review-artifacts",
         "review-command scripts/run_v03_story_llm_harness.py --review-artifacts",
+        "roadmap-artifact v03-roadmap.txt",
         "agent-contracts-result accepted",
     ] {
         assert!(stdout.contains(required), "{required}\n{stdout}");
@@ -26857,6 +26860,29 @@ fn cli_ail_e2e_corpus_writes_report_for_metadata_complete_corpus() {
         )),
         "{report}"
     );
+    let roadmap = fs::read_to_string(artifact_dir.join("v03-roadmap.txt")).unwrap();
+    assert!(roadmap.contains("AIL-v0.3-Roadmap:"), "{roadmap}");
+    assert!(roadmap.contains("entry-count 100"), "{roadmap}");
+    assert!(roadmap.contains("signal-count 100"), "{roadmap}");
+    assert!(
+        roadmap.contains(
+            "signal Scenario 0 should become a documented future learning gap for example coverage. count 1"
+        ),
+        "{roadmap}"
+    );
+    assert!(
+        roadmap.contains("capability-levels high-level"),
+        "{roadmap}"
+    );
+    assert!(roadmap.contains("program-domains application"), "{roadmap}");
+    assert!(
+        roadmap.contains("story-journeys story-to-spec"),
+        "{roadmap}"
+    );
+    assert!(roadmap.contains("entries example-0"), "{roadmap}");
+    let roadmap_fingerprint =
+        fs::read_to_string(artifact_dir.join("v03-roadmap.fingerprint.txt")).unwrap();
+    assert_eq!(roadmap_fingerprint.trim(), fnv64_fingerprint(&roadmap));
     let report_fingerprint =
         fs::read_to_string(artifact_dir.join("examples-report.fingerprint.txt")).unwrap();
     assert_eq!(report_fingerprint.trim(), fnv64_fingerprint(&report));
@@ -26866,6 +26892,13 @@ fn cli_ail_e2e_corpus_writes_report_for_metadata_complete_corpus() {
         manifest.contains(&format!(
             "report examples-report.txt {}",
             report_fingerprint.trim()
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "roadmap v03-roadmap.txt {}",
+            roadmap_fingerprint.trim()
         )),
         "{manifest}"
     );

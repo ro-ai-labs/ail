@@ -20,6 +20,7 @@ Story mode harness artifacts before any generated content is promoted into
   `scripts/run_v03_story_llm_harness.py`
 - current prompt-pack files under `docs/ail/prompts/`
 - current examples replay report from `ail-examples examples --artifact-dir`
+- current examples v0.3 roadmap artifact, `v03-roadmap.txt`
 - reviewer notes about intended promotion entries
 
 ## Required Output
@@ -35,6 +36,8 @@ Return an `AIL-Prompt-Interaction-Review` report that records:
   story artifacts are reviewed
 - release replay command used before promotion:
   `ail-examples examples --artifact-dir`
+- v0.3 roadmap artifact reviewed:
+  `v03-roadmap.txt`
 - explicit decision: `accepted-for-promotion`, `needs-repair`, or
   `rejected-for-promotion`
 
@@ -44,14 +47,15 @@ Return an `AIL-Prompt-Interaction-Review` report that records:
   harness review and deterministic replay.
 - Do not rewrite generated specs to make them pass silently; report the repair
   needed and preserve the original hosted output as evidence.
-- Do not claim model quality, compiler trust, runtime success, or release
-  readiness from non-empty LLM output alone.
+- Do not claim model quality, compiler trust, runtime success, next-version
+  learning, or release readiness from non-empty LLM output alone.
 - Do not hide missing fingerprints, empty prompt content, missing agent trace
-  entries, or semantic-anchor loss.
+  entries, missing `v03-roadmap.txt`, or semantic-anchor loss.
 
 ## Replay Gate
 
 The review is accepted only when both relevant offline review commands pass and
 the promoted corpus copy passes `ail-examples examples --artifact-dir ...`
-with `--release-evidence`. If either harness review is missing or rejected, the
-review must return `needs-repair` or `rejected-for-promotion`.
+with `--release-evidence` and writes `v03-roadmap.txt`. If either harness
+review is missing or rejected, the review must return `needs-repair` or
+`rejected-for-promotion`.
