@@ -132,9 +132,11 @@ Each README should state the purpose, concepts taught, files to inspect,
 expected replay artifacts, rejected fixtures where applicable, and the next
 example to read.
 
-Current progress: `examples/refund_tool.ail/README.md` and
-`examples/stateful_counter.ail/README.md` cover the weakest repeated families
-and are checked by `example_learning_readmes_cover_repeated_family_gaps`.
+Current progress: `examples/support_ticket.ail/README.md`,
+`examples/refund_tool.ail/README.md`, and
+`examples/stateful_counter.ail/README.md` cover the highest-volume repeated
+families and are checked by
+`example_learning_readmes_cover_repeated_family_gaps`.
 
 The `ail-examples` replay bundle must also write deterministic story artifacts:
 

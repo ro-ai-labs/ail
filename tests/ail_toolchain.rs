@@ -324,6 +324,7 @@ fn example_learning_readmes_cover_repeated_family_gaps() {
     let examples_readme = fs::read_to_string(fixture("README.md")).unwrap();
     for required in [
         "## Learning Guides",
+        "support_ticket.ail/README.md",
         "network_driver.ail/README.md",
         "c_interop.ail/README.md",
         "darwin_linux_effect.ail/README.md",
@@ -334,6 +335,29 @@ fn example_learning_readmes_cover_repeated_family_gaps() {
         assert!(
             examples_readme.contains(required),
             "{required}\n{examples_readme}"
+        );
+    }
+
+    let support_readme = fs::read_to_string(fixture("support_ticket.ail/README.md")).unwrap();
+    for required in [
+        "# Support Ticket Example",
+        "## Purpose",
+        "## Concepts Taught",
+        "## Files To Inspect",
+        "## Expected Replay Artifacts",
+        "## Rejected Fixtures",
+        "## Next Example To Read",
+        "## v0.3 Learning Signal",
+        "application workflow",
+        "scheduler",
+        "secret internal notes",
+        "overdue tickets",
+        "example-80",
+        "example-99",
+    ] {
+        assert!(
+            support_readme.contains(required),
+            "{required}\n{support_readme}"
         );
     }
 

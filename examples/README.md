@@ -45,6 +45,9 @@ The current ladder is:
 The catalog is the authoritative replay manifest, but package-local READMEs are
 the teaching path through repeated example families:
 
+- `support_ticket.ail/README.md`: Application workflow baseline, scheduler
+  behavior, ticket state transitions, secret internal notes, native binary
+  evidence, and rejected diagnostic gaps.
 - `network_driver.ail/README.md`: low-level System profile resources,
   ownership, borrowing, device effects, and missing-capability diagnostics.
 - `c_interop.ail/README.md`: C ABI, pointer ownership, callbacks, layout,
