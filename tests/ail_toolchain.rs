@@ -928,12 +928,14 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         "AIL Interactive Manual",
         "scripts/run_ail_interactive_manual.py --list",
         "scripts/run_ail_interactive_manual.py --chapter user-story-mode --dry-run",
+        "scripts/run_ail_interactive_manual.py --all --run-checks",
         "scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run-checks",
         "scripts/run_v03_prompt_llm_harness.py --dry-run",
         "user-story-mode",
         "examples-release",
         "prompt-interaction",
         "agent-entrypoint",
+        "v03-authoring-gate",
     ] {
         assert!(
             manual_index.contains(required),
@@ -986,6 +988,7 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "chapter examples-release",
         "chapter prompt-interaction",
         "chapter agent-entrypoint",
+        "chapter v03-authoring-gate",
     ] {
         assert!(list_stdout.contains(required), "{required}\n{list_stdout}");
     }
@@ -1067,6 +1070,52 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
             agent_stdout.contains(required),
             "{required}\n{agent_stdout}"
         );
+    }
+
+    let gate_dry_run = Command::new("python3")
+        .args([&script, "--chapter", "v03-authoring-gate", "--dry-run"])
+        .output()
+        .unwrap();
+    assert!(
+        gate_dry_run.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&gate_dry_run.stdout),
+        String::from_utf8_lossy(&gate_dry_run.stderr)
+    );
+    let gate_stdout = String::from_utf8_lossy(&gate_dry_run.stdout);
+    for required in [
+        "id v03-authoring-gate",
+        "doc docs/ail/31-v03-learning-and-authoring-gate.md",
+        "python3 scripts/run_ail_interactive_manual.py --chapter user-story-mode --run-checks",
+        "python3 scripts/run_ail_interactive_manual.py --chapter examples-release --run-checks",
+        "python3 scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run-checks",
+        "python3 scripts/run_ail_interactive_manual.py --chapter agent-entrypoint --run-checks",
+        "evidence examples-report.txt",
+        "evidence agent-trace.txt",
+    ] {
+        assert!(gate_stdout.contains(required), "{required}\n{gate_stdout}");
+    }
+
+    let all_dry_run = Command::new("python3")
+        .args([&script, "--all", "--dry-run"])
+        .output()
+        .unwrap();
+    assert!(
+        all_dry_run.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&all_dry_run.stdout),
+        String::from_utf8_lossy(&all_dry_run.stderr)
+    );
+    let all_stdout = String::from_utf8_lossy(&all_dry_run.stdout);
+    for required in [
+        "AIL-Interactive-Manual-Runbook:",
+        "chapter user-story-mode",
+        "chapter examples-release",
+        "chapter prompt-interaction",
+        "chapter agent-entrypoint",
+        "chapter v03-authoring-gate",
+    ] {
+        assert!(all_stdout.contains(required), "{required}\n{all_stdout}");
     }
 }
 

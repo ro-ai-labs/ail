@@ -22,6 +22,12 @@ Run deterministic User Story mode checks:
 python3 scripts/run_ail_interactive_manual.py --chapter user-story-mode --run-checks
 ```
 
+Run every deterministic authoring chapter as one local audit:
+
+```sh
+python3 scripts/run_ail_interactive_manual.py --all --run-checks
+```
+
 Run the prompt interaction checks:
 
 ```sh
@@ -62,3 +68,6 @@ be reviewed before promotion into `./examples`.
   harness.
 - `agent-entrypoint`: Codex agent role files and the AIL toolchain-agent package
   that participates in the authoring pipeline.
+- `v03-authoring-gate`: the deterministic v0.3 audit that runs User Story
+  mode, examples replay, prompt interaction, and agent-entrypoint checks from
+  one manual chapter.

@@ -35,7 +35,7 @@ class ManualChapter:
     commands: tuple[ManualCommand, ...]
 
 
-CHAPTERS: tuple[ManualChapter, ...] = (
+BASE_CHAPTERS: tuple[ManualChapter, ...] = (
     ManualChapter(
         chapter_id="user-story-mode",
         title="User Story Mode",
@@ -219,12 +219,87 @@ CHAPTERS: tuple[ManualChapter, ...] = (
     ),
 )
 
+V03_AUTHORING_GATE = ManualChapter(
+    chapter_id="v03-authoring-gate",
+    title="v0.3 Authoring Gate",
+    doc="docs/ail/31-v03-learning-and-authoring-gate.md",
+    purpose="Run the deterministic story, examples, prompt, and agent checks as one v0.3 audit.",
+    commands=(
+        ManualCommand(
+            label="run-user-story-mode-checks",
+            command=(
+                "python3",
+                "scripts/run_ail_interactive_manual.py",
+                "--chapter",
+                "user-story-mode",
+                "--run-checks",
+            ),
+            evidence=(
+                "story-mode-report.txt",
+                "manifest.ail-story.txt",
+                "agent-trace.txt",
+            ),
+        ),
+        ManualCommand(
+            label="run-examples-release-checks",
+            command=(
+                "python3",
+                "scripts/run_ail_interactive_manual.py",
+                "--chapter",
+                "examples-release",
+                "--run-checks",
+            ),
+            evidence=(
+                "examples-report.txt",
+                "manifest.ail-examples.txt",
+                "model-executor-manifest.txt",
+            ),
+        ),
+        ManualCommand(
+            label="run-prompt-interaction-checks",
+            command=(
+                "python3",
+                "scripts/run_ail_interactive_manual.py",
+                "--chapter",
+                "prompt-interaction",
+                "--run-checks",
+            ),
+            evidence=(
+                "prompt-corpus-portability.txt",
+                "manifest.ail-prompt-corpus.txt",
+                "examples-report.txt",
+            ),
+        ),
+        ManualCommand(
+            label="run-agent-entrypoint-checks",
+            command=(
+                "python3",
+                "scripts/run_ail_interactive_manual.py",
+                "--chapter",
+                "agent-entrypoint",
+                "--run-checks",
+            ),
+            evidence=(
+                "agent.ailbc.json",
+                "agent-trace.txt",
+            ),
+        ),
+    ),
+)
+
+CHAPTERS: tuple[ManualChapter, ...] = BASE_CHAPTERS + (V03_AUTHORING_GATE,)
+
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="List, print, or run deterministic AIL interactive manual chapters."
     )
     parser.add_argument("--list", action="store_true", help="List manual chapters")
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Print or run all deterministic authoring chapters",
+    )
     parser.add_argument("--chapter", help="Chapter id to print or run")
     parser.add_argument(
         "--dry-run",
@@ -280,6 +355,20 @@ def print_chapter(chapter: ManualChapter, include_live: bool) -> None:
             print(f"evidence {evidence}")
 
 
+def print_runbook(include_live: bool) -> None:
+    print("AIL-Interactive-Manual-Runbook:")
+    for chapter in CHAPTERS:
+        print(f"chapter {chapter.chapter_id} {chapter.title}")
+        print(f"doc {chapter.doc}")
+        print(f"purpose {chapter.purpose}")
+        for index, command in enumerate(chapter_commands(chapter, include_live), start=1):
+            print(f"step {chapter.chapter_id}.{index} {command.label}")
+            print(f"live {str(command.live).lower()}")
+            print(command.shell_line())
+            for evidence in command.evidence:
+                print(f"evidence {evidence}")
+
+
 def run_chapter_checks(chapter: ManualChapter, include_live: bool) -> int:
     commands = chapter_commands(chapter, include_live)
     if not commands:
@@ -293,12 +382,30 @@ def run_chapter_checks(chapter: ManualChapter, include_live: bool) -> int:
     return 0
 
 
+def run_all_chapter_checks(include_live: bool) -> int:
+    for chapter in BASE_CHAPTERS:
+        print(f"chapter {chapter.chapter_id}")
+        status = run_chapter_checks(chapter, include_live)
+        if status != 0:
+            return status
+    return 0
+
+
 def main(argv: list[str]) -> int:
     args = parse_args(argv)
-    if args.list or not args.chapter:
+    if args.all and args.chapter:
+        raise SystemExit("--all cannot be used with --chapter")
+    if args.list or (not args.chapter and not args.all):
         print_chapter_list()
-        if not args.chapter:
+        if args.list and not (args.all or args.chapter):
             return 0
+        if not args.chapter and not args.all:
+            return 0
+    if args.all:
+        if args.run_checks:
+            return run_all_chapter_checks(args.include_live)
+        print_runbook(args.include_live or args.dry_run)
+        return 0
     chapter = chapter_by_id(args.chapter)
     if args.run_checks:
         return run_chapter_checks(chapter, args.include_live)
