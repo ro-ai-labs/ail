@@ -1027,6 +1027,18 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         docs_index.contains("manual/01-user-story-mode.md"),
         "{docs_index}"
     );
+    for manual_chapter in [
+        "manual/02-examples-release.md",
+        "manual/03-prompt-interaction.md",
+        "manual/04-agent-entrypoint.md",
+        "manual/05-v03-roadmap.md",
+        "manual/06-v03-authoring-gate.md",
+    ] {
+        assert!(
+            docs_index.contains(manual_chapter),
+            "{manual_chapter}\n{docs_index}"
+        );
+    }
     let manual_index = fs::read_to_string(format!(
         "{}/docs/ail/manual/README.md",
         env!("CARGO_MANIFEST_DIR")
@@ -1046,6 +1058,11 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         "agent-entrypoint",
         "v03-roadmap",
         "v03-authoring-gate",
+        "02-examples-release.md",
+        "03-prompt-interaction.md",
+        "04-agent-entrypoint.md",
+        "05-v03-roadmap.md",
+        "06-v03-authoring-gate.md",
     ] {
         assert!(
             manual_index.contains(required),
@@ -1072,6 +1089,57 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         "http://inteligentia-pro-1:8080/v1/chat/completions",
     ] {
         assert!(manual.contains(required), "{required}\n{manual}");
+    }
+    for (manual_path, required_terms) in [
+        (
+            "02-examples-release.md",
+            [
+                "cargo run -- ail-examples examples",
+                "examples-report.txt",
+                "model-executor-manifest.txt",
+            ],
+        ),
+        (
+            "03-prompt-interaction.md",
+            [
+                "cargo run -- ail-prompt-corpus docs/ail/corpus/prompts",
+                "scripts/run_v03_prompt_llm_harness.py --dry-run",
+                "manifest.ail-prompt-corpus.txt",
+            ],
+        ),
+        (
+            "04-agent-entrypoint.md",
+            [
+                "cargo run -- ail-agent-contracts examples/agents",
+                "examples/ail_toolchain_agent.ail",
+                "agent-trace.txt",
+            ],
+        ),
+        (
+            "05-v03-roadmap.md",
+            [
+                "cargo run -- ail-v03-roadmap examples",
+                "v03-roadmap.txt",
+                "AIL-v0.3-Roadmap",
+            ],
+        ),
+        (
+            "06-v03-authoring-gate.md",
+            [
+                "scripts/run_ail_interactive_manual.py --chapter v03-authoring-gate --run-checks",
+                "run-user-story-mode-checks",
+                "run-agent-entrypoint-checks",
+            ],
+        ),
+    ] {
+        let manual = fs::read_to_string(format!(
+            "{}/docs/ail/manual/{manual_path}",
+            env!("CARGO_MANIFEST_DIR")
+        ))
+        .unwrap();
+        for required in required_terms {
+            assert!(manual.contains(required), "{required}\n{manual}");
+        }
     }
 }
 
@@ -1147,6 +1215,7 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
     let prompt_stdout = String::from_utf8_lossy(&prompt_dry_run.stdout);
     for required in [
         "id prompt-interaction",
+        "doc docs/ail/manual/03-prompt-interaction.md",
         "cargo run -- ail-prompt-corpus docs/ail/corpus/prompts",
         "cargo run -- ail-examples examples",
         "python3 scripts/run_v03_prompt_llm_harness.py --dry-run",
@@ -1172,6 +1241,7 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
     let agent_stdout = String::from_utf8_lossy(&agent_dry_run.stdout);
     for required in [
         "id agent-entrypoint",
+        "doc docs/ail/manual/04-agent-entrypoint.md",
         "cargo run -- ail-check examples/ail_toolchain_agent.ail",
         "codex-ail-prompt-reviewer.md",
         "cargo run -- ail-agent-contracts examples/agents",
@@ -1199,7 +1269,7 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
     let gate_stdout = String::from_utf8_lossy(&gate_dry_run.stdout);
     for required in [
         "id v03-authoring-gate",
-        "doc docs/ail/31-v03-learning-and-authoring-gate.md",
+        "doc docs/ail/manual/06-v03-authoring-gate.md",
         "python3 scripts/run_ail_interactive_manual.py --chapter user-story-mode --run-checks",
         "python3 scripts/run_ail_interactive_manual.py --chapter examples-release --run-checks",
         "python3 scripts/run_ail_interactive_manual.py --chapter v03-roadmap --run-checks",
@@ -1248,6 +1318,7 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
     let roadmap_stdout = String::from_utf8_lossy(&roadmap_dry_run.stdout);
     for required in [
         "id v03-roadmap",
+        "doc docs/ail/manual/05-v03-roadmap.md",
         "cargo run -- ail-v03-roadmap examples",
         "--artifact-dir /tmp/ail-manual-v03-roadmap",
         "evidence AIL-v0.3-Roadmap",

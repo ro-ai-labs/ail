@@ -108,6 +108,16 @@ one of these version surfaces or add a versioned surface through
 - `manual/01-user-story-mode.md`: story-first authoring with `ail-story`,
   checked requirements, accepted spec, checked Core, bytecode, agent trace, and
   live llama.cpp harness evidence.
+- `manual/02-examples-release.md`: full examples replay, release evidence,
+  model/executor manifest, and learning artifact review.
+- `manual/03-prompt-interaction.md`: prompt corpus, prompt-surface replay,
+  transcript capture help, and hosted prompt harness review.
+- `manual/04-agent-entrypoint.md`: Codex role contracts and the AIL-authored
+  toolchain-agent build entrypoint.
+- `manual/05-v03-roadmap.md`: direct `ail-v03-roadmap` backlog view over the
+  examples-derived learning signals.
+- `manual/06-v03-authoring-gate.md`: one deterministic audit over User Story
+  mode, examples replay, roadmap, prompt, and agent checks.
 
 ## Versioned Assets
 

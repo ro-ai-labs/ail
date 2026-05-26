@@ -84,14 +84,16 @@ be reviewed before promotion into `./examples`.
   requirements, accepted spec, checked Core, bytecode, and agent trace. Prose:
   `01-user-story-mode.md`.
 - `examples-release`: full `./examples` replay with release evidence and
-  learning metadata.
+  learning metadata. Prose: `02-examples-release.md`.
 - `prompt-interaction`: prompt-pack and stored transcript inspection for system
   prompt interaction testing, plus an opt-in hosted llama.cpp prompt-pack
-  harness.
+  harness. Prose: `03-prompt-interaction.md`.
 - `agent-entrypoint`: Codex agent role files and the AIL toolchain-agent package
-  that participates in the authoring pipeline.
+  that participates in the authoring pipeline. Prose:
+  `04-agent-entrypoint.md`.
 - `v03-roadmap`: direct next-version backlog generated from the examples
-  corpus with `ail-v03-roadmap`.
+  corpus with `ail-v03-roadmap`. Prose: `05-v03-roadmap.md`.
 - `v03-authoring-gate`: the deterministic v0.3 audit that runs User Story
   mode, examples replay, roadmap printing, prompt interaction, and
-  agent-entrypoint checks from one manual chapter.
+  agent-entrypoint checks from one manual chapter. Prose:
+  `06-v03-authoring-gate.md`.

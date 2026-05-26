@@ -118,7 +118,7 @@ BASE_CHAPTERS: tuple[ManualChapter, ...] = (
     ManualChapter(
         chapter_id="examples-release",
         title="Examples Release Replay",
-        doc="examples/README.md",
+        doc="docs/ail/manual/02-examples-release.md",
         purpose="Replay the full examples catalog and inspect learning evidence.",
         commands=(
             ManualCommand(
@@ -144,7 +144,7 @@ BASE_CHAPTERS: tuple[ManualChapter, ...] = (
     ManualChapter(
         chapter_id="v03-roadmap",
         title="v0.3 Roadmap",
-        doc="docs/ail/31-v03-learning-and-authoring-gate.md",
+        doc="docs/ail/manual/05-v03-roadmap.md",
         purpose="Print the examples-derived next-version backlog without mining the full replay report.",
         commands=(
             ManualCommand(
@@ -170,7 +170,7 @@ BASE_CHAPTERS: tuple[ManualChapter, ...] = (
     ManualChapter(
         chapter_id="prompt-interaction",
         title="Prompt Interaction",
-        doc="docs/ail/prompts/README.md",
+        doc="docs/ail/manual/03-prompt-interaction.md",
         purpose="Inspect prompt-pack surfaces and stored request/response replay.",
         commands=(
             ManualCommand(
@@ -225,7 +225,7 @@ BASE_CHAPTERS: tuple[ManualChapter, ...] = (
     ManualChapter(
         chapter_id="agent-entrypoint",
         title="Agent Entrypoint",
-        doc="examples/agents/README.md",
+        doc="docs/ail/manual/04-agent-entrypoint.md",
         purpose="Inspect Codex agent roles and the AIL toolchain-agent package.",
         commands=(
             ManualCommand(
@@ -276,7 +276,7 @@ BASE_CHAPTERS: tuple[ManualChapter, ...] = (
 V03_AUTHORING_GATE = ManualChapter(
     chapter_id="v03-authoring-gate",
     title="v0.3 Authoring Gate",
-    doc="docs/ail/31-v03-learning-and-authoring-gate.md",
+    doc="docs/ail/manual/06-v03-authoring-gate.md",
     purpose="Run the deterministic story, examples, roadmap, prompt, and agent checks as one v0.3 audit.",
     commands=(
         ManualCommand(
