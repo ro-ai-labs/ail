@@ -1,0 +1,5 @@
+{
+  "agent": "codex-ail-spec-writer",
+  "content": "# Rejected C Interop Fixture: Nullable To NonNull\n\nC library: libc.\n\nThe library imports function strlen.\n\nstrlen needs:\n\n- text: NonNull<Pointer<CChar>> nullable\n\nstrlen produces:\n\n- length: UInt64\n\nstrlen requires capability:\n\n- call libc strlen\n\nstrlen records trace event named ForeignStrlen",
+  "model": "codex-subagent-default"
+}

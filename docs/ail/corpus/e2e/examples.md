@@ -1943,3 +1943,24 @@ vm-action: LinuxExit
 runtime-state: system.mode=test
 expected-diagnostic: AIL-BACKEND-001
 failure-taxonomy: unsupported-target
+
+## End-To-End Example: example-105
+semantic-task: c-interop-nullable-nonnull-rejected-105
+profile: System
+surface-tags: c-interop,ffi
+package: examples/c_interop.ail
+prompt-file: docs/ail/prompts/interop.system.md
+prompt-version: ail-prompts.v0.2
+prompt-fingerprint: fnv64:87f6dd1772d48729
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
+request-file: requests/example-105.json
+response-file: responses/example-105.json
+artifact-kind: ail-spec
+checker-result: rejected
+target: wasm32-unknown-sandbox-wasm
+vm-action: strlen
+runtime-state: text=null
+expected-diagnostic: AIL-FFI-NULL-001
+failure-taxonomy: invalid-interop

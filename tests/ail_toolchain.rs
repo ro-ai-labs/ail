@@ -20024,13 +20024,13 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         String::from_utf8_lossy(&output.stderr)
     );
     let report = fs::read_to_string(artifact_dir.join("e2e-corpus-report.txt")).unwrap();
-    assert!(report.contains("entry-count 105"), "{report}");
+    assert!(report.contains("entry-count 106"), "{report}");
     assert!(
         report.contains("checker-result-count accepted 100"),
         "{report}"
     );
     assert!(
-        report.contains("checker-result-count rejected 5"),
+        report.contains("checker-result-count rejected 6"),
         "{report}"
     );
     assert!(
@@ -20054,6 +20054,10 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
+        report.contains("failure-taxonomy-count invalid-interop 1"),
+        "{report}"
+    );
+    assert!(
         !report.contains("capture-origin-count deterministic-seed"),
         "{report}"
     );
@@ -20062,7 +20066,7 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("capture-origin-count live-codex 101"),
+        report.contains("capture-origin-count live-codex 102"),
         "{report}"
     );
     assert!(
@@ -20690,9 +20694,15 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
             && report.contains("entry-artifact example-104 diagnostics"),
         "{report}"
     );
+    assert!(
+        report.contains("entry example-105")
+            && report.contains("semantic-task c-interop-nullable-nonnull-rejected-105")
+            && report.contains("entry-artifact example-105 diagnostics"),
+        "{report}"
+    );
     assert!(report.contains("profile-count UI 1"), "{report}");
     assert!(
-        report.contains("target-count wasm32-unknown-sandbox-wasm 11"),
+        report.contains("target-count wasm32-unknown-sandbox-wasm 12"),
         "{report}"
     );
     assert!(
@@ -20749,6 +20759,14 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         ),
         "{unsupported_target_diagnostics}"
     );
+    let invalid_interop_diagnostics =
+        fs::read_to_string(artifact_dir.join("examples/example-105/diagnostics.txt")).unwrap();
+    assert!(
+        invalid_interop_diagnostics.contains(
+            "AIL-FFI-NULL-001 nullable value libc.strlen.text cannot satisfy NonNull pointer contract"
+        ),
+        "{invalid_interop_diagnostics}"
+    );
     let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-e2e-corpus.txt")).unwrap();
     assert!(manifest.contains("AIL-E2E-Corpus-Manifest:"), "{manifest}");
     assert!(
@@ -20758,9 +20776,9 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
     let model_executor_manifest =
         fs::read_to_string(artifact_dir.join("model-executor-manifest.txt")).unwrap();
     assert!(
-        model_executor_manifest.contains("entry-count 105")
-            && model_executor_manifest.contains("executor-family codex-skill-agent count 101")
-            && model_executor_manifest.contains("capture-origin live-codex count 101")
+        model_executor_manifest.contains("entry-count 106")
+            && model_executor_manifest.contains("executor-family codex-skill-agent count 102")
+            && model_executor_manifest.contains("capture-origin live-codex count 102")
             && model_executor_manifest.contains(
                 "entry example-100 semantic-task stateful-counter-live-codex-accepted-100"
             )
@@ -20775,6 +20793,9 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
             )
             && model_executor_manifest.contains(
                 "entry example-104 semantic-task system-linux-syscall-darwin-unsupported-104"
+            )
+            && model_executor_manifest.contains(
+                "entry example-105 semantic-task c-interop-nullable-nonnull-rejected-105"
             ),
         "{model_executor_manifest}"
     );
