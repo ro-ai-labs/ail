@@ -20024,13 +20024,13 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         String::from_utf8_lossy(&output.stderr)
     );
     let report = fs::read_to_string(artifact_dir.join("e2e-corpus-report.txt")).unwrap();
-    assert!(report.contains("entry-count 106"), "{report}");
+    assert!(report.contains("entry-count 107"), "{report}");
     assert!(
         report.contains("checker-result-count accepted 100"),
         "{report}"
     );
     assert!(
-        report.contains("checker-result-count rejected 6"),
+        report.contains("checker-result-count rejected 7"),
         "{report}"
     );
     assert!(
@@ -20058,6 +20058,10 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
+        report.contains("failure-taxonomy-count permission-capability 1"),
+        "{report}"
+    );
+    assert!(
         !report.contains("capture-origin-count deterministic-seed"),
         "{report}"
     );
@@ -20066,7 +20070,7 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("capture-origin-count live-codex 102"),
+        report.contains("capture-origin-count live-codex 103"),
         "{report}"
     );
     assert!(
@@ -20700,6 +20704,13 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
             && report.contains("entry-artifact example-105 diagnostics"),
         "{report}"
     );
+    assert!(
+        report.contains("entry example-106")
+            && report
+                .contains("semantic-task network-driver-effect-without-capability-rejected-106")
+            && report.contains("entry-artifact example-106 diagnostics"),
+        "{report}"
+    );
     assert!(report.contains("profile-count UI 1"), "{report}");
     assert!(
         report.contains("target-count wasm32-unknown-sandbox-wasm 12"),
@@ -20767,6 +20778,14 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         ),
         "{invalid_interop_diagnostics}"
     );
+    let permission_capability_diagnostics =
+        fs::read_to_string(artifact_dir.join("examples/example-106/diagnostics.txt")).unwrap();
+    assert!(
+        permission_capability_diagnostics.contains(
+            "AIL021 system component NetworkPacketReceiver performs effect 'read network device' without a declared capability"
+        ),
+        "{permission_capability_diagnostics}"
+    );
     let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-e2e-corpus.txt")).unwrap();
     assert!(manifest.contains("AIL-E2E-Corpus-Manifest:"), "{manifest}");
     assert!(
@@ -20776,9 +20795,9 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
     let model_executor_manifest =
         fs::read_to_string(artifact_dir.join("model-executor-manifest.txt")).unwrap();
     assert!(
-        model_executor_manifest.contains("entry-count 106")
-            && model_executor_manifest.contains("executor-family codex-skill-agent count 102")
-            && model_executor_manifest.contains("capture-origin live-codex count 102")
+        model_executor_manifest.contains("entry-count 107")
+            && model_executor_manifest.contains("executor-family codex-skill-agent count 103")
+            && model_executor_manifest.contains("capture-origin live-codex count 103")
             && model_executor_manifest.contains(
                 "entry example-100 semantic-task stateful-counter-live-codex-accepted-100"
             )
@@ -20796,6 +20815,9 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
             )
             && model_executor_manifest.contains(
                 "entry example-105 semantic-task c-interop-nullable-nonnull-rejected-105"
+            )
+            && model_executor_manifest.contains(
+                "entry example-106 semantic-task network-driver-effect-without-capability-rejected-106"
             ),
         "{model_executor_manifest}"
     );

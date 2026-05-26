@@ -1964,3 +1964,24 @@ vm-action: strlen
 runtime-state: text=null
 expected-diagnostic: AIL-FFI-NULL-001
 failure-taxonomy: invalid-interop
+
+## End-To-End Example: example-106
+semantic-task: network-driver-effect-without-capability-rejected-106
+profile: System
+surface-tags: system,capability
+package: examples/network_driver.ail
+prompt-file: docs/ail/prompts/spec-draft.system.md
+prompt-version: ail-prompts.v0.2
+prompt-fingerprint: fnv64:b23778093326102c
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
+request-file: requests/example-106.json
+response-file: responses/example-106.json
+artifact-kind: ail-spec
+checker-result: rejected
+target: linux-x86_64-elf
+vm-action: NetworkPacketReceiver
+runtime-state: network.device=eth0;rx.buffer=empty
+expected-diagnostic: AIL021
+failure-taxonomy: permission-capability

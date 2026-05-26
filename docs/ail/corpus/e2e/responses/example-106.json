@@ -1,0 +1,5 @@
+{
+  "agent": "codex-ail-spec-writer",
+  "content": "# Rejected Network Driver Fixture\n\nSystem component: Network packet receiver.\n\nThe component uses:\n\n- rx buffer: Buffer\n- network device: Device\n\nThe component performs:\n\n- read network device\n\nThe component records:\n\n- PacketReceived\n\nThe component guarantees:\n\n- every packet read is stored in rx buffer before release",
+  "model": "codex-subagent-default"
+}
