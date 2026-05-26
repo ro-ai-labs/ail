@@ -16,6 +16,7 @@ class AuditStep:
     command: list[str]
     artifact_dir: Path | None = None
     manifest_name: str | None = None
+    required_files: tuple[str, ...] = ()
 
 
 @dataclasses.dataclass(frozen=True)
@@ -254,11 +255,14 @@ def build_v02_audit_plan(bundle_root: Path) -> list[AuditStep]:
             ],
             artifacts / "v02-e2e-corpus",
             "manifest.ail-e2e-corpus.txt",
+            ("model-executor-manifest.txt", "model-executor-manifest.fingerprint.txt"),
         ),
     ]
 
 
-def verify_artifact_dir(artifact_dir: Path, manifest_name: str) -> list[str]:
+def verify_artifact_dir(
+    artifact_dir: Path, manifest_name: str, required_files: tuple[str, ...] = ()
+) -> list[str]:
     manifest_path = artifact_dir / manifest_name
     fingerprint_path = artifact_dir / "manifest.fingerprint.txt"
     if not artifact_dir.is_dir():
@@ -274,11 +278,28 @@ def verify_artifact_dir(artifact_dir: Path, manifest_name: str) -> list[str]:
         raise ValueError(
             f"manifest fingerprint mismatch for {manifest_path}: expected {expected}, found {actual}"
         )
-    return [
+    lines = [
         f"artifact-dir {artifact_dir}",
         f"artifact-manifest {manifest_name} {expected}",
         "artifact-manifest-fingerprint manifest.fingerprint.txt ok",
     ]
+    for required_file in required_files:
+        required_path = artifact_dir / required_file
+        if not required_path.is_file():
+            raise ValueError(f"required artifact file is missing: {required_path}")
+        lines.append(f"artifact-required-file {required_file} ok")
+        if required_file.endswith(".fingerprint.txt"):
+            artifact_name = required_file.removesuffix(".fingerprint.txt") + ".txt"
+            artifact_path = artifact_dir / artifact_name
+            if artifact_path.is_file():
+                expected_required = fnv64_fingerprint(artifact_path.read_bytes())
+                actual_required = required_path.read_text(encoding="utf-8").strip()
+                if actual_required != expected_required:
+                    raise ValueError(
+                        f"required artifact fingerprint mismatch for {required_path}: expected {expected_required}, found {actual_required}"
+                    )
+                lines.append(f"artifact-required-fingerprint {required_file} ok")
+    return lines
 
 
 def render_release_manifest(results: list[AuditResult], mode: str) -> str:
@@ -330,7 +351,11 @@ def run_plan(bundle_root: Path, dry_run: bool) -> int:
         artifact_lines: tuple[str, ...] = ()
         if completed.returncode == 0 and step.artifact_dir is not None:
             assert step.manifest_name is not None
-            artifact_lines = tuple(verify_artifact_dir(step.artifact_dir, step.manifest_name))
+            artifact_lines = tuple(
+                verify_artifact_dir(
+                    step.artifact_dir, step.manifest_name, step.required_files
+                )
+            )
         result = AuditResult(
             step=step,
             status=status,

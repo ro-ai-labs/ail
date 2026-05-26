@@ -22249,6 +22249,69 @@ fn cli_ail_e2e_corpus_writes_report_for_metadata_complete_corpus() {
         )),
         "{manifest}"
     );
+    let model_executor_manifest =
+        fs::read_to_string(artifact_dir.join("model-executor-manifest.txt")).unwrap();
+    assert!(
+        model_executor_manifest.contains("AIL-E2E-Model-Executor-Manifest:"),
+        "{model_executor_manifest}"
+    );
+    assert!(
+        model_executor_manifest.contains("entry-count 100"),
+        "{model_executor_manifest}"
+    );
+    assert!(
+        model_executor_manifest.contains("executor-family codex-skill-agent count 1"),
+        "{model_executor_manifest}"
+    );
+    assert!(
+        model_executor_manifest.contains("executor-family llm-http count 99"),
+        "{model_executor_manifest}"
+    );
+    assert!(
+        model_executor_manifest.contains("executor-label local-executor count 100"),
+        "{model_executor_manifest}"
+    );
+    assert!(
+        model_executor_manifest.contains("endpoint-label local-endpoint count 98"),
+        "{model_executor_manifest}"
+    );
+    assert!(
+        model_executor_manifest.contains("endpoint-label local-endpoint-alt count 1"),
+        "{model_executor_manifest}"
+    );
+    assert!(
+        model_executor_manifest.contains("capture-origin deterministic-seed count 100"),
+        "{model_executor_manifest}"
+    );
+    assert!(
+        model_executor_manifest
+            .contains("executor-endpoint local-executor@local-endpoint count 98"),
+        "{model_executor_manifest}"
+    );
+    assert!(
+        model_executor_manifest
+            .contains("executor-endpoint local-executor@local-endpoint-alt count 1"),
+        "{model_executor_manifest}"
+    );
+    assert!(
+        model_executor_manifest.contains(
+            "entry example-99 semantic-task support-ticket-99 executor-family codex-skill-agent executor-label local-executor endpoint-label none capture-origin deterministic-seed"
+        ),
+        "{model_executor_manifest}"
+    );
+    let model_executor_manifest_fingerprint =
+        fs::read_to_string(artifact_dir.join("model-executor-manifest.fingerprint.txt")).unwrap();
+    assert_eq!(
+        model_executor_manifest_fingerprint.trim(),
+        fnv64_fingerprint(&model_executor_manifest)
+    );
+    assert!(
+        manifest.contains(&format!(
+            "model-executor model-executor-manifest.txt {}",
+            model_executor_manifest_fingerprint.trim()
+        )),
+        "{manifest}"
+    );
     let manifest_fingerprint =
         fs::read_to_string(artifact_dir.join("manifest.fingerprint.txt")).unwrap();
     assert_eq!(manifest_fingerprint.trim(), fnv64_fingerprint(&manifest));

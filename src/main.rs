@@ -1964,6 +1964,7 @@ fn push_ail_e2e_entry_artifact_lines(
 
 fn render_ail_e2e_corpus_manifest(
     report_text: &str,
+    model_executor_manifest_text: &str,
     evaluations: &[AilE2eCorpusEvaluation],
 ) -> String {
     let mut lines = vec![
@@ -1971,6 +1972,10 @@ fn render_ail_e2e_corpus_manifest(
         format!(
             "report e2e-corpus-report.txt {}",
             ail_artifact_fingerprint(report_text)
+        ),
+        format!(
+            "model-executor model-executor-manifest.txt {}",
+            ail_artifact_fingerprint(model_executor_manifest_text)
         ),
     ];
     for evaluation in evaluations {
@@ -1990,6 +1995,113 @@ fn render_ail_e2e_corpus_manifest(
             entry.id, checker_result, target
         ));
         push_ail_e2e_entry_artifact_lines(&mut lines, "entry-artifact", evaluation);
+    }
+    format!("{}\n", lines.join("\n"))
+}
+
+fn render_ail_e2e_model_executor_manifest(evaluations: &[AilE2eCorpusEvaluation]) -> String {
+    let mut executor_family_counts = BTreeMap::new();
+    let mut executor_label_counts = BTreeMap::new();
+    let mut endpoint_label_counts = BTreeMap::new();
+    let mut capture_origin_counts = BTreeMap::new();
+    let mut executor_origin_counts = BTreeMap::new();
+    let mut executor_endpoint_counts = BTreeMap::new();
+
+    for evaluation in evaluations {
+        let fields = &evaluation.entry.fields;
+        let executor_family = fields
+            .get("executor-family")
+            .map(String::as_str)
+            .unwrap_or("unknown");
+        let executor_label = fields
+            .get("executor-label")
+            .map(String::as_str)
+            .unwrap_or("unknown");
+        let capture_origin = fields
+            .get("capture-origin")
+            .map(String::as_str)
+            .unwrap_or("unknown");
+        *executor_family_counts
+            .entry(executor_family.to_string())
+            .or_insert(0usize) += 1;
+        *executor_label_counts
+            .entry(executor_label.to_string())
+            .or_insert(0usize) += 1;
+        *capture_origin_counts
+            .entry(capture_origin.to_string())
+            .or_insert(0usize) += 1;
+        *executor_origin_counts
+            .entry(format!("{executor_family}@{capture_origin}"))
+            .or_insert(0usize) += 1;
+        if let Some(endpoint_label) = fields
+            .get("endpoint-label")
+            .filter(|label| !label.is_empty())
+        {
+            *endpoint_label_counts
+                .entry(endpoint_label.to_string())
+                .or_insert(0usize) += 1;
+            *executor_endpoint_counts
+                .entry(format!("{executor_label}@{endpoint_label}"))
+                .or_insert(0usize) += 1;
+        }
+    }
+
+    let mut lines = vec![
+        "AIL-E2E-Model-Executor-Manifest:".to_string(),
+        format!("entry-count {}", evaluations.len()),
+    ];
+    for (executor_family, count) in executor_family_counts {
+        lines.push(format!("executor-family {executor_family} count {count}"));
+    }
+    for (executor_label, count) in executor_label_counts {
+        lines.push(format!("executor-label {executor_label} count {count}"));
+    }
+    for (endpoint_label, count) in endpoint_label_counts {
+        lines.push(format!("endpoint-label {endpoint_label} count {count}"));
+    }
+    for (capture_origin, count) in capture_origin_counts {
+        lines.push(format!("capture-origin {capture_origin} count {count}"));
+    }
+    for (executor_origin, count) in executor_origin_counts {
+        lines.push(format!("executor-origin {executor_origin} count {count}"));
+    }
+    for (executor_endpoint, count) in executor_endpoint_counts {
+        lines.push(format!(
+            "executor-endpoint {executor_endpoint} count {count}"
+        ));
+    }
+    for evaluation in evaluations {
+        let fields = &evaluation.entry.fields;
+        let semantic_task = fields
+            .get("semantic-task")
+            .map(String::as_str)
+            .unwrap_or("unknown");
+        let executor_family = fields
+            .get("executor-family")
+            .map(String::as_str)
+            .unwrap_or("unknown");
+        let executor_label = fields
+            .get("executor-label")
+            .map(String::as_str)
+            .unwrap_or("unknown");
+        let endpoint_label = fields
+            .get("endpoint-label")
+            .filter(|label| !label.is_empty())
+            .map(String::as_str)
+            .unwrap_or("none");
+        let capture_origin = fields
+            .get("capture-origin")
+            .map(String::as_str)
+            .unwrap_or("unknown");
+        lines.push(format!(
+            "entry {} semantic-task {} executor-family {} executor-label {} endpoint-label {} capture-origin {}",
+            evaluation.entry.id,
+            semantic_task,
+            executor_family,
+            executor_label,
+            endpoint_label,
+            capture_origin
+        ));
     }
     format!("{}\n", lines.join("\n"))
 }
@@ -2230,7 +2342,22 @@ fn write_ail_e2e_corpus_artifacts(
         format!("{}\n", ail_artifact_fingerprint(report_text)),
     )
     .map_err(|error| format!("failed to write e2e corpus report fingerprint: {error}"))?;
-    let manifest_text = render_ail_e2e_corpus_manifest(report_text, evaluations);
+    let model_executor_manifest_text = render_ail_e2e_model_executor_manifest(evaluations);
+    fs::write(
+        root.join("model-executor-manifest.txt"),
+        &model_executor_manifest_text,
+    )
+    .map_err(|error| format!("failed to write e2e model executor manifest: {error}"))?;
+    fs::write(
+        root.join("model-executor-manifest.fingerprint.txt"),
+        format!(
+            "{}\n",
+            ail_artifact_fingerprint(&model_executor_manifest_text)
+        ),
+    )
+    .map_err(|error| format!("failed to write e2e model executor manifest fingerprint: {error}"))?;
+    let manifest_text =
+        render_ail_e2e_corpus_manifest(report_text, &model_executor_manifest_text, evaluations);
     fs::write(root.join("manifest.ail-e2e-corpus.txt"), &manifest_text)
         .map_err(|error| format!("failed to write e2e corpus manifest: {error}"))?;
     fs::write(

@@ -32,6 +32,9 @@ class V02ReleaseAuditTest(unittest.TestCase):
         self.assertIn("build-support", names)
         self.assertIn("spec-roundtrip", names)
         self.assertIn("e2e-corpus", names)
+        e2e_step = plan[names.index("e2e-corpus")]
+        self.assertIn("model-executor-manifest.txt", e2e_step.required_files)
+        self.assertIn("model-executor-manifest.fingerprint.txt", e2e_step.required_files)
         build_command = plan[names.index("build-support")].command
         self.assertIn("--spec-file", build_command)
         self.assertIn("examples/support_ticket.ail/spec.ail-spec.md", build_command)
@@ -56,8 +59,23 @@ class V02ReleaseAuditTest(unittest.TestCase):
             artifact_dir.joinpath("manifest.fingerprint.txt").write_text(
                 audit.fnv64_fingerprint(manifest.encode("utf-8")) + "\n"
             )
+            model_executor_manifest = "AIL-E2E-Model-Executor-Manifest:\nentry-count 100\n"
+            artifact_dir.joinpath("model-executor-manifest.txt").write_text(
+                model_executor_manifest
+            )
+            artifact_dir.joinpath("model-executor-manifest.fingerprint.txt").write_text(
+                audit.fnv64_fingerprint(model_executor_manifest.encode("utf-8"))
+                + "\n"
+            )
 
-            verified = audit.verify_artifact_dir(artifact_dir, "manifest.ail-test.txt")
+            verified = audit.verify_artifact_dir(
+                artifact_dir,
+                "manifest.ail-test.txt",
+                (
+                    "model-executor-manifest.txt",
+                    "model-executor-manifest.fingerprint.txt",
+                ),
+            )
 
             self.assertEqual(
                 verified,
@@ -66,12 +84,22 @@ class V02ReleaseAuditTest(unittest.TestCase):
                     "artifact-manifest manifest.ail-test.txt "
                     + audit.fnv64_fingerprint(manifest.encode("utf-8")),
                     "artifact-manifest-fingerprint manifest.fingerprint.txt ok",
+                    "artifact-required-file model-executor-manifest.txt ok",
+                    "artifact-required-file model-executor-manifest.fingerprint.txt ok",
+                    "artifact-required-fingerprint model-executor-manifest.fingerprint.txt ok",
                 ],
             )
 
             artifact_dir.joinpath("manifest.fingerprint.txt").write_text("fnv64:bad\n")
             with self.assertRaisesRegex(ValueError, "manifest fingerprint mismatch"):
-                audit.verify_artifact_dir(artifact_dir, "manifest.ail-test.txt")
+                audit.verify_artifact_dir(
+                    artifact_dir,
+                    "manifest.ail-test.txt",
+                    (
+                        "model-executor-manifest.txt",
+                        "model-executor-manifest.fingerprint.txt",
+                    ),
+                )
 
     def test_dry_run_writes_fingerprinted_release_manifest(self):
         with tempfile.TemporaryDirectory() as tmp:

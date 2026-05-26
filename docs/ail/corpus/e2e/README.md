@@ -103,7 +103,11 @@ capture-origin counts plus response,
 extracted-artifact, checked Core, bytecode, VM trace, native, target-report,
 and diagnostics fingerprint reuse. Response, extracted-artifact, and
 target-report duplicate counts must remain zero before claiming the v0.2
-prompt-to-artifact release gate.
+prompt-to-artifact release gate. The artifact bundle also writes
+`model-executor-manifest.txt` and
+`model-executor-manifest.fingerprint.txt`, which enumerate executor families,
+executor labels, endpoint labels, capture origins, executor/origin pairs,
+executor/endpoint pairs, and per-entry semantic task provenance.
 
 The seed includes one real `UI` profile replay through `ui_workflow.ail`, which
 lowers UI route, form, dashboard, and workflow semantics into checked Core,

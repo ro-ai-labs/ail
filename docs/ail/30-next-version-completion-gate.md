@@ -326,6 +326,10 @@ Evidence:
   target-report entries, plus broad `live-llm` and `live-codex` capture-origin
   coverage unless this file names a specific shared artifact as intentional
   non-release scaffolding.
+- The e2e corpus artifact bundle includes `model-executor-manifest.txt` and
+  `model-executor-manifest.fingerprint.txt`, covering executor families,
+  executor labels, endpoint labels, capture origins, executor/origin pairs,
+  executor/endpoint pairs, and per-entry semantic task provenance.
 
 Minimum proof commands:
 
@@ -444,7 +448,7 @@ The v0.2 release evidence bundle must contain:
 - per-example transcript, checked-artifact, Core, bytecode, target, manifest,
   and failure-taxonomy fingerprints for the end-to-end corpus
 - model/executor manifest covering `llm-http` and `codex-skill-agent`
-  executor families
+  executor families, endpoint labels, executor labels, and capture origins
 - bootstrap artifact directory with fixed-point, host-boundary, dependency, and
   handoff reports
 
@@ -504,7 +508,10 @@ already covers parts of this gate:
 - `ail-e2e-corpus` replay verifier, threshold tests, stored transcript replay,
   accepted prompt-output compilation to bytecode, VM traces, Linux native
   artifacts, Wasm and Darwin target-contract reports, rejected-output replay,
-  and top-level manifest/report fingerprints
+  top-level manifest/report fingerprints, and a fingerprinted
+  model/executor manifest covering executor families, endpoint labels,
+  executor labels, capture origins, executor/origin pairs, executor/endpoint
+  pairs, and per-entry semantic task provenance
 - checked 100-entry e2e live release corpus under `docs/ail/corpus/e2e`
 - four replay-clean live LLM captures for the Standard Collections, Support
   Ticket, and Refund Tool packages, using schema-shaped prompt input or
