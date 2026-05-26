@@ -105,7 +105,9 @@ multi-module policy.
 
 ## v0.3 Learning Signal
 
-UI Workflow covers the first serious user-facing surface, but v0.3 needs
-stronger visual review artifacts, story-to-screen traceability, semantic
-anchors for UI routes/forms/dashboards, and accessibility exercises that prove
-the regenerated user-story view preserves the intended user experience.
+UI Workflow covers the first serious user-facing surface, and its primary
+story files now carry semantic anchors for routes, forms, dashboards,
+workflow traces, and Wasm target reports. v0.3 still needs stronger visual
+review artifacts, story-to-screen traceability, and accessibility exercises
+that prove the regenerated user-story view preserves the intended user
+experience.

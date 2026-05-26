@@ -731,6 +731,61 @@ fn example_incident_stories_record_semantic_anchors() {
 }
 
 #[test]
+fn example_ui_workflow_stories_record_semantic_anchors() {
+    let spec = fs::read_to_string(fixture("ui_workflow.ail/spec.ail-spec.md")).unwrap();
+    let package = fs::read_to_string(fixture("ui_workflow.ail/ail-package.md")).unwrap();
+    let catalog = fs::read_to_string(fixture("examples.md")).unwrap();
+    for (story_file, required_anchors) in [
+        (
+            "stories/example-65.md",
+            [
+                "Ticket detail",
+                "Create ticket",
+                "Support manager dashboard",
+                "Refund approval",
+                "CreateTicketForm",
+                "wasm32-unknown-sandbox-wasm",
+            ],
+        ),
+        (
+            "stories/example-108.md",
+            [
+                "Create ticket",
+                "title error is announced",
+                "FormValidationFailed",
+                "CreateTicketForm",
+                "spec-draft.system.md",
+                "target-report",
+            ],
+        ),
+        (
+            "stories/example-109.md",
+            [
+                "Provider call before Manager approval",
+                "DashboardViewed",
+                "RefundApprovalWorkflowViewed",
+                "ui.route",
+                "ui.form",
+                "ui.dashboard",
+            ],
+        ),
+    ] {
+        let story = fs::read_to_string(fixture(story_file)).unwrap();
+        assert!(story.contains("semantic-anchors:"), "{story_file}\n{story}");
+        for anchor in required_anchors {
+            assert!(
+                story.contains(anchor),
+                "{story_file} missing semantic anchor {anchor}\n{story}"
+            );
+            assert!(
+                spec.contains(anchor) || package.contains(anchor) || catalog.contains(anchor),
+                "{story_file} anchor {anchor} is not grounded in UI workflow spec/package/catalog"
+            );
+        }
+    }
+}
+
+#[test]
 fn example_low_level_stories_record_semantic_anchors() {
     let catalog = fs::read_to_string(fixture("examples.md")).unwrap();
     let network_spec = fs::read_to_string(fixture("network_driver.ail/spec.ail-spec.md")).unwrap();
@@ -21572,7 +21627,7 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("semantic-anchor-story-count 19")
+        report.contains("semantic-anchor-story-count 22")
             && report.contains(
                 "entry-semantic-anchors example-111 Incident; Declare incident; IncidentDeclared; incident_identity; incident_policy; incident_notifications"
             ),

@@ -11,3 +11,4 @@ module-count: 3
 spec-count: 3
 story-count: 3
 interacts-with: ui.route,ui.form,ui.dashboard
+semantic-anchors: Provider call before Manager approval; DashboardViewed; RefundApprovalWorkflowViewed; ui.route; ui.form; ui.dashboard

@@ -11,3 +11,4 @@ module-count: 3
 spec-count: 3
 story-count: 3
 interacts-with: ui.route,ui.form,ui.dashboard
+semantic-anchors: Ticket detail; Create ticket; Support manager dashboard; Refund approval; CreateTicketForm; wasm32-unknown-sandbox-wasm
