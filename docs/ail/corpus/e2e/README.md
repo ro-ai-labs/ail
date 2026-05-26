@@ -1,7 +1,7 @@
 # AIL End-To-End Corpus
 
-This directory holds the checked v0.2 prompt-to-artifact seed corpus consumed by
-`ail-e2e-corpus`.
+This directory holds the checked v0.2 prompt-to-artifact release corpus
+consumed by `ail-e2e-corpus`.
 
 Each counted example must be replayable without live model access and must
 record the full chain from stored prompt transcript to checked AIL artifact,

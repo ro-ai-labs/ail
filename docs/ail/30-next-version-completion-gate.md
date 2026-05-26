@@ -334,7 +334,7 @@ cargo test cli_ail_build_agent_compares_prompt_portability_before_compile
 cargo test cli_ail_prompt_corpus_accepts_checked_outputs
 cargo test cli_ail_prompt_corpus_rejects_semantic_drift_outputs
 cargo test cli_ail_prompt_corpus_writes_portability_report
-cargo test cli_ail_e2e_corpus_replays_checked_seed_corpus
+cargo test cli_ail_e2e_corpus_replays_checked_live_release_corpus
 cargo test cli_ail_e2e_corpus_requires_100_distinct_semantic_examples
 cargo test cli_ail_e2e_corpus_requires_full_prompt_pack_coverage
 cargo test cli_ail_e2e_corpus_requires_llm_and_codex_executor_families
@@ -344,6 +344,7 @@ cargo test cli_ail_e2e_corpus_replays_imported_package_specs
 cargo test cli_ail_e2e_corpus_replays_ui_profile_specs
 cargo test cli_ail_e2e_corpus_replays_rejected_prompt_failures
 cargo test cli_ail_e2e_corpus_release_evidence_rejects_deterministic_seed_corpus
+cargo test cli_ail_e2e_corpus_release_evidence_accepts_live_corpus
 cargo test cli_ail_e2e_corpus_release_evidence_requires_live_codex_for_codex_executor
 cargo run -- ail-e2e-corpus docs/ail/corpus/e2e --artifact-dir /tmp/ail-v02-e2e-corpus --release-evidence
 ```
@@ -488,7 +489,7 @@ already covers parts of this gate:
   accepted prompt-output compilation to bytecode, VM traces, Linux native
   artifacts, Wasm and Darwin target-contract reports, rejected-output replay,
   and top-level manifest/report fingerprints
-- checked 100-entry e2e seed corpus under `docs/ail/corpus/e2e`
+- checked 100-entry e2e live release corpus under `docs/ail/corpus/e2e`
 - four replay-clean live LLM captures for the Standard Collections, Support
   Ticket, and Refund Tool packages, using schema-shaped prompt input or
   constrained prose prompting with an OpenAI-compatible chat-completions
@@ -508,22 +509,20 @@ already covers parts of this gate:
   Codex transcript imports to one corpus copy before replay
 - named Codex skill-agent contracts for requirements writing, spec writing, and
   diagnostic repair under `docs/ail/corpus/e2e/agents/`
-- checked e2e seed corpus responses and extracted artifacts have zero
+- checked e2e release corpus responses and extracted artifacts have zero
   duplicate fingerprints after deterministic per-scenario trace specialization;
   target reports also have zero duplicate fingerprints after contract reports
   started recording the compiled bytecode fingerprint
-- package-import e2e seed entries replay through package-aware import
+- package-import e2e release entries replay through package-aware import
   resolution and compile the composed support package through checked Core,
   bytecode, and VM trace artifacts
-- real UI-profile e2e seed entry replays `ui_workflow.ail` through checked
+- real UI-profile e2e release entry replays `ui_workflow.ail` through checked
   Core, semantic-contract bytecode, VM trace, and Wasm target-contract artifacts
 
 Missing v0.2 evidence includes:
 
 - v0.2-specific release evidence bundle
-- broad live-captured LLM/Codex executor transcripts replacing the current
-  deterministic checked-fixture seed artifacts
-- broader live-captured UI-profile transcripts beyond the checked seed's single
+- broader live-captured UI-profile transcripts beyond the current single
   semantic-contract replay
 - richer rejected-output coverage for prompt-envelope, profile mismatch,
   hallucinated capability, missing trace, unsupported target, invalid interop,

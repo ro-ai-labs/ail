@@ -15725,6 +15725,76 @@ fn cli_ail_conformance_checks_valid_and_rejected_fixtures() {
 }
 
 #[test]
+fn cli_ail_conformance_checks_v02_package_host_boundary_fixtures() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let fixture_expectations = [
+        (
+            "support_composed.ail",
+            ["valid: spec.ail-spec.md", "ail conformance: ok"].as_slice(),
+        ),
+        (
+            "ail_std_collections.ail",
+            [
+                "accepted: option-map-minimal.ail-spec.md",
+                "rejected: invalid-generic-variant-payload.ail-spec.md AIL-TYPE-001",
+                "ail conformance: ok",
+            ]
+            .as_slice(),
+        ),
+        (
+            "ail_std_runtime.ail",
+            [
+                "accepted: run-task-minimal.ail-spec.md",
+                "rejected: missing-capability-grant.ail AIL-PACKAGE-001",
+                "ail conformance: ok",
+            ]
+            .as_slice(),
+        ),
+        (
+            "c_interop.ail",
+            [
+                "accepted: owned-pointer-release-minimal.ail-spec.md",
+                "rejected: borrowed-pointer-escape.ail-spec.md AIL-FFI-OWNERSHIP-001",
+                "rejected: secret-leakage.ail-spec.md AIL-FFI-SECRET-001",
+                "ail conformance: ok",
+            ]
+            .as_slice(),
+        ),
+        (
+            "ui_workflow.ail",
+            [
+                "accepted: ui-minimal.ail-spec.md",
+                "rejected: form-missing-action.ail-spec.md AIL-UI-FORM-001",
+                "rejected: inaccessible-error-text.ail-spec.md AIL-UI-A11Y-001",
+                "ail conformance: ok",
+            ]
+            .as_slice(),
+        ),
+    ];
+
+    for (fixture_name, expected_lines) in fixture_expectations {
+        let package = fixture(fixture_name);
+        let output = Command::new(binary)
+            .args(["ail-conformance", &package])
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "fixture {fixture_name}\nstdout:\n{}\nstderr:\n{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        for expected_line in expected_lines {
+            assert!(
+                stdout.contains(expected_line),
+                "fixture {fixture_name} missing {expected_line}\n{stdout}"
+            );
+        }
+    }
+}
+
+#[test]
 fn cli_ail_conformance_writes_auditable_artifacts() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
@@ -19930,7 +20000,7 @@ fn cli_ail_prompt_corpus_writes_portability_report() {
 }
 
 #[test]
-fn cli_ail_e2e_corpus_replays_checked_seed_corpus() {
+fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let artifact_dir = std::env::temp_dir().join(format!(
         "ail-e2e-corpus-seed-artifacts-{}",
@@ -20637,6 +20707,54 @@ fn cli_ail_e2e_corpus_release_evidence_accepts_live_corpus() {
         String::from_utf8_lossy(&output.stderr)
     );
 
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
+fn cli_ail_e2e_corpus_release_evidence_rejects_deterministic_seed_corpus() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let corpus_dir = std::env::temp_dir().join(format!(
+        "ail-e2e-corpus-release-deterministic-origin-{}",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-e2e-corpus-release-deterministic-origin-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&corpus_dir);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&corpus_dir).unwrap();
+    fs::write(
+        corpus_dir.join("examples.md"),
+        e2e_corpus_text_with_override(0, &[]),
+    )
+    .unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-e2e-corpus",
+            corpus_dir.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+            "--release-evidence",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains(
+            "ail-e2e-corpus --release-evidence requires zero deterministic-seed entries; found 100"
+        ),
+        "{stderr}"
+    );
+
+    let _ = fs::remove_dir_all(corpus_dir);
     let _ = fs::remove_dir_all(artifact_dir);
 }
 
