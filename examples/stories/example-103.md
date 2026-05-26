@@ -11,3 +11,4 @@ module-count: 1
 spec-count: 1
 story-count: 1
 interacts-with: none
+semantic-anchors: refund-tool-hallucinated-capability; RefundCustomerPayment; diagnostic-hallucinated-capability; diagnostic-story; AIL019; diagnostics

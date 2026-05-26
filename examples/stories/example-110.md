@@ -11,3 +11,4 @@ module-count: 1
 spec-count: 1
 story-count: 1
 interacts-with: none
+semantic-anchors: stateful-counter-live-codex-repair-110; IncrementCounter; counter.value=110; linux-x86_64-elf; repair.system.md; target-report

@@ -11,3 +11,4 @@ module-count: 1
 spec-count: 1
 story-count: 1
 interacts-with: none
+semantic-anchors: stateful-counter-live-codex-flow-patch-97; Increment counter; counter.value=0; story-amendment; flow-patch.system.md; vm-trace

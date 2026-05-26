@@ -11,3 +11,4 @@ module-count: 3
 spec-count: 3
 story-count: 3
 interacts-with: payment.provider,policy.engine,audit.log
+semantic-anchors: refund amount; captured amount; human review task; story-amendment; flow-patch.system.md; target-report

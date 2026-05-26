@@ -11,3 +11,4 @@ module-count: 3
 spec-count: 3
 story-count: 3
 interacts-with: payment.provider,policy.engine,audit.log
+semantic-anchors: ProviderRejected; RefundProviderRejected; PaymentProvider; trace-debug.system.md; semantic-similar; target-report

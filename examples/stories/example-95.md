@@ -11,3 +11,4 @@ module-count: 1
 spec-count: 1
 story-count: 1
 interacts-with: none
+semantic-anchors: Counter; Increment counter; counter value; CounterIncremented; IncrementCounter; spec-to-story

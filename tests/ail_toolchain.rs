@@ -660,6 +660,113 @@ fn example_low_level_stories_record_semantic_anchors() {
     }
 }
 
+#[test]
+fn example_stateful_and_agent_tool_stories_record_semantic_anchors() {
+    let catalog = fs::read_to_string(fixture("examples.md")).unwrap();
+    let stateful_spec =
+        fs::read_to_string(fixture("stateful_counter.ail/spec.ail-spec.md")).unwrap();
+    let refund_spec = fs::read_to_string(fixture("refund_tool.ail/spec.ail-spec.md")).unwrap();
+    for (story_file, grounding_text, required_anchors) in [
+        (
+            "stories/example-95.md",
+            stateful_spec.as_str(),
+            [
+                "Counter",
+                "Increment counter",
+                "counter value",
+                "CounterIncremented",
+                "IncrementCounter",
+                "spec-to-story",
+            ],
+        ),
+        (
+            "stories/example-97.md",
+            stateful_spec.as_str(),
+            [
+                "stateful-counter-live-codex-flow-patch-97",
+                "Increment counter",
+                "counter.value=0",
+                "story-amendment",
+                "flow-patch.system.md",
+                "vm-trace",
+            ],
+        ),
+        (
+            "stories/example-110.md",
+            stateful_spec.as_str(),
+            [
+                "stateful-counter-live-codex-repair-110",
+                "IncrementCounter",
+                "counter.value=110",
+                "linux-x86_64-elf",
+                "repair.system.md",
+                "target-report",
+            ],
+        ),
+        (
+            "stories/example-45.md",
+            refund_spec.as_str(),
+            [
+                "Refund customer payment",
+                "payment token",
+                "PaymentProvider.refund",
+                "RefundLedger",
+                "manager approval",
+                "spec-to-story",
+            ],
+        ),
+        (
+            "stories/example-47.md",
+            refund_spec.as_str(),
+            [
+                "refund amount",
+                "captured amount",
+                "human review task",
+                "story-amendment",
+                "flow-patch.system.md",
+                "target-report",
+            ],
+        ),
+        (
+            "stories/example-48.md",
+            refund_spec.as_str(),
+            [
+                "ProviderRejected",
+                "RefundProviderRejected",
+                "PaymentProvider",
+                "trace-debug.system.md",
+                "semantic-similar",
+                "target-report",
+            ],
+        ),
+        (
+            "stories/example-103.md",
+            refund_spec.as_str(),
+            [
+                "refund-tool-hallucinated-capability",
+                "RefundCustomerPayment",
+                "diagnostic-hallucinated-capability",
+                "diagnostic-story",
+                "AIL019",
+                "diagnostics",
+            ],
+        ),
+    ] {
+        let story = fs::read_to_string(fixture(story_file)).unwrap();
+        assert!(story.contains("semantic-anchors:"), "{story_file}\n{story}");
+        for anchor in required_anchors {
+            assert!(
+                story.contains(anchor),
+                "{story_file} missing semantic anchor {anchor}\n{story}"
+            );
+            assert!(
+                grounding_text.contains(anchor) || catalog.contains(anchor),
+                "{story_file} anchor {anchor} is not grounded in package spec or catalog"
+            );
+        }
+    }
+}
+
 fn detailed_ail_diagnostic(core: &ail::ail::AilCore, code: &str, message: &str) -> String {
     check_ail_core_diagnostics(core)
         .into_iter()
