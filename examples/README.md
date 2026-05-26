@@ -106,6 +106,13 @@ checked as families: when a family has at least five entries, it must cover at
 least three prompt files and at least two story journeys. This keeps
 prompt-surface matrices useful instead of letting one story earn many slots
 through label-only variation.
+The release verifier also requires at least ten distinct `v0.3-signal`
+learning signals, and the replay report emits `v03-signal-distinct-count` plus
+one `v03-signal-count` line per signal. That makes the corpus usable as a
+machine-readable backlog for the next language, prompt, checker, runtime,
+target, and documentation improvements. The catalog field keeps the public
+version spelling `v0.3-signal`; report labels use `v03-*` as artifact-safe
+line keys.
 
 User stories are also first-class. A story can start the development flow
 (`story-to-spec`), be regenerated from a checked spec or Core artifact

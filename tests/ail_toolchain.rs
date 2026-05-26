@@ -40,6 +40,22 @@ fn fnv64_fingerprint_bytes(bytes: &[u8]) -> String {
     format!("fnv64:{hash:016x}")
 }
 
+fn e2e_v03_signal_text(index: usize) -> &'static str {
+    const SIGNALS: [&str; 10] = [
+        "Prompt coverage needs clearer authoring evidence across every system prompt.",
+        "Executor coverage should distinguish hosted LLM and Codex skill-agent traces.",
+        "Package examples need reusable learning guides tied to replay artifacts.",
+        "Target examples require clearer portability evidence for each backend contract.",
+        "Story examples should preserve reviewer-visible semantic anchors in reports.",
+        "Diagnostic examples need repair walkthroughs that connect failures to fixes.",
+        "Runtime examples should expose state, permissions, and trace replay boundaries.",
+        "Interop examples need richer unsafe-boundary checks and ABI teaching fixtures.",
+        "UI examples require accessibility and workflow-review artifacts in replay.",
+        "Self-hosting examples need compiler-pass composition and fixed-point checks.",
+    ];
+    SIGNALS[index % SIGNALS.len()]
+}
+
 fn e2e_corpus_entry_text(index: usize, overrides: &[(&str, &str)]) -> String {
     let prompt_files = [
         "docs/ail/prompts/interview.system.md",
@@ -24553,6 +24569,60 @@ fn cli_ail_e2e_corpus_requires_v03_signal_to_name_next_improvement() {
 }
 
 #[test]
+fn cli_ail_e2e_corpus_requires_v03_signal_diversity() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let corpus_dir = std::env::temp_dir().join(format!(
+        "ail-examples-v03-signal-diversity-{}",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-examples-v03-signal-diversity-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&corpus_dir);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&corpus_dir).unwrap();
+    write_e2e_transcript_files(&corpus_dir, 100);
+
+    let repeated_signal =
+        "All examples need the same generic next-version learning note for future review.";
+    let mut corpus_text = String::new();
+    for index in 0..100 {
+        corpus_text.push_str(&e2e_corpus_entry_text(
+            index,
+            &[("v0.3-signal", repeated_signal)],
+        ));
+    }
+    fs::write(corpus_dir.join("examples.md"), corpus_text).unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-examples",
+            corpus_dir.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains(
+            "ail-examples requires at least 10 distinct v0.3-signal learning signals; found 1"
+        ),
+        "{stderr}"
+    );
+
+    let _ = fs::remove_dir_all(corpus_dir);
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
 fn cli_ail_e2e_corpus_requires_repeated_story_family_diversity() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let corpus_dir = std::env::temp_dir().join(format!(
@@ -24814,6 +24884,7 @@ fn cli_ail_e2e_corpus_requires_llm_and_codex_executor_families() {
     fs::create_dir_all(&corpus_dir).unwrap();
     let mut corpus_text = String::new();
     for index in 0..100 {
+        let v03_signal = e2e_v03_signal_text(index);
         corpus_text.push_str(&format!(
             "## End-To-End Example: example-{index}\n\
              semantic-task: support-ticket-{index}\n\
@@ -24836,7 +24907,7 @@ fn cli_ail_e2e_corpus_requires_llm_and_codex_executor_families() {
              story-journey: story-to-spec\n\
              story-roundtrip: semantic-similar\n\
              distinctness-claim: support-ticket-{index} validates application-workflow executor coverage.\n\
-             v0.3-signal: Executor coverage should become a documented learning dimension.\n\
+             v0.3-signal: {v03_signal}\n\
              prompt-file: docs/ail/prompts/spec-draft.system.md\n\
              prompt-version: ail-prompts.v0.2\n\
              prompt-fingerprint: fnv64:spec-draft\n\
@@ -25010,6 +25081,7 @@ fn cli_ail_e2e_corpus_requires_full_prompt_pack_coverage() {
     fs::create_dir_all(&corpus_dir).unwrap();
     let mut corpus_text = String::new();
     for index in 0..100 {
+        let v03_signal = e2e_v03_signal_text(index);
         let executor_family = if index == 99 {
             "codex-skill-agent"
         } else {
@@ -25042,7 +25114,7 @@ fn cli_ail_e2e_corpus_requires_full_prompt_pack_coverage() {
              story-journey: story-to-spec\n\
              story-roundtrip: semantic-similar\n\
              distinctness-claim: support-ticket-{index} validates prompt-surface-coverage requirements.\n\
-             v0.3-signal: Prompt matrices should be separated from semantic use-case diversity.\n\
+             v0.3-signal: {v03_signal}\n\
              prompt-file: docs/ail/prompts/spec-draft.system.md\n\
              prompt-version: ail-prompts.v0.2\n\
              prompt-fingerprint: fnv64:spec-draft\n\
@@ -26076,6 +26148,13 @@ fn cli_ail_e2e_corpus_writes_report_for_metadata_complete_corpus() {
     assert!(report.contains("target-count vm 5"), "{report}");
     assert!(
         report.contains("checker-result-count accepted 100"),
+        "{report}"
+    );
+    assert!(report.contains("v03-signal-distinct-count 100"), "{report}");
+    assert!(
+        report.contains(
+            "v03-signal-count Scenario 0 should become a documented future learning gap for example coverage. 1"
+        ),
         "{report}"
     );
     assert!(report.contains("program-scale-count utility"), "{report}");

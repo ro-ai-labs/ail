@@ -2247,6 +2247,19 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
             lines.push(format!("{label} {value} {count}"));
         }
     }
+    let mut v03_signal_counts = BTreeMap::new();
+    for evaluation in evaluations {
+        if let Some(signal) = evaluation.entry.fields.get("v0.3-signal") {
+            *v03_signal_counts.entry(signal.as_str()).or_insert(0usize) += 1;
+        }
+    }
+    lines.push(format!(
+        "v03-signal-distinct-count {}",
+        v03_signal_counts.len()
+    ));
+    for (signal, count) in v03_signal_counts {
+        lines.push(format!("v03-signal-count {signal} {count}"));
+    }
     let semantic_anchor_story_count = evaluations
         .iter()
         .filter(|evaluation| !evaluation.semantic_anchors.is_empty())
@@ -2857,6 +2870,16 @@ fn validate_ail_e2e_corpus_release_coverage(entries: &[AilE2eCorpusEntry]) -> Re
     if accepted_count < 100 {
         return Err(format!(
             "ail-examples requires at least 100 accepted prompt-to-artifact examples; found {accepted_count}"
+        ));
+    }
+    let v03_signals = entries
+        .iter()
+        .filter_map(|entry| entry.fields.get("v0.3-signal").map(String::as_str))
+        .collect::<BTreeSet<_>>();
+    if v03_signals.len() < 10 {
+        return Err(format!(
+            "ail-examples requires at least 10 distinct v0.3-signal learning signals; found {}",
+            v03_signals.len()
         ));
     }
     let executor_families = entries

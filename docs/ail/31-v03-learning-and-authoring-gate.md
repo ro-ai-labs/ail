@@ -94,6 +94,15 @@ executor, or human-review path. This does not make the corpus v0.3-complete,
 but it prevents new entries from being counted when they are only labels around
 a passing replay.
 
+Learning signals are also checked as a corpus. The release verifier requires
+at least ten distinct `v0.3-signal` values so one generic future note cannot be
+copied across the 100-example suite. Replay reports must emit
+`v03-signal-distinct-count` and one `v03-signal-count` line per signal; those
+lines are the machine-readable backlog that turns examples into v0.3 language,
+prompt, checker, runtime, target, and documentation work. The catalog metadata
+field remains `v0.3-signal`; the report uses `v03-*` labels as artifact-safe
+line keys.
+
 Repeated story families are checked across entries. Any `user-story-id` family
 with at least five entries must cover at least three prompt files and at least
 two story journeys, and the report must emit `story-family-count` plus
@@ -177,6 +186,7 @@ cargo test cli_ail_e2e_corpus_requires_capability_level_thresholds
 cargo test cli_ail_e2e_corpus_requires_user_story_metadata
 cargo test cli_ail_e2e_corpus_rejects_unknown_story_evidence
 cargo test cli_ail_e2e_corpus_requires_story_diversity
+cargo test cli_ail_e2e_corpus_requires_v03_signal_diversity
 cargo test cli_ail_e2e_corpus_replays_checked_live_release_corpus
 cargo run -- ail-examples examples --artifact-dir /tmp/ail-v03-learning-examples --release-evidence
 git diff --check -- examples docs/ail src tests scripts
@@ -184,7 +194,9 @@ git diff --check -- examples docs/ail src tests scripts
 
 ## Current v0.3 Signals
 
-The current examples reveal these next-version gaps:
+Replay now emits `v03-signal-distinct-count` and `v03-signal-count` lines so
+these gaps can be read from `examples-report.txt` instead of maintained only
+as prose. The current examples reveal these next-version gaps:
 
 - Package examples need package-local teaching guides, not only verifier input
   files.
