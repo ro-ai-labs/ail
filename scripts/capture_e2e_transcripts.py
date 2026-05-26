@@ -47,10 +47,11 @@ def read_entries(text: str) -> list[tuple[str | None, list[str]]]:
     current_id: str | None = None
     current_lines: list[str] = []
     for line in text.splitlines():
-        if line.startswith("## End-To-End Example: "):
+        if line.startswith("## Example: ") or line.startswith("## End-To-End Example: "):
             if current_id is not None:
                 entries.append((current_id, current_lines))
-            current_id = line.removeprefix("## End-To-End Example: ").strip()
+            current_id = line.removeprefix("## Example: ")
+            current_id = current_id.removeprefix("## End-To-End Example: ").strip()
             current_lines = [line]
         elif current_id is None:
             entries.append((None, [line]))
@@ -74,11 +75,23 @@ def fields_from_entry(lines: list[str]) -> dict[str, str]:
 
 
 def render_entry(entry_id: str, fields: dict[str, str]) -> list[str]:
-    lines = [f"## End-To-End Example: {entry_id}"]
+    lines = [f"## Example: {entry_id}"]
     for key, value in fields.items():
         lines.append(f"{key}: {value}")
     lines.append("")
     return lines
+
+
+def refresh_distinctness_claim(fields: dict[str, str]) -> None:
+    semantic_task = fields["semantic-task"]
+    capability = fields.get("capability-under-test", "declared capability")
+    distinctness_claim = fields.get("distinctness-claim", "")
+    if semantic_task in distinctness_claim and capability in distinctness_claim:
+        return
+    fields["distinctness-claim"] = (
+        f"{semantic_task} validates {capability} with stored transcript replay "
+        "and promoted executor evidence."
+    )
 
 
 def completion_body(endpoint: str, prompt: str, n_predict: int) -> dict[str, object]:
@@ -175,6 +188,7 @@ def main() -> int:
             "checker-result": "accepted",
         }
     )
+    refresh_distinctness_claim(fields)
     entries[replacement_index] = (args.entry_id, render_entry(args.entry_id, fields))
     output_lines: list[str] = []
     for _entry_id, lines in entries:

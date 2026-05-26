@@ -272,7 +272,7 @@ cargo test cli_ail_compile_writes_darwin_macho_contract_artifacts
 cargo test cli_ail_compile_darwin_contract_rejects_linux_only_syscall_effect
 ```
 
-### 6. End-To-End Prompt Corpus And Model Portability
+### 6. Examples And Model Portability
 
 Requirement: Prompt-pack behavior is measured with stored accepted and rejected
 model outputs rather than trusted by assumption, and the accepted prompt outputs
@@ -281,7 +281,7 @@ compiled artifact.
 
 Evidence:
 
-- The release corpus contains at least 100 end-to-end examples. An end-to-end
+- The release examples contain at least 100 end-to-end examples. An end-to-end
   example starts from a user intent, a package/profile context, a versioned
   system prompt, and one executor output, then records checked requirements or
   checked AIL-Spec, checked AIL-Core, bytecode, a VM trace, and either a Linux
@@ -444,9 +444,9 @@ The v0.2 release evidence bundle must contain:
 - build manifest and manifest fingerprint
 - agent bytecode, agent fingerprint, and agent trace
 - prompt portability report and fingerprint
-- 100-example end-to-end prompt corpus replay report and fingerprint
+- 100-example `ail-examples` replay report and fingerprint
 - per-example transcript, checked-artifact, Core, bytecode, target, manifest,
-  and failure-taxonomy fingerprints for the end-to-end corpus
+  and failure-taxonomy fingerprints for the examples
 - model/executor manifest covering `llm-http` and `codex-skill-agent`
   executor families, endpoint labels, executor labels, and capture origins
 - bootstrap artifact directory with fixed-point, host-boundary, dependency, and

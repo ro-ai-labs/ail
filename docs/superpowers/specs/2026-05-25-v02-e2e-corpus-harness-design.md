@@ -18,7 +18,7 @@ and target outputs.
 The first implementation target is a new verifier command:
 
 ```bash
-cargo run -- ail-examples examples --artifact-dir /tmp/ail-e2e-corpus
+cargo run -- ail-examples examples --artifact-dir /tmp/ail-examples
 ```
 
 The command reads corpus manifests and transcript files from
@@ -111,9 +111,9 @@ so portability evidence is not only a single-model replay.
 
 The verifier writes:
 
-- `e2e-corpus-report.txt`
-- `e2e-corpus-report.fingerprint.txt`
-- `manifest.ail-e2e-corpus.txt`
+- `examples-report.txt`
+- `examples-report.fingerprint.txt`
+- `manifest.ail-examples.txt`
 - `manifest.fingerprint.txt`
 - `examples/<semantic-task>/request.fingerprint.txt`
 - `examples/<semantic-task>/response.fingerprint.txt`

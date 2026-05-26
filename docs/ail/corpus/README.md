@@ -89,9 +89,9 @@ To capture live LLM evidence without changing the offline replay contract, copy
 `examples/` and replace one entry with a stored HTTP completion transcript:
 
 ```bash
-python3 scripts/capture_e2e_transcripts.py \
+python3 scripts/capture_example_transcripts.py \
   --base-corpus examples \
-  --output-dir /tmp/ail-e2e-live-corpus \
+  --output-dir /tmp/ail-examples-live-corpus \
   --entry-id example-30 \
   --endpoint http://inteligentia-pro-1:8080/v1/chat/completions \
   --endpoint-label inteligentia-pro-1-qwen3.6-35b-chat \
@@ -142,7 +142,7 @@ The 100-example count is semantic, not cosmetic. Re-running the same stored
 output under a different label does not count unless the executor transcript is
 real, replayable, and the semantic task or target evidence changes.
 
-The e2e report also records duplicate-fingerprint counts for stored requests,
+The examples report also records duplicate-fingerprint counts for stored requests,
 responses, extracted artifacts, checked Core, bytecode, VM traces, native
 artifacts, target reports, diagnostics, and capture-origin buckets. These
 counts make seed-corpus reuse auditable. Final v0.2 release evidence must drive
@@ -152,10 +152,10 @@ must replace broad `deterministic-seed` coverage with `live-llm` and
 artifact that is not counted as semantic-release coverage.
 
 Live HTTP model transcripts are captured with
-`scripts/capture_e2e_transcripts.py`. Recorded Codex or skill-agent transcripts
-are imported with `scripts/capture_codex_e2e_transcript.py`, which marks the
+`scripts/capture_example_transcripts.py`. Recorded Codex or skill-agent transcripts
+are imported with `scripts/capture_codex_example_transcript.py`, which marks the
 entry `executor-family: codex-skill-agent` and `capture-origin: live-codex`
 while keeping replay offline and reproducible.
-Multi-entry promotion uses `scripts/capture_e2e_batch.py` so a live LLM capture
+Multi-entry promotion uses `scripts/capture_example_batch.py` so a live LLM capture
 batch and recorded Codex transcript imports can be applied to one corpus copy
 before replay.

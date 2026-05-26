@@ -121,7 +121,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
 }
 
 fn usage() -> String {
-    "usage: ail <ail-check|ail-core|ail-flow|ail-flow-edit|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-interview|ail-requirements|ail-spec|ail-draft|ail-build|ail-story|ail-pass|ail-bootstrap|ail-prompt-corpus|ail-examples|ail-e2e-corpus|ail-patch> <path> [patch|target-package] [--action name] [--prompt text] [--story-file path] [--interview-file path] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--base-model name] [--target-model name] [--out path] [--all-actions] [--diagnostics-json] [--artifact-dir path] [--llm-endpoint url] [--release-evidence] [key=value ...]\nsaved-core usage: ail <ail-spec|ail-lower|ail-compile|ail-run|ail-build> --core-file <checked-core> [--action name] [--target target] [--out path] [--artifact-dir path] [key=value ...]\nwasm-contract usage: ail ail-compile <package-or-artifact.ailbc.json> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir> OR ail ail-compile --core-file <checked-core> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir>\ncore-patch usage: ail ail-patch --core-file <checked-core> <ail-core.patch.json>\nflow-edit usage: ail ail-flow-edit --core-file <checked-core> <ail-flow.edit.json>\nail-pass usage: ail ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR ail ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]\nail-bootstrap usage: ail ail-bootstrap <toolchain-agent-package> --pass <compiler-pass-package> --agent <toolchain-agent-package> --target linux-x86_64-elf --artifact-dir <dir>\nail-story usage: ail ail-story <package> --story-file <story.md> [--artifact-dir <dir>] [--llm-endpoint <url>] [--agent <agent-package-or-bytecode>] [--target <target> --action <ActionName> --out <path>]\nail-prompt-corpus usage: ail ail-prompt-corpus <corpus-file-or-dir> --artifact-dir <dir>\nail-examples usage: ail ail-examples examples --artifact-dir <dir> [--release-evidence]\nail-e2e-corpus usage: ail ail-e2e-corpus <corpus-dir> --artifact-dir <dir> [--release-evidence] (compatibility alias for ail-examples)"
+    "usage: ail <ail-check|ail-core|ail-flow|ail-flow-edit|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-interview|ail-requirements|ail-spec|ail-draft|ail-build|ail-story|ail-pass|ail-bootstrap|ail-prompt-corpus|ail-examples|ail-patch> <path> [patch|target-package] [--action name] [--prompt text] [--story-file path] [--interview-file path] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--base-model name] [--target-model name] [--out path] [--all-actions] [--diagnostics-json] [--artifact-dir path] [--llm-endpoint url] [--release-evidence] [key=value ...]\nsaved-core usage: ail <ail-spec|ail-lower|ail-compile|ail-run|ail-build> --core-file <checked-core> [--action name] [--target target] [--out path] [--artifact-dir path] [key=value ...]\nwasm-contract usage: ail ail-compile <package-or-artifact.ailbc.json> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir> OR ail ail-compile --core-file <checked-core> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir>\ncore-patch usage: ail ail-patch --core-file <checked-core> <ail-core.patch.json>\nflow-edit usage: ail ail-flow-edit --core-file <checked-core> <ail-flow.edit.json>\nail-pass usage: ail ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR ail ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]\nail-bootstrap usage: ail ail-bootstrap <toolchain-agent-package> --pass <compiler-pass-package> --agent <toolchain-agent-package> --target linux-x86_64-elf --artifact-dir <dir>\nail-story usage: ail ail-story <package> --story-file <story.md> [--artifact-dir <dir>] [--llm-endpoint <url>] [--agent <agent-package-or-bytecode>] [--target <target> --action <ActionName> --out <path>]\nail-prompt-corpus usage: ail ail-prompt-corpus <corpus-file-or-dir> --artifact-dir <dir>\nail-examples usage: ail ail-examples examples --artifact-dir <dir> [--release-evidence]\ncompatibility alias: ail ail-e2e-corpus <examples-dir> --artifact-dir <dir> [--release-evidence]"
         .to_string()
 }
 
@@ -1133,7 +1133,10 @@ fn parse_ail_e2e_corpus_entries(
     let mut current_id: Option<String> = None;
     let mut current_fields = BTreeMap::<String, String>::new();
     for line in text.lines() {
-        if let Some(id) = line.strip_prefix("## End-To-End Example: ") {
+        if let Some(id) = line
+            .strip_prefix("## Example: ")
+            .or_else(|| line.strip_prefix("## End-To-End Example: "))
+        {
             if let Some(entry_id) = current_id.take() {
                 entries.push(ail_e2e_corpus_entry_from_fields(
                     source_file,
@@ -1920,7 +1923,7 @@ fn evaluate_rejected_ail_e2e_corpus_entry(
         ));
     }
     let mut lines = vec![
-        "AIL-E2E-Rejected-Diagnostics:".to_string(),
+        "AIL-Examples-Rejected-Diagnostics:".to_string(),
         "checker-result rejected".to_string(),
         format!("expected-diagnostic {expected_diagnostic}"),
         format!("failure-taxonomy {failure_taxonomy}"),
@@ -2080,11 +2083,12 @@ fn render_ail_e2e_native_target_report(
     target_name: &str,
     native_executables: &[AilNativeArtifact],
 ) -> Result<String, String> {
-    let mut lines = native_machine_bytecode_report_header("AIL-E2E-Target-Report:", target_name)?;
+    let mut lines =
+        native_machine_bytecode_report_header("AIL-Examples-Target-Report:", target_name)?;
     for executable in native_executables {
         if executable.target_name != target_name {
             return Err(format!(
-                "e2e native artifact {} targets {}, expected {target_name}",
+                "examples native artifact {} targets {}, expected {target_name}",
                 executable.file_name, executable.target_name
             ));
         }
@@ -2124,7 +2128,7 @@ fn parse_ail_e2e_runtime_state(
 
 fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> String {
     let mut lines = vec![
-        "AIL-End-To-End-Corpus-Report:".to_string(),
+        "AIL-Examples-Report:".to_string(),
         format!("entry-count {}", evaluations.len()),
     ];
     for (field, label) in [
@@ -2510,9 +2514,9 @@ fn render_ail_e2e_corpus_manifest(
     evaluations: &[AilE2eCorpusEvaluation],
 ) -> String {
     let mut lines = vec![
-        "AIL-E2E-Corpus-Manifest:".to_string(),
+        "AIL-Examples-Manifest:".to_string(),
         format!(
-            "report e2e-corpus-report.txt {}",
+            "report examples-report.txt {}",
             ail_artifact_fingerprint(report_text)
         ),
         format!(
@@ -2589,7 +2593,7 @@ fn render_ail_e2e_model_executor_manifest(evaluations: &[AilE2eCorpusEvaluation]
     }
 
     let mut lines = vec![
-        "AIL-E2E-Model-Executor-Manifest:".to_string(),
+        "AIL-Examples-Model-Executor-Manifest:".to_string(),
         format!("entry-count {}", evaluations.len()),
     ];
     for (executor_family, count) in executor_family_counts {
@@ -3094,10 +3098,10 @@ fn write_ail_e2e_corpus_artifacts(
     let root = std::path::Path::new(artifact_dir);
     fs::create_dir_all(root)
         .map_err(|error| format!("failed to create ail-examples artifact dir: {error}"))?;
-    fs::write(root.join("e2e-corpus-report.txt"), report_text)
+    fs::write(root.join("examples-report.txt"), report_text)
         .map_err(|error| format!("failed to write examples catalog report: {error}"))?;
     fs::write(
-        root.join("e2e-corpus-report.fingerprint.txt"),
+        root.join("examples-report.fingerprint.txt"),
         format!("{}\n", ail_artifact_fingerprint(report_text)),
     )
     .map_err(|error| format!("failed to write examples catalog report fingerprint: {error}"))?;
@@ -3106,7 +3110,7 @@ fn write_ail_e2e_corpus_artifacts(
         root.join("model-executor-manifest.txt"),
         &model_executor_manifest_text,
     )
-    .map_err(|error| format!("failed to write e2e model executor manifest: {error}"))?;
+    .map_err(|error| format!("failed to write examples model executor manifest: {error}"))?;
     fs::write(
         root.join("model-executor-manifest.fingerprint.txt"),
         format!(
@@ -3114,7 +3118,9 @@ fn write_ail_e2e_corpus_artifacts(
             ail_artifact_fingerprint(&model_executor_manifest_text)
         ),
     )
-    .map_err(|error| format!("failed to write e2e model executor manifest fingerprint: {error}"))?;
+    .map_err(|error| {
+        format!("failed to write examples model executor manifest fingerprint: {error}")
+    })?;
     let manifest_text =
         render_ail_e2e_corpus_manifest(report_text, &model_executor_manifest_text, evaluations);
     fs::write(root.join("manifest.ail-examples.txt"), &manifest_text)
@@ -3129,34 +3135,39 @@ fn write_ail_e2e_corpus_artifacts(
             render_ail_e2e_user_story_text(&evaluation.entry, &evaluation.semantic_anchors);
         let entry_dir = root.join("examples").join(&evaluation.entry.id);
         fs::create_dir_all(&entry_dir)
-            .map_err(|error| format!("failed to create e2e entry artifact dir: {error}"))?;
+            .map_err(|error| format!("failed to create examples entry artifact dir: {error}"))?;
         fs::write(entry_dir.join("user-story.txt"), &story_text)
-            .map_err(|error| format!("failed to write e2e user story: {error}"))?;
+            .map_err(|error| format!("failed to write examples user story: {error}"))?;
         fs::write(
             entry_dir.join("user-story.fingerprint.txt"),
             format!("{}\n", ail_artifact_fingerprint(&story_text)),
         )
-        .map_err(|error| format!("failed to write e2e user story fingerprint: {error}"))?;
+        .map_err(|error| format!("failed to write examples user story fingerprint: {error}"))?;
         if evaluation.request_fingerprint.is_some()
             || evaluation.response_fingerprint.is_some()
             || evaluation.extracted_artifact_fingerprint.is_some()
         {
             let entry_dir = root.join("examples").join(&evaluation.entry.id);
-            fs::create_dir_all(&entry_dir)
-                .map_err(|error| format!("failed to create e2e entry artifact dir: {error}"))?;
+            fs::create_dir_all(&entry_dir).map_err(|error| {
+                format!("failed to create examples entry artifact dir: {error}")
+            })?;
             if let Some(request_fingerprint) = &evaluation.request_fingerprint {
                 fs::write(
                     entry_dir.join("request.fingerprint.txt"),
                     format!("{request_fingerprint}\n"),
                 )
-                .map_err(|error| format!("failed to write e2e request fingerprint: {error}"))?;
+                .map_err(|error| {
+                    format!("failed to write examples request fingerprint: {error}")
+                })?;
             }
             if let Some(response_fingerprint) = &evaluation.response_fingerprint {
                 fs::write(
                     entry_dir.join("response.fingerprint.txt"),
                     format!("{response_fingerprint}\n"),
                 )
-                .map_err(|error| format!("failed to write e2e response fingerprint: {error}"))?;
+                .map_err(|error| {
+                    format!("failed to write examples response fingerprint: {error}")
+                })?;
             }
             if let Some(extracted_artifact_fingerprint) = &evaluation.extracted_artifact_fingerprint
             {
@@ -3165,55 +3176,61 @@ fn write_ail_e2e_corpus_artifacts(
                     format!("{extracted_artifact_fingerprint}\n"),
                 )
                 .map_err(|error| {
-                    format!("failed to write e2e extracted artifact fingerprint: {error}")
+                    format!("failed to write examples extracted artifact fingerprint: {error}")
                 })?;
             }
         }
         if let Some(core_text) = &evaluation.checked_core_text {
             let entry_dir = root.join("examples").join(&evaluation.entry.id);
-            fs::create_dir_all(&entry_dir)
-                .map_err(|error| format!("failed to create e2e entry artifact dir: {error}"))?;
+            fs::create_dir_all(&entry_dir).map_err(|error| {
+                format!("failed to create examples entry artifact dir: {error}")
+            })?;
             fs::write(entry_dir.join("checked.ail-core.txt"), core_text)
-                .map_err(|error| format!("failed to write e2e checked core: {error}"))?;
+                .map_err(|error| format!("failed to write examples checked core: {error}"))?;
             fs::write(
                 entry_dir.join("checked.ail-core.fingerprint.txt"),
                 format!("{}\n", ail_artifact_fingerprint(core_text)),
             )
-            .map_err(|error| format!("failed to write e2e checked core fingerprint: {error}"))?;
+            .map_err(|error| {
+                format!("failed to write examples checked core fingerprint: {error}")
+            })?;
         }
         if let Some(bytecode_text) = &evaluation.bytecode_text {
             let entry_dir = root.join("examples").join(&evaluation.entry.id);
-            fs::create_dir_all(&entry_dir)
-                .map_err(|error| format!("failed to create e2e entry artifact dir: {error}"))?;
+            fs::create_dir_all(&entry_dir).map_err(|error| {
+                format!("failed to create examples entry artifact dir: {error}")
+            })?;
             fs::write(entry_dir.join("artifact.ailbc.json"), bytecode_text)
-                .map_err(|error| format!("failed to write e2e bytecode artifact: {error}"))?;
+                .map_err(|error| format!("failed to write examples bytecode artifact: {error}"))?;
             fs::write(
                 entry_dir.join("artifact.ailbc.fingerprint.txt"),
                 format!("{}\n", ail_artifact_fingerprint(bytecode_text)),
             )
-            .map_err(|error| format!("failed to write e2e bytecode fingerprint: {error}"))?;
+            .map_err(|error| format!("failed to write examples bytecode fingerprint: {error}"))?;
         }
         if let Some(vm_trace_text) = &evaluation.vm_trace_text {
             let entry_dir = root.join("examples").join(&evaluation.entry.id);
-            fs::create_dir_all(&entry_dir)
-                .map_err(|error| format!("failed to create e2e entry artifact dir: {error}"))?;
+            fs::create_dir_all(&entry_dir).map_err(|error| {
+                format!("failed to create examples entry artifact dir: {error}")
+            })?;
             fs::write(entry_dir.join("vm-trace.txt"), vm_trace_text)
-                .map_err(|error| format!("failed to write e2e vm trace: {error}"))?;
+                .map_err(|error| format!("failed to write examples vm trace: {error}"))?;
             fs::write(
                 entry_dir.join("vm-trace.fingerprint.txt"),
                 format!("{}\n", ail_artifact_fingerprint(vm_trace_text)),
             )
-            .map_err(|error| format!("failed to write e2e vm trace fingerprint: {error}"))?;
+            .map_err(|error| format!("failed to write examples vm trace fingerprint: {error}"))?;
         }
         if !evaluation.native_executables.is_empty() {
             let entry_dir = root.join("examples").join(&evaluation.entry.id);
-            fs::create_dir_all(&entry_dir)
-                .map_err(|error| format!("failed to create e2e entry artifact dir: {error}"))?;
+            fs::create_dir_all(&entry_dir).map_err(|error| {
+                format!("failed to create examples entry artifact dir: {error}")
+            })?;
             for executable in &evaluation.native_executables {
                 let artifact_path = entry_dir.join(&executable.file_name);
                 fs::write(&artifact_path, &executable.bytes).map_err(|error| {
                     format!(
-                        "failed to write e2e native executable {}: {error}",
+                        "failed to write examples native executable {}: {error}",
                         executable.file_name
                     )
                 })?;
@@ -3224,7 +3241,7 @@ fn write_ail_e2e_corpus_artifacts(
                 )
                 .map_err(|error| {
                     format!(
-                        "failed to write e2e native executable fingerprint {}: {error}",
+                        "failed to write examples native executable fingerprint {}: {error}",
                         executable.file_name
                     )
                 })?;
@@ -3232,27 +3249,33 @@ fn write_ail_e2e_corpus_artifacts(
         }
         if let Some(target_report_text) = &evaluation.target_report_text {
             let entry_dir = root.join("examples").join(&evaluation.entry.id);
-            fs::create_dir_all(&entry_dir)
-                .map_err(|error| format!("failed to create e2e entry artifact dir: {error}"))?;
+            fs::create_dir_all(&entry_dir).map_err(|error| {
+                format!("failed to create examples entry artifact dir: {error}")
+            })?;
             fs::write(entry_dir.join("target-report.txt"), target_report_text)
-                .map_err(|error| format!("failed to write e2e target report: {error}"))?;
+                .map_err(|error| format!("failed to write examples target report: {error}"))?;
             fs::write(
                 entry_dir.join("target-report.fingerprint.txt"),
                 format!("{}\n", ail_artifact_fingerprint(target_report_text)),
             )
-            .map_err(|error| format!("failed to write e2e target report fingerprint: {error}"))?;
+            .map_err(|error| {
+                format!("failed to write examples target report fingerprint: {error}")
+            })?;
         }
         if let Some(diagnostics_text) = &evaluation.diagnostics_text {
             let entry_dir = root.join("examples").join(&evaluation.entry.id);
-            fs::create_dir_all(&entry_dir)
-                .map_err(|error| format!("failed to create e2e entry artifact dir: {error}"))?;
+            fs::create_dir_all(&entry_dir).map_err(|error| {
+                format!("failed to create examples entry artifact dir: {error}")
+            })?;
             fs::write(entry_dir.join("diagnostics.txt"), diagnostics_text)
-                .map_err(|error| format!("failed to write e2e diagnostics: {error}"))?;
+                .map_err(|error| format!("failed to write examples diagnostics: {error}"))?;
             fs::write(
                 entry_dir.join("diagnostics.fingerprint.txt"),
                 format!("{}\n", ail_artifact_fingerprint(diagnostics_text)),
             )
-            .map_err(|error| format!("failed to write e2e diagnostics fingerprint: {error}"))?;
+            .map_err(|error| {
+                format!("failed to write examples diagnostics fingerprint: {error}")
+            })?;
         }
     }
     Ok(())

@@ -540,7 +540,7 @@ def main() -> None:
             fields["runtime-state"] = "ticket.id=T-1;ticket.status=Open"
             fields["expected-diagnostic"] = "AIL001"
             fields["failure-taxonomy"] = "semantic-drift"
-        entries.append(f"## End-To-End Example: example-{index}")
+        entries.append(f"## Example: example-{index}")
         entries.extend(f"{key}: {value}" for key, value in fields.items())
         entries.append("")
     (CORPUS / "examples.md").write_text("\n".join(entries))

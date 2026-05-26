@@ -125,9 +125,9 @@ offline replay passes. One seed entry can be replaced with a stored live LLM
 capture by writing a copy of the corpus:
 
 ```sh
-python3 scripts/capture_e2e_transcripts.py \
+python3 scripts/capture_example_transcripts.py \
   --base-corpus examples \
-  --output-dir /tmp/ail-e2e-live-corpus \
+  --output-dir /tmp/ail-examples-live-corpus \
   --entry-id example-30 \
   --endpoint http://inteligentia-pro-1:8080/v1/chat/completions \
   --endpoint-label inteligentia-pro-1-qwen3.6-35b-chat \
@@ -158,9 +158,9 @@ Recorded Codex or skill-agent transcripts are promoted through a separate
 offline import command:
 
 ```sh
-python3 scripts/capture_codex_e2e_transcript.py \
+python3 scripts/capture_codex_example_transcript.py \
   --base-corpus examples \
-  --output-dir /tmp/ail-e2e-live-codex-corpus \
+  --output-dir /tmp/ail-examples-live-codex-corpus \
   --entry-id example-99 \
   --executor-label codex-ail-spec-writer \
   --semantic-task support-ticket-live-codex-99 \
@@ -178,10 +178,10 @@ Batch promotion uses a JSON plan so multiple entries can be captured into the
 same corpus copy without overwriting earlier replacements:
 
 ```sh
-python3 scripts/capture_e2e_batch.py \
+python3 scripts/capture_example_batch.py \
   --base-corpus examples \
-  --output-dir /tmp/ail-e2e-live-batch-corpus \
-  --plan-json /tmp/ail-e2e-capture-plan.json
+  --output-dir /tmp/ail-examples-live-batch-corpus \
+  --plan-json /tmp/ail-examples-capture-plan.json
 ```
 
 Each plan entry uses `executor_family: llm-http` with endpoint, prompt, and
@@ -252,13 +252,13 @@ evidence across five user-story families.
 Replay with:
 
 ```sh
-cargo run -- ail-examples examples --artifact-dir /tmp/ail-e2e-seed-artifacts
+cargo run -- ail-examples examples --artifact-dir /tmp/ail-examples-seed-artifacts
 ```
 
 Final release replay adds the strict evidence switch:
 
 ```sh
-cargo run -- ail-examples examples --artifact-dir /tmp/ail-e2e-release-artifacts --release-evidence
+cargo run -- ail-examples examples --artifact-dir /tmp/ail-examples-release-artifacts --release-evidence
 ```
 
 That mode requires all counted entries to come from stored live captures and

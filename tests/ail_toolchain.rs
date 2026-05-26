@@ -203,7 +203,7 @@ fn e2e_corpus_entry_text(index: usize, overrides: &[(&str, &str)]) -> String {
     for (key, value) in overrides {
         fields.insert(key, (*value).to_string());
     }
-    let mut text = format!("## End-To-End Example: example-{index}\n");
+    let mut text = format!("## Example: example-{index}\n");
     for (key, value) in fields {
         text.push_str(&format!("{key}: {value}\n"));
     }
@@ -22710,7 +22710,7 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
-    let report = fs::read_to_string(artifact_dir.join("e2e-corpus-report.txt")).unwrap();
+    let report = fs::read_to_string(artifact_dir.join("examples-report.txt")).unwrap();
     assert!(report.contains("entry-count 116"), "{report}");
     assert!(
         report.contains("checker-result-count accepted 108"),
@@ -23598,7 +23598,7 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{package_resolution_diagnostics}"
     );
     let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-examples.txt")).unwrap();
-    assert!(manifest.contains("AIL-E2E-Corpus-Manifest:"), "{manifest}");
+    assert!(manifest.contains("AIL-Examples-Manifest:"), "{manifest}");
     assert!(
         manifest.contains("entry example-99 checker-result rejected target vm"),
         "{manifest}"
@@ -23836,7 +23836,7 @@ fn cli_ail_e2e_corpus_replays_imported_package_specs() {
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
-    let report = fs::read_to_string(artifact_dir.join("e2e-corpus-report.txt")).unwrap();
+    let report = fs::read_to_string(artifact_dir.join("examples-report.txt")).unwrap();
     assert!(
         report.contains("entry example-10")
             && report.contains("semantic-task support-composed-import-10"),
@@ -25549,7 +25549,7 @@ fn cli_ail_e2e_corpus_replays_rejected_prompt_failures() {
         diagnostics_fingerprint.trim(),
         fnv64_fingerprint(&diagnostics)
     );
-    let report = fs::read_to_string(artifact_dir.join("e2e-corpus-report.txt")).unwrap();
+    let report = fs::read_to_string(artifact_dir.join("examples-report.txt")).unwrap();
     assert!(
         report.contains("checker-result-count accepted 100"),
         "{report}"
@@ -25610,8 +25610,8 @@ fn cli_ail_e2e_corpus_writes_report_for_metadata_complete_corpus() {
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
-    let report = fs::read_to_string(artifact_dir.join("e2e-corpus-report.txt")).unwrap();
-    assert!(report.contains("AIL-End-To-End-Corpus-Report:"), "{report}");
+    let report = fs::read_to_string(artifact_dir.join("examples-report.txt")).unwrap();
+    assert!(report.contains("AIL-Examples-Report:"), "{report}");
     assert!(report.contains("entry-count 100"), "{report}");
     assert!(report.contains("profile-count Application 40"), "{report}");
     assert!(report.contains("profile-count AgentTool 15"), "{report}");
@@ -25773,7 +25773,7 @@ fn cli_ail_e2e_corpus_writes_report_for_metadata_complete_corpus() {
     let target_report =
         fs::read_to_string(artifact_dir.join("examples/example-0/target-report.txt")).unwrap();
     assert!(
-        target_report.contains("AIL-E2E-Target-Report:")
+        target_report.contains("AIL-Examples-Target-Report:")
             && target_report.contains("target linux-x86_64-elf")
             && target_report.contains(&format!(
                 "machine-bytecode target linux-x86_64-elf target-CloseTicket.elf elf64-little-x86_64-executable {} bytes {}",
@@ -25892,13 +25892,13 @@ fn cli_ail_e2e_corpus_writes_report_for_metadata_complete_corpus() {
         "{report}"
     );
     let report_fingerprint =
-        fs::read_to_string(artifact_dir.join("e2e-corpus-report.fingerprint.txt")).unwrap();
+        fs::read_to_string(artifact_dir.join("examples-report.fingerprint.txt")).unwrap();
     assert_eq!(report_fingerprint.trim(), fnv64_fingerprint(&report));
     let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-examples.txt")).unwrap();
-    assert!(manifest.contains("AIL-E2E-Corpus-Manifest:"), "{manifest}");
+    assert!(manifest.contains("AIL-Examples-Manifest:"), "{manifest}");
     assert!(
         manifest.contains(&format!(
-            "report e2e-corpus-report.txt {}",
+            "report examples-report.txt {}",
             report_fingerprint.trim()
         )),
         "{manifest}"
@@ -25924,7 +25924,7 @@ fn cli_ail_e2e_corpus_writes_report_for_metadata_complete_corpus() {
     let model_executor_manifest =
         fs::read_to_string(artifact_dir.join("model-executor-manifest.txt")).unwrap();
     assert!(
-        model_executor_manifest.contains("AIL-E2E-Model-Executor-Manifest:"),
+        model_executor_manifest.contains("AIL-Examples-Model-Executor-Manifest:"),
         "{model_executor_manifest}"
     );
     assert!(
@@ -25987,6 +25987,50 @@ fn cli_ail_e2e_corpus_writes_report_for_metadata_complete_corpus() {
     let manifest_fingerprint =
         fs::read_to_string(artifact_dir.join("manifest.fingerprint.txt")).unwrap();
     assert_eq!(manifest_fingerprint.trim(), fnv64_fingerprint(&manifest));
+
+    let _ = fs::remove_dir_all(corpus_dir);
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
+fn cli_ail_examples_accepts_legacy_end_to_end_heading_for_compatibility() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let corpus_dir = std::env::temp_dir().join(format!(
+        "ail-examples-legacy-heading-{}",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-examples-legacy-heading-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&corpus_dir);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&corpus_dir).unwrap();
+    write_e2e_transcript_files(&corpus_dir, 100);
+    fs::write(
+        corpus_dir.join("examples.md"),
+        e2e_corpus_text_with_override(0, &[]).replace("## Example:", "## End-To-End Example:"),
+    )
+    .unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-examples",
+            corpus_dir.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let report = fs::read_to_string(artifact_dir.join("examples-report.txt")).unwrap();
+    assert!(report.contains("AIL-Examples-Report:"), "{report}");
+    assert!(report.contains("entry-count 100"), "{report}");
 
     let _ = fs::remove_dir_all(corpus_dir);
     let _ = fs::remove_dir_all(artifact_dir);
@@ -26069,7 +26113,7 @@ fn cli_ail_e2e_corpus_replays_rejected_prompt_envelope_failures() {
             ),
         "{diagnostics}"
     );
-    let report = fs::read_to_string(artifact_dir.join("e2e-corpus-report.txt")).unwrap();
+    let report = fs::read_to_string(artifact_dir.join("examples-report.txt")).unwrap();
     assert!(
         report.contains("checker-result-count accepted 100")
             && report.contains("checker-result-count rejected 1")

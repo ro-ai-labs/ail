@@ -8,7 +8,13 @@ import json
 import shutil
 from pathlib import Path
 
-from capture_e2e_transcripts import fields_from_entry, fnv64, read_entries, render_entry
+from capture_e2e_transcripts import (
+    fields_from_entry,
+    fnv64,
+    read_entries,
+    refresh_distinctness_claim,
+    render_entry,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -81,6 +87,7 @@ def main() -> int:
     if fields.get("checker-result") == "accepted":
         fields.pop("expected-diagnostic", None)
         fields.pop("failure-taxonomy", None)
+    refresh_distinctness_claim(fields)
 
     entries[replacement_index] = (args.entry_id, render_entry(args.entry_id, fields))
     output_lines: list[str] = []

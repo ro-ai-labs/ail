@@ -1,4 +1,4 @@
-# AIL E2E Codex Skill Agents
+# AIL Codex Example Agents
 
 This directory defines the Codex-style skill-agent executor labels that may be
 used by `ail-examples` entries with `executor-family: codex-skill-agent`.

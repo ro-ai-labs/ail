@@ -1,6 +1,7 @@
 import json
 import shutil
 import subprocess
+import sys
 import tempfile
 import threading
 import unittest
@@ -32,9 +33,41 @@ class _CompletionHandler(BaseHTTPRequestHandler):
 
 
 class CaptureE2eTranscriptsTest(unittest.TestCase):
+    def test_example_capture_script_aliases_are_documented_and_callable(self):
+        for script in [
+            "scripts/capture_example_transcripts.py",
+            "scripts/capture_codex_example_transcript.py",
+            "scripts/capture_example_batch.py",
+        ]:
+            output = subprocess.run(
+                [sys.executable, script, "--help"],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            self.assertEqual(
+                output.returncode,
+                0,
+                f"{script}\nstdout:\n{output.stdout}\nstderr:\n{output.stderr}",
+            )
+
+        examples_readme = (ROOT / "examples" / "README.md").read_text()
+        corpus_readme = (ROOT / "docs" / "ail" / "corpus" / "README.md").read_text()
+        for script in [
+            "scripts/capture_example_transcripts.py",
+            "scripts/capture_codex_example_transcript.py",
+            "scripts/capture_example_batch.py",
+        ]:
+            self.assertIn(script, examples_readme)
+        self.assertIn("scripts/capture_example_transcripts.py", corpus_readme)
+        self.assertIn("scripts/capture_codex_example_transcript.py", corpus_readme)
+        self.assertIn("scripts/capture_example_batch.py", corpus_readme)
+
     def test_capture_replaces_seed_entry_with_live_llm_transcript(self):
-        output_dir = Path(tempfile.mkdtemp(prefix="ail-e2e-live-capture-"))
-        artifact_dir = Path(tempfile.mkdtemp(prefix="ail-e2e-live-capture-artifacts-"))
+        output_dir = Path(tempfile.mkdtemp(prefix="ail-examples-live-capture-"))
+        artifact_dir = Path(tempfile.mkdtemp(prefix="ail-examples-live-capture-artifacts-"))
         server = None
         try:
             _CompletionHandler.requests = []
@@ -49,7 +82,7 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             capture = subprocess.run(
                 [
                     "python3",
-                    "scripts/capture_e2e_transcripts.py",
+                    "scripts/capture_example_transcripts.py",
                     "--base-corpus",
                     "examples",
                     "--output-dir",
@@ -105,10 +138,10 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
                 capture_output=True,
             )
             self.assertEqual(replay.returncode, 0, replay.stderr)
-            report = (artifact_dir / "e2e-corpus-report.txt").read_text()
+            report = (artifact_dir / "examples-report.txt").read_text()
             self.assertNotIn("capture-origin-count deterministic-seed", report)
             self.assertIn("capture-origin-count live-llm 5", report)
-            self.assertIn("capture-origin-count live-codex 106", report)
+            self.assertIn("capture-origin-count live-codex 111", report)
             self.assertIn(
                 "entry example-30 source "
                 + str(output_dir / "examples.md")
@@ -123,8 +156,8 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             shutil.rmtree(artifact_dir, ignore_errors=True)
 
     def test_capture_chat_completion_transcript_replays_offline(self):
-        output_dir = Path(tempfile.mkdtemp(prefix="ail-e2e-live-chat-capture-"))
-        artifact_dir = Path(tempfile.mkdtemp(prefix="ail-e2e-live-chat-capture-artifacts-"))
+        output_dir = Path(tempfile.mkdtemp(prefix="ail-examples-live-chat-capture-"))
+        artifact_dir = Path(tempfile.mkdtemp(prefix="ail-examples-live-chat-capture-artifacts-"))
         server = None
         try:
             spec_text = (
@@ -143,7 +176,7 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             capture = subprocess.run(
                 [
                     "python3",
-                    "scripts/capture_e2e_transcripts.py",
+                    "scripts/capture_example_transcripts.py",
                     "--base-corpus",
                     "examples",
                     "--output-dir",
@@ -193,9 +226,9 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
                 capture_output=True,
             )
             self.assertEqual(replay.returncode, 0, replay.stderr)
-            report = (artifact_dir / "e2e-corpus-report.txt").read_text()
+            report = (artifact_dir / "examples-report.txt").read_text()
             self.assertIn("capture-origin-count live-llm 4", report)
-            self.assertIn("capture-origin-count live-codex 107", report)
+            self.assertIn("capture-origin-count live-codex 112", report)
             self.assertIn("entry example-32", report)
         finally:
             _CompletionHandler.response_payload = None
@@ -206,10 +239,10 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             shutil.rmtree(artifact_dir, ignore_errors=True)
 
     def test_capture_uses_schema_input_json_file_for_spec_draft_prompt(self):
-        output_dir = Path(tempfile.mkdtemp(prefix="ail-e2e-live-input-capture-"))
-        artifact_dir = Path(tempfile.mkdtemp(prefix="ail-e2e-live-input-capture-artifacts-"))
-        input_json = Path(tempfile.mkdtemp(prefix="ail-e2e-live-input-json-")) / "input.json"
-        task_prompt = Path(tempfile.mkdtemp(prefix="ail-e2e-live-task-prompt-")) / "task.txt"
+        output_dir = Path(tempfile.mkdtemp(prefix="ail-examples-live-input-capture-"))
+        artifact_dir = Path(tempfile.mkdtemp(prefix="ail-examples-live-input-capture-artifacts-"))
+        input_json = Path(tempfile.mkdtemp(prefix="ail-examples-live-input-json-")) / "input.json"
+        task_prompt = Path(tempfile.mkdtemp(prefix="ail-examples-live-task-prompt-")) / "task.txt"
         server = None
         try:
             input_payload = {
@@ -247,7 +280,7 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             capture = subprocess.run(
                 [
                     "python3",
-                    "scripts/capture_e2e_transcripts.py",
+                    "scripts/capture_example_transcripts.py",
                     "--base-corpus",
                     "examples",
                     "--output-dir",
@@ -308,9 +341,9 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             shutil.rmtree(task_prompt.parent, ignore_errors=True)
 
     def test_capture_codex_transcript_imports_live_codex_entry(self):
-        output_dir = Path(tempfile.mkdtemp(prefix="ail-e2e-live-codex-capture-"))
-        artifact_dir = Path(tempfile.mkdtemp(prefix="ail-e2e-live-codex-capture-artifacts-"))
-        transcript_dir = Path(tempfile.mkdtemp(prefix="ail-e2e-live-codex-transcript-"))
+        output_dir = Path(tempfile.mkdtemp(prefix="ail-examples-live-codex-capture-"))
+        artifact_dir = Path(tempfile.mkdtemp(prefix="ail-examples-live-codex-capture-artifacts-"))
+        transcript_dir = Path(tempfile.mkdtemp(prefix="ail-examples-live-codex-transcript-"))
         try:
             request_json = transcript_dir / "request.json"
             response_json = transcript_dir / "response.json"
@@ -343,7 +376,7 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             capture = subprocess.run(
                 [
                     "python3",
-                    "scripts/capture_codex_e2e_transcript.py",
+                    "scripts/capture_codex_example_transcript.py",
                     "--base-corpus",
                     "examples",
                     "--output-dir",
@@ -372,7 +405,7 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             self.assertIn("executor-family: codex-skill-agent", examples)
             self.assertIn("capture-origin: live-codex", examples)
             self.assertIn("executor-label: codex-ail-spec-writer-test", examples)
-            example_99 = examples.split("## End-To-End Example: example-99", 1)[1]
+            example_99 = examples.split("## Example: example-99", 1)[1]
             self.assertNotIn("endpoint-label:", example_99)
 
             request = json.loads((output_dir / "requests" / "example-99.json").read_text())
@@ -396,11 +429,11 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
                 capture_output=True,
             )
             self.assertEqual(replay.returncode, 0, replay.stderr)
-            report = (artifact_dir / "e2e-corpus-report.txt").read_text()
+            report = (artifact_dir / "examples-report.txt").read_text()
             self.assertNotIn("capture-origin-count deterministic-seed", report)
             self.assertIn("capture-origin-count live-llm 4", report)
-            self.assertIn("capture-origin-count live-codex 107", report)
-            self.assertIn("checker-result-count accepted 104", report)
+            self.assertIn("capture-origin-count live-codex 112", report)
+            self.assertIn("checker-result-count accepted 109", report)
             self.assertIn("entry example-99", report)
             self.assertIn("capture-origin live-codex", report)
         finally:
@@ -409,9 +442,9 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             shutil.rmtree(transcript_dir, ignore_errors=True)
 
     def test_batch_capture_preserves_previous_live_entries(self):
-        output_dir = Path(tempfile.mkdtemp(prefix="ail-e2e-live-batch-capture-"))
-        artifact_dir = Path(tempfile.mkdtemp(prefix="ail-e2e-live-batch-capture-artifacts-"))
-        transcript_dir = Path(tempfile.mkdtemp(prefix="ail-e2e-live-batch-transcript-"))
+        output_dir = Path(tempfile.mkdtemp(prefix="ail-examples-live-batch-capture-"))
+        artifact_dir = Path(tempfile.mkdtemp(prefix="ail-examples-live-batch-capture-artifacts-"))
+        transcript_dir = Path(tempfile.mkdtemp(prefix="ail-examples-live-batch-transcript-"))
         server = None
         try:
             spec_text = (
@@ -488,7 +521,7 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             capture = subprocess.run(
                 [
                     "python3",
-                    "scripts/capture_e2e_batch.py",
+                    "scripts/capture_example_batch.py",
                     "--base-corpus",
                     "examples",
                     "--output-dir",
@@ -525,10 +558,10 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
                 capture_output=True,
             )
             self.assertEqual(replay.returncode, 0, replay.stderr)
-            report = (artifact_dir / "e2e-corpus-report.txt").read_text()
+            report = (artifact_dir / "examples-report.txt").read_text()
             self.assertNotIn("capture-origin-count deterministic-seed", report)
             self.assertIn("capture-origin-count live-llm 5", report)
-            self.assertIn("capture-origin-count live-codex 106", report)
+            self.assertIn("capture-origin-count live-codex 111", report)
             self.assertIn("entry example-30", report)
             self.assertIn("entry example-32", report)
             self.assertIn("entry example-99", report)

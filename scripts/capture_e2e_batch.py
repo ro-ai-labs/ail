@@ -14,6 +14,7 @@ from capture_e2e_transcripts import (
     fields_from_entry,
     fnv64,
     read_entries,
+    refresh_distinctness_claim,
     render_entry,
     render_prompt,
 )
@@ -118,6 +119,7 @@ def apply_llm_entry(
             "checker-result": "accepted",
         }
     )
+    refresh_distinctness_claim(fields)
     entries[index] = (entry_id, render_entry(entry_id, fields))
 
 
@@ -158,6 +160,7 @@ def apply_codex_entry(
     if fields.get("checker-result") == "accepted":
         fields.pop("expected-diagnostic", None)
         fields.pop("failure-taxonomy", None)
+    refresh_distinctness_claim(fields)
     entries[index] = (entry_id, render_entry(entry_id, fields))
 
 

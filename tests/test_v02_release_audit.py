@@ -59,7 +59,7 @@ class V02ReleaseAuditTest(unittest.TestCase):
             artifact_dir.joinpath("manifest.fingerprint.txt").write_text(
                 audit.fnv64_fingerprint(manifest.encode("utf-8")) + "\n"
             )
-            model_executor_manifest = "AIL-E2E-Model-Executor-Manifest:\nentry-count 100\n"
+            model_executor_manifest = "AIL-Examples-Model-Executor-Manifest:\nentry-count 100\n"
             artifact_dir.joinpath("model-executor-manifest.txt").write_text(
                 model_executor_manifest
             )

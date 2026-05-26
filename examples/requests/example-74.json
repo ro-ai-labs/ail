@@ -17,7 +17,7 @@
       "guarantees",
       "traces"
     ],
-    "requirements_source": "inline checked requirements from active AIL v0.2 e2e capture session"
+    "requirements_source": "inline checked requirements from active AIL v0.2 examples capture session"
   },
   "package": "examples/network_driver.ail",
   "profile": "System",
