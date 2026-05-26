@@ -122,6 +122,84 @@ def write_prompt_llm_review_fixture(artifact_dir, empty_content_for=None):
     write_text(artifact_dir / "manifest.fingerprint.txt", fnv64(manifest_text) + "\n")
 
 
+def write_story_llm_review_fixture(artifact_dir, omit_agent_trace=False):
+    artifact_dir.mkdir(parents=True, exist_ok=True)
+    story_source = (
+        "# Support Ticket Story\n\n"
+        "user-story-id: support-ticket-agent-story\n"
+        "user-story: As a support agent I can close a ticket from a reviewed story.\n"
+        "acceptance-criteria: checked requirements exist; checked spec exists; bytecode exists; agent trace exists\n"
+        "semantic-anchors: Support Tickets; Close ticket; TicketClosed; toolchain agent\n"
+    )
+    story_normalized = story_source + "story-journey: story-to-spec\nstory-roundtrip: semantic-similar\n"
+    story_report = (
+        "AIL-Story-Mode-Report:\n"
+        "package: support-ticket\n"
+        "user-story-id: support-ticket-agent-story\n"
+        "semantic-anchor-count: 4\n"
+        "endpoint: http://127.0.0.1:8080/v1/chat/completions\n"
+    )
+    requirements = (
+        "AIL-Requirements:\n"
+        "- The application manages support tickets.\n"
+        "- The Close ticket action records TicketClosed.\n"
+    )
+    spec = (
+        "# Support Ticket\n\n"
+        "AIL-Spec: support-ticket\n\n"
+        "Action: Close ticket.\n"
+    )
+    core = "AIL-Core:\nnode action CloseTicket\n"
+    flow_review = json.dumps({"profile": "Application", "actions": ["Close ticket"]}) + "\n"
+    bytecode = json.dumps({"version": "ail-bytecode-0", "package": "support-ticket"}) + "\n"
+    build_manifest = (
+        "AIL-Build-Manifest:\n"
+        f"bytecode artifact.ailbc.json {fnv64(bytecode)}\n"
+        "trace agent-trace.txt\n"
+    )
+    agent_trace = (
+        "entrypoint=ail-story\n"
+        "buildrequest.story-id=support-ticket-agent-story\n"
+        "buildrequest.semantic-anchors=Support Tickets; Close ticket; TicketClosed; toolchain agent\n"
+        "action CaptureRequirements started\n"
+        "action PrepareSpecDraft started\n"
+        "action AcceptSpecDraft started\n"
+        "action CompileApplication started\n"
+        "action VerifyBytecodeArtifact started\n"
+    )
+    artifacts = [
+        ("story.source.md", "story.source.fingerprint.txt", story_source),
+        ("story.normalized.md", "story.normalized.fingerprint.txt", story_normalized),
+        ("story-mode-report.txt", "story-mode-report.fingerprint.txt", story_report),
+        ("requirements.ail-requirements.md", "requirements.fingerprint.txt", requirements),
+        ("accepted.ail-spec.md", "accepted.ail-spec.fingerprint.txt", spec),
+        ("checked.ail-core.txt", "checked.ail-core.fingerprint.txt", core),
+        ("review.ail-flow.json", "review.ail-flow.fingerprint.txt", flow_review),
+        ("artifact.ailbc.json", "artifact.fingerprint.txt", bytecode),
+        ("manifest.ail-build.txt", "manifest.fingerprint.txt", build_manifest),
+    ]
+    if not omit_agent_trace:
+        artifacts.append(("agent-trace.txt", "agent-trace.fingerprint.txt", agent_trace))
+    for name, fingerprint_name, text in artifacts:
+        write_text(artifact_dir / name, text)
+        write_text(artifact_dir / fingerprint_name, fnv64(text) + "\n")
+
+    manifest = (
+        "AIL-Story-Manifest:\n"
+        "entrypoint ail-story\n"
+        f"story-source story.source.md {fnv64(story_source)}\n"
+        f"story-normalized story.normalized.md {fnv64(story_normalized)}\n"
+        f"story-report story-mode-report.txt {fnv64(story_report)}\n"
+        f"requirements requirements.ail-requirements.md {fnv64(requirements)}\n"
+        f"spec accepted.ail-spec.md {fnv64(spec)}\n"
+        f"core checked.ail-core.txt {fnv64(core)}\n"
+        f"bytecode artifact.ailbc.json {fnv64(bytecode)}\n"
+        f"build-manifest manifest.ail-build.txt {fnv64(build_manifest)}\n"
+    )
+    write_text(artifact_dir / "manifest.ail-story.txt", manifest)
+    write_text(artifact_dir / "manifest.ail-story.fingerprint.txt", fnv64(manifest) + "\n")
+
+
 class _CompletionHandler(BaseHTTPRequestHandler):
     response_text = ""
     response_payload = None
@@ -229,6 +307,60 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
                 "empty content docs/ail/prompts/requirements.system.md",
                 review.stdout,
             )
+        finally:
+            shutil.rmtree(artifact_dir, ignore_errors=True)
+
+    def test_story_llm_harness_review_accepts_complete_artifact_bundle(self):
+        artifact_dir = Path(tempfile.mkdtemp(prefix="ail-story-llm-review-"))
+        try:
+            write_story_llm_review_fixture(artifact_dir)
+            review = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_story_llm_harness.py",
+                    "--review-artifacts",
+                    str(artifact_dir),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(
+                review.returncode,
+                0,
+                f"stdout:\n{review.stdout}\nstderr:\n{review.stderr}",
+            )
+            self.assertIn("AIL-Story-LLM-Harness-Review:", review.stdout)
+            self.assertIn("story-id support-ticket-agent-story", review.stdout)
+            self.assertIn("semantic-anchor-count 4", review.stdout)
+            self.assertIn("agent-trace present", review.stdout)
+            self.assertIn("review-result accepted", review.stdout)
+        finally:
+            shutil.rmtree(artifact_dir, ignore_errors=True)
+
+    def test_story_llm_harness_review_rejects_missing_agent_trace(self):
+        artifact_dir = Path(tempfile.mkdtemp(prefix="ail-story-llm-review-missing-agent-"))
+        try:
+            write_story_llm_review_fixture(artifact_dir, omit_agent_trace=True)
+            review = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_story_llm_harness.py",
+                    "--review-artifacts",
+                    str(artifact_dir),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertNotEqual(
+                review.returncode,
+                0,
+                f"stdout:\n{review.stdout}\nstderr:\n{review.stderr}",
+            )
+            self.assertIn("review-result rejected", review.stdout)
+            self.assertIn("missing file", review.stdout)
+            self.assertIn("agent-trace.txt", review.stdout)
         finally:
             shutil.rmtree(artifact_dir, ignore_errors=True)
 

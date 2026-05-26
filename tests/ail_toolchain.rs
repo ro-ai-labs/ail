@@ -1376,6 +1376,7 @@ fn script_v03_story_llm_harness_help_names_endpoint_and_dry_run() {
     for required in [
         "ail-story",
         "--dry-run",
+        "--review-artifacts",
         "--endpoint",
         "http://inteligentia-pro-1:8080",
         "/v1/chat/completions",
@@ -1402,6 +1403,17 @@ fn script_v03_story_llm_harness_help_names_endpoint_and_dry_run() {
         dry_run_stdout
             .contains("--llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions"),
         "{dry_run_stdout}"
+    );
+    let manual = fs::read_to_string(format!(
+        "{}/docs/ail/manual/01-user-story-mode.md",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .unwrap();
+    assert!(
+        manual.contains(
+            "python3 scripts/run_v03_story_llm_harness.py --review-artifacts /tmp/ail-v03-story-llm"
+        ),
+        "{manual}"
     );
 }
 

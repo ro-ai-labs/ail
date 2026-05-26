@@ -117,10 +117,22 @@ Then run it live when `http://inteligentia-pro-1:8080/` is reachable:
 python3 scripts/run_v03_story_llm_harness.py
 ```
 
+Review the completed live artifact directory before promotion:
+
+```sh
+python3 scripts/run_v03_story_llm_harness.py --review-artifacts /tmp/ail-v03-story-llm
+```
+
 The harness is intentionally outside the default test suite because it depends
 on the hosted llama.cpp server and model behavior. Promote a live run into the
 examples corpus only after the generated requirements, spec, Core, bytecode,
 agent trace, and manifest have been reviewed.
+
+The review mode is offline. It checks story source and normalized story
+fingerprints, story-mode report metadata, generated requirements, accepted
+spec, checked Core, flow review, bytecode, story manifest fingerprints, and
+toolchain-agent trace order before a live run can be treated as promotion
+candidate evidence.
 
 The harness probes `http://inteligentia-pro-1:8080/v1/models` and runs
 `ail-story` against `http://inteligentia-pro-1:8080/v1/chat/completions` by

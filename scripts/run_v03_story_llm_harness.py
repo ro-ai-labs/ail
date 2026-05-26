@@ -8,10 +8,12 @@ llama.cpp-compatible server and then runs `ail-story` through Cargo.
 from __future__ import annotations
 
 import argparse
+import json
 import subprocess
 import sys
 import urllib.parse
 import urllib.request
+from pathlib import Path
 
 
 DEFAULT_SERVER = "http://inteligentia-pro-1:8080/"
@@ -20,6 +22,14 @@ DEFAULT_PACKAGE = "examples/support_ticket.ail"
 DEFAULT_STORY_FILE = "examples/stories/example-30.md"
 DEFAULT_AGENT = "examples/ail_toolchain_agent.ail"
 DEFAULT_ARTIFACT_DIR = "/tmp/ail-v03-story-llm"
+
+
+def fnv64(text: str) -> str:
+    value = 0xCBF29CE484222325
+    for byte in text.encode():
+        value ^= byte
+        value = (value * 0x100000001B3) & 0xFFFFFFFFFFFFFFFF
+    return f"fnv64:{value:016x}"
 
 
 def endpoint_join(endpoint: str, suffix: str) -> str:
@@ -68,6 +78,168 @@ def check_models(endpoint: str) -> None:
         body = response.read().decode("utf-8", errors="replace")
     print(f"models endpoint: {models_url}")
     print(body)
+
+
+def read_required_text(path: Path, errors: list[str]) -> str:
+    if not path.exists():
+        errors.append(f"missing file {path}")
+        return ""
+    return path.read_text()
+
+
+def check_fingerprint(
+    path: Path, errors: list[str], fingerprint_path: Path | None = None
+) -> bool:
+    text = read_required_text(path, errors)
+    fingerprint_path = fingerprint_path or path.with_suffix(".fingerprint.txt")
+    expected = read_required_text(fingerprint_path, errors).strip()
+    actual = fnv64(text)
+    if expected != actual:
+        errors.append(
+            f"fingerprint mismatch {path}: expected {expected or '<missing>'} got {actual}"
+        )
+        return False
+    return True
+
+
+def parse_story_report(report_text: str) -> dict[str, str]:
+    values: dict[str, str] = {}
+    for line in report_text.splitlines():
+        if ":" in line:
+            key, value = line.split(":", 1)
+            values[key.strip()] = value.strip()
+    return values
+
+
+def manifest_entries(manifest_text: str) -> list[tuple[str, str, str]]:
+    entries: list[tuple[str, str, str]] = []
+    for line in manifest_text.splitlines():
+        parts = line.split()
+        if len(parts) >= 3 and parts[-1].startswith("fnv64:"):
+            entries.append((parts[0], parts[-2], parts[-1]))
+    return entries
+
+
+def check_manifest_entries(artifact_root: Path, manifest_text: str, errors: list[str]) -> int:
+    checked = 0
+    for kind, file_name, expected in manifest_entries(manifest_text):
+        text = read_required_text(artifact_root / file_name, errors)
+        actual = fnv64(text)
+        if actual != expected:
+            errors.append(
+                f"manifest fingerprint mismatch {kind} {file_name}: expected {expected} got {actual}"
+            )
+        else:
+            checked += 1
+    return checked
+
+
+def review_artifacts(artifact_dir: str) -> int:
+    artifact_root = Path(artifact_dir)
+    errors: list[str] = []
+    fingerprint_checks = 0
+    manifest_text = read_required_text(artifact_root / "manifest.ail-story.txt", errors)
+    report_text = read_required_text(artifact_root / "story-mode-report.txt", errors)
+    normalized_story = read_required_text(artifact_root / "story.normalized.md", errors)
+    agent_trace = read_required_text(artifact_root / "agent-trace.txt", errors)
+
+    for path, fingerprint_path in [
+        (artifact_root / "story.source.md", artifact_root / "story.source.fingerprint.txt"),
+        (
+            artifact_root / "story.normalized.md",
+            artifact_root / "story.normalized.fingerprint.txt",
+        ),
+        (
+            artifact_root / "story-mode-report.txt",
+            artifact_root / "story-mode-report.fingerprint.txt",
+        ),
+        (
+            artifact_root / "requirements.ail-requirements.md",
+            artifact_root / "requirements.fingerprint.txt",
+        ),
+        (
+            artifact_root / "accepted.ail-spec.md",
+            artifact_root / "accepted.ail-spec.fingerprint.txt",
+        ),
+        (
+            artifact_root / "checked.ail-core.txt",
+            artifact_root / "checked.ail-core.fingerprint.txt",
+        ),
+        (
+            artifact_root / "review.ail-flow.json",
+            artifact_root / "review.ail-flow.fingerprint.txt",
+        ),
+        (artifact_root / "artifact.ailbc.json", artifact_root / "artifact.fingerprint.txt"),
+        (
+            artifact_root / "manifest.ail-story.txt",
+            artifact_root / "manifest.ail-story.fingerprint.txt",
+        ),
+    ]:
+        if check_fingerprint(path, errors, fingerprint_path):
+            fingerprint_checks += 1
+    if (artifact_root / "manifest.ail-build.txt").exists():
+        if check_fingerprint(
+            artifact_root / "manifest.ail-build.txt",
+            errors,
+            artifact_root / "manifest.fingerprint.txt",
+        ):
+            fingerprint_checks += 1
+
+    manifest_match_count = check_manifest_entries(artifact_root, manifest_text, errors)
+    if "AIL-Story-Manifest:" not in manifest_text:
+        errors.append("manifest missing AIL-Story-Manifest header")
+    if "entrypoint ail-story" not in manifest_text:
+        errors.append("manifest missing ail-story entrypoint")
+
+    report_values = parse_story_report(report_text)
+    story_id = report_values.get("user-story-id", "")
+    anchor_count = report_values.get("semantic-anchor-count", "")
+    if not story_id:
+        errors.append("story report missing user-story-id")
+    if not anchor_count:
+        errors.append("story report missing semantic-anchor-count")
+    for required in [
+        "user-story:",
+        "acceptance-criteria:",
+        "semantic-anchors:",
+        "story-journey: story-to-spec",
+        "story-roundtrip: semantic-similar",
+    ]:
+        if required not in normalized_story:
+            errors.append(f"normalized story missing {required}")
+    if "entrypoint=ail-story" not in agent_trace:
+        errors.append("agent trace missing entrypoint=ail-story")
+    for action in [
+        "action CaptureRequirements started",
+        "action PrepareSpecDraft started",
+        "action AcceptSpecDraft started",
+        "action CompileApplication started",
+        "action VerifyBytecodeArtifact started",
+    ]:
+        if action not in agent_trace:
+            errors.append(f"agent trace missing {action}")
+    for json_path in ["artifact.ailbc.json", "review.ail-flow.json"]:
+        text = read_required_text(artifact_root / json_path, errors)
+        if text:
+            try:
+                json.loads(text)
+            except json.JSONDecodeError as error:
+                errors.append(f"invalid json {json_path}: {error}")
+
+    print("AIL-Story-LLM-Harness-Review:")
+    print(f"artifact-dir {artifact_root}")
+    print(f"story-id {story_id or '<missing>'}")
+    print(f"semantic-anchor-count {anchor_count or '<missing>'}")
+    print(f"manifest-entry-check-count {manifest_match_count}")
+    print(f"fingerprint-check-count {fingerprint_checks}")
+    print(f"agent-trace {'present' if agent_trace else 'missing'}")
+    if errors:
+        print("review-result rejected")
+        for error in errors:
+            print(f"error {error}")
+        return 1
+    print("review-result accepted")
+    return 0
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
@@ -124,11 +296,17 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         action="store_true",
         help="Skip the /v1/models check before running ail-story",
     )
+    parser.add_argument(
+        "--review-artifacts",
+        help="Review an existing ail-story artifact directory without network access",
+    )
     return parser.parse_args(argv)
 
 
 def main(argv: list[str]) -> int:
     args = parse_args(argv)
+    if args.review_artifacts:
+        return review_artifacts(args.review_artifacts)
     command = build_ail_story_command(args)
     if args.dry_run:
         print("model check:")
