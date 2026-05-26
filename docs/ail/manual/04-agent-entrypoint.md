@@ -26,6 +26,16 @@ repairer, and prompt reviewer contracts. The prompt reviewer contract must
 require prompt harness review, story harness review, examples replay, and
 `cargo run -- ail-v03-roadmap examples`.
 
+The same gate also validates the repo-local Codex skill:
+
+```text
+examples/agents/skills/ail-prompt-interaction-reviewer/SKILL.md
+```
+
+That skill is the reusable procedure for reviewing hosted llama.cpp prompt
+artifacts, User Story mode artifacts, examples replay, and `v03-roadmap.txt`
+before generated content is promoted into `./examples`.
+
 ## Toolchain Agent Package
 
 Check the AIL-authored toolchain agent package:
@@ -50,4 +60,3 @@ agent-trace.txt
 
 `agent-trace.txt` should show requirements capture, spec preparation, spec
 acceptance, compile, bytecode verification, and manifest verification in order.
-

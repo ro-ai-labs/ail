@@ -1143,6 +1143,15 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
             assert!(manual.contains(required), "{required}\n{manual}");
         }
     }
+    let agent_manual = fs::read_to_string(format!(
+        "{}/docs/ail/manual/04-agent-entrypoint.md",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .unwrap();
+    assert!(
+        agent_manual.contains("examples/agents/skills/ail-prompt-interaction-reviewer/SKILL.md"),
+        "{agent_manual}"
+    );
 }
 
 #[test]
@@ -1280,6 +1289,7 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "doc docs/ail/manual/04-agent-entrypoint.md",
         "cargo run -- ail-check examples/ail_toolchain_agent.ail",
         "codex-ail-prompt-reviewer.md",
+        "examples/agents/skills/ail-prompt-interaction-reviewer/SKILL.md",
         "cargo run -- ail-agent-contracts examples/agents",
         "cargo test ail_toolchain_agent_package_lowers_to_verified_bytecode --test ail_toolchain",
         "cargo test cli_ail_build_runs_toolchain_agent_bytecode --test ail_toolchain",
@@ -1500,6 +1510,37 @@ fn examples_agents_include_prompt_review_contract() {
 }
 
 #[test]
+fn codex_skill_documents_prompt_interaction_review_gate() {
+    let skill = fs::read_to_string(format!(
+        "{}/examples/agents/skills/ail-prompt-interaction-reviewer/SKILL.md",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .unwrap();
+    for required in [
+        "name: ail-prompt-interaction-reviewer",
+        "description: Use when",
+        "examples/agents/codex-ail-prompt-reviewer.md",
+        "http://inteligentia-pro-1:8080/",
+        "python3 scripts/run_v03_prompt_llm_harness.py --dry-run",
+        "python3 scripts/run_v03_prompt_llm_harness.py --review-artifacts /tmp/ail-v03-prompt-llm",
+        "python3 scripts/run_v03_story_llm_harness.py --review-artifacts /tmp/ail-v03-story-llm",
+        "python3 scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run-checks --include-live",
+        "cargo run -- ail-agent-contracts examples/agents",
+        "cargo run -- ail-examples examples --artifact-dir",
+        "cargo run -- ail-v03-roadmap examples --artifact-dir",
+        "prompt-envelope-valid-count",
+        "prompt-envelope-invalid-count",
+        "manifest.v03-prompt-llm.txt",
+        "v03-roadmap.txt",
+        "accepted-for-promotion",
+        "needs-repair",
+        "rejected-for-promotion",
+    ] {
+        assert!(skill.contains(required), "{required}\n{skill}");
+    }
+}
+
+#[test]
 fn cli_ail_agent_contracts_validates_prompt_reviewer_contract() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let output = Command::new(binary)
@@ -1524,6 +1565,7 @@ fn cli_ail_agent_contracts_validates_prompt_reviewer_contract() {
         "review-command scripts/run_v03_story_llm_harness.py --review-artifacts",
         "roadmap-artifact v03-roadmap.txt",
         "roadmap-command cargo run -- ail-v03-roadmap examples --artifact-dir",
+        "codex-skill examples/agents/skills/ail-prompt-interaction-reviewer/SKILL.md",
         "agent-contracts-result accepted",
     ] {
         assert!(stdout.contains(required), "{required}\n{stdout}");

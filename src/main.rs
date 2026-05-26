@@ -1275,6 +1275,40 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
             ));
         }
     }
+    let skill_path = root.join("skills/ail-prompt-interaction-reviewer/SKILL.md");
+    let skill_text = fs::read_to_string(&skill_path).map_err(|error| {
+        format!(
+            "failed to read codex skill {}: {error}",
+            skill_path.display()
+        )
+    })?;
+    for required in [
+        "name: ail-prompt-interaction-reviewer",
+        "description: Use when",
+        "examples/agents/codex-ail-prompt-reviewer.md",
+        "http://inteligentia-pro-1:8080/",
+        "python3 scripts/run_v03_prompt_llm_harness.py --dry-run",
+        "python3 scripts/run_v03_prompt_llm_harness.py --review-artifacts /tmp/ail-v03-prompt-llm",
+        "python3 scripts/run_v03_story_llm_harness.py --review-artifacts /tmp/ail-v03-story-llm",
+        "python3 scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run-checks --include-live",
+        "cargo run -- ail-agent-contracts examples/agents",
+        "cargo run -- ail-examples examples --artifact-dir",
+        "cargo run -- ail-v03-roadmap examples --artifact-dir",
+        "prompt-envelope-valid-count",
+        "prompt-envelope-invalid-count",
+        "manifest.v03-prompt-llm.txt",
+        "v03-roadmap.txt",
+        "accepted-for-promotion",
+        "needs-repair",
+        "rejected-for-promotion",
+    ] {
+        if !skill_text.contains(required) {
+            return Err(format!(
+                "codex skill {} missing {required}",
+                skill_path.display()
+            ));
+        }
+    }
 
     println!("AIL-Agent-Contracts-Report:");
     println!("contract-count {}", contracts.len());
@@ -1288,6 +1322,7 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
     println!("review-command scripts/run_v03_story_llm_harness.py --review-artifacts");
     println!("roadmap-artifact v03-roadmap.txt");
     println!("roadmap-command cargo run -- ail-v03-roadmap examples --artifact-dir");
+    println!("codex-skill examples/agents/skills/ail-prompt-interaction-reviewer/SKILL.md");
     println!("agent-contracts-result accepted");
     Ok(0)
 }

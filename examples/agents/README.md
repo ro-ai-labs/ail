@@ -40,6 +40,14 @@ lowers to bytecode, and verifies that `ail-build` writes `agent.ailbc.json` and
 | `codex-ail-diagnostic-repairer` | `codex-ail-diagnostic-repairer.md` | repaired AIL-Spec or rejected diagnostic explanation | repaired artifact passes or the expected diagnostic is reproduced |
 | `codex-ail-prompt-reviewer` | `codex-ail-prompt-reviewer.md` | Prompt and story harness review report | `scripts/run_v03_prompt_llm_harness.py --review-artifacts`, `scripts/run_v03_story_llm_harness.py --review-artifacts`, then `ail-examples examples --artifact-dir ... --release-evidence` and `cargo run -- ail-v03-roadmap examples ...` write `v03-roadmap.txt` and pass before promotion |
 
+## Codex Skills
+
+The reusable prompt/system-interaction review skill is stored at
+`examples/agents/skills/ail-prompt-interaction-reviewer/SKILL.md`. It mirrors
+`codex-ail-prompt-reviewer.md` in Codex skill format, records the hosted
+llama.cpp endpoint, and lists the deterministic commands and evidence required
+before promoting generated prompt or User Story mode artifacts.
+
 ## Request JSON Shape
 
 ```json

@@ -268,6 +268,7 @@ BASE_CHAPTERS: tuple[ManualChapter, ...] = (
                 evidence=(
                     "AIL-Agent-Contracts-Report",
                     "codex-ail-prompt-reviewer.md",
+                    "examples/agents/skills/ail-prompt-interaction-reviewer/SKILL.md",
                 ),
             ),
             ManualCommand(
