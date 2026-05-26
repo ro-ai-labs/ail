@@ -65,6 +65,16 @@ python3 scripts/run_v03_story_llm_harness.py --review-artifacts /tmp/ail-v03-sto
 The review writes `story-llm-harness-report.txt` and
 `story-llm-harness-report.fingerprint.txt` in the reviewed artifact directory.
 
+Review completed hosted prompt-pack artifacts before promotion:
+
+```sh
+python3 scripts/run_v03_prompt_llm_harness.py --review-artifacts /tmp/ail-v03-prompt-llm
+```
+
+The review writes `prompt-llm-harness-review.txt` and
+`prompt-llm-harness-review.fingerprint.txt` in the reviewed artifact
+directory.
+
 Run deterministic local checks for a chapter:
 
 ```sh

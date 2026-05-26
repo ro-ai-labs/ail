@@ -73,6 +73,8 @@ The review report must include:
 - `prompt-envelope-invalid-count`
 - `manifest.v03-prompt-llm.txt`
 - `prompt-llm-harness-report.txt`
+- `prompt-llm-harness-review.txt`
+- `prompt-llm-harness-review.fingerprint.txt`
 - `story-llm-harness-report.txt`
 - `examples-report.txt`
 - `v03-roadmap.txt`

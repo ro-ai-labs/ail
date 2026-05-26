@@ -68,6 +68,8 @@ manifest.ail-examples.txt
 prompt-corpus-portability.txt
 manifest.ail-prompt-corpus.txt
 prompt-llm-harness-report.txt
+prompt-llm-harness-review.txt
+prompt-llm-harness-review.fingerprint.txt
 manifest.v03-prompt-llm.txt
 prompt-envelope-valid-count
 prompt-envelope-invalid-count

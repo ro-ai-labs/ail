@@ -1355,6 +1355,8 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "run-prompt-interaction-live-checks",
         "python3 scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run-checks --include-live",
         "evidence prompt-llm-harness-report.txt",
+        "evidence prompt-llm-harness-review.txt",
+        "evidence prompt-llm-harness-review.fingerprint.txt",
         "evidence manifest.v03-prompt-llm.txt",
         "evidence prompt-envelope-valid-count",
         "evidence prompt-envelope-invalid-count",
@@ -1537,6 +1539,8 @@ fn codex_skill_documents_prompt_interaction_review_gate() {
         "prompt-envelope-valid-count",
         "prompt-envelope-invalid-count",
         "manifest.v03-prompt-llm.txt",
+        "prompt-llm-harness-review.txt",
+        "prompt-llm-harness-review.fingerprint.txt",
         "v03-roadmap.txt",
         "accepted-for-promotion",
         "needs-repair",
@@ -1671,7 +1675,9 @@ fn script_v03_prompt_llm_harness_help_lists_all_prompts_and_dry_run() {
             && prompt_docs.contains("probe-label")
             && prompt_docs.contains("task-specific probes")
             && prompt_docs.contains("envelope contract")
-            && prompt_docs.contains("JSON mode"),
+            && prompt_docs.contains("JSON mode")
+            && prompt_docs.contains("prompt-llm-harness-review.txt")
+            && prompt_docs.contains("prompt-llm-harness-review.fingerprint.txt"),
         "{prompt_docs}"
     );
     let prompt_manual = fs::read_to_string(format!(
@@ -1685,9 +1691,135 @@ fn script_v03_prompt_llm_harness_help_lists_all_prompts_and_dry_run() {
             && prompt_manual.contains("probe-label")
             && prompt_manual.contains("task-specific probes")
             && prompt_manual.contains("envelope contract")
-            && prompt_manual.contains("JSON mode"),
+            && prompt_manual.contains("JSON mode")
+            && prompt_manual.contains("prompt-llm-harness-review.txt")
+            && prompt_manual.contains("prompt-llm-harness-review.fingerprint.txt"),
         "{prompt_manual}"
     );
+}
+
+#[test]
+fn script_v03_prompt_llm_harness_review_writes_fingerprinted_report() {
+    let script = format!(
+        "{}/scripts/run_v03_prompt_llm_harness.py",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let unique_suffix = format!(
+        "{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-prompt-harness-review-artifacts-{unique_suffix}"
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let artifact_kinds = [
+        "AIL-Interview",
+        "AIL-Requirements",
+        "AIL-Spec Canonical",
+        "AIL-Core Candidate",
+        "AIL-Spec Canonical",
+        "AIL-Repair",
+        "AIL-Spec Canonical",
+        "AIL-Spec Friendly",
+        "AIL-Core Patch",
+        "Trace Explanation",
+        "Interop Questions",
+    ];
+    let response_bodies = artifact_kinds
+        .into_iter()
+        .map(|artifact_kind| {
+            let envelope = format!(
+                concat!(
+                    "{{",
+                    "\"artifact_kind\":{},",
+                    "\"artifact_text\":{},",
+                    "\"questions\":[],",
+                    "\"assumptions\":[],",
+                    "\"provenance\":[\"mock:prompt-harness\"],",
+                    "\"checker_handoff\":{{",
+                    "\"must_check\":true,",
+                    "\"expected_profile\":\"Application\",",
+                    "\"expected_features\":[]",
+                    "}}",
+                    "}}"
+                ),
+                json_string(artifact_kind),
+                json_string("deterministic prompt harness artifact")
+            );
+            format!(
+                r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+                json_string(&envelope)
+            )
+        })
+        .collect::<Vec<_>>();
+    let server = serve_chat_responses(listener, response_bodies);
+
+    let output = Command::new("python3")
+        .args([
+            &script,
+            "--endpoint",
+            &format!("http://127.0.0.1:{}/v1/chat/completions", addr.port()),
+            "--skip-model-check",
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+            "--max-tokens",
+            "64",
+        ])
+        .output()
+        .unwrap();
+    let request_bodies = server.join().unwrap();
+    assert_eq!(request_bodies.len(), 11);
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let review = Command::new("python3")
+        .args([
+            &script,
+            "--review-artifacts",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        review.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&review.stdout),
+        String::from_utf8_lossy(&review.stderr)
+    );
+    let review_stdout = String::from_utf8_lossy(&review.stdout);
+    assert!(
+        review_stdout.contains("AIL-Prompt-LLM-Harness-Review:"),
+        "{review_stdout}"
+    );
+    assert!(
+        review_stdout.contains("prompt-envelope-valid-count 11"),
+        "{review_stdout}"
+    );
+    assert!(
+        review_stdout.contains("review-result accepted"),
+        "{review_stdout}"
+    );
+    let review_report =
+        fs::read_to_string(artifact_dir.join("prompt-llm-harness-review.txt")).unwrap();
+    assert_eq!(review_report, review_stdout);
+    let review_report_fingerprint =
+        fs::read_to_string(artifact_dir.join("prompt-llm-harness-review.fingerprint.txt")).unwrap();
+    assert_eq!(
+        review_report_fingerprint.trim(),
+        fnv64_fingerprint(&review_report)
+    );
+
+    fs::remove_dir_all(artifact_dir).unwrap();
 }
 
 #[test]

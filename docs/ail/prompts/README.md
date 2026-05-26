@@ -53,6 +53,13 @@ Review a completed hosted run before promotion:
 python3 scripts/run_v03_prompt_llm_harness.py --review-artifacts /tmp/ail-v03-prompt-llm
 ```
 
+That review writes:
+
+```text
+/tmp/ail-v03-prompt-llm/prompt-llm-harness-review.txt
+/tmp/ail-v03-prompt-llm/prompt-llm-harness-review.fingerprint.txt
+```
+
 The review mode is offline. It checks the required prompt set, manifest,
 report, request/response/content files, prompt fingerprints, probe labels,
 probe fingerprints, expected `artifact_kind` values, artifact fingerprints, and
@@ -60,6 +67,7 @@ prompt-pack envelope shape. A hosted probe is not accepted only because it is
 non-empty: extracted content must classify as either `prompt-envelope-artifact`
 or `prompt-envelope-questions`. The review prints
 `prompt-envelope-valid-count`, `prompt-envelope-questions-count`, and
-`prompt-envelope-invalid-count`, and rejects empty output, raw non-envelope
+`prompt-envelope-invalid-count`, persists the accepted/rejected review text as
+a fingerprinted review artifact, and rejects empty output, raw non-envelope
 output, generic artifact kinds, or artifacts captured with the wrong
 task-specific probe.

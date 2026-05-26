@@ -1297,6 +1297,8 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
         "prompt-envelope-valid-count",
         "prompt-envelope-invalid-count",
         "manifest.v03-prompt-llm.txt",
+        "prompt-llm-harness-review.txt",
+        "prompt-llm-harness-review.fingerprint.txt",
         "v03-roadmap.txt",
         "accepted-for-promotion",
         "needs-repair",

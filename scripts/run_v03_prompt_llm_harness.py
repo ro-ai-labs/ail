@@ -588,35 +588,43 @@ def review_artifacts(args: argparse.Namespace, paths: list[Path]) -> int:
         if f"artifact {rel}" not in manifest_text:
             errors.append(f"manifest missing prompt artifact {rel}")
 
-    print("AIL-Prompt-LLM-Harness-Review:")
-    print(f"artifact-dir {artifact_root}")
-    print(f"prompt-count {len(paths)}")
-    print(f"content-nonempty-count {content_nonempty}")
     valid_count = (
         content_kind_counts["prompt-envelope-artifact"]
         + content_kind_counts["prompt-envelope-questions"]
     )
-    print(f"prompt-envelope-valid-count {valid_count}")
-    print(
+    review_lines = [
+        "AIL-Prompt-LLM-Harness-Review:",
+        f"artifact-dir {artifact_root}",
+        f"prompt-count {len(paths)}",
+        f"content-nonempty-count {content_nonempty}",
+        f"prompt-envelope-valid-count {valid_count}",
         "prompt-envelope-artifact-count "
-        f"{content_kind_counts['prompt-envelope-artifact']}"
-    )
-    print(
+        f"{content_kind_counts['prompt-envelope-artifact']}",
         "prompt-envelope-questions-count "
-        f"{content_kind_counts['prompt-envelope-questions']}"
-    )
-    print(
+        f"{content_kind_counts['prompt-envelope-questions']}",
         "prompt-envelope-invalid-count "
-        f"{content_kind_counts['invalid'] + content_kind_counts['empty']}"
-    )
-    print(f"fingerprint-check-count {fingerprint_checks}")
+        f"{content_kind_counts['invalid'] + content_kind_counts['empty']}",
+        f"fingerprint-check-count {fingerprint_checks}",
+    ]
     if errors:
-        print("review-result rejected")
+        review_lines.append("review-result rejected")
         for error in errors:
-            print(f"error {error}")
+            review_lines.append(f"error {error}")
+    else:
+        review_lines.append("review-result accepted")
+    review_text = "\n".join(review_lines) + "\n"
+    try:
+        write_text(artifact_root / "prompt-llm-harness-review.txt", review_text)
+        write_text(
+            artifact_root / "prompt-llm-harness-review.fingerprint.txt",
+            fnv64(review_text) + "\n",
+        )
+    except OSError as error:
+        print(review_text, end="")
+        print(f"error failed to write prompt harness review report: {error}")
         return 1
-    print("review-result accepted")
-    return 0
+    print(review_text, end="")
+    return 1 if errors else 0
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:

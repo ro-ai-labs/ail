@@ -419,6 +419,8 @@ V03_AUTHORING_GATE = ManualChapter(
             live=True,
             evidence=(
                 "prompt-llm-harness-report.txt",
+                "prompt-llm-harness-review.txt",
+                "prompt-llm-harness-review.fingerprint.txt",
                 "manifest.v03-prompt-llm.txt",
                 "prompt-envelope-valid-count",
                 "prompt-envelope-invalid-count",
