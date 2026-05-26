@@ -1,0 +1,5 @@
+{
+  "agent": "codex-ail-spec-writer",
+  "content": "# Action Without Trace AIL-Spec Example\n\nThe application Broken Tickets manages invalid ticket examples.\n\nA Ticket has:\n\n- id: Text\n- status: State<Open, Closed>\n\nAction: Close ticket.\n\nWhen a support agent closes a ticket:\n\n- the system requires the ticket to exist\n- the system changes the ticket status to Closed",
+  "model": "codex-subagent-default"
+}

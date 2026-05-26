@@ -1880,3 +1880,24 @@ vm-action: CloseTicket
 runtime-state: ticket.id=T-1;ticket.status=Open
 expected-diagnostic: AIL-PROMPT-001
 failure-taxonomy: profile-mismatch
+
+## End-To-End Example: example-102
+semantic-task: support-ticket-missing-trace-rejected-102
+profile: System
+surface-tags: core
+package: examples/support_ticket.ail
+prompt-file: docs/ail/prompts/spec-draft.system.md
+prompt-version: ail-prompts.v0.2
+prompt-fingerprint: fnv64:b23778093326102c
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
+request-file: requests/example-102.json
+response-file: responses/example-102.json
+artifact-kind: ail-spec
+checker-result: rejected
+target: vm
+vm-action: CloseTicket
+runtime-state: ticket.id=T-1;ticket.status=Open
+expected-diagnostic: AIL-TRACE-001
+failure-taxonomy: missing-trace
