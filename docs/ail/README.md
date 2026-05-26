@@ -101,9 +101,16 @@ one of these version surfaces or add a versioned surface through
 - `../../examples/repeated_task.ail/spec.ail-spec.md`
 - `25-example-inventory.md`
 
+## Manual
+
+- `manual/01-user-story-mode.md`: story-first authoring with `ail-story`,
+  checked requirements, accepted spec, checked Core, bytecode, agent trace, and
+  live llama.cpp harness evidence.
+
 ## Versioned Assets
 
 - `prompts/`: agent prompt pack artifacts
+- `manual/`: runnable manual chapters for authoring workflows
 - `corpus/`: conformance and training fixtures
 - `24-diagnostics-catalog.md`: stable diagnostic IDs
 - `27-desired-outcome-traceability.md`: outcome-to-artifact matrix

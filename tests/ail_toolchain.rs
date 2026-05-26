@@ -882,6 +882,64 @@ fn example_ui_workflow_stories_record_semantic_anchors() {
 }
 
 #[test]
+fn docs_ail_manual_links_user_story_mode_chapter() {
+    let docs_index =
+        fs::read_to_string(format!("{}/docs/ail/README.md", env!("CARGO_MANIFEST_DIR"))).unwrap();
+    assert!(
+        docs_index.contains("manual/01-user-story-mode.md"),
+        "{docs_index}"
+    );
+    let manual = fs::read_to_string(format!(
+        "{}/docs/ail/manual/01-user-story-mode.md",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .unwrap();
+    for required in [
+        "cargo run -- ail-story examples/support_ticket.ail",
+        "--story-file examples/stories/example-30.md",
+        "--agent examples/ail_toolchain_agent.ail",
+        "story.source.md",
+        "requirements.ail-requirements.md",
+        "accepted.ail-spec.md",
+        "checked.ail-core.txt",
+        "artifact.ailbc.json",
+        "manifest.ail-story.txt",
+        "agent-trace.txt",
+        "http://inteligentia-pro-1:8080/",
+    ] {
+        assert!(manual.contains(required), "{required}\n{manual}");
+    }
+}
+
+#[test]
+fn script_v03_story_llm_harness_help_names_endpoint_and_dry_run() {
+    let script = format!(
+        "{}/scripts/run_v03_story_llm_harness.py",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let output = Command::new("python3")
+        .args([&script, "--help"])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    for required in [
+        "ail-story",
+        "--dry-run",
+        "--endpoint",
+        "http://inteligentia-pro-1:8080/",
+        "examples/stories/example-30.md",
+    ] {
+        assert!(stdout.contains(required), "{required}\n{stdout}");
+    }
+}
+
+#[test]
 fn example_support_ticket_stories_record_semantic_anchors() {
     let spec = fs::read_to_string(fixture("support_ticket.ail/spec.ail-spec.md")).unwrap();
     let package = fs::read_to_string(fixture("support_ticket.ail/ail-package.md")).unwrap();
