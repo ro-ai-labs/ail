@@ -70,6 +70,10 @@ Each entry in `examples/examples.md` must include:
   `story-amendment`, or `diagnostic-story`.
 - `story-roundtrip`: `semantic-similar` for accepted stories or
   `diagnostic-preserving` for rejected diagnostic stories.
+- `semantic-anchors` in the referenced story file when the entry is part of a
+  semantic-preservation sample: at least three reviewer-visible terms,
+  actions, modules, targets, or diagnostics that must survive story/spec/Core
+  round-trips.
 - `distinctness-claim`: why this entry earns a slot, especially when it shares
   a package with other prompt-surface examples.
 - `v0.3-signal`: the language, prompt, checker, runtime, target, or docs gap

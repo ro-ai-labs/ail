@@ -28,6 +28,9 @@ Every entry below carries learning metadata:
   preservation path.
 - `story-roundtrip`: expected semantic preservation mode for regenerated
   stories.
+- `semantic-anchors` in the referenced story file when present: the terms,
+  actions, modules, targets, or diagnostics replay reports as semantic
+  preservation evidence.
 - `distinctness-claim`: why this entry is useful even when it shares a package
   with another prompt-surface example.
 - `v0.3-signal`: what the example tells us to improve in the next language and

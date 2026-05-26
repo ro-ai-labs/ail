@@ -21393,6 +21393,21 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
             && report.contains("story-roundtrip-count semantic-similar 108"),
         "{report}"
     );
+    assert!(
+        report.contains("semantic-anchor-story-count 19")
+            && report.contains(
+                "entry-semantic-anchors example-111 Incident; Declare incident; IncidentDeclared; incident_identity; incident_policy; incident_notifications"
+            ),
+        "{report}"
+    );
+    let incident_user_story =
+        fs::read_to_string(artifact_dir.join("examples/example-111/user-story.txt")).unwrap();
+    assert!(
+        incident_user_story.contains(
+            "semantic-anchors Incident; Declare incident; IncidentDeclared; incident_identity; incident_policy; incident_notifications"
+        ),
+        "{incident_user_story}"
+    );
     assert!(report.contains("profile-count UI 3"), "{report}");
     assert!(
         report.contains("target-count wasm32-unknown-sandbox-wasm 16"),

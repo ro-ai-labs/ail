@@ -400,6 +400,7 @@ struct AilE2eCorpusEntry {
 #[derive(Debug, Clone)]
 struct AilE2eCorpusEvaluation {
     entry: AilE2eCorpusEntry,
+    semantic_anchors: Vec<String>,
     request_fingerprint: Option<String>,
     response_fingerprint: Option<String>,
     extracted_artifact_fingerprint: Option<String>,
@@ -1495,6 +1496,28 @@ fn parse_ail_e2e_story_file_fields(
     Ok(fields)
 }
 
+fn ail_e2e_semantic_anchors_from_story_fields(
+    story_fields: &BTreeMap<String, String>,
+) -> Vec<String> {
+    story_fields
+        .get("semantic-anchors")
+        .map(|semantic_anchors| {
+            semantic_anchors
+                .split([',', ';'])
+                .map(str::trim)
+                .filter(|anchor| !anchor.is_empty())
+                .map(str::to_string)
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn read_ail_e2e_entry_semantic_anchors(entry: &AilE2eCorpusEntry) -> Result<Vec<String>, String> {
+    let story_path = ail_e2e_entry_resolved_path(entry, "story-file")?;
+    let story_fields = parse_ail_e2e_story_file_fields(&story_path)?;
+    Ok(ail_e2e_semantic_anchors_from_story_fields(&story_fields))
+}
+
 fn validate_ail_e2e_corpus_story_files(
     entries: &[AilE2eCorpusEntry],
     require_release_semantic_anchors: bool,
@@ -1531,20 +1554,15 @@ fn validate_ail_e2e_corpus_story_files(
                 ));
             }
         }
-        if let Some(semantic_anchors) = story_fields.get("semantic-anchors") {
-            let semantic_anchor_count = semantic_anchors
-                .split([',', ';'])
-                .filter(|anchor| !anchor.trim().is_empty())
-                .count();
-            if semantic_anchor_count > 0 && semantic_anchor_count < 3 {
-                return Err(format!(
-                    "examples catalog entry {} story-file semantic-anchors must list at least 3 anchors",
-                    entry.id
-                ));
-            }
-            if semantic_anchor_count >= 3 {
-                semantic_anchor_story_count += 1;
-            }
+        let semantic_anchor_count = ail_e2e_semantic_anchors_from_story_fields(&story_fields).len();
+        if semantic_anchor_count > 0 && semantic_anchor_count < 3 {
+            return Err(format!(
+                "examples catalog entry {} story-file semantic-anchors must list at least 3 anchors",
+                entry.id
+            ));
+        }
+        if semantic_anchor_count >= 3 {
+            semantic_anchor_story_count += 1;
         }
     }
     if require_release_semantic_anchors && semantic_anchor_story_count < 10 {
@@ -1770,6 +1788,7 @@ fn evaluate_rejected_ail_e2e_corpus_entry(
     }
     Ok(AilE2eCorpusEvaluation {
         entry: entry.clone(),
+        semantic_anchors: read_ail_e2e_entry_semantic_anchors(entry)?,
         request_fingerprint: Some(ail_artifact_fingerprint(&request_text)),
         response_fingerprint: Some(ail_artifact_fingerprint(&response_text)),
         extracted_artifact_fingerprint: Some(ail_artifact_fingerprint(&artifact_text)),
@@ -1807,6 +1826,7 @@ fn evaluate_ail_e2e_corpus_entry(
     if artifact_kind != "ail-spec" {
         return Ok(AilE2eCorpusEvaluation {
             entry: entry.clone(),
+            semantic_anchors: read_ail_e2e_entry_semantic_anchors(entry)?,
             request_fingerprint: None,
             response_fingerprint: None,
             extracted_artifact_fingerprint: None,
@@ -1901,6 +1921,7 @@ fn evaluate_ail_e2e_corpus_entry(
     };
     Ok(AilE2eCorpusEvaluation {
         entry: entry.clone(),
+        semantic_anchors: read_ail_e2e_entry_semantic_anchors(entry)?,
         request_fingerprint: Some(ail_artifact_fingerprint(&request_text)),
         response_fingerprint: Some(ail_artifact_fingerprint(&response_text)),
         extracted_artifact_fingerprint: Some(ail_artifact_fingerprint(&spec_text)),
@@ -1989,6 +2010,13 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
             lines.push(format!("{label} {value} {count}"));
         }
     }
+    let semantic_anchor_story_count = evaluations
+        .iter()
+        .filter(|evaluation| !evaluation.semantic_anchors.is_empty())
+        .count();
+    lines.push(format!(
+        "semantic-anchor-story-count {semantic_anchor_story_count}"
+    ));
     push_ail_e2e_fingerprint_reuse_lines(&mut lines, "request", evaluations, |evaluation| {
         evaluation.request_fingerprint.clone()
     });
@@ -2126,7 +2154,14 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
                 ail_artifact_fingerprint(diagnostics_text)
             ));
         }
-        let story_text = render_ail_e2e_user_story_text(entry);
+        if !evaluation.semantic_anchors.is_empty() {
+            lines.push(format!(
+                "entry-semantic-anchors {} {}",
+                entry.id,
+                evaluation.semantic_anchors.join("; ")
+            ));
+        }
+        let story_text = render_ail_e2e_user_story_text(entry, &evaluation.semantic_anchors);
         lines.push(format!(
             "entry-artifact {} user-story examples/{}/user-story.txt {}",
             entry.id,
@@ -2286,7 +2321,7 @@ fn push_ail_e2e_entry_artifact_lines(
             ail_artifact_fingerprint(diagnostics_text)
         ));
     }
-    let story_text = render_ail_e2e_user_story_text(entry);
+    let story_text = render_ail_e2e_user_story_text(entry, &evaluation.semantic_anchors);
     lines.push(format!(
         "{prefix} {} user-story examples/{}/user-story.txt {}",
         entry.id,
@@ -2295,10 +2330,18 @@ fn push_ail_e2e_entry_artifact_lines(
     ));
 }
 
-fn render_ail_e2e_user_story_text(entry: &AilE2eCorpusEntry) -> String {
+fn render_ail_e2e_user_story_text(
+    entry: &AilE2eCorpusEntry,
+    semantic_anchors: &[String],
+) -> String {
     let field = |key: &str| entry.fields.get(key).map(String::as_str).unwrap_or("");
+    let semantic_anchor_line = if semantic_anchors.is_empty() {
+        String::new()
+    } else {
+        format!("semantic-anchors {}\n", semantic_anchors.join("; "))
+    };
     format!(
-        "AIL-User-Story:\nentry {}\nid {}\nstory {}\nacceptance-criteria {}\nuse-case {}\ncapability-under-test {}\nprogram-scale {}\nprogram-domain {}\nmodule-count {}\nspec-count {}\nstory-count {}\ninteracts-with {}\nstory-journey {}\nstory-roundtrip {}\nstory-evidence {}\nsemantic-task {}\n\n",
+        "AIL-User-Story:\nentry {}\nid {}\nstory {}\nacceptance-criteria {}\nuse-case {}\ncapability-under-test {}\nprogram-scale {}\nprogram-domain {}\nmodule-count {}\nspec-count {}\nstory-count {}\ninteracts-with {}\nstory-journey {}\nstory-roundtrip {}\nstory-evidence {}\nsemantic-task {}\n{}\n",
         entry.id,
         field("user-story-id"),
         field("user-story"),
@@ -2315,6 +2358,7 @@ fn render_ail_e2e_user_story_text(entry: &AilE2eCorpusEntry) -> String {
         field("story-roundtrip"),
         field("story-evidence"),
         field("semantic-task"),
+        semantic_anchor_line,
     )
 }
 
@@ -2939,7 +2983,8 @@ fn write_ail_e2e_corpus_artifacts(
     )
     .map_err(|error| format!("failed to write examples catalog manifest fingerprint: {error}"))?;
     for evaluation in evaluations {
-        let story_text = render_ail_e2e_user_story_text(&evaluation.entry);
+        let story_text =
+            render_ail_e2e_user_story_text(&evaluation.entry, &evaluation.semantic_anchors);
         let entry_dir = root.join("examples").join(&evaluation.entry.id);
         fs::create_dir_all(&entry_dir)
             .map_err(|error| format!("failed to create e2e entry artifact dir: {error}"))?;
