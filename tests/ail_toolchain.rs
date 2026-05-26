@@ -18765,6 +18765,122 @@ fn cli_ail_requirements_root_llm_endpoint_uses_completion_api() {
 }
 
 #[test]
+fn cli_ail_story_requires_story_file() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("support_ticket.ail");
+
+    let output = Command::new(binary)
+        .args(["ail-story", &package])
+        .output()
+        .unwrap();
+
+    assert!(
+        !output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("ail-story requires --story-file <path>"),
+        "{stderr}"
+    );
+}
+
+#[test]
+fn cli_ail_story_rejects_missing_user_story_before_llm_request() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("support_ticket.ail");
+    let story_file = std::env::temp_dir().join(format!(
+        "ail-story-missing-user-story-{}.md",
+        std::process::id()
+    ));
+    fs::write(
+        &story_file,
+        concat!(
+            "# Missing User Story\n\n",
+            "acceptance-criteria: checked spec exists; checked core exists\n",
+            "semantic-anchors: Close ticket; TicketClosed; SupportAgent\n"
+        ),
+    )
+    .unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-story",
+            &package,
+            "--story-file",
+            story_file.to_str().unwrap(),
+            "--llm-endpoint",
+            "http://127.0.0.1:9/",
+        ])
+        .output()
+        .unwrap();
+
+    assert!(
+        !output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("ail-story diagnostics:"), "{stdout}");
+    assert!(
+        stdout.contains("AIL-STORY-001 story file is missing user-story"),
+        "{stdout}"
+    );
+
+    fs::remove_file(story_file).unwrap();
+}
+
+#[test]
+fn cli_ail_story_rejects_missing_semantic_anchors_before_llm_request() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("support_ticket.ail");
+    let story_file = std::env::temp_dir().join(format!(
+        "ail-story-missing-anchors-{}.md",
+        std::process::id()
+    ));
+    fs::write(
+        &story_file,
+        concat!(
+            "# Missing Anchors\n\n",
+            "user-story: As a reviewer I can close a support ticket from a story.\n",
+            "acceptance-criteria: checked spec exists; checked core exists\n",
+            "semantic-anchors: Close ticket; TicketClosed\n"
+        ),
+    )
+    .unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-story",
+            &package,
+            "--story-file",
+            story_file.to_str().unwrap(),
+            "--llm-endpoint",
+            "http://127.0.0.1:9/",
+        ])
+        .output()
+        .unwrap();
+
+    assert!(
+        !output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("ail-story diagnostics:"), "{stdout}");
+    assert!(
+        stdout.contains("AIL-STORY-003 story file semantic-anchors must list at least 3 anchors"),
+        "{stdout}"
+    );
+
+    fs::remove_file(story_file).unwrap();
+}
+
+#[test]
 fn cli_ail_interview_surfaces_prompt_envelope_questions_as_artifact() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");

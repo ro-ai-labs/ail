@@ -33,6 +33,7 @@ struct CliOptions {
     ail_interview_file: Option<String>,
     ail_requirements_file: Option<String>,
     ail_spec_file: Option<String>,
+    ail_story_file: Option<String>,
     ail_core_file: Option<String>,
     ail_compile_target: Option<String>,
     ail_compile_out: Option<String>,
@@ -105,6 +106,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
             | "ail-spec"
             | "ail-draft"
             | "ail-build"
+            | "ail-story"
             | "ail-pass"
             | "ail-bootstrap"
             | "ail-examples"
@@ -119,7 +121,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
 }
 
 fn usage() -> String {
-    "usage: ail <ail-check|ail-core|ail-flow|ail-flow-edit|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-interview|ail-requirements|ail-spec|ail-draft|ail-build|ail-pass|ail-bootstrap|ail-prompt-corpus|ail-examples|ail-e2e-corpus|ail-patch> <path> [patch|target-package] [--action name] [--prompt text] [--interview-file path] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--base-model name] [--target-model name] [--out path] [--all-actions] [--diagnostics-json] [--artifact-dir path] [--llm-endpoint url] [--release-evidence] [key=value ...]\nsaved-core usage: ail <ail-spec|ail-lower|ail-compile|ail-run|ail-build> --core-file <checked-core> [--action name] [--target target] [--out path] [--artifact-dir path] [key=value ...]\nwasm-contract usage: ail ail-compile <package-or-artifact.ailbc.json> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir> OR ail ail-compile --core-file <checked-core> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir>\ncore-patch usage: ail ail-patch --core-file <checked-core> <ail-core.patch.json>\nflow-edit usage: ail ail-flow-edit --core-file <checked-core> <ail-flow.edit.json>\nail-pass usage: ail ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR ail ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]\nail-bootstrap usage: ail ail-bootstrap <toolchain-agent-package> --pass <compiler-pass-package> --agent <toolchain-agent-package> --target linux-x86_64-elf --artifact-dir <dir>\nail-prompt-corpus usage: ail ail-prompt-corpus <corpus-file-or-dir> --artifact-dir <dir>\nail-examples usage: ail ail-examples examples --artifact-dir <dir> [--release-evidence]\nail-e2e-corpus usage: ail ail-e2e-corpus <corpus-dir> --artifact-dir <dir> [--release-evidence] (compatibility alias for ail-examples)"
+    "usage: ail <ail-check|ail-core|ail-flow|ail-flow-edit|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-interview|ail-requirements|ail-spec|ail-draft|ail-build|ail-story|ail-pass|ail-bootstrap|ail-prompt-corpus|ail-examples|ail-e2e-corpus|ail-patch> <path> [patch|target-package] [--action name] [--prompt text] [--story-file path] [--interview-file path] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--base-model name] [--target-model name] [--out path] [--all-actions] [--diagnostics-json] [--artifact-dir path] [--llm-endpoint url] [--release-evidence] [key=value ...]\nsaved-core usage: ail <ail-spec|ail-lower|ail-compile|ail-run|ail-build> --core-file <checked-core> [--action name] [--target target] [--out path] [--artifact-dir path] [key=value ...]\nwasm-contract usage: ail ail-compile <package-or-artifact.ailbc.json> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir> OR ail ail-compile --core-file <checked-core> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir>\ncore-patch usage: ail ail-patch --core-file <checked-core> <ail-core.patch.json>\nflow-edit usage: ail ail-flow-edit --core-file <checked-core> <ail-flow.edit.json>\nail-pass usage: ail ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR ail ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]\nail-bootstrap usage: ail ail-bootstrap <toolchain-agent-package> --pass <compiler-pass-package> --agent <toolchain-agent-package> --target linux-x86_64-elf --artifact-dir <dir>\nail-story usage: ail ail-story <package> --story-file <story.md> [--artifact-dir <dir>] [--llm-endpoint <url>] [--agent <agent-package-or-bytecode>] [--target <target> --action <ActionName> --out <path>]\nail-prompt-corpus usage: ail ail-prompt-corpus <corpus-file-or-dir> --artifact-dir <dir>\nail-examples usage: ail ail-examples examples --artifact-dir <dir> [--release-evidence]\nail-e2e-corpus usage: ail ail-e2e-corpus <corpus-dir> --artifact-dir <dir> [--release-evidence] (compatibility alias for ail-examples)"
         .to_string()
 }
 
@@ -1510,6 +1512,54 @@ fn ail_e2e_semantic_anchors_from_story_fields(
                 .collect()
         })
         .unwrap_or_default()
+}
+
+fn validate_ail_story_mode_fields(story_fields: &BTreeMap<String, String>) -> Vec<String> {
+    let mut diagnostics = Vec::new();
+    if story_fields
+        .get("user-story")
+        .is_none_or(|value| value.trim().is_empty())
+    {
+        diagnostics.push("AIL-STORY-001 story file is missing user-story".to_string());
+    }
+    if story_fields
+        .get("acceptance-criteria")
+        .is_none_or(|value| value.trim().is_empty())
+    {
+        diagnostics.push("AIL-STORY-002 story file is missing acceptance-criteria".to_string());
+    }
+    if ail_e2e_semantic_anchors_from_story_fields(story_fields).len() < 3 {
+        diagnostics.push(
+            "AIL-STORY-003 story file semantic-anchors must list at least 3 anchors".to_string(),
+        );
+    }
+    for field in ["module-count", "spec-count", "story-count"] {
+        if let Some(value) = story_fields.get(field)
+            && !matches!(value.trim().parse::<usize>(), Ok(parsed) if parsed > 0)
+        {
+            diagnostics.push(format!(
+                "AIL-STORY-004 story file {field} must be a positive integer"
+            ));
+        }
+    }
+    if let Some(value) = story_fields.get("story-journey")
+        && !matches!(
+            value.as_str(),
+            "story-to-spec" | "spec-to-story" | "story-amendment" | "diagnostic-story"
+        )
+    {
+        diagnostics.push(format!(
+            "AIL-STORY-005 story file story-journey has unknown value {value}"
+        ));
+    }
+    if let Some(value) = story_fields.get("story-roundtrip")
+        && !matches!(value.as_str(), "semantic-similar" | "diagnostic-preserving")
+    {
+        diagnostics.push(format!(
+            "AIL-STORY-006 story file story-roundtrip has unknown value {value}"
+        ));
+    }
+    diagnostics
 }
 
 fn read_ail_e2e_entry_semantic_anchors(entry: &AilE2eCorpusEntry) -> Result<Vec<String>, String> {
@@ -10652,6 +10702,33 @@ fn run_ail_bootstrap_command(path: &str, cli_options: &CliOptions) -> Result<u8,
     Ok(0)
 }
 
+fn run_ail_story_command(
+    package: &ail::ail::AilPackage,
+    cli_options: &CliOptions,
+) -> Result<u8, String> {
+    let story_file = cli_options
+        .ail_story_file
+        .as_deref()
+        .ok_or_else(|| "ail-story requires --story-file <path>".to_string())?;
+    let story_fields = parse_ail_e2e_story_file_fields(std::path::Path::new(story_file))?;
+    let diagnostics = validate_ail_story_mode_fields(&story_fields);
+    if !diagnostics.is_empty() {
+        println!("ail-story diagnostics:");
+        for diagnostic in diagnostics {
+            println!("{diagnostic}");
+        }
+        return Ok(1);
+    }
+    println!("ail-story preflight:");
+    println!("package: {}", package.metadata.name);
+    println!("story-file: {story_file}");
+    println!(
+        "semantic-anchors: {}",
+        ail_e2e_semantic_anchors_from_story_fields(&story_fields).len()
+    );
+    Err("ail-story story-to-build pipeline is not implemented yet".to_string())
+}
+
 fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Result<u8, String> {
     if command == "ail-bootstrap" {
         return run_ail_bootstrap_command(path, cli_options);
@@ -10866,6 +10943,9 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
         return Err("ail-flow-edit requires --core-file <checked-core>".to_string());
     }
     let package = load_ail_package_dir(path)?;
+    if command == "ail-story" {
+        return run_ail_story_command(&package, cli_options);
+    }
     if command == "ail-conformance" {
         let result = run_ail_conformance(&package)?;
         let report_text = render_ail_conformance_report(&result);
@@ -11373,6 +11453,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
     let mut ail_interview_file = None;
     let mut ail_requirements_file = None;
     let mut ail_spec_file = None;
+    let mut ail_story_file = None;
     let mut ail_core_file = None;
     let mut ail_compile_target = None;
     let mut ail_compile_out = None;
@@ -11401,7 +11482,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         if arg == "--action" {
             if !matches!(
                 command,
-                "ail-run" | "ail-vm" | "ail-pass" | "ail-compile" | "ail-build"
+                "ail-run" | "ail-vm" | "ail-pass" | "ail-compile" | "ail-build" | "ail-story"
             ) {
                 return Err(usage());
             }
@@ -11423,6 +11504,17 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
                 return Err("missing value for --prompt".to_string());
             };
             ail_prompt = Some(prompt.clone());
+            index += 2;
+            continue;
+        }
+        if arg == "--story-file" {
+            if command != "ail-story" {
+                return Err(usage());
+            }
+            let Some(path) = args.get(index + 1) else {
+                return Err("missing value for --story-file".to_string());
+            };
+            ail_story_file = Some(path.clone());
             index += 2;
             continue;
         }
@@ -11517,6 +11609,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
                     | "ail-compile"
                     | "ail-conformance"
                     | "ail-bootstrap"
+                    | "ail-story"
             ) {
                 return Err(usage());
             }
@@ -11536,6 +11629,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
                     | "ail-lower"
                     | "ail-conformance"
                     | "ail-bootstrap"
+                    | "ail-story"
             ) {
                 return Err(usage());
             }
@@ -11569,7 +11663,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
             continue;
         }
         if arg == "--out" {
-            if !matches!(command, "ail-compile" | "ail-build") {
+            if !matches!(command, "ail-compile" | "ail-build" | "ail-story") {
                 return Err(usage());
             }
             let Some(path) = args.get(index + 1) else {
@@ -11590,7 +11684,12 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         if arg == "--llm-endpoint" {
             if !matches!(
                 command,
-                "ail-interview" | "ail-requirements" | "ail-spec" | "ail-draft" | "ail-build"
+                "ail-interview"
+                    | "ail-requirements"
+                    | "ail-spec"
+                    | "ail-draft"
+                    | "ail-build"
+                    | "ail-story"
             ) {
                 return Err(usage());
             }
@@ -11628,6 +11727,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
                     | "ail-compile"
                     | "ail-conformance"
                     | "ail-bootstrap"
+                    | "ail-story"
                     | "ail-prompt-corpus"
                     | "ail-examples"
                     | "ail-e2e-corpus"
@@ -11699,6 +11799,21 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
             return Err("ail-build --action requires --target and --out".to_string());
         }
     }
+    if command == "ail-story" {
+        let native_requested = ail_compile_target.is_some() || ail_compile_out.is_some();
+        if native_requested && ail_compile_target.is_none() {
+            return Err("ail-story native output requires --target <target>".to_string());
+        }
+        if native_requested && ail_compile_out.is_none() {
+            return Err("ail-story native output requires --out <path>".to_string());
+        }
+        if native_requested && ail_action.is_none() {
+            return Err("ail-story native output requires --action <name>".to_string());
+        }
+        if !native_requested && ail_action.is_some() {
+            return Err("ail-story --action requires --target and --out".to_string());
+        }
+    }
     if command == "ail-bootstrap" {
         if ail_build_pass.is_none() {
             return Err("ail-bootstrap requires --pass <compiler-pass>".to_string());
@@ -11759,6 +11874,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         ail_interview_file,
         ail_requirements_file,
         ail_spec_file,
+        ail_story_file,
         ail_core_file,
         ail_compile_target,
         ail_compile_out,
