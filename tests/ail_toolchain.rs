@@ -475,6 +475,83 @@ fn example_learning_readmes_cover_repeated_family_gaps() {
     }
 }
 
+#[test]
+fn example_incident_stories_record_semantic_anchors() {
+    let spec = fs::read_to_string(fixture("incident_response.ail/spec.ail-spec.md")).unwrap();
+    let package = fs::read_to_string(fixture("incident_response.ail/ail-package.md")).unwrap();
+    let catalog = fs::read_to_string(fixture("examples.md")).unwrap();
+    for (story_file, required_anchors) in [
+        (
+            "stories/example-111.md",
+            [
+                "Incident",
+                "Declare incident",
+                "IncidentDeclared",
+                "incident_identity",
+                "incident_policy",
+                "incident_notifications",
+            ],
+        ),
+        (
+            "stories/example-112.md",
+            [
+                "Escalate incident",
+                "Notify incident responder",
+                "private notes",
+                "IncidentEscalated",
+                "incident_notifications",
+                "target-report",
+            ],
+        ),
+        (
+            "stories/example-113.md",
+            [
+                "Complete incident lifecycle",
+                "IncidentLifecycleCompleted",
+                "Declare",
+                "Postmortem",
+                "spec-to-story",
+                "semantic-similar",
+            ],
+        ),
+        (
+            "stories/example-114.md",
+            [
+                "Resolve incident",
+                "Start postmortem",
+                "IncidentResolved",
+                "IncidentPostmortemStarted",
+                "story-amendment",
+                "aarch64-apple-darwin-libsystem-macho",
+            ],
+        ),
+        (
+            "stories/example-115.md",
+            [
+                "Incident command center",
+                "Service owner incident dashboard",
+                "Escalate incident",
+                "Incident lifecycle",
+                "wasm32-unknown-sandbox-wasm",
+                "target-report",
+            ],
+        ),
+    ] {
+        let story = fs::read_to_string(fixture(story_file)).unwrap();
+        assert!(story.contains("semantic-anchors:"), "{story_file}\n{story}");
+        for anchor in required_anchors {
+            assert!(
+                story.contains(anchor),
+                "{story_file} missing semantic anchor {anchor}\n{story}"
+            );
+            assert!(
+                spec.contains(anchor) || package.contains(anchor) || catalog.contains(anchor),
+                "{story_file} anchor {anchor} is not grounded in incident response spec/package/catalog"
+            );
+        }
+    }
+}
+
 fn detailed_ail_diagnostic(core: &ail::ail::AilCore, code: &str, message: &str) -> String {
     check_ail_core_diagnostics(core)
         .into_iter()

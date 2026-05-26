@@ -11,3 +11,4 @@ module-count: 4
 spec-count: 4
 story-count: 5
 interacts-with: incident_identity,incident_policy,incident_notifications,incident_response
+semantic-anchors: Incident; Declare incident; IncidentDeclared; incident_identity; incident_policy; incident_notifications
