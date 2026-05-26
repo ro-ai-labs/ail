@@ -11,6 +11,16 @@ Every entry below carries learning metadata:
 - `use-case`: the practical scenario the example exists to teach or prove.
 - `capability-level`: `low-level`, `mid-level`, or `high-level`.
 - `capability-under-test`: the concrete AIL surface under pressure.
+- `program-scale`: `utility`, `module`, or `multi-module-system`.
+- `user-story-id`: stable story family; it may repeat across prompt, target,
+  and repair variants while `semantic-task` stays unique.
+- `user-story`: one-line user-story view for the checked behavior.
+- `acceptance-criteria`: observable story criteria tied to replay evidence.
+- `story-evidence`: the strongest artifact that proves the story path.
+- `story-journey`: story-to-spec, spec-to-story, amendment, or diagnostic
+  preservation path.
+- `story-roundtrip`: expected semantic preservation mode for regenerated
+  stories.
 - `distinctness-claim`: why this entry is useful even when it shares a package
   with another prompt-surface example.
 - `v0.3-signal`: what the example tells us to improve in the next language and
@@ -38,6 +48,14 @@ package: examples/ail_std_collections.ail
 use-case: Standard library collection semantics with generic Option/List/Map behavior.
 capability-level: mid-level
 capability-under-test: stdlib-generics
+program-scale: multi-module-system
+user-story-id: stdlib-collections-story
+user-story: As a reviewer I can inspect stdlib-collections behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: checked-core
+story-file: stories/example-0.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
 distinctness-claim: stdlib-collections-live-codex-interview-0 exercises docs/ail/prompts/interview.system.md over stdlib-generics.
 v0.3-signal: Generics need reusable conformance fixtures and teachable stdlib walkthroughs.
 prompt-file: docs/ail/prompts/interview.system.md
@@ -60,6 +78,14 @@ package: examples/ail_std_collections.ail
 use-case: Standard library collection semantics with generic Option/List/Map behavior.
 capability-level: mid-level
 capability-under-test: stdlib-generics
+program-scale: multi-module-system
+user-story-id: stdlib-collections-story
+user-story: As a reviewer I can inspect stdlib-collections behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: checked-core
+story-file: stories/example-1.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
 distinctness-claim: stdlib-collections-live-spec-input-1 exercises docs/ail/prompts/requirements.system.md over stdlib-generics.
 v0.3-signal: Generics need reusable conformance fixtures and teachable stdlib walkthroughs.
 prompt-file: docs/ail/prompts/requirements.system.md
@@ -83,6 +109,14 @@ package: examples/ail_std_collections.ail
 use-case: Standard library collection semantics with generic Option/List/Map behavior.
 capability-level: mid-level
 capability-under-test: stdlib-generics
+program-scale: multi-module-system
+user-story-id: stdlib-collections-story
+user-story: As a reviewer I can inspect stdlib-collections behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: checked-core
+story-file: stories/example-2.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
 distinctness-claim: stdlib-collections-live-spec-input-2 exercises docs/ail/prompts/spec-draft.system.md over stdlib-generics.
 v0.3-signal: Generics need reusable conformance fixtures and teachable stdlib walkthroughs.
 prompt-file: docs/ail/prompts/spec-draft.system.md
@@ -106,6 +140,14 @@ package: examples/ail_std_collections.ail
 use-case: Standard library collection semantics with generic Option/List/Map behavior.
 capability-level: mid-level
 capability-under-test: stdlib-generics
+program-scale: multi-module-system
+user-story-id: stdlib-collections-story
+user-story: As a reviewer I can inspect stdlib-collections behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: checked-core
+story-file: stories/example-3.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
 distinctness-claim: stdlib-collections-live-codex-core-draft-3 exercises docs/ail/prompts/core-draft.system.md over stdlib-generics.
 v0.3-signal: Generics need reusable conformance fixtures and teachable stdlib walkthroughs.
 prompt-file: docs/ail/prompts/core-draft.system.md
@@ -128,6 +170,14 @@ package: examples/ail_std_collections.ail
 use-case: Standard library collection semantics with generic Option/List/Map behavior.
 capability-level: mid-level
 capability-under-test: stdlib-generics
+program-scale: multi-module-system
+user-story-id: stdlib-collections-story
+user-story: As a reviewer I can inspect stdlib-collections behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: checked-core
+story-file: stories/example-4.md
+story-journey: story-amendment
+story-roundtrip: semantic-similar
 distinctness-claim: stdlib-collections-live-codex-diagnostic-repair-4 exercises docs/ail/prompts/diagnostic-repair.system.md over stdlib-generics.
 v0.3-signal: Generics need reusable conformance fixtures and teachable stdlib walkthroughs.
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
@@ -150,6 +200,14 @@ package: examples/ail_std_collections.ail
 use-case: Standard library collection semantics with generic Option/List/Map behavior.
 capability-level: mid-level
 capability-under-test: stdlib-generics
+program-scale: multi-module-system
+user-story-id: stdlib-collections-story
+user-story: As a reviewer I can inspect stdlib-collections behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: checked-core
+story-file: stories/example-5.md
+story-journey: spec-to-story
+story-roundtrip: semantic-similar
 distinctness-claim: stdlib-collections-live-codex-core-to-spec-5 exercises docs/ail/prompts/core-to-spec.system.md over stdlib-generics.
 v0.3-signal: Generics need reusable conformance fixtures and teachable stdlib walkthroughs.
 prompt-file: docs/ail/prompts/core-to-spec.system.md
@@ -172,6 +230,14 @@ package: examples/ail_std_collections.ail
 use-case: Standard library collection semantics with generic Option/List/Map behavior.
 capability-level: mid-level
 capability-under-test: stdlib-generics
+program-scale: multi-module-system
+user-story-id: stdlib-collections-story
+user-story: As a reviewer I can inspect stdlib-collections behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: checked-core
+story-file: stories/example-6.md
+story-journey: spec-to-story
+story-roundtrip: semantic-similar
 distinctness-claim: stdlib-collections-live-codex-core-to-summary-6 exercises docs/ail/prompts/core-to-summary.system.md over stdlib-generics.
 v0.3-signal: Generics need reusable conformance fixtures and teachable stdlib walkthroughs.
 prompt-file: docs/ail/prompts/core-to-summary.system.md
@@ -194,6 +260,14 @@ package: examples/ail_std_collections.ail
 use-case: Standard library collection semantics with generic Option/List/Map behavior.
 capability-level: mid-level
 capability-under-test: stdlib-generics
+program-scale: multi-module-system
+user-story-id: stdlib-collections-story
+user-story: As a reviewer I can inspect stdlib-collections behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: checked-core
+story-file: stories/example-7.md
+story-journey: story-amendment
+story-roundtrip: semantic-similar
 distinctness-claim: stdlib-collections-live-codex-flow-patch-7 exercises docs/ail/prompts/flow-patch.system.md over stdlib-generics.
 v0.3-signal: Generics need reusable conformance fixtures and teachable stdlib walkthroughs.
 prompt-file: docs/ail/prompts/flow-patch.system.md
@@ -216,6 +290,14 @@ package: examples/ail_std_collections.ail
 use-case: Standard library collection semantics with generic Option/List/Map behavior.
 capability-level: mid-level
 capability-under-test: stdlib-generics
+program-scale: multi-module-system
+user-story-id: stdlib-collections-story
+user-story: As a reviewer I can inspect stdlib-collections behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: checked-core
+story-file: stories/example-8.md
+story-journey: story-amendment
+story-roundtrip: semantic-similar
 distinctness-claim: stdlib-collections-live-codex-trace-debug-8 exercises docs/ail/prompts/trace-debug.system.md over stdlib-generics.
 v0.3-signal: Generics need reusable conformance fixtures and teachable stdlib walkthroughs.
 prompt-file: docs/ail/prompts/trace-debug.system.md
@@ -238,6 +320,14 @@ package: examples/ail_std_collections.ail
 use-case: Standard library collection semantics with generic Option/List/Map behavior.
 capability-level: mid-level
 capability-under-test: stdlib-generics
+program-scale: multi-module-system
+user-story-id: stdlib-collections-story
+user-story: As a reviewer I can inspect stdlib-collections behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: checked-core
+story-file: stories/example-9.md
+story-journey: story-amendment
+story-roundtrip: semantic-similar
 distinctness-claim: stdlib-collections-live-codex-interop-9 exercises docs/ail/prompts/interop.system.md over stdlib-generics.
 v0.3-signal: Generics need reusable conformance fixtures and teachable stdlib walkthroughs.
 prompt-file: docs/ail/prompts/interop.system.md
@@ -260,6 +350,14 @@ package: examples/support_composed.ail
 use-case: Package composition with explicit imports and capability grants.
 capability-level: mid-level
 capability-under-test: package-imports
+program-scale: module
+user-story-id: support-composed-story
+user-story: As a reviewer I can inspect support-composed behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: vm-trace
+story-file: stories/example-10.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
 distinctness-claim: support-composed-live-codex-interview-10 exercises docs/ail/prompts/interview.system.md over package-imports.
 v0.3-signal: Package graphs need clearer authoring guidance and dependency review views.
 prompt-file: docs/ail/prompts/interview.system.md
@@ -284,6 +382,14 @@ package: examples/support_composed.ail
 use-case: Package composition with explicit imports and capability grants.
 capability-level: mid-level
 capability-under-test: package-imports
+program-scale: module
+user-story-id: support-composed-story
+user-story: As a reviewer I can inspect support-composed behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: vm-trace
+story-file: stories/example-11.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
 distinctness-claim: support-composed-live-codex-requirements-11 exercises docs/ail/prompts/requirements.system.md over package-imports.
 v0.3-signal: Package graphs need clearer authoring guidance and dependency review views.
 prompt-file: docs/ail/prompts/requirements.system.md
@@ -308,6 +414,14 @@ package: examples/support_composed.ail
 use-case: Package composition with explicit imports and capability grants.
 capability-level: mid-level
 capability-under-test: package-imports
+program-scale: module
+user-story-id: support-composed-story
+user-story: As a reviewer I can inspect support-composed behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: vm-trace
+story-file: stories/example-12.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
 distinctness-claim: support-composed-live-codex-spec-draft-12 exercises docs/ail/prompts/spec-draft.system.md over package-imports.
 v0.3-signal: Package graphs need clearer authoring guidance and dependency review views.
 prompt-file: docs/ail/prompts/spec-draft.system.md
@@ -332,6 +446,14 @@ package: examples/support_composed.ail
 use-case: Package composition with explicit imports and capability grants.
 capability-level: mid-level
 capability-under-test: package-imports
+program-scale: module
+user-story-id: support-composed-story
+user-story: As a reviewer I can inspect support-composed behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: vm-trace
+story-file: stories/example-13.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
 distinctness-claim: support-composed-live-codex-core-draft-13 exercises docs/ail/prompts/core-draft.system.md over package-imports.
 v0.3-signal: Package graphs need clearer authoring guidance and dependency review views.
 prompt-file: docs/ail/prompts/core-draft.system.md
@@ -356,6 +478,14 @@ package: examples/support_composed.ail
 use-case: Package composition with explicit imports and capability grants.
 capability-level: mid-level
 capability-under-test: package-imports
+program-scale: module
+user-story-id: support-composed-story
+user-story: As a reviewer I can inspect support-composed behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: vm-trace
+story-file: stories/example-14.md
+story-journey: story-amendment
+story-roundtrip: semantic-similar
 distinctness-claim: support-composed-live-codex-diagnostic-repair-14 exercises docs/ail/prompts/diagnostic-repair.system.md over package-imports.
 v0.3-signal: Package graphs need clearer authoring guidance and dependency review views.
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
@@ -380,6 +510,14 @@ package: examples/support_composed.ail
 use-case: Package composition with explicit imports and capability grants.
 capability-level: mid-level
 capability-under-test: package-imports
+program-scale: module
+user-story-id: support-composed-story
+user-story: As a reviewer I can inspect support-composed behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: vm-trace
+story-file: stories/example-15.md
+story-journey: spec-to-story
+story-roundtrip: semantic-similar
 distinctness-claim: support-composed-live-codex-core-to-spec-15 exercises docs/ail/prompts/core-to-spec.system.md over package-imports.
 v0.3-signal: Package graphs need clearer authoring guidance and dependency review views.
 prompt-file: docs/ail/prompts/core-to-spec.system.md
@@ -404,6 +542,14 @@ package: examples/support_composed.ail
 use-case: Package composition with explicit imports and capability grants.
 capability-level: mid-level
 capability-under-test: package-imports
+program-scale: module
+user-story-id: support-composed-story
+user-story: As a reviewer I can inspect support-composed behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: vm-trace
+story-file: stories/example-16.md
+story-journey: spec-to-story
+story-roundtrip: semantic-similar
 distinctness-claim: support-composed-live-codex-core-to-summary-16 exercises docs/ail/prompts/core-to-summary.system.md over package-imports.
 v0.3-signal: Package graphs need clearer authoring guidance and dependency review views.
 prompt-file: docs/ail/prompts/core-to-summary.system.md
@@ -428,6 +574,14 @@ package: examples/support_composed.ail
 use-case: Package composition with explicit imports and capability grants.
 capability-level: mid-level
 capability-under-test: package-imports
+program-scale: module
+user-story-id: support-composed-story
+user-story: As a reviewer I can inspect support-composed behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: vm-trace
+story-file: stories/example-17.md
+story-journey: story-amendment
+story-roundtrip: semantic-similar
 distinctness-claim: support-composed-live-codex-flow-patch-17 exercises docs/ail/prompts/flow-patch.system.md over package-imports.
 v0.3-signal: Package graphs need clearer authoring guidance and dependency review views.
 prompt-file: docs/ail/prompts/flow-patch.system.md
@@ -452,6 +606,14 @@ package: examples/support_composed.ail
 use-case: Package composition with explicit imports and capability grants.
 capability-level: mid-level
 capability-under-test: package-imports
+program-scale: module
+user-story-id: support-composed-story
+user-story: As a reviewer I can inspect support-composed behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: vm-trace
+story-file: stories/example-18.md
+story-journey: story-amendment
+story-roundtrip: semantic-similar
 distinctness-claim: support-composed-live-codex-trace-debug-18 exercises docs/ail/prompts/trace-debug.system.md over package-imports.
 v0.3-signal: Package graphs need clearer authoring guidance and dependency review views.
 prompt-file: docs/ail/prompts/trace-debug.system.md
@@ -476,6 +638,14 @@ package: examples/support_composed.ail
 use-case: Package composition with explicit imports and capability grants.
 capability-level: mid-level
 capability-under-test: package-imports
+program-scale: module
+user-story-id: support-composed-story
+user-story: As a reviewer I can inspect support-composed behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: vm-trace
+story-file: stories/example-19.md
+story-journey: story-amendment
+story-roundtrip: semantic-similar
 distinctness-claim: support-composed-live-codex-interop-19 exercises docs/ail/prompts/interop.system.md over package-imports.
 v0.3-signal: Package graphs need clearer authoring guidance and dependency review views.
 prompt-file: docs/ail/prompts/interop.system.md
@@ -500,6 +670,14 @@ package: examples/option_map.ail
 use-case: Small transform used to exercise typed option mapping and UI-tagged prompt surfaces.
 capability-level: high-level
 capability-under-test: ui-surface-coverage
+program-scale: multi-module-system
+user-story-id: option-map-story
+user-story: As a reviewer I can inspect option-map behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: checked-core
+story-file: stories/example-20.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
 distinctness-claim: option-map-live-codex-interview-20 exercises docs/ail/prompts/interview.system.md over ui-surface-coverage.
 v0.3-signal: UI examples need richer package-local walkthroughs and stricter semantic tagging.
 prompt-file: docs/ail/prompts/interview.system.md
@@ -522,6 +700,14 @@ package: examples/option_map.ail
 use-case: Small transform used to exercise typed option mapping and UI-tagged prompt surfaces.
 capability-level: high-level
 capability-under-test: ui-surface-coverage
+program-scale: multi-module-system
+user-story-id: option-map-story
+user-story: As a reviewer I can inspect option-map behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: checked-core
+story-file: stories/example-21.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
 distinctness-claim: option-map-live-codex-requirements-21 exercises docs/ail/prompts/requirements.system.md over ui-surface-coverage.
 v0.3-signal: UI examples need richer package-local walkthroughs and stricter semantic tagging.
 prompt-file: docs/ail/prompts/requirements.system.md
@@ -544,6 +730,14 @@ package: examples/option_map.ail
 use-case: Small transform used to exercise typed option mapping and UI-tagged prompt surfaces.
 capability-level: high-level
 capability-under-test: ui-surface-coverage
+program-scale: multi-module-system
+user-story-id: option-map-story
+user-story: As a reviewer I can inspect option-map behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: checked-core
+story-file: stories/example-22.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
 distinctness-claim: option-map-live-codex-spec-draft-22 exercises docs/ail/prompts/spec-draft.system.md over ui-surface-coverage.
 v0.3-signal: UI examples need richer package-local walkthroughs and stricter semantic tagging.
 prompt-file: docs/ail/prompts/spec-draft.system.md
@@ -566,6 +760,14 @@ package: examples/option_map.ail
 use-case: Small transform used to exercise typed option mapping and UI-tagged prompt surfaces.
 capability-level: high-level
 capability-under-test: ui-surface-coverage
+program-scale: multi-module-system
+user-story-id: option-map-story
+user-story: As a reviewer I can inspect option-map behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: checked-core
+story-file: stories/example-23.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
 distinctness-claim: option-map-live-codex-core-draft-23 exercises docs/ail/prompts/core-draft.system.md over ui-surface-coverage.
 v0.3-signal: UI examples need richer package-local walkthroughs and stricter semantic tagging.
 prompt-file: docs/ail/prompts/core-draft.system.md
@@ -588,6 +790,14 @@ package: examples/option_map.ail
 use-case: Small transform used to exercise typed option mapping and UI-tagged prompt surfaces.
 capability-level: high-level
 capability-under-test: ui-surface-coverage
+program-scale: multi-module-system
+user-story-id: option-map-story
+user-story: As a reviewer I can inspect option-map behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: checked-core
+story-file: stories/example-24.md
+story-journey: story-amendment
+story-roundtrip: semantic-similar
 distinctness-claim: option-map-live-codex-diagnostic-repair-24 exercises docs/ail/prompts/diagnostic-repair.system.md over ui-surface-coverage.
 v0.3-signal: UI examples need richer package-local walkthroughs and stricter semantic tagging.
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
@@ -610,6 +820,14 @@ package: examples/c_interop.ail
 use-case: Checked C and host interop with ABI, ownership, status, and trace contracts.
 capability-level: low-level
 capability-under-test: c-host-interop
+program-scale: utility
+user-story-id: c-interop-story
+user-story: As a reviewer I can inspect c-interop behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-25.md
+story-journey: spec-to-story
+story-roundtrip: semantic-similar
 distinctness-claim: c-interop-live-codex-core-to-spec-25 exercises docs/ail/prompts/core-to-spec.system.md over c-host-interop.
 v0.3-signal: Interop needs deeper unsafe-boundary tutorials and more ABI fixture diversity.
 prompt-file: docs/ail/prompts/core-to-spec.system.md
@@ -633,6 +851,14 @@ package: examples/c_interop.ail
 use-case: Checked C and host interop with ABI, ownership, status, and trace contracts.
 capability-level: low-level
 capability-under-test: c-host-interop
+program-scale: utility
+user-story-id: c-interop-story
+user-story: As a reviewer I can inspect c-interop behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-26.md
+story-journey: spec-to-story
+story-roundtrip: semantic-similar
 distinctness-claim: c-interop-live-codex-core-to-summary-26 exercises docs/ail/prompts/core-to-summary.system.md over c-host-interop.
 v0.3-signal: Interop needs deeper unsafe-boundary tutorials and more ABI fixture diversity.
 prompt-file: docs/ail/prompts/core-to-summary.system.md
@@ -656,6 +882,14 @@ package: examples/c_interop.ail
 use-case: Checked C and host interop with ABI, ownership, status, and trace contracts.
 capability-level: low-level
 capability-under-test: c-host-interop
+program-scale: utility
+user-story-id: c-interop-story
+user-story: As a reviewer I can inspect c-interop behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-27.md
+story-journey: story-amendment
+story-roundtrip: semantic-similar
 distinctness-claim: c-interop-live-codex-flow-patch-27 exercises docs/ail/prompts/flow-patch.system.md over c-host-interop.
 v0.3-signal: Interop needs deeper unsafe-boundary tutorials and more ABI fixture diversity.
 prompt-file: docs/ail/prompts/flow-patch.system.md
@@ -679,6 +913,14 @@ package: examples/c_interop.ail
 use-case: Checked C and host interop with ABI, ownership, status, and trace contracts.
 capability-level: low-level
 capability-under-test: c-host-interop
+program-scale: utility
+user-story-id: c-interop-story
+user-story: As a reviewer I can inspect c-interop behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-28.md
+story-journey: story-amendment
+story-roundtrip: semantic-similar
 distinctness-claim: c-interop-live-codex-trace-debug-28 exercises docs/ail/prompts/trace-debug.system.md over c-host-interop.
 v0.3-signal: Interop needs deeper unsafe-boundary tutorials and more ABI fixture diversity.
 prompt-file: docs/ail/prompts/trace-debug.system.md
@@ -702,6 +944,14 @@ package: examples/c_interop.ail
 use-case: Checked C and host interop with ABI, ownership, status, and trace contracts.
 capability-level: low-level
 capability-under-test: c-host-interop
+program-scale: utility
+user-story-id: c-interop-story
+user-story: As a reviewer I can inspect c-interop behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-29.md
+story-journey: story-amendment
+story-roundtrip: semantic-similar
 distinctness-claim: c-interop-live-codex-interop-29 exercises docs/ail/prompts/interop.system.md over c-host-interop.
 v0.3-signal: Interop needs deeper unsafe-boundary tutorials and more ABI fixture diversity.
 prompt-file: docs/ail/prompts/interop.system.md
@@ -725,6 +975,14 @@ package: examples/support_ticket.ail
 use-case: Application workflow for support-ticket actions, permissions, failures, and traces.
 capability-level: high-level
 capability-under-test: application-workflow
+program-scale: multi-module-system
+user-story-id: support-ticket-story
+user-story: As a reviewer I can inspect support-ticket behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-30.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
 distinctness-claim: support-ticket-live-codex-interview-30 exercises docs/ail/prompts/interview.system.md over application-workflow.
 v0.3-signal: Application examples need user-story walkthroughs from intent to runtime trace.
 prompt-file: docs/ail/prompts/interview.system.md
@@ -749,6 +1007,14 @@ package: examples/support_ticket.ail
 use-case: Application workflow for support-ticket actions, permissions, failures, and traces.
 capability-level: high-level
 capability-under-test: application-workflow
+program-scale: multi-module-system
+user-story-id: support-ticket-story
+user-story: As a reviewer I can inspect support-ticket behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-31.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
 distinctness-claim: support-ticket-live-codex-requirements-31 exercises docs/ail/prompts/requirements.system.md over application-workflow.
 v0.3-signal: Application examples need user-story walkthroughs from intent to runtime trace.
 prompt-file: docs/ail/prompts/requirements.system.md
@@ -773,6 +1039,14 @@ package: examples/support_ticket.ail
 use-case: Application workflow for support-ticket actions, permissions, failures, and traces.
 capability-level: high-level
 capability-under-test: application-workflow
+program-scale: multi-module-system
+user-story-id: support-ticket-story
+user-story: As a reviewer I can inspect support-ticket behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-32.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
 distinctness-claim: support-ticket-live-spec-input-32 exercises docs/ail/prompts/spec-draft.system.md over application-workflow.
 v0.3-signal: Application examples need user-story walkthroughs from intent to runtime trace.
 prompt-file: docs/ail/prompts/spec-draft.system.md
@@ -798,6 +1072,14 @@ package: examples/support_ticket.ail
 use-case: Application workflow for support-ticket actions, permissions, failures, and traces.
 capability-level: high-level
 capability-under-test: application-workflow
+program-scale: multi-module-system
+user-story-id: support-ticket-story
+user-story: As a reviewer I can inspect support-ticket behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-33.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
 distinctness-claim: support-ticket-live-codex-core-draft-33 exercises docs/ail/prompts/core-draft.system.md over application-workflow.
 v0.3-signal: Application examples need user-story walkthroughs from intent to runtime trace.
 prompt-file: docs/ail/prompts/core-draft.system.md
@@ -822,6 +1104,14 @@ package: examples/support_ticket.ail
 use-case: Application workflow for support-ticket actions, permissions, failures, and traces.
 capability-level: high-level
 capability-under-test: application-workflow
+program-scale: multi-module-system
+user-story-id: support-ticket-story
+user-story: As a reviewer I can inspect support-ticket behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-34.md
+story-journey: story-amendment
+story-roundtrip: semantic-similar
 distinctness-claim: support-ticket-live-codex-diagnostic-repair-34 exercises docs/ail/prompts/diagnostic-repair.system.md over application-workflow.
 v0.3-signal: Application examples need user-story walkthroughs from intent to runtime trace.
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
@@ -846,6 +1136,14 @@ package: examples/runtime_generic.ail
 use-case: Runtime generic value flow through typed actions and traceable outcomes.
 capability-level: mid-level
 capability-under-test: runtime-generics
+program-scale: module
+user-story-id: runtime-generic-story
+user-story: As a reviewer I can inspect runtime-generic behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-35.md
+story-journey: spec-to-story
+story-roundtrip: semantic-similar
 distinctness-claim: runtime-generic-live-codex-core-to-spec-35 exercises docs/ail/prompts/core-to-spec.system.md over runtime-generics.
 v0.3-signal: Generic runtime behavior needs clearer type-inference explanations.
 prompt-file: docs/ail/prompts/core-to-spec.system.md
@@ -870,6 +1168,14 @@ package: examples/runtime_generic.ail
 use-case: Runtime generic value flow through typed actions and traceable outcomes.
 capability-level: mid-level
 capability-under-test: runtime-generics
+program-scale: module
+user-story-id: runtime-generic-story
+user-story: As a reviewer I can inspect runtime-generic behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-36.md
+story-journey: spec-to-story
+story-roundtrip: semantic-similar
 distinctness-claim: runtime-generic-live-codex-core-to-summary-36 exercises docs/ail/prompts/core-to-summary.system.md over runtime-generics.
 v0.3-signal: Generic runtime behavior needs clearer type-inference explanations.
 prompt-file: docs/ail/prompts/core-to-summary.system.md
@@ -894,6 +1200,14 @@ package: examples/runtime_generic.ail
 use-case: Runtime generic value flow through typed actions and traceable outcomes.
 capability-level: mid-level
 capability-under-test: runtime-generics
+program-scale: module
+user-story-id: runtime-generic-story
+user-story: As a reviewer I can inspect runtime-generic behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-37.md
+story-journey: story-amendment
+story-roundtrip: semantic-similar
 distinctness-claim: runtime-generic-live-codex-flow-patch-37 exercises docs/ail/prompts/flow-patch.system.md over runtime-generics.
 v0.3-signal: Generic runtime behavior needs clearer type-inference explanations.
 prompt-file: docs/ail/prompts/flow-patch.system.md
@@ -918,6 +1232,14 @@ package: examples/runtime_generic.ail
 use-case: Runtime generic value flow through typed actions and traceable outcomes.
 capability-level: mid-level
 capability-under-test: runtime-generics
+program-scale: module
+user-story-id: runtime-generic-story
+user-story: As a reviewer I can inspect runtime-generic behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-38.md
+story-journey: story-amendment
+story-roundtrip: semantic-similar
 distinctness-claim: runtime-generic-live-codex-trace-debug-38 exercises docs/ail/prompts/trace-debug.system.md over runtime-generics.
 v0.3-signal: Generic runtime behavior needs clearer type-inference explanations.
 prompt-file: docs/ail/prompts/trace-debug.system.md
@@ -942,6 +1264,14 @@ package: examples/runtime_generic.ail
 use-case: Runtime generic value flow through typed actions and traceable outcomes.
 capability-level: mid-level
 capability-under-test: runtime-generics
+program-scale: module
+user-story-id: runtime-generic-story
+user-story: As a reviewer I can inspect runtime-generic behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-39.md
+story-journey: story-amendment
+story-roundtrip: semantic-similar
 distinctness-claim: runtime-generic-live-codex-interop-39 exercises docs/ail/prompts/interop.system.md over runtime-generics.
 v0.3-signal: Generic runtime behavior needs clearer type-inference explanations.
 prompt-file: docs/ail/prompts/interop.system.md
@@ -966,6 +1296,14 @@ package: examples/refund_tool.ail
 use-case: Agent tool for payment refund approval with permissions and capability checks.
 capability-level: high-level
 capability-under-test: agent-tool-safety
+program-scale: multi-module-system
+user-story-id: refund-tool-story
+user-story: As a reviewer I can inspect refund-tool behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-40.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
 distinctness-claim: refund-tool-live-codex-interview-40 exercises docs/ail/prompts/interview.system.md over agent-tool-safety.
 v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
 prompt-file: docs/ail/prompts/interview.system.md
@@ -990,6 +1328,14 @@ package: examples/refund_tool.ail
 use-case: Agent tool for payment refund approval with permissions and capability checks.
 capability-level: high-level
 capability-under-test: agent-tool-safety
+program-scale: multi-module-system
+user-story-id: refund-tool-story
+user-story: As a reviewer I can inspect refund-tool behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-41.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
 distinctness-claim: refund-tool-live-codex-requirements-41 exercises docs/ail/prompts/requirements.system.md over agent-tool-safety.
 v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
 prompt-file: docs/ail/prompts/requirements.system.md
@@ -1014,6 +1360,14 @@ package: examples/refund_tool.ail
 use-case: Agent tool for payment refund approval with permissions and capability checks.
 capability-level: high-level
 capability-under-test: agent-tool-safety
+program-scale: multi-module-system
+user-story-id: refund-tool-story
+user-story: As a reviewer I can inspect refund-tool behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-42.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
 distinctness-claim: refund-tool-live-codex-spec-draft-42 exercises docs/ail/prompts/spec-draft.system.md over agent-tool-safety.
 v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
 prompt-file: docs/ail/prompts/spec-draft.system.md
@@ -1038,6 +1392,14 @@ package: examples/refund_tool.ail
 use-case: Agent tool for payment refund approval with permissions and capability checks.
 capability-level: high-level
 capability-under-test: agent-tool-safety
+program-scale: multi-module-system
+user-story-id: refund-tool-story
+user-story: As a reviewer I can inspect refund-tool behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-43.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
 distinctness-claim: refund-tool-live-codex-core-draft-43 exercises docs/ail/prompts/core-draft.system.md over agent-tool-safety.
 v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
 prompt-file: docs/ail/prompts/core-draft.system.md
@@ -1062,6 +1424,14 @@ package: examples/refund_tool.ail
 use-case: Agent tool for payment refund approval with permissions and capability checks.
 capability-level: high-level
 capability-under-test: agent-tool-safety
+program-scale: multi-module-system
+user-story-id: refund-tool-story
+user-story: As a reviewer I can inspect refund-tool behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-44.md
+story-journey: story-amendment
+story-roundtrip: semantic-similar
 distinctness-claim: refund-tool-live-codex-diagnostic-repair-44 exercises docs/ail/prompts/diagnostic-repair.system.md over agent-tool-safety.
 v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
@@ -1086,6 +1456,14 @@ package: examples/refund_tool.ail
 use-case: Agent tool for payment refund approval with permissions and capability checks.
 capability-level: high-level
 capability-under-test: agent-tool-safety
+program-scale: multi-module-system
+user-story-id: refund-tool-story
+user-story: As a reviewer I can inspect refund-tool behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-45.md
+story-journey: spec-to-story
+story-roundtrip: semantic-similar
 distinctness-claim: refund-tool-live-codex-core-to-spec-45 exercises docs/ail/prompts/core-to-spec.system.md over agent-tool-safety.
 v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
 prompt-file: docs/ail/prompts/core-to-spec.system.md
@@ -1110,6 +1488,14 @@ package: examples/refund_tool.ail
 use-case: Agent tool for payment refund approval with permissions and capability checks.
 capability-level: high-level
 capability-under-test: agent-tool-safety
+program-scale: multi-module-system
+user-story-id: refund-tool-story
+user-story: As a reviewer I can inspect refund-tool behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-46.md
+story-journey: spec-to-story
+story-roundtrip: semantic-similar
 distinctness-claim: refund-tool-live-codex-core-to-summary-46 exercises docs/ail/prompts/core-to-summary.system.md over agent-tool-safety.
 v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
 prompt-file: docs/ail/prompts/core-to-summary.system.md
@@ -1134,6 +1520,14 @@ package: examples/refund_tool.ail
 use-case: Agent tool for payment refund approval with permissions and capability checks.
 capability-level: high-level
 capability-under-test: agent-tool-safety
+program-scale: multi-module-system
+user-story-id: refund-tool-story
+user-story: As a reviewer I can inspect refund-tool behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-47.md
+story-journey: story-amendment
+story-roundtrip: semantic-similar
 distinctness-claim: refund-tool-live-codex-flow-patch-47 exercises docs/ail/prompts/flow-patch.system.md over agent-tool-safety.
 v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
 prompt-file: docs/ail/prompts/flow-patch.system.md
@@ -1158,6 +1552,14 @@ package: examples/refund_tool.ail
 use-case: Agent tool for payment refund approval with permissions and capability checks.
 capability-level: high-level
 capability-under-test: agent-tool-safety
+program-scale: multi-module-system
+user-story-id: refund-tool-story
+user-story: As a reviewer I can inspect refund-tool behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-48.md
+story-journey: story-amendment
+story-roundtrip: semantic-similar
 distinctness-claim: refund-tool-live-codex-trace-debug-48 exercises docs/ail/prompts/trace-debug.system.md over agent-tool-safety.
 v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
 prompt-file: docs/ail/prompts/trace-debug.system.md
@@ -1182,6 +1584,14 @@ package: examples/refund_tool.ail
 use-case: Agent tool for payment refund approval with permissions and capability checks.
 capability-level: high-level
 capability-under-test: agent-tool-safety
+program-scale: multi-module-system
+user-story-id: refund-tool-story
+user-story: As a reviewer I can inspect refund-tool behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-49.md
+story-journey: story-amendment
+story-roundtrip: semantic-similar
 distinctness-claim: refund-tool-live-codex-interop-49 exercises docs/ail/prompts/interop.system.md over agent-tool-safety.
 v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
 prompt-file: docs/ail/prompts/interop.system.md
@@ -1206,6 +1616,14 @@ package: examples/refund_tool.ail
 use-case: Agent tool for payment refund approval with permissions and capability checks.
 capability-level: high-level
 capability-under-test: agent-tool-safety
+program-scale: multi-module-system
+user-story-id: refund-tool-story
+user-story: As a reviewer I can inspect refund-tool behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-50.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
 distinctness-claim: refund-tool-live-codex-interview-50 exercises docs/ail/prompts/interview.system.md over agent-tool-safety.
 v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
 prompt-file: docs/ail/prompts/interview.system.md
@@ -1230,6 +1648,14 @@ package: examples/refund_tool.ail
 use-case: Agent tool for payment refund approval with permissions and capability checks.
 capability-level: high-level
 capability-under-test: agent-tool-safety
+program-scale: multi-module-system
+user-story-id: refund-tool-story
+user-story: As a reviewer I can inspect refund-tool behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-51.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
 distinctness-claim: refund-tool-live-codex-requirements-51 exercises docs/ail/prompts/requirements.system.md over agent-tool-safety.
 v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
 prompt-file: docs/ail/prompts/requirements.system.md
@@ -1254,6 +1680,14 @@ package: examples/refund_tool.ail
 use-case: Agent tool for payment refund approval with permissions and capability checks.
 capability-level: high-level
 capability-under-test: agent-tool-safety
+program-scale: multi-module-system
+user-story-id: refund-tool-story
+user-story: As a reviewer I can inspect refund-tool behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-52.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
 distinctness-claim: refund-tool-live-spec-input-52 exercises docs/ail/prompts/spec-draft.system.md over agent-tool-safety.
 v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
 prompt-file: docs/ail/prompts/spec-draft.system.md
@@ -1279,6 +1713,14 @@ package: examples/refund_tool.ail
 use-case: Agent tool for payment refund approval with permissions and capability checks.
 capability-level: high-level
 capability-under-test: agent-tool-safety
+program-scale: multi-module-system
+user-story-id: refund-tool-story
+user-story: As a reviewer I can inspect refund-tool behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-53.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
 distinctness-claim: refund-tool-live-codex-core-draft-53 exercises docs/ail/prompts/core-draft.system.md over agent-tool-safety.
 v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
 prompt-file: docs/ail/prompts/core-draft.system.md
@@ -1303,6 +1745,14 @@ package: examples/refund_tool.ail
 use-case: Agent tool for payment refund approval with permissions and capability checks.
 capability-level: high-level
 capability-under-test: agent-tool-safety
+program-scale: multi-module-system
+user-story-id: refund-tool-story
+user-story: As a reviewer I can inspect refund-tool behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-54.md
+story-journey: story-amendment
+story-roundtrip: semantic-similar
 distinctness-claim: refund-tool-live-codex-diagnostic-repair-54 exercises docs/ail/prompts/diagnostic-repair.system.md over agent-tool-safety.
 v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
@@ -1327,6 +1777,14 @@ package: examples/compiler_pass.ail
 use-case: Compiler pass semantics that transform AIL-Core with checked traces.
 capability-level: low-level
 capability-under-test: compiler-pass
+program-scale: utility
+user-story-id: compiler-pass-story
+user-story: As a reviewer I can inspect compiler-pass behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-55.md
+story-journey: spec-to-story
+story-roundtrip: semantic-similar
 distinctness-claim: compiler-pass-live-codex-core-to-spec-55 exercises docs/ail/prompts/core-to-spec.system.md over compiler-pass.
 v0.3-signal: Self-hosting needs pass-composition examples and fixed-point checks.
 prompt-file: docs/ail/prompts/core-to-spec.system.md
@@ -1350,6 +1808,14 @@ package: examples/compiler_pass.ail
 use-case: Compiler pass semantics that transform AIL-Core with checked traces.
 capability-level: low-level
 capability-under-test: compiler-pass
+program-scale: utility
+user-story-id: compiler-pass-story
+user-story: As a reviewer I can inspect compiler-pass behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-56.md
+story-journey: spec-to-story
+story-roundtrip: semantic-similar
 distinctness-claim: compiler-pass-live-codex-core-to-summary-56 exercises docs/ail/prompts/core-to-summary.system.md over compiler-pass.
 v0.3-signal: Self-hosting needs pass-composition examples and fixed-point checks.
 prompt-file: docs/ail/prompts/core-to-summary.system.md
@@ -1373,6 +1839,14 @@ package: examples/compiler_pass.ail
 use-case: Compiler pass semantics that transform AIL-Core with checked traces.
 capability-level: low-level
 capability-under-test: compiler-pass
+program-scale: utility
+user-story-id: compiler-pass-story
+user-story: As a reviewer I can inspect compiler-pass behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-57.md
+story-journey: story-amendment
+story-roundtrip: semantic-similar
 distinctness-claim: compiler-pass-live-codex-flow-patch-57 exercises docs/ail/prompts/flow-patch.system.md over compiler-pass.
 v0.3-signal: Self-hosting needs pass-composition examples and fixed-point checks.
 prompt-file: docs/ail/prompts/flow-patch.system.md
@@ -1396,6 +1870,14 @@ package: examples/compiler_pass.ail
 use-case: Compiler pass semantics that transform AIL-Core with checked traces.
 capability-level: low-level
 capability-under-test: compiler-pass
+program-scale: utility
+user-story-id: compiler-pass-story
+user-story: As a reviewer I can inspect compiler-pass behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-58.md
+story-journey: story-amendment
+story-roundtrip: semantic-similar
 distinctness-claim: compiler-pass-live-codex-trace-debug-58 exercises docs/ail/prompts/trace-debug.system.md over compiler-pass.
 v0.3-signal: Self-hosting needs pass-composition examples and fixed-point checks.
 prompt-file: docs/ail/prompts/trace-debug.system.md
@@ -1419,6 +1901,14 @@ package: examples/compiler_pass.ail
 use-case: Compiler pass semantics that transform AIL-Core with checked traces.
 capability-level: low-level
 capability-under-test: compiler-pass
+program-scale: utility
+user-story-id: compiler-pass-story
+user-story: As a reviewer I can inspect compiler-pass behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-59.md
+story-journey: story-amendment
+story-roundtrip: semantic-similar
 distinctness-claim: compiler-pass-live-codex-interop-59 exercises docs/ail/prompts/interop.system.md over compiler-pass.
 v0.3-signal: Self-hosting needs pass-composition examples and fixed-point checks.
 prompt-file: docs/ail/prompts/interop.system.md
@@ -1442,6 +1932,14 @@ package: examples/compiler_pass.ail
 use-case: Compiler pass semantics that transform AIL-Core with checked traces.
 capability-level: low-level
 capability-under-test: compiler-pass
+program-scale: utility
+user-story-id: compiler-pass-story
+user-story: As a reviewer I can inspect compiler-pass behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-60.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
 distinctness-claim: compiler-pass-live-codex-interview-60 exercises docs/ail/prompts/interview.system.md over compiler-pass.
 v0.3-signal: Self-hosting needs pass-composition examples and fixed-point checks.
 prompt-file: docs/ail/prompts/interview.system.md
@@ -1465,6 +1963,14 @@ package: examples/compiler_pass.ail
 use-case: Compiler pass semantics that transform AIL-Core with checked traces.
 capability-level: low-level
 capability-under-test: compiler-pass
+program-scale: utility
+user-story-id: compiler-pass-story
+user-story: As a reviewer I can inspect compiler-pass behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-61.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
 distinctness-claim: compiler-pass-live-codex-requirements-61 exercises docs/ail/prompts/requirements.system.md over compiler-pass.
 v0.3-signal: Self-hosting needs pass-composition examples and fixed-point checks.
 prompt-file: docs/ail/prompts/requirements.system.md
@@ -1488,6 +1994,14 @@ package: examples/compiler_pass.ail
 use-case: Compiler pass semantics that transform AIL-Core with checked traces.
 capability-level: low-level
 capability-under-test: compiler-pass
+program-scale: utility
+user-story-id: compiler-pass-story
+user-story: As a reviewer I can inspect compiler-pass behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-62.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
 distinctness-claim: compiler-pass-live-codex-spec-draft-62 exercises docs/ail/prompts/spec-draft.system.md over compiler-pass.
 v0.3-signal: Self-hosting needs pass-composition examples and fixed-point checks.
 prompt-file: docs/ail/prompts/spec-draft.system.md
@@ -1511,6 +2025,14 @@ package: examples/compiler_pass.ail
 use-case: Compiler pass semantics that transform AIL-Core with checked traces.
 capability-level: low-level
 capability-under-test: compiler-pass
+program-scale: utility
+user-story-id: compiler-pass-story
+user-story: As a reviewer I can inspect compiler-pass behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-63.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
 distinctness-claim: compiler-pass-live-codex-core-draft-63 exercises docs/ail/prompts/core-draft.system.md over compiler-pass.
 v0.3-signal: Self-hosting needs pass-composition examples and fixed-point checks.
 prompt-file: docs/ail/prompts/core-draft.system.md
@@ -1534,6 +2056,14 @@ package: examples/compiler_pass.ail
 use-case: Compiler pass semantics that transform AIL-Core with checked traces.
 capability-level: low-level
 capability-under-test: compiler-pass
+program-scale: utility
+user-story-id: compiler-pass-story
+user-story: As a reviewer I can inspect compiler-pass behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-64.md
+story-journey: story-amendment
+story-roundtrip: semantic-similar
 distinctness-claim: compiler-pass-live-codex-diagnostic-repair-64 exercises docs/ail/prompts/diagnostic-repair.system.md over compiler-pass.
 v0.3-signal: Self-hosting needs pass-composition examples and fixed-point checks.
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
@@ -1557,6 +2087,14 @@ package: examples/ui_workflow.ail
 use-case: Accessible route, form, dashboard, and workflow semantics for a user-facing app.
 capability-level: high-level
 capability-under-test: ui-workflow
+program-scale: multi-module-system
+user-story-id: ui-workflow-story
+user-story: As a reviewer I can inspect ui-workflow behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-65.md
+story-journey: spec-to-story
+story-roundtrip: semantic-similar
 distinctness-claim: ui-workflow-live-codex-core-to-spec-65 exercises docs/ail/prompts/core-to-spec.system.md over ui-workflow.
 v0.3-signal: UI authoring needs stronger visual review artifacts and accessibility exercises.
 prompt-file: docs/ail/prompts/core-to-spec.system.md
@@ -1581,6 +2119,14 @@ package: examples/network_driver.ail
 use-case: System-level network driver boundary with effects, capabilities, and packets.
 capability-level: low-level
 capability-under-test: system-driver
+program-scale: utility
+user-story-id: network-driver-story
+user-story: As a reviewer I can inspect network-driver behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-66.md
+story-journey: spec-to-story
+story-roundtrip: semantic-similar
 distinctness-claim: network-driver-live-codex-core-to-summary-66 exercises docs/ail/prompts/core-to-summary.system.md over system-driver.
 v0.3-signal: Systems profile needs hardware-facing contracts and scheduler/interrupt examples.
 prompt-file: docs/ail/prompts/core-to-summary.system.md
@@ -1603,6 +2149,14 @@ package: examples/network_driver.ail
 use-case: System-level network driver boundary with effects, capabilities, and packets.
 capability-level: low-level
 capability-under-test: system-driver
+program-scale: utility
+user-story-id: network-driver-story
+user-story: As a reviewer I can inspect network-driver behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-67.md
+story-journey: story-amendment
+story-roundtrip: semantic-similar
 distinctness-claim: network-driver-live-codex-flow-patch-67 exercises docs/ail/prompts/flow-patch.system.md over system-driver.
 v0.3-signal: Systems profile needs hardware-facing contracts and scheduler/interrupt examples.
 prompt-file: docs/ail/prompts/flow-patch.system.md
@@ -1625,6 +2179,14 @@ package: examples/network_driver.ail
 use-case: System-level network driver boundary with effects, capabilities, and packets.
 capability-level: low-level
 capability-under-test: system-driver
+program-scale: utility
+user-story-id: network-driver-story
+user-story: As a reviewer I can inspect network-driver behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-68.md
+story-journey: story-amendment
+story-roundtrip: semantic-similar
 distinctness-claim: network-driver-live-codex-trace-debug-68 exercises docs/ail/prompts/trace-debug.system.md over system-driver.
 v0.3-signal: Systems profile needs hardware-facing contracts and scheduler/interrupt examples.
 prompt-file: docs/ail/prompts/trace-debug.system.md
@@ -1647,6 +2209,14 @@ package: examples/network_driver.ail
 use-case: System-level network driver boundary with effects, capabilities, and packets.
 capability-level: low-level
 capability-under-test: system-driver
+program-scale: utility
+user-story-id: network-driver-story
+user-story: As a reviewer I can inspect network-driver behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-69.md
+story-journey: story-amendment
+story-roundtrip: semantic-similar
 distinctness-claim: network-driver-live-codex-interop-69 exercises docs/ail/prompts/interop.system.md over system-driver.
 v0.3-signal: Systems profile needs hardware-facing contracts and scheduler/interrupt examples.
 prompt-file: docs/ail/prompts/interop.system.md
@@ -1669,6 +2239,14 @@ package: examples/network_driver.ail
 use-case: System-level network driver boundary with effects, capabilities, and packets.
 capability-level: low-level
 capability-under-test: system-driver
+program-scale: utility
+user-story-id: network-driver-story
+user-story: As a reviewer I can inspect network-driver behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-70.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
 distinctness-claim: network-driver-live-codex-interview-70 exercises docs/ail/prompts/interview.system.md over system-driver.
 v0.3-signal: Systems profile needs hardware-facing contracts and scheduler/interrupt examples.
 prompt-file: docs/ail/prompts/interview.system.md
@@ -1691,6 +2269,14 @@ package: examples/network_driver.ail
 use-case: System-level network driver boundary with effects, capabilities, and packets.
 capability-level: low-level
 capability-under-test: system-driver
+program-scale: utility
+user-story-id: network-driver-story
+user-story: As a reviewer I can inspect network-driver behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-71.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
 distinctness-claim: network-driver-live-codex-requirements-71 exercises docs/ail/prompts/requirements.system.md over system-driver.
 v0.3-signal: Systems profile needs hardware-facing contracts and scheduler/interrupt examples.
 prompt-file: docs/ail/prompts/requirements.system.md
@@ -1713,6 +2299,14 @@ package: examples/network_driver.ail
 use-case: System-level network driver boundary with effects, capabilities, and packets.
 capability-level: low-level
 capability-under-test: system-driver
+program-scale: utility
+user-story-id: network-driver-story
+user-story: As a reviewer I can inspect network-driver behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-72.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
 distinctness-claim: network-driver-live-codex-spec-draft-72 exercises docs/ail/prompts/spec-draft.system.md over system-driver.
 v0.3-signal: Systems profile needs hardware-facing contracts and scheduler/interrupt examples.
 prompt-file: docs/ail/prompts/spec-draft.system.md
@@ -1735,6 +2329,14 @@ package: examples/network_driver.ail
 use-case: System-level network driver boundary with effects, capabilities, and packets.
 capability-level: low-level
 capability-under-test: system-driver
+program-scale: utility
+user-story-id: network-driver-story
+user-story: As a reviewer I can inspect network-driver behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-73.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
 distinctness-claim: network-driver-live-codex-core-draft-73 exercises docs/ail/prompts/core-draft.system.md over system-driver.
 v0.3-signal: Systems profile needs hardware-facing contracts and scheduler/interrupt examples.
 prompt-file: docs/ail/prompts/core-draft.system.md
@@ -1757,6 +2359,14 @@ package: examples/network_driver.ail
 use-case: System-level network driver boundary with effects, capabilities, and packets.
 capability-level: low-level
 capability-under-test: system-driver
+program-scale: utility
+user-story-id: network-driver-story
+user-story: As a reviewer I can inspect network-driver behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-74.md
+story-journey: story-amendment
+story-roundtrip: semantic-similar
 distinctness-claim: network-driver-live-codex-diagnostic-repair-74 exercises docs/ail/prompts/diagnostic-repair.system.md over system-driver.
 v0.3-signal: Systems profile needs hardware-facing contracts and scheduler/interrupt examples.
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
@@ -1779,6 +2389,14 @@ package: examples/secret_access.ail
 use-case: Secret and permission semantics for guarded internal data access.
 capability-level: mid-level
 capability-under-test: security-permissions
+program-scale: module
+user-story-id: secret-access-story
+user-story: As a reviewer I can inspect secret-access behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-75.md
+story-journey: spec-to-story
+story-roundtrip: semantic-similar
 distinctness-claim: secret-access-live-codex-core-to-spec-75 exercises docs/ail/prompts/core-to-spec.system.md over security-permissions.
 v0.3-signal: Security examples need threat-model annotations and audit trails.
 prompt-file: docs/ail/prompts/core-to-spec.system.md
@@ -1803,6 +2421,14 @@ package: examples/secret_access.ail
 use-case: Secret and permission semantics for guarded internal data access.
 capability-level: mid-level
 capability-under-test: security-permissions
+program-scale: module
+user-story-id: secret-access-story
+user-story: As a reviewer I can inspect secret-access behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-76.md
+story-journey: spec-to-story
+story-roundtrip: semantic-similar
 distinctness-claim: secret-access-live-codex-core-to-summary-76 exercises docs/ail/prompts/core-to-summary.system.md over security-permissions.
 v0.3-signal: Security examples need threat-model annotations and audit trails.
 prompt-file: docs/ail/prompts/core-to-summary.system.md
@@ -1827,6 +2453,14 @@ package: examples/secret_access.ail
 use-case: Secret and permission semantics for guarded internal data access.
 capability-level: mid-level
 capability-under-test: security-permissions
+program-scale: module
+user-story-id: secret-access-story
+user-story: As a reviewer I can inspect secret-access behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-77.md
+story-journey: story-amendment
+story-roundtrip: semantic-similar
 distinctness-claim: secret-access-live-codex-flow-patch-77 exercises docs/ail/prompts/flow-patch.system.md over security-permissions.
 v0.3-signal: Security examples need threat-model annotations and audit trails.
 prompt-file: docs/ail/prompts/flow-patch.system.md
@@ -1851,6 +2485,14 @@ package: examples/secret_access.ail
 use-case: Secret and permission semantics for guarded internal data access.
 capability-level: mid-level
 capability-under-test: security-permissions
+program-scale: module
+user-story-id: secret-access-story
+user-story: As a reviewer I can inspect secret-access behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-78.md
+story-journey: story-amendment
+story-roundtrip: semantic-similar
 distinctness-claim: secret-access-live-codex-trace-debug-78 exercises docs/ail/prompts/trace-debug.system.md over security-permissions.
 v0.3-signal: Security examples need threat-model annotations and audit trails.
 prompt-file: docs/ail/prompts/trace-debug.system.md
@@ -1875,6 +2517,14 @@ package: examples/secret_access.ail
 use-case: Secret and permission semantics for guarded internal data access.
 capability-level: mid-level
 capability-under-test: security-permissions
+program-scale: module
+user-story-id: secret-access-story
+user-story: As a reviewer I can inspect secret-access behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-79.md
+story-journey: story-amendment
+story-roundtrip: semantic-similar
 distinctness-claim: secret-access-live-codex-interop-79 exercises docs/ail/prompts/interop.system.md over security-permissions.
 v0.3-signal: Security examples need threat-model annotations and audit trails.
 prompt-file: docs/ail/prompts/interop.system.md
@@ -1899,6 +2549,14 @@ package: examples/repeated_task.ail
 use-case: Scheduled repeated maintenance workflow with stateful trace evidence.
 capability-level: high-level
 capability-under-test: scheduled-workflow
+program-scale: multi-module-system
+user-story-id: repeated-task-story
+user-story: As a reviewer I can inspect repeated-task behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-80.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
 distinctness-claim: repeated-task-live-codex-interview-80 exercises docs/ail/prompts/interview.system.md over scheduled-workflow.
 v0.3-signal: Workflow examples need temporal policies and retry/backoff semantics.
 prompt-file: docs/ail/prompts/interview.system.md
@@ -1923,6 +2581,14 @@ package: examples/repeated_task.ail
 use-case: Scheduled repeated maintenance workflow with stateful trace evidence.
 capability-level: high-level
 capability-under-test: scheduled-workflow
+program-scale: multi-module-system
+user-story-id: repeated-task-story
+user-story: As a reviewer I can inspect repeated-task behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-81.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
 distinctness-claim: repeated-task-live-codex-requirements-81 exercises docs/ail/prompts/requirements.system.md over scheduled-workflow.
 v0.3-signal: Workflow examples need temporal policies and retry/backoff semantics.
 prompt-file: docs/ail/prompts/requirements.system.md
@@ -1947,6 +2613,14 @@ package: examples/repeated_task.ail
 use-case: Scheduled repeated maintenance workflow with stateful trace evidence.
 capability-level: high-level
 capability-under-test: scheduled-workflow
+program-scale: multi-module-system
+user-story-id: repeated-task-story
+user-story: As a reviewer I can inspect repeated-task behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-82.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
 distinctness-claim: repeated-task-live-codex-spec-draft-82 exercises docs/ail/prompts/spec-draft.system.md over scheduled-workflow.
 v0.3-signal: Workflow examples need temporal policies and retry/backoff semantics.
 prompt-file: docs/ail/prompts/spec-draft.system.md
@@ -1971,6 +2645,14 @@ package: examples/repeated_task.ail
 use-case: Scheduled repeated maintenance workflow with stateful trace evidence.
 capability-level: high-level
 capability-under-test: scheduled-workflow
+program-scale: multi-module-system
+user-story-id: repeated-task-story
+user-story: As a reviewer I can inspect repeated-task behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-83.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
 distinctness-claim: repeated-task-live-codex-core-draft-83 exercises docs/ail/prompts/core-draft.system.md over scheduled-workflow.
 v0.3-signal: Workflow examples need temporal policies and retry/backoff semantics.
 prompt-file: docs/ail/prompts/core-draft.system.md
@@ -1995,6 +2677,14 @@ package: examples/repeated_task.ail
 use-case: Scheduled repeated maintenance workflow with stateful trace evidence.
 capability-level: high-level
 capability-under-test: scheduled-workflow
+program-scale: multi-module-system
+user-story-id: repeated-task-story
+user-story: As a reviewer I can inspect repeated-task behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-84.md
+story-journey: story-amendment
+story-roundtrip: semantic-similar
 distinctness-claim: repeated-task-live-codex-diagnostic-repair-84 exercises docs/ail/prompts/diagnostic-repair.system.md over scheduled-workflow.
 v0.3-signal: Workflow examples need temporal policies and retry/backoff semantics.
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
@@ -2019,6 +2709,14 @@ package: examples/c_interop.ail
 use-case: Checked C and host interop with ABI, ownership, status, and trace contracts.
 capability-level: low-level
 capability-under-test: c-host-interop
+program-scale: utility
+user-story-id: c-interop-story
+user-story: As a reviewer I can inspect c-interop behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-85.md
+story-journey: spec-to-story
+story-roundtrip: semantic-similar
 distinctness-claim: c-interop-live-codex-core-to-spec-85 exercises docs/ail/prompts/core-to-spec.system.md over c-host-interop.
 v0.3-signal: Interop needs deeper unsafe-boundary tutorials and more ABI fixture diversity.
 prompt-file: docs/ail/prompts/core-to-spec.system.md
@@ -2042,6 +2740,14 @@ package: examples/c_interop.ail
 use-case: Checked C and host interop with ABI, ownership, status, and trace contracts.
 capability-level: low-level
 capability-under-test: c-host-interop
+program-scale: utility
+user-story-id: c-interop-story
+user-story: As a reviewer I can inspect c-interop behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-86.md
+story-journey: spec-to-story
+story-roundtrip: semantic-similar
 distinctness-claim: c-interop-live-codex-core-to-summary-86 exercises docs/ail/prompts/core-to-summary.system.md over c-host-interop.
 v0.3-signal: Interop needs deeper unsafe-boundary tutorials and more ABI fixture diversity.
 prompt-file: docs/ail/prompts/core-to-summary.system.md
@@ -2065,6 +2771,14 @@ package: examples/c_interop.ail
 use-case: Checked C and host interop with ABI, ownership, status, and trace contracts.
 capability-level: low-level
 capability-under-test: c-host-interop
+program-scale: utility
+user-story-id: c-interop-story
+user-story: As a reviewer I can inspect c-interop behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-87.md
+story-journey: story-amendment
+story-roundtrip: semantic-similar
 distinctness-claim: c-interop-live-codex-flow-patch-87 exercises docs/ail/prompts/flow-patch.system.md over c-host-interop.
 v0.3-signal: Interop needs deeper unsafe-boundary tutorials and more ABI fixture diversity.
 prompt-file: docs/ail/prompts/flow-patch.system.md
@@ -2088,6 +2802,14 @@ package: examples/c_interop.ail
 use-case: Checked C and host interop with ABI, ownership, status, and trace contracts.
 capability-level: low-level
 capability-under-test: c-host-interop
+program-scale: utility
+user-story-id: c-interop-story
+user-story: As a reviewer I can inspect c-interop behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-88.md
+story-journey: story-amendment
+story-roundtrip: semantic-similar
 distinctness-claim: c-interop-live-codex-trace-debug-88 exercises docs/ail/prompts/trace-debug.system.md over c-host-interop.
 v0.3-signal: Interop needs deeper unsafe-boundary tutorials and more ABI fixture diversity.
 prompt-file: docs/ail/prompts/trace-debug.system.md
@@ -2111,6 +2833,14 @@ package: examples/c_interop.ail
 use-case: Checked C and host interop with ABI, ownership, status, and trace contracts.
 capability-level: low-level
 capability-under-test: c-host-interop
+program-scale: utility
+user-story-id: c-interop-story
+user-story: As a reviewer I can inspect c-interop behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-89.md
+story-journey: story-amendment
+story-roundtrip: semantic-similar
 distinctness-claim: c-interop-live-codex-interop-89 exercises docs/ail/prompts/interop.system.md over c-host-interop.
 v0.3-signal: Interop needs deeper unsafe-boundary tutorials and more ABI fixture diversity.
 prompt-file: docs/ail/prompts/interop.system.md
@@ -2134,6 +2864,14 @@ package: examples/support_ticket.ail
 use-case: Application workflow for support-ticket actions, permissions, failures, and traces.
 capability-level: high-level
 capability-under-test: application-workflow
+program-scale: multi-module-system
+user-story-id: support-ticket-story
+user-story: As a reviewer I can inspect support-ticket behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-90.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
 distinctness-claim: support-ticket-live-codex-interview-90 exercises docs/ail/prompts/interview.system.md over application-workflow.
 v0.3-signal: Application examples need user-story walkthroughs from intent to runtime trace.
 prompt-file: docs/ail/prompts/interview.system.md
@@ -2158,6 +2896,14 @@ package: examples/support_ticket.ail
 use-case: Application workflow for support-ticket actions, permissions, failures, and traces.
 capability-level: high-level
 capability-under-test: application-workflow
+program-scale: multi-module-system
+user-story-id: support-ticket-story
+user-story: As a reviewer I can inspect support-ticket behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-91.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
 distinctness-claim: support-ticket-live-codex-requirements-91 exercises docs/ail/prompts/requirements.system.md over application-workflow.
 v0.3-signal: Application examples need user-story walkthroughs from intent to runtime trace.
 prompt-file: docs/ail/prompts/requirements.system.md
@@ -2182,6 +2928,14 @@ package: examples/support_ticket.ail
 use-case: Application workflow for support-ticket actions, permissions, failures, and traces.
 capability-level: high-level
 capability-under-test: application-workflow
+program-scale: multi-module-system
+user-story-id: support-ticket-story
+user-story: As a reviewer I can inspect support-ticket behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-92.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
 distinctness-claim: support-ticket-live-codex-spec-92 exercises docs/ail/prompts/spec-draft.system.md over application-workflow.
 v0.3-signal: Application examples need user-story walkthroughs from intent to runtime trace.
 prompt-file: docs/ail/prompts/spec-draft.system.md
@@ -2206,6 +2960,14 @@ package: examples/support_ticket.ail
 use-case: Application workflow for support-ticket actions, permissions, failures, and traces.
 capability-level: high-level
 capability-under-test: application-workflow
+program-scale: multi-module-system
+user-story-id: support-ticket-story
+user-story: As a reviewer I can inspect support-ticket behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-93.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
 distinctness-claim: support-ticket-live-codex-core-draft-93 exercises docs/ail/prompts/core-draft.system.md over application-workflow.
 v0.3-signal: Application examples need user-story walkthroughs from intent to runtime trace.
 prompt-file: docs/ail/prompts/core-draft.system.md
@@ -2230,6 +2992,14 @@ package: examples/support_ticket.ail
 use-case: Application workflow for support-ticket actions, permissions, failures, and traces.
 capability-level: high-level
 capability-under-test: application-workflow
+program-scale: multi-module-system
+user-story-id: support-ticket-story
+user-story: As a reviewer I can inspect support-ticket behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-94.md
+story-journey: story-amendment
+story-roundtrip: semantic-similar
 distinctness-claim: support-ticket-live-codex-diagnostic-repair-94 exercises docs/ail/prompts/diagnostic-repair.system.md over application-workflow.
 v0.3-signal: Application examples need user-story walkthroughs from intent to runtime trace.
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
@@ -2254,6 +3024,14 @@ package: examples/stateful_counter.ail
 use-case: Minimal state mutation that proves deterministic VM/native behavior.
 capability-level: mid-level
 capability-under-test: stateful-runtime
+program-scale: module
+user-story-id: stateful-counter-story
+user-story: As a reviewer I can inspect stateful-counter behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: vm-trace
+story-file: stories/example-95.md
+story-journey: spec-to-story
+story-roundtrip: semantic-similar
 distinctness-claim: stateful-counter-live-codex-core-to-spec-95 exercises docs/ail/prompts/core-to-spec.system.md over stateful-runtime.
 v0.3-signal: State examples need clearer persistence and concurrency boundaries.
 prompt-file: docs/ail/prompts/core-to-spec.system.md
@@ -2278,6 +3056,14 @@ package: examples/stateful_counter.ail
 use-case: Minimal state mutation that proves deterministic VM/native behavior.
 capability-level: mid-level
 capability-under-test: stateful-runtime
+program-scale: module
+user-story-id: stateful-counter-story
+user-story: As a reviewer I can inspect stateful-counter behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: vm-trace
+story-file: stories/example-96.md
+story-journey: spec-to-story
+story-roundtrip: semantic-similar
 distinctness-claim: stateful-counter-live-codex-core-to-summary-96 exercises docs/ail/prompts/core-to-summary.system.md over stateful-runtime.
 v0.3-signal: State examples need clearer persistence and concurrency boundaries.
 prompt-file: docs/ail/prompts/core-to-summary.system.md
@@ -2302,6 +3088,14 @@ package: examples/stateful_counter.ail
 use-case: Minimal state mutation that proves deterministic VM/native behavior.
 capability-level: mid-level
 capability-under-test: stateful-runtime
+program-scale: module
+user-story-id: stateful-counter-story
+user-story: As a reviewer I can inspect stateful-counter behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: vm-trace
+story-file: stories/example-97.md
+story-journey: story-amendment
+story-roundtrip: semantic-similar
 distinctness-claim: stateful-counter-live-codex-flow-patch-97 exercises docs/ail/prompts/flow-patch.system.md over stateful-runtime.
 v0.3-signal: State examples need clearer persistence and concurrency boundaries.
 prompt-file: docs/ail/prompts/flow-patch.system.md
@@ -2326,6 +3120,14 @@ package: examples/stateful_counter.ail
 use-case: Minimal state mutation that proves deterministic VM/native behavior.
 capability-level: mid-level
 capability-under-test: stateful-runtime
+program-scale: module
+user-story-id: stateful-counter-story
+user-story: As a reviewer I can inspect stateful-counter behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: vm-trace
+story-file: stories/example-98.md
+story-journey: story-amendment
+story-roundtrip: semantic-similar
 distinctness-claim: stateful-counter-live-codex-trace-debug-98 exercises docs/ail/prompts/trace-debug.system.md over stateful-runtime.
 v0.3-signal: State examples need clearer persistence and concurrency boundaries.
 prompt-file: docs/ail/prompts/trace-debug.system.md
@@ -2350,6 +3152,14 @@ package: examples/support_ticket.ail
 use-case: Rejected semantic-drift case used to verify diagnostic teaching coverage.
 capability-level: high-level
 capability-under-test: diagnostic-semantic-drift
+program-scale: module
+user-story-id: semantic-drift-story
+user-story: As a reviewer I can inspect the semantic-drift diagnostic so that repair preserves the intended behavior.
+acceptance-criteria: expected diagnostic exists; diagnostic artifact exists; repair target remains reviewable
+story-evidence: diagnostics
+story-file: stories/example-99.md
+story-journey: diagnostic-story
+story-roundtrip: diagnostic-preserving
 distinctness-claim: support-ticket-live-codex-rejected-99 exercises docs/ail/prompts/interop.system.md over diagnostic-semantic-drift.
 v0.3-signal: Rejected examples need repair tutorials that convert diagnostics into corrected specs.
 prompt-file: docs/ail/prompts/interop.system.md
@@ -2376,6 +3186,14 @@ package: examples/stateful_counter.ail
 use-case: Minimal state mutation that proves deterministic VM/native behavior.
 capability-level: mid-level
 capability-under-test: stateful-runtime
+program-scale: module
+user-story-id: stateful-counter-story
+user-story: As a reviewer I can inspect stateful-counter behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: vm-trace
+story-file: stories/example-100.md
+story-journey: story-amendment
+story-roundtrip: semantic-similar
 distinctness-claim: stateful-counter-live-codex-accepted-100 exercises docs/ail/prompts/interop.system.md over stateful-runtime.
 v0.3-signal: State examples need clearer persistence and concurrency boundaries.
 prompt-file: docs/ail/prompts/interop.system.md
@@ -2400,6 +3218,14 @@ package: examples/support_ticket.ail
 use-case: Rejected profile-mismatch case used to verify diagnostic teaching coverage.
 capability-level: high-level
 capability-under-test: diagnostic-profile-mismatch
+program-scale: module
+user-story-id: profile-mismatch-story
+user-story: As a reviewer I can inspect the profile-mismatch diagnostic so that repair preserves the intended behavior.
+acceptance-criteria: expected diagnostic exists; diagnostic artifact exists; repair target remains reviewable
+story-evidence: diagnostics
+story-file: stories/example-101.md
+story-journey: diagnostic-story
+story-roundtrip: diagnostic-preserving
 distinctness-claim: support-ticket-profile-mismatch-rejected-101 exercises docs/ail/prompts/spec-draft.system.md over diagnostic-profile-mismatch.
 v0.3-signal: Rejected examples need repair tutorials that convert diagnostics into corrected specs.
 prompt-file: docs/ail/prompts/spec-draft.system.md
@@ -2426,6 +3252,14 @@ package: examples/support_ticket.ail
 use-case: Rejected missing-trace case used to verify diagnostic teaching coverage.
 capability-level: high-level
 capability-under-test: diagnostic-missing-trace
+program-scale: module
+user-story-id: missing-trace-story
+user-story: As a reviewer I can inspect the missing-trace diagnostic so that repair preserves the intended behavior.
+acceptance-criteria: expected diagnostic exists; diagnostic artifact exists; repair target remains reviewable
+story-evidence: diagnostics
+story-file: stories/example-102.md
+story-journey: diagnostic-story
+story-roundtrip: diagnostic-preserving
 distinctness-claim: support-ticket-missing-trace-rejected-102 exercises docs/ail/prompts/spec-draft.system.md over diagnostic-missing-trace.
 v0.3-signal: Rejected examples need repair tutorials that convert diagnostics into corrected specs.
 prompt-file: docs/ail/prompts/spec-draft.system.md
@@ -2452,6 +3286,14 @@ package: examples/refund_tool.ail
 use-case: Rejected hallucinated-capability case used to verify diagnostic teaching coverage.
 capability-level: high-level
 capability-under-test: diagnostic-hallucinated-capability
+program-scale: module
+user-story-id: hallucinated-capability-story
+user-story: As a reviewer I can inspect the hallucinated-capability diagnostic so that repair preserves the intended behavior.
+acceptance-criteria: expected diagnostic exists; diagnostic artifact exists; repair target remains reviewable
+story-evidence: diagnostics
+story-file: stories/example-103.md
+story-journey: diagnostic-story
+story-roundtrip: diagnostic-preserving
 distinctness-claim: refund-tool-hallucinated-capability-rejected-103 exercises docs/ail/prompts/diagnostic-repair.system.md over diagnostic-hallucinated-capability.
 v0.3-signal: Rejected examples need repair tutorials that convert diagnostics into corrected specs.
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
@@ -2478,6 +3320,14 @@ package: examples/darwin_linux_effect.ail
 use-case: Rejected unsupported-target case used to verify diagnostic teaching coverage.
 capability-level: low-level
 capability-under-test: diagnostic-unsupported-target
+program-scale: utility
+user-story-id: unsupported-target-story
+user-story: As a reviewer I can inspect the unsupported-target diagnostic so that repair preserves the intended behavior.
+acceptance-criteria: expected diagnostic exists; diagnostic artifact exists; repair target remains reviewable
+story-evidence: diagnostics
+story-file: stories/example-104.md
+story-journey: diagnostic-story
+story-roundtrip: diagnostic-preserving
 distinctness-claim: system-linux-syscall-darwin-unsupported-104 exercises docs/ail/prompts/spec-draft.system.md over diagnostic-unsupported-target.
 v0.3-signal: Rejected examples need repair tutorials that convert diagnostics into corrected specs.
 prompt-file: docs/ail/prompts/spec-draft.system.md
@@ -2504,6 +3354,14 @@ package: examples/c_interop.ail
 use-case: Rejected invalid-interop case used to verify diagnostic teaching coverage.
 capability-level: low-level
 capability-under-test: diagnostic-invalid-interop
+program-scale: utility
+user-story-id: invalid-interop-story
+user-story: As a reviewer I can inspect the invalid-interop diagnostic so that repair preserves the intended behavior.
+acceptance-criteria: expected diagnostic exists; diagnostic artifact exists; repair target remains reviewable
+story-evidence: diagnostics
+story-file: stories/example-105.md
+story-journey: diagnostic-story
+story-roundtrip: diagnostic-preserving
 distinctness-claim: c-interop-nullable-nonnull-rejected-105 exercises docs/ail/prompts/interop.system.md over diagnostic-invalid-interop.
 v0.3-signal: Rejected examples need repair tutorials that convert diagnostics into corrected specs.
 prompt-file: docs/ail/prompts/interop.system.md
@@ -2530,6 +3388,14 @@ package: examples/network_driver.ail
 use-case: Rejected permission-capability case used to verify diagnostic teaching coverage.
 capability-level: low-level
 capability-under-test: diagnostic-permission-capability
+program-scale: utility
+user-story-id: permission-capability-story
+user-story: As a reviewer I can inspect the permission-capability diagnostic so that repair preserves the intended behavior.
+acceptance-criteria: expected diagnostic exists; diagnostic artifact exists; repair target remains reviewable
+story-evidence: diagnostics
+story-file: stories/example-106.md
+story-journey: diagnostic-story
+story-roundtrip: diagnostic-preserving
 distinctness-claim: network-driver-effect-without-capability-rejected-106 exercises docs/ail/prompts/spec-draft.system.md over diagnostic-permission-capability.
 v0.3-signal: Rejected examples need repair tutorials that convert diagnostics into corrected specs.
 prompt-file: docs/ail/prompts/spec-draft.system.md
@@ -2556,6 +3422,14 @@ package: examples/missing_registry_import.ail
 use-case: Rejected package-resolution case used to verify diagnostic teaching coverage.
 capability-level: mid-level
 capability-under-test: diagnostic-package-resolution
+program-scale: module
+user-story-id: package-resolution-story
+user-story: As a reviewer I can inspect the package-resolution diagnostic so that repair preserves the intended behavior.
+acceptance-criteria: expected diagnostic exists; diagnostic artifact exists; repair target remains reviewable
+story-evidence: diagnostics
+story-file: stories/example-107.md
+story-journey: diagnostic-story
+story-roundtrip: diagnostic-preserving
 distinctness-claim: package-registry-missing-import-rejected-107 exercises docs/ail/prompts/requirements.system.md over diagnostic-package-resolution.
 v0.3-signal: Rejected examples need repair tutorials that convert diagnostics into corrected specs.
 prompt-file: docs/ail/prompts/requirements.system.md
@@ -2582,6 +3456,14 @@ package: examples/ui_workflow.ail
 use-case: Accessible route, form, dashboard, and workflow semantics for a user-facing app.
 capability-level: high-level
 capability-under-test: ui-workflow
+program-scale: multi-module-system
+user-story-id: ui-workflow-story
+user-story: As a reviewer I can inspect ui-workflow behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-108.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
 distinctness-claim: ui-workflow-live-codex-spec-draft-108 exercises docs/ail/prompts/spec-draft.system.md over ui-workflow.
 v0.3-signal: UI authoring needs stronger visual review artifacts and accessibility exercises.
 prompt-file: docs/ail/prompts/spec-draft.system.md
@@ -2606,6 +3488,14 @@ package: examples/ui_workflow.ail
 use-case: Accessible route, form, dashboard, and workflow semantics for a user-facing app.
 capability-level: high-level
 capability-under-test: ui-workflow
+program-scale: multi-module-system
+user-story-id: ui-workflow-story
+user-story: As a reviewer I can inspect ui-workflow behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-109.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
 distinctness-claim: ui-workflow-live-codex-requirements-109 exercises docs/ail/prompts/requirements.system.md over ui-workflow.
 v0.3-signal: UI authoring needs stronger visual review artifacts and accessibility exercises.
 prompt-file: docs/ail/prompts/requirements.system.md
@@ -2630,6 +3520,14 @@ package: examples/stateful_counter.ail
 use-case: Minimal state mutation that proves deterministic VM/native behavior.
 capability-level: mid-level
 capability-under-test: stateful-runtime
+program-scale: module
+user-story-id: stateful-counter-story
+user-story: As a reviewer I can inspect stateful-counter behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: target-report
+story-file: stories/example-110.md
+story-journey: story-amendment
+story-roundtrip: semantic-similar
 distinctness-claim: stateful-counter-live-codex-repair-110 exercises docs/ail/prompts/repair.system.md over stateful-runtime.
 v0.3-signal: State examples need clearer persistence and concurrency boundaries.
 prompt-file: docs/ail/prompts/repair.system.md

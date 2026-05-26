@@ -52,6 +52,17 @@ Each entry in `examples/examples.md` must include:
 - `use-case`: practical scenario the example teaches or proves.
 - `capability-level`: one of `low-level`, `mid-level`, or `high-level`.
 - `capability-under-test`: concrete AIL surface under pressure.
+- `program-scale`: one of `utility`, `module`, or `multi-module-system`.
+- `user-story-id`: stable story family used to group prompt, target, and
+  repair variants.
+- `user-story`: one-line story in reviewer-facing form.
+- `acceptance-criteria`: observable criteria tied to checked artifacts.
+- `story-evidence`: strongest artifact that proves the story path, one of
+  `checked-core`, `bytecode`, `vm-trace`, `target-report`, or `diagnostics`.
+- `story-journey`: one of `story-to-spec`, `spec-to-story`,
+  `story-amendment`, or `diagnostic-story`.
+- `story-roundtrip`: `semantic-similar` for accepted stories or
+  `diagnostic-preserving` for rejected diagnostic stories.
 - `distinctness-claim`: why this entry earns a slot, especially when it shares
   a package with other prompt-surface examples.
 - `v0.3-signal`: the language, prompt, checker, runtime, target, or docs gap
@@ -59,8 +70,13 @@ Each entry in `examples/examples.md` must include:
 
 Prompt-surface matrices are allowed, but they are not automatically useful.
 They count only when the distinctness claim identifies the prompt behavior,
-checker assertion, target artifact, diagnostic, or human-review path being
-validated.
+checker assertion, target artifact, diagnostic, user-story journey, or
+human-review path being validated.
+
+The verifier must require at least 10 distinct `user-story-id` values, at least
+one high-level `application-workflow` story family with two or more replayed
+entries, and coverage across `story-to-spec`, `spec-to-story`, and
+`story-amendment` journeys.
 
 ## Required Learning Artifacts
 
@@ -83,11 +99,23 @@ Each README should state the purpose, concepts taught, files to inspect,
 expected replay artifacts, rejected fixtures where applicable, and the next
 example to read.
 
+The `ail-examples` replay bundle must also write deterministic story artifacts:
+
+- `examples/<entry-id>/user-story.txt`
+- `examples/<entry-id>/user-story.fingerprint.txt`
+
+The story artifact is derived from catalog metadata and fingerprinted in the
+same report and manifest as request, response, checked Core, bytecode, VM
+trace, native, target-report, and diagnostics artifacts.
+
 ## Minimum Proof Commands
 
 ```bash
 cargo test cli_ail_e2e_corpus_requires_replay_metadata
 cargo test cli_ail_e2e_corpus_requires_capability_level_thresholds
+cargo test cli_ail_e2e_corpus_requires_user_story_metadata
+cargo test cli_ail_e2e_corpus_rejects_unknown_story_evidence
+cargo test cli_ail_e2e_corpus_requires_story_diversity
 cargo test cli_ail_e2e_corpus_replays_checked_live_release_corpus
 cargo run -- ail-examples examples --artifact-dir /tmp/ail-v03-learning-examples --release-evidence
 git diff --check -- examples docs/ail src tests scripts
@@ -109,4 +137,3 @@ The current examples reveal these next-version gaps:
   semantics, and clearer unsupported-target migration guidance.
 - Rejected examples need repair tutorials that turn diagnostics into corrected
   specs.
-

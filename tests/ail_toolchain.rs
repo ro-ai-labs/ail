@@ -74,11 +74,37 @@ fn e2e_corpus_entry_text(index: usize, overrides: &[(&str, &str)]) -> String {
         35..=39 | 75..=84 | 95..=99 => "mid-level",
         _ => "high-level",
     };
+    let program_scale = match index {
+        0..=9 | 25..=29 | 55..=64 | 85..=99 => "utility",
+        10..=19 | 30..=39 | 65..=84 => "module",
+        _ => "multi-module-system",
+    };
     let target = match index {
         85..=89 => "wasm32-unknown-sandbox-wasm",
         90..=94 => "aarch64-apple-darwin-libsystem-macho",
         95..=99 => "vm",
         _ => "linux-x86_64-elf",
+    };
+    let story_journey = match prompt_file {
+        "docs/ail/prompts/interview.system.md"
+        | "docs/ail/prompts/requirements.system.md"
+        | "docs/ail/prompts/spec-draft.system.md"
+        | "docs/ail/prompts/core-draft.system.md" => "story-to-spec",
+        "docs/ail/prompts/core-to-spec.system.md"
+        | "docs/ail/prompts/core-to-summary.system.md" => "spec-to-story",
+        "docs/ail/prompts/repair.system.md"
+        | "docs/ail/prompts/diagnostic-repair.system.md"
+        | "docs/ail/prompts/flow-patch.system.md"
+        | "docs/ail/prompts/trace-debug.system.md"
+        | "docs/ail/prompts/interop.system.md" => "story-amendment",
+        _ => "story-to-spec",
+    };
+    let story_evidence = match target {
+        "vm" => "vm-trace",
+        "linux-x86_64-elf"
+        | "wasm32-unknown-sandbox-wasm"
+        | "aarch64-apple-darwin-libsystem-macho" => "target-report",
+        _ => "checked-core",
     };
     let executor_family = if index == 99 {
         "codex-skill-agent"
@@ -95,6 +121,24 @@ fn e2e_corpus_entry_text(index: usize, overrides: &[(&str, &str)]) -> String {
         ),
         ("capability-level", capability_level.to_string()),
         ("capability-under-test", "application-workflow".to_string()),
+        ("program-scale", program_scale.to_string()),
+        (
+            "user-story-id",
+            format!("support-ticket-story-{}", index % 12),
+        ),
+        (
+            "user-story",
+            format!("As a reviewer I can inspect support-ticket scenario {index}."),
+        ),
+        (
+            "acceptance-criteria",
+            "checked spec exists; checked core exists; binary or target evidence exists"
+                .to_string(),
+        ),
+        ("story-evidence", story_evidence.to_string()),
+        ("story-file", format!("stories/example-{index}.md")),
+        ("story-journey", story_journey.to_string()),
+        ("story-roundtrip", "semantic-similar".to_string()),
         (
             "distinctness-claim",
             format!("Example {index} validates this capability through its own prompt surface."),
@@ -155,6 +199,7 @@ fn e2e_corpus_text_with_override(index_to_override: usize, overrides: &[(&str, &
 fn write_e2e_transcript_files(root: &std::path::Path, count: usize) {
     fs::create_dir_all(root.join("requests")).unwrap();
     fs::create_dir_all(root.join("responses")).unwrap();
+    fs::create_dir_all(root.join("stories")).unwrap();
     let spec_text = fs::read_to_string(format!(
         "{}/examples/support_ticket.ail/spec.ail-spec.md",
         env!("CARGO_MANIFEST_DIR")
@@ -169,6 +214,13 @@ fn write_e2e_transcript_files(root: &std::path::Path, count: usize) {
         fs::write(
             root.join("responses").join(format!("example-{index}.json")),
             &spec_text,
+        )
+        .unwrap();
+        fs::write(
+            root.join("stories").join(format!("example-{index}.md")),
+            format!(
+                "# Example {index} User Story\n\nAs a reviewer I can inspect support-ticket scenario {index} so that the regenerated story remains semantically similar to the checked spec.\n"
+            ),
         )
         .unwrap();
     }
@@ -21596,6 +21648,14 @@ fn cli_ail_e2e_corpus_requires_llm_and_codex_executor_families() {
              use-case: Support-ticket verifier scenario {index}\n\
              capability-level: high-level\n\
              capability-under-test: application-workflow\n\
+             program-scale: multi-module-system\n\
+             user-story-id: support-ticket-executor-coverage-{index}\n\
+             user-story: As a reviewer I can inspect executor coverage scenario {index}.\n\
+             acceptance-criteria: checked spec exists; target evidence exists\n\
+             story-evidence: target-report\n\
+             story-file: stories/example-{index}.md\n\
+             story-journey: story-to-spec\n\
+             story-roundtrip: semantic-similar\n\
              distinctness-claim: Example {index} validates executor coverage.\n\
              v0.3-signal: Executor coverage should become a documented learning dimension.\n\
              prompt-file: docs/ail/prompts/spec-draft.system.md\n\
@@ -21663,6 +21723,14 @@ fn cli_ail_e2e_corpus_requires_rejected_example_diagnostics() {
              use-case: Support-ticket accepted scenario {index}\n\
              capability-level: high-level\n\
              capability-under-test: application-workflow\n\
+             program-scale: multi-module-system\n\
+             user-story-id: support-ticket-diagnostic-setup-{index}\n\
+             user-story: As a reviewer I can inspect accepted diagnostic setup scenario {index}.\n\
+             acceptance-criteria: checked spec exists; diagnostic threshold setup exists\n\
+             story-evidence: target-report\n\
+             story-file: stories/accepted-{index}.md\n\
+             story-journey: story-to-spec\n\
+             story-roundtrip: semantic-similar\n\
              distinctness-claim: Accepted example {index} validates diagnostic threshold setup.\n\
              v0.3-signal: Accepted examples should explain the diagnostic they protect against.\n\
              prompt-file: docs/ail/prompts/spec-draft.system.md\n\
@@ -21687,6 +21755,14 @@ fn cli_ail_e2e_corpus_requires_rejected_example_diagnostics() {
          use-case: Rejected support-ticket diagnostic scenario\n\
          capability-level: high-level\n\
          capability-under-test: diagnostic-replay\n\
+         program-scale: module\n\
+         user-story-id: support-ticket-rejected-diagnostic\n\
+         user-story: As a reviewer I can inspect rejected support-ticket diagnostics.\n\
+         acceptance-criteria: expected diagnostic exists; diagnostic artifact exists\n\
+         story-evidence: diagnostics\n\
+         story-file: stories/rejected-0.md\n\
+         story-journey: diagnostic-story\n\
+         story-roundtrip: diagnostic-preserving\n\
          distinctness-claim: Rejected example validates required diagnostic metadata.\n\
          v0.3-signal: Rejected examples need repair tutorials.\n\
          prompt-file: docs/ail/prompts/spec-draft.system.md\n\
@@ -21763,6 +21839,14 @@ fn cli_ail_e2e_corpus_requires_full_prompt_pack_coverage() {
              use-case: Support-ticket prompt coverage scenario {index}\n\
              capability-level: high-level\n\
              capability-under-test: prompt-surface-coverage\n\
+             program-scale: multi-module-system\n\
+             user-story-id: support-ticket-prompt-coverage-{index}\n\
+             user-story: As a reviewer I can inspect prompt coverage scenario {index}.\n\
+             acceptance-criteria: prompt pack coverage exists; checked spec exists\n\
+             story-evidence: target-report\n\
+             story-file: stories/example-{index}.md\n\
+             story-journey: story-to-spec\n\
+             story-roundtrip: semantic-similar\n\
              distinctness-claim: Example {index} validates prompt-pack coverage requirements.\n\
              v0.3-signal: Prompt matrices should be separated from semantic use-case diversity.\n\
              prompt-file: docs/ail/prompts/spec-draft.system.md\n\
@@ -21941,6 +22025,146 @@ fn cli_ail_e2e_corpus_requires_capability_level_thresholds() {
         stderr.contains(
             "ail-examples requires at least 20 capability-level low-level examples; found 0"
         ),
+        "{stderr}"
+    );
+
+    let _ = fs::remove_dir_all(corpus_dir);
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
+fn cli_ail_e2e_corpus_requires_user_story_metadata() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let corpus_dir = std::env::temp_dir().join(format!(
+        "ail-examples-user-story-metadata-{}",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-examples-user-story-metadata-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&corpus_dir);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&corpus_dir).unwrap();
+    fs::write(
+        corpus_dir.join("examples.md"),
+        e2e_corpus_text_with_override(0, &[("user-story-id", "")]),
+    )
+    .unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-examples",
+            corpus_dir.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("examples catalog entry example-0 is missing user-story-id"),
+        "{stderr}"
+    );
+
+    let _ = fs::remove_dir_all(corpus_dir);
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
+fn cli_ail_e2e_corpus_rejects_unknown_story_evidence() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let corpus_dir = std::env::temp_dir().join(format!(
+        "ail-examples-story-evidence-{}",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-examples-story-evidence-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&corpus_dir);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&corpus_dir).unwrap();
+    fs::write(
+        corpus_dir.join("examples.md"),
+        e2e_corpus_text_with_override(0, &[("story-evidence", "screenshot")]),
+    )
+    .unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-examples",
+            corpus_dir.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("examples catalog entry example-0 has unknown story-evidence screenshot"),
+        "{stderr}"
+    );
+
+    let _ = fs::remove_dir_all(corpus_dir);
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
+fn cli_ail_e2e_corpus_requires_story_diversity() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let corpus_dir = std::env::temp_dir().join(format!(
+        "ail-examples-story-diversity-{}",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-examples-story-diversity-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&corpus_dir);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&corpus_dir).unwrap();
+    write_e2e_transcript_files(&corpus_dir, 100);
+    let mut corpus_text = String::new();
+    for index in 0..100 {
+        corpus_text.push_str(&e2e_corpus_entry_text(
+            index,
+            &[("user-story-id", "one-story")],
+        ));
+    }
+    fs::write(corpus_dir.join("examples.md"), corpus_text).unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-examples",
+            corpus_dir.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr
+            .contains("ail-examples requires at least 10 distinct user-story-id entries; found 1"),
         "{stderr}"
     );
 
@@ -22366,8 +22590,51 @@ fn cli_ail_e2e_corpus_writes_report_for_metadata_complete_corpus() {
         report.contains("checker-result-count accepted 100"),
         "{report}"
     );
+    assert!(report.contains("program-scale-count utility"), "{report}");
+    assert!(
+        report.contains("story-journey-count story-to-spec"),
+        "{report}"
+    );
+    assert!(
+        report.contains("story-journey-count spec-to-story"),
+        "{report}"
+    );
+    assert!(
+        report.contains("story-journey-count story-amendment"),
+        "{report}"
+    );
+    assert!(
+        report.contains("story-roundtrip-count semantic-similar 100"),
+        "{report}"
+    );
+    assert!(
+        report.contains("story-evidence-count target-report"),
+        "{report}"
+    );
     assert!(
         report.contains("executor-family codex-skill-agent"),
+        "{report}"
+    );
+    let user_story =
+        fs::read_to_string(artifact_dir.join("examples/example-0/user-story.txt")).unwrap();
+    assert!(
+        user_story.contains("AIL-User-Story:")
+            && user_story.contains("id support-ticket-story-0")
+            && user_story.contains("story-roundtrip semantic-similar"),
+        "{user_story}"
+    );
+    let user_story_fingerprint =
+        fs::read_to_string(artifact_dir.join("examples/example-0/user-story.fingerprint.txt"))
+            .unwrap();
+    assert_eq!(
+        user_story_fingerprint.trim(),
+        fnv64_fingerprint(&user_story)
+    );
+    assert!(
+        report.contains(&format!(
+            "entry-artifact example-0 user-story examples/example-0/user-story.txt {}",
+            user_story_fingerprint.trim()
+        )),
         "{report}"
     );
     let request_transcript =

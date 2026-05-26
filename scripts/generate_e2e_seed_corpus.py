@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CORPUS = ROOT / "examples"
 REQUESTS = CORPUS / "requests"
 RESPONSES = CORPUS / "responses"
+STORIES = CORPUS / "stories"
 
 TRACE_NAMES = [
     "OptionMapEvaluated",
@@ -254,6 +255,52 @@ def endpoint_label_for(index: int) -> str:
     return "local-endpoint-alt" if index == 1 else "local-endpoint"
 
 
+def story_journey_for(prompt_file: str, checker_result: str) -> str:
+    if checker_result == "rejected":
+        return "diagnostic-story"
+    if prompt_file in {
+        "docs/ail/prompts/core-to-spec.system.md",
+        "docs/ail/prompts/core-to-summary.system.md",
+    }:
+        return "spec-to-story"
+    if prompt_file in {
+        "docs/ail/prompts/repair.system.md",
+        "docs/ail/prompts/diagnostic-repair.system.md",
+        "docs/ail/prompts/flow-patch.system.md",
+        "docs/ail/prompts/trace-debug.system.md",
+        "docs/ail/prompts/interop.system.md",
+    }:
+        return "story-amendment"
+    return "story-to-spec"
+
+
+def program_scale_for(index: int, fixture: dict[str, str] | None) -> str:
+    if fixture is None:
+        return "module"
+    capability = fixture["capability"]
+    if capability in {"c-host-interop", "compiler-pass", "system-driver", "backend-portability"}:
+        return "utility"
+    if capability in {"package-imports", "runtime-generics", "security-permissions", "stateful-runtime"}:
+        return "module"
+    return "multi-module-system"
+
+
+def story_evidence_for(target: str, checker_result: str, fixture: dict[str, str] | None) -> str:
+    if checker_result == "rejected":
+        return "diagnostics"
+    if fixture is not None and "vm_action" in fixture:
+        return "vm-trace"
+    if target in {"linux-x86_64-elf", "wasm32-unknown-sandbox-wasm", "aarch64-apple-darwin-libsystem-macho"}:
+        return "target-report"
+    return "checked-core"
+
+
+def user_story_id_for(index: int, checker_result: str, fixture: dict[str, str] | None) -> str:
+    if checker_result == "rejected" or fixture is None:
+        return "support-ticket-diagnostic-story"
+    return f"{fixture['semantic_prefix']}-story"
+
+
 def accepted_fixture_for(index: int) -> dict[str, str]:
     if index <= 9:
         return ACCEPTED_FIXTURES["standard-library"]
@@ -297,6 +344,7 @@ def specialize_response_text(text: str, index: int) -> str:
 def main() -> None:
     REQUESTS.mkdir(parents=True, exist_ok=True)
     RESPONSES.mkdir(parents=True, exist_ok=True)
+    STORIES.mkdir(parents=True, exist_ok=True)
     rejected_spec = (
         ROOT
         / "examples"
@@ -323,6 +371,20 @@ def main() -> None:
             if fixture is None
             else f"{fixture['semantic_prefix']}-{index}"
         )
+        target = target_for(index)
+        story_id = user_story_id_for(index, checker_result, fixture)
+        user_story = (
+            "As a reviewer I can inspect rejected prompt diagnostics so that repair keeps the intended behavior."
+            if fixture is None
+            else f"As a reviewer I can inspect {fixture['semantic_prefix']} behavior so that the regenerated story remains semantically similar to the checked spec."
+        )
+        acceptance_criteria = (
+            "expected diagnostic exists; diagnostic artifact exists; repair target remains reviewable"
+            if fixture is None
+            else "checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists"
+        )
+        story_evidence = story_evidence_for(target, checker_result, fixture)
+        story_file = f"stories/example-{index}.md"
         request = {
             "semantic_task": semantic_task,
             "prompt_file": prompt_file,
@@ -337,6 +399,14 @@ def main() -> None:
         )
         (REQUESTS / f"example-{index}.json").write_text(json.dumps(request, sort_keys=True) + "\n")
         (RESPONSES / f"example-{index}.ail-spec.md").write_text(response_text)
+        (CORPUS / story_file).write_text(
+            f"# {semantic_task} User Story\n\n"
+            f"user-story-id: {story_id}\n"
+            f"user-story: {user_story}\n"
+            f"acceptance-criteria: {acceptance_criteria}\n"
+            f"story-journey: {story_journey_for(prompt_file, checker_result)}\n"
+            f"story-evidence: {story_evidence}\n"
+        )
         fields = {
             "semantic-task": semantic_task,
             "profile": profile_for(index),
@@ -349,6 +419,16 @@ def main() -> None:
             "capability-under-test": "diagnostic-replay"
             if fixture is None
             else fixture["capability"],
+            "program-scale": program_scale_for(index, fixture),
+            "user-story-id": story_id,
+            "user-story": user_story,
+            "acceptance-criteria": acceptance_criteria,
+            "story-evidence": story_evidence,
+            "story-file": story_file,
+            "story-journey": story_journey_for(prompt_file, checker_result),
+            "story-roundtrip": "diagnostic-preserving"
+            if checker_result == "rejected"
+            else "semantic-similar",
             "distinctness-claim": f"{semantic_task} exercises {prompt_file} over its capability path.",
             "v0.3-signal": "Rejected examples need repair tutorials that convert diagnostics into corrected specs."
             if fixture is None
@@ -363,7 +443,7 @@ def main() -> None:
             "response-file": f"responses/example-{index}.ail-spec.md",
             "artifact-kind": "ail-spec",
             "checker-result": checker_result,
-            "target": target_for(index),
+            "target": target,
         }
         if fixture is not None and "vm_action" in fixture:
             fields["vm-action"] = fixture["vm_action"]

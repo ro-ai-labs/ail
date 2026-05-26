@@ -1155,6 +1155,14 @@ fn ail_e2e_corpus_entry_from_fields(
         "use-case",
         "capability-level",
         "capability-under-test",
+        "program-scale",
+        "user-story-id",
+        "user-story",
+        "acceptance-criteria",
+        "story-evidence",
+        "story-file",
+        "story-journey",
+        "story-roundtrip",
         "distinctness-claim",
         "v0.3-signal",
         "package",
@@ -1201,6 +1209,51 @@ fn ail_e2e_corpus_entry_from_fields(
     if !matches!(capability_level, "low-level" | "mid-level" | "high-level") {
         return Err(format!(
             "examples catalog entry {id} has unknown capability-level {capability_level}"
+        ));
+    }
+    let program_scale = fields
+        .get("program-scale")
+        .map(String::as_str)
+        .unwrap_or_default();
+    if !matches!(program_scale, "utility" | "module" | "multi-module-system") {
+        return Err(format!(
+            "examples catalog entry {id} has unknown program-scale {program_scale}"
+        ));
+    }
+    let story_journey = fields
+        .get("story-journey")
+        .map(String::as_str)
+        .unwrap_or_default();
+    if !matches!(
+        story_journey,
+        "story-to-spec" | "spec-to-story" | "story-amendment" | "diagnostic-story"
+    ) {
+        return Err(format!(
+            "examples catalog entry {id} has unknown story-journey {story_journey}"
+        ));
+    }
+    let story_roundtrip = fields
+        .get("story-roundtrip")
+        .map(String::as_str)
+        .unwrap_or_default();
+    if !matches!(
+        story_roundtrip,
+        "semantic-similar" | "diagnostic-preserving"
+    ) {
+        return Err(format!(
+            "examples catalog entry {id} has unknown story-roundtrip {story_roundtrip}"
+        ));
+    }
+    let story_evidence = fields
+        .get("story-evidence")
+        .map(String::as_str)
+        .unwrap_or_default();
+    if !matches!(
+        story_evidence,
+        "checked-core" | "bytecode" | "vm-trace" | "target-report" | "diagnostics"
+    ) {
+        return Err(format!(
+            "examples catalog entry {id} has unknown story-evidence {story_evidence}"
         ));
     }
     let executor_family = fields
@@ -1277,7 +1330,7 @@ fn validate_ail_e2e_corpus_transcript_files(entries: &[AilE2eCorpusEntry]) -> Re
         let source_dir = std::path::Path::new(&entry.source_file)
             .parent()
             .unwrap_or_else(|| std::path::Path::new("."));
-        for field in ["request-file", "response-file"] {
+        for field in ["request-file", "response-file", "story-file"] {
             let Some(path) = entry.fields.get(field) else {
                 continue;
             };
@@ -1705,6 +1758,10 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
     for (field, label) in [
         ("profile", "profile-count"),
         ("capability-level", "capability-level-count"),
+        ("program-scale", "program-scale-count"),
+        ("story-evidence", "story-evidence-count"),
+        ("story-journey", "story-journey-count"),
+        ("story-roundtrip", "story-roundtrip-count"),
         ("prompt-file", "prompt-count"),
         ("executor-family", "executor-family-count"),
         ("capture-origin", "capture-origin-count"),
@@ -1859,6 +1916,13 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
                 ail_artifact_fingerprint(diagnostics_text)
             ));
         }
+        let story_text = render_ail_e2e_user_story_text(entry);
+        lines.push(format!(
+            "entry-artifact {} user-story examples/{}/user-story.txt {}",
+            entry.id,
+            entry.id,
+            ail_artifact_fingerprint(&story_text)
+        ));
     }
     format!("{}\n", lines.join("\n"))
 }
@@ -2012,6 +2076,31 @@ fn push_ail_e2e_entry_artifact_lines(
             ail_artifact_fingerprint(diagnostics_text)
         ));
     }
+    let story_text = render_ail_e2e_user_story_text(entry);
+    lines.push(format!(
+        "{prefix} {} user-story examples/{}/user-story.txt {}",
+        entry.id,
+        entry.id,
+        ail_artifact_fingerprint(&story_text)
+    ));
+}
+
+fn render_ail_e2e_user_story_text(entry: &AilE2eCorpusEntry) -> String {
+    let field = |key: &str| entry.fields.get(key).map(String::as_str).unwrap_or("");
+    format!(
+        "AIL-User-Story:\nentry {}\nid {}\nstory {}\nacceptance-criteria {}\nuse-case {}\ncapability-under-test {}\nprogram-scale {}\nstory-journey {}\nstory-roundtrip {}\nstory-evidence {}\nsemantic-task {}\n\n",
+        entry.id,
+        field("user-story-id"),
+        field("user-story"),
+        field("acceptance-criteria"),
+        field("use-case"),
+        field("capability-under-test"),
+        field("program-scale"),
+        field("story-journey"),
+        field("story-roundtrip"),
+        field("story-evidence"),
+        field("semantic-task"),
+    )
 }
 
 fn render_ail_e2e_corpus_manifest(
@@ -2299,6 +2388,87 @@ fn validate_ail_e2e_corpus_release_coverage(entries: &[AilE2eCorpusEntry]) -> Re
             ));
         }
     }
+    let mut program_scale_counts = BTreeMap::new();
+    for entry in entries {
+        if let Some(program_scale) = entry.fields.get("program-scale") {
+            *program_scale_counts
+                .entry(program_scale.as_str())
+                .or_insert(0usize) += 1;
+        }
+    }
+    for (required_scale, required_count) in [
+        ("utility", 10usize),
+        ("module", 20usize),
+        ("multi-module-system", 10usize),
+    ] {
+        let found = program_scale_counts
+            .get(required_scale)
+            .copied()
+            .unwrap_or(0);
+        if found < required_count {
+            return Err(format!(
+                "ail-examples requires at least {required_count} program-scale {required_scale} examples; found {found}"
+            ));
+        }
+    }
+    let mut story_journey_counts = BTreeMap::new();
+    for entry in entries {
+        if let Some(story_journey) = entry.fields.get("story-journey") {
+            *story_journey_counts
+                .entry(story_journey.as_str())
+                .or_insert(0usize) += 1;
+        }
+    }
+    for (required_journey, required_count) in [
+        ("story-to-spec", 20usize),
+        ("spec-to-story", 5usize),
+        ("story-amendment", 20usize),
+    ] {
+        let found = story_journey_counts
+            .get(required_journey)
+            .copied()
+            .unwrap_or(0);
+        if found < required_count {
+            return Err(format!(
+                "ail-examples requires at least {required_count} story-journey {required_journey} examples; found {found}"
+            ));
+        }
+    }
+    let distinct_story_ids = entries
+        .iter()
+        .filter_map(|entry| entry.fields.get("user-story-id").map(String::as_str))
+        .collect::<BTreeSet<_>>();
+    if distinct_story_ids.len() < 10 {
+        return Err(format!(
+            "ail-examples requires at least 10 distinct user-story-id entries; found {}",
+            distinct_story_ids.len()
+        ));
+    }
+    let mut story_family_counts = BTreeMap::new();
+    for entry in entries {
+        let is_application_workflow = entry
+            .fields
+            .get("capability-under-test")
+            .is_some_and(|capability| capability == "application-workflow");
+        let is_high_level = entry
+            .fields
+            .get("capability-level")
+            .is_some_and(|level| level == "high-level");
+        if is_application_workflow
+            && is_high_level
+            && let Some(story_id) = entry.fields.get("user-story-id")
+        {
+            *story_family_counts
+                .entry(story_id.as_str())
+                .or_insert(0usize) += 1;
+        }
+    }
+    if !story_family_counts.values().any(|count| *count >= 2) {
+        return Err(
+            "ail-examples requires one high-level application-workflow user-story-id family with at least two entries"
+                .to_string(),
+        );
+    }
     let mut target_counts = BTreeMap::new();
     for entry in entries {
         if let Some(target) = entry.fields.get("target") {
@@ -2456,6 +2626,17 @@ fn write_ail_e2e_corpus_artifacts(
     )
     .map_err(|error| format!("failed to write examples catalog manifest fingerprint: {error}"))?;
     for evaluation in evaluations {
+        let story_text = render_ail_e2e_user_story_text(&evaluation.entry);
+        let entry_dir = root.join("examples").join(&evaluation.entry.id);
+        fs::create_dir_all(&entry_dir)
+            .map_err(|error| format!("failed to create e2e entry artifact dir: {error}"))?;
+        fs::write(entry_dir.join("user-story.txt"), &story_text)
+            .map_err(|error| format!("failed to write e2e user story: {error}"))?;
+        fs::write(
+            entry_dir.join("user-story.fingerprint.txt"),
+            format!("{}\n", ail_artifact_fingerprint(&story_text)),
+        )
+        .map_err(|error| format!("failed to write e2e user story fingerprint: {error}"))?;
         if evaluation.request_fingerprint.is_some()
             || evaluation.response_fingerprint.is_some()
             || evaluation.extracted_artifact_fingerprint.is_some()

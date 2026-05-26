@@ -1,0 +1,8 @@
+# system-linux-syscall-darwin-unsupported-104 User Story
+
+user-story-id: unsupported-target-story
+user-story: As a reviewer I can inspect the unsupported-target diagnostic so that repair preserves the intended behavior.
+acceptance-criteria: expected diagnostic exists; diagnostic artifact exists; repair target remains reviewable
+story-journey: diagnostic-story
+story-roundtrip: diagnostic-preserving
+story-evidence: diagnostics

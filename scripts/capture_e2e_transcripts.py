@@ -68,7 +68,7 @@ def fields_from_entry(lines: list[str]) -> dict[str, str]:
             continue
         key, value = line.split(":", 1)
         key = key.strip()
-        if key and all(ch.islower() or ch == "-" for ch in key):
+        if key and all(ch.islower() or ch.isdigit() or ch in {"-", "."} for ch in key):
             fields[key] = value.strip()
     return fields
 
