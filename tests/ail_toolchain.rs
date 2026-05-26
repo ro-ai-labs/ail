@@ -321,6 +321,91 @@ fn assert_e2e_corpus_override_failure(
 
 #[test]
 fn example_learning_readmes_cover_repeated_family_gaps() {
+    let examples_readme = fs::read_to_string(fixture("README.md")).unwrap();
+    for required in [
+        "## Learning Guides",
+        "network_driver.ail/README.md",
+        "c_interop.ail/README.md",
+        "darwin_linux_effect.ail/README.md",
+        "refund_tool.ail/README.md",
+        "stateful_counter.ail/README.md",
+        "incident_response.ail/README.md",
+    ] {
+        assert!(
+            examples_readme.contains(required),
+            "{required}\n{examples_readme}"
+        );
+    }
+
+    let network_readme = fs::read_to_string(fixture("network_driver.ail/README.md")).unwrap();
+    for required in [
+        "# Network Driver Example",
+        "## Purpose",
+        "## Concepts Taught",
+        "## Files To Inspect",
+        "## Expected Replay Artifacts",
+        "## Rejected Fixtures",
+        "## Next Example To Read",
+        "## v0.3 Learning Signal",
+        "System profile",
+        "ownership",
+        "borrowing",
+        "device effects",
+        "example-66",
+        "example-106",
+    ] {
+        assert!(
+            network_readme.contains(required),
+            "{required}\n{network_readme}"
+        );
+    }
+
+    let c_interop_readme = fs::read_to_string(fixture("c_interop.ail/README.md")).unwrap();
+    for required in [
+        "# C Interop Example",
+        "## Purpose",
+        "## Concepts Taught",
+        "## Files To Inspect",
+        "## Expected Replay Artifacts",
+        "## Rejected Fixtures",
+        "## Next Example To Read",
+        "## v0.3 Learning Signal",
+        "ABI",
+        "borrowed mutable",
+        "Callback",
+        "status-map",
+        "example-85",
+        "example-105",
+    ] {
+        assert!(
+            c_interop_readme.contains(required),
+            "{required}\n{c_interop_readme}"
+        );
+    }
+
+    let portability_readme =
+        fs::read_to_string(fixture("darwin_linux_effect.ail/README.md")).unwrap();
+    for required in [
+        "# Darwin Linux Effect Example",
+        "## Purpose",
+        "## Concepts Taught",
+        "## Files To Inspect",
+        "## Expected Replay Artifacts",
+        "## Rejected Fixtures",
+        "## Next Example To Read",
+        "## v0.3 Learning Signal",
+        "Linux syscall",
+        "Darwin",
+        "unsupported target",
+        "target contract",
+        "example-104",
+    ] {
+        assert!(
+            portability_readme.contains(required),
+            "{required}\n{portability_readme}"
+        );
+    }
+
     let refund_readme = fs::read_to_string(fixture("refund_tool.ail/README.md")).unwrap();
     for required in [
         "# Refund Tool Example",

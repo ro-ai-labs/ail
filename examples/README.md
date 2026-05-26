@@ -40,6 +40,26 @@ The current ladder is:
    permission/capability failures, and package-resolution failures prove that
    AIL teaches failure modes, not only successful paths.
 
+## Learning Guides
+
+The catalog is the authoritative replay manifest, but package-local READMEs are
+the teaching path through repeated example families:
+
+- `network_driver.ail/README.md`: low-level System profile resources,
+  ownership, borrowing, device effects, and missing-capability diagnostics.
+- `c_interop.ail/README.md`: C ABI, pointer ownership, callbacks, layout,
+  status-map failures, host imports, and invalid interop repair gaps.
+- `darwin_linux_effect.ail/README.md`: target portability, Linux syscall
+  effects, Darwin target contract evidence, and unsupported-target
+  diagnostics.
+- `refund_tool.ail/README.md`: AgentTool safety, approvals, policy review,
+  secret handling, and repair-tutorial gaps.
+- `stateful_counter.ail/README.md`: deterministic state, persistence,
+  idempotency, locking, replay after failure, and native artifact evidence.
+- `incident_response.ail/README.md`: high-level multi-module incident response
+  with identity, policy, notification, UI, workflow, target-contract, and story
+  journey evidence.
+
 For v0.3, every new example should either add a genuinely new use case or make
 an existing use case more useful by testing a different prompt surface, target,
 checker assertion, diagnostic, or human-review path. The `distinctness-claim`
