@@ -11,3 +11,4 @@ module-count: 1
 spec-count: 1
 story-count: 1
 interacts-with: none
+semantic-anchors: InferReadPermissions; AIL-Core graph; ReadPermissionAdded; SecretReadNeedsHumanConfirmation; compiler-pass; trace-debug.system.md

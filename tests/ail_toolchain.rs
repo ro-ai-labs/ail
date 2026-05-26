@@ -1651,6 +1651,142 @@ fn example_runtime_and_secret_stories_record_semantic_anchors() {
 }
 
 #[test]
+fn example_compiler_pass_stories_record_semantic_anchors() {
+    let spec = fs::read_to_string(fixture("compiler_pass.ail/spec.ail-spec.md")).unwrap();
+    let package = fs::read_to_string(fixture("compiler_pass.ail/ail-package.md")).unwrap();
+    let readme = fs::read_to_string(fixture("compiler_pass.ail/README.md")).unwrap();
+    let catalog = fs::read_to_string(fixture("examples.md")).unwrap();
+    for (story_file, required_anchors) in [
+        (
+            "stories/example-55.md",
+            [
+                "InferReadPermissions",
+                "AIL-Core graph",
+                "ReadPermissionAdded",
+                "SecretReadNeedsHumanConfirmation",
+                "compiler-pass",
+                "core-to-spec.system.md",
+            ],
+        ),
+        (
+            "stories/example-56.md",
+            [
+                "InferReadPermissions",
+                "AIL-Core graph",
+                "ReadPermissionAdded",
+                "SecretReadNeedsHumanConfirmation",
+                "compiler-pass",
+                "core-to-summary.system.md",
+            ],
+        ),
+        (
+            "stories/example-57.md",
+            [
+                "InferReadPermissions",
+                "AIL-Core graph",
+                "ReadPermissionAdded",
+                "SecretReadNeedsHumanConfirmation",
+                "compiler-pass",
+                "flow-patch.system.md",
+            ],
+        ),
+        (
+            "stories/example-58.md",
+            [
+                "InferReadPermissions",
+                "AIL-Core graph",
+                "ReadPermissionAdded",
+                "SecretReadNeedsHumanConfirmation",
+                "compiler-pass",
+                "trace-debug.system.md",
+            ],
+        ),
+        (
+            "stories/example-59.md",
+            [
+                "InferReadPermissions",
+                "AIL-Core graph",
+                "ReadPermissionAdded",
+                "SecretReadNeedsHumanConfirmation",
+                "compiler-pass",
+                "interop.system.md",
+            ],
+        ),
+        (
+            "stories/example-60.md",
+            [
+                "InferReadPermissions",
+                "AIL-Core graph",
+                "ReadPermissionAdded",
+                "SecretReadNeedsHumanConfirmation",
+                "compiler-pass",
+                "interview.system.md",
+            ],
+        ),
+        (
+            "stories/example-61.md",
+            [
+                "InferReadPermissions",
+                "AIL-Core graph",
+                "ReadPermissionAdded",
+                "SecretReadNeedsHumanConfirmation",
+                "compiler-pass",
+                "requirements.system.md",
+            ],
+        ),
+        (
+            "stories/example-62.md",
+            [
+                "InferReadPermissions",
+                "AIL-Core graph",
+                "ReadPermissionAdded",
+                "SecretReadNeedsHumanConfirmation",
+                "compiler-pass",
+                "spec-draft.system.md",
+            ],
+        ),
+        (
+            "stories/example-63.md",
+            [
+                "InferReadPermissions",
+                "AIL-Core graph",
+                "ReadPermissionAdded",
+                "SecretReadNeedsHumanConfirmation",
+                "compiler-pass",
+                "core-draft.system.md",
+            ],
+        ),
+        (
+            "stories/example-64.md",
+            [
+                "InferReadPermissions",
+                "AIL-Core graph",
+                "ReadPermissionAdded",
+                "SecretReadNeedsHumanConfirmation",
+                "compiler-pass",
+                "diagnostic-repair.system.md",
+            ],
+        ),
+    ] {
+        let story = fs::read_to_string(fixture(story_file)).unwrap();
+        assert!(story.contains("semantic-anchors:"), "{story_file}\n{story}");
+        for anchor in required_anchors {
+            assert!(
+                story.contains(anchor),
+                "{story_file} missing semantic anchor {anchor}\n{story}"
+            );
+            assert!(
+                spec.contains(anchor)
+                    || package.contains(anchor)
+                    || readme.contains(anchor)
+                    || catalog.contains(anchor),
+                "{story_file} anchor {anchor} is not grounded in compiler pass spec/package/readme/catalog"
+            );
+        }
+    }
+}
+
+#[test]
 fn example_low_level_stories_record_semantic_anchors() {
     let catalog = fs::read_to_string(fixture("examples.md")).unwrap();
     let network_spec = fs::read_to_string(fixture("network_driver.ail/spec.ail-spec.md")).unwrap();
@@ -22492,9 +22628,12 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("semantic-anchor-story-count 75")
+        report.contains("semantic-anchor-story-count 85")
             && report.contains(
                 "entry-semantic-anchors example-0 Option<T>; Result<T; E>; Map<K; V>; Option.map; OptionMapEvaluated; interview.system.md"
+            )
+            && report.contains(
+                "entry-semantic-anchors example-55 InferReadPermissions; AIL-Core graph; ReadPermissionAdded; SecretReadNeedsHumanConfirmation; compiler-pass; core-to-spec.system.md"
             )
             && report.contains(
                 "entry-semantic-anchors example-35 Runtime Tickets; Prioritize ticket; TicketPrioritized; ticket.priority=Low; runtime-generics; core-to-spec.system.md"
