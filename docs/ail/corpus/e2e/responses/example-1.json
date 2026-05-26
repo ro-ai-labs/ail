@@ -1,0 +1,36 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "# AIL Standard Collections Package\n\nPackage: ail.std.collections.\n\nType: Option<T>.\n\nOption has variants:\n\n- Some(value: T)\n- None\n\nType: Result<T,E>.\n\nResult has variants:\n\n- Success(value: T)\n- Failure(error: E)\n\nType: List<T>.\n\nList has variants:\n\n- Empty\n- Items(values: T)\n\nType: Map<K,V>.\n\nMap has variants:\n\n- Empty\n- Entries(key: K, value: V)\n\nType: Set<T>.\n\nSet has variants:\n\n- Empty\n- Members(value: T)\n\nFunction: Option.map.\n\nThe function needs:\n\n- option: Option<T>\n- mapper: Text\n\nThe function produces:\n\n- result: Option<U>\n\nWhen Option.map runs:\n\n- the system requires the option to exist\n- if the option is Some(value), the function calls mapper with value\n- the function returns Some(mapped value)\n- if the option is None, the function returns None\n- the function records a trace event named OptionMapEvaluated",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1779753351,
+  "id": "chatcmpl-Qpt832SyVeXVrM5diSeMH4wHaJ1kAbvW",
+  "model": "unsloth/Qwen3.6-35B-A3B-GGUF:UD-Q4_K_XL",
+  "object": "chat.completion",
+  "system_fingerprint": "b9248-585080d31",
+  "timings": {
+    "cache_n": 148,
+    "predicted_ms": 7498.367,
+    "predicted_n": 228,
+    "predicted_per_second": 30.406620534844453,
+    "predicted_per_token_ms": 32.88757456140351,
+    "prompt_ms": 1212.769,
+    "prompt_n": 617,
+    "prompt_per_second": 508.7531096193917,
+    "prompt_per_token_ms": 1.9655899513776338
+  },
+  "usage": {
+    "completion_tokens": 228,
+    "prompt_tokens": 765,
+    "prompt_tokens_details": {
+      "cached_tokens": 148
+    },
+    "total_tokens": 993
+  }
+}

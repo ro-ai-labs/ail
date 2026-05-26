@@ -489,11 +489,11 @@ already covers parts of this gate:
   artifacts, Wasm and Darwin target-contract reports, rejected-output replay,
   and top-level manifest/report fingerprints
 - checked 100-entry e2e seed corpus under `docs/ail/corpus/e2e`
-- three replay-clean live LLM `spec-draft.system.md` captures for the Standard
-  Collections, Support Ticket, and Refund Tool packages, using schema-shaped
-  prompt input and an OpenAI-compatible chat-completions endpoint with thinking
-  disabled
-- ninety replay-clean live Codex `codex-ail-spec-writer` captures for the
+- four replay-clean live LLM captures for the Standard Collections, Support
+  Ticket, and Refund Tool packages, using schema-shaped prompt input or
+  constrained prose prompting with an OpenAI-compatible chat-completions
+  endpoint with thinking disabled
+- ninety-six replay-clean live Codex `codex-ail-spec-writer` captures for the
   Standard Collections, Composed Support, Refund Tool, Support Ticket,
   Stateful Counter, UI Workflow, C Interop, Network Driver, Compiler Pass,
   Secret Access, Repeated Task, and Runtime Generic packages, imported from

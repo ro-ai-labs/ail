@@ -1,1 +1,25 @@
-{"artifact_kind": "ail-spec", "instruction": "Produce the stored AIL-Spec candidate for deterministic replay.", "prompt_file": "docs/ail/prompts/flow-patch.system.md", "prompt_version": "ail-prompts.v0.2", "semantic_task": "c-interop-87"}
+{
+  "agent_contract": "docs/ail/corpus/e2e/agents/codex-ail-spec-writer.md",
+  "agent_contract_version": "0.1.0",
+  "codex_model": "codex-subagent-default",
+  "executor_label": "codex-ail-spec-writer",
+  "input": {
+    "manifest": "# AIL Package\n\nname: c-interop\nversion: 0.2.0\nprofile: C interop\nentry: spec.ail-spec.md\nfeatures: c-interop, external-bindings, abi-layout, callbacks, ownership, failures, traces\nconformance: v0.2\nschema-version: ail-core.schema.v0\nsafety-level: expert\ntarget-support:\n  ail-core.schema.v0: supported\n  wasm32-unknown-sandbox-wasm: supported-with-host-imports\n",
+    "required_features": [
+      "c-interop",
+      "external-bindings",
+      "abi-layout",
+      "callbacks",
+      "ownership",
+      "failures",
+      "traces",
+      "host-boundary",
+      "wasm32-unknown-sandbox-wasm"
+    ]
+  },
+  "package": "examples/c_interop.ail",
+  "profile": "System",
+  "prompt_file": "docs/ail/prompts/flow-patch.system.md",
+  "prompt_version": "ail-prompts.v0.2",
+  "task": "Draft a complete canonical AIL-Spec for the C interop package flow patch and host boundary from the checked package manifest. Include C host function and buffer behavior, CompressPayload, requirements, failures, traces, and wasm host-boundary behavior."
+}

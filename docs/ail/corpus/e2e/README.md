@@ -94,20 +94,16 @@ live LLM access. The current corpus stores:
 - `agents/`: Codex-style skill-agent executor contracts used by
   `live-codex` transcript imports.
 
-This is a checked seed corpus with three replay-clean live LLM smoke captures
-and ninety replay-clean live Codex skill-agent captures, not final v0.2 release
-evidence. The current corpus marks 7 entries `capture-origin:
-deterministic-seed`, three `spec-draft.system.md` entries `capture-origin:
-live-llm`, and ninety `codex-ail-spec-writer` entries `capture-origin:
-live-codex`; deterministic fixture responses remain in place so the replay
-harness, artifact writing, and coverage thresholds can be verified while
-broader LLM/Codex captures are added. The replay report exposes
+This is a checked release-evidence corpus with four replay-clean live LLM
+captures and ninety-six replay-clean live Codex skill-agent captures. The
+current corpus marks zero entries `capture-origin: deterministic-seed`, four
+entries `capture-origin: live-llm`, and ninety-six `codex-ail-spec-writer`
+entries `capture-origin: live-codex`. The replay report exposes
 capture-origin counts plus response,
 extracted-artifact, checked Core, bytecode, VM trace, native, target-report,
 and diagnostics fingerprint reuse. Response, extracted-artifact, and
-target-report duplicate counts must remain zero before claiming the final v0.2
-prompt-to-artifact release gate, and release evidence must expand `live-llm`
-coverage and add `live-codex` capture-origin entries.
+target-report duplicate counts must remain zero before claiming the v0.2
+prompt-to-artifact release gate.
 
 The seed includes one real `UI` profile replay through `ui_workflow.ail`, which
 lowers UI route, form, dashboard, and workflow semantics into checked Core,
@@ -131,5 +127,4 @@ cargo run -- ail-e2e-corpus docs/ail/corpus/e2e --artifact-dir /tmp/ail-e2e-rele
 
 That mode requires all counted entries to come from stored live captures and
 requires both `live-llm` and `live-codex` origins. The current corpus is
-expected to fail that stricter command until broad live transcripts replace the
-remaining deterministic seed entries.
+expected to pass that stricter command with zero deterministic seed entries.

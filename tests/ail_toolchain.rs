@@ -19968,15 +19968,21 @@ fn cli_ail_e2e_corpus_replays_checked_seed_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("capture-origin-count deterministic-seed 7"),
+        !report.contains("capture-origin-count deterministic-seed"),
         "{report}"
     );
     assert!(
-        report.contains("capture-origin-count live-llm 3"),
+        report.contains("capture-origin-count live-llm 4"),
         "{report}"
     );
     assert!(
-        report.contains("capture-origin-count live-codex 90"),
+        report.contains("capture-origin-count live-codex 96"),
+        "{report}"
+    );
+    assert!(
+        report.contains("entry example-1")
+            && report.contains("semantic-task stdlib-collections-live-spec-input-1")
+            && report.contains("capture-origin live-llm"),
         "{report}"
     );
     assert!(
@@ -20154,6 +20160,24 @@ fn cli_ail_e2e_corpus_replays_checked_seed_corpus() {
         "{report}"
     );
     assert!(
+        report.contains("entry example-9")
+            && report.contains("semantic-task stdlib-collections-live-codex-interop-9")
+            && report.contains("capture-origin live-codex"),
+        "{report}"
+    );
+    assert!(
+        report.contains("entry example-11")
+            && report.contains("semantic-task support-composed-live-codex-requirements-11")
+            && report.contains("capture-origin live-codex"),
+        "{report}"
+    );
+    assert!(
+        report.contains("entry example-12")
+            && report.contains("semantic-task support-composed-live-codex-spec-draft-12")
+            && report.contains("capture-origin live-codex"),
+        "{report}"
+    );
+    assert!(
         report.contains("entry example-30")
             && report.contains("semantic-task support-ticket-live-codex-interview-30")
             && report.contains("capture-origin live-codex"),
@@ -20312,6 +20336,12 @@ fn cli_ail_e2e_corpus_replays_checked_seed_corpus() {
     assert!(
         report.contains("entry example-86")
             && report.contains("semantic-task c-interop-live-codex-core-to-summary-86")
+            && report.contains("capture-origin live-codex"),
+        "{report}"
+    );
+    assert!(
+        report.contains("entry example-39")
+            && report.contains("semantic-task runtime-generic-live-codex-interop-39")
             && report.contains("capture-origin live-codex"),
         "{report}"
     );
@@ -20526,6 +20556,12 @@ fn cli_ail_e2e_corpus_replays_checked_seed_corpus() {
         "{report}"
     );
     assert!(
+        report.contains("entry example-87")
+            && report.contains("semantic-task c-interop-live-codex-flow-patch-87")
+            && report.contains("capture-origin live-codex"),
+        "{report}"
+    );
+    assert!(
         report.contains("entry example-88")
             && report.contains("semantic-task c-interop-live-codex-trace-debug-88")
             && report.contains("capture-origin live-codex"),
@@ -20559,6 +20595,12 @@ fn cli_ail_e2e_corpus_replays_checked_seed_corpus() {
             .contains("entry-artifact example-99 diagnostics examples/example-99/diagnostics.txt"),
         "{report}"
     );
+    assert!(
+        report.contains("entry example-99")
+            && report.contains("semantic-task support-ticket-live-codex-rejected-99")
+            && report.contains("capture-origin live-codex"),
+        "{report}"
+    );
     let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-e2e-corpus.txt")).unwrap();
     assert!(manifest.contains("AIL-E2E-Corpus-Manifest:"), "{manifest}");
     assert!(
@@ -20570,7 +20612,7 @@ fn cli_ail_e2e_corpus_replays_checked_seed_corpus() {
 }
 
 #[test]
-fn cli_ail_e2e_corpus_release_evidence_rejects_deterministic_seed_corpus() {
+fn cli_ail_e2e_corpus_release_evidence_accepts_live_corpus() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let artifact_dir = std::env::temp_dir().join(format!(
         "ail-e2e-corpus-release-seed-artifacts-{}",
@@ -20589,17 +20631,10 @@ fn cli_ail_e2e_corpus_release_evidence_rejects_deterministic_seed_corpus() {
         .output()
         .unwrap();
     assert!(
-        !output.status.success(),
+        output.status.success(),
         "stdout:\n{}\nstderr:\n{}",
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
-    );
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-        stderr.contains(
-            "ail-e2e-corpus --release-evidence requires zero deterministic-seed entries; found 7"
-        ),
-        "{stderr}"
     );
 
     let _ = fs::remove_dir_all(artifact_dir);
