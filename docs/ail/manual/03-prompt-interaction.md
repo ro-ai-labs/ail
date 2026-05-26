@@ -48,6 +48,12 @@ Print the hosted prompt-pack run without contacting the model:
 python3 scripts/run_v03_prompt_llm_harness.py --dry-run
 ```
 
+The dry run lists every required prompt with its task-specific `probe-label`
+and `probe-fingerprint`. Those probes cover concrete interactions such as
+interview clarification, requirements drafting, canonical spec drafting,
+AIL-Core lowering, repair, diagnostic repair, round-trip rendering, human
+summary, flow patching, trace debugging, and C interop questions.
+
 Run it only when `http://inteligentia-pro-1:8080/` is reachable and the output
 will be reviewed:
 
@@ -57,8 +63,11 @@ python3 scripts/run_v03_prompt_llm_harness.py --review-artifacts /tmp/ail-v03-pr
 ```
 
 Review mode checks request, response, content, report, manifest, fingerprint
-artifacts, and prompt-pack envelope shape for each required system prompt. It
-prints `prompt-envelope-valid-count`, `prompt-envelope-questions-count`, and
+artifacts, prompt-specific probe metadata, expected `artifact_kind` values, and
+prompt-pack envelope shape for each required system prompt. It prints
+`prompt-envelope-valid-count`, `prompt-envelope-questions-count`, and
 `prompt-envelope-invalid-count`; a non-empty raw model response is still
 rejected when it is not a valid prompt-pack envelope or blocking-question
-envelope.
+envelope, a generic artifact kind is rejected, and a generic probe is rejected
+when its `probe-label` or `probe-fingerprint` does not match the expected
+task-specific probes.

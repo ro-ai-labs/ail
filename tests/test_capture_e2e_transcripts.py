@@ -1,4 +1,5 @@
 import json
+import importlib.util
 import shutil
 import subprocess
 import sys
@@ -26,6 +27,29 @@ REQUIRED_PROMPTS = (
     "interop.system.md",
 )
 
+EXPECTED_ARTIFACT_KINDS = {
+    "interview.system.md": "AIL-Interview",
+    "requirements.system.md": "AIL-Requirements",
+    "spec-draft.system.md": "AIL-Spec Canonical",
+    "core-draft.system.md": "AIL-Core Candidate",
+    "repair.system.md": "AIL-Spec Canonical",
+    "diagnostic-repair.system.md": "AIL-Repair",
+    "core-to-spec.system.md": "AIL-Spec Canonical",
+    "core-to-summary.system.md": "AIL-Spec Friendly",
+    "flow-patch.system.md": "AIL-Core Patch",
+    "trace-debug.system.md": "Trace Explanation",
+    "interop.system.md": "Interop Questions",
+}
+
+_PROMPT_HARNESS_SPEC = importlib.util.spec_from_file_location(
+    "run_v03_prompt_llm_harness",
+    ROOT / "scripts" / "run_v03_prompt_llm_harness.py",
+)
+_PROMPT_HARNESS = importlib.util.module_from_spec(_PROMPT_HARNESS_SPEC)
+assert _PROMPT_HARNESS_SPEC.loader is not None
+_PROMPT_HARNESS_SPEC.loader.exec_module(_PROMPT_HARNESS)
+PROMPT_PROBES = _PROMPT_HARNESS.PROMPT_PROBES
+
 
 def fnv64(text):
     value = 0xCBF29CE484222325
@@ -40,12 +64,13 @@ def write_text(path, text):
     path.write_text(text)
 
 
-def prompt_probe_envelope(prompt_name):
+def prompt_probe_envelope(prompt_name, artifact_kind_override=None):
     stem = prompt_name.removesuffix(".system.md")
     return (
         json.dumps(
             {
-                "artifact_kind": "AIL-Prompt-Probe",
+                "artifact_kind": artifact_kind_override
+                or EXPECTED_ARTIFACT_KINDS[prompt_name],
                 "artifact_text": "",
                 "questions": [f"What semantics should {stem} preserve?"],
                 "assumptions": [],
@@ -63,7 +88,11 @@ def prompt_probe_envelope(prompt_name):
 
 
 def write_prompt_llm_review_fixture(
-    artifact_dir, empty_content_for=None, invalid_content_for=None
+    artifact_dir,
+    empty_content_for=None,
+    invalid_content_for=None,
+    mismatched_probe_for=None,
+    mismatched_artifact_kind_for=None,
 ):
     artifact_dir.mkdir(parents=True, exist_ok=True)
     models_text = (
@@ -87,12 +116,21 @@ def write_prompt_llm_review_fixture(
         prompt_rel = f"docs/ail/prompts/{prompt_name}"
         prompt_text = prompt_path.read_text()
         stem = prompt_name.removesuffix(".system.md")
+        probe_label, probe_text = PROMPT_PROBES[prompt_name]
+        probe_fingerprint = fnv64(probe_text)
+        if mismatched_probe_for == prompt_name:
+            probe_label = "generic-live-probe"
+            probe_text = "AIL prompt-pack live probe."
+            probe_fingerprint = fnv64(probe_text)
         if empty_content_for == prompt_name:
             content = ""
             content_kind = "empty"
         elif invalid_content_for == prompt_name:
             content = f"Raw non-envelope output for {stem}.\n"
             content_kind = "invalid"
+        elif mismatched_artifact_kind_for == prompt_name:
+            content = prompt_probe_envelope(prompt_name, "AIL-Prompt-Probe")
+            content_kind = "prompt-envelope-questions"
         else:
             content = prompt_probe_envelope(prompt_name)
             content_kind = "prompt-envelope-questions"
@@ -103,10 +141,12 @@ def write_prompt_llm_review_fixture(
                 "method": "POST",
                 "prompt_file": prompt_rel,
                 "prompt_fingerprint": fnv64(prompt_text),
+                "probe_label": probe_label,
+                "probe_fingerprint": probe_fingerprint,
                 "body": {
                     "messages": [
                         {"role": "system", "content": prompt_text},
-                        {"role": "user", "content": "AIL prompt-pack live probe."},
+                        {"role": "user", "content": probe_text},
                     ],
                     "max_tokens": 64,
                     "temperature": 0.0,
@@ -135,6 +175,7 @@ def write_prompt_llm_review_fixture(
         )
         report_lines.append(
             f"prompt {prompt_rel} prompt-fingerprint {fnv64(prompt_text)} "
+            f"probe-label {probe_label} probe-fingerprint {probe_fingerprint} "
             f"response-fingerprint {fnv64(response_text)} "
             f"content-kind {content_kind} content-bytes {len(content_text.encode())}"
         )
@@ -370,6 +411,75 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             self.assertIn("review-result rejected", review.stdout)
             self.assertIn(
                 "invalid prompt envelope docs/ail/prompts/requirements.system.md",
+                review.stdout,
+            )
+            self.assertIn("prompt-envelope-invalid-count 1", review.stdout)
+        finally:
+            shutil.rmtree(artifact_dir, ignore_errors=True)
+
+    def test_prompt_llm_harness_review_rejects_mismatched_probe_metadata(self):
+        artifact_dir = Path(tempfile.mkdtemp(prefix="ail-prompt-llm-review-probe-"))
+        try:
+            write_prompt_llm_review_fixture(
+                artifact_dir, mismatched_probe_for="requirements.system.md"
+            )
+            review = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_prompt_llm_harness.py",
+                    "--review-artifacts",
+                    str(artifact_dir),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertNotEqual(
+                review.returncode,
+                0,
+                f"stdout:\n{review.stdout}\nstderr:\n{review.stderr}",
+            )
+            self.assertIn("review-result rejected", review.stdout)
+            self.assertIn(
+                "request probe_label mismatch docs/ail/prompts/requirements.system.md",
+                review.stdout,
+            )
+            self.assertIn(
+                "request probe_fingerprint mismatch docs/ail/prompts/requirements.system.md",
+                review.stdout,
+            )
+        finally:
+            shutil.rmtree(artifact_dir, ignore_errors=True)
+
+    def test_prompt_llm_harness_review_rejects_mismatched_artifact_kind(self):
+        artifact_dir = Path(tempfile.mkdtemp(prefix="ail-prompt-llm-review-kind-"))
+        try:
+            write_prompt_llm_review_fixture(
+                artifact_dir, mismatched_artifact_kind_for="requirements.system.md"
+            )
+            review = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_prompt_llm_harness.py",
+                    "--review-artifacts",
+                    str(artifact_dir),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertNotEqual(
+                review.returncode,
+                0,
+                f"stdout:\n{review.stdout}\nstderr:\n{review.stderr}",
+            )
+            self.assertIn("review-result rejected", review.stdout)
+            self.assertIn(
+                "invalid prompt envelope docs/ail/prompts/requirements.system.md",
+                review.stdout,
+            )
+            self.assertIn(
+                "prompt envelope artifact_kind must be AIL-Requirements",
                 review.stdout,
             )
             self.assertIn("prompt-envelope-invalid-count 1", review.stdout)

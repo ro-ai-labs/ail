@@ -34,12 +34,173 @@ REQUIRED_PROMPTS = (
     "trace-debug.system.md",
     "interop.system.md",
 )
-DEFAULT_PROBE = """AIL prompt-pack live probe.
+EXPECTED_ARTIFACT_KINDS: dict[str, str] = {
+    "interview.system.md": "AIL-Interview",
+    "requirements.system.md": "AIL-Requirements",
+    "spec-draft.system.md": "AIL-Spec Canonical",
+    "core-draft.system.md": "AIL-Core Candidate",
+    "repair.system.md": "AIL-Spec Canonical",
+    "diagnostic-repair.system.md": "AIL-Repair",
+    "core-to-spec.system.md": "AIL-Spec Canonical",
+    "core-to-summary.system.md": "AIL-Spec Friendly",
+    "flow-patch.system.md": "AIL-Core Patch",
+    "trace-debug.system.md": "Trace Explanation",
+    "interop.system.md": "Interop Questions",
+}
+PROMPT_PROBES: dict[str, tuple[str, str]] = {
+    "interview.system.md": (
+        "interview-clarify-refund-tool",
+        """Task: ask only the blocking semantic questions needed before drafting
+requirements for this request.
 
-Return a compact prompt-pack envelope or blocking questions for this prompt
-surface. Keep the response short. Do not claim the artifact is checked,
-compiled, deployed, or trusted.
-"""
+Input:
+{"profile":"Application","user_request":"Build a refund tool for support agents. It should block unsafe refunds and leave an audit trail.","known_context":["The approver role, refund threshold, and provider failure behavior are not specified."],"safety_class":"medium"}
+
+Return one JSON prompt-pack envelope. Use artifact_kind AIL-Interview. Put
+blocking questions in questions unless the input is already sufficient. Do not
+invent approvers, thresholds, provider calls, traces, or compiled artifacts.
+""",
+    ),
+    "requirements.system.md": (
+        "requirements-support-ticket-coverage",
+        """Task: convert confirmed support-ticket interview answers into
+AIL-Requirements.
+
+Input answers:
+- SupportAgent may close an existing ticket.
+- Closing writes Ticket.status = Closed.
+- Missing tickets produce TicketNotFound.
+- InternalNote is Secret<Text> readable only by SupportAgent and SupportManager.
+- Success records TicketClosed with ticket_id and actor_id.
+
+Return one JSON prompt-pack envelope. Use artifact_kind AIL-Requirements.
+Cover objects, action, failure, permission, secret, guarantee, and trace with
+provenance to the answers. Do not add unconfirmed notifications or host calls.
+""",
+    ),
+    "spec-draft.system.md": (
+        "spec-draft-canonical-close-ticket",
+        """Task: draft canonical AIL-Spec from checked requirements.
+
+Checked requirements: SupportAgent may close an existing Ticket; closing writes
+Ticket.status to Closed; missing tickets raise TicketNotFound; InternalNote is
+Secret<Text> readable only by SupportAgent and SupportManager; success records
+TicketClosed(ticket_id, actor_id).
+
+Package manifest: package support_ticket profile Application.
+
+Return one JSON prompt-pack envelope. Use artifact_kind AIL-Spec Canonical.
+Use parser-owned headings and preserve permission, failure, secret, trace, and
+provenance. Do not answer in friendly prose.
+""",
+    ),
+    "core-draft.system.md": (
+        "core-draft-provenance-close-ticket",
+        """Task: lower canonical Close ticket AIL-Spec into candidate AIL-Core.
+
+Spec facts: Action CloseTicket requires SupportAgent, reads Ticket.id, writes
+Ticket.status, handles TicketNotFound, protects InternalNote as Secret<Text>,
+and records Trace TicketClosed. Source ids are req-1 through req-5.
+
+Return one JSON prompt-pack envelope. Use artifact_kind AIL-Core Candidate.
+Emit node and edge text with provenance ids. Do not claim the graph is checked.
+""",
+    ),
+    "repair.system.md": (
+        "repair-preserve-permission-add-trace",
+        """Task: repair a draft AIL-Spec from reviewer instructions.
+
+Draft: CloseTicket already requires SupportAgent and handles TicketNotFound but
+has no success trace. Repair request: add TicketClosed(ticket_id, actor_id) to
+the successful CloseTicket path. Acceptance criteria: preserve the existing
+permission and failure semantics.
+
+Return one JSON prompt-pack envelope. Use artifact_kind AIL-Spec Canonical.
+Return a complete replacement artifact, not a patch fragment. Do not delete
+permission or failure declarations.
+""",
+    ),
+    "diagnostic-repair.system.md": (
+        "diagnostic-repair-missing-trace",
+        """Task: respond to checker diagnostic AIL-TRACE-001.
+
+Artifact kind: AIL-Core. Artifact text: node Action CloseTicket; edge
+CloseTicket writes Ticket.status. Diagnostic: AIL-TRACE-001 action CloseTicket
+is missing trace coverage. Provenance: req-3 says the user wants auditability
+but does not name a trace event.
+
+Return one JSON prompt-pack envelope. Use artifact_kind AIL-Repair. Ask a
+blocking question if the trace name cannot be proven. Do not invent
+Trace.ActionCompleted.
+""",
+    ),
+    "core-to-spec.system.md": (
+        "core-to-spec-roundtrip-close-ticket",
+        """Task: render checked AIL-Core into canonical structured English.
+
+AIL-Core: node Action CloseTicket id action.close; node Permission SupportAgent
+id perm.support-agent; node Failure TicketNotFound id failure.ticket-not-found;
+node Trace TicketClosed id trace.ticket-closed; edge action.close requires
+perm.support-agent; edge action.close handles failure.ticket-not-found; edge
+action.close records_trace trace.ticket-closed.
+
+Return one JSON prompt-pack envelope. Use artifact_kind AIL-Spec Canonical.
+Do not omit permission, failure, trace, ids, or canonical headings.
+""",
+    ),
+    "core-to-summary.system.md": (
+        "core-to-summary-human-review",
+        """Task: explain checked AIL-Core to a non-engineer reviewer.
+
+AIL-Core contains CloseTicket, SupportAgent permission, TicketNotFound failure,
+InternalNote secret protection, and TicketClosed trace. There is no customer
+email edge.
+
+Return one JSON prompt-pack envelope. Use artifact_kind AIL-Spec Friendly.
+Each paragraph must cite graph node ids. Do not claim friendly text is
+parseable, and do not add customer email behavior.
+""",
+    ),
+    "flow-patch.system.md": (
+        "flow-patch-reviewed-escalation",
+        """Task: convert a reviewed visual edit into an AIL-Core patch.
+
+Base hash: fnv64:1111222233334444. Flow item: action-card CloseTicket. Visual
+edit reviewed by Jordan: add EscalateTicket after CloseTicket when priority is
+High and record TicketEscalated. Existing incident edges remain attached.
+
+Return one JSON prompt-pack envelope. Use artifact_kind AIL-Core Patch. Emit
+patch operations only; do not replace the whole spec with prose.
+""",
+    ),
+    "trace-debug.system.md": (
+        "trace-debug-ticket-closed",
+        """Task: explain a runtime trace using only checked events.
+
+Trace events: e1 CloseTicket started actor SupportAgent; e2 Ticket.status wrote
+Closed; e3 TicketClosed recorded; e4 InternalNote redacted. Question: why did
+the ticket close, and was the customer emailed?
+
+Return one JSON prompt-pack envelope. Use artifact_kind Trace Explanation.
+Cite event ids and graph node ids. Do not invent notification events or expose
+redacted InternalNote content.
+""",
+    ),
+    "interop.system.md": (
+        "interop-pointer-ownership-questions",
+        """Task: ask safe C interop questions before drafting bindings.
+
+Binding request: expose char *read_sensor(int sensor_id) from sensor.h to AIL
+System profile code. Known header says it may return NULL. Ownership, release
+function, errno mapping, calling convention, symbol visibility, and
+thread-safety are unknown.
+
+Return one JSON prompt-pack envelope. Use artifact_kind Interop Questions.
+Ask blocking questions for unknown ABI and safety semantics. Do not assume AIL
+automatically releases returned pointers.
+""",
+    ),
+}
 
 
 def fnv64(text: str) -> str:
@@ -78,6 +239,40 @@ def prompt_paths(prompt_dir: str) -> list[Path]:
 
 def relative(path: Path) -> str:
     return str(path.resolve().relative_to(ROOT))
+
+
+def prompt_probe(prompt_name: str, override: str | None) -> tuple[str, str]:
+    if override is not None:
+        return "custom-live-probe", override
+    try:
+        return PROMPT_PROBES[prompt_name]
+    except KeyError:
+        raise SystemExit(f"missing hosted probe for prompt {prompt_name}") from None
+
+
+def expected_artifact_kind(prompt_name: str) -> str:
+    try:
+        return EXPECTED_ARTIFACT_KINDS[prompt_name]
+    except KeyError:
+        raise SystemExit(f"missing expected artifact kind for prompt {prompt_name}") from None
+
+
+def request_user_probe(body: object) -> str:
+    if not isinstance(body, dict):
+        return ""
+    messages = body.get("messages")
+    if isinstance(messages, list):
+        for message in messages:
+            if (
+                isinstance(message, dict)
+                and message.get("role") == "user"
+                and isinstance(message.get("content"), str)
+            ):
+                return str(message["content"]).strip()
+    prompt = body.get("prompt")
+    if isinstance(prompt, str) and "USER PROBE:" in prompt:
+        return prompt.split("USER PROBE:", 1)[1].strip()
+    return ""
 
 
 def completion_body(
@@ -175,13 +370,20 @@ def prompt_envelope_json(content: str) -> tuple[dict[str, object] | None, str]:
     return value, ""
 
 
-def classify_prompt_content(content: str) -> tuple[str, str]:
+def classify_prompt_content(
+    content: str, expected_kind: str | None = None
+) -> tuple[str, str]:
     envelope, error = prompt_envelope_json(content)
     if envelope is None:
         return "empty" if not content.strip() else "invalid", error
     artifact_kind = envelope.get("artifact_kind")
     if not isinstance(artifact_kind, str) or not artifact_kind.strip():
         return "invalid", "prompt envelope artifact_kind must be a non-empty string"
+    if expected_kind is not None and artifact_kind != expected_kind:
+        return (
+            "invalid",
+            f"prompt envelope artifact_kind must be {expected_kind}, got {artifact_kind}",
+        )
     artifact_text = envelope.get("artifact_text", "")
     if not isinstance(artifact_text, str):
         return "invalid", "prompt envelope artifact_text must be a string"
@@ -293,6 +495,8 @@ def review_artifacts(args: argparse.Namespace, paths: list[Path]) -> int:
         rel = relative(prompt_path)
         stem = prompt_path.name.removesuffix(".system.md")
         prompt_text = prompt_path.read_text()
+        expected_probe_label, expected_probe = prompt_probe(prompt_path.name, args.probe)
+        expected_probe_fingerprint = fnv64(expected_probe)
         request_path = artifact_root / "requests" / f"{stem}.json"
         response_path = artifact_root / "responses" / f"{stem}.json"
         content_path = artifact_root / "content" / f"{stem}.txt"
@@ -300,7 +504,9 @@ def review_artifacts(args: argparse.Namespace, paths: list[Path]) -> int:
         request = load_json(request_path, errors)
         response = load_json(response_path, errors)
         content = read_required_text(content_path, errors)
-        content_kind, content_error = classify_prompt_content(content)
+        content_kind, content_error = classify_prompt_content(
+            content, expected_artifact_kind(prompt_path.name)
+        )
         content_kind_counts[content_kind] = content_kind_counts.get(content_kind, 0) + 1
         for artifact_path in [request_path, response_path, content_path]:
             if check_fingerprint(artifact_path, errors):
@@ -311,6 +517,12 @@ def review_artifacts(args: argparse.Namespace, paths: list[Path]) -> int:
                 errors.append(f"request prompt_file mismatch {rel}")
             if request.get("prompt_fingerprint") != fnv64(prompt_text):
                 errors.append(f"request prompt_fingerprint mismatch {rel}")
+            if request.get("probe_label") != expected_probe_label:
+                errors.append(f"request probe_label mismatch {rel}")
+            if request.get("probe_fingerprint") != expected_probe_fingerprint:
+                errors.append(f"request probe_fingerprint mismatch {rel}")
+            if request_user_probe(request.get("body")).strip() != expected_probe.strip():
+                errors.append(f"request user probe mismatch {rel}")
         if not response:
             errors.append(f"missing response json {rel}")
         if content.strip():
@@ -329,6 +541,13 @@ def review_artifacts(args: argparse.Namespace, paths: list[Path]) -> int:
         )
         if prompt_report_line and f"content-kind {content_kind}" not in prompt_report_line:
             errors.append(f"report content-kind mismatch {rel}: expected {content_kind}")
+        if prompt_report_line and f"probe-label {expected_probe_label}" not in prompt_report_line:
+            errors.append(f"report probe-label mismatch {rel}")
+        if (
+            prompt_report_line
+            and f"probe-fingerprint {expected_probe_fingerprint}" not in prompt_report_line
+        ):
+            errors.append(f"report probe-fingerprint mismatch {rel}")
         if f"artifact {rel}" not in manifest_text:
             errors.append(f"manifest missing prompt artifact {rel}")
 
@@ -388,7 +607,13 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     )
     parser.add_argument("--model", help="Optional model id for OpenAI-compatible servers")
     parser.add_argument("--max-tokens", type=int, default=512)
-    parser.add_argument("--probe", default=DEFAULT_PROBE)
+    parser.add_argument(
+        "--probe",
+        help=(
+            "Override the task-specific probe text and send the same custom "
+            "probe to every prompt"
+        ),
+    )
     parser.add_argument(
         "--dry-run",
         action="store_true",
@@ -413,7 +638,11 @@ def print_dry_run(args: argparse.Namespace, paths: list[Path]) -> None:
     print(f"prompt-dir {args.prompt_dir}")
     print(f"artifact-dir {args.artifact_dir}")
     for path in paths:
-        print(f"prompt {relative(path)}")
+        probe_label, probe_text = prompt_probe(path.name, args.probe)
+        print(
+            f"prompt {relative(path)} "
+            f"probe-label {probe_label} probe-fingerprint {fnv64(probe_text)}"
+        )
 
 
 def run_live(args: argparse.Namespace, paths: list[Path]) -> int:
@@ -437,7 +666,11 @@ def run_live(args: argparse.Namespace, paths: list[Path]) -> int:
         prompt_text = path.read_text()
         rel = relative(path)
         stem = path.name.removesuffix(".system.md")
-        body = completion_body(args.endpoint, prompt_text, args.probe, args.max_tokens, args.model)
+        probe_label, probe_text = prompt_probe(path.name, args.probe)
+        probe_fingerprint = fnv64(probe_text)
+        body = completion_body(
+            args.endpoint, prompt_text, probe_text, args.max_tokens, args.model
+        )
         response = request_json(args.endpoint, body)
         request_text = json.dumps(
             {
@@ -445,6 +678,8 @@ def run_live(args: argparse.Namespace, paths: list[Path]) -> int:
                 "method": "POST",
                 "prompt_file": rel,
                 "prompt_fingerprint": fnv64(prompt_text),
+                "probe_label": probe_label,
+                "probe_fingerprint": probe_fingerprint,
                 "body": body,
             },
             indent=2,
@@ -452,7 +687,9 @@ def run_live(args: argparse.Namespace, paths: list[Path]) -> int:
         ) + "\n"
         response_text = json.dumps(response, indent=2, sort_keys=True) + "\n"
         content_text = extract_content(response) + "\n"
-        content_kind, _content_error = classify_prompt_content(content_text)
+        content_kind, _content_error = classify_prompt_content(
+            content_text, expected_artifact_kind(path.name)
+        )
         request_path = artifact_root / "requests" / f"{stem}.json"
         response_path = artifact_root / "responses" / f"{stem}.json"
         content_path = artifact_root / "content" / f"{stem}.txt"
@@ -468,6 +705,7 @@ def run_live(args: argparse.Namespace, paths: list[Path]) -> int:
         report_lines.append(
             "prompt "
             f"{rel} prompt-fingerprint {fnv64(prompt_text)} "
+            f"probe-label {probe_label} probe-fingerprint {probe_fingerprint} "
             f"response-fingerprint {fnv64(response_text)} "
             f"content-kind {content_kind} "
             f"content-bytes {len(content_text.encode())}"

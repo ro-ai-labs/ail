@@ -1512,16 +1512,28 @@ fn script_v03_prompt_llm_harness_help_lists_all_prompts_and_dry_run() {
         "model-check curl -sS http://inteligentia-pro-1:8080/v1/models",
         "endpoint http://inteligentia-pro-1:8080/v1/chat/completions",
         "prompt docs/ail/prompts/interview.system.md",
+        "probe-label interview-clarify-refund-tool",
+        "probe-fingerprint fnv64:",
         "prompt docs/ail/prompts/requirements.system.md",
+        "probe-label requirements-support-ticket-coverage",
         "prompt docs/ail/prompts/spec-draft.system.md",
+        "probe-label spec-draft-canonical-close-ticket",
         "prompt docs/ail/prompts/core-draft.system.md",
+        "probe-label core-draft-provenance-close-ticket",
         "prompt docs/ail/prompts/repair.system.md",
+        "probe-label repair-preserve-permission-add-trace",
         "prompt docs/ail/prompts/diagnostic-repair.system.md",
+        "probe-label diagnostic-repair-missing-trace",
         "prompt docs/ail/prompts/core-to-spec.system.md",
+        "probe-label core-to-spec-roundtrip-close-ticket",
         "prompt docs/ail/prompts/core-to-summary.system.md",
+        "probe-label core-to-summary-human-review",
         "prompt docs/ail/prompts/flow-patch.system.md",
+        "probe-label flow-patch-reviewed-escalation",
         "prompt docs/ail/prompts/trace-debug.system.md",
+        "probe-label trace-debug-ticket-closed",
         "prompt docs/ail/prompts/interop.system.md",
+        "probe-label interop-pointer-ownership-questions",
         "artifact-dir /tmp/ail-v03-prompt-llm",
     ] {
         assert!(
@@ -1543,7 +1555,9 @@ fn script_v03_prompt_llm_harness_help_lists_all_prompts_and_dry_run() {
     );
     assert!(
         prompt_docs.contains("prompt-envelope-valid-count")
-            && prompt_docs.contains("prompt-envelope-invalid-count"),
+            && prompt_docs.contains("prompt-envelope-invalid-count")
+            && prompt_docs.contains("probe-label")
+            && prompt_docs.contains("task-specific probes"),
         "{prompt_docs}"
     );
     let prompt_manual = fs::read_to_string(format!(
@@ -1553,7 +1567,9 @@ fn script_v03_prompt_llm_harness_help_lists_all_prompts_and_dry_run() {
     .unwrap();
     assert!(
         prompt_manual.contains("prompt-envelope-valid-count")
-            && prompt_manual.contains("prompt-envelope-invalid-count"),
+            && prompt_manual.contains("prompt-envelope-invalid-count")
+            && prompt_manual.contains("probe-label")
+            && prompt_manual.contains("task-specific probes"),
         "{prompt_manual}"
     );
 }
