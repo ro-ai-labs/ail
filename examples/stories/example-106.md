@@ -11,3 +11,4 @@ module-count: 1
 spec-count: 1
 story-count: 1
 interacts-with: none
+semantic-anchors: network-driver-effect-without-capability; NetworkPacketReceiver; capability; diagnostic-story; permission-capability; diagnostics

@@ -11,3 +11,4 @@ module-count: 1
 spec-count: 1
 story-count: 1
 interacts-with: none
+semantic-anchors: borrowed mutable; status; Z_BUF_ERROR; Failure.OutputBufferTooSmall; interop.system.md; target-report

@@ -552,6 +552,114 @@ fn example_incident_stories_record_semantic_anchors() {
     }
 }
 
+#[test]
+fn example_low_level_stories_record_semantic_anchors() {
+    let catalog = fs::read_to_string(fixture("examples.md")).unwrap();
+    let network_spec = fs::read_to_string(fixture("network_driver.ail/spec.ail-spec.md")).unwrap();
+    let c_interop_spec = fs::read_to_string(fixture("c_interop.ail/spec.ail-spec.md")).unwrap();
+    let portability_spec =
+        fs::read_to_string(fixture("darwin_linux_effect.ail/spec.ail-spec.md")).unwrap();
+    for (story_file, grounding_text, required_anchors) in [
+        (
+            "stories/example-66.md",
+            network_spec.as_str(),
+            [
+                "Network packet receiver",
+                "rx buffer",
+                "packet metadata",
+                "network device",
+                "PacketReceived",
+                "spec-to-story",
+            ],
+        ),
+        (
+            "stories/example-69.md",
+            network_spec.as_str(),
+            [
+                "read network device",
+                "write rx buffer",
+                "release rx buffer",
+                "access network device",
+                "interop.system.md",
+                "target-report",
+            ],
+        ),
+        (
+            "stories/example-106.md",
+            network_spec.as_str(),
+            [
+                "network-driver-effect-without-capability",
+                "NetworkPacketReceiver",
+                "capability",
+                "diagnostic-story",
+                "permission-capability",
+                "diagnostics",
+            ],
+        ),
+        (
+            "stories/example-85.md",
+            c_interop_spec.as_str(),
+            [
+                "compress2",
+                "qsort",
+                "Pointer<UInt8>",
+                "Callback",
+                "Packet header layout",
+                "spec-to-story",
+            ],
+        ),
+        (
+            "stories/example-89.md",
+            c_interop_spec.as_str(),
+            [
+                "borrowed mutable",
+                "status",
+                "Z_BUF_ERROR",
+                "Failure.OutputBufferTooSmall",
+                "interop.system.md",
+                "target-report",
+            ],
+        ),
+        (
+            "stories/example-105.md",
+            c_interop_spec.as_str(),
+            [
+                "c-interop-nullable-nonnull",
+                "nullable",
+                "nullable-nonnull",
+                "invalid-interop",
+                "diagnostic-story",
+                "diagnostics",
+            ],
+        ),
+        (
+            "stories/example-104.md",
+            portability_spec.as_str(),
+            [
+                "Linux syscall",
+                "Darwin",
+                "unsupported-target",
+                "aarch64-apple-darwin-libsystem-macho",
+                "diagnostic-story",
+                "target-report",
+            ],
+        ),
+    ] {
+        let story = fs::read_to_string(fixture(story_file)).unwrap();
+        assert!(story.contains("semantic-anchors:"), "{story_file}\n{story}");
+        for anchor in required_anchors {
+            assert!(
+                story.contains(anchor),
+                "{story_file} missing semantic anchor {anchor}\n{story}"
+            );
+            assert!(
+                grounding_text.contains(anchor) || catalog.contains(anchor),
+                "{story_file} anchor {anchor} is not grounded in package spec or catalog"
+            );
+        }
+    }
+}
+
 fn detailed_ail_diagnostic(core: &ail::ail::AilCore, code: &str, message: &str) -> String {
     check_ail_core_diagnostics(core)
         .into_iter()

@@ -11,3 +11,4 @@ module-count: 1
 spec-count: 1
 story-count: 1
 interacts-with: none
+semantic-anchors: compress2; qsort; Pointer<UInt8>; Callback; Packet header layout; spec-to-story

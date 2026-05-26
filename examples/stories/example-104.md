@@ -11,3 +11,4 @@ module-count: 1
 spec-count: 1
 story-count: 1
 interacts-with: none
+semantic-anchors: Linux syscall; Darwin; unsupported-target; aarch64-apple-darwin-libsystem-macho; diagnostic-story; target-report

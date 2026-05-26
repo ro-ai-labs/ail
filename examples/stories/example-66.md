@@ -11,3 +11,4 @@ module-count: 1
 spec-count: 1
 story-count: 1
 interacts-with: none
+semantic-anchors: Network packet receiver; rx buffer; packet metadata; network device; PacketReceived; spec-to-story

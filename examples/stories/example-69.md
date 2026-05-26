@@ -11,3 +11,4 @@ module-count: 1
 spec-count: 1
 story-count: 1
 interacts-with: none
+semantic-anchors: read network device; write rx buffer; release rx buffer; access network device; interop.system.md; target-report

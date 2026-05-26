@@ -11,3 +11,4 @@ module-count: 1
 spec-count: 1
 story-count: 1
 interacts-with: none
+semantic-anchors: c-interop-nullable-nonnull; nullable; nullable-nonnull; invalid-interop; diagnostic-story; diagnostics
