@@ -112,10 +112,12 @@ files for the main teaching packages:
 
 - `examples/support_ticket.ail`
 - `examples/refund_tool.ail`
+- `examples/stateful_counter.ail`
 - `examples/compiler_pass.ail`
 - `examples/network_driver.ail`
 - `examples/c_interop.ail`
 - `examples/ui_workflow.ail`
+- `examples/incident_response.ail`
 - `examples/ail_std_core.ail`
 - `examples/ail_std_collections.ail`
 - `examples/ail_std_effects.ail`
@@ -125,6 +127,10 @@ files for the main teaching packages:
 Each README should state the purpose, concepts taught, files to inspect,
 expected replay artifacts, rejected fixtures where applicable, and the next
 example to read.
+
+Current progress: `examples/refund_tool.ail/README.md` and
+`examples/stateful_counter.ail/README.md` cover the weakest repeated families
+and are checked by `example_learning_readmes_cover_repeated_family_gaps`.
 
 The `ail-examples` replay bundle must also write deterministic story artifacts:
 

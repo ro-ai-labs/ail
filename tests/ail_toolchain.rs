@@ -319,6 +319,53 @@ fn assert_e2e_corpus_override_failure(
     let _ = fs::remove_dir_all(artifact_dir);
 }
 
+#[test]
+fn example_learning_readmes_cover_repeated_family_gaps() {
+    let refund_readme = fs::read_to_string(fixture("refund_tool.ail/README.md")).unwrap();
+    for required in [
+        "# Refund Tool Example",
+        "## Purpose",
+        "## Concepts Taught",
+        "## Files To Inspect",
+        "## Expected Replay Artifacts",
+        "## Rejected Fixtures",
+        "## Next Example To Read",
+        "## v0.3 Learning Signal",
+        "multi-agent handoff",
+        "policy-review variants",
+        "repair tutorial",
+        "examples/rejected",
+        "example-103/diagnostics.txt",
+    ] {
+        assert!(
+            refund_readme.contains(required),
+            "{required}\n{refund_readme}"
+        );
+    }
+
+    let stateful_readme = fs::read_to_string(fixture("stateful_counter.ail/README.md")).unwrap();
+    for required in [
+        "# Stateful Counter Example",
+        "## Purpose",
+        "## Concepts Taught",
+        "## Files To Inspect",
+        "## Expected Replay Artifacts",
+        "## Rejected Fixtures",
+        "## Next Example To Read",
+        "## v0.3 Learning Signal",
+        "persistence",
+        "idempotency",
+        "locking",
+        "replay after failure",
+        "target-IncrementCounter.elf",
+    ] {
+        assert!(
+            stateful_readme.contains(required),
+            "{required}\n{stateful_readme}"
+        );
+    }
+}
+
 fn detailed_ail_diagnostic(core: &ail::ail::AilCore, code: &str, message: &str) -> String {
     check_ail_core_diagnostics(core)
         .into_iter()
