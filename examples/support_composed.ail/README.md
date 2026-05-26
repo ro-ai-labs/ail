@@ -96,8 +96,10 @@ Application workflow first. After this package, read
 
 ## v0.3 Learning Signal
 
-Support Composed shows that AIL can replay imported package graphs, but it is
-still too thin as a teaching artifact. v0.3 should add a dependency review
-view, package-local rejected fixtures, semantic anchors for imported symbols,
-and a story-diff that shows how a user request changes either the local spec
-or the imported shared package.
+Support Composed shows that AIL can replay imported package graphs, and its
+story files now preserve semantic anchors for `support-composed`,
+`support_shared`, `Shared.User`, `Close ticket`, `TicketClosed`, `active
+queue`, and each prompt surface from `example-10` through `example-19`. v0.3
+should add a dependency review view, package-local rejected fixtures, and a
+story-diff that shows how a user request changes either the local spec or the
+imported shared package.

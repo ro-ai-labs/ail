@@ -952,6 +952,152 @@ fn example_support_ticket_stories_record_semantic_anchors() {
 }
 
 #[test]
+fn example_support_composed_stories_record_semantic_anchors() {
+    let spec = fs::read_to_string(fixture("support_composed.ail/spec.ail-spec.md")).unwrap();
+    let package = fs::read_to_string(fixture("support_composed.ail/ail-package.md")).unwrap();
+    let shared_spec = fs::read_to_string(fixture("support_shared.ail/spec.ail-spec.md")).unwrap();
+    let catalog = fs::read_to_string(fixture("examples.md")).unwrap();
+    for (story_file, required_anchors) in [
+        (
+            "stories/example-10.md",
+            [
+                "support-composed",
+                "support_shared",
+                "Shared.User",
+                "Close ticket",
+                "TicketClosed",
+                "active queue",
+                "interview.system.md",
+            ],
+        ),
+        (
+            "stories/example-11.md",
+            [
+                "support-composed",
+                "support_shared",
+                "Shared.User",
+                "Close ticket",
+                "TicketClosed",
+                "active queue",
+                "requirements.system.md",
+            ],
+        ),
+        (
+            "stories/example-12.md",
+            [
+                "support-composed",
+                "support_shared",
+                "Shared.User",
+                "Close ticket",
+                "TicketClosed",
+                "active queue",
+                "spec-draft.system.md",
+            ],
+        ),
+        (
+            "stories/example-13.md",
+            [
+                "support-composed",
+                "support_shared",
+                "Shared.User",
+                "Close ticket",
+                "TicketClosed",
+                "active queue",
+                "core-draft.system.md",
+            ],
+        ),
+        (
+            "stories/example-14.md",
+            [
+                "support-composed",
+                "support_shared",
+                "Shared.User",
+                "Close ticket",
+                "TicketClosed",
+                "active queue",
+                "diagnostic-repair.system.md",
+            ],
+        ),
+        (
+            "stories/example-15.md",
+            [
+                "support-composed",
+                "support_shared",
+                "Shared.User",
+                "Close ticket",
+                "TicketClosed",
+                "active queue",
+                "core-to-spec.system.md",
+            ],
+        ),
+        (
+            "stories/example-16.md",
+            [
+                "support-composed",
+                "support_shared",
+                "Shared.User",
+                "Close ticket",
+                "TicketClosed",
+                "active queue",
+                "core-to-summary.system.md",
+            ],
+        ),
+        (
+            "stories/example-17.md",
+            [
+                "support-composed",
+                "support_shared",
+                "Shared.User",
+                "Close ticket",
+                "TicketClosed",
+                "active queue",
+                "flow-patch.system.md",
+            ],
+        ),
+        (
+            "stories/example-18.md",
+            [
+                "support-composed",
+                "support_shared",
+                "Shared.User",
+                "Close ticket",
+                "TicketClosed",
+                "active queue",
+                "trace-debug.system.md",
+            ],
+        ),
+        (
+            "stories/example-19.md",
+            [
+                "support-composed",
+                "support_shared",
+                "Shared.User",
+                "Close ticket",
+                "TicketClosed",
+                "active queue",
+                "interop.system.md",
+            ],
+        ),
+    ] {
+        let story = fs::read_to_string(fixture(story_file)).unwrap();
+        assert!(story.contains("semantic-anchors:"), "{story_file}\n{story}");
+        for anchor in required_anchors {
+            assert!(
+                story.contains(anchor),
+                "{story_file} missing semantic anchor {anchor}\n{story}"
+            );
+            assert!(
+                spec.contains(anchor)
+                    || package.contains(anchor)
+                    || shared_spec.contains(anchor)
+                    || catalog.contains(anchor),
+                "{story_file} anchor {anchor} is not grounded in support composed spec/package/shared spec/catalog"
+            );
+        }
+    }
+}
+
+#[test]
 fn example_low_level_stories_record_semantic_anchors() {
     let catalog = fs::read_to_string(fixture("examples.md")).unwrap();
     let network_spec = fs::read_to_string(fixture("network_driver.ail/spec.ail-spec.md")).unwrap();
@@ -21793,7 +21939,10 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("semantic-anchor-story-count 35")
+        report.contains("semantic-anchor-story-count 45")
+            && report.contains(
+                "entry-semantic-anchors example-10 support-composed; support_shared; Shared.User; Close ticket; TicketClosed; active queue; interview.system.md"
+            )
             && report.contains(
                 "entry-semantic-anchors example-111 Incident; Declare incident; IncidentDeclared; incident_identity; incident_policy; incident_notifications"
             ),

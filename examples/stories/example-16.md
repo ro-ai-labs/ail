@@ -11,3 +11,4 @@ module-count: 2
 spec-count: 2
 story-count: 2
 interacts-with: support_shared
+semantic-anchors: support-composed; support_shared; Shared.User; Close ticket; TicketClosed; active queue; core-to-summary.system.md
