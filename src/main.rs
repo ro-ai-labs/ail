@@ -2127,6 +2127,20 @@ fn validate_ail_e2e_corpus_release_coverage(entries: &[AilE2eCorpusEntry]) -> Re
             semantic_tasks.len()
         ));
     }
+    let accepted_count = entries
+        .iter()
+        .filter(|entry| {
+            entry
+                .fields
+                .get("checker-result")
+                .is_some_and(|checker_result| checker_result == "accepted")
+        })
+        .count();
+    if accepted_count < 100 {
+        return Err(format!(
+            "ail-e2e-corpus requires at least 100 accepted prompt-to-artifact examples; found {accepted_count}"
+        ));
+    }
     let executor_families = entries
         .iter()
         .filter_map(|entry| entry.fields.get("executor-family").map(String::as_str))

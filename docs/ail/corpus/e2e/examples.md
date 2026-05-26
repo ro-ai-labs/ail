@@ -1840,3 +1840,22 @@ vm-action: CloseTicket
 runtime-state: ticket.id=T-1;ticket.status=Open
 expected-diagnostic: AIL001
 failure-taxonomy: semantic-drift
+
+## End-To-End Example: example-100
+semantic-task: stateful-counter-live-codex-accepted-100
+profile: System
+surface-tags: core
+package: examples/stateful_counter.ail
+prompt-file: docs/ail/prompts/interop.system.md
+prompt-version: ail-prompts.v0.2
+prompt-fingerprint: fnv64:87f6dd1772d48729
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
+request-file: requests/example-100.json
+response-file: responses/example-100.json
+artifact-kind: ail-spec
+checker-result: accepted
+target: vm
+vm-action: IncrementCounter
+runtime-state: counter.value=0

@@ -20024,9 +20024,9 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         String::from_utf8_lossy(&output.stderr)
     );
     let report = fs::read_to_string(artifact_dir.join("e2e-corpus-report.txt")).unwrap();
-    assert!(report.contains("entry-count 100"), "{report}");
+    assert!(report.contains("entry-count 101"), "{report}");
     assert!(
-        report.contains("checker-result-count accepted 99"),
+        report.contains("checker-result-count accepted 100"),
         "{report}"
     );
     assert!(
@@ -20046,7 +20046,7 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("capture-origin-count live-codex 96"),
+        report.contains("capture-origin-count live-codex 97"),
         "{report}"
     );
     assert!(
@@ -20643,6 +20643,13 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
             && report.contains("capture-origin live-codex"),
         "{report}"
     );
+    assert!(
+        report.contains("entry example-100")
+            && report.contains("semantic-task stateful-counter-live-codex-accepted-100")
+            && report.contains("entry-artifact example-100 bytecode")
+            && report.contains("entry-artifact example-100 vm-trace"),
+        "{report}"
+    );
     assert!(report.contains("profile-count UI 1"), "{report}");
     assert!(
         report.contains("target-count wasm32-unknown-sandbox-wasm 11"),
@@ -20676,6 +20683,17 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
     assert!(
         manifest.contains("entry example-99 checker-result rejected target vm"),
         "{manifest}"
+    );
+    let model_executor_manifest =
+        fs::read_to_string(artifact_dir.join("model-executor-manifest.txt")).unwrap();
+    assert!(
+        model_executor_manifest.contains("entry-count 101")
+            && model_executor_manifest.contains("executor-family codex-skill-agent count 97")
+            && model_executor_manifest.contains("capture-origin live-codex count 97")
+            && model_executor_manifest.contains(
+                "entry example-100 semantic-task stateful-counter-live-codex-accepted-100"
+            ),
+        "{model_executor_manifest}"
     );
 
     let _ = fs::remove_dir_all(artifact_dir);
@@ -21017,6 +21035,62 @@ fn cli_ail_e2e_corpus_requires_100_distinct_semantic_examples() {
     assert!(
         stderr.contains(
             "ail-e2e-corpus requires at least 100 distinct semantic-task entries; found 1"
+        ),
+        "{stderr}"
+    );
+
+    let _ = fs::remove_dir_all(corpus_dir);
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
+fn cli_ail_e2e_corpus_requires_100_accepted_prompt_to_artifact_examples() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let corpus_dir = std::env::temp_dir().join(format!(
+        "ail-e2e-corpus-accepted-threshold-{}",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-e2e-corpus-accepted-threshold-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&corpus_dir);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&corpus_dir).unwrap();
+    let mut corpus_text = String::new();
+    for index in 0..101 {
+        let overrides: &[(&str, &str)] = if matches!(index, 98 | 99) {
+            &[
+                ("checker-result", "rejected"),
+                ("expected-diagnostic", "AIL001"),
+                ("failure-taxonomy", "semantic-drift"),
+            ]
+        } else {
+            &[]
+        };
+        corpus_text.push_str(&e2e_corpus_entry_text(index, overrides));
+    }
+    fs::write(corpus_dir.join("examples.md"), corpus_text).unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-e2e-corpus",
+            corpus_dir.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains(
+            "ail-e2e-corpus requires at least 100 accepted prompt-to-artifact examples; found 99"
         ),
         "{stderr}"
     );
@@ -21854,7 +21928,7 @@ fn cli_ail_e2e_corpus_replays_rejected_prompt_failures() {
     let _ = fs::remove_dir_all(&corpus_dir);
     let _ = fs::remove_dir_all(&artifact_dir);
     fs::create_dir_all(&corpus_dir).unwrap();
-    write_e2e_transcript_files(&corpus_dir, 100);
+    write_e2e_transcript_files(&corpus_dir, 101);
     fs::write(
         corpus_dir.join("requests").join("rejected-0.json"),
         r#"{"prompt":"rejected"}"#,
@@ -21870,7 +21944,7 @@ fn cli_ail_e2e_corpus_replays_rejected_prompt_failures() {
     )
     .unwrap();
     let mut corpus_text = String::new();
-    for index in 0..100 {
+    for index in 0..101 {
         if index == 99 {
             corpus_text.push_str(&e2e_corpus_entry_text(
                 index,
@@ -21922,7 +21996,7 @@ fn cli_ail_e2e_corpus_replays_rejected_prompt_failures() {
     );
     let report = fs::read_to_string(artifact_dir.join("e2e-corpus-report.txt")).unwrap();
     assert!(
-        report.contains("checker-result-count accepted 99"),
+        report.contains("checker-result-count accepted 100"),
         "{report}"
     );
     assert!(

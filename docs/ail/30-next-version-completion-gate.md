@@ -512,12 +512,14 @@ already covers parts of this gate:
   model/executor manifest covering executor families, endpoint labels,
   executor labels, capture origins, executor/origin pairs, executor/endpoint
   pairs, and per-entry semantic task provenance
-- checked 100-entry e2e live release corpus under `docs/ail/corpus/e2e`
+- checked 101-entry e2e live release corpus under `docs/ail/corpus/e2e`,
+  including 100 accepted prompt-to-artifact examples plus one rejected
+  diagnostic example
 - four replay-clean live LLM captures for the Standard Collections, Support
   Ticket, and Refund Tool packages, using schema-shaped prompt input or
   constrained prose prompting with an OpenAI-compatible chat-completions
   endpoint with thinking disabled
-- ninety-six replay-clean live Codex `codex-ail-spec-writer` captures for the
+- ninety-seven replay-clean live Codex `codex-ail-spec-writer` captures for the
   Standard Collections, Composed Support, Refund Tool, Support Ticket,
   Stateful Counter, UI Workflow, C Interop, Network Driver, Compiler Pass,
   Secret Access, Repeated Task, and Runtime Generic packages, imported from
