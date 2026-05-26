@@ -19036,6 +19036,138 @@ fn cli_ail_story_builds_checked_artifacts_from_story_file() {
 }
 
 #[test]
+fn cli_ail_story_agent_records_story_entrypoint_before_compile() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("support_ticket.ail");
+    let agent_package = fixture("ail_toolchain_agent.ail");
+    let unique_suffix = format!(
+        "{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
+    let story_file = std::env::temp_dir().join(format!("ail-story-agent-{unique_suffix}.md"));
+    let artifact_dir =
+        std::env::temp_dir().join(format!("ail-story-agent-artifacts-{unique_suffix}"));
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::write(
+        &story_file,
+        concat!(
+            "# Support Ticket Agent Story\n\n",
+            "user-story-id: support-ticket-agent-story\n",
+            "user-story: As a support agent I can turn a story into checked support-ticket bytecode through the toolchain agent.\n",
+            "acceptance-criteria: checked requirements exist; checked spec exists; bytecode exists; agent trace records the story entrypoint\n",
+            "semantic-anchors: Support Tickets; Close ticket; TicketClosed; toolchain agent\n"
+        ),
+    )
+    .unwrap();
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let requirements = concat!(
+        "AIL-Requirements:\n",
+        "- The application manages support tickets.\n",
+        "- Ticket fields include id, title, status, and secret internal notes.\n",
+        "- The CloseTicket action requires ticket id input and ticket status not to be Closed.\n",
+        "- Failure NotFound happens when ticket id is missing and records TicketNotFound.\n",
+        "- The action guarantees closed tickets do not appear in the open queue.\n",
+        "- The action records trace event TicketClosed.\n"
+    );
+    let requirements_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(requirements)
+    );
+    let response_spec = fs::read_to_string(format!("{package}/spec.ail-spec.md")).unwrap();
+    let spec_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(&format!("```ail\n{response_spec}\n```"))
+    );
+    let server = serve_chat_responses(listener, vec![requirements_body, spec_body]);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-story",
+            &package,
+            "--story-file",
+            story_file.to_str().unwrap(),
+            "--agent",
+            &agent_package,
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+            "--llm-endpoint",
+            &format!("http://127.0.0.1:{}/v1/chat/completions", addr.port()),
+        ])
+        .output()
+        .unwrap();
+
+    let request_bodies = server.join().unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(request_bodies.len(), 2);
+    assert!(
+        request_bodies[0].contains("AGENT REQUIREMENTS CONTEXT:"),
+        "{}",
+        request_bodies[0]
+    );
+    assert!(
+        request_bodies[0].contains("buildrequest.entrypoint=ail-story"),
+        "{}",
+        request_bodies[0]
+    );
+    assert!(
+        request_bodies[1].contains("AGENT SPEC CONTEXT:"),
+        "{}",
+        request_bodies[1]
+    );
+    assert!(
+        request_bodies[1].contains("buildrequest.entrypoint=ail-story"),
+        "{}",
+        request_bodies[1]
+    );
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let bytecode = parse_ail_bytecode(&stdout).unwrap();
+    assert_eq!(verify_ail_bytecode(&bytecode), Vec::<String>::new());
+    let agent_trace = fs::read_to_string(artifact_dir.join("agent-trace.txt")).unwrap();
+    let entrypoint_index = agent_trace
+        .find("entrypoint=ail-story")
+        .unwrap_or_else(|| panic!("{agent_trace}"));
+    let capture_index = agent_trace
+        .find("action CaptureRequirements started")
+        .unwrap_or_else(|| panic!("{agent_trace}"));
+    let prepare_index = agent_trace
+        .find("action PrepareSpecDraft started")
+        .unwrap_or_else(|| panic!("{agent_trace}"));
+    let accept_index = agent_trace
+        .find("action AcceptSpecDraft started")
+        .unwrap_or_else(|| panic!("{agent_trace}"));
+    let compile_index = agent_trace
+        .find("action CompileApplication started")
+        .unwrap_or_else(|| panic!("{agent_trace}"));
+    let verify_index = agent_trace
+        .find("action VerifyBytecodeArtifact started")
+        .unwrap_or_else(|| panic!("{agent_trace}"));
+    assert!(entrypoint_index < capture_index, "{agent_trace}");
+    assert!(capture_index < prepare_index, "{agent_trace}");
+    assert!(prepare_index < accept_index, "{agent_trace}");
+    assert!(accept_index < compile_index, "{agent_trace}");
+    assert!(compile_index < verify_index, "{agent_trace}");
+    let story_manifest = fs::read_to_string(artifact_dir.join("manifest.ail-story.txt")).unwrap();
+    assert!(
+        story_manifest.contains("entrypoint ail-story"),
+        "{story_manifest}"
+    );
+
+    fs::remove_file(story_file).unwrap();
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
 fn cli_ail_interview_surfaces_prompt_envelope_questions_as_artifact() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");

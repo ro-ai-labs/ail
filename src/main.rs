@@ -10989,11 +10989,32 @@ fn run_ail_story_command(
     );
     let requirements_prompt =
         prompt_with_source_spec_context(&requirements_prompt, &source_artifacts.spec_text);
+    let mut agent_start = if let Some(agent_path) = cli_options.ail_build_agent.as_deref() {
+        let mut agent_start =
+            run_ail_build_agent_capture(agent_path, &package.metadata.name, &requirements_prompt)?;
+        agent_start
+            .trace
+            .insert(0, "entrypoint=ail-story".to_string());
+        agent_start.state.insert(
+            "buildrequest.entrypoint".to_string(),
+            "ail-story".to_string(),
+        );
+        agent_start.state.insert(
+            "buildrequest.story".to_string(),
+            normalized_story_text.clone(),
+        );
+        Some(agent_start)
+    } else {
+        None
+    };
+    let agent_requirements_context = agent_start
+        .as_ref()
+        .map(render_ail_build_agent_requirements_context);
     let (requirements, requirements_diagnostics) = draft_checked_ail_requirements_for_package(
         package,
         &requirements_prompt,
         endpoint,
-        None,
+        agent_requirements_context.as_deref(),
         true,
     )?;
     if !requirements_diagnostics.is_empty() {
@@ -11007,6 +11028,17 @@ fn run_ail_story_command(
         .get("semantic-anchors")
         .map(String::as_str)
         .unwrap_or("");
+    let agent_spec_context = if let (Some(agent_path), Some(previous_agent_start)) =
+        (cli_options.ail_build_agent.as_deref(), agent_start.take())
+    {
+        let prepared_agent_start =
+            run_ail_build_agent_prepare_spec(agent_path, previous_agent_start, &requirements)?;
+        let context = render_ail_build_agent_spec_context(&prepared_agent_start);
+        agent_start = Some(prepared_agent_start);
+        Some(context)
+    } else {
+        None
+    };
     let spec_prompt = prompt_with_requested_native_action(
         &render_ail_story_spec_prompt(&normalized_story_text, semantic_anchors),
         cli_options
@@ -11020,7 +11052,7 @@ fn run_ail_story_command(
         &spec_prompt,
         &requirements,
         endpoint,
-        None,
+        agent_spec_context.as_deref(),
         true,
     )?;
     if !draft.success() {
@@ -11029,6 +11061,16 @@ fn run_ail_story_command(
             println!("{}", diagnostic.detailed_message());
         }
         return Ok(1);
+    }
+    if let (Some(agent_path), Some(previous_agent_start)) =
+        (cli_options.ail_build_agent.as_deref(), agent_start.take())
+    {
+        agent_start = Some(run_ail_build_agent_accept_spec(
+            agent_path,
+            previous_agent_start,
+            &requirements,
+            &draft.spec_text,
+        )?);
     }
     let document = parse_ail_package_spec_text(package, &draft.spec_text)?;
     let core = elaborate_ail_core(package, &document);
@@ -11039,7 +11081,7 @@ fn run_ail_story_command(
         Some(&requirements),
         Some(&draft.spec_text),
         Some(&requirements_prompt),
-        None,
+        agent_start,
     )?;
     if exit_code == 0
         && let Some(artifact_dir) = cli_options.artifact_dir.as_deref()
