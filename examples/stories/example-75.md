@@ -11,3 +11,4 @@ module-count: 1
 spec-count: 1
 story-count: 1
 interacts-with: none
+semantic-anchors: Secret Access; View internal notes; InternalNotesViewed; PermissionDenied; security-permissions; core-to-spec.system.md

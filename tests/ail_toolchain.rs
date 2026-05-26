@@ -334,6 +334,8 @@ fn example_learning_readmes_cover_repeated_family_gaps() {
         "refund_tool.ail/README.md",
         "stateful_counter.ail/README.md",
         "repeated_task.ail/README.md",
+        "runtime_generic.ail/README.md",
+        "secret_access.ail/README.md",
         "incident_response.ail/README.md",
         "ail_std_core.ail/README.md",
         "ail_std_collections.ail/README.md",
@@ -466,6 +468,53 @@ fn example_learning_readmes_cover_repeated_family_gaps() {
         assert!(
             repeated_task_readme.contains(required),
             "{required}\n{repeated_task_readme}"
+        );
+    }
+
+    let runtime_generic_readme =
+        fs::read_to_string(fixture("runtime_generic.ail/README.md")).unwrap();
+    for required in [
+        "# Runtime Generic Example",
+        "## Purpose",
+        "## Concepts Taught",
+        "## Files To Inspect",
+        "## Expected Replay Artifacts",
+        "## Rejected Fixtures",
+        "## Next Example To Read",
+        "## v0.3 Learning Signal",
+        "Prioritize ticket",
+        "TicketPrioritized",
+        "runtime-generics",
+        "example-35",
+        "example-39",
+    ] {
+        assert!(
+            runtime_generic_readme.contains(required),
+            "{required}\n{runtime_generic_readme}"
+        );
+    }
+
+    let secret_access_readme =
+        fs::read_to_string(fixture("secret_access.ail/README.md")).unwrap();
+    for required in [
+        "# Secret Access Example",
+        "## Purpose",
+        "## Concepts Taught",
+        "## Files To Inspect",
+        "## Expected Replay Artifacts",
+        "## Rejected Fixtures",
+        "## Next Example To Read",
+        "## v0.3 Learning Signal",
+        "View internal notes",
+        "InternalNotesViewed",
+        "InternalNotesDenied",
+        "PermissionDenied",
+        "example-75",
+        "example-79",
+    ] {
+        assert!(
+            secret_access_readme.contains(required),
+            "{required}\n{secret_access_readme}"
         );
     }
 
@@ -1440,6 +1489,162 @@ fn example_repeated_task_stories_record_semantic_anchors() {
             assert!(
                 spec.contains(anchor) || package.contains(anchor) || catalog.contains(anchor),
                 "{story_file} anchor {anchor} is not grounded in repeated task spec/package/catalog"
+            );
+        }
+    }
+}
+
+#[test]
+fn example_runtime_and_secret_stories_record_semantic_anchors() {
+    let runtime_spec = fs::read_to_string(fixture("runtime_generic.ail/spec.ail-spec.md")).unwrap();
+    let runtime_package = fs::read_to_string(fixture("runtime_generic.ail/ail-package.md")).unwrap();
+    let secret_spec = fs::read_to_string(fixture("secret_access.ail/spec.ail-spec.md")).unwrap();
+    let secret_package = fs::read_to_string(fixture("secret_access.ail/ail-package.md")).unwrap();
+    let catalog = fs::read_to_string(fixture("examples.md")).unwrap();
+    for (story_file, grounding_text, package_text, required_anchors) in [
+        (
+            "stories/example-35.md",
+            runtime_spec.as_str(),
+            runtime_package.as_str(),
+            [
+                "Runtime Tickets",
+                "Prioritize ticket",
+                "TicketPrioritized",
+                "ticket.priority=Low",
+                "runtime-generics",
+                "core-to-spec.system.md",
+            ],
+        ),
+        (
+            "stories/example-36.md",
+            runtime_spec.as_str(),
+            runtime_package.as_str(),
+            [
+                "Runtime Tickets",
+                "Prioritize ticket",
+                "TicketPrioritized",
+                "ticket.priority=Low",
+                "runtime-generics",
+                "core-to-summary.system.md",
+            ],
+        ),
+        (
+            "stories/example-37.md",
+            runtime_spec.as_str(),
+            runtime_package.as_str(),
+            [
+                "Runtime Tickets",
+                "Prioritize ticket",
+                "TicketPrioritized",
+                "ticket.priority=Low",
+                "runtime-generics",
+                "flow-patch.system.md",
+            ],
+        ),
+        (
+            "stories/example-38.md",
+            runtime_spec.as_str(),
+            runtime_package.as_str(),
+            [
+                "Runtime Tickets",
+                "Prioritize ticket",
+                "TicketPrioritized",
+                "ticket.priority=Low",
+                "runtime-generics",
+                "trace-debug.system.md",
+            ],
+        ),
+        (
+            "stories/example-39.md",
+            runtime_spec.as_str(),
+            runtime_package.as_str(),
+            [
+                "Runtime Tickets",
+                "Prioritize ticket",
+                "TicketPrioritized",
+                "ticket.priority=Low",
+                "runtime-generics",
+                "interop.system.md",
+            ],
+        ),
+        (
+            "stories/example-75.md",
+            secret_spec.as_str(),
+            secret_package.as_str(),
+            [
+                "Secret Access",
+                "View internal notes",
+                "InternalNotesViewed",
+                "PermissionDenied",
+                "security-permissions",
+                "core-to-spec.system.md",
+            ],
+        ),
+        (
+            "stories/example-76.md",
+            secret_spec.as_str(),
+            secret_package.as_str(),
+            [
+                "Secret Access",
+                "View internal notes",
+                "InternalNotesViewed",
+                "PermissionDenied",
+                "security-permissions",
+                "core-to-summary.system.md",
+            ],
+        ),
+        (
+            "stories/example-77.md",
+            secret_spec.as_str(),
+            secret_package.as_str(),
+            [
+                "Secret Access",
+                "View internal notes",
+                "InternalNotesViewed",
+                "PermissionDenied",
+                "security-permissions",
+                "flow-patch.system.md",
+            ],
+        ),
+        (
+            "stories/example-78.md",
+            secret_spec.as_str(),
+            secret_package.as_str(),
+            [
+                "Secret Access",
+                "View internal notes",
+                "InternalNotesDenied",
+                "PermissionDenied",
+                "security-permissions",
+                "trace-debug.system.md",
+            ],
+        ),
+        (
+            "stories/example-79.md",
+            secret_spec.as_str(),
+            secret_package.as_str(),
+            [
+                "Secret Access",
+                "View internal notes",
+                "InternalNotesViewed",
+                "PermissionDenied",
+                "security-permissions",
+                "interop.system.md",
+            ],
+        ),
+    ] {
+        let story = fs::read_to_string(fixture(story_file)).unwrap();
+        assert!(story.contains("semantic-anchors:"), "{story_file}\n{story}");
+        for anchor in required_anchors {
+            assert!(
+                story.contains(anchor),
+                "{story_file} missing semantic anchor {anchor}\n{story}"
+            );
+            assert!(
+                grounding_text.contains(anchor)
+                    || package_text.contains(anchor)
+                    || catalog.contains(anchor),
+                "{story_file} anchor {anchor} is not grounded in package spec/package metadata/catalog"
             );
         }
     }
@@ -22287,9 +22492,15 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("semantic-anchor-story-count 65")
+        report.contains("semantic-anchor-story-count 75")
             && report.contains(
                 "entry-semantic-anchors example-0 Option<T>; Result<T; E>; Map<K; V>; Option.map; OptionMapEvaluated; interview.system.md"
+            )
+            && report.contains(
+                "entry-semantic-anchors example-35 Runtime Tickets; Prioritize ticket; TicketPrioritized; ticket.priority=Low; runtime-generics; core-to-spec.system.md"
+            )
+            && report.contains(
+                "entry-semantic-anchors example-75 Secret Access; View internal notes; InternalNotesViewed; PermissionDenied; security-permissions; core-to-spec.system.md"
             )
             && report.contains(
                 "entry-semantic-anchors example-80 Maintenance Runner; Run maintenance cycle; IncrementCounter; MaintenanceCycleCompleted; scheduled-workflow; interview.system.md"

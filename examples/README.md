@@ -70,6 +70,10 @@ the teaching path through repeated example families:
   idempotency, locking, replay after failure, and native artifact evidence.
 - `repeated_task.ail/README.md`: scheduled-workflow behavior, repeated action
   lowering, maintenance-cycle trace evidence, and temporal-policy gaps.
+- `runtime_generic.ail/README.md`: typed runtime priority flow,
+  `TicketPrioritized` trace evidence, target reports, and type-inference gaps.
+- `secret_access.ail/README.md`: secret internal notes, permission checks,
+  redaction behavior, denied-access traces, and audit-trail gaps.
 - `incident_response.ail/README.md`: high-level multi-module incident response
   with identity, policy, notification, UI, workflow, target-contract, and story
   journey evidence.

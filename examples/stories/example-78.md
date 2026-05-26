@@ -11,3 +11,4 @@ module-count: 1
 spec-count: 1
 story-count: 1
 interacts-with: none
+semantic-anchors: Secret Access; View internal notes; InternalNotesDenied; PermissionDenied; security-permissions; trace-debug.system.md
