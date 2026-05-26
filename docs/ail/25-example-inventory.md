@@ -2,9 +2,27 @@
 
 ## Purpose
 
-This inventory makes referenced examples visible as part of the active
-specification suite. Each example lists its source package, status, covered
-artifacts, fixtures, and verification command.
+This inventory is the active map from the file-based `./examples` tree to the
+AIL replay catalog. It makes every package directory visible, distinguishes
+support packages from counted catalog entries, and points reviewers to the
+commands that prove the examples still replay end to end.
+
+## Corpus Snapshot
+
+- Package directories: 26
+- Counted catalog examples: 116
+- Accepted prompt-to-artifact examples: 108
+- Rejected diagnostic examples: 8
+- Story files: 116
+- Stored request transcripts: 116
+- Stored response artifacts: 116
+
+The authoritative replay manifest is `examples/examples.md`. Package
+directories provide source manifests, specifications, support packages,
+profile-specific fixtures, and teaching guides. A catalog entry counts as an
+AIL example only when `ail-examples` can replay it through stored prompt or
+package source, checked artifact, checked AIL-Core, bytecode, VM trace, and
+binary or target-contract evidence.
 
 ## Version Surface
 
@@ -12,175 +30,94 @@ Unless a row states otherwise, examples in this inventory target:
 
 - language reference: `ail-reference.draft`
 - AIL-Core schema: `ail-core.schema.v0`
-- prompt pack: draft prompt-pack with `AIL-PROMPT-001`
-- bytecode: stage-0 VM JSON plus native Linux x86_64 ELF target where
-  executable
-- conformance suite: `first-slice` package fixtures and profile fixtures
+- prompt pack: draft prompt pack with `AIL-PROMPT-001`
+- bytecode: stage-0 VM JSON plus supported native or contract targets
+- conformance suite: package-local accepted/rejected fixtures where present
 
 When an example is updated to cover a newer language feature, its row or
 section must name the changed version surface.
 
-## Inventory
+## Package Directory Inventory
 
-| Example | Profile | Version surface | Source | Status | Coverage |
-| --- | --- | --- | --- | --- | --- |
-| Support Ticket | Application | draft/default | `examples/support_ticket.ail/` | accepted first executable target | AIL-Spec, docs AIL-Core, AIL-Flow renderer, trace runtime, accepted/rejected fixtures, patch fixture |
-| Refund Tool | AgentTool | draft/default | `examples/refund_tool.ail/` | accepted agent-tool target | AIL-Spec, docs AIL-Core, AIL-Flow renderer, trace runtime, accepted/rejected fixtures |
-| Compiler Pass | Compiler | draft/default | `examples/compiler_pass.ail/` | accepted AIL-Meta compiler-pass target | AIL-Spec, docs AIL-Core, bytecode pass runtime, accepted/rejected fixtures |
-| Network Driver | System | draft/default | `examples/network_driver.ail/` | accepted system target | AIL-Spec package, docs AIL-Core, AIL-Flow renderer, trace runtime, accepted/rejected fixtures |
-| Toolchain Agent | Application | draft/default | `examples/ail_toolchain_agent.ail/` | accepted self-hosting path target | requirements capture, spec drafting, core lowering, pass execution, bytecode, native backend, prompt portability reports |
-| Recursive Factorial | Application | draft/default | `examples/recursive_factorial.ail/` | accepted executable-semantics fixture | AIL-Spec, AIL-Core, recursive function bytecode, VM trace runtime |
-| Option Map | Application | draft/default | `examples/option_map.ail/` | accepted executable-semantics fixture | AIL-Spec, AIL-Core, collection-transform bytecode, VM trace runtime |
-| Stateful Counter | Application | draft/default | `examples/stateful_counter.ail/` | accepted executable-semantics fixture | AIL-Spec, AIL-Core, integer-state bytecode, VM trace runtime |
-| Repeated Task | Application | draft/default | `examples/repeated_task.ail/` | accepted executable-semantics fixture | AIL-Spec, AIL-Core, repeated-action bytecode, VM trace runtime, native Linux x86_64 ELF runtime |
+| Package directory | Manifest package | Profile | Catalog entries | Role |
+| --- | --- | --- | ---: | --- |
+| `examples/ail_std_collections.ail/` | `ail.std.collections` | Application | 10 | Standard-library generic collections, `Option.map`, accepted/rejected generic fixtures, and prompt matrix entries. |
+| `examples/ail_std_core.ail/` | `ail.std.core` | Application | 0 | Standard-library primitive contracts and package-local conformance fixture source. |
+| `examples/ail_std_effects.ail/` | `ail.std.effects` | Application | 0 | Standard-library resource-effect contracts and package-local accepted fixture source. |
+| `examples/ail_std_runtime.ail/` | `ail.std.runtime` | Application | 0 | Runtime task contracts, failure surfaces, and package-local fixture source. |
+| `examples/ail_std_security.ail/` | `ail.std.security` | Application | 0 | Secret, permission, and capability contracts with package-local fixture source. |
+| `examples/ail_toolchain_agent.ail/` | `ail-toolchain-agent` | Application | 0 | AIL-authored toolchain agent package used by `ail-build`, `ail-story`, compiler-pass, and target-verification flows. |
+| `examples/c_interop.ail/` | `c-interop` | C interop | 11 | C ABI, pointer ownership, callbacks, layout, status-map diagnostics, Wasm contract, and rejected nullable/non-null interop replay. |
+| `examples/compiler_pass.ail/` | `ail-meta-permissions` | Compiler | 10 | Compiler profile pass semantics, `InferReadPermissions`, AIL-Core graph transforms, and self-hosting learning signal. |
+| `examples/darwin_linux_effect.ail/` | `darwin-linux-effect-app` | Application | 1 | Backend portability diagnostic for Linux-only syscall effects on the Darwin contract target. |
+| `examples/incident_identity.ail/` | `incident-identity` | Application | 0 | Support package imported by the incident-response multi-module examples. |
+| `examples/incident_notifications.ail/` | `incident-notifications` | AgentTool | 0 | Notification AgentTool support package imported by incident-response examples. |
+| `examples/incident_policy.ail/` | `incident-policy` | Application | 0 | Policy support package imported by incident-response examples. |
+| `examples/incident_response.ail/` | `incident-response` | Application | 5 | High-level multi-module incident workflows, UI surfaces, target contracts, and regenerated story views. |
+| `examples/missing_registry_import.ail/` | `missing-registry-import` | Application | 1 | Rejected package-resolution diagnostic for unresolved registry imports. |
+| `examples/network_driver.ail/` | `network-driver` | System | 10 | System profile resources, ownership, borrowing, device effects, scheduler/interrupt fixtures, and missing-capability diagnostics. |
+| `examples/option_map.ail/` | `ail-std-option-map` | Application | 5 | Focused `Option.map` application surface, UI-tagged prompt entries, checked Core, bytecode, and VM evidence. |
+| `examples/recursive_factorial.ail/` | `recursive-factorial` | Application | 0 | Executable-semantics fixture for recursive functions and bytecode control flow. |
+| `examples/refund_tool.ail/` | `refund-tool` | AgentTool | 16 | AgentTool policy, approval, permission, provider-call, UI, repair, and hallucinated-capability diagnostic examples. |
+| `examples/repeated_task.ail/` | `repeated-task` | Application | 5 | Scheduled maintenance workflow, repeated action lowering, VM trace, and temporal-policy learning signal. |
+| `examples/runtime_generic.ail/` | `runtime-generic` | Application | 5 | Generic runtime priority flow, typed state, trace evidence, and target reports. |
+| `examples/secret_access.ail/` | `secret-access` | Application | 5 | Secret internal notes, redaction, permission checks, allowed and denied access traces. |
+| `examples/stateful_counter.ail/` | `stateful-counter` | Application | 6 | Deterministic state, integer mutation, VM/native evidence, and repair-target replay. |
+| `examples/support_composed.ail/` | `support-composed` | Application | 10 | Package composition over `support_shared`, import resolution, shared user types, VM traces, and prompt-surface matrix entries. |
+| `examples/support_shared.ail/` | `support-shared` | Application | 0 | Shared package imported by `support_composed.ail`; not counted directly in the replay catalog. |
+| `examples/support_ticket.ail/` | `support-ticket` | Application | 13 | Application workflow baseline, native target evidence, story-mode input, profile mismatch, missing trace, and semantic-drift diagnostics. |
+| `examples/ui_workflow.ail/` | `ui-workflow` | UI | 3 | UI route, form, dashboard, workflow ordering, accessibility, and Wasm target-contract evidence. |
 
-## Support Ticket
+## Replay Structure
 
-Artifacts:
+The examples directory has four layers:
 
-- `examples/support_ticket.ail/ail-package.md`
-- `examples/support_ticket.ail/spec.ail-spec.md`
-- `examples/support_ticket.ail/reference.ail-spec.md`
-- `examples/support_ticket.ail/checked.ail-core.md`
-- `examples/support_ticket.ail/examples/accepted/close-ticket-minimal.ail-spec.md`
-- `examples/support_ticket.ail/examples/rejected/action-without-trace.ail-spec.md`
-- `examples/support_ticket.ail/examples/rejected/failure-without-handling.ail-spec.md`
-- `examples/support_ticket.ail/examples/rejected/failure-without-trace.ail-spec.md`
-- `examples/support_ticket.ail/examples/rejected/missing-failure-handler.ail-spec.md`
-- `examples/support_ticket.ail/examples/rejected/missing-reference.ail-spec.md`
-- `examples/support_ticket.ail/examples/rejected/secret-leak.ail-spec.md`
-- `examples/support_ticket.ail/examples/rejected/secret-read-without-protection.ail-spec.md`
-- `examples/support_ticket.ail/examples/rejected/unknown-field-type.ail-spec.md`
-- `examples/support_ticket.ail/examples/rejected/unknown-field.ail-spec.md`
-- `examples/support_ticket.ail/examples/rejected/unknown-requirement-field.ail-spec.md`
-- `examples/support_ticket.ail/examples/patches/escalate-ticket.ail-patch.md`
+- package directories: `examples/*.ail/`
+- catalog manifest: `examples/examples.md`
+- per-entry story views: `examples/stories/example-*.md`
+- stored transcripts and inputs: `examples/requests/`, `examples/responses/`,
+  and `examples/inputs/`
 
-Verification:
+Codex-style executor contracts live under `examples/agents/`. Package-local
+teaching guides live in package `README.md` files when the package is a main
+teaching path. Support-only packages are still listed in this inventory even
+when they do not yet have a guide.
 
-```bash
-cargo test --test ail_toolchain support_ticket
-```
+## Required Verification
 
-## Refund Tool
-
-Artifacts:
-
-- `examples/refund_tool.ail/ail-package.md`
-- `examples/refund_tool.ail/spec.ail-spec.md`
-- `examples/refund_tool.ail/reference.ail-spec.md`
-- `examples/refund_tool.ail/checked.ail-core.md`
-- `examples/refund_tool.ail/examples/accepted/refund-minimal.ail-spec.md`
-- `examples/refund_tool.ail/examples/rejected/approval-without-rule.ail-spec.md`
-- `examples/refund_tool.ail/examples/rejected/permission-without-rule.ail-spec.md`
-- `examples/refund_tool.ail/examples/rejected/secret-output.ail-spec.md`
-- `examples/refund_tool.ail/examples/rejected/tool-without-trace.ail-spec.md`
-- `examples/refund_tool.ail/examples/rejected/unknown-input-type.ail-spec.md`
-
-Verification:
+Run the full replay gate:
 
 ```bash
-cargo test --test ail_toolchain refund_tool
+cargo run -- ail-examples examples --artifact-dir /tmp/ail-examples-release-artifacts --release-evidence
 ```
 
-## Compiler Pass
-
-Artifacts:
-
-- `examples/compiler_pass.ail/ail-package.md`
-- `examples/compiler_pass.ail/spec.ail-spec.md`
-- `examples/compiler_pass.ail/reference.ail-spec.md`
-- `examples/compiler_pass.ail/checked.ail-core.md`
-- `examples/compiler_pass.ail/examples/accepted/infer-read-permissions-minimal.ail-spec.md`
-- `examples/compiler_pass.ail/examples/rejected/unknown-value-type.ail-spec.md`
-
-Verification:
+Run the v0.3 manual audit, which includes the examples replay plus story,
+prompt, and agent-entrypoint checks:
 
 ```bash
-cargo test --test ail_toolchain compiler_pass
+python3 scripts/run_ail_interactive_manual.py --all --run-checks
 ```
 
-## Network Driver
-
-Artifacts:
-
-- `examples/network_driver.ail/ail-package.md`
-- `examples/network_driver.ail/spec.ail-spec.md`
-- `examples/network_driver.ail/checked.ail-core.md`
-- `examples/network_driver.ail/examples/accepted/packet-receive-minimal.ail-spec.md`
-- `examples/network_driver.ail/examples/accepted/mutable-borrow-minimal.ail-spec.md`
-- `examples/network_driver.ail/examples/accepted/move-resource-minimal.ail-spec.md`
-- `examples/network_driver.ail/examples/accepted/layout-minimal.ail-spec.md`
-- `examples/network_driver.ail/examples/accepted/allocation-minimal.ail-spec.md`
-- `examples/network_driver.ail/examples/accepted/interrupt-context-minimal.ail-spec.md`
-- `examples/network_driver.ail/examples/accepted/interrupt-priority-minimal.ail-spec.md`
-- `examples/network_driver.ail/examples/accepted/interrupt-mask-minimal.ail-spec.md`
-- `examples/network_driver.ail/examples/accepted/scheduler-task-minimal.ail-spec.md`
-- `examples/network_driver.ail/examples/accepted/scheduler-task-priority-minimal.ail-spec.md`
-- `examples/network_driver.ail/examples/accepted/scheduler-task-timing-minimal.ail-spec.md`
-- `examples/network_driver.ail/examples/accepted/lock-guard-minimal.ail-spec.md`
-- `examples/network_driver.ail/examples/rejected/*.ail-spec.md`
-
-Verification:
+Run the Rust regression suite before claiming the inventory is current:
 
 ```bash
-cargo test --test ail_toolchain network_driver
+cargo test --test ail_toolchain
 ```
 
-## Recursive Factorial
+## Maintenance Rule
 
-Artifacts:
+When adding, renaming, or deleting an `examples/*.ail/` directory, update:
 
-- `examples/recursive_factorial.ail/ail-package.md`
-- `examples/recursive_factorial.ail/spec.ail-spec.md`
+- `README.md`
+- `examples/README.md` when the package is a teaching path
+- this inventory
+- any package-local README or conformance fixture references
 
-Verification:
-
-```bash
-cargo test --test ail_toolchain ail_spec_lowers_function_surface_into_runnable_bytecode
-```
-
-## Option Map
-
-Artifacts:
-
-- `examples/option_map.ail/ail-package.md`
-- `examples/option_map.ail/spec.ail-spec.md`
-
-Verification:
-
-```bash
-cargo test --test ail_toolchain ail_standard_library_option_map_executes_collection_transform_bytecode
-```
-
-## Stateful Counter
-
-Artifacts:
-
-- `examples/stateful_counter.ail/ail-package.md`
-- `examples/stateful_counter.ail/spec.ail-spec.md`
-
-Verification:
-
-```bash
-cargo test --test ail_toolchain ail_spec_lowers_stateful_counter_increment_to_integer_bytecode
-```
-
-## Repeated Task
-
-Artifacts:
-
-- `examples/repeated_task.ail/ail-package.md`
-- `examples/repeated_task.ail/spec.ail-spec.md`
-
-Verification:
-
-```bash
-cargo test --test ail_toolchain ail_spec_lowers_repeated_task_to_repeat_action_bytecode
-cargo test --test ail_toolchain ail_native_elf_executes_repeated_action_bytecode
-```
+`docs_example_inventory_names_every_package_directory` derives the package
+list from disk and rejects inventory drift.
 
 ## Last Conformance Result
 
-The authoritative conformance result is the local test output from
-`cargo test --test ail_toolchain` and `cargo test`. This inventory records the
-commands and artifact boundaries; it does not replace fresh verification.
+The authoritative conformance result is the local output from fresh
+verification commands. This inventory records package boundaries and replay
+commands; it does not replace current command output.

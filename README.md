@@ -136,25 +136,49 @@ enabled.
 
 ## Examples
 
-AIL packages live under [examples](examples):
+AIL packages live under [examples](examples). The current tree contains 26 package directories,
+plus the 116-entry replay catalog in
+[`examples/examples.md`](examples/examples.md). Each counted catalog entry is
+end-to-end: stored request/response or package source, checked artifact,
+checked AIL-Core, bytecode, VM trace, and binary or target-contract evidence.
 
-- `support_ticket.ail`
+Application and workflow packages:
+
+- `ail_std_collections.ail`
+- `ail_std_core.ail`
+- `ail_std_effects.ail`
+- `ail_std_runtime.ail`
+- `ail_std_security.ail`
+- `darwin_linux_effect.ail`
+- `incident_identity.ail`
+- `incident_policy.ail`
+- `incident_response.ail`
+- `missing_registry_import.ail`
+- `option_map.ail`
+- `recursive_factorial.ail`
+- `repeated_task.ail`
+- `runtime_generic.ail`
+- `secret_access.ail`
+- `stateful_counter.ail`
 - `support_composed.ail`
 - `support_shared.ail`
-- `refund_tool.ail`
-- `secret_access.ail`
-- `runtime_generic.ail`
-- `recursive_factorial.ail`
-- `option_map.ail`
-- `stateful_counter.ail`
-- `repeated_task.ail`
-- `network_driver.ail`
-- `compiler_pass.ail`
+- `support_ticket.ail`
+
+Specialized profile packages:
+
 - `ail_toolchain_agent.ail`
+- `c_interop.ail`
+- `compiler_pass.ail`
+- `incident_notifications.ail`
+- `network_driver.ail`
+- `refund_tool.ail`
+- `ui_workflow.ail`
 
 Each package has an `ail-package.md` manifest and a `spec.ail-spec.md` entry
 spec. Accepted and rejected conformance fixtures live under package-local
-`examples/accepted` and `examples/rejected` directories.
+`examples/accepted` and `examples/rejected` directories where present. The
+active package inventory is [docs/ail/25-example-inventory.md](docs/ail/25-example-inventory.md);
+the replay and learning guide entry point is [examples/README.md](examples/README.md).
 
 ## Verification
 

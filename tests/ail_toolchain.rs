@@ -779,6 +779,57 @@ fn example_learning_readmes_cover_repeated_family_gaps() {
 }
 
 #[test]
+fn docs_example_inventory_names_every_package_directory() {
+    let examples_dir = format!("{}/examples", env!("CARGO_MANIFEST_DIR"));
+    let mut package_dirs = Vec::new();
+    for entry in fs::read_dir(&examples_dir).unwrap() {
+        let entry = entry.unwrap();
+        if !entry.file_type().unwrap().is_dir() {
+            continue;
+        }
+        let name = entry.file_name().to_string_lossy().into_owned();
+        if name.ends_with(".ail") {
+            package_dirs.push(name);
+        }
+    }
+    package_dirs.sort();
+    assert_eq!(package_dirs.len(), 26, "{package_dirs:?}");
+
+    let root_readme =
+        fs::read_to_string(format!("{}/README.md", env!("CARGO_MANIFEST_DIR"))).unwrap();
+    let inventory = fs::read_to_string(format!(
+        "{}/docs/ail/25-example-inventory.md",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .unwrap();
+
+    assert!(
+        root_readme.contains("26 package directories"),
+        "{root_readme}"
+    );
+    assert!(inventory.contains("Package directories: 26"), "{inventory}");
+    assert!(
+        inventory.contains("Counted catalog examples: 116"),
+        "{inventory}"
+    );
+
+    for package in package_dirs {
+        let manifest = format!("{examples_dir}/{package}/ail-package.md");
+        let spec = format!("{examples_dir}/{package}/spec.ail-spec.md");
+        assert!(fs::metadata(&manifest).is_ok(), "{manifest}");
+        assert!(fs::metadata(&spec).is_ok(), "{spec}");
+        assert!(
+            root_readme.contains(&format!("`{package}`")),
+            "{package}\n{root_readme}"
+        );
+        assert!(
+            inventory.contains(&format!("`examples/{package}/`")),
+            "{package}\n{inventory}"
+        );
+    }
+}
+
+#[test]
 fn example_incident_stories_record_semantic_anchors() {
     let spec = fs::read_to_string(fixture("incident_response.ail/spec.ail-spec.md")).unwrap();
     let package = fs::read_to_string(fixture("incident_response.ail/ail-package.md")).unwrap();
