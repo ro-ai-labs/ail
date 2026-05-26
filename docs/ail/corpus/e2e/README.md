@@ -86,11 +86,11 @@ response JSON files. The batch output still must be replayed with
 The generated files are committed so release verification does not depend on
 live LLM access. The current corpus stores:
 
-- `examples.md`: 101 manifest entries with prompt, executor, profile, surface,
+- `examples.md`: 102 manifest entries with prompt, executor, profile, surface,
   capture-origin, checker-result, and target metadata. One hundred entries are
   accepted prompt-to-artifact examples that replay through checked Core,
-  bytecode, VM trace, and binary or target-contract evidence; one entry is a
-  rejected diagnostic example.
+  bytecode, VM trace, and binary or target-contract evidence; two entries are
+  rejected diagnostic examples.
 - `requests/`: stored prompt request transcripts.
 - `responses/`: stored model/agent response artifacts.
 - `inputs/`: schema-shaped prompt inputs used for live capture attempts.
@@ -98,18 +98,18 @@ live LLM access. The current corpus stores:
   `live-codex` transcript imports.
 
 This is a checked release-evidence corpus with four replay-clean live LLM
-captures and ninety-seven replay-clean live Codex skill-agent captures. The
+captures and ninety-eight replay-clean live Codex skill-agent captures. The
 current corpus marks zero entries `capture-origin: deterministic-seed`, four
-entries `capture-origin: live-llm`, and ninety-seven `codex-ail-spec-writer`
+entries `capture-origin: live-llm`, and ninety-eight `codex-ail-spec-writer`
 entries `capture-origin: live-codex`. The replay report exposes
 capture-origin counts plus response,
 extracted-artifact, checked Core, bytecode, VM trace, native, target-report,
 and diagnostics fingerprint reuse. Response, extracted-artifact, and
 target-report duplicate counts must remain zero before claiming the v0.2
 prompt-to-artifact release gate. Rejected e2e replay includes stored
-prompt-envelope diagnostics for malformed model outputs; broader rejected
-taxonomy coverage is still tracked by the v0.2 completion gate. The artifact
-bundle also writes
+prompt-envelope diagnostics for malformed model outputs and profile mismatch
+checker-handoff diagnostics; broader rejected taxonomy coverage is still
+tracked by the v0.2 completion gate. The artifact bundle also writes
 `model-executor-manifest.txt` and
 `model-executor-manifest.fingerprint.txt`, which enumerate executor families,
 executor labels, endpoint labels, capture origins, executor/origin pairs,

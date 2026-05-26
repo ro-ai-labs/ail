@@ -20024,17 +20024,21 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         String::from_utf8_lossy(&output.stderr)
     );
     let report = fs::read_to_string(artifact_dir.join("e2e-corpus-report.txt")).unwrap();
-    assert!(report.contains("entry-count 101"), "{report}");
+    assert!(report.contains("entry-count 102"), "{report}");
     assert!(
         report.contains("checker-result-count accepted 100"),
         "{report}"
     );
     assert!(
-        report.contains("checker-result-count rejected 1"),
+        report.contains("checker-result-count rejected 2"),
         "{report}"
     );
     assert!(
         report.contains("failure-taxonomy-count semantic-drift 1"),
+        "{report}"
+    );
+    assert!(
+        report.contains("failure-taxonomy-count profile-mismatch 1"),
         "{report}"
     );
     assert!(
@@ -20046,7 +20050,7 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("capture-origin-count live-codex 97"),
+        report.contains("capture-origin-count live-codex 98"),
         "{report}"
     );
     assert!(
@@ -20650,6 +20654,12 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
             && report.contains("entry-artifact example-100 vm-trace"),
         "{report}"
     );
+    assert!(
+        report.contains("entry example-101")
+            && report.contains("semantic-task support-ticket-profile-mismatch-rejected-101")
+            && report.contains("entry-artifact example-101 diagnostics"),
+        "{report}"
+    );
     assert!(report.contains("profile-count UI 1"), "{report}");
     assert!(
         report.contains("target-count wasm32-unknown-sandbox-wasm 11"),
@@ -20678,6 +20688,14 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
             && report.contains("capture-origin live-codex"),
         "{report}"
     );
+    let profile_mismatch_diagnostics =
+        fs::read_to_string(artifact_dir.join("examples/example-101/diagnostics.txt")).unwrap();
+    assert!(
+        profile_mismatch_diagnostics.contains(
+            "AIL-PROMPT-001 prompt envelope checker_handoff.expected_profile must be Application"
+        ),
+        "{profile_mismatch_diagnostics}"
+    );
     let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-e2e-corpus.txt")).unwrap();
     assert!(manifest.contains("AIL-E2E-Corpus-Manifest:"), "{manifest}");
     assert!(
@@ -20687,11 +20705,14 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
     let model_executor_manifest =
         fs::read_to_string(artifact_dir.join("model-executor-manifest.txt")).unwrap();
     assert!(
-        model_executor_manifest.contains("entry-count 101")
-            && model_executor_manifest.contains("executor-family codex-skill-agent count 97")
-            && model_executor_manifest.contains("capture-origin live-codex count 97")
+        model_executor_manifest.contains("entry-count 102")
+            && model_executor_manifest.contains("executor-family codex-skill-agent count 98")
+            && model_executor_manifest.contains("capture-origin live-codex count 98")
             && model_executor_manifest.contains(
                 "entry example-100 semantic-task stateful-counter-live-codex-accepted-100"
+            )
+            && model_executor_manifest.contains(
+                "entry example-101 semantic-task support-ticket-profile-mismatch-rejected-101"
             ),
         "{model_executor_manifest}"
     );
