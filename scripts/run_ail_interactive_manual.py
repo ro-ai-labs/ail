@@ -142,6 +142,32 @@ BASE_CHAPTERS: tuple[ManualChapter, ...] = (
         ),
     ),
     ManualChapter(
+        chapter_id="v03-roadmap",
+        title="v0.3 Roadmap",
+        doc="docs/ail/31-v03-learning-and-authoring-gate.md",
+        purpose="Print the examples-derived next-version backlog without mining the full replay report.",
+        commands=(
+            ManualCommand(
+                label="print-v03-roadmap",
+                command=(
+                    "cargo",
+                    "run",
+                    "--",
+                    "ail-v03-roadmap",
+                    "examples",
+                    "--artifact-dir",
+                    "/tmp/ail-manual-v03-roadmap",
+                    "--release-evidence",
+                ),
+                evidence=(
+                    "AIL-v0.3-Roadmap",
+                    "v03-roadmap.txt",
+                    "manifest.ail-examples.txt",
+                ),
+            ),
+        ),
+    ),
+    ManualChapter(
         chapter_id="prompt-interaction",
         title="Prompt Interaction",
         doc="docs/ail/prompts/README.md",
@@ -251,7 +277,7 @@ V03_AUTHORING_GATE = ManualChapter(
     chapter_id="v03-authoring-gate",
     title="v0.3 Authoring Gate",
     doc="docs/ail/31-v03-learning-and-authoring-gate.md",
-    purpose="Run the deterministic story, examples, prompt, and agent checks as one v0.3 audit.",
+    purpose="Run the deterministic story, examples, roadmap, prompt, and agent checks as one v0.3 audit.",
     commands=(
         ManualCommand(
             label="run-user-story-mode-checks",
@@ -282,6 +308,20 @@ V03_AUTHORING_GATE = ManualChapter(
                 "v03-roadmap.txt",
                 "manifest.ail-examples.txt",
                 "model-executor-manifest.txt",
+            ),
+        ),
+        ManualCommand(
+            label="run-v03-roadmap-checks",
+            command=(
+                "python3",
+                "scripts/run_ail_interactive_manual.py",
+                "--chapter",
+                "v03-roadmap",
+                "--run-checks",
+            ),
+            evidence=(
+                "AIL-v0.3-Roadmap",
+                "v03-roadmap.txt",
             ),
         ),
         ManualCommand(

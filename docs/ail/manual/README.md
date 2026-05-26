@@ -38,6 +38,12 @@ The examples replay in this gate writes `v03-roadmap.txt`, which is the
 machine-readable backlog of next-version language, prompt, checker, runtime,
 target, and documentation improvements learned from the corpus.
 
+Print only that roadmap view without reading the full examples report:
+
+```sh
+python3 scripts/run_ail_interactive_manual.py --chapter v03-roadmap --run-checks
+```
+
 Run the prompt interaction checks:
 
 ```sh
@@ -84,6 +90,8 @@ be reviewed before promotion into `./examples`.
   harness.
 - `agent-entrypoint`: Codex agent role files and the AIL toolchain-agent package
   that participates in the authoring pipeline.
+- `v03-roadmap`: direct next-version backlog generated from the examples
+  corpus with `ail-v03-roadmap`.
 - `v03-authoring-gate`: the deterministic v0.3 audit that runs User Story
-  mode, examples replay, prompt interaction, and agent-entrypoint checks from
-  one manual chapter.
+  mode, examples replay, roadmap printing, prompt interaction, and
+  agent-entrypoint checks from one manual chapter.

@@ -140,7 +140,12 @@ line keys. Replay also writes `v03-roadmap.txt`, a dedicated backlog artifact
 that groups each signal by entry id, capability level, program domain, prompt
 file, story journey, and checker result. The roadmap is fingerprinted and
 listed in `manifest.ail-examples.txt` so agent reviewers can consume the
-learning backlog without scraping the full replay report.
+learning backlog without scraping the full replay report. Print the roadmap
+directly with:
+
+```sh
+cargo run -- ail-v03-roadmap examples --artifact-dir /tmp/ail-v03-roadmap --release-evidence
+```
 
 User stories are also first-class. A story can start the development flow
 (`story-to-spec`), be regenerated from a checked spec or Core artifact

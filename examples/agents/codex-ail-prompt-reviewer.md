@@ -36,6 +36,8 @@ Return an `AIL-Prompt-Interaction-Review` report that records:
   story artifacts are reviewed
 - release replay command used before promotion:
   `ail-examples examples --artifact-dir`
+- v0.3 roadmap command used before promotion:
+  `cargo run -- ail-v03-roadmap examples`
 - v0.3 roadmap artifact reviewed:
   `v03-roadmap.txt`
 - explicit decision: `accepted-for-promotion`, `needs-repair`, or
@@ -56,6 +58,7 @@ Return an `AIL-Prompt-Interaction-Review` report that records:
 
 The review is accepted only when both relevant offline review commands pass and
 the promoted corpus copy passes `ail-examples examples --artifact-dir ...`
-with `--release-evidence` and writes `v03-roadmap.txt`. If either harness
-review is missing or rejected, the review must return `needs-repair` or
-`rejected-for-promotion`.
+with `--release-evidence`, `cargo run -- ail-v03-roadmap examples ...`
+writes `v03-roadmap.txt`, and the roadmap signals are reviewed. If either
+harness review is missing or rejected, the review must return `needs-repair`
+or `rejected-for-promotion`.

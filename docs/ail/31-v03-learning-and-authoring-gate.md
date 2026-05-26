@@ -108,7 +108,11 @@ groups the same signals by count, entry id, capability level, program domain,
 prompt file, story journey, and checker result so the interactive manual,
 prompt-review agent, and release reviewer do not need to mine the full
 `examples-report.txt` to decide which v0.3 improvements are being requested by
-the corpus.
+the corpus. The direct command is:
+
+```bash
+cargo run -- ail-v03-roadmap examples --artifact-dir /tmp/ail-v03-roadmap --release-evidence
+```
 
 Repeated story families are checked across entries. Any `user-story-id` family
 with at least five entries must cover at least three prompt files and at least
@@ -220,6 +224,7 @@ cargo test cli_ail_e2e_corpus_requires_v03_signal_diversity
 cargo test cli_ail_e2e_corpus_replays_checked_live_release_corpus
 cargo test --test ail_toolchain script_ail_interactive_manual_v03_authoring_gate_run_checks_succeeds
 cargo run -- ail-examples examples --artifact-dir /tmp/ail-v03-learning-examples --release-evidence
+cargo run -- ail-v03-roadmap examples --artifact-dir /tmp/ail-v03-roadmap --release-evidence
 test -f /tmp/ail-v03-learning-examples/v03-roadmap.txt
 git diff --check -- examples docs/ail src tests scripts
 ```

@@ -1044,6 +1044,7 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         "examples-release",
         "prompt-interaction",
         "agent-entrypoint",
+        "v03-roadmap",
         "v03-authoring-gate",
     ] {
         assert!(
@@ -1097,6 +1098,7 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "chapter examples-release",
         "chapter prompt-interaction",
         "chapter agent-entrypoint",
+        "chapter v03-roadmap",
         "chapter v03-authoring-gate",
     ] {
         assert!(list_stdout.contains(required), "{required}\n{list_stdout}");
@@ -1200,6 +1202,7 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "doc docs/ail/31-v03-learning-and-authoring-gate.md",
         "python3 scripts/run_ail_interactive_manual.py --chapter user-story-mode --run-checks",
         "python3 scripts/run_ail_interactive_manual.py --chapter examples-release --run-checks",
+        "python3 scripts/run_ail_interactive_manual.py --chapter v03-roadmap --run-checks",
         "python3 scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run-checks",
         "python3 scripts/run_ail_interactive_manual.py --chapter agent-entrypoint --run-checks",
         "evidence examples-report.txt",
@@ -1226,9 +1229,34 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "chapter examples-release",
         "chapter prompt-interaction",
         "chapter agent-entrypoint",
+        "chapter v03-roadmap",
         "chapter v03-authoring-gate",
     ] {
         assert!(all_stdout.contains(required), "{required}\n{all_stdout}");
+    }
+
+    let roadmap_dry_run = Command::new("python3")
+        .args([&script, "--chapter", "v03-roadmap", "--dry-run"])
+        .output()
+        .unwrap();
+    assert!(
+        roadmap_dry_run.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&roadmap_dry_run.stdout),
+        String::from_utf8_lossy(&roadmap_dry_run.stderr)
+    );
+    let roadmap_stdout = String::from_utf8_lossy(&roadmap_dry_run.stdout);
+    for required in [
+        "id v03-roadmap",
+        "cargo run -- ail-v03-roadmap examples",
+        "--artifact-dir /tmp/ail-manual-v03-roadmap",
+        "evidence AIL-v0.3-Roadmap",
+        "evidence v03-roadmap.txt",
+    ] {
+        assert!(
+            roadmap_stdout.contains(required),
+            "{required}\n{roadmap_stdout}"
+        );
     }
 }
 
@@ -1320,6 +1348,7 @@ fn examples_agents_include_prompt_review_contract() {
         "target artifact: AIL-Prompt-Interaction-Review",
         "Do not promote generated content into ./examples",
         "ail-examples examples --artifact-dir",
+        "cargo run -- ail-v03-roadmap examples",
         "v03-roadmap.txt",
     ] {
         assert!(
@@ -1353,6 +1382,7 @@ fn cli_ail_agent_contracts_validates_prompt_reviewer_contract() {
         "review-command scripts/run_v03_prompt_llm_harness.py --review-artifacts",
         "review-command scripts/run_v03_story_llm_harness.py --review-artifacts",
         "roadmap-artifact v03-roadmap.txt",
+        "roadmap-command cargo run -- ail-v03-roadmap examples --artifact-dir",
         "agent-contracts-result accepted",
     ] {
         assert!(stdout.contains(required), "{required}\n{stdout}");
@@ -26986,6 +27016,71 @@ fn cli_ail_e2e_corpus_writes_report_for_metadata_complete_corpus() {
     let manifest_fingerprint =
         fs::read_to_string(artifact_dir.join("manifest.fingerprint.txt")).unwrap();
     assert_eq!(manifest_fingerprint.trim(), fnv64_fingerprint(&manifest));
+
+    let _ = fs::remove_dir_all(corpus_dir);
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
+fn cli_ail_v03_roadmap_prints_backlog_without_full_examples_report() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let corpus_dir =
+        std::env::temp_dir().join(format!("ail-v03-roadmap-corpus-{}", std::process::id()));
+    let artifact_dir =
+        std::env::temp_dir().join(format!("ail-v03-roadmap-artifacts-{}", std::process::id()));
+    let _ = fs::remove_dir_all(&corpus_dir);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&corpus_dir).unwrap();
+    write_e2e_transcript_files(&corpus_dir, 100);
+    fs::write(
+        corpus_dir.join("examples.md"),
+        e2e_corpus_text_with_override(0, &[]),
+    )
+    .unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-v03-roadmap",
+            corpus_dir.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("AIL-v0.3-Roadmap:"), "{stdout}");
+    assert!(stdout.contains("entry-count 100"), "{stdout}");
+    assert!(stdout.contains("signal-count 100"), "{stdout}");
+    assert!(
+        stdout.contains(
+            "signal Scenario 0 should become a documented future learning gap for example coverage. count 1"
+        ),
+        "{stdout}"
+    );
+    assert!(
+        !stdout.contains("AIL-Examples-Report:"),
+        "roadmap command should print only the roadmap\n{stdout}"
+    );
+
+    let roadmap = fs::read_to_string(artifact_dir.join("v03-roadmap.txt")).unwrap();
+    assert_eq!(stdout, roadmap);
+    let roadmap_fingerprint =
+        fs::read_to_string(artifact_dir.join("v03-roadmap.fingerprint.txt")).unwrap();
+    assert_eq!(roadmap_fingerprint.trim(), fnv64_fingerprint(&roadmap));
+    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-examples.txt")).unwrap();
+    assert!(
+        manifest.contains(&format!(
+            "roadmap v03-roadmap.txt {}",
+            roadmap_fingerprint.trim()
+        )),
+        "{manifest}"
+    );
 
     let _ = fs::remove_dir_all(corpus_dir);
     let _ = fs::remove_dir_all(artifact_dir);
