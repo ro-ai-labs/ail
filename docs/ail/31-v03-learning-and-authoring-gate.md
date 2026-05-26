@@ -87,6 +87,12 @@ UI workflows, and system drivers. Diagnostics are also validated when present:
 a diagnostic-domain example must be rejected or carry diagnostic story
 evidence.
 
+Domain coverage is not only a count. Each required domain must exercise at
+least three prompt files and at least two story journeys, so one repeated
+prompt path cannot stand in for a meaningful domain slice. The story files
+under `examples/stories/` are also checked against the catalog for story,
+journey, evidence, domain, count, and interaction metadata.
+
 The verifier must require at least 10 distinct `user-story-id` values, at least
 one high-level `application-workflow` story family with two or more replayed
 entries, and coverage across `story-to-spec`, `spec-to-story`, and

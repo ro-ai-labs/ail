@@ -138,7 +138,9 @@ live LLM access. The current corpus stores:
   prompt-to-artifact examples that replay through checked Core, bytecode, VM
   trace, and binary or target-contract evidence; eight entries are rejected
   diagnostic examples.
-- `stories/`: one deterministic user-story view per catalog entry.
+- `stories/`: one deterministic user-story view per catalog entry. The
+  verifier rejects story files whose story, journey, evidence, domain,
+  interaction, or count metadata drifts from the catalog.
 - `requests/`: stored prompt request transcripts.
 - `responses/`: stored model/agent response artifacts.
 - `inputs/`: schema-shaped prompt inputs used for live capture attempts.

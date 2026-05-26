@@ -478,6 +478,7 @@ def main() -> None:
             f"user-story: {user_story}\n"
             f"acceptance-criteria: {acceptance_criteria}\n"
             f"story-journey: {story_journey_for(prompt_file, checker_result)}\n"
+            f"story-roundtrip: {'diagnostic-preserving' if checker_result == 'rejected' else 'semantic-similar'}\n"
             f"story-evidence: {story_evidence}\n"
             f"program-domain: {program_domain_for(index, fixture)}\n"
             f"module-count: {'1' if fixture is None else fixture['module_count']}\n"

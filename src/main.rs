@@ -1418,6 +1418,67 @@ fn validate_ail_e2e_corpus_transcript_files(entries: &[AilE2eCorpusEntry]) -> Re
     Ok(())
 }
 
+fn parse_ail_e2e_story_file_fields(
+    path: &std::path::Path,
+) -> Result<BTreeMap<String, String>, String> {
+    let text = fs::read_to_string(path).map_err(|error| {
+        format!(
+            "failed to read examples story file {}: {error}",
+            path.display()
+        )
+    })?;
+    let mut fields = BTreeMap::new();
+    for line in text.lines() {
+        if let Some((key, value)) = line.split_once(':') {
+            let key = key.trim();
+            if !key.is_empty()
+                && key.chars().all(|ch| {
+                    ch.is_ascii_lowercase() || ch.is_ascii_digit() || ch == '-' || ch == '.'
+                })
+            {
+                fields.insert(key.to_string(), value.trim().to_string());
+            }
+        }
+    }
+    Ok(fields)
+}
+
+fn validate_ail_e2e_corpus_story_files(entries: &[AilE2eCorpusEntry]) -> Result<(), String> {
+    for entry in entries {
+        let story_path = ail_e2e_entry_resolved_path(entry, "story-file")?;
+        let story_fields = parse_ail_e2e_story_file_fields(&story_path)?;
+        for field in [
+            "user-story-id",
+            "user-story",
+            "acceptance-criteria",
+            "story-journey",
+            "story-roundtrip",
+            "story-evidence",
+            "program-domain",
+            "module-count",
+            "spec-count",
+            "story-count",
+            "interacts-with",
+        ] {
+            let catalog_value = entry.fields.get(field).map(String::as_str).unwrap_or("");
+            let story_value = story_fields.get(field).map(String::as_str).unwrap_or("");
+            if story_value.is_empty() {
+                return Err(format!(
+                    "examples catalog entry {} story-file is missing {field}",
+                    entry.id
+                ));
+            }
+            if story_value != catalog_value {
+                return Err(format!(
+                    "examples catalog entry {} story-file {field} mismatch: catalog `{catalog_value}` story `{story_value}`",
+                    entry.id
+                ));
+            }
+        }
+    }
+    Ok(())
+}
+
 fn ail_e2e_entry_source_dir(entry: &AilE2eCorpusEntry) -> &std::path::Path {
     std::path::Path::new(&entry.source_file)
         .parent()
@@ -2490,6 +2551,8 @@ fn validate_ail_e2e_corpus_release_coverage(entries: &[AilE2eCorpusEntry]) -> Re
         }
     }
     let mut program_domain_counts = BTreeMap::new();
+    let mut program_domain_prompt_files: BTreeMap<&str, BTreeSet<&str>> = BTreeMap::new();
+    let mut program_domain_story_journeys: BTreeMap<&str, BTreeSet<&str>> = BTreeMap::new();
     let mut interactive_entry_count = 0usize;
     let mut multi_artifact_entry_count = 0usize;
     for entry in entries {
@@ -2497,6 +2560,18 @@ fn validate_ail_e2e_corpus_release_coverage(entries: &[AilE2eCorpusEntry]) -> Re
             *program_domain_counts
                 .entry(program_domain.as_str())
                 .or_insert(0usize) += 1;
+            if let Some(prompt_file) = entry.fields.get("prompt-file") {
+                program_domain_prompt_files
+                    .entry(program_domain.as_str())
+                    .or_default()
+                    .insert(prompt_file.as_str());
+            }
+            if let Some(story_journey) = entry.fields.get("story-journey") {
+                program_domain_story_journeys
+                    .entry(program_domain.as_str())
+                    .or_default()
+                    .insert(story_journey.as_str());
+            }
         }
         if entry
             .fields
@@ -2542,6 +2617,24 @@ fn validate_ail_e2e_corpus_release_coverage(entries: &[AilE2eCorpusEntry]) -> Re
         if found < required_count {
             return Err(format!(
                 "ail-examples requires at least {required_count} program-domain {required_domain} examples; found {found}"
+            ));
+        }
+        let prompt_file_count = program_domain_prompt_files
+            .get(required_domain)
+            .map(BTreeSet::len)
+            .unwrap_or(0);
+        if prompt_file_count < 3 {
+            return Err(format!(
+                "ail-examples requires program-domain {required_domain} to cover at least 3 prompt files; found {prompt_file_count}"
+            ));
+        }
+        let story_journey_count = program_domain_story_journeys
+            .get(required_domain)
+            .map(BTreeSet::len)
+            .unwrap_or(0);
+        if story_journey_count < 2 {
+            return Err(format!(
+                "ail-examples requires program-domain {required_domain} to cover at least 2 story journeys; found {story_journey_count}"
             ));
         }
     }
@@ -2918,6 +3011,7 @@ fn run_ail_e2e_corpus_command(path: &str, cli_options: &CliOptions) -> Result<u8
         validate_ail_e2e_corpus_live_release_evidence(&entries)?;
     }
     validate_ail_e2e_corpus_transcript_files(&entries)?;
+    validate_ail_e2e_corpus_story_files(&entries)?;
     let mut evaluations = Vec::new();
     for entry in &entries {
         evaluations.push(evaluate_ail_e2e_corpus_entry(entry)?);

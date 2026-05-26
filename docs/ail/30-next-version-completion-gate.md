@@ -528,11 +528,13 @@ already covers parts of this gate:
   `v0.3-signal` metadata; replay reports count low-level, mid-level,
   high-level, utility, module, multi-module system, program domain, story
   journey, and story evidence coverage so prompt matrices cannot silently
-  stand in for a useful learning corpus
+  stand in for a useful learning corpus; each required domain must also span
+  at least three prompt files and at least two story journeys
 - every release example now writes a deterministic `user-story.txt` artifact
   and fingerprint into the replay bundle, tying user-story views to the same
   manifest/report path as checked Core, bytecode, VM traces, target reports,
-  native artifacts, and diagnostics
+  native artifacts, and diagnostics; checked story files must match catalog
+  story, journey, evidence, domain, count, and interaction metadata
 - four replay-clean live LLM captures for the Standard Collections, Support
   Ticket, and Refund Tool packages, using schema-shaped prompt input or
   constrained prose prompting with an OpenAI-compatible chat-completions

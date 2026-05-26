@@ -241,12 +241,33 @@ fn write_e2e_transcript_files(root: &std::path::Path, count: usize) {
         .unwrap();
         fs::write(
             root.join("stories").join(format!("example-{index}.md")),
-            format!(
-                "# Example {index} User Story\n\nAs a reviewer I can inspect support-ticket scenario {index} so that the regenerated story remains semantically similar to the checked spec.\n"
-            ),
+            e2e_story_file_text(index),
         )
         .unwrap();
     }
+}
+
+fn e2e_story_file_text(index: usize) -> String {
+    let mut fields = BTreeMap::new();
+    for line in e2e_corpus_entry_text(index, &[]).lines() {
+        if let Some((key, value)) = line.split_once(": ") {
+            fields.insert(key.to_string(), value.to_string());
+        }
+    }
+    format!(
+        "# Example {index} User Story\n\nuser-story-id: {}\nuser-story: {}\nacceptance-criteria: {}\nstory-journey: {}\nstory-roundtrip: {}\nstory-evidence: {}\nprogram-domain: {}\nmodule-count: {}\nspec-count: {}\nstory-count: {}\ninteracts-with: {}\n",
+        fields.get("user-story-id").unwrap(),
+        fields.get("user-story").unwrap(),
+        fields.get("acceptance-criteria").unwrap(),
+        fields.get("story-journey").unwrap(),
+        fields.get("story-roundtrip").unwrap(),
+        fields.get("story-evidence").unwrap(),
+        fields.get("program-domain").unwrap(),
+        fields.get("module-count").unwrap(),
+        fields.get("spec-count").unwrap(),
+        fields.get("story-count").unwrap(),
+        fields.get("interacts-with").unwrap(),
+    )
 }
 
 fn assert_e2e_corpus_override_failure(
@@ -22166,6 +22187,72 @@ fn cli_ail_e2e_corpus_requires_user_story_metadata() {
 }
 
 #[test]
+fn cli_ail_e2e_corpus_requires_story_file_metadata_to_match_catalog() {
+    assert_e2e_corpus_override_failure(
+        "story-file-metadata-match",
+        0,
+        &[("story-journey", "story-amendment")],
+        "examples catalog entry example-0 story-file story-journey mismatch",
+    );
+}
+
+#[test]
+fn cli_ail_e2e_corpus_requires_story_file_spectrum_metadata() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let corpus_dir = std::env::temp_dir().join(format!(
+        "ail-examples-story-file-spectrum-{}",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-examples-story-file-spectrum-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&corpus_dir);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&corpus_dir).unwrap();
+    write_e2e_transcript_files(&corpus_dir, 100);
+    let story_text = e2e_story_file_text(0)
+        .lines()
+        .filter(|line| !line.starts_with("program-domain:"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    fs::write(
+        corpus_dir.join("stories").join("example-0.md"),
+        format!("{story_text}\n"),
+    )
+    .unwrap();
+    fs::write(
+        corpus_dir.join("examples.md"),
+        e2e_corpus_text_with_override(0, &[]),
+    )
+    .unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-examples",
+            corpus_dir.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("examples catalog entry example-0 story-file is missing program-domain"),
+        "{stderr}"
+    );
+
+    let _ = fs::remove_dir_all(corpus_dir);
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
 fn cli_ail_e2e_corpus_rejects_unknown_story_evidence() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let corpus_dir = std::env::temp_dir().join(format!(
@@ -22293,6 +22380,62 @@ fn cli_ail_e2e_corpus_requires_program_domain_thresholds() {
     assert!(
         stderr.contains(
             "ail-examples requires at least 5 program-domain os-utility examples; found 0"
+        ),
+        "{stderr}"
+    );
+
+    let _ = fs::remove_dir_all(corpus_dir);
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
+fn cli_ail_e2e_corpus_requires_domain_prompt_and_story_journey_diversity() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let corpus_dir = std::env::temp_dir().join(format!(
+        "ail-examples-domain-diversity-{}",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-examples-domain-diversity-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&corpus_dir);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&corpus_dir).unwrap();
+    write_e2e_transcript_files(&corpus_dir, 100);
+    let mut corpus_text = String::new();
+    for index in 0..100 {
+        let overrides = if (25..=29).contains(&index) || (85..=89).contains(&index) {
+            &[
+                ("prompt-file", "docs/ail/prompts/spec-draft.system.md"),
+                ("story-journey", "story-to-spec"),
+            ][..]
+        } else {
+            &[][..]
+        };
+        corpus_text.push_str(&e2e_corpus_entry_text(index, overrides));
+    }
+    fs::write(corpus_dir.join("examples.md"), corpus_text).unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-examples",
+            corpus_dir.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains(
+            "ail-examples requires program-domain c-interop to cover at least 3 prompt files; found 1"
         ),
         "{stderr}"
     );
