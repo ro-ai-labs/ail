@@ -83,11 +83,18 @@ This package includes package-local conformance fixtures:
   resolution that skips the `Mitigating` predecessor state.
 - `examples/rejected/postmortem-without-resolved-status.ail-spec.md` rejects
   postmortem start that skips the `Resolved` predecessor state.
+- `examples/rejected/private-notes-public-timeline-leak.ail-spec.md` rejects
+  private-note leakage into the public timeline.
+- `examples/rejected/escalation-without-commander-review.ail-spec.md` rejects
+  escalation that omits commander-review policy coverage.
+- `examples/rejected/route-missing-permission.ail-spec.md` rejects command
+  routes that read incident data without a route permission.
+- `examples/rejected/dashboard-missing-permission.ail-spec.md` rejects
+  service-owner dashboards that read incident data without a dashboard
+  permission.
 
-The next rejected fixtures should cover private-note leakage into the public
-timeline, escalation without commander review where policy requires it, and
-route or dashboard access without the matching role permission. Those fixtures
-should become repair tutorials, not only negative checks.
+The next step is to turn these rejected fixtures into repair tutorials, not
+only negative checks.
 
 ## Next Example To Read
 

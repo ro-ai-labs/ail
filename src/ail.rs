@@ -4099,6 +4099,8 @@ pub fn check_ail_core_diagnostics(core: &AilCore) -> Vec<AilDiagnostic> {
     diagnostics.extend(check_application_incident_lifecycle_status_requirements(
         core,
     ));
+    diagnostics.extend(check_application_private_notes_public_timeline(core));
+    diagnostics.extend(check_application_incident_escalation_policy_review(core));
     diagnostics.extend(check_toolchain_agent_artifact_fingerprint_reads(core));
     diagnostics.extend(check_tool_secret_output_disclosure(core));
     diagnostics.extend(check_unknown_field_references(core));
@@ -4142,6 +4144,7 @@ pub fn check_ail_core_diagnostics(core: &AilCore) -> Vec<AilDiagnostic> {
     diagnostics.extend(check_external_binding_mutable_aliases(core));
     diagnostics.extend(check_external_binding_secret_leakage(core));
     diagnostics.extend(check_ui_form_action_targets(core));
+    diagnostics.extend(check_ui_route_permissions(core));
     diagnostics.extend(check_ui_dashboard_permissions(core));
     diagnostics.extend(check_ui_form_accessibility(core));
     diagnostics.extend(check_ui_destructive_action_confirmations(core));
@@ -15077,6 +15080,130 @@ fn action_requires_incident_status(
         })
 }
 
+fn check_application_private_notes_public_timeline(core: &AilCore) -> Vec<AilDiagnostic> {
+    if core.package.profile != "Application" {
+        return Vec::new();
+    }
+    let node_by_id = graph_node_by_id(core);
+    let mut reported_actions = BTreeSet::new();
+    let mut diagnostics = Vec::new();
+    for edge in core.graph.edges.iter().filter(|edge| edge.kind == "writes") {
+        let Some(action) = node_by_id.get(&edge.source) else {
+            continue;
+        };
+        if action.kind != "Action" {
+            continue;
+        }
+        if !edge_mentions_private_notes_public_timeline(edge, &node_by_id) {
+            continue;
+        }
+        if !reported_actions.insert(action.id.clone()) {
+            continue;
+        }
+        diagnostics.push(
+            AilDiagnostic::error(
+                "AIL-APP-006",
+                format!(
+                    "action {} writes private notes to the public timeline",
+                    action.name
+                ),
+            )
+            .with_source_provenance(
+                edge.attributes
+                    .get("provenance")
+                    .cloned()
+                    .or_else(|| node_provenance(core, &action.id)),
+            )
+            .with_affected_graph_item(format!("edge:{}", edge.id))
+            .with_repair_suggestion(format!(
+                "Remove the private-note public timeline write or replace it with a non-secret public summary in action {}.",
+                action.name
+            )),
+        );
+    }
+    diagnostics
+}
+
+fn edge_mentions_private_notes_public_timeline(
+    edge: &Edge,
+    node_by_id: &BTreeMap<String, Node>,
+) -> bool {
+    let target_text = node_by_id
+        .get(&edge.target)
+        .map(|target| target.name.as_str())
+        .unwrap_or("");
+    [
+        target_text,
+        edge.attributes.get("provenance").map_or("", String::as_str),
+    ]
+    .iter()
+    .any(|text| {
+        let compact = compact_semantic_text(text);
+        compact.contains("privatenotes") && compact.contains("publictimeline")
+    })
+}
+
+fn check_application_incident_escalation_policy_review(core: &AilCore) -> Vec<AilDiagnostic> {
+    if core.package.profile != "Application" {
+        return Vec::new();
+    }
+    let node_by_id = graph_node_by_id(core);
+    let mut reported_actions = BTreeSet::new();
+    let mut diagnostics = Vec::new();
+    for edge in core.graph.edges.iter().filter(|edge| edge.kind == "writes") {
+        let Some(action) = node_by_id.get(&edge.source) else {
+            continue;
+        };
+        if action.kind != "Action" || !action.name.to_ascii_lowercase().contains("escalate") {
+            continue;
+        }
+        if !edge_writes_incident_status_to(edge, "Mitigating") {
+            continue;
+        }
+        if !reported_actions.insert(action.id.clone()) {
+            continue;
+        }
+        if action_requires_commander_review(core, &node_by_id, action) {
+            continue;
+        }
+        diagnostics.push(
+            AilDiagnostic::error(
+                "AIL-APP-007",
+                format!(
+                    "action {} escalates an incident without requiring commander review",
+                    action.name
+                ),
+            )
+            .with_source_provenance(
+                edge.attributes
+                    .get("provenance")
+                    .cloned()
+                    .or_else(|| node_provenance(core, &action.id)),
+            )
+            .with_affected_graph_item(format!("edge:{}", edge.id))
+            .with_repair_suggestion(format!(
+                "Add a requirement such as 'the escalation policy to require commander review' to action {}.",
+                action.name
+            )),
+        );
+    }
+    diagnostics
+}
+
+fn action_requires_commander_review(
+    core: &AilCore,
+    node_by_id: &BTreeMap<String, Node>,
+    action: &Node,
+) -> bool {
+    outgoing_nodes(core, node_by_id, action, "requires")
+        .into_iter()
+        .filter(|node| node.kind == "Rule")
+        .any(|rule| {
+            let compact = compact_semantic_text(&rule.name);
+            compact.contains("commanderreview") || compact.contains("commanderapproval")
+        })
+}
+
 fn check_toolchain_agent_artifact_fingerprint_reads(core: &AilCore) -> Vec<AilDiagnostic> {
     if core.package.name != "ail-toolchain-agent" {
         return Vec::new();
@@ -15989,6 +16116,31 @@ fn check_ui_form_action_targets(core: &AilCore) -> Vec<AilDiagnostic> {
         }
     }
     diagnostics
+}
+
+fn check_ui_route_permissions(core: &AilCore) -> Vec<AilDiagnostic> {
+    core.graph
+        .nodes
+        .iter()
+        .filter(|node| node.kind == "Route")
+        .filter(|route| has_outgoing_edge(&core.graph, "reads", &route.id))
+        .filter(|route| !has_outgoing_edge(&core.graph, "requires", &route.id))
+        .map(|route| {
+            AilDiagnostic::error(
+                "AIL-UI-PERMISSION-002",
+                format!(
+                    "route {} reads data without a matching permission",
+                    route.name
+                ),
+            )
+            .with_source_provenance(node_provenance(core, &route.id))
+            .with_affected_graph_item(format!("node:{}", route.id))
+            .with_repair_suggestion(format!(
+                "Add 'The route requires permission:' to route {}.",
+                route.name
+            ))
+        })
+        .collect()
 }
 
 fn check_ui_dashboard_permissions(core: &AilCore) -> Vec<AilDiagnostic> {

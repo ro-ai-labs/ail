@@ -381,9 +381,10 @@ as prose. The current examples reveal these next-version gaps:
   requirement, and ticket status changes that drop customer-visible public
   updates. Incident-response now has package-local accepted/rejected fixtures
   for escalation, responder notification pager requirements, resolution after
-  mitigation, and postmortem after resolution. The next bar is repair tutorials
-  for those incident failures plus additional rejected fixtures for private
-  note leakage, commander-review policy, and route or dashboard permissions.
+  mitigation, postmortem after resolution, private-note leakage,
+  commander-review policy, and route or dashboard permissions. The next bar is
+  repair tutorials for those incident failures and promotion of repaired
+  variants back through the Application baseline.
 - UI examples now emit deterministic visual review, accessibility review,
   workflow authoring artifacts, deterministic UI patch plans, a human-approved
   UI patch import demo, and a rejected accessibility diagnostic fixture that

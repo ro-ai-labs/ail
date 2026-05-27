@@ -774,6 +774,10 @@ fn example_learning_readmes_cover_repeated_family_gaps() {
         "notification-without-responder-pager.ail-spec.md",
         "resolve-without-mitigating-status.ail-spec.md",
         "postmortem-without-resolved-status.ail-spec.md",
+        "private-notes-public-timeline-leak.ail-spec.md",
+        "escalation-without-commander-review.ail-spec.md",
+        "route-missing-permission.ail-spec.md",
+        "dashboard-missing-permission.ail-spec.md",
     ] {
         assert!(
             incident_readme.contains(required),
@@ -1336,6 +1340,10 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
                 "rejected: notification-without-responder-pager.ail-spec.md AIL-APP-004",
                 "rejected: resolve-without-mitigating-status.ail-spec.md AIL-APP-005",
                 "rejected: postmortem-without-resolved-status.ail-spec.md AIL-APP-005",
+                "rejected: private-notes-public-timeline-leak.ail-spec.md AIL-APP-006",
+                "rejected: escalation-without-commander-review.ail-spec.md AIL-APP-007",
+                "rejected: route-missing-permission.ail-spec.md AIL-UI-PERMISSION-002",
+                "rejected: dashboard-missing-permission.ail-spec.md AIL-UI-PERMISSION-001",
             ],
         ),
         (
@@ -1700,6 +1708,10 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "evidence rejected: notification-without-responder-pager.ail-spec.md AIL-APP-004",
         "evidence rejected: resolve-without-mitigating-status.ail-spec.md AIL-APP-005",
         "evidence rejected: postmortem-without-resolved-status.ail-spec.md AIL-APP-005",
+        "evidence rejected: private-notes-public-timeline-leak.ail-spec.md AIL-APP-006",
+        "evidence rejected: escalation-without-commander-review.ail-spec.md AIL-APP-007",
+        "evidence rejected: route-missing-permission.ail-spec.md AIL-UI-PERMISSION-002",
+        "evidence rejected: dashboard-missing-permission.ail-spec.md AIL-UI-PERMISSION-001",
         "evidence ail conformance: ok",
     ] {
         assert!(
@@ -2150,6 +2162,10 @@ fn script_ail_interactive_manual_v03_authoring_gate_run_checks_succeeds() {
         "rejected: notification-without-responder-pager.ail-spec.md AIL-APP-004",
         "rejected: resolve-without-mitigating-status.ail-spec.md AIL-APP-005",
         "rejected: postmortem-without-resolved-status.ail-spec.md AIL-APP-005",
+        "rejected: private-notes-public-timeline-leak.ail-spec.md AIL-APP-006",
+        "rejected: escalation-without-commander-review.ail-spec.md AIL-APP-007",
+        "rejected: route-missing-permission.ail-spec.md AIL-UI-PERMISSION-002",
+        "rejected: dashboard-missing-permission.ail-spec.md AIL-UI-PERMISSION-001",
         "ail-compile wrote linux-x86_64-elf executable",
         "native-bytecode-report.txt",
         "running check-ui-patch-runtime-state",
@@ -19442,6 +19458,64 @@ fn ail_core_reports_incident_response_lifecycle_and_notification_diagnostics() {
                 .to_string()
         )
     );
+
+    let private_notes_public_timeline = fs::read_to_string(format!(
+        "{rejected_dir}/private-notes-public-timeline-leak.ail-spec.md"
+    ))
+    .unwrap();
+    let private_notes_public_timeline_doc =
+        parse_ail_spec_text(&private_notes_public_timeline).unwrap();
+    let private_notes_public_timeline_core =
+        elaborate_ail_core(&package, &private_notes_public_timeline_doc);
+    assert!(
+        check_ail_core(&private_notes_public_timeline_core).contains(
+            &"AIL-APP-006 action PublishPrivateNotes writes private notes to the public timeline"
+                .to_string()
+        )
+    );
+
+    let escalation_without_commander_review = fs::read_to_string(format!(
+        "{rejected_dir}/escalation-without-commander-review.ail-spec.md"
+    ))
+    .unwrap();
+    let escalation_without_commander_review_doc =
+        parse_ail_spec_text(&escalation_without_commander_review).unwrap();
+    let escalation_without_commander_review_core =
+        elaborate_ail_core(&package, &escalation_without_commander_review_doc);
+    assert!(
+        check_ail_core(&escalation_without_commander_review_core).contains(
+            &"AIL-APP-007 action EscalateIncident escalates an incident without requiring commander review"
+                .to_string()
+        )
+    );
+
+    let route_missing_permission = fs::read_to_string(format!(
+        "{rejected_dir}/route-missing-permission.ail-spec.md"
+    ))
+    .unwrap();
+    let route_missing_permission_doc = parse_ail_spec_text(&route_missing_permission).unwrap();
+    let route_missing_permission_core = elaborate_ail_core(&package, &route_missing_permission_doc);
+    assert!(
+        check_ail_core(&route_missing_permission_core).contains(
+            &"AIL-UI-PERMISSION-002 route IncidentCommandCenter reads data without a matching permission"
+                .to_string()
+        )
+    );
+
+    let dashboard_missing_permission = fs::read_to_string(format!(
+        "{rejected_dir}/dashboard-missing-permission.ail-spec.md"
+    ))
+    .unwrap();
+    let dashboard_missing_permission_doc =
+        parse_ail_spec_text(&dashboard_missing_permission).unwrap();
+    let dashboard_missing_permission_core =
+        elaborate_ail_core(&package, &dashboard_missing_permission_doc);
+    assert!(
+        check_ail_core(&dashboard_missing_permission_core).contains(
+            &"AIL-UI-PERMISSION-001 dashboard ServiceOwnerIncidentDashboard reads data without a matching permission"
+                .to_string()
+        )
+    );
 }
 
 #[test]
@@ -20634,6 +20708,10 @@ fn cli_ail_conformance_checks_v02_package_host_boundary_fixtures() {
                 "rejected: notification-without-responder-pager.ail-spec.md AIL-APP-004",
                 "rejected: resolve-without-mitigating-status.ail-spec.md AIL-APP-005",
                 "rejected: postmortem-without-resolved-status.ail-spec.md AIL-APP-005",
+                "rejected: private-notes-public-timeline-leak.ail-spec.md AIL-APP-006",
+                "rejected: escalation-without-commander-review.ail-spec.md AIL-APP-007",
+                "rejected: route-missing-permission.ail-spec.md AIL-UI-PERMISSION-002",
+                "rejected: dashboard-missing-permission.ail-spec.md AIL-UI-PERMISSION-001",
                 "ail conformance: ok",
             ]
             .as_slice(),

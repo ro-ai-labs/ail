@@ -60,6 +60,10 @@ rejected: status-change-without-public-update.ail-spec.md AIL-APP-003
 rejected: notification-without-responder-pager.ail-spec.md AIL-APP-004
 rejected: resolve-without-mitigating-status.ail-spec.md AIL-APP-005
 rejected: postmortem-without-resolved-status.ail-spec.md AIL-APP-005
+rejected: private-notes-public-timeline-leak.ail-spec.md AIL-APP-006
+rejected: escalation-without-commander-review.ail-spec.md AIL-APP-007
+rejected: route-missing-permission.ail-spec.md AIL-UI-PERMISSION-002
+rejected: dashboard-missing-permission.ail-spec.md AIL-UI-PERMISSION-001
 ail conformance: ok
 ```
 
@@ -71,7 +75,10 @@ status changes.
 
 Incident-response rejected fixtures cover responder notification without a
 pager requirement, resolving before the incident is Mitigating, and starting
-postmortem before the incident is Resolved.
+postmortem before the incident is Resolved. They also cover private-note
+leakage into the public timeline, escalation without commander review, command
+routes without read permission, and service-owner dashboards without read
+permission.
 
 ## Relationship To User Story Mode
 
