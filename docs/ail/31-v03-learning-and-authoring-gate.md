@@ -239,6 +239,8 @@ The `ail-examples` replay bundle must also write deterministic story artifacts:
 - `examples/<entry-id>/ui-review-patch.fingerprint.txt` for accepted UI workflow or UI-surface entries
 - `examples/<entry-id>/agent-policy-review.txt` for accepted AgentTool entries
 - `examples/<entry-id>/agent-policy-review.fingerprint.txt` for accepted AgentTool entries
+- `examples/<entry-id>/dependency-review.txt` for accepted package-import entries
+- `examples/<entry-id>/dependency-review.fingerprint.txt` for accepted package-import entries
 - `examples/<entry-id>/repair-tutorial.txt` for rejected entries
 - `examples/<entry-id>/repair-tutorial.fingerprint.txt` for rejected entries
 - `examples/<entry-id>/repair-candidate.ail-spec.md` for rejected entries
@@ -332,6 +334,11 @@ permission and approval review, external-call review, secret-redaction review,
 audit-trace review, human approval requirement, runtime evidence, and upstream
 fingerprints. The report must summarize these files with
 `agent-policy-review-fingerprint-*` lines and list each review in
+`manifest.ail-examples.txt`. Accepted package-import entries must emit
+`dependency-review.txt`, which records the local package, imported package,
+import alias, imported type owner, capability grant, story anchors, runtime
+evidence, and replay fingerprints. The report must summarize these files with
+`dependency-review-fingerprint-*` lines and list each review in
 `manifest.ail-examples.txt`. A reviewed AgentTool policy handoff can then be
 captured with `scripts/run_v03_agent_policy_capture_plan.py` and imported with
 `scripts/run_v03_agent_policy_import_demo.py`; that demo must preserve the
@@ -489,6 +496,13 @@ as prose. The current examples reveal these next-version gaps:
 
 - Package examples need package-local teaching guides, not only verifier input
   files.
+- Package-import examples now emit deterministic `dependency-review.txt` and
+  fingerprint artifacts for `example-10` through `example-19`, tying
+  `support-composed`, `support-shared`, alias `Shared`, imported
+  `Shared.User`, capability grants, story anchors, and VM replay fingerprints
+  into reviewer-facing evidence. The next bar is package-local rejected
+  fixtures and story diffs for user requests that change either the local spec
+  or the imported shared package.
 - Prompt matrices need explicit separation between semantic use-case diversity
   and prompt-surface coverage.
 - Application examples now have deterministic User Story mode evidence that

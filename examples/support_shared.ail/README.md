@@ -24,7 +24,8 @@ the composed support-ticket package.
 
 This package is replayed through `support_composed.ail` catalog entries
 `example-10` through `example-19`, where import resolution appears in checked
-Core, dependency reports, bytecode, VM traces, and story anchors.
+Core, dependency reports, `dependency-review.txt`, bytecode, VM traces, and
+story anchors.
 
 ## Rejected Fixtures
 
@@ -40,4 +41,7 @@ Read `support_composed.ail/README.md` next for the accepted import path.
 ## v0.3 Learning Signal
 
 Shared support examples need dependency review views that explain which
-imported package owns each type, failure, and permission rule.
+imported package owns each type, failure, and permission rule. The dependent
+`support_composed.ail` corpus entries now emit deterministic dependency reviews
+for `example-10` through `example-19`; the next bar is package-local rejected
+fixtures for missing shared types and incompatible package versions.

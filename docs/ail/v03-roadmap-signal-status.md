@@ -39,9 +39,9 @@ rationale: Current interop fixtures cover layouts, callbacks, ownership, nullabi
 evidence: docs/ail/31-v03-learning-and-authoring-gate.md
 
 signal: Package graphs need clearer authoring guidance and dependency review views.
-status: deferred
-rationale: Package resolution, dependency reports, and learning guides are checked, but reviewer-facing dependency review views still need more authoring guidance.
-evidence: docs/ail/31-v03-learning-and-authoring-gate.md
+status: promoted
+rationale: Support Composed package-import examples now emit deterministic dependency-review artifacts for example-10 through example-19, tying local package identity, Shared alias ownership, imported type use, capability grants, story anchors, and replay fingerprints into reviewer-facing evidence.
+evidence: cargo run -- ail-examples examples --release-evidence
 
 signal: Rejected examples need repair tutorials that convert diagnostics into corrected specs.
 status: deferred

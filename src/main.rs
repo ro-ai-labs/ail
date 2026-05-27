@@ -502,6 +502,7 @@ struct AilE2eCorpusEvaluation {
     threat_model_audit_text: Option<String>,
     type_inference_review_text: Option<String>,
     state_boundary_review_text: Option<String>,
+    dependency_review_text: Option<String>,
     diagnostics_text: Option<String>,
     repair_tutorial_text: Option<String>,
     repair_proof: Option<AilE2eRepairProofArtifacts>,
@@ -2853,6 +2854,7 @@ fn evaluate_rejected_ail_e2e_corpus_entry(
         threat_model_audit_text: None,
         type_inference_review_text: None,
         state_boundary_review_text: None,
+        dependency_review_text: None,
         diagnostics_text: Some(diagnostics_text),
         repair_tutorial_text: Some(repair_tutorial_text),
         repair_proof: Some(repair_proof),
@@ -3351,6 +3353,7 @@ fn evaluate_ail_e2e_corpus_entry(
             threat_model_audit_text: None,
             type_inference_review_text: None,
             state_boundary_review_text: None,
+            dependency_review_text: None,
             diagnostics_text: None,
             repair_tutorial_text: None,
             repair_proof: None,
@@ -3487,6 +3490,14 @@ fn evaluate_ail_e2e_corpus_entry(
         vm_trace_text.as_deref(),
         target_report_text.as_deref(),
     );
+    let dependency_review_text = render_ail_e2e_dependency_review_text(
+        entry,
+        &semantic_anchors,
+        Some(&checked_core_text),
+        Some(&bytecode_text),
+        vm_trace_text.as_deref(),
+        target_report_text.as_deref(),
+    );
     Ok(AilE2eCorpusEvaluation {
         entry: entry.clone(),
         semantic_anchors,
@@ -3503,6 +3514,7 @@ fn evaluate_ail_e2e_corpus_entry(
         threat_model_audit_text,
         type_inference_review_text,
         state_boundary_review_text,
+        dependency_review_text,
         diagnostics_text: None,
         repair_tutorial_text: None,
         repair_proof: None,
@@ -3756,6 +3768,17 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
                 .map(|text| ail_artifact_fingerprint(text))
         },
     );
+    push_ail_e2e_fingerprint_reuse_lines(
+        &mut lines,
+        "dependency-review",
+        evaluations,
+        |evaluation| {
+            evaluation
+                .dependency_review_text
+                .as_ref()
+                .map(|text| ail_artifact_fingerprint(text))
+        },
+    );
     push_ail_e2e_fingerprint_reuse_lines(&mut lines, "diagnostics", evaluations, |evaluation| {
         evaluation
             .diagnostics_text
@@ -3980,6 +4003,14 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
                 entry.id,
                 entry.id,
                 ail_artifact_fingerprint(state_boundary_review_text)
+            ));
+        }
+        if let Some(dependency_review_text) = &evaluation.dependency_review_text {
+            lines.push(format!(
+                "entry-artifact {} dependency-review examples/{}/dependency-review.txt {}",
+                entry.id,
+                entry.id,
+                ail_artifact_fingerprint(dependency_review_text)
             ));
         }
         if let Some(diagnostics_text) = &evaluation.diagnostics_text {
@@ -4232,6 +4263,14 @@ fn push_ail_e2e_entry_artifact_lines(
             entry.id,
             entry.id,
             ail_artifact_fingerprint(state_boundary_review_text)
+        ));
+    }
+    if let Some(dependency_review_text) = &evaluation.dependency_review_text {
+        lines.push(format!(
+            "{prefix} {} dependency-review examples/{}/dependency-review.txt {}",
+            entry.id,
+            entry.id,
+            ail_artifact_fingerprint(dependency_review_text)
         ));
     }
     if let Some(diagnostics_text) = &evaluation.diagnostics_text {
@@ -4807,6 +4846,87 @@ fn render_ail_e2e_state_boundary_review_text(
     }
     lines.push(
         "state-boundary-summary Stateful Counter evidence explains persistence, idempotency, concurrency, failure replay, trace coverage, and replay fingerprints for reviewer audit."
+            .to_string(),
+    );
+    Some(format!("{}\n", lines.join("\n")))
+}
+
+fn render_ail_e2e_dependency_review_text(
+    entry: &AilE2eCorpusEntry,
+    semantic_anchors: &[String],
+    checked_core_text: Option<&str>,
+    bytecode_text: Option<&str>,
+    vm_trace_text: Option<&str>,
+    target_report_text: Option<&str>,
+) -> Option<String> {
+    let field = |key: &str| entry.fields.get(key).map(String::as_str).unwrap_or("");
+    let package_graph_signal =
+        "Package graphs need clearer authoring guidance and dependency review views.";
+    let is_support_composed_package_graph = field("capability-under-test") == "package-imports"
+        || field("package").ends_with("support_composed.ail")
+        || field("v0.3-signal") == package_graph_signal;
+    if !is_support_composed_package_graph {
+        return None;
+    }
+    let runtime_evidence = if target_report_text.is_some() {
+        "target-report"
+    } else if vm_trace_text.is_some() {
+        "vm-trace"
+    } else if bytecode_text.is_some() {
+        "bytecode"
+    } else {
+        "checked-core"
+    };
+    let mut lines = vec![
+        "AIL-Dependency-Review:".to_string(),
+        format!("entry {}", entry.id),
+        format!("semantic-task {}", field("semantic-task")),
+        format!("package {}", field("package")),
+        format!("profile {}", field("profile")),
+        format!("program-domain {}", field("program-domain")),
+        format!("capability-under-test {}", field("capability-under-test")),
+        "dependency-review-artifact deterministic-text".to_string(),
+        "package-surface package-graph".to_string(),
+        "local-package support-composed".to_string(),
+        "imported-package support-shared".to_string(),
+        "import-alias Shared".to_string(),
+        "imported-type Shared.User".to_string(),
+        "owner-package support-shared".to_string(),
+        "capability-grant imports,things,actions,failures,guarantees,traces".to_string(),
+        "authoring-boundary imported ownership must remain visible before compile".to_string(),
+        "review-boundary dependency identity, alias, type owner, capability grant, and replay fingerprints must be auditable"
+            .to_string(),
+        format!("runtime-evidence {runtime_evidence}"),
+    ];
+    for anchor in semantic_anchors {
+        lines.push(format!("story-anchor {anchor}"));
+    }
+    if let Some(checked_core_text) = checked_core_text {
+        lines.push(format!(
+            "checked-core-fingerprint {}",
+            ail_artifact_fingerprint(checked_core_text)
+        ));
+    }
+    if let Some(bytecode_text) = bytecode_text {
+        lines.push(format!(
+            "bytecode-fingerprint {}",
+            ail_artifact_fingerprint(bytecode_text)
+        ));
+    }
+    if let Some(vm_trace_text) = vm_trace_text {
+        lines.push(format!(
+            "vm-trace-fingerprint {}",
+            ail_artifact_fingerprint(vm_trace_text)
+        ));
+    }
+    if let Some(target_report_text) = target_report_text {
+        lines.push(format!(
+            "target-report-fingerprint {}",
+            ail_artifact_fingerprint(target_report_text)
+        ));
+    }
+    lines.push(
+        "dependency-review-summary Support Composed evidence keeps package identity, Shared alias ownership, imported type use, capability grant, story anchors, and replay fingerprints visible for reviewer audit."
             .to_string(),
     );
     Some(format!("{}\n", lines.join("\n")))
@@ -5868,6 +5988,24 @@ fn write_ail_e2e_corpus_artifacts(
             )
             .map_err(|error| {
                 format!("failed to write examples state boundary review fingerprint: {error}")
+            })?;
+        }
+        if let Some(dependency_review_text) = &evaluation.dependency_review_text {
+            let entry_dir = root.join("examples").join(&evaluation.entry.id);
+            fs::create_dir_all(&entry_dir).map_err(|error| {
+                format!("failed to create examples entry artifact dir: {error}")
+            })?;
+            fs::write(
+                entry_dir.join("dependency-review.txt"),
+                dependency_review_text,
+            )
+            .map_err(|error| format!("failed to write examples dependency review: {error}"))?;
+            fs::write(
+                entry_dir.join("dependency-review.fingerprint.txt"),
+                format!("{}\n", ail_artifact_fingerprint(dependency_review_text)),
+            )
+            .map_err(|error| {
+                format!("failed to write examples dependency review fingerprint: {error}")
             })?;
         }
         if let Some(diagnostics_text) = &evaluation.diagnostics_text {

@@ -1761,7 +1761,9 @@ fn script_v03_signal_status_audit_marks_agent_policy_import_promoted() {
         "signal-status-evidence Security examples need threat-model annotations and audit trails. cargo run -- ail-examples examples --release-evidence",
         "signal-status State examples need clearer persistence and concurrency boundaries. count 6 status promoted",
         "signal-status-evidence State examples need clearer persistence and concurrency boundaries. cargo run -- ail-examples examples --release-evidence",
-        "promoted-count 4",
+        "signal-status Package graphs need clearer authoring guidance and dependency review views. count 10 status promoted",
+        "signal-status-evidence Package graphs need clearer authoring guidance and dependency review views. cargo run -- ail-examples examples --release-evidence",
+        "promoted-count 5",
         "missing-status-count 0",
         "audit-result accepted",
     ] {
@@ -28959,6 +28961,14 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
+        report.contains("dependency-review-fingerprint-observed-count 10"),
+        "{report}"
+    );
+    assert!(
+        report.contains("dependency-review-fingerprint-duplicate-entry-count 0"),
+        "{report}"
+    );
+    assert!(
         report.contains(
             "v03-signal-count UI authoring needs human-approved visual patch import workflows after deterministic UI patch plans are replayed. 4"
         ),
@@ -29206,6 +29216,57 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         report.contains(&format!(
             "entry-artifact example-95 state-boundary-review examples/example-95/state-boundary-review.txt {}",
             state_boundary_review_95_fingerprint.trim()
+        )),
+        "{report}"
+    );
+    let dependency_review_10 =
+        fs::read_to_string(artifact_dir.join("examples/example-10/dependency-review.txt")).unwrap();
+    assert!(
+        dependency_review_10.contains("AIL-Dependency-Review:")
+            && dependency_review_10.contains("entry example-10")
+            && dependency_review_10
+                .contains("semantic-task support-composed-live-codex-interview-10")
+            && dependency_review_10.contains("package examples/support_composed.ail")
+            && dependency_review_10.contains("profile Application")
+            && dependency_review_10.contains("program-domain package-graph")
+            && dependency_review_10.contains("capability-under-test package-imports")
+            && dependency_review_10.contains("dependency-review-artifact deterministic-text")
+            && dependency_review_10.contains("package-surface package-graph")
+            && dependency_review_10.contains("local-package support-composed")
+            && dependency_review_10.contains("imported-package support-shared")
+            && dependency_review_10.contains("import-alias Shared")
+            && dependency_review_10.contains("imported-type Shared.User")
+            && dependency_review_10.contains("owner-package support-shared")
+            && dependency_review_10
+                .contains("authoring-boundary imported ownership must remain visible before compile")
+            && dependency_review_10.contains(
+                "review-boundary dependency identity, alias, type owner, capability grant, and replay fingerprints must be auditable"
+            )
+            && dependency_review_10.contains("story-anchor support-composed")
+            && dependency_review_10.contains("story-anchor support_shared")
+            && dependency_review_10.contains("story-anchor Shared.User")
+            && dependency_review_10.contains("story-anchor Close ticket")
+            && dependency_review_10.contains("story-anchor TicketClosed")
+            && dependency_review_10.contains("story-anchor active queue")
+            && dependency_review_10.contains("runtime-evidence vm-trace")
+            && dependency_review_10.contains("checked-core-fingerprint ")
+            && dependency_review_10.contains("bytecode-fingerprint ")
+            && dependency_review_10.contains("vm-trace-fingerprint ")
+            && dependency_review_10.contains("dependency-review-summary "),
+        "{dependency_review_10}"
+    );
+    let dependency_review_10_fingerprint = fs::read_to_string(
+        artifact_dir.join("examples/example-10/dependency-review.fingerprint.txt"),
+    )
+    .unwrap();
+    assert_eq!(
+        dependency_review_10_fingerprint.trim(),
+        fnv64_fingerprint(&dependency_review_10)
+    );
+    assert!(
+        report.contains(&format!(
+            "entry-artifact example-10 dependency-review examples/example-10/dependency-review.txt {}",
+            dependency_review_10_fingerprint.trim()
         )),
         "{report}"
     );
@@ -29650,6 +29711,13 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         manifest.contains(&format!(
             "entry-artifact example-95 state-boundary-review examples/example-95/state-boundary-review.txt {}",
             state_boundary_review_95_fingerprint.trim()
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "entry-artifact example-10 dependency-review examples/example-10/dependency-review.txt {}",
+            dependency_review_10_fingerprint.trim()
         )),
         "{manifest}"
     );

@@ -54,9 +54,11 @@ Useful artifacts after replay include:
 - `examples/example-10/checked.ail-core.txt`
 - `examples/example-10/artifact.ailbc.json`
 - `examples/example-10/vm-trace.txt`
+- `examples/example-10/dependency-review.txt`
 - `examples/example-14/user-story.txt`
 - `examples/example-17/user-story.txt`
 - `examples/example-19/vm-trace.txt`
+- `examples/example-19/dependency-review.txt`
 - `/tmp/ail-support-composed-close-ticket.elf` from the direct native compile
   command below.
 
@@ -100,6 +102,9 @@ Support Composed shows that AIL can replay imported package graphs, and its
 story files now preserve semantic anchors for `support-composed`,
 `support_shared`, `Shared.User`, `Close ticket`, `TicketClosed`, `active
 queue`, and each prompt surface from `example-10` through `example-19`. v0.3
-should add a dependency review view, package-local rejected fixtures, and a
-story-diff that shows how a user request changes either the local spec or the
-imported shared package.
+now emits `dependency-review.txt` and fingerprint artifacts for `example-10`
+through `example-19`, making the local package, imported package, alias,
+imported type owner, capability grant, story anchors, and replay fingerprints
+reviewable. The next bar is package-local rejected fixtures and a story-diff
+that shows how a user request changes either the local spec or the imported
+shared package.
