@@ -5,7 +5,7 @@
 User Story mode makes a story file the first-class entry point for authoring.
 The story is reviewed as intent, not trusted code. The trusted path still runs
 through checked requirements, accepted AIL-Spec, checked AIL-Core, verified
-bytecode, and optional agent or target evidence.
+bytecode, default toolchain-agent evidence, and optional target evidence.
 
 Use this chapter when validating the first AIL v0.3 authoring workflow.
 
@@ -16,9 +16,9 @@ python3 scripts/run_ail_interactive_manual.py --chapter user-story-mode --run-ch
 ```
 
 These checks exercise the local `ail-story` path with a stubbed chat endpoint
-and verify both the plain story authoring path and the toolchain-agent
-entrypoint path. They also verify the blocking-question branch where the model
-needs clarification before requirements can be trusted, and the native target
+and verify the default toolchain-agent entrypoint path. They also verify the
+blocking-question branch where the model needs clarification before
+requirements can be trusted, explicit agent compatibility, and the native target
 branch where a story-authored `CloseTicket` executable is run to produce a
 runtime trace.
 
@@ -30,10 +30,13 @@ a temporary artifact directory:
 ```sh
 cargo run -- ail-story examples/support_ticket.ail \
   --story-file examples/stories/example-30.md \
-  --agent examples/ail_toolchain_agent.ail \
   --artifact-dir /tmp/ail-user-story-mode \
   --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
 ```
+
+When `examples/ail_toolchain_agent.ail` is discoverable beside the example
+package or from the repository root, `ail-story` uses it as the default
+toolchain agent. Pass `--agent <path>` only when overriding that default.
 
 The story file must include at least:
 
@@ -60,6 +63,7 @@ After a successful compile run, inspect these files:
 /tmp/ail-user-story-mode/checked.ail-core.txt
 /tmp/ail-user-story-mode/review.ail-flow.json
 /tmp/ail-user-story-mode/artifact.ailbc.json
+/tmp/ail-user-story-mode/agent.ailbc.json
 /tmp/ail-user-story-mode/manifest.ail-story.txt
 /tmp/ail-user-story-mode/agent-trace.txt
 /tmp/ail-user-story-mode/llm/requirements.request.json
@@ -78,7 +82,15 @@ semantic-anchor count. It also records `story-llm-transcript-count`,
 `story-prompt-envelope-invalid-count` when LLM transcripts are present.
 `manifest.ail-story.txt` fingerprints story, generated requirements, accepted
 spec, checked Core, bytecode, each stored LLM request/response/content
-transcript, and the underlying `ail-build` manifest.
+transcript, the default agent bytecode and trace, and the underlying
+`ail-build` manifest.
+
+Default-agent story manifests include these direct evidence entries:
+
+```text
+agent agent.ailbc.json <fingerprint>
+agent-trace agent-trace.txt <fingerprint>
+```
 
 When the requirements prompt returns blocking questions instead of an
 `AIL-Requirements` artifact, `ail-story` prints `ail-story blocking questions:`,
@@ -110,7 +122,6 @@ To request native output, name the action and target:
 ```sh
 cargo run -- ail-story examples/support_ticket.ail \
   --story-file examples/stories/example-30.md \
-  --agent examples/ail_toolchain_agent.ail \
   --artifact-dir /tmp/ail-user-story-mode-native \
   --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions \
   --target linux-x86_64-elf \

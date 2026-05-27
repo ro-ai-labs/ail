@@ -20,7 +20,6 @@ DEFAULT_SERVER = "http://inteligentia-pro-1:8080/"
 DEFAULT_ENDPOINT = "http://inteligentia-pro-1:8080/v1/chat/completions"
 DEFAULT_PACKAGE = "examples/support_ticket.ail"
 DEFAULT_STORY_FILE = "examples/stories/example-30.md"
-DEFAULT_AGENT = "examples/ail_toolchain_agent.ail"
 DEFAULT_ARTIFACT_DIR = "/tmp/ail-v03-story-llm"
 
 
@@ -296,6 +295,12 @@ def review_artifacts(artifact_dir: str) -> int:
         errors.append("manifest missing AIL-Story-Manifest header")
     if "entrypoint ail-story" not in manifest_text:
         errors.append("manifest missing ail-story entrypoint")
+    for required_manifest_entry in [
+        "agent agent.ailbc.json",
+        "agent-trace agent-trace.txt",
+    ]:
+        if required_manifest_entry not in manifest_text:
+            errors.append(f"manifest missing {required_manifest_entry}")
 
     report_values = parse_story_report(report_text)
     story_id = report_values.get("user-story-id", "")
@@ -390,8 +395,11 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     )
     parser.add_argument(
         "--agent",
-        default=DEFAULT_AGENT,
-        help=f"Toolchain agent package or bytecode (default: {DEFAULT_AGENT})",
+        default=None,
+        help=(
+            "Override the default toolchain agent package or bytecode; "
+            "ail-story discovers examples/ail_toolchain_agent.ail when available"
+        ),
     )
     parser.add_argument(
         "--artifact-dir",

@@ -21,6 +21,7 @@ use ail::ail::{
 };
 use ail::core_model::json_string;
 
+#[derive(Clone)]
 struct CliOptions {
     runtime_state: BTreeMap<String, String>,
     llm_endpoint: Option<String>,
@@ -363,6 +364,8 @@ struct AilStoryManifestArtifactSet<'a> {
     spec_text: &'a str,
     core_text: &'a str,
     bytecode_text: &'a str,
+    agent_bytecode_text: Option<&'a str>,
+    agent_trace_text: Option<&'a str>,
     build_manifest_text: Option<&'a str>,
     llm_transcripts: &'a [AilStoryLlmTranscript],
 }
@@ -6914,6 +6917,18 @@ fn render_ail_story_manifest(artifacts: &AilStoryManifestArtifactSet<'_>) -> Str
             ail_artifact_fingerprint(artifacts.bytecode_text)
         ),
     ]);
+    if let Some(agent_bytecode_text) = artifacts.agent_bytecode_text {
+        lines.push(format!(
+            "agent agent.ailbc.json {}",
+            ail_artifact_fingerprint(agent_bytecode_text)
+        ));
+    }
+    if let Some(agent_trace_text) = artifacts.agent_trace_text {
+        lines.push(format!(
+            "agent-trace agent-trace.txt {}",
+            ail_artifact_fingerprint(agent_trace_text)
+        ));
+    }
     for transcript in artifacts.llm_transcripts {
         lines.push(format!(
             "llm-{}-request llm/{}.request.json {}",
@@ -7165,6 +7180,8 @@ fn write_ail_story_mode_artifacts(
         }
     }
     let build_manifest_text = fs::read_to_string(root.join("manifest.ail-build.txt")).ok();
+    let agent_bytecode_text = fs::read_to_string(root.join("agent.ailbc.json")).ok();
+    let agent_trace_text = fs::read_to_string(root.join("agent-trace.txt")).ok();
     let manifest_text = render_ail_story_manifest(&AilStoryManifestArtifactSet {
         story_source_text: &story_source_text,
         story_normalized_text: &story_normalized_text,
@@ -7174,6 +7191,8 @@ fn write_ail_story_mode_artifacts(
         spec_text: &spec_text,
         core_text: &core_text,
         bytecode_text: &bytecode_text,
+        agent_bytecode_text: agent_bytecode_text.as_deref(),
+        agent_trace_text: agent_trace_text.as_deref(),
         build_manifest_text: build_manifest_text.as_deref(),
         llm_transcripts: artifacts.llm_transcripts,
     });
@@ -13305,6 +13324,27 @@ fn run_ail_bootstrap_command(path: &str, cli_options: &CliOptions) -> Result<u8,
     Ok(0)
 }
 
+const DEFAULT_AIL_TOOLCHAIN_AGENT_PATH: &str = "examples/ail_toolchain_agent.ail";
+
+fn is_ail_package_dir(path: &std::path::Path) -> bool {
+    path.join("ail-package.md").is_file()
+}
+
+fn discover_default_ail_toolchain_agent(package: &AilPackage) -> Option<String> {
+    let mut candidates = Vec::new();
+    if let Some(package_parent) = package.root.parent() {
+        candidates.push(package_parent.join("ail_toolchain_agent.ail"));
+    }
+    for ancestor in package.root.ancestors() {
+        candidates.push(ancestor.join(DEFAULT_AIL_TOOLCHAIN_AGENT_PATH));
+    }
+    candidates.push(std::path::PathBuf::from(DEFAULT_AIL_TOOLCHAIN_AGENT_PATH));
+    candidates
+        .into_iter()
+        .find(|candidate| is_ail_package_dir(candidate))
+        .map(|candidate| candidate.to_string_lossy().to_string())
+}
+
 fn run_ail_story_command(
     path: &str,
     package: &ail::ail::AilPackage,
@@ -13333,6 +13373,14 @@ fn run_ail_story_command(
         .llm_endpoint
         .as_deref()
         .unwrap_or(&package.metadata.base_llm_endpoint);
+    let effective_agent_path = cli_options
+        .ail_build_agent
+        .clone()
+        .or_else(|| discover_default_ail_toolchain_agent(package));
+    let mut story_cli_options = cli_options.clone();
+    if story_cli_options.ail_build_agent.is_none() {
+        story_cli_options.ail_build_agent = effective_agent_path.clone();
+    }
     let requirements_prompt = prompt_with_requested_native_action(
         &render_ail_story_requirements_prompt(&normalized_story_text),
         cli_options
@@ -13342,7 +13390,7 @@ fn run_ail_story_command(
     );
     let requirements_prompt =
         prompt_with_source_spec_context(&requirements_prompt, &source_artifacts.spec_text);
-    let mut agent_start = if let Some(agent_path) = cli_options.ail_build_agent.as_deref() {
+    let mut agent_start = if let Some(agent_path) = effective_agent_path.as_deref() {
         let story_id = normalized_story_fields
             .get("user-story-id")
             .map(String::as_str)
@@ -13432,7 +13480,7 @@ fn run_ail_story_command(
         .map(String::as_str)
         .unwrap_or("");
     let agent_spec_context = if let (Some(agent_path), Some(previous_agent_start)) =
-        (cli_options.ail_build_agent.as_deref(), agent_start.take())
+        (effective_agent_path.as_deref(), agent_start.take())
     {
         let prepared_agent_start =
             run_ail_build_agent_prepare_spec(agent_path, previous_agent_start, &requirements)?;
@@ -13467,7 +13515,7 @@ fn run_ail_story_command(
         return Ok(1);
     }
     if let (Some(agent_path), Some(previous_agent_start)) =
-        (cli_options.ail_build_agent.as_deref(), agent_start.take())
+        (effective_agent_path.as_deref(), agent_start.take())
     {
         agent_start = Some(run_ail_build_agent_accept_spec(
             agent_path,
@@ -13480,7 +13528,7 @@ fn run_ail_story_command(
     let core = elaborate_ail_core(package, &document);
     let exit_code = run_ail_build_from_core(
         core,
-        cli_options,
+        &story_cli_options,
         Some(source_artifacts),
         Some(&requirements),
         Some(&draft.spec_text),

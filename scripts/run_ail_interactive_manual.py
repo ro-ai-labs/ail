@@ -73,12 +73,15 @@ BASE_CHAPTERS: tuple[ManualChapter, ...] = (
                 command=(
                     "cargo",
                     "test",
-                    "cli_ail_story_agent_records_story_entrypoint_before_compile",
+                    "cli_ail_story_uses_default_toolchain_agent_entrypoint",
                     "--test",
                     "ail_toolchain",
                 ),
                 evidence=(
+                    "agent.ailbc.json",
                     "agent-trace.txt",
+                    "agent agent.ailbc.json",
+                    "agent-trace agent-trace.txt",
                     "manifest.ail-story.txt",
                 ),
             ),
