@@ -11,5 +11,6 @@ change:
     requires the ticket to exist
     changes the ticket escalation reason
     changes the ticket status to Overdue
+    records a public update
     guarantees escalated tickets appear in the escalation queue
     records trace TicketEscalated

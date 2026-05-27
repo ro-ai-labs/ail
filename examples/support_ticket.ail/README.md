@@ -101,6 +101,9 @@ diagnostic fixtures to inspect when changing Application checker behavior:
 
 - `action-without-trace.ail-spec.md`: rejects a ticket action without required
   trace coverage (`AIL-TRACE-001`).
+- `assignment-without-role-requirement.ail-spec.md`: rejects assignment that
+  changes `Ticket.assignee` without checking the assignee support role
+  (`AIL-APP-001`).
 - `failure-without-handling.ail-spec.md`: rejects an action that declares a
   failure but has no handling rule (`AIL-FAILURE-001`).
 - `failure-without-trace.ail-spec.md`: rejects a failure path that has no
@@ -113,6 +116,11 @@ diagnostic fixtures to inspect when changing Application checker behavior:
   secret internal note (`AIL002`).
 - `secret-read-without-protection.ail-spec.md`: rejects an unprotected secret
   read (`AIL005`).
+- `overdue-without-time-requirement.ail-spec.md`: rejects scheduler-driven
+  overdue transitions without a current-time versus due-time requirement
+  (`AIL-APP-002`).
+- `status-change-without-public-update.ail-spec.md`: rejects ticket status
+  changes that omit the customer-visible public update (`AIL-APP-003`).
 - `unknown-field-type.ail-spec.md`: rejects an unsupported field type
   (`AIL-TYPE-001`).
 - `unknown-field.ail-spec.md`: rejects references to unknown ticket fields
@@ -150,4 +158,6 @@ diagnostic failure taxonomies. v0.3 now has deterministic manual evidence that
 starts from a story and reaches native runtime trace output. The next bar is a
 guided application tutorial that compares package-local conformance, explicit
 story amendment examples, prompt-surface replay, package-import replay, and
-native binary evidence.
+native binary evidence. The local conformance slice now covers the first
+application-specific boundaries for assignee role checks, overdue scheduler
+time checks, and public-update preservation.

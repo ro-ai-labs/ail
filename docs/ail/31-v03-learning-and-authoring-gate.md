@@ -345,9 +345,12 @@ as prose. The current examples reveal these next-version gaps:
   counts. The support-ticket package now has package-local accepted/rejected
   conformance fixtures surfaced by the `application-baseline` manual chapter,
   including secret leaks, missing traces, invalid fields, and failure-handling
-  diagnostics. The next bar is broader story-amendment comparisons across the
-  application family and more application-specific rejected fixtures for
-  scheduler, assignment, and public-update semantics.
+  diagnostics. That chapter now also checks application-specific diagnostics
+  for assignment without support-role validation, overdue scheduler mutation
+  without a current-time requirement, and ticket status changes that drop
+  customer-visible public updates. The next bar is broader story-amendment
+  comparisons across the application family and additional application-specific
+  rejected fixtures for lifecycle and notification semantics.
 - UI examples now emit deterministic visual review, accessibility review,
   workflow authoring artifacts, deterministic UI patch plans, a human-approved
   UI patch import demo, and a rejected accessibility diagnostic fixture that

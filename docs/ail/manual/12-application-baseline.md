@@ -46,12 +46,17 @@ rejected: secret-leak.ail-spec.md AIL002
 rejected: action-without-trace.ail-spec.md AIL-TRACE-001
 rejected: failure-without-trace.ail-spec.md AIL-TRACE-002
 rejected: unknown-field-type.ail-spec.md AIL-TYPE-001
+rejected: assignment-without-role-requirement.ail-spec.md AIL-APP-001
+rejected: overdue-without-time-requirement.ail-spec.md AIL-APP-002
+rejected: status-change-without-public-update.ail-spec.md AIL-APP-003
 ail conformance: ok
 ```
 
 Additional package-local rejected fixtures cover missing references, missing
 failure handlers, unknown fields, unknown requirement fields, secret reads
-without protection, and unhandled failure paths.
+without protection, unhandled failure paths, assignee role requirements,
+overdue scheduler time requirements, and public-update preservation for ticket
+status changes.
 
 ## Relationship To User Story Mode
 

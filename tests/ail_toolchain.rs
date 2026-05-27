@@ -1574,6 +1574,9 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "evidence rejected: action-without-trace.ail-spec.md AIL-TRACE-001",
         "evidence rejected: failure-without-trace.ail-spec.md AIL-TRACE-002",
         "evidence rejected: unknown-field-type.ail-spec.md AIL-TYPE-001",
+        "evidence rejected: assignment-without-role-requirement.ail-spec.md AIL-APP-001",
+        "evidence rejected: overdue-without-time-requirement.ail-spec.md AIL-APP-002",
+        "evidence rejected: status-change-without-public-update.ail-spec.md AIL-APP-003",
         "evidence ail conformance: ok",
     ] {
         assert!(
@@ -1733,6 +1736,9 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "evidence rejected: secret-leak.ail-spec.md AIL002",
         "evidence rejected: action-without-trace.ail-spec.md AIL-TRACE-001",
         "evidence rejected: unknown-field-type.ail-spec.md AIL-TYPE-001",
+        "evidence rejected: assignment-without-role-requirement.ail-spec.md AIL-APP-001",
+        "evidence rejected: overdue-without-time-requirement.ail-spec.md AIL-APP-002",
+        "evidence rejected: status-change-without-public-update.ail-spec.md AIL-APP-003",
         "evidence repair-promotion-review.txt",
         "evidence repair-promotion-capture-plan.json",
         "evidence repair-promotion-import-demo-report.txt",
@@ -1928,6 +1934,9 @@ fn script_ail_interactive_manual_v03_authoring_gate_run_checks_succeeds() {
         "accepted: close-ticket-minimal.ail-spec.md",
         "rejected: secret-leak.ail-spec.md AIL002",
         "rejected: action-without-trace.ail-spec.md AIL-TRACE-001",
+        "rejected: assignment-without-role-requirement.ail-spec.md AIL-APP-001",
+        "rejected: overdue-without-time-requirement.ail-spec.md AIL-APP-002",
+        "rejected: status-change-without-public-update.ail-spec.md AIL-APP-003",
         "ail-compile wrote linux-x86_64-elf executable",
         "native-bytecode-report.txt",
         "running check-ui-patch-runtime-state",
@@ -9025,6 +9034,11 @@ fn ail_patch_adds_field_view_and_action_then_round_trips() {
         patched.actions["EscalateTicket"]
             .traces
             .contains(&"TicketEscalated".to_string())
+    );
+    assert!(
+        patched.actions["EscalateTicket"]
+            .writes
+            .contains(&"a public update".to_string())
     );
 
     let diagnostics = check_ail_core(&elaborate_ail_core(&package, &patched));
@@ -18954,6 +18968,47 @@ fn ail_core_reports_stable_invalid_fixture_diagnostics() {
     assert!(
         check_ail_core(&unknown_requirement_field_core).contains(
             &"AIL007 action CloseTicket requirement references unknown field 'ticket priority'"
+                .to_string()
+        )
+    );
+
+    let assignment_without_role = fs::read_to_string(format!(
+        "{rejected_dir}/assignment-without-role-requirement.ail-spec.md"
+    ))
+    .unwrap();
+    let assignment_without_role_doc = parse_ail_spec_text(&assignment_without_role).unwrap();
+    let assignment_without_role_core = elaborate_ail_core(&package, &assignment_without_role_doc);
+    assert!(
+        check_ail_core(&assignment_without_role_core).contains(
+            &"AIL-APP-001 action AssignTicket writes Ticket.assignee without a support-role requirement"
+                .to_string()
+        )
+    );
+
+    let overdue_without_time = fs::read_to_string(format!(
+        "{rejected_dir}/overdue-without-time-requirement.ail-spec.md"
+    ))
+    .unwrap();
+    let overdue_without_time_doc = parse_ail_spec_text(&overdue_without_time).unwrap();
+    let overdue_without_time_core = elaborate_ail_core(&package, &overdue_without_time_doc);
+    assert!(
+        check_ail_core(&overdue_without_time_core).contains(
+            &"AIL-APP-002 action MarksOverdueTickets writes Ticket.status to Overdue without a current-time requirement"
+                .to_string()
+        )
+    );
+
+    let status_change_without_public_update = fs::read_to_string(format!(
+        "{rejected_dir}/status-change-without-public-update.ail-spec.md"
+    ))
+    .unwrap();
+    let status_change_without_public_update_doc =
+        parse_ail_spec_text(&status_change_without_public_update).unwrap();
+    let status_change_without_public_update_core =
+        elaborate_ail_core(&package, &status_change_without_public_update_doc);
+    assert!(
+        check_ail_core(&status_change_without_public_update_core).contains(
+            &"AIL-APP-003 action CloseTicket changes Ticket.status without recording a public update"
                 .to_string()
         )
     );

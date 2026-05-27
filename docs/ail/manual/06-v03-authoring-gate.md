@@ -134,6 +134,9 @@ rejected: secret-leak.ail-spec.md AIL002
 rejected: action-without-trace.ail-spec.md AIL-TRACE-001
 rejected: failure-without-trace.ail-spec.md AIL-TRACE-002
 rejected: unknown-field-type.ail-spec.md AIL-TYPE-001
+rejected: assignment-without-role-requirement.ail-spec.md AIL-APP-001
+rejected: overdue-without-time-requirement.ail-spec.md AIL-APP-002
+rejected: status-change-without-public-update.ail-spec.md AIL-APP-003
 checked.ail-core.txt
 artifact.ailbc.json
 native-bytecode-report.txt

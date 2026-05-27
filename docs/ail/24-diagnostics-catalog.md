@@ -41,6 +41,9 @@ severity, blocking behavior, and at least one invalid fixture.
 | `AIL-TRACE-001` | `ail.spec.action.requires-trace` | executable action or tool lacks trace coverage | error | yes | add `records_trace` |
 | `AIL-TRACE-002` | `ail.spec.failure.requires-trace` | failure lacks trace coverage | error | yes | add failure trace |
 | `AIL-FAILURE-001` | `ail.spec.failure.requires-handler` | declared blocking failure has no handler | error | yes | add handler or classify as propagated |
+| `AIL-APP-001` | `ail.application.assignment.requires-support-role` | assignment changes assignee without support-role validation | error | yes | add assignee support-role requirement |
+| `AIL-APP-002` | `ail.application.overdue.requires-current-time` | overdue status transition lacks due-time comparison | error | yes | add current-time requirement |
+| `AIL-APP-003` | `ail.application.status.requires-public-update` | ticket status transition omits public update | error | yes | record a customer-visible public update |
 | `AIL-SECRET-READ-001` | `ail.core.secret-read.requires-protection` | secret read lacks explicit protection | error | yes | add permission and secret protection |
 | `AIL-SECRET-WRITE-001` | `ail.core.secret-write.requires-redaction` | secret write lacks redaction or protection | error | yes | add redaction policy |
 | `AIL-SECRET-OUTPUT-001` | `ail.tool.output.secret-requires-approval` | tool output exposes a secret without reveal permission | error | yes | remove secret output or add reveal approval |
@@ -133,6 +136,62 @@ severity, blocking behavior, and at least one invalid fixture.
 - blocking behavior: blocks acceptance
 - invalid fixture:
   `examples/support_ticket.ail/examples/rejected/failure-without-handling.ail-spec.md`
+
+### AIL-APP-001
+
+- condition: an Application action writes `Ticket.assignee` without a
+  requirement that constrains the assignee support role
+- affected graph item: `writes` edge from the action to `Ticket.assignee`
+- message template: `action {name} writes Ticket.assignee without a
+  support-role requirement`
+- non-engineer explanation: the workflow can assign a ticket to someone who is
+  not support staff
+- agent follow-up question: `Which roles are allowed to receive assigned
+  tickets?`
+- repair suggestion: add an assignee role requirement such as
+  `the assignee role to be SupportAgent or SupportManager`
+- AIL-Flow highlight: Action Card requirements section
+- severity: error
+- blocking behavior: blocks acceptance
+- invalid fixture:
+  `examples/support_ticket.ail/examples/rejected/assignment-without-role-requirement.ail-spec.md`
+
+### AIL-APP-002
+
+- condition: an Application action writes `Ticket.status` to `Overdue` without
+  comparing current time to the ticket due time
+- affected graph item: `writes` edge from the action to `Ticket.status`
+- message template: `action {name} writes Ticket.status to Overdue without a
+  current-time requirement`
+- non-engineer explanation: the scheduler can mark a ticket overdue without
+  checking whether the due time has passed
+- agent follow-up question: `What time condition must be true before the ticket
+  becomes overdue?`
+- repair suggestion: add a requirement such as
+  `the current time to be later than due_at`
+- AIL-Flow highlight: Action Card requirements section
+- severity: error
+- blocking behavior: blocks acceptance
+- invalid fixture:
+  `examples/support_ticket.ail/examples/rejected/overdue-without-time-requirement.ail-spec.md`
+
+### AIL-APP-003
+
+- condition: an Application action changes `Ticket.status` in a package with a
+  public-update surface but does not record a public update
+- affected graph item: `writes` edge from the action to `Ticket.status`
+- message template: `action {name} changes Ticket.status without recording a
+  public update`
+- non-engineer explanation: customers can lose the visible history entry that
+  explains a status change
+- agent follow-up question: `What public update should be visible after this
+  status change?`
+- repair suggestion: add `the system records a public update`
+- AIL-Flow highlight: Action Card write/effect section
+- severity: error
+- blocking behavior: blocks acceptance
+- invalid fixture:
+  `examples/support_ticket.ail/examples/rejected/status-change-without-public-update.ail-spec.md`
 
 ### AIL-SECRET-READ-001
 

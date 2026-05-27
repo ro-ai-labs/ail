@@ -4092,6 +4092,9 @@ pub fn check_ail_core_diagnostics(core: &AilCore) -> Vec<AilDiagnostic> {
     diagnostics.extend(check_action_failure_declarations(core));
     diagnostics.extend(check_secret_write_protection(core));
     diagnostics.extend(check_secret_read_protection(core));
+    diagnostics.extend(check_application_assignment_role_requirements(core));
+    diagnostics.extend(check_application_overdue_time_requirements(core));
+    diagnostics.extend(check_application_status_public_update(core));
     diagnostics.extend(check_tool_secret_output_disclosure(core));
     diagnostics.extend(check_unknown_field_references(core));
     diagnostics.extend(check_failure_handling(core));
@@ -14430,6 +14433,8 @@ fn apply_ail_patch_action_line(action: &mut AilAction, line: &str) {
         action.traces.push(trim_sentence(trace));
     } else if let Some(trace) = line.strip_prefix("records a trace event named ") {
         action.traces.push(trim_sentence(trace));
+    } else if let Some(write) = line.strip_prefix("records ") {
+        action.writes.push(trim_sentence(write));
     } else if let Some(failure) = line.strip_prefix("if ") {
         action.failures.push(trim_sentence(failure));
     }
@@ -14667,6 +14672,258 @@ fn check_secret_read_protection(core: &AilCore) -> Vec<AilDiagnostic> {
         "AIL005",
         "read without an explicit protection rule",
     )
+}
+
+fn check_application_assignment_role_requirements(core: &AilCore) -> Vec<AilDiagnostic> {
+    if core.package.profile != "Application" {
+        return Vec::new();
+    }
+    let node_by_id = graph_node_by_id(core);
+    let mut diagnostics = Vec::new();
+    for edge in core.graph.edges.iter().filter(|edge| edge.kind == "writes") {
+        let Some(action) = node_by_id.get(&edge.source) else {
+            continue;
+        };
+        if action.kind != "Action" {
+            continue;
+        }
+        let Some(target) = node_by_id.get(&edge.target) else {
+            continue;
+        };
+        if target.kind != "Field" || !is_assignee_field(&target.name) {
+            continue;
+        }
+        if action_has_support_role_requirement(core, &node_by_id, action) {
+            continue;
+        }
+        diagnostics.push(
+            AilDiagnostic::error(
+                "AIL-APP-001",
+                format!(
+                    "action {} writes {} without a support-role requirement",
+                    action.name, target.name
+                ),
+            )
+            .with_source_provenance(
+                edge.attributes
+                    .get("provenance")
+                    .cloned()
+                    .or_else(|| node_provenance(core, &action.id)),
+            )
+            .with_affected_graph_item(format!("edge:{}", edge.id))
+            .with_repair_suggestion(format!(
+                "Add a requirement such as 'the assignee role to be SupportAgent or SupportManager' to action {}.",
+                action.name
+            )),
+        );
+    }
+    diagnostics
+}
+
+fn is_assignee_field(field_name: &str) -> bool {
+    let normalized = field_name.to_ascii_lowercase();
+    normalized == "assignee" || normalized.ends_with(".assignee")
+}
+
+fn action_has_support_role_requirement(
+    core: &AilCore,
+    node_by_id: &BTreeMap<String, Node>,
+    action: &Node,
+) -> bool {
+    outgoing_nodes(core, node_by_id, action, "requires")
+        .into_iter()
+        .filter(|node| node.kind == "Rule")
+        .any(|rule| {
+            let compact = compact_semantic_text(&rule.name);
+            compact.contains("assigneerole")
+                && (compact.contains("supportagent")
+                    || compact.contains("supportmanager")
+                    || compact.contains("supportstaff"))
+        })
+}
+
+fn check_application_overdue_time_requirements(core: &AilCore) -> Vec<AilDiagnostic> {
+    if core.package.profile != "Application" {
+        return Vec::new();
+    }
+    let node_by_id = graph_node_by_id(core);
+    let mut diagnostics = Vec::new();
+    for edge in core.graph.edges.iter().filter(|edge| edge.kind == "writes") {
+        let Some(action) = node_by_id.get(&edge.source) else {
+            continue;
+        };
+        if action.kind != "Action" {
+            continue;
+        }
+        let Some(target) = node_by_id.get(&edge.target) else {
+            continue;
+        };
+        if !is_status_write_to(edge, target, "overdue") {
+            continue;
+        }
+        if !action_is_scheduler_trigger(action) {
+            continue;
+        }
+        if action_has_current_time_due_requirement(core, &node_by_id, action) {
+            continue;
+        }
+        diagnostics.push(
+            AilDiagnostic::error(
+                "AIL-APP-002",
+                format!(
+                    "action {} writes {} to Overdue without a current-time requirement",
+                    action.name, target.name
+                ),
+            )
+            .with_source_provenance(
+                edge.attributes
+                    .get("provenance")
+                    .cloned()
+                    .or_else(|| node_provenance(core, &action.id)),
+            )
+            .with_affected_graph_item(format!("edge:{}", edge.id))
+            .with_repair_suggestion(format!(
+                "Add a requirement such as 'the current time to be later than due_at' to action {}.",
+                action.name
+            )),
+        );
+    }
+    diagnostics
+}
+
+fn action_has_current_time_due_requirement(
+    core: &AilCore,
+    node_by_id: &BTreeMap<String, Node>,
+    action: &Node,
+) -> bool {
+    outgoing_nodes(core, node_by_id, action, "requires")
+        .into_iter()
+        .filter(|node| node.kind == "Rule")
+        .any(|rule| {
+            let compact = compact_semantic_text(&rule.name);
+            compact.contains("currenttime")
+                && (compact.contains("laterthan") || compact.contains("after"))
+                && (compact.contains("dueat") || compact.contains("due"))
+        })
+}
+
+fn action_is_scheduler_trigger(action: &Node) -> bool {
+    action
+        .attributes
+        .get("trigger")
+        .is_some_and(|trigger| trigger.to_ascii_lowercase().contains("scheduler"))
+}
+
+fn check_application_status_public_update(core: &AilCore) -> Vec<AilDiagnostic> {
+    if core.package.profile != "Application" || !application_has_public_update_surface(core) {
+        return Vec::new();
+    }
+    let node_by_id = graph_node_by_id(core);
+    let mut reported_actions = BTreeSet::new();
+    let mut diagnostics = Vec::new();
+    for edge in core.graph.edges.iter().filter(|edge| edge.kind == "writes") {
+        let Some(action) = node_by_id.get(&edge.source) else {
+            continue;
+        };
+        if action.kind != "Action" {
+            continue;
+        }
+        let Some(target) = node_by_id.get(&edge.target) else {
+            continue;
+        };
+        if !is_public_ticket_status_transition(edge, target) {
+            continue;
+        }
+        if !reported_actions.insert(action.id.clone()) {
+            continue;
+        }
+        if action_writes_public_update(core, &node_by_id, action) {
+            continue;
+        }
+        diagnostics.push(
+            AilDiagnostic::error(
+                "AIL-APP-003",
+                format!(
+                    "action {} changes {} without recording a public update",
+                    action.name, target.name
+                ),
+            )
+            .with_source_provenance(
+                edge.attributes
+                    .get("provenance")
+                    .cloned()
+                    .or_else(|| node_provenance(core, &action.id)),
+            )
+            .with_affected_graph_item(format!("edge:{}", edge.id))
+            .with_repair_suggestion(format!(
+                "Add a 'the system records a public update' bullet to action {}.",
+                action.name
+            )),
+        );
+    }
+    diagnostics
+}
+
+fn application_has_public_update_surface(core: &AilCore) -> bool {
+    core.graph.nodes.iter().any(|node| {
+        let lower = node.name.to_ascii_lowercase();
+        matches!(node.kind.as_str(), "Field" | "View")
+            && (lower.contains("public update") || lower.contains("public_updates"))
+    })
+}
+
+fn is_public_ticket_status_transition(edge: &Edge, target: &Node) -> bool {
+    if target.kind != "Field" || !target.name.eq_ignore_ascii_case("ticket.status") {
+        return false;
+    }
+    ["new", "assigned", "closed", "overdue"]
+        .iter()
+        .any(|value| is_status_write_to(edge, target, value))
+}
+
+fn is_status_write_to(edge: &Edge, target: &Node, value: &str) -> bool {
+    if target.kind != "Field" || !target.name.to_ascii_lowercase().ends_with(".status") {
+        return false;
+    }
+    let Some(provenance) = edge.attributes.get("provenance") else {
+        return false;
+    };
+    let compact = compact_semantic_text(provenance);
+    let value = compact_semantic_text(value);
+    compact.contains(&format!("statusto{value}")) || compact.contains(&format!("status{value}"))
+}
+
+fn action_writes_public_update(
+    core: &AilCore,
+    node_by_id: &BTreeMap<String, Node>,
+    action: &Node,
+) -> bool {
+    core.graph
+        .edges
+        .iter()
+        .filter(|edge| edge.kind == "writes" && edge.source == action.id)
+        .any(|edge| {
+            let target_text = node_by_id
+                .get(&edge.target)
+                .map(|target| target.name.as_str())
+                .unwrap_or("");
+            [
+                target_text,
+                edge.attributes.get("provenance").map_or("", String::as_str),
+            ]
+            .iter()
+            .any(|text| {
+                let lower = text.to_ascii_lowercase();
+                lower.contains("public update") || lower.contains("public_updates")
+            })
+        })
+}
+
+fn compact_semantic_text(text: &str) -> String {
+    text.to_ascii_lowercase()
+        .chars()
+        .filter(|ch| ch.is_ascii_alphanumeric())
+        .collect()
 }
 
 fn check_failure_handling(core: &AilCore) -> Vec<AilDiagnostic> {
