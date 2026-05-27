@@ -1045,6 +1045,7 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         "manual/05-v03-roadmap.md",
         "manual/06-v03-authoring-gate.md",
         "manual/07-repair-promotion.md",
+        "manual/08-ui-patch-import.md",
     ] {
         assert!(
             docs_index.contains(manual_chapter),
@@ -1074,6 +1075,7 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         "agent-entrypoint",
         "v03-roadmap",
         "repair-promotion",
+        "ui-patch-import",
         "v03-authoring-gate",
         "02-examples-release.md",
         "03-prompt-interaction.md",
@@ -1081,6 +1083,7 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         "05-v03-roadmap.md",
         "06-v03-authoring-gate.md",
         "07-repair-promotion.md",
+        "08-ui-patch-import.md",
     ] {
         assert!(
             manual_index.contains(required),
@@ -1128,10 +1131,10 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
     ] {
         assert!(manual.contains(required), "{required}\n{manual}");
     }
-    for (manual_path, required_terms) in [
+    let manual_expectations: &[(&str, &[&str])] = &[
         (
             "02-examples-release.md",
-            [
+            &[
                 "cargo run -- ail-examples examples",
                 "examples-report.txt",
                 "model-executor-manifest.txt",
@@ -1139,7 +1142,7 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         ),
         (
             "03-prompt-interaction.md",
-            [
+            &[
                 "cargo run -- ail-prompt-corpus docs/ail/corpus/prompts",
                 "scripts/run_v03_prompt_llm_harness.py --dry-run",
                 "manifest.ail-prompt-corpus.txt",
@@ -1147,7 +1150,7 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         ),
         (
             "04-agent-entrypoint.md",
-            [
+            &[
                 "cargo run -- ail-agent-contracts examples/agents",
                 "examples/ail_toolchain_agent.ail",
                 "agent-trace.txt",
@@ -1155,7 +1158,7 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         ),
         (
             "05-v03-roadmap.md",
-            [
+            &[
                 "cargo run -- ail-v03-roadmap examples",
                 "v03-roadmap.txt",
                 "AIL-v0.3-Roadmap",
@@ -1163,19 +1166,33 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         ),
         (
             "06-v03-authoring-gate.md",
-            [
+            &[
                 "scripts/run_ail_interactive_manual.py --chapter v03-authoring-gate --run-checks",
                 "run-user-story-mode-checks",
                 "run-agent-entrypoint-checks",
+                "run-ui-patch-import-checks",
             ],
         ),
-    ] {
+        (
+            "08-ui-patch-import.md",
+            &[
+                "scripts/run_ail_interactive_manual.py --chapter ui-patch-import --run-checks",
+                "scripts/run_v03_ui_patch_capture_plan.py",
+                "scripts/run_v03_ui_patch_import_demo.py",
+                "ui-patch-capture-plan.json",
+                "ui-patch-import-demo-report.txt",
+                "flow-edit-applied true",
+                "patched-core-replayed true",
+            ],
+        ),
+    ];
+    for &(manual_path, required_terms) in manual_expectations {
         let manual = fs::read_to_string(format!(
             "{}/docs/ail/manual/{manual_path}",
             env!("CARGO_MANIFEST_DIR")
         ))
         .unwrap();
-        for required in required_terms {
+        for &required in required_terms {
             assert!(manual.contains(required), "{required}\n{manual}");
         }
     }
@@ -1227,6 +1244,7 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "chapter agent-entrypoint",
         "chapter v03-roadmap",
         "chapter repair-promotion",
+        "chapter ui-patch-import",
         "chapter v03-authoring-gate",
     ] {
         assert!(list_stdout.contains(required), "{required}\n{list_stdout}");
@@ -1399,6 +1417,38 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         );
     }
 
+    let ui_patch_dry_run = Command::new("python3")
+        .args([&script, "--chapter", "ui-patch-import", "--dry-run"])
+        .output()
+        .unwrap();
+    assert!(
+        ui_patch_dry_run.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&ui_patch_dry_run.stdout),
+        String::from_utf8_lossy(&ui_patch_dry_run.stderr)
+    );
+    let ui_patch_stdout = String::from_utf8_lossy(&ui_patch_dry_run.stdout);
+    for required in [
+        "id ui-patch-import",
+        "doc docs/ail/manual/08-ui-patch-import.md",
+        "cargo run -- ail-examples examples",
+        "ui-review-patch.txt",
+        "ui-review-patch-fingerprint-observed-count",
+        "scripts/run_v03_ui_patch_capture_plan.py",
+        "ui-patch-capture-plan.json",
+        "scripts/run_v03_ui_patch_import_demo.py",
+        "ui-patch-import-demo-report.txt",
+        "source-preserved true",
+        "proposed-accepted true",
+        "flow-edit-applied true",
+        "patched-core-replayed true",
+    ] {
+        assert!(
+            ui_patch_stdout.contains(required),
+            "{required}\n{ui_patch_stdout}"
+        );
+    }
+
     let gate_dry_run = Command::new("python3")
         .args([&script, "--chapter", "v03-authoring-gate", "--dry-run"])
         .output()
@@ -1419,12 +1469,17 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "python3 scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run-checks",
         "python3 scripts/run_ail_interactive_manual.py --chapter agent-entrypoint --run-checks",
         "python3 scripts/run_ail_interactive_manual.py --chapter repair-promotion --run-checks",
+        "python3 scripts/run_ail_interactive_manual.py --chapter ui-patch-import --run-checks",
         "evidence examples-report.txt",
         "evidence v03-roadmap.txt",
         "evidence agent-trace.txt",
         "evidence repair-promotion-review.txt",
         "evidence repair-promotion-capture-plan.json",
         "evidence repair-promotion-import-demo-report.txt",
+        "evidence ui-patch-capture-plan.json",
+        "evidence ui-patch-import-demo-report.txt",
+        "evidence flow-edit-applied true",
+        "evidence patched-core-replayed true",
     ] {
         assert!(gate_stdout.contains(required), "{required}\n{gate_stdout}");
     }
@@ -1573,6 +1628,7 @@ fn script_ail_interactive_manual_v03_authoring_gate_run_checks_succeeds() {
         "running run-examples-release-checks",
         "running run-prompt-interaction-checks",
         "running run-agent-entrypoint-checks",
+        "running run-ui-patch-import-checks",
         "AIL-Examples-Report:",
         "AIL-Prompt-Corpus-Portability-Report:",
         "story-questions.ail-interview.md",

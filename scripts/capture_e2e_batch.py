@@ -144,6 +144,13 @@ def story_plan_fingerprint_path(plan_path: Path) -> Path:
     return plan_path.with_suffix(".fingerprint.txt")
 
 
+def ui_patch_plan_fingerprint_path(plan_path: Path) -> Path:
+    canonical = plan_path.with_name("ui-patch-capture-plan.fingerprint.txt")
+    if canonical.exists():
+        return canonical
+    return plan_path.with_suffix(".fingerprint.txt")
+
+
 def require_story_artifact_fingerprint(
     artifact_dir: Path,
     relative_path: str,
@@ -324,6 +331,52 @@ def load_story_promotion_capture_plan(
     return plan
 
 
+def load_ui_patch_capture_plan(
+    entry: dict[str, object],
+) -> dict[str, object] | None:
+    plan_json = optional_string(entry, "ui_patch_capture_plan_json")
+    if plan_json is None:
+        return None
+    plan_path = Path(plan_json)
+    plan_text = plan_path.read_text()
+    expected_fingerprint = ui_patch_plan_fingerprint_path(plan_path).read_text().strip()
+    actual_fingerprint = fnv64(plan_text)
+    if expected_fingerprint != actual_fingerprint:
+        raise SystemExit(
+            "ui patch capture plan fingerprint mismatch: "
+            f"expected {expected_fingerprint} got {actual_fingerprint}"
+        )
+    plan = json.loads(plan_text)
+    if not isinstance(plan, dict):
+        raise SystemExit("ui patch capture plan must be an object")
+    if plan_string(plan, "artifact_kind") != "AIL-UI-Patch-Capture-Plan":
+        raise SystemExit("ui patch capture plan has invalid artifact_kind")
+    for field, expected in [
+        ("status", "plan-only"),
+        ("patch_import_decision", "accepted-for-import"),
+        ("patch_command", "ail-flow-edit"),
+        ("patch_import_status", "proposed-only"),
+        ("batch_capture_script", "scripts/capture_example_batch.py"),
+    ]:
+        actual = plan_string(plan, field)
+        if actual != expected:
+            raise SystemExit(f"ui patch capture plan {field} expected {expected}, got {actual}")
+    for field in [
+        "human_approval_required",
+        "must_supply_request_response_json",
+        "preserve_source_entry",
+    ]:
+        if not plan_bool(plan, field):
+            raise SystemExit(f"ui patch capture plan requires {field}")
+    entry_id = required_string(entry, "entry_id")
+    if plan_string(plan, "proposed_entry_id") != entry_id:
+        raise SystemExit("ui patch capture plan proposed_entry_id must match batch entry_id")
+    source_entry_id = optional_string(entry, "source_entry_id")
+    if source_entry_id is not None and plan_string(plan, "source_entry_id") != source_entry_id:
+        raise SystemExit("ui patch capture plan source_entry_id must match batch source_entry_id")
+    return plan
+
+
 def apply_llm_entry(
     output_dir: Path,
     entries: list[tuple[str | None, list[str]]],
@@ -376,13 +429,23 @@ def apply_codex_entry(
     entry_id = required_string(entry, "entry_id")
     repair_plan = load_repair_promotion_capture_plan(entry)
     story_plan = load_story_promotion_capture_plan(entry)
-    if repair_plan is not None and story_plan is not None:
-        raise SystemExit("batch entry cannot use both repair and story promotion plans")
-    append_entry = repair_plan is not None or story_plan is not None
+    ui_patch_plan = load_ui_patch_capture_plan(entry)
+    plan_count = sum(
+        1 for plan in [repair_plan, story_plan, ui_patch_plan] if plan is not None
+    )
+    if plan_count > 1:
+        raise SystemExit(
+            "batch entry cannot use repair, story, and UI patch promotion plans together"
+        )
+    append_entry = plan_count == 1
     source_entry_id = (
         plan_string(repair_plan, "source_entry_id")
         if repair_plan is not None
-        else required_string(entry, "source_entry_id") if story_plan is not None else entry_id
+        else plan_string(ui_patch_plan, "source_entry_id")
+        if ui_patch_plan is not None
+        else required_string(entry, "source_entry_id")
+        if story_plan is not None
+        else entry_id
     )
     if append_entry and any(candidate_id == entry_id for candidate_id, _lines in entries):
         raise SystemExit(f"proposed promotion entry {entry_id} already exists")
@@ -392,6 +455,8 @@ def apply_codex_entry(
     prompt_file = optional_string(entry, "prompt_file") or fields["prompt-file"]
     if story_plan is not None and optional_string(entry, "prompt_file") is None:
         prompt_file = "docs/ail/prompts/spec-draft.system.md"
+    if ui_patch_plan is not None and optional_string(entry, "prompt_file") is None:
+        prompt_file = "docs/ail/prompts/flow-patch.system.md"
     fields["prompt-file"] = prompt_file
     system_prompt = (ROOT / prompt_file).read_text()
 
@@ -495,6 +560,26 @@ def apply_codex_entry(
                 optional_string(entry, "story_roundtrip") or "semantic-similar"
             )
             fields["story-evidence"] = optional_string(entry, "story_evidence") or "vm-trace"
+        if ui_patch_plan is not None:
+            fields["story-file"] = f"stories/{entry_id}.md"
+            fields["story-journey"] = optional_string(entry, "story_journey") or "story-amendment"
+            fields["story-roundtrip"] = (
+                optional_string(entry, "story_roundtrip") or "semantic-similar"
+            )
+            fields["story-evidence"] = optional_string(entry, "story_evidence") or "vm-trace"
+            fields["surface-tags"] = optional_string(entry, "surface_tags") or "ui,flow-patch"
+            fields["capability-under-test"] = (
+                optional_string(entry, "capability_under_test") or "ui-patch-import"
+            )
+            fields["use-case"] = optional_string(entry, "use_case") or (
+                f"Human-approved UI patch import for deterministic review plan {source_entry_id} "
+                "that applies an ail-flow-edit and replays the patched spec through Core, "
+                "bytecode, target contract, and trace evidence."
+            )
+            fields["v0.3-signal"] = optional_string(entry, "v03_signal") or (
+                "UI authoring needs imported visual patch plans to carry replay evidence "
+                "after human-approved ail-flow-edit changes are applied."
+            )
         story_path = output_dir / fields["story-file"]
         story_path.parent.mkdir(parents=True, exist_ok=True)
         story_path.write_text(render_story_file(fields, semantic_anchors))

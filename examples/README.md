@@ -282,9 +282,10 @@ python3 scripts/capture_example_batch.py \
 Each plan entry uses `executor_family: llm-http` with endpoint, prompt, and
 model labels, or `executor_family: codex-skill-agent` with recorded request and
 response JSON files. Codex entries may also provide
-`repair_promotion_capture_plan_json` or `story_promotion_capture_plan_json`
-when the batch appends a human-approved promotion candidate. The batch output
-still must be replayed with `ail-examples` before promotion.
+`repair_promotion_capture_plan_json`, `story_promotion_capture_plan_json`, or
+`ui_patch_capture_plan_json` when the batch appends a human-approved promotion
+candidate. The batch output still must be replayed with `ail-examples` before
+promotion.
 
 The generated files are committed so release verification does not depend on
 live LLM access. The current corpus stores:
@@ -295,7 +296,7 @@ live LLM access. The current corpus stores:
   story journey, distinctness, capture-origin, checker-result, target, and
   v0.3 learning metadata. One hundred eight entries are accepted
   prompt-to-artifact examples that replay through checked Core, bytecode, VM
-  trace, and binary or target-contract evidence; eight entries are rejected
+  trace, and binary or target-contract evidence; nine entries are rejected
   diagnostic examples.
 - `stories/`: one deterministic user-story view per catalog entry. The
   verifier rejects story files whose story, journey, evidence, domain,
@@ -331,6 +332,12 @@ live LLM access. The current corpus stores:
 - `examples/<entry-id>/ui-review-patch.txt`: generated beside each UI review
   to record a proposed-only `ail-flow-edit` patch plan, human approval
   requirement, patch scope, and upstream UI review fingerprint.
+- `ui-patch-capture-plan.json` and `ui-patch-import-demo-report.txt`: generated
+  in scratch artifact directories by `scripts/run_v03_ui_patch_capture_plan.py`
+  and `scripts/run_v03_ui_patch_import_demo.py` to validate a human-approved
+  `ail-flow-edit`, append `example-108-ui-patch` to a corpus copy, and replay
+  that copy through checked Core, bytecode, VM trace, and target-contract
+  evidence.
 - `examples/<entry-id>/agent-policy-review.txt`: generated for each accepted
   AgentTool entry to record deterministic multi-agent handoff review, the
   `ail-agent-contracts examples/agents` check, permission and approval review,
@@ -354,7 +361,11 @@ remain zero before claiming the v0.2 prompt-to-artifact release gate. Accepted U
 UI-surface replay must emit `ui-review-fingerprint-*` and
 `ui-review-patch-fingerprint-*` report lines plus `ui-review` and
 `ui-review-patch` manifest entries before claiming the visual/accessibility
-patch-planning path. Accepted AgentTool replay must emit
+patch-planning path. The human-approved import path is checked by
+`scripts/run_v03_ui_patch_capture_plan.py` followed by
+`scripts/run_v03_ui_patch_import_demo.py`; the import report must include
+`source-preserved true`, `proposed-accepted true`, `flow-edit-applied true`, and
+`patched-core-replayed true`. Accepted AgentTool replay must emit
 `agent-policy-review-fingerprint-*` report lines plus `agent-policy-review`
 manifest entries before claiming the multi-agent policy handoff review path.
 Rejected example replay

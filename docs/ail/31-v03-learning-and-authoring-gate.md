@@ -216,6 +216,13 @@ The `ail-examples` replay bundle must also write deterministic story artifacts:
 - `examples/<entry-id>/repair-promotion-review.txt` for rejected entries
 - `v03-roadmap.txt`
 - `v03-roadmap.fingerprint.txt`
+- `ui-patch-capture-plan.json`, `ui-patch-capture-plan.txt`, and
+  `ui-patch-capture-plan.fingerprint.txt` in a scratch capture-plan directory
+  when a UI patch is proposed for human-approved import.
+- `ui-patch-import-demo-report.txt` and
+  `ui-patch-import-demo-report.fingerprint.txt` in a scratch import work
+  directory when the approved UI patch is appended to a corpus copy and
+  replayed.
 
 The story artifact is derived from catalog metadata and fingerprinted in the
 same report and manifest as request, response, checked Core, bytecode, VM
@@ -229,7 +236,12 @@ deterministic patch plan that names the `ail-flow-edit` handoff, requires human
 approval, and binds itself to the UI review fingerprint. The report must
 summarize these files with
 `ui-review-fingerprint-*` and `ui-review-patch-fingerprint-*` lines and list
-each UI review and patch plan in `manifest.ail-examples.txt`. Accepted
+each UI review and patch plan in `manifest.ail-examples.txt`. A reviewed UI
+patch can then be captured with `scripts/run_v03_ui_patch_capture_plan.py` and
+imported with `scripts/run_v03_ui_patch_import_demo.py`; that demo must
+preserve the source entry, apply `ail-flow-edit`, append an accepted
+`example-108-ui-patch` candidate to a corpus copy, and replay the copy until
+`flow-edit-applied true` and `patched-core-replayed true` are recorded. Accepted
 `AgentTool` entries must also emit `agent-policy-review.txt`, which records the
 multi-agent handoff roles, `ail-agent-contracts examples/agents` check, tool
 permission and approval review, external-call review, secret-redaction review,
@@ -282,10 +294,11 @@ as prose. The current examples reveal these next-version gaps:
 - Prompt matrices need explicit separation between semantic use-case diversity
   and prompt-surface coverage.
 - UI examples now emit deterministic visual review, accessibility review,
-  workflow authoring artifacts, deterministic UI patch plans, and a rejected
-  accessibility diagnostic fixture that repairs to checked Core, verified
-  bytecode, and Wasm target-contract evidence. The next bar is a human-approved
-  visual patch import workflow.
+  workflow authoring artifacts, deterministic UI patch plans, a human-approved
+  UI patch import demo, and a rejected accessibility diagnostic fixture that
+  repairs to checked Core, verified bytecode, and Wasm target-contract
+  evidence. The next bar is visual regression evidence and runtime UI-state
+  checks for imported patches.
 - AgentTool examples now emit deterministic policy review artifacts with
   multi-agent handoff roles, contract checks, permission and approval review,
   external-call review, secret-redaction review, audit-trace review, and
