@@ -379,6 +379,25 @@ BASE_CHAPTERS: tuple[ManualChapter, ...] = (
                 command=("cargo", "run", "--", "ail-check", "examples/ail_toolchain_agent.ail"),
             ),
             ManualCommand(
+                label="check-toolchain-agent-conformance",
+                command=(
+                    "cargo",
+                    "run",
+                    "--",
+                    "ail-conformance",
+                    "examples/ail_toolchain_agent.ail",
+                    "--artifact-dir",
+                    "/tmp/ail-manual-agent-entrypoint-conformance",
+                ),
+                evidence=(
+                    "conformance-report.txt",
+                    "manifest.ail-conformance.txt",
+                    "accepted: bytecode-verification-minimal.ail-spec.md",
+                    "rejected: bytecode-verification-without-fingerprint.ail-spec.md AIL-AGENT-001",
+                    "ail conformance: ok",
+                ),
+            ),
+            ManualCommand(
                 label="verify-toolchain-agent-package",
                 command=(
                     "cargo",
@@ -1029,6 +1048,10 @@ V03_AUTHORING_GATE = ManualChapter(
                 "--run-checks",
             ),
             evidence=(
+                "conformance-report.txt",
+                "manifest.ail-conformance.txt",
+                "accepted: bytecode-verification-minimal.ail-spec.md",
+                "rejected: bytecode-verification-without-fingerprint.ail-spec.md AIL-AGENT-001",
                 "agent.ailbc.json",
                 "agent-trace.txt",
             ),

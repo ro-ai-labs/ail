@@ -113,6 +113,8 @@ prompt-envelope-questions-expected-count
 prompt-outcome-match-count
 prompt-envelope-invalid-count
 agent.ailbc.json
+accepted: bytecode-verification-minimal.ail-spec.md
+rejected: bytecode-verification-without-fingerprint.ail-spec.md AIL-AGENT-001
 bootstrap-fixed-point-report.txt
 bootstrap-fixed-point-report.fingerprint.txt
 fixed-point: ok

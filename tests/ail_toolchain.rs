@@ -1461,6 +1461,9 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "id agent-entrypoint",
         "doc docs/ail/manual/04-agent-entrypoint.md",
         "cargo run -- ail-check examples/ail_toolchain_agent.ail",
+        "cargo run -- ail-conformance examples/ail_toolchain_agent.ail",
+        "accepted: bytecode-verification-minimal.ail-spec.md",
+        "rejected: bytecode-verification-without-fingerprint.ail-spec.md AIL-AGENT-001",
         "codex-ail-prompt-reviewer.md",
         "examples/agents/skills/ail-prompt-interaction-reviewer/SKILL.md",
         "cargo run -- ail-agent-contracts examples/agents",
@@ -1718,6 +1721,8 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "python3 scripts/run_ail_interactive_manual.py --chapter agent-policy-import --run-checks",
         "evidence examples-report.txt",
         "evidence v03-roadmap.txt",
+        "evidence accepted: bytecode-verification-minimal.ail-spec.md",
+        "evidence rejected: bytecode-verification-without-fingerprint.ail-spec.md AIL-AGENT-001",
         "evidence agent-trace.txt",
         "evidence bootstrap-fixed-point-report.txt",
         "evidence fixed-point: ok",
@@ -20601,6 +20606,46 @@ fn cli_ail_conformance_checks_agent_tool_fixtures() {
     assert!(
         stdout.contains(
             "repair=Use a supported AIL type for input RefundCustomerPayment.payment token or declare a Thing named 'MysteryCredential'."
+        ),
+        "{stdout}"
+    );
+    assert!(stdout.contains("ail conformance: ok"));
+}
+
+#[test]
+fn cli_ail_conformance_checks_toolchain_agent_fixtures() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("ail_toolchain_agent.ail");
+
+    let output = Command::new(binary)
+        .args(["ail-conformance", &package])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("ail conformance: package ail-toolchain-agent"));
+    assert!(stdout.contains("valid: spec.ail-spec.md"));
+    assert!(stdout.contains("accepted: bytecode-verification-minimal.ail-spec.md"));
+    assert!(
+        stdout.contains(
+            "rejected: bytecode-verification-without-fingerprint.ail-spec.md AIL-AGENT-001"
+        ),
+        "{stdout}"
+    );
+    assert!(
+        stdout.contains(
+            "source=action:VerifyBytecodeArtifact.read:the BuildRequest bytecode artifact"
+        ),
+        "{stdout}"
+    );
+    assert!(
+        stdout.contains(
+            "repair=Read BuildRequest.bytecode fingerprint before action VerifyBytecodeArtifact verifies BuildRequest.bytecode artifact."
         ),
         "{stdout}"
     );

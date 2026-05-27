@@ -34,9 +34,17 @@ target verification, and manifest verification flows.
 
 ## Rejected Fixtures
 
-This package does not have package-local rejected fixtures. Rejection coverage
-comes from the build, compile, prompt-envelope, and manifest-verification tests
-that stop before trusting malformed or incomplete agent handoffs.
+This package includes package-local conformance fixtures:
+
+- `examples/accepted/bytecode-verification-minimal.ail-spec.md` shows the
+  minimal accepted bytecode-verification action.
+- `examples/rejected/bytecode-verification-without-fingerprint.ail-spec.md`
+  rejects an agent action that verifies a bytecode artifact without reading
+  the matching fingerprint first.
+
+Additional rejection coverage comes from the build, compile, prompt-envelope,
+and manifest-verification tests that stop before trusting malformed or
+incomplete agent handoffs.
 
 ## Next Example To Read
 
@@ -47,5 +55,7 @@ through this agent.
 ## v0.3 Learning Signal
 
 AIL v0.3 should turn this package from a deterministic verifier participant
-into a richer multi-agent handoff tutorial with policy review, prompt-portable
-handoff contracts, and repair guidance for failed agent actions.
+into a richer multi-agent handoff tutorial with first-class agent semantics,
+default entrypoint policy, prompt-portable handoff contracts, and repair
+guidance for failed agent actions. The current local fixtures establish the
+first agent-specific artifact-verification boundary.

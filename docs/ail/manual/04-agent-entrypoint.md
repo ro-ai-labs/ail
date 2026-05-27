@@ -72,7 +72,18 @@ Check the AIL-authored toolchain agent package:
 
 ```sh
 cargo run -- ail-check examples/ail_toolchain_agent.ail
+cargo run -- ail-conformance examples/ail_toolchain_agent.ail --artifact-dir /tmp/ail-manual-agent-entrypoint-conformance
 cargo test ail_toolchain_agent_package_lowers_to_verified_bytecode --test ail_toolchain
+```
+
+The conformance check must include local agent-boundary fixtures:
+
+```text
+conformance-report.txt
+manifest.ail-conformance.txt
+accepted: bytecode-verification-minimal.ail-spec.md
+rejected: bytecode-verification-without-fingerprint.ail-spec.md AIL-AGENT-001
+ail conformance: ok
 ```
 
 Then verify the build entrypoint path:
@@ -84,6 +95,8 @@ cargo test cli_ail_build_runs_toolchain_agent_bytecode --test ail_toolchain
 The expected evidence is:
 
 ```text
+conformance-report.txt
+manifest.ail-conformance.txt
 agent.ailbc.json
 agent-trace.txt
 ```

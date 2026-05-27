@@ -4095,6 +4095,7 @@ pub fn check_ail_core_diagnostics(core: &AilCore) -> Vec<AilDiagnostic> {
     diagnostics.extend(check_application_assignment_role_requirements(core));
     diagnostics.extend(check_application_overdue_time_requirements(core));
     diagnostics.extend(check_application_status_public_update(core));
+    diagnostics.extend(check_toolchain_agent_artifact_fingerprint_reads(core));
     diagnostics.extend(check_tool_secret_output_disclosure(core));
     diagnostics.extend(check_unknown_field_references(core));
     diagnostics.extend(check_failure_handling(core));
@@ -14917,6 +14918,96 @@ fn action_writes_public_update(
                 lower.contains("public update") || lower.contains("public_updates")
             })
         })
+}
+
+fn check_toolchain_agent_artifact_fingerprint_reads(core: &AilCore) -> Vec<AilDiagnostic> {
+    if core.package.name != "ail-toolchain-agent" {
+        return Vec::new();
+    }
+    let node_by_id = graph_node_by_id(core);
+    let mut diagnostics = Vec::new();
+    for edge in core.graph.edges.iter().filter(|edge| edge.kind == "reads") {
+        let Some(action) = node_by_id.get(&edge.source) else {
+            continue;
+        };
+        if action.kind != "Action" || !action.name.starts_with("Verify") {
+            continue;
+        }
+        let Some(artifact_field) = node_by_id.get(&edge.target) else {
+            continue;
+        };
+        if artifact_field.kind != "Field"
+            || !is_toolchain_agent_artifact_field(&artifact_field.name)
+        {
+            continue;
+        }
+        let Some(expected_fingerprint) =
+            toolchain_agent_fingerprint_field_name(&artifact_field.name)
+        else {
+            continue;
+        };
+        if action_reads_field(core, &node_by_id, action, &expected_fingerprint) {
+            continue;
+        }
+        diagnostics.push(
+            AilDiagnostic::error(
+                "AIL-AGENT-001",
+                format!(
+                    "action {} verifies {} without reading {}",
+                    action.name, artifact_field.name, expected_fingerprint
+                ),
+            )
+            .with_source_provenance(
+                edge.attributes
+                    .get("provenance")
+                    .cloned()
+                    .or_else(|| node_provenance(core, &action.id)),
+            )
+            .with_affected_graph_item(format!("edge:{}", edge.id))
+            .with_repair_suggestion(format!(
+                "Read {expected_fingerprint} before action {} verifies {}.",
+                action.name, artifact_field.name
+            )),
+        );
+    }
+    diagnostics
+}
+
+fn is_toolchain_agent_artifact_field(field_name: &str) -> bool {
+    let lower = field_name.to_ascii_lowercase();
+    lower.starts_with("buildrequest.")
+        && (lower.ends_with(" artifact") || lower.ends_with(" report"))
+        && !lower.ends_with(" fingerprint")
+        && !lower.ends_with(" verification report")
+        && !lower.ends_with(" compilation report")
+        && !lower.ends_with(" review report")
+}
+
+fn toolchain_agent_fingerprint_field_name(field_name: &str) -> Option<String> {
+    let (prefix, local) = field_name.split_once('.')?;
+    if local == "bytecode artifact" {
+        Some(format!("{prefix}.bytecode fingerprint"))
+    } else if local == "compiler pass artifact" {
+        Some(format!("{prefix}.compiler pass fingerprint"))
+    } else if local.ends_with(" artifact") || local.ends_with(" report") {
+        Some(format!("{field_name} fingerprint"))
+    } else {
+        None
+    }
+}
+
+fn action_reads_field(
+    core: &AilCore,
+    node_by_id: &BTreeMap<String, Node>,
+    action: &Node,
+    field_name: &str,
+) -> bool {
+    core.graph
+        .edges
+        .iter()
+        .filter(|edge| edge.kind == "reads" && edge.source == action.id)
+        .filter_map(|edge| node_by_id.get(&edge.target))
+        .any(|field| field.kind == "Field" && field.name.eq_ignore_ascii_case(field_name))
 }
 
 fn compact_semantic_text(text: &str) -> String {
