@@ -1,0 +1,28 @@
+AIL-Requirements:
+- Domain Object Ticket exists with required fields id: Text, title: Text, status: State<New, Open, Assigned, Closed, Overdue>, customer: User, assignee: Option<User>, created_at: Time, due_at: Time, public_updates: List<Text>, and internal notes: Secret<List<Text>>.
+- Domain Object User exists with required fields id: Text, role: State<Customer, SupportAgent, SupportManager>, and email: Text.
+- Action CreateTicket requires inputs customer_id: Text and title: Text; preconditions include the caller having role Customer; effects include creating a Ticket with status New, setting the customer, recording an initial public update, ensuring internal notes are empty and secret, and emitting trace event TicketCreated.
+- Action AssignTicket requires inputs ticket_id: Text and assignee_id: Text; preconditions include the ticket existing, the ticket status being New or Open, and the assignee having role SupportAgent or SupportManager; effects include updating the assignee, changing status to Assigned, recording a public update, granting the assignee visibility into internal notes, and emitting trace event TicketAssigned.
+- Action CloseTicket requires inputs ticket_id: Text; preconditions include the ticket existing and the ticket status not being Closed; effects include changing status to Closed, recording a public update, ensuring internal notes are not revealed to the customer, guaranteeing the ticket does not appear in the open ticket queue, and emitting trace event TicketClosed.
+- Action MarkOverdue is triggered by a scheduler reading tickets with status New, Open, or Assigned; preconditions include the current time being later than the ticket's due_at; effects include changing status to Overdue, recording a public update, and emitting trace event TicketOverdue.
+- Failure NotFound occurs when a ticket id does not match a stored ticket; effects include no ticket data changes, returning error "Ticket not found", and emitting trace event TicketNotFound.
+- Failure PermissionDenied occurs when a user without support staff permission attempts to access internal notes; effects include revealing no secret value, returning error "Permission denied", and emitting trace event InternalNotesDenied.
+- Guarantee InternalNotesSecret ensures that internal notes are always stored as Secret<List<Text>> and are never exposed to users without explicit support staff permissions (SupportAgent or SupportManager).
+- Guarantee OpenQueueExclusion ensures that tickets with status Closed never appear in the open ticket queue view accessible to SupportAgents.
+- Trace Event TicketCreated is emitted upon successful creation of a new ticket.
+- Trace Event TicketAssigned is emitted upon successful assignment of a ticket.
+- Trace Event TicketClosed is emitted upon successful closure of a ticket.
+- Trace Event TicketOverdue is emitted when a ticket is marked as overdue by the scheduler.
+- Trace Event TicketNotFound is emitted when a lookup fails due to a missing ticket id.
+- Trace Event InternalNotesDenied is emitted when an unauthorized access attempt to internal notes is blocked.
+- Permission SupportAgent may view the open ticket queue and internal notes of assigned tickets.
+- Permission SupportManager may view the overdue tickets view and internal notes of assigned tickets.
+- Permission Customer may view their own ticket history including public updates but must never access internal notes.
+- Secret internal notes of type Secret<List<Text>> are accessible only to SupportAgent and SupportManager roles.
+- Runtime Input current_time is required for the scheduler to evaluate due_at for overdue ticket marking.
+- Runtime Input ticket_id is required for lookup operations in AssignTicket, CloseTicket, and NotFound failure handling.
+- Runtime Input customer_id is required for CreateTicket to associate the ticket with a user.
+- Runtime Input assignee_id is required for AssignTicket to determine the new assignee.
+- View OpenTicketQueue is visible to SupportAgent and lists tickets with status New, Open, or Assigned.
+- View OverdueTicketsView is visible to SupportManager and lists tickets with status Overdue.
+- View CustomerTicketHistory is visible to Customer and includes public_updates but excludes internal notes.

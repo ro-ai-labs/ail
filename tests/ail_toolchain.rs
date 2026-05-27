@@ -836,7 +836,7 @@ fn docs_example_inventory_names_every_package_directory() {
     );
     assert!(inventory.contains("Package directories: 26"), "{inventory}");
     assert!(
-        inventory.contains("Counted catalog examples: 122"),
+        inventory.contains("Counted catalog examples: 123"),
         "{inventory}"
     );
     let story_count = fs::read_dir(format!("{examples_dir}/stories"))
@@ -870,16 +870,16 @@ fn docs_example_inventory_names_every_package_directory() {
                 .is_some_and(|extension| extension == "json")
         })
         .count();
-    assert_eq!(story_count, 122, "story file count drifted");
-    assert_eq!(request_count, 122, "request transcript count drifted");
-    assert_eq!(response_count, 122, "response artifact count drifted");
-    assert!(inventory.contains("Story files: 122"), "{inventory}");
+    assert_eq!(story_count, 123, "story file count drifted");
+    assert_eq!(request_count, 123, "request transcript count drifted");
+    assert_eq!(response_count, 123, "response artifact count drifted");
+    assert!(inventory.contains("Story files: 123"), "{inventory}");
     assert!(
-        inventory.contains("Stored request transcripts: 122"),
+        inventory.contains("Stored request transcripts: 123"),
         "{inventory}"
     );
     assert!(
-        inventory.contains("Stored response artifacts: 122"),
+        inventory.contains("Stored response artifacts: 123"),
         "{inventory}"
     );
     assert!(
@@ -22718,6 +22718,16 @@ fn cli_ail_story_builds_checked_artifacts_from_story_file() {
         request_bodies[0]
     );
     assert!(
+        request_bodies[0].contains("Return only a prompt-pack JSON envelope for AIL-Requirements"),
+        "{}",
+        request_bodies[0]
+    );
+    assert!(
+        !request_bodies[0].contains("Output only an AIL-Requirements artifact"),
+        "{}",
+        request_bodies[0]
+    );
+    assert!(
         request_bodies[0].contains("As a support agent I can close a support ticket"),
         "{}",
         request_bodies[0]
@@ -26605,7 +26615,13 @@ fn cli_ail_build_agent_threads_capture_checklist_into_requirements_prompt() {
     assert_eq!(request_bodies.len(), 2);
     assert!(request_bodies[0].contains("Draft AIL requirements"));
     assert!(
-        request_bodies[0].contains("The first line must be exactly AIL-Requirements:"),
+        request_bodies[0].contains("Return only a prompt-pack JSON envelope for AIL-Requirements"),
+        "{}",
+        request_bodies[0]
+    );
+    assert!(
+        request_bodies[0]
+            .contains("Inside artifact_text, the first line must be exactly AIL-Requirements:"),
         "{}",
         request_bodies[0]
     );
@@ -27322,9 +27338,9 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         String::from_utf8_lossy(&output.stderr)
     );
     let report = fs::read_to_string(artifact_dir.join("examples-report.txt")).unwrap();
-    assert!(report.contains("entry-count 122"), "{report}");
+    assert!(report.contains("entry-count 123"), "{report}");
     assert!(
-        report.contains("checker-result-count accepted 113"),
+        report.contains("checker-result-count accepted 114"),
         "{report}"
     );
     assert!(
@@ -27340,7 +27356,7 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("capability-level-count high-level 48"),
+        report.contains("capability-level-count high-level 49"),
         "{report}"
     );
     assert!(
@@ -27388,7 +27404,7 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("capture-origin-count live-codex 118"),
+        report.contains("capture-origin-count live-codex 119"),
         "{report}"
     );
     assert!(
@@ -28101,12 +28117,12 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         report.contains("program-domain-count application 10")
             && report.contains("program-domain-count diagnostic 9")
             && report.contains("program-domain-count runtime 21")
-            && report.contains("program-scale-count multi-module-system 53")
-            && report.contains("story-roundtrip-count semantic-similar 113"),
+            && report.contains("program-scale-count multi-module-system 54")
+            && report.contains("story-roundtrip-count semantic-similar 114"),
         "{report}"
     );
     assert!(
-        report.contains("semantic-anchor-story-count 122")
+        report.contains("semantic-anchor-story-count 123")
             && report.contains(
                 "entry-semantic-anchors example-0 Option<T>; Result<T; E>; Map<K; V>; Option.map; OptionMapEvaluated; interview.system.md"
             )
@@ -28811,9 +28827,9 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
     let model_executor_manifest =
         fs::read_to_string(artifact_dir.join("model-executor-manifest.txt")).unwrap();
     assert!(
-        model_executor_manifest.contains("entry-count 122")
-            && model_executor_manifest.contains("executor-family codex-skill-agent count 118")
-            && model_executor_manifest.contains("capture-origin live-codex count 118")
+        model_executor_manifest.contains("entry-count 123")
+            && model_executor_manifest.contains("executor-family codex-skill-agent count 119")
+            && model_executor_manifest.contains("capture-origin live-codex count 119")
             && model_executor_manifest.contains(
                 "entry example-100 semantic-task stateful-counter-live-codex-accepted-100"
             )

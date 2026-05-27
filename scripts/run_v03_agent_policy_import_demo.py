@@ -311,8 +311,8 @@ def main(argv: list[str]) -> int:
     )
     report_text = (args.output_artifacts / "examples-report.txt").read_text()
     for line in [
-        "entry-count 123",
-        "checker-result-count accepted 114",
+        "entry-count 124",
+        "checker-result-count accepted 115",
         "checker-result-count rejected 9",
         f"entry {source_entry_id} ",
         f"entry {proposed_entry_id} ",
@@ -330,8 +330,8 @@ def main(argv: list[str]) -> int:
         f"{str(source_core_fingerprint_preserved).lower()}",
         f"policy-handoff-imported {str(policy_handoff_imported).lower()}",
         f"policy-handoff-replayed {str(policy_handoff_replayed).lower()}",
-        "entry-count 123",
-        "checker-result-count accepted 114",
+        "entry-count 124",
+        "checker-result-count accepted 115",
         "checker-result-count rejected 9",
         f"patched-spec {patched_spec_path}",
         f"batch-plan {batch_plan_path}",

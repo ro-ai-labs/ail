@@ -1,0 +1,8 @@
+{
+  "approval_mode": "deterministic-demo",
+  "executor_label": "codex-ail-prompt-reviewer-story-demo",
+  "source_entry_id": "example-30",
+  "story_id": "support-ticket-story",
+  "story_promotion_capture_plan_fingerprint": "fnv64:735da2a580dd6b3d",
+  "task": "Approve the reviewed User Story mode artifact for corpus promotion."
+}

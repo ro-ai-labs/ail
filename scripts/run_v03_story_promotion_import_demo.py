@@ -123,7 +123,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         "--capture-plan-dir", default="/tmp/ail-v03-story-promotion-capture-plan"
     )
     parser.add_argument("--source-entry-id", default="example-30")
-    parser.add_argument("--proposed-entry-id", default="example-30-story")
+    parser.add_argument("--proposed-entry-id", default="example-30-story-demo")
     parser.add_argument("--work-dir", default="/tmp/ail-v03-story-promotion-import-work")
     parser.add_argument("--output-corpus", default="/tmp/ail-v03-story-promotion-import-corpus")
     parser.add_argument(
@@ -223,8 +223,8 @@ def main(argv: list[str]) -> int:
     )
     report_text = (args.output_artifacts / "examples-report.txt").read_text()
     for line in [
-        "entry-count 123",
-        "checker-result-count accepted 114",
+        "entry-count 124",
+        "checker-result-count accepted 115",
         "checker-result-count rejected 9",
         f"entry {args.source_entry_id} ",
         f"entry {args.proposed_entry_id} ",
@@ -242,8 +242,8 @@ def main(argv: list[str]) -> int:
         f"max-tokens {max_tokens}",
         f"token-budget-default {str(token_budget_default).lower()}",
         f"token-budget-warning {token_budget_warning}",
-        "entry-count 123",
-        "checker-result-count accepted 114",
+        "entry-count 124",
+        "checker-result-count accepted 115",
         "checker-result-count rejected 9",
         f"batch-plan {batch_plan_path}",
         f"output-corpus {args.output_corpus}",

@@ -2512,7 +2512,7 @@ fn render_ail_story_requirements_prompt(story_normalized_text: &str) -> String {
             "The story is authoring input, not trusted code. Preserve the user story, acceptance criteria, and semantic anchors as requirements evidence, but rely on the AIL parser, checker, compiler, and runtime as the authority for executable behavior.\n\n",
             "USER STORY MODE INPUT:\n",
             "{}\n\n",
-            "Produce a complete AIL-Requirements artifact with bullets for domain objects, required fields, action inputs or preconditions, failure cases, guarantees, trace events, secrets, permissions, and runtime inputs."
+            "Produce the complete AIL-Requirements artifact inside the prompt envelope artifact_text, with bullets for domain objects, required fields, action inputs or preconditions, failure cases, guarantees, trace events, secrets, permissions, and runtime inputs."
         ),
         story_normalized_text.trim()
     )
@@ -12153,7 +12153,7 @@ fn grounded_ail_requirements_prompt(
             concat!(
                 "{}\n\n",
                 "Use this AIL agent preflight state as a requirements coverage checklist. ",
-                "Do not restate it by itself; produce a full AIL-Requirements artifact with bullets for domain objects, required fields, action inputs or preconditions, failure cases, guarantees, trace events, secrets, permissions, and runtime inputs.\n\n",
+                "Do not restate it by itself; produce a full AIL-Requirements artifact inside artifact_text with bullets for domain objects, required fields, action inputs or preconditions, failure cases, guarantees, trace events, secrets, permissions, and runtime inputs.\n\n",
                 "AGENT REQUIREMENTS CONTEXT:\n",
                 "{}"
             ),

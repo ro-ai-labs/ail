@@ -4406,3 +4406,40 @@ checker-result: accepted
 target: vm
 vm-action: factorial
 runtime-state: n=7
+## Example: example-30-story
+semantic-task: support-ticket-story-promoted-30
+profile: Application
+surface-tags: user-story-mode
+package: examples/support_ticket.ail
+use-case: Human-approved User Story mode promotion for a reviewed story artifact bundle that already produced requirements, spec, Core, bytecode, and trace evidence.
+capability-level: high-level
+capability-under-test: user-story-mode-promotion
+program-scale: multi-module-system
+program-domain: os-utility
+module-count: 3
+spec-count: 3
+story-count: 3
+interacts-with: libsystem,elf-loader,wasm-sandbox
+user-story-id: support-ticket-story
+user-story: As a reviewer I can inspect support-ticket behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: vm-trace
+story-file: stories/example-30-story.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
+distinctness-claim: support-ticket-story-promoted-30 validates user-story-mode-promotion with stored transcript replay and promoted executor evidence.
+v0.3-signal: User Story mode needs replayable promotion evidence that preserves the story artifact bundle while appending an accepted corpus candidate.
+prompt-file: docs/ail/prompts/spec-draft.system.md
+prompt-version: ail-prompts.v0.2
+prompt-fingerprint: fnv64:b23778093326102c
+executor-family: codex-skill-agent
+executor-label: codex-ail-prompt-reviewer-story-demo
+capture-origin: live-codex
+request-file: requests/example-30-story.json
+response-file: responses/example-30-story.json
+artifact-kind: ail-spec
+checker-result: accepted
+target: linux-x86_64-elf
+vm-action: CloseTicket
+runtime-state: ticket.id=T-1;ticket.status=Open
+story-artifacts: story-artifacts/example-30-story
