@@ -584,6 +584,13 @@ as prose. The current examples reveal these next-version gaps:
   the `Low -> High` transition, `TicketPrioritized` trace coverage, and replay
   fingerprints. The next bar is rejected invalid-transition fixtures and story
   diffs for user requests that change the type contract.
+- Stateful Counter examples now emit deterministic
+  `state-boundary-review.txt` and fingerprint artifacts for `example-95`
+  through `example-98`, `example-100`, and `example-110`, tying persistence,
+  idempotency, lock or serialization, replay recovery, `CounterIncremented`,
+  `AIL-STATE-001` through `AIL-STATE-004`, and VM/native replay fingerprints
+  into reviewer-facing evidence. The next bar is richer state coverage for
+  migrations, stale-state conflicts, and multi-action transactions.
 - Incident-response examples show that complex systems need richer story
   graphs across imported modules, UI surfaces, workflow transitions, target
   contracts, and regenerated story views.
@@ -593,8 +600,3 @@ as prose. The current examples reveal these next-version gaps:
   checker-visible base-case branch or calls itself without a decreasing
   argument. The next bar is richer termination proofs beyond these first
   base-case, decreasing-argument, and numeric stack-bound patterns.
-- Stateful examples now include package-local accepted/rejected conformance
-  fixtures for persistence guarantees, retry idempotency keys, shared-state
-  locking or serialization, and replay recovery after failure. The next bar is
-  migration fixtures, stale-state conflict detection, multi-action
-  transactions, and durable runtime evidence beyond text-level policy checks.

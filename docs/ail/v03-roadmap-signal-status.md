@@ -59,9 +59,9 @@ rationale: The bootstrap chapter proves one fixed-point compiler-pass compositio
 evidence: docs/ail/31-v03-learning-and-authoring-gate.md
 
 signal: State examples need clearer persistence and concurrency boundaries.
-status: deferred
-rationale: Stateful runtime fixtures now cover persistence, idempotency, locking, and replay recovery, but migration, stale-state, transaction, and durable runtime evidence remain next-version work.
-evidence: docs/ail/31-v03-learning-and-authoring-gate.md
+status: promoted
+rationale: Stateful Counter examples now emit deterministic state-boundary review artifacts for example-95 through example-98, example-100, and example-110, tying persistence, idempotency, concurrency, failure replay, diagnostics, and replay fingerprints into reviewer-facing evidence.
+evidence: cargo run -- ail-examples examples --release-evidence
 
 signal: Systems profile needs unsupported-target migration guidance and broader transmit/interrupt runtime variants.
 status: deferred

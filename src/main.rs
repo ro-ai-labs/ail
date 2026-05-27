@@ -501,6 +501,7 @@ struct AilE2eCorpusEvaluation {
     agent_policy_review_text: Option<String>,
     threat_model_audit_text: Option<String>,
     type_inference_review_text: Option<String>,
+    state_boundary_review_text: Option<String>,
     diagnostics_text: Option<String>,
     repair_tutorial_text: Option<String>,
     repair_proof: Option<AilE2eRepairProofArtifacts>,
@@ -2851,6 +2852,7 @@ fn evaluate_rejected_ail_e2e_corpus_entry(
         agent_policy_review_text: None,
         threat_model_audit_text: None,
         type_inference_review_text: None,
+        state_boundary_review_text: None,
         diagnostics_text: Some(diagnostics_text),
         repair_tutorial_text: Some(repair_tutorial_text),
         repair_proof: Some(repair_proof),
@@ -3348,6 +3350,7 @@ fn evaluate_ail_e2e_corpus_entry(
             agent_policy_review_text: None,
             threat_model_audit_text: None,
             type_inference_review_text: None,
+            state_boundary_review_text: None,
             diagnostics_text: None,
             repair_tutorial_text: None,
             repair_proof: None,
@@ -3477,6 +3480,13 @@ fn evaluate_ail_e2e_corpus_entry(
         vm_trace_text.as_deref(),
         target_report_text.as_deref(),
     );
+    let state_boundary_review_text = render_ail_e2e_state_boundary_review_text(
+        entry,
+        Some(&checked_core_text),
+        Some(&bytecode_text),
+        vm_trace_text.as_deref(),
+        target_report_text.as_deref(),
+    );
     Ok(AilE2eCorpusEvaluation {
         entry: entry.clone(),
         semantic_anchors,
@@ -3492,6 +3502,7 @@ fn evaluate_ail_e2e_corpus_entry(
         agent_policy_review_text,
         threat_model_audit_text,
         type_inference_review_text,
+        state_boundary_review_text,
         diagnostics_text: None,
         repair_tutorial_text: None,
         repair_proof: None,
@@ -3734,6 +3745,17 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
                 .map(|text| ail_artifact_fingerprint(text))
         },
     );
+    push_ail_e2e_fingerprint_reuse_lines(
+        &mut lines,
+        "state-boundary-review",
+        evaluations,
+        |evaluation| {
+            evaluation
+                .state_boundary_review_text
+                .as_ref()
+                .map(|text| ail_artifact_fingerprint(text))
+        },
+    );
     push_ail_e2e_fingerprint_reuse_lines(&mut lines, "diagnostics", evaluations, |evaluation| {
         evaluation
             .diagnostics_text
@@ -3950,6 +3972,14 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
                 entry.id,
                 entry.id,
                 ail_artifact_fingerprint(type_inference_review_text)
+            ));
+        }
+        if let Some(state_boundary_review_text) = &evaluation.state_boundary_review_text {
+            lines.push(format!(
+                "entry-artifact {} state-boundary-review examples/{}/state-boundary-review.txt {}",
+                entry.id,
+                entry.id,
+                ail_artifact_fingerprint(state_boundary_review_text)
             ));
         }
         if let Some(diagnostics_text) = &evaluation.diagnostics_text {
@@ -4194,6 +4224,14 @@ fn push_ail_e2e_entry_artifact_lines(
             entry.id,
             entry.id,
             ail_artifact_fingerprint(type_inference_review_text)
+        ));
+    }
+    if let Some(state_boundary_review_text) = &evaluation.state_boundary_review_text {
+        lines.push(format!(
+            "{prefix} {} state-boundary-review examples/{}/state-boundary-review.txt {}",
+            entry.id,
+            entry.id,
+            ail_artifact_fingerprint(state_boundary_review_text)
         ));
     }
     if let Some(diagnostics_text) = &evaluation.diagnostics_text {
@@ -4689,6 +4727,86 @@ fn render_ail_e2e_type_inference_review_text(
     }
     lines.push(
         "type-inference-summary Runtime Generic evidence explains inferred state variants, preconditions, state transition, trace coverage, and replay fingerprints for reviewer audit."
+            .to_string(),
+    );
+    Some(format!("{}\n", lines.join("\n")))
+}
+
+fn render_ail_e2e_state_boundary_review_text(
+    entry: &AilE2eCorpusEntry,
+    checked_core_text: Option<&str>,
+    bytecode_text: Option<&str>,
+    vm_trace_text: Option<&str>,
+    target_report_text: Option<&str>,
+) -> Option<String> {
+    let field = |key: &str| entry.fields.get(key).map(String::as_str).unwrap_or("");
+    let state_signal = "State examples need clearer persistence and concurrency boundaries.";
+    let is_stateful_counter_entry = field("capability-under-test") == "stateful-runtime"
+        || field("package").ends_with("stateful_counter.ail")
+        || field("v0.3-signal") == state_signal;
+    if !is_stateful_counter_entry {
+        return None;
+    }
+    let runtime_evidence = if target_report_text.is_some() {
+        "target-report"
+    } else if vm_trace_text.is_some() {
+        "vm-trace"
+    } else if bytecode_text.is_some() {
+        "bytecode"
+    } else {
+        "checked-core"
+    };
+    let mut lines = vec![
+        "AIL-State-Boundary-Review:".to_string(),
+        format!("entry {}", entry.id),
+        format!("semantic-task {}", field("semantic-task")),
+        format!("package {}", field("package")),
+        format!("profile {}", field("profile")),
+        format!("program-domain {}", field("program-domain")),
+        format!("capability-under-test {}", field("capability-under-test")),
+        "state-boundary-artifact deterministic-text".to_string(),
+        "state-surface persistence-concurrency".to_string(),
+        "entity Counter".to_string(),
+        "action Increment counter".to_string(),
+        "mutable-field counter.value Int".to_string(),
+        "state-transition counter.value n -> n + 1".to_string(),
+        "persistence-boundary counter write must be durable before replay".to_string(),
+        "idempotency-boundary retryable increment requires request id and dedupe state".to_string(),
+        "concurrency-boundary shared counter mutation requires lock or serialization".to_string(),
+        "failure-boundary failure after write requires replay recovery".to_string(),
+        "trace-event CounterIncremented".to_string(),
+        "diagnostic-link AIL-STATE-001".to_string(),
+        "diagnostic-link AIL-STATE-002".to_string(),
+        "diagnostic-link AIL-STATE-003".to_string(),
+        "diagnostic-link AIL-STATE-004".to_string(),
+        format!("runtime-evidence {runtime_evidence}"),
+    ];
+    if let Some(checked_core_text) = checked_core_text {
+        lines.push(format!(
+            "checked-core-fingerprint {}",
+            ail_artifact_fingerprint(checked_core_text)
+        ));
+    }
+    if let Some(bytecode_text) = bytecode_text {
+        lines.push(format!(
+            "bytecode-fingerprint {}",
+            ail_artifact_fingerprint(bytecode_text)
+        ));
+    }
+    if let Some(vm_trace_text) = vm_trace_text {
+        lines.push(format!(
+            "vm-trace-fingerprint {}",
+            ail_artifact_fingerprint(vm_trace_text)
+        ));
+    }
+    if let Some(target_report_text) = target_report_text {
+        lines.push(format!(
+            "target-report-fingerprint {}",
+            ail_artifact_fingerprint(target_report_text)
+        ));
+    }
+    lines.push(
+        "state-boundary-summary Stateful Counter evidence explains persistence, idempotency, concurrency, failure replay, trace coverage, and replay fingerprints for reviewer audit."
             .to_string(),
     );
     Some(format!("{}\n", lines.join("\n")))
@@ -5732,6 +5850,24 @@ fn write_ail_e2e_corpus_artifacts(
             )
             .map_err(|error| {
                 format!("failed to write examples type inference review fingerprint: {error}")
+            })?;
+        }
+        if let Some(state_boundary_review_text) = &evaluation.state_boundary_review_text {
+            let entry_dir = root.join("examples").join(&evaluation.entry.id);
+            fs::create_dir_all(&entry_dir).map_err(|error| {
+                format!("failed to create examples entry artifact dir: {error}")
+            })?;
+            fs::write(
+                entry_dir.join("state-boundary-review.txt"),
+                state_boundary_review_text,
+            )
+            .map_err(|error| format!("failed to write examples state boundary review: {error}"))?;
+            fs::write(
+                entry_dir.join("state-boundary-review.fingerprint.txt"),
+                format!("{}\n", ail_artifact_fingerprint(state_boundary_review_text)),
+            )
+            .map_err(|error| {
+                format!("failed to write examples state boundary review fingerprint: {error}")
             })?;
         }
         if let Some(diagnostics_text) = &evaluation.diagnostics_text {

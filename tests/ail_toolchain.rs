@@ -1759,7 +1759,9 @@ fn script_v03_signal_status_audit_marks_agent_policy_import_promoted() {
         "signal-status-evidence Generic runtime behavior needs clearer type-inference explanations. cargo run -- ail-examples examples --release-evidence",
         "signal-status Security examples need threat-model annotations and audit trails. count 5 status promoted",
         "signal-status-evidence Security examples need threat-model annotations and audit trails. cargo run -- ail-examples examples --release-evidence",
-        "promoted-count 3",
+        "signal-status State examples need clearer persistence and concurrency boundaries. count 6 status promoted",
+        "signal-status-evidence State examples need clearer persistence and concurrency boundaries. cargo run -- ail-examples examples --release-evidence",
+        "promoted-count 4",
         "missing-status-count 0",
         "audit-result accepted",
     ] {
@@ -28949,6 +28951,14 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
+        report.contains("state-boundary-review-fingerprint-observed-count 6"),
+        "{report}"
+    );
+    assert!(
+        report.contains("state-boundary-review-fingerprint-duplicate-entry-count 0"),
+        "{report}"
+    );
+    assert!(
         report.contains(
             "v03-signal-count UI authoring needs human-approved visual patch import workflows after deterministic UI patch plans are replayed. 4"
         ),
@@ -29146,6 +29156,56 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         report.contains(&format!(
             "entry-artifact example-35 type-inference-review examples/example-35/type-inference-review.txt {}",
             type_inference_review_35_fingerprint.trim()
+        )),
+        "{report}"
+    );
+    let state_boundary_review_95 =
+        fs::read_to_string(artifact_dir.join("examples/example-95/state-boundary-review.txt"))
+            .unwrap();
+    assert!(
+        state_boundary_review_95.contains("AIL-State-Boundary-Review:")
+            && state_boundary_review_95.contains("entry example-95")
+            && state_boundary_review_95
+                .contains("semantic-task stateful-counter-live-codex-core-to-spec-95")
+            && state_boundary_review_95.contains("state-surface persistence-concurrency")
+            && state_boundary_review_95.contains("entity Counter")
+            && state_boundary_review_95.contains("action Increment counter")
+            && state_boundary_review_95.contains("mutable-field counter.value Int")
+            && state_boundary_review_95.contains("state-transition counter.value n -> n + 1")
+            && state_boundary_review_95
+                .contains("persistence-boundary counter write must be durable before replay")
+            && state_boundary_review_95.contains(
+                "idempotency-boundary retryable increment requires request id and dedupe state"
+            )
+            && state_boundary_review_95.contains(
+                "concurrency-boundary shared counter mutation requires lock or serialization"
+            )
+            && state_boundary_review_95
+                .contains("failure-boundary failure after write requires replay recovery")
+            && state_boundary_review_95.contains("trace-event CounterIncremented")
+            && state_boundary_review_95.contains("diagnostic-link AIL-STATE-001")
+            && state_boundary_review_95.contains("diagnostic-link AIL-STATE-002")
+            && state_boundary_review_95.contains("diagnostic-link AIL-STATE-003")
+            && state_boundary_review_95.contains("diagnostic-link AIL-STATE-004")
+            && state_boundary_review_95.contains("runtime-evidence vm-trace")
+            && state_boundary_review_95.contains("checked-core-fingerprint ")
+            && state_boundary_review_95.contains("bytecode-fingerprint ")
+            && state_boundary_review_95.contains("vm-trace-fingerprint ")
+            && state_boundary_review_95.contains("state-boundary-summary "),
+        "{state_boundary_review_95}"
+    );
+    let state_boundary_review_95_fingerprint = fs::read_to_string(
+        artifact_dir.join("examples/example-95/state-boundary-review.fingerprint.txt"),
+    )
+    .unwrap();
+    assert_eq!(
+        state_boundary_review_95_fingerprint.trim(),
+        fnv64_fingerprint(&state_boundary_review_95)
+    );
+    assert!(
+        report.contains(&format!(
+            "entry-artifact example-95 state-boundary-review examples/example-95/state-boundary-review.txt {}",
+            state_boundary_review_95_fingerprint.trim()
         )),
         "{report}"
     );
@@ -29583,6 +29643,13 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         manifest.contains(&format!(
             "entry-artifact example-35 type-inference-review examples/example-35/type-inference-review.txt {}",
             type_inference_review_35_fingerprint.trim()
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "entry-artifact example-95 state-boundary-review examples/example-95/state-boundary-review.txt {}",
+            state_boundary_review_95_fingerprint.trim()
         )),
         "{manifest}"
     );

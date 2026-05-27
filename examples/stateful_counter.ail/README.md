@@ -58,9 +58,12 @@ Useful artifacts to inspect after replay:
 - `examples/example-95/checked.ail-core.txt`
 - `examples/example-95/artifact.ailbc.json`
 - `examples/example-95/vm-trace.txt`
+- `examples/example-95/state-boundary-review.txt`
+- `examples/example-95/state-boundary-review.fingerprint.txt`
 - `examples/example-100/vm-trace.txt`
 - `examples/example-110/target-IncrementCounter.elf`
 - `examples/example-110/target-report.txt`
+- `examples/example-110/state-boundary-review.txt`
 - `examples/example-110/user-story.txt`
 
 The direct package checks are:
@@ -88,7 +91,9 @@ workflow that uses state across multiple modules and stories.
 ## v0.3 Learning Signal
 
 The current counter package now teaches the first stateful runtime policies:
-persistence, idempotency, locking, and replay recovery. The next v0.3 bar is a
-richer state family with migrations, stale-state conflict detection,
-multi-action transactions, and durable runtime evidence beyond text-level
-policy checks.
+persistence, idempotency, locking, and replay recovery. Its v0.3 state signal
+is now promoted by deterministic state-boundary review artifacts that connect
+these policies, `AIL-STATE-001` through `AIL-STATE-004`, `CounterIncremented`,
+and VM/native replay fingerprints. The next bar is a richer state family with
+migrations, stale-state conflict detection, multi-action transactions, and
+durable runtime evidence beyond text-level policy checks.
