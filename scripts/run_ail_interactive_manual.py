@@ -425,6 +425,22 @@ BASE_CHAPTERS: tuple[ManualChapter, ...] = (
                     "agent-trace.txt",
                 ),
             ),
+            ManualCommand(
+                label="verify-agent-bytecode-after-compile",
+                command=(
+                    "cargo",
+                    "test",
+                    "cli_ail_build_agent_verifies_bytecode_artifact_after_compile",
+                    "--test",
+                    "ail_toolchain",
+                ),
+                evidence=(
+                    "action CompileApplication started",
+                    "action VerifyBytecodeArtifact started",
+                    "agent.ailbc.json",
+                    "artifact.ailbc.json",
+                ),
+            ),
         ),
     ),
     ManualChapter(

@@ -1183,6 +1183,7 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
             &[
                 "cargo run -- ail-agent-contracts examples/agents",
                 "examples/ail_toolchain_agent.ail",
+                "cli_ail_build_agent_verifies_bytecode_artifact_after_compile",
                 "agent-trace.txt",
             ],
         ),
@@ -1483,6 +1484,7 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "policy-handoff-replayed true",
         "cargo test ail_toolchain_agent_package_lowers_to_verified_bytecode --test ail_toolchain",
         "cargo test cli_ail_build_runs_toolchain_agent_bytecode --test ail_toolchain",
+        "cargo test cli_ail_build_agent_verifies_bytecode_artifact_after_compile --test ail_toolchain",
         "evidence agent.ailbc.json",
         "evidence agent-trace.txt",
     ] {
@@ -30636,59 +30638,41 @@ fn cli_ail_build_agent_verifies_bytecode_artifact_after_compile() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
     let agent_package = fixture("ail_toolchain_agent.ail");
+    let core_path = std::env::temp_dir().join(format!(
+        "ail-support-ticket-agent-verify-core-{}.ail-core.txt",
+        std::process::id()
+    ));
     let artifact_dir = std::env::temp_dir().join(format!(
         "ail-ail-build-agent-verify-artifacts-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&artifact_dir);
-    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-    let addr = listener.local_addr().unwrap();
-    let requirements = concat!(
-        "AIL-Requirements:\n",
-        "- The application manages support tickets.\n",
-        "- Ticket fields include id, title, status, and secret internal notes.\n",
-        "- The CloseTicket action requires ticket id input and ticket status not to be Closed.\n",
-        "- Failure NotFound happens when ticket id is missing and records TicketNotFound.\n",
-        "- The action guarantees closed tickets do not appear in the open queue.\n",
-        "- The action records trace event TicketClosed.\n"
-    );
-    let requirements_body = format!(
-        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
-        json_string(requirements)
-    );
-    let response_spec = fs::read_to_string(format!("{package}/spec.ail-spec.md")).unwrap();
-    let spec_body = format!(
-        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
-        json_string(&format!(
-            "<think>ignore this</think>\n```ail\n{response_spec}\n```"
-        ))
-    );
-    let server = serve_chat_responses(listener, vec![requirements_body, spec_body]);
+    let package_model = load_ail_package_dir(&package).unwrap();
+    let document = parse_ail_package_document(&package_model).unwrap();
+    let core = elaborate_ail_core(&package_model, &document);
+    assert_eq!(check_ail_core(&core), Vec::<String>::new());
+    fs::write(&core_path, render_ail_core(&core)).unwrap();
 
     let output = Command::new(binary)
         .args([
             "ail-build",
             &package,
-            "--prompt",
-            "Build an AIL support ticket bytecode artifact",
+            "--core-file",
+            core_path.to_str().unwrap(),
             "--agent",
             &agent_package,
             "--artifact-dir",
             artifact_dir.to_str().unwrap(),
-            "--llm-endpoint",
-            &format!("http://127.0.0.1:{}/v1/chat/completions", addr.port()),
         ])
         .output()
         .unwrap();
 
-    let request_bodies = server.join().unwrap();
     assert!(
         output.status.success(),
         "stdout:\n{}\nstderr:\n{}",
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
-    assert_eq!(request_bodies.len(), 2);
     let stdout = String::from_utf8_lossy(&output.stdout);
     let bytecode = parse_ail_bytecode(&stdout).unwrap();
     assert_eq!(verify_ail_bytecode(&bytecode), Vec::<String>::new());
@@ -30714,8 +30698,7 @@ fn cli_ail_build_agent_verifies_bytecode_artifact_after_compile() {
     assert!(agent_trace.contains("read buildrequest.artifact manifest fingerprint"));
     assert!(agent_trace.contains("read buildrequest.source package"));
     assert!(agent_trace.contains("read buildrequest.source package fingerprint"));
-    assert!(agent_trace.contains("read buildrequest.requirements fingerprint"));
-    assert!(agent_trace.contains("read buildrequest.spec fingerprint"));
+    assert!(agent_trace.contains("read buildrequest.core ir fingerprint"));
     assert!(agent_trace.contains("read buildrequest.flow review fingerprint"));
     assert!(
         agent_trace.contains("write buildrequest.artifact manifest verification report=Verified")
@@ -30744,6 +30727,7 @@ fn cli_ail_build_agent_verifies_bytecode_artifact_after_compile() {
     assert!(agent_bytecode.contains(r#""action":"VerifyBytecodeArtifact""#));
     assert!(agent_bytecode.contains(r#""action":"VerifyBuildManifest""#));
 
+    fs::remove_file(core_path).unwrap();
     fs::remove_dir_all(artifact_dir).unwrap();
 }
 

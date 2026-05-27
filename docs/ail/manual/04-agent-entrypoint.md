@@ -90,6 +90,7 @@ Then verify the build entrypoint path:
 
 ```sh
 cargo test cli_ail_build_runs_toolchain_agent_bytecode --test ail_toolchain
+cargo test cli_ail_build_agent_verifies_bytecode_artifact_after_compile --test ail_toolchain
 ```
 
 The expected evidence is:
@@ -98,8 +99,14 @@ The expected evidence is:
 conformance-report.txt
 manifest.ail-conformance.txt
 agent.ailbc.json
+artifact.ailbc.json
 agent-trace.txt
+action CompileApplication started
+action VerifyBytecodeArtifact started
 ```
 
 `agent-trace.txt` should show requirements capture, spec preparation, spec
 acceptance, compile, bytecode verification, and manifest verification in order.
+The bytecode-after-compile gate specifically rejects stale build-agent traces
+where `VerifyBytecodeArtifact` appears before `CompileApplication`, or where
+the trace claims verification without a compiled `artifact.ailbc.json`.
