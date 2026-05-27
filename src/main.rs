@@ -1298,6 +1298,9 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
         "repair-promotion-review.txt",
         "repair-promotion-review.fingerprint.txt",
         "repair-promotion-review-fingerprint-observed-count",
+        "repair-promotion-import-demo-report.txt",
+        "source-preserved true",
+        "proposed-accepted true",
         "accepted-for-promotion",
         "human-approval-required true",
         "semantic-anchor-missing-count 0",
@@ -1340,6 +1343,9 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
         "repair-promotion-review.txt",
         "repair-promotion-review.fingerprint.txt",
         "repair-promotion-review-fingerprint-observed-count",
+        "repair-promotion-import-demo-report.txt",
+        "source-preserved true",
+        "proposed-accepted true",
         "accepted-for-promotion",
         "needs-repair",
         "rejected-for-promotion",
@@ -1367,6 +1373,10 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
         "repair-promotion-review.txt",
         "repair-promotion-review.fingerprint.txt",
         "repair-promotion-review-fingerprint-observed-count",
+        "repair-promotion-import-demo-report.txt",
+        "repair-promotion-import-demo-report.fingerprint.txt",
+        "source-preserved true",
+        "proposed-accepted true",
         "accepted-for-promotion",
         "human-approval-required true",
         "semantic-anchor-missing-count 0",
@@ -1390,6 +1400,7 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
     println!("review-command scripts/run_v03_prompt_llm_harness.py --review-artifacts");
     println!("review-command scripts/run_v03_story_llm_harness.py --review-artifacts");
     println!("repair-promotion-artifact repair-promotion-review.txt");
+    println!("repair-promotion-import-artifact repair-promotion-import-demo-report.txt");
     println!("roadmap-artifact v03-roadmap.txt");
     println!("roadmap-command cargo run -- ail-v03-roadmap examples --artifact-dir");
     println!("codex-skill examples/agents/skills/ail-prompt-interaction-reviewer/SKILL.md");

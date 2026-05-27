@@ -29,6 +29,13 @@ promotion reviewer contract must require `repair-promotion-review.txt`,
 `repair-promotion-review.fingerprint.txt`, and
 `repair-promotion-review-fingerprint-observed-count`.
 
+The agent contract also requires the human-approved import demo evidence:
+`repair-promotion-import-demo-report.txt`,
+`repair-promotion-import-demo-report.fingerprint.txt`, `source-preserved true`,
+and `proposed-accepted true`. This keeps the agent from treating a repaired
+candidate as promotable unless the rejected source entry remains intact and the
+proposed accepted entry replays in a corpus copy.
+
 The same gate also validates the repo-local Codex skills:
 
 ```text
@@ -38,8 +45,8 @@ examples/agents/skills/ail-repair-promotion-reviewer/SKILL.md
 
 Those skills are the reusable procedures for reviewing hosted llama.cpp prompt
 artifacts, User Story mode artifacts, examples replay, `v03-roadmap.txt`, and
-repair promotion evidence before generated content is promoted into
-`./examples`.
+repair promotion evidence, including the deterministic import demo, before
+generated content is promoted into `./examples`.
 
 ## Toolchain Agent Package
 

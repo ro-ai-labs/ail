@@ -271,6 +271,9 @@ BASE_CHAPTERS: tuple[ManualChapter, ...] = (
                     "AIL-Agent-Contracts-Report",
                     "codex-ail-prompt-reviewer.md",
                     "examples/agents/skills/ail-prompt-interaction-reviewer/SKILL.md",
+                    "repair-promotion-import-demo-report.txt",
+                    "source-preserved true",
+                    "proposed-accepted true",
                 ),
             ),
             ManualCommand(

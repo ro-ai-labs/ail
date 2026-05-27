@@ -51,10 +51,14 @@ The review report must include:
 - `repair-promotion-review-fingerprint-observed-count`
 - `repair-promotion-capture-plan.json`
 - `repair-promotion-capture-plan.fingerprint.txt`
+- `repair-promotion-import-demo-report.txt`
+- `repair-promotion-import-demo-report.fingerprint.txt`
 - `accepted-for-promotion`, `needs-repair`, or `rejected-for-promotion`
 - `human-approval-required true`
 - `expected-diagnostic-removed true`
 - `semantic-anchor-missing-count 0`
+- `source-preserved true`
+- `proposed-accepted true`
 - diagnostics, repair tutorial, repair candidate, checked Core, bytecode,
   repair evidence, and repair diff fingerprints
 - `preserve_rejected_entry: true`
@@ -69,6 +73,10 @@ Return `needs-repair` or `rejected-for-promotion` when:
   match
 - deterministic replay does not list the promotion review in
   `manifest.ail-examples.txt`
+- `scripts/run_v03_repair_promotion_import_demo.py` has not produced
+  `repair-promotion-import-demo-report.txt`
+- the import demo does not report `source-preserved true` and
+  `proposed-accepted true`
 - the expected diagnostic is not removed
 - checked Core, bytecode, VM evidence, or target evidence is missing
 - semantic anchors are missing
@@ -80,3 +88,8 @@ When human approval is available, use `scripts/capture_example_batch.py` with
 `repair_promotion_capture_plan_json`, `source_entry_id`, and the proposed
 `entry_id` so the repaired accepted entry is appended to a corpus copy while
 the rejected source entry remains intact.
+The deterministic wrapper is:
+
+```sh
+python3 scripts/run_v03_repair_promotion_import_demo.py
+```

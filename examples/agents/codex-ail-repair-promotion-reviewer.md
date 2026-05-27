@@ -23,6 +23,8 @@ verified bytecode, VM or target evidence, and repair diff.
 - `repair-promotion-review.fingerprint.txt`
 - `repair-promotion-capture-plan.json`
 - `repair-promotion-capture-plan.fingerprint.txt`
+- `repair-promotion-import-demo-report.txt`
+- `repair-promotion-import-demo-report.fingerprint.txt`
 - reviewer notes about intended accepted-corpus promotion
 
 ## Required Output
@@ -43,6 +45,8 @@ Return an `AIL-Repair-Promotion-Review` report that records:
   Core, bytecode, repair evidence, and repair diff
 - `semantic-anchor-missing-count 0`
 - `repair-promotion-review-fingerprint-observed-count`
+- `source-preserved true`
+- `proposed-accepted true`
 
 ## Forbidden Behavior
 
@@ -54,6 +58,8 @@ Return an `AIL-Repair-Promotion-Review` report that records:
   checked Core, bytecode verification, VM or target evidence, or
   `semantic-anchor-missing-count 0` is missing.
 - Do not treat `accepted-for-promotion` as an automatic file edit.
+- Do not treat a capture plan as sufficient unless the import demo reports
+  `source-preserved true` and `proposed-accepted true`.
 
 ## Replay Gate
 
@@ -80,7 +86,22 @@ The capture plan must include `preserve_rejected_entry: true`,
 `must_supply_request_response_json: true`, and
 `batch_capture_script: scripts/capture_example_batch.py`.
 
-After human approval, the reviewer may prepare a batch entry with
+After human approval, run the deterministic import demo:
+
+```sh
+python3 scripts/run_v03_repair_promotion_import_demo.py \
+  --base-corpus examples \
+  --examples-artifacts /tmp/ail-repair-promotion-review \
+  --capture-plan-dir /tmp/ail-repair-promotion-capture-plan \
+  --source-entry-id <rejected-entry-id> \
+  --work-dir /tmp/ail-repair-promotion-import-work \
+  --output-corpus /tmp/ail-repair-promotion-import-corpus \
+  --output-artifacts /tmp/ail-repair-promotion-import-artifacts
+```
+
+The import report must include `repair-promotion-import-demo-report.txt`,
+`source-preserved true`, and `proposed-accepted true`. The reviewer may then
+prepare a batch entry with
 `source_entry_id`, `entry_id`, `request_json_file`, `response_json_file`, and
 `repair_promotion_capture_plan_json`. The batch importer must append the
 proposed accepted entry in a corpus copy and must not rewrite or delete the

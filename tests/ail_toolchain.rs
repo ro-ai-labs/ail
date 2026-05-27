@@ -1155,6 +1155,16 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         agent_manual.contains("examples/agents/skills/ail-prompt-interaction-reviewer/SKILL.md"),
         "{agent_manual}"
     );
+    for required in [
+        "repair-promotion-import-demo-report.txt",
+        "source-preserved true",
+        "proposed-accepted true",
+    ] {
+        assert!(
+            agent_manual.contains(required),
+            "{required}\n{agent_manual}"
+        );
+    }
 }
 
 #[test]
@@ -1296,6 +1306,9 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "codex-ail-prompt-reviewer.md",
         "examples/agents/skills/ail-prompt-interaction-reviewer/SKILL.md",
         "cargo run -- ail-agent-contracts examples/agents",
+        "repair-promotion-import-demo-report.txt",
+        "source-preserved true",
+        "proposed-accepted true",
         "cargo test ail_toolchain_agent_package_lowers_to_verified_bytecode --test ail_toolchain",
         "cargo test cli_ail_build_runs_toolchain_agent_bytecode --test ail_toolchain",
         "evidence agent.ailbc.json",
@@ -1568,6 +1581,9 @@ fn examples_agents_include_prompt_review_contract() {
         "repair-promotion-review-fingerprint-observed-count",
         "accepted-for-promotion",
         "human-approval-required true",
+        "repair-promotion-import-demo-report.txt",
+        "source-preserved true",
+        "proposed-accepted true",
         "Do not promote generated content into ./examples",
     ] {
         assert!(
@@ -1606,11 +1622,31 @@ fn codex_skill_documents_prompt_interaction_review_gate() {
         "repair-promotion-review.txt",
         "repair-promotion-review.fingerprint.txt",
         "repair-promotion-review-fingerprint-observed-count",
+        "repair-promotion-import-demo-report.txt",
+        "source-preserved true",
+        "proposed-accepted true",
         "accepted-for-promotion",
         "needs-repair",
         "rejected-for-promotion",
     ] {
         assert!(skill.contains(required), "{required}\n{skill}");
+    }
+    let repair_skill = fs::read_to_string(format!(
+        "{}/examples/agents/skills/ail-repair-promotion-reviewer/SKILL.md",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .unwrap();
+    for required in [
+        "repair-promotion-import-demo-report.txt",
+        "repair-promotion-import-demo-report.fingerprint.txt",
+        "source-preserved true",
+        "proposed-accepted true",
+        "scripts/run_v03_repair_promotion_import_demo.py",
+    ] {
+        assert!(
+            repair_skill.contains(required),
+            "{required}\n{repair_skill}"
+        );
     }
 }
 
@@ -1639,6 +1675,7 @@ fn cli_ail_agent_contracts_validates_prompt_reviewer_contract() {
         "review-command scripts/run_v03_prompt_llm_harness.py --review-artifacts",
         "review-command scripts/run_v03_story_llm_harness.py --review-artifacts",
         "repair-promotion-artifact repair-promotion-review.txt",
+        "repair-promotion-import-artifact repair-promotion-import-demo-report.txt",
         "roadmap-artifact v03-roadmap.txt",
         "roadmap-command cargo run -- ail-v03-roadmap examples --artifact-dir",
         "codex-skill examples/agents/skills/ail-prompt-interaction-reviewer/SKILL.md",

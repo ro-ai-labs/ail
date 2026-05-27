@@ -94,6 +94,9 @@ The review report must include:
 - `repair-promotion-review.txt`
 - `repair-promotion-review.fingerprint.txt`
 - `repair-promotion-review-fingerprint-observed-count`
+- `repair-promotion-import-demo-report.txt`
+- `source-preserved true`
+- `proposed-accepted true`
 - prompt file fingerprints when available
 - probe labels and probe fingerprints
 - expected `artifact_kind` validation for every prompt
