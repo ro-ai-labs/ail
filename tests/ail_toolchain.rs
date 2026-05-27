@@ -3191,17 +3191,6 @@ fn example_support_ticket_stories_record_semantic_anchors() {
                 "diagnostics",
             ],
         ),
-        (
-            "stories/example-102.md",
-            [
-                "missing-trace",
-                "AIL-TRACE-001",
-                "diagnostic-missing-trace",
-                "CloseTicket",
-                "spec-draft.system.md",
-                "diagnostics",
-            ],
-        ),
     ] {
         let story = fs::read_to_string(fixture(story_file)).unwrap();
         assert!(story.contains("semantic-anchors:"), "{story_file}\n{story}");
@@ -4318,6 +4307,18 @@ fn example_stateful_and_agent_tool_stories_record_semantic_anchors() {
                 "CounterIncremented",
                 "IncrementCounter",
                 "stateful-counter-live-codex-accepted-100",
+            ],
+        ),
+        (
+            "stories/example-102.md",
+            stateful_spec.as_str(),
+            [
+                "missing-trace",
+                "AIL-TRACE-001",
+                "IncrementCounter",
+                "CounterIncremented",
+                "spec-draft.system.md",
+                "diagnostics",
             ],
         ),
         (
@@ -26338,7 +26339,7 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
     );
     assert!(
         report.contains("entry example-102")
-            && report.contains("semantic-task support-ticket-missing-trace-rejected-102")
+            && report.contains("semantic-task stateful-counter-missing-trace-rejected-102")
             && report.contains("entry-artifact example-102 diagnostics"),
         "{report}"
     );
@@ -26640,7 +26641,7 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         fs::read_to_string(artifact_dir.join("examples/example-102/diagnostics.txt")).unwrap();
     assert!(
         missing_trace_diagnostics
-            .contains("AIL-TRACE-001 action CloseTicket is missing trace coverage"),
+            .contains("AIL-TRACE-001 action IncrementCounter is missing trace coverage"),
         "{missing_trace_diagnostics}"
     );
     let hallucinated_capability_diagnostics =
@@ -26708,7 +26709,15 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
+        report.contains("repair-candidate-fingerprint-duplicate-entry-count 0"),
+        "{report}"
+    );
+    assert!(
         report.contains("repair-checked-core-fingerprint-observed-count 9"),
+        "{report}"
+    );
+    assert!(
+        report.contains("repair-checked-core-fingerprint-duplicate-entry-count 0"),
         "{report}"
     );
     assert!(
@@ -26716,7 +26725,15 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
+        report.contains("repair-bytecode-fingerprint-duplicate-entry-count 0"),
+        "{report}"
+    );
+    assert!(
         report.contains("repair-vm-trace-fingerprint-observed-count 6"),
+        "{report}"
+    );
+    assert!(
+        report.contains("repair-vm-trace-fingerprint-duplicate-entry-count 0"),
         "{report}"
     );
     assert!(
@@ -27109,7 +27126,7 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
                 "entry example-101 semantic-task support-ticket-profile-mismatch-rejected-101"
             )
             && model_executor_manifest.contains(
-                "entry example-102 semantic-task support-ticket-missing-trace-rejected-102"
+                "entry example-102 semantic-task stateful-counter-missing-trace-rejected-102"
             )
             && model_executor_manifest.contains(
                 "entry example-103 semantic-task refund-tool-hallucinated-capability-rejected-103"
@@ -27171,6 +27188,114 @@ fn cli_ail_e2e_corpus_release_evidence_accepts_live_corpus() {
         String::from_utf8_lossy(&output.stderr)
     );
 
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
+fn cli_ail_e2e_corpus_release_evidence_rejects_duplicate_repair_proof_artifacts() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let corpus_dir = std::env::temp_dir().join(format!(
+        "ail-examples-duplicate-repair-proof-{}",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-examples-duplicate-repair-proof-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&corpus_dir);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&corpus_dir).unwrap();
+    write_e2e_transcript_files(&corpus_dir, 102);
+    for index in [98usize, 99usize] {
+        fs::write(
+            corpus_dir
+                .join("requests")
+                .join(format!("duplicate-repair-{index}.json")),
+            format!(r#"{{"prompt":"duplicate-repair-{index}"}}"#),
+        )
+        .unwrap();
+        fs::write(
+            corpus_dir
+                .join("responses")
+                .join(format!("duplicate-repair-{index}.json")),
+            fs::read_to_string(format!(
+                "{}/examples/support_ticket.ail/examples/rejected/missing-reference.ail-spec.md",
+                env!("CARGO_MANIFEST_DIR")
+            ))
+            .unwrap(),
+        )
+        .unwrap();
+    }
+    let mut corpus_text = String::new();
+    for index in 0..102 {
+        let request_file = if index == 98 {
+            "requests/duplicate-repair-98.json"
+        } else if index == 99 {
+            "requests/duplicate-repair-99.json"
+        } else {
+            ""
+        };
+        let response_file = if index == 98 {
+            "responses/duplicate-repair-98.json"
+        } else if index == 99 {
+            "responses/duplicate-repair-99.json"
+        } else {
+            ""
+        };
+        let mut overrides: Vec<(&str, &str)> = if index == 99 {
+            vec![("capture-origin", "live-codex")]
+        } else {
+            vec![("capture-origin", "live-llm")]
+        };
+        if matches!(index, 98 | 99) {
+            overrides.extend([
+                ("request-file", request_file),
+                ("response-file", response_file),
+                ("checker-result", "rejected"),
+                ("story-evidence", "diagnostics"),
+                ("story-journey", "diagnostic-story"),
+                ("story-roundtrip", "diagnostic-preserving"),
+                ("expected-diagnostic", "AIL001"),
+                ("failure-taxonomy", "semantic-drift"),
+            ]);
+            fs::write(
+                corpus_dir
+                    .join("stories")
+                    .join(format!("example-{index}.md")),
+                e2e_story_file_text_with_overrides(index, &overrides),
+            )
+            .unwrap();
+        }
+        corpus_text.push_str(&e2e_corpus_entry_text(index, &overrides));
+    }
+    fs::write(corpus_dir.join("examples.md"), corpus_text).unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-examples",
+            corpus_dir.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+            "--release-evidence",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains(
+            "ail-examples --release-evidence rejected repair-candidate artifacts must be distinct"
+        ),
+        "{stderr}"
+    );
+    assert!(stderr.contains("example-98,example-99"), "{stderr}");
+
+    let _ = fs::remove_dir_all(corpus_dir);
     let _ = fs::remove_dir_all(artifact_dir);
 }
 

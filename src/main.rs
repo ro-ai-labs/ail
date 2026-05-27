@@ -2471,6 +2471,7 @@ fn build_ail_e2e_repair_proof(
         input.package_path,
         input.failure_taxonomy,
         input.artifact_kind,
+        input.rejected_artifact_text,
     )?;
     let document =
         parse_ail_package_spec_text(&package, &candidate_spec_text).map_err(|error| {
@@ -2724,6 +2725,7 @@ fn load_ail_e2e_repair_candidate_package(
     package_path: &str,
     failure_taxonomy: &str,
     artifact_kind: &str,
+    rejected_artifact_text: &str,
 ) -> Result<(AilPackage, String), String> {
     if failure_taxonomy == "package-resolution" {
         return synthesize_package_resolution_repair_candidate(entry, package_path);
@@ -2735,6 +2737,30 @@ fn load_ail_e2e_repair_candidate_package(
         )
     })?;
     let mut candidate_spec_text = package.spec_text.clone();
+    if failure_taxonomy == "semantic-drift" {
+        let repaired = rejected_artifact_text
+            .replace("the account to exist", "the ticket to exist")
+            .replace("account to exist", "ticket to exist");
+        if repaired != rejected_artifact_text {
+            candidate_spec_text = repaired;
+        }
+    }
+    if failure_taxonomy == "missing-trace" && !rejected_artifact_text.contains("trace event named")
+    {
+        candidate_spec_text = ensure_trailing_newline(rejected_artifact_text.to_string());
+        let repair_trace = if rejected_artifact_text.contains("increment counter") {
+            "CounterIncremented"
+        } else if rejected_artifact_text.contains("Close ticket")
+            || rejected_artifact_text.contains("closes a ticket")
+        {
+            "TicketClosed"
+        } else {
+            "RepairTraceCompleted"
+        };
+        candidate_spec_text.push_str(&format!(
+            "- the system records a trace event named {repair_trace}\n"
+        ));
+    }
     if failure_taxonomy == "unsupported-target" {
         candidate_spec_text = candidate_spec_text
             .replace("- call linux syscall exit", "- call darwin process exit")
@@ -4724,6 +4750,58 @@ fn validate_ail_e2e_corpus_live_release_evidence(
     Ok(())
 }
 
+fn validate_ail_e2e_repair_proof_distinctness(
+    evaluations: &[AilE2eCorpusEvaluation],
+) -> Result<(), String> {
+    for label in [
+        "repair-candidate",
+        "repair-checked-core",
+        "repair-bytecode",
+        "repair-vm-trace",
+        "repair-target-report",
+    ] {
+        let mut entries_by_fingerprint = BTreeMap::<String, Vec<String>>::new();
+        for evaluation in evaluations {
+            let Some(repair_proof) = &evaluation.repair_proof else {
+                continue;
+            };
+            let fingerprint = match label {
+                "repair-candidate" => {
+                    Some(ail_artifact_fingerprint(&repair_proof.candidate_spec_text))
+                }
+                "repair-checked-core" => {
+                    Some(ail_artifact_fingerprint(&repair_proof.checked_core_text))
+                }
+                "repair-bytecode" => Some(ail_artifact_fingerprint(&repair_proof.bytecode_text)),
+                "repair-vm-trace" => repair_proof
+                    .vm_trace_text
+                    .as_ref()
+                    .map(|text| ail_artifact_fingerprint(text)),
+                "repair-target-report" => repair_proof
+                    .target_report_text
+                    .as_ref()
+                    .map(|text| ail_artifact_fingerprint(text)),
+                _ => None,
+            };
+            if let Some(fingerprint) = fingerprint {
+                entries_by_fingerprint
+                    .entry(fingerprint)
+                    .or_default()
+                    .push(evaluation.entry.id.clone());
+            }
+        }
+        for (fingerprint, entries) in entries_by_fingerprint {
+            if entries.len() > 1 {
+                return Err(format!(
+                    "ail-examples --release-evidence rejected {label} artifacts must be distinct; fingerprint {fingerprint} is reused by {}",
+                    entries.join(",")
+                ));
+            }
+        }
+    }
+    Ok(())
+}
+
 fn write_ail_e2e_corpus_artifacts(
     artifact_dir: &str,
     report_text: &str,
@@ -5120,6 +5198,9 @@ fn run_ail_e2e_corpus_command(path: &str, cli_options: &CliOptions) -> Result<u8
     for entry in &entries {
         evaluations.push(evaluate_ail_e2e_corpus_entry(entry)?);
     }
+    if cli_options.release_evidence {
+        validate_ail_e2e_repair_proof_distinctness(&evaluations)?;
+    }
     let report_text = render_ail_e2e_corpus_report(&evaluations);
     write_ail_e2e_corpus_artifacts(artifact_dir, &report_text, &evaluations)?;
     print!("{report_text}");
@@ -5146,6 +5227,9 @@ fn run_ail_v03_roadmap_command(path: &str, cli_options: &CliOptions) -> Result<u
     let mut evaluations = Vec::new();
     for entry in &entries {
         evaluations.push(evaluate_ail_e2e_corpus_entry(entry)?);
+    }
+    if cli_options.release_evidence {
+        validate_ail_e2e_repair_proof_distinctness(&evaluations)?;
     }
     let report_text = render_ail_e2e_corpus_report(&evaluations);
     write_ail_e2e_corpus_artifacts(artifact_dir, &report_text, &evaluations)?;

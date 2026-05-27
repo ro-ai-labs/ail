@@ -3663,11 +3663,11 @@ runtime-state: ticket.id=T-1;ticket.status=Open
 expected-diagnostic: AIL-PROMPT-001
 failure-taxonomy: profile-mismatch
 ## Example: example-102
-semantic-task: support-ticket-missing-trace-rejected-102
+semantic-task: stateful-counter-missing-trace-rejected-102
 profile: System
 surface-tags: core
-package: examples/support_ticket.ail
-use-case: Rejected missing-trace case used to verify diagnostic teaching coverage.
+package: examples/stateful_counter.ail
+use-case: Rejected stateful-counter missing-trace case used to verify diagnostic teaching coverage.
 capability-level: high-level
 capability-under-test: diagnostic-missing-trace
 program-scale: module
@@ -3683,7 +3683,7 @@ story-evidence: diagnostics
 story-file: stories/example-102.md
 story-journey: diagnostic-story
 story-roundtrip: diagnostic-preserving
-distinctness-claim: support-ticket-missing-trace-rejected-102 exercises docs/ail/prompts/spec-draft.system.md over diagnostic-missing-trace.
+distinctness-claim: stateful-counter-missing-trace-rejected-102 exercises docs/ail/prompts/spec-draft.system.md over diagnostic-missing-trace.
 v0.3-signal: Rejected examples need repair tutorials that convert diagnostics into corrected specs.
 prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
@@ -3696,8 +3696,8 @@ response-file: responses/example-102.json
 artifact-kind: ail-spec
 checker-result: rejected
 target: vm
-vm-action: CloseTicket
-runtime-state: ticket.id=T-1;ticket.status=Open
+vm-action: IncrementCounter
+runtime-state: counter.value=0
 expected-diagnostic: AIL-TRACE-001
 failure-taxonomy: missing-trace
 ## Example: example-103
