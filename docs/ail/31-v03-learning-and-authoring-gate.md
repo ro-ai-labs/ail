@@ -231,6 +231,10 @@ The `ail-examples` replay bundle must also write deterministic story artifacts:
   `agent-policy-import-demo-report.fingerprint.txt` in a scratch import work
   directory when the approved policy handoff is appended to a corpus copy and
   replayed.
+- `agent-policy-multi-agent-handoff-report.txt` and
+  `agent-policy-multi-agent-handoff-report.fingerprint.txt` in the same
+  scratch import work directory when the AgentTool policy import is validated
+  by a role-separated deterministic handoff witness.
 
 The story artifact is derived from catalog metadata and fingerprinted in the
 same report and manifest as request, response, checked Core, bytecode, VM
@@ -315,10 +319,11 @@ as prose. The current examples reveal these next-version gaps:
 - AgentTool examples now emit deterministic policy review artifacts with
   multi-agent handoff roles, contract checks, permission and approval review,
   external-call review, secret-redaction review, audit-trace review, runtime
-  evidence, a reusable Codex AgentTool policy reviewer contract and skill, and
-  a human-approved AgentTool policy import demo. The next bar is multi-agent
+  evidence, a reusable Codex AgentTool policy reviewer contract and skill, a
+  human-approved AgentTool policy import demo, and a deterministic
+  role-separated multi-agent handoff witness. The next bar is live reviewer
   execution evidence where the policy handoff is produced by separate reviewer
-  roles rather than one deterministic import script.
+  roles rather than derived from deterministic replay artifacts.
 - Compiler/self-hosting examples need pass composition and fixed-point checks.
 - Systems examples need hardware-facing contracts, scheduler or interrupt
   semantics, and clearer unsupported-target migration guidance.

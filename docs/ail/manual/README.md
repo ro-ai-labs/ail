@@ -147,7 +147,8 @@ python3 scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run
   `08-ui-patch-import.md`.
 - `agent-policy-import`: deterministic review of AgentTool policy handoff
   artifacts before importing a human-approved policy trace amendment into a
-  replayed corpus copy. Prose: `09-agent-policy-import.md`.
+  replayed corpus copy, then writing a role-separated deterministic
+  multi-agent handoff witness. Prose: `09-agent-policy-import.md`.
 - `v03-authoring-gate`: the deterministic v0.3 audit that runs User Story
   mode, examples replay, roadmap printing, prompt interaction,
   agent-entrypoint, repair-promotion, UI patch import, and AgentTool policy

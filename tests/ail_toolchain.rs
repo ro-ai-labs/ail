@@ -1490,10 +1490,14 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "agent-policy-capture-plan.json",
         "scripts/run_v03_agent_policy_import_demo.py",
         "agent-policy-import-demo-report.txt",
+        "scripts/run_v03_agent_policy_multi_agent_handoff.py",
+        "agent-policy-multi-agent-handoff-report.txt",
+        "separate-reviewer-role-count 5",
         "source-preserved true",
         "proposed-accepted true",
         "policy-handoff-imported true",
         "policy-handoff-replayed true",
+        "multi-agent-execution-evidence deterministic-role-handoff",
     ] {
         assert!(
             agent_policy_stdout.contains(required),
@@ -1535,8 +1539,10 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "evidence patched-core-replayed true",
         "evidence agent-policy-capture-plan.json",
         "evidence agent-policy-import-demo-report.txt",
+        "evidence agent-policy-multi-agent-handoff-report.txt",
         "evidence policy-handoff-imported true",
         "evidence policy-handoff-replayed true",
+        "evidence multi-agent-execution-evidence deterministic-role-handoff",
     ] {
         assert!(gate_stdout.contains(required), "{required}\n{gate_stdout}");
     }

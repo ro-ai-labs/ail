@@ -112,8 +112,11 @@ agent-policy-capture-plan.txt
 agent-policy-capture-plan.fingerprint.txt
 agent-policy-import-demo-report.txt
 agent-policy-import-demo-report.fingerprint.txt
+agent-policy-multi-agent-handoff-report.txt
+agent-policy-multi-agent-handoff-report.fingerprint.txt
 policy-handoff-imported true
 policy-handoff-replayed true
+multi-agent-execution-evidence deterministic-role-handoff
 ```
 
 Passing this chapter is not the same as declaring AIL v0.3 complete. It is the

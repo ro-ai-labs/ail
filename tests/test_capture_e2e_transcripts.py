@@ -2063,6 +2063,53 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             )
             self.assertTrue(checked_core.exists())
             self.assertIn("node Trace PolicyHandoffApprovedScenario40", checked_core.read_text())
+            handoff = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_agent_policy_multi_agent_handoff.py",
+                    "--examples-artifacts",
+                    str(examples_artifacts),
+                    "--capture-plan-dir",
+                    str(capture_plan_dir),
+                    "--import-work-dir",
+                    str(work_dir),
+                    "--output-artifacts",
+                    str(output_artifacts),
+                    "--source-entry-id",
+                    "example-40",
+                    "--output-dir",
+                    str(work_dir),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(handoff.returncode, 0, handoff.stderr)
+            handoff_report = (
+                work_dir / "agent-policy-multi-agent-handoff-report.txt"
+            ).read_text()
+            handoff_fingerprint = (
+                work_dir / "agent-policy-multi-agent-handoff-report.fingerprint.txt"
+            ).read_text()
+            self.assertIn("AIL-Agent-Policy-Multi-Agent-Handoff:", handoff_report)
+            self.assertIn("source-entry-id example-40", handoff_report)
+            self.assertIn("proposed-entry-id example-40-policy", handoff_report)
+            self.assertIn("separate-reviewer-role-count 5", handoff_report)
+            self.assertIn("role requirements-writer contract codex-ail-requirements-writer", handoff_report)
+            self.assertIn("role spec-writer contract codex-ail-spec-writer", handoff_report)
+            self.assertIn("role diagnostic-repairer contract codex-ail-diagnostic-repairer", handoff_report)
+            self.assertIn("role prompt-reviewer contract codex-ail-prompt-reviewer", handoff_report)
+            self.assertIn("role agent-policy-reviewer contract codex-ail-agent-policy-reviewer", handoff_report)
+            self.assertIn("agent-contracts-result accepted", handoff_report)
+            self.assertIn("source-preserved true", handoff_report)
+            self.assertIn("proposed-accepted true", handoff_report)
+            self.assertIn("policy-handoff-imported true", handoff_report)
+            self.assertIn("policy-handoff-replayed true", handoff_report)
+            self.assertIn(
+                "multi-agent-execution-evidence deterministic-role-handoff",
+                handoff_report,
+            )
+            self.assertEqual(handoff_fingerprint.strip(), fnv64(handoff_report))
         finally:
             shutil.rmtree(work_dir, ignore_errors=True)
             shutil.rmtree(examples_artifacts, ignore_errors=True)

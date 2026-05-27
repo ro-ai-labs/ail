@@ -83,3 +83,38 @@ checker-result-count rejected 9
 The import appends `PolicyHandoffApprovedScenario40` to the human-approved
 AgentTool spec so the promoted entry is distinct, replayable, and still bound
 to the deterministic policy review artifact.
+
+## Multi-Agent Handoff Evidence
+
+After the import demo passes, write the role-by-role handoff witness:
+
+```sh
+python3 scripts/run_v03_agent_policy_multi_agent_handoff.py \
+  --examples-artifacts /tmp/ail-manual-agent-policy \
+  --capture-plan-dir /tmp/ail-manual-agent-policy-capture-plan \
+  --import-work-dir /tmp/ail-manual-agent-policy-import-work \
+  --output-artifacts /tmp/ail-manual-agent-policy-import-artifacts \
+  --source-entry-id example-40 \
+  --output-dir /tmp/ail-manual-agent-policy-import-work
+```
+
+The script validates `ail-agent-contracts examples/agents`, the policy capture
+plan, the policy review fingerprint, the import report fingerprint, and the
+promoted checked Core trace. It then writes:
+
+```text
+agent-policy-multi-agent-handoff-report.txt
+agent-policy-multi-agent-handoff-report.fingerprint.txt
+separate-reviewer-role-count 5
+role requirements-writer contract codex-ail-requirements-writer
+role spec-writer contract codex-ail-spec-writer
+role diagnostic-repairer contract codex-ail-diagnostic-repairer
+role prompt-reviewer contract codex-ail-prompt-reviewer
+role agent-policy-reviewer contract codex-ail-agent-policy-reviewer
+multi-agent-execution-evidence deterministic-role-handoff
+```
+
+This is still deterministic local evidence, not a live multi-agent execution
+claim. It raises the AgentTool handoff from one import script to a reusable
+role-separated review witness before the next v0.3 step adds live reviewer
+execution.
