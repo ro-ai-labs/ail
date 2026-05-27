@@ -499,6 +499,7 @@ struct AilE2eCorpusEvaluation {
     ui_review_text: Option<String>,
     ui_review_patch_text: Option<String>,
     agent_policy_review_text: Option<String>,
+    threat_model_audit_text: Option<String>,
     diagnostics_text: Option<String>,
     repair_tutorial_text: Option<String>,
     repair_proof: Option<AilE2eRepairProofArtifacts>,
@@ -2847,6 +2848,7 @@ fn evaluate_rejected_ail_e2e_corpus_entry(
         ui_review_text: None,
         ui_review_patch_text: None,
         agent_policy_review_text: None,
+        threat_model_audit_text: None,
         diagnostics_text: Some(diagnostics_text),
         repair_tutorial_text: Some(repair_tutorial_text),
         repair_proof: Some(repair_proof),
@@ -3342,6 +3344,7 @@ fn evaluate_ail_e2e_corpus_entry(
             ui_review_text: None,
             ui_review_patch_text: None,
             agent_policy_review_text: None,
+            threat_model_audit_text: None,
             diagnostics_text: None,
             repair_tutorial_text: None,
             repair_proof: None,
@@ -3457,6 +3460,13 @@ fn evaluate_ail_e2e_corpus_entry(
         vm_trace_text.as_deref(),
         target_report_text.as_deref(),
     );
+    let threat_model_audit_text = render_ail_e2e_threat_model_audit_text(
+        entry,
+        Some(&checked_core_text),
+        Some(&bytecode_text),
+        vm_trace_text.as_deref(),
+        target_report_text.as_deref(),
+    );
     Ok(AilE2eCorpusEvaluation {
         entry: entry.clone(),
         semantic_anchors,
@@ -3470,6 +3480,7 @@ fn evaluate_ail_e2e_corpus_entry(
         ui_review_text,
         ui_review_patch_text,
         agent_policy_review_text,
+        threat_model_audit_text,
         diagnostics_text: None,
         repair_tutorial_text: None,
         repair_proof: None,
@@ -3690,6 +3701,17 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
                 .map(|text| ail_artifact_fingerprint(text))
         },
     );
+    push_ail_e2e_fingerprint_reuse_lines(
+        &mut lines,
+        "threat-model-audit",
+        evaluations,
+        |evaluation| {
+            evaluation
+                .threat_model_audit_text
+                .as_ref()
+                .map(|text| ail_artifact_fingerprint(text))
+        },
+    );
     push_ail_e2e_fingerprint_reuse_lines(&mut lines, "diagnostics", evaluations, |evaluation| {
         evaluation
             .diagnostics_text
@@ -3890,6 +3912,14 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
                 entry.id,
                 entry.id,
                 ail_artifact_fingerprint(agent_policy_review_text)
+            ));
+        }
+        if let Some(threat_model_audit_text) = &evaluation.threat_model_audit_text {
+            lines.push(format!(
+                "entry-artifact {} threat-model-audit examples/{}/threat-model-audit.txt {}",
+                entry.id,
+                entry.id,
+                ail_artifact_fingerprint(threat_model_audit_text)
             ));
         }
         if let Some(diagnostics_text) = &evaluation.diagnostics_text {
@@ -4118,6 +4148,14 @@ fn push_ail_e2e_entry_artifact_lines(
             entry.id,
             entry.id,
             ail_artifact_fingerprint(agent_policy_review_text)
+        ));
+    }
+    if let Some(threat_model_audit_text) = &evaluation.threat_model_audit_text {
+        lines.push(format!(
+            "{prefix} {} threat-model-audit examples/{}/threat-model-audit.txt {}",
+            entry.id,
+            entry.id,
+            ail_artifact_fingerprint(threat_model_audit_text)
         ));
     }
     if let Some(diagnostics_text) = &evaluation.diagnostics_text {
@@ -4454,6 +4492,86 @@ fn render_ail_e2e_agent_policy_review_text(
     }
     lines.push(
         "agent-policy-review-summary AgentTool evidence is ready for human-approved multi-agent policy handoff import."
+            .to_string(),
+    );
+    Some(format!("{}\n", lines.join("\n")))
+}
+
+fn render_ail_e2e_threat_model_audit_text(
+    entry: &AilE2eCorpusEntry,
+    checked_core_text: Option<&str>,
+    bytecode_text: Option<&str>,
+    vm_trace_text: Option<&str>,
+    target_report_text: Option<&str>,
+) -> Option<String> {
+    let field = |key: &str| entry.fields.get(key).map(String::as_str).unwrap_or("");
+    let security_signal = "Security examples need threat-model annotations and audit trails.";
+    let is_secret_access_security_entry = field("capability-under-test") == "security-permissions"
+        || field("package").ends_with("secret_access.ail")
+        || field("v0.3-signal") == security_signal;
+    if !is_secret_access_security_entry {
+        return None;
+    }
+    let runtime_evidence = if target_report_text.is_some() {
+        "target-report"
+    } else if vm_trace_text.is_some() {
+        "vm-trace"
+    } else if bytecode_text.is_some() {
+        "bytecode"
+    } else {
+        "checked-core"
+    };
+    let mut lines = vec![
+        "AIL-Threat-Model-Audit:".to_string(),
+        format!("entry {}", entry.id),
+        format!("semantic-task {}", field("semantic-task")),
+        format!("package {}", field("package")),
+        format!("profile {}", field("profile")),
+        format!("program-domain {}", field("program-domain")),
+        format!("capability-under-test {}", field("capability-under-test")),
+        "threat-model-artifact deterministic-text".to_string(),
+        "security-surface secret-internal-notes".to_string(),
+        "asset Ticket.internal notes".to_string(),
+        "trust-boundary requester-role-check".to_string(),
+        "attacker-capability customer-or-unauthorized-requester".to_string(),
+        "required-permission SupportAgent or SupportManager".to_string(),
+        "required-control support-role-requirement".to_string(),
+        "required-control customer-redaction".to_string(),
+        "redaction-requirement customer must not receive internal notes".to_string(),
+        "audit-trail-event InternalNotesViewed".to_string(),
+        "audit-trail-event InternalNotesDenied".to_string(),
+        "denied-failure PermissionDenied".to_string(),
+        "diagnostic-link AIL-SECRET-ROLE-001".to_string(),
+        "diagnostic-link AIL005".to_string(),
+        "diagnostic-link AIL-TRACE-002".to_string(),
+        format!("runtime-evidence {runtime_evidence}"),
+    ];
+    if let Some(checked_core_text) = checked_core_text {
+        lines.push(format!(
+            "checked-core-fingerprint {}",
+            ail_artifact_fingerprint(checked_core_text)
+        ));
+    }
+    if let Some(bytecode_text) = bytecode_text {
+        lines.push(format!(
+            "bytecode-fingerprint {}",
+            ail_artifact_fingerprint(bytecode_text)
+        ));
+    }
+    if let Some(vm_trace_text) = vm_trace_text {
+        lines.push(format!(
+            "vm-trace-fingerprint {}",
+            ail_artifact_fingerprint(vm_trace_text)
+        ));
+    }
+    if let Some(target_report_text) = target_report_text {
+        lines.push(format!(
+            "target-report-fingerprint {}",
+            ail_artifact_fingerprint(target_report_text)
+        ));
+    }
+    lines.push(
+        "threat-model-summary Secret Access binds role checks, customer redaction, denied-access traces, diagnostics, and replay evidence for reviewer audit."
             .to_string(),
     );
     Some(format!("{}\n", lines.join("\n")))
@@ -5461,6 +5579,24 @@ fn write_ail_e2e_corpus_artifacts(
             )
             .map_err(|error| {
                 format!("failed to write examples agent policy review fingerprint: {error}")
+            })?;
+        }
+        if let Some(threat_model_audit_text) = &evaluation.threat_model_audit_text {
+            let entry_dir = root.join("examples").join(&evaluation.entry.id);
+            fs::create_dir_all(&entry_dir).map_err(|error| {
+                format!("failed to create examples entry artifact dir: {error}")
+            })?;
+            fs::write(
+                entry_dir.join("threat-model-audit.txt"),
+                threat_model_audit_text,
+            )
+            .map_err(|error| format!("failed to write examples threat model audit: {error}"))?;
+            fs::write(
+                entry_dir.join("threat-model-audit.fingerprint.txt"),
+                format!("{}\n", ail_artifact_fingerprint(threat_model_audit_text)),
+            )
+            .map_err(|error| {
+                format!("failed to write examples threat model audit fingerprint: {error}")
             })?;
         }
         if let Some(diagnostics_text) = &evaluation.diagnostics_text {

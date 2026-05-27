@@ -49,9 +49,9 @@ rationale: Rejected entries now emit repair tutorials, repair proofs, diffs, and
 evidence: docs/ail/31-v03-learning-and-authoring-gate.md
 
 signal: Security examples need threat-model annotations and audit trails.
-status: deferred
-rationale: Secret Access conformance and redaction fixtures exist, but threat-model annotations and audit-trail artifacts are intentionally deferred.
-evidence: docs/ail/31-v03-learning-and-authoring-gate.md
+status: promoted
+rationale: Secret Access examples now emit deterministic threat-model audit artifacts for entries example-75 through example-79, tying support-role checks, redaction, denied-access traces, diagnostic links, and replay fingerprints into reviewer-facing evidence.
+evidence: cargo run -- ail-examples examples --release-evidence
 
 signal: Self-hosting needs multiple composed compiler-pass variants and reviewer-visible pass-order conflict diagnostics.
 status: deferred

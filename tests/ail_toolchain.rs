@@ -1755,7 +1755,9 @@ fn script_v03_signal_status_audit_marks_agent_policy_import_promoted() {
     for required in [
         "signal-status AgentTool authoring needs human-approved multi-agent policy handoff imports after deterministic policy reviews are replayed. count 15 status promoted",
         "signal-status-evidence AgentTool authoring needs human-approved multi-agent policy handoff imports after deterministic policy reviews are replayed. scripts/run_v03_agent_policy_import_audit.py",
-        "promoted-count 1",
+        "signal-status Security examples need threat-model annotations and audit trails. count 5 status promoted",
+        "signal-status-evidence Security examples need threat-model annotations and audit trails. cargo run -- ail-examples examples --release-evidence",
+        "promoted-count 2",
         "missing-status-count 0",
         "audit-result accepted",
     ] {
@@ -28929,6 +28931,14 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
+        report.contains("threat-model-audit-fingerprint-observed-count 5"),
+        "{report}"
+    );
+    assert!(
+        report.contains("threat-model-audit-fingerprint-duplicate-entry-count 0"),
+        "{report}"
+    );
+    assert!(
         report.contains(
             "v03-signal-count UI authoring needs human-approved visual patch import workflows after deterministic UI patch plans are replayed. 4"
         ),
@@ -29050,6 +29060,43 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         report.contains(&format!(
             "entry-artifact example-40 agent-policy-review examples/example-40/agent-policy-review.txt {}",
             agent_policy_review_40_fingerprint.trim()
+        )),
+        "{report}"
+    );
+    let threat_model_audit_75 =
+        fs::read_to_string(artifact_dir.join("examples/example-75/threat-model-audit.txt"))
+            .unwrap();
+    assert!(
+        threat_model_audit_75.contains("AIL-Threat-Model-Audit:")
+            && threat_model_audit_75.contains("entry example-75")
+            && threat_model_audit_75
+                .contains("semantic-task secret-access-live-codex-core-to-spec-75")
+            && threat_model_audit_75.contains("security-surface secret-internal-notes")
+            && threat_model_audit_75.contains("asset Ticket.internal notes")
+            && threat_model_audit_75.contains("trust-boundary requester-role-check")
+            && threat_model_audit_75.contains("required-control support-role-requirement")
+            && threat_model_audit_75.contains("required-control customer-redaction")
+            && threat_model_audit_75.contains("audit-trail-event InternalNotesViewed")
+            && threat_model_audit_75.contains("audit-trail-event InternalNotesDenied")
+            && threat_model_audit_75.contains("diagnostic-link AIL-SECRET-ROLE-001")
+            && threat_model_audit_75.contains("diagnostic-link AIL005")
+            && threat_model_audit_75.contains("diagnostic-link AIL-TRACE-002")
+            && threat_model_audit_75.contains("runtime-evidence target-report")
+            && threat_model_audit_75.contains("threat-model-summary "),
+        "{threat_model_audit_75}"
+    );
+    let threat_model_audit_75_fingerprint = fs::read_to_string(
+        artifact_dir.join("examples/example-75/threat-model-audit.fingerprint.txt"),
+    )
+    .unwrap();
+    assert_eq!(
+        threat_model_audit_75_fingerprint.trim(),
+        fnv64_fingerprint(&threat_model_audit_75)
+    );
+    assert!(
+        report.contains(&format!(
+            "entry-artifact example-75 threat-model-audit examples/example-75/threat-model-audit.txt {}",
+            threat_model_audit_75_fingerprint.trim()
         )),
         "{report}"
     );
@@ -29473,6 +29520,13 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         manifest.contains(&format!(
             "entry-artifact example-40 agent-policy-review examples/example-40/agent-policy-review.txt {}",
             agent_policy_review_40_fingerprint.trim()
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "entry-artifact example-75 threat-model-audit examples/example-75/threat-model-audit.txt {}",
+            threat_model_audit_75_fingerprint.trim()
         )),
         "{manifest}"
     );

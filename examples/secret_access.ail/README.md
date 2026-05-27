@@ -59,8 +59,11 @@ Useful artifacts after replay include:
 - `examples/example-75/checked.ail-core.txt`
 - `examples/example-75/artifact.ailbc.json`
 - `examples/example-75/target-report.txt`
+- `examples/example-75/threat-model-audit.txt`
+- `examples/example-75/threat-model-audit.fingerprint.txt`
 - `examples/example-75/user-story.txt`
 - `examples/example-79/target-report.txt`
+- `examples/example-79/threat-model-audit.txt`
 
 For a focused package check:
 
@@ -88,6 +91,6 @@ history.
 
 Secret Access now has package-local accepted/rejected fixtures that prove secret
 read permission, redaction, failure declaration, and denied-access trace gaps
-are caught before compile or runtime replay. The next v0.3 bar is threat-model
-annotations and audit-trail artifacts that connect these diagnostics to
-reviewer-facing security stories.
+are caught before compile or runtime replay. Its v0.3 security signal is now
+promoted by deterministic threat-model audit artifacts that connect these
+diagnostics to reviewer-facing security stories and replay fingerprints.

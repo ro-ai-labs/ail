@@ -574,9 +574,10 @@ as prose. The current examples reveal these next-version gaps:
   script.
 - Secret Access examples now include package-local accepted/rejected
   conformance fixtures for support-role guarded secret reads, redaction,
-  denied-access traces, and declared `PermissionDenied` failures. The next bar
-  is threat-model annotations and audit-trail artifacts that connect secret
-  diagnostics to reviewer-facing security stories.
+  denied-access traces, and declared `PermissionDenied` failures. Release
+  evidence now emits `threat-model-audit.txt` and fingerprint artifacts for
+  `example-75` through `example-79`, connecting `AIL-SECRET-ROLE-001`, `AIL005`,
+  and `AIL-TRACE-002` to reviewer-facing security stories and replay evidence.
 - Incident-response examples show that complex systems need richer story
   graphs across imported modules, UI surfaces, workflow transitions, target
   contracts, and regenerated story views.
