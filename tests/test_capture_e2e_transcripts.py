@@ -1407,6 +1407,13 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
                 f"--endpoint {endpoint} --skip-model-check --artifact-dir {artifact_root / 'agent-policy-live-review'}",
                 combined_stdout,
             )
+            self.assertGreaterEqual(
+                combined_stdout.count("evidence model-check-model-id"), 3
+            )
+            self.assertIn("evidence model-check.json", combined_stdout)
+            self.assertIn("evidence model-check.fingerprint.txt", combined_stdout)
+            self.assertIn("evidence models.json", combined_stdout)
+            self.assertIn("evidence models.fingerprint.txt", combined_stdout)
             self.assertIn(f"--llm-endpoint {endpoint}", combined_stdout)
             self.assertNotIn("http://inteligentia-pro-1:8080", combined_stdout)
             self.assertEqual(_CompletionHandler.requests, [])
