@@ -1374,6 +1374,11 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
                 "rejected: dashboard-missing-permission.ail-spec.md AIL-UI-PERMISSION-001",
                 "rejected-repair-tutorial-count 7",
                 "rejected/private-notes-public-timeline-leak.ail-spec.md/repair-tutorial.txt",
+                "rejected-repair-proof-count 7",
+                "rejected/private-notes-public-timeline-leak.ail-spec.md/repair-proof.txt",
+                "rejected/private-notes-public-timeline-leak.ail-spec.md/repair-candidate.ail-spec.md",
+                "rejected/private-notes-public-timeline-leak.ail-spec.md/repair-checked.ail-core.txt",
+                "rejected/private-notes-public-timeline-leak.ail-spec.md/repair-artifact.ailbc.json",
             ],
         ),
         (
@@ -1885,6 +1890,11 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "evidence rejected: dashboard-missing-permission.ail-spec.md AIL-UI-PERMISSION-001",
         "evidence rejected-repair-tutorial-count 7",
         "evidence rejected/private-notes-public-timeline-leak.ail-spec.md/repair-tutorial.txt",
+        "evidence rejected-repair-proof-count 7",
+        "evidence rejected/private-notes-public-timeline-leak.ail-spec.md/repair-proof.txt",
+        "evidence rejected/private-notes-public-timeline-leak.ail-spec.md/repair-candidate.ail-spec.md",
+        "evidence rejected/private-notes-public-timeline-leak.ail-spec.md/repair-checked.ail-core.txt",
+        "evidence rejected/private-notes-public-timeline-leak.ail-spec.md/repair-artifact.ailbc.json",
         "evidence ail conformance: ok",
     ] {
         assert!(
@@ -2387,6 +2397,11 @@ fn script_ail_interactive_manual_v03_authoring_gate_run_checks_succeeds() {
         "rejected: dashboard-missing-permission.ail-spec.md AIL-UI-PERMISSION-001",
         "rejected-repair-tutorial-count 7",
         "rejected/private-notes-public-timeline-leak.ail-spec.md/repair-tutorial.txt",
+        "rejected-repair-proof-count 7",
+        "rejected/private-notes-public-timeline-leak.ail-spec.md/repair-proof.txt",
+        "rejected/private-notes-public-timeline-leak.ail-spec.md/repair-candidate.ail-spec.md",
+        "rejected/private-notes-public-timeline-leak.ail-spec.md/repair-checked.ail-core.txt",
+        "rejected/private-notes-public-timeline-leak.ail-spec.md/repair-artifact.ailbc.json",
         "ail-compile wrote linux-x86_64-elf executable",
         "native-bytecode-report.txt",
         "running check-ui-patch-runtime-state",
@@ -22144,6 +22159,7 @@ fn cli_ail_conformance_writes_rejected_fixture_repair_tutorials() {
         report.contains("rejected-repair-tutorial-count 7"),
         "{report}"
     );
+    assert!(report.contains("rejected-repair-proof-count 7"), "{report}");
 
     let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-conformance.txt")).unwrap();
     for (fixture_name, expected_diagnostic) in expected_fixtures {
@@ -22175,6 +22191,74 @@ fn cli_ail_conformance_writes_rejected_fixture_repair_tutorials() {
             manifest.contains(&format!(
                 "rejected-repair-tutorial {fixture_name} rejected/{fixture_name}/repair-tutorial.txt {}",
                 tutorial_fingerprint.trim()
+            )),
+            "{manifest}"
+        );
+        let repair_dir = artifact_dir.join("rejected").join(fixture_name);
+        let proof_path = repair_dir.join("repair-proof.txt");
+        let proof = fs::read_to_string(&proof_path)
+            .unwrap_or_else(|error| panic!("{}: {error}", proof_path.display()));
+        assert!(
+            proof.contains("AIL-Conformance-Repair-Proof:")
+                && proof.contains("package incident-response")
+                && proof.contains(&format!("fixture {fixture_name}"))
+                && proof.contains("checker-result rejected-to-repaired")
+                && proof.contains(&format!("expected-diagnostic {expected_diagnostic}"))
+                && proof.contains(
+                    "repair-candidate examples/accepted/incident-escalation-minimal.ail-spec.md"
+                )
+                && proof.contains("repair-candidate-fingerprint fnv64:")
+                && proof.contains("repair-checked-core-fingerprint fnv64:")
+                && proof.contains("repair-bytecode-fingerprint fnv64:")
+                && proof.contains("repair-proof-summary corrected package-local fixture checked into Core and verified bytecode"),
+            "{proof}"
+        );
+        let proof_fingerprint =
+            fs::read_to_string(repair_dir.join("repair-proof.fingerprint.txt")).unwrap();
+        assert_eq!(proof_fingerprint.trim(), fnv64_fingerprint(&proof));
+        assert!(
+            manifest.contains(&format!(
+                "rejected-repair-proof {fixture_name} rejected/{fixture_name}/repair-proof.txt {}",
+                proof_fingerprint.trim()
+            )),
+            "{manifest}"
+        );
+        let candidate = fs::read_to_string(repair_dir.join("repair-candidate.ail-spec.md"))
+            .unwrap_or_else(|error| panic!("{fixture_name} repair candidate: {error}"));
+        let candidate_fingerprint =
+            fs::read_to_string(repair_dir.join("repair-candidate.fingerprint.txt")).unwrap();
+        assert_eq!(candidate_fingerprint.trim(), fnv64_fingerprint(&candidate));
+        assert!(
+            manifest.contains(&format!(
+                "rejected-repair-candidate {fixture_name} rejected/{fixture_name}/repair-candidate.ail-spec.md {}",
+                candidate_fingerprint.trim()
+            )),
+            "{manifest}"
+        );
+        let checked_core = fs::read_to_string(repair_dir.join("repair-checked.ail-core.txt"))
+            .unwrap_or_else(|error| panic!("{fixture_name} repair checked core: {error}"));
+        let checked_core_fingerprint =
+            fs::read_to_string(repair_dir.join("repair-checked.ail-core.fingerprint.txt")).unwrap();
+        assert_eq!(
+            checked_core_fingerprint.trim(),
+            fnv64_fingerprint(&checked_core)
+        );
+        assert!(
+            manifest.contains(&format!(
+                "rejected-repair-checked-core {fixture_name} rejected/{fixture_name}/repair-checked.ail-core.txt {}",
+                checked_core_fingerprint.trim()
+            )),
+            "{manifest}"
+        );
+        let bytecode = fs::read_to_string(repair_dir.join("repair-artifact.ailbc.json"))
+            .unwrap_or_else(|error| panic!("{fixture_name} repair bytecode: {error}"));
+        let bytecode_fingerprint =
+            fs::read_to_string(repair_dir.join("repair-artifact.ailbc.fingerprint.txt")).unwrap();
+        assert_eq!(bytecode_fingerprint.trim(), fnv64_fingerprint(&bytecode));
+        assert!(
+            manifest.contains(&format!(
+                "rejected-repair-bytecode {fixture_name} rejected/{fixture_name}/repair-artifact.ailbc.json {}",
+                bytecode_fingerprint.trim()
             )),
             "{manifest}"
         );
@@ -32870,14 +32954,13 @@ fn cli_ail_v03_roadmap_advances_completed_application_story_signal() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(
         stdout.contains(
-            "signal Application examples need package-local rejected fixtures and story amendment comparisons after story-to-runtime walkthroughs. count 10"
+            "signal Application examples need repaired incident promotion variants and richer stateful application walkthroughs after package-local diagnostics have checked repair proofs. count 10"
         ),
         "{stdout}"
     );
     assert!(
-        !stdout.contains(
-            "Application examples need user-story walkthroughs from intent to runtime trace."
-        ),
+        !stdout.contains("Application examples need user-story walkthroughs from intent to runtime trace.")
+            && !stdout.contains("Application examples need package-local rejected fixtures and story amendment comparisons after story-to-runtime walkthroughs."),
         "{stdout}"
     );
 

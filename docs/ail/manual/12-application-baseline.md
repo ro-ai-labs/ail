@@ -38,11 +38,14 @@ cargo run -- ail-conformance examples/incident_response.ail --artifact-dir /tmp/
 - `examples/incident_response.ail/examples/rejected/*.ail-spec.md` rejects
   notification and lifecycle mistakes directly in the high-level
   multi-module package.
-- Rejected package-local fixtures write `repair-tutorial.txt` plus a
-  fingerprint under the conformance artifact directory, so local diagnostics
-  become reviewer-readable repair guidance instead of report-only failures.
-- The report, manifest, and repair tutorials are fingerprinted in the same way
-  as other conformance chapters.
+- Rejected package-local fixtures write `repair-tutorial.txt`,
+  `repair-proof.txt`, `repair-candidate.ail-spec.md`,
+  `repair-checked.ail-core.txt`, and `repair-artifact.ailbc.json` plus
+  fingerprints under the conformance artifact directory, so local diagnostics
+  become checked repair chains instead of report-only failures.
+- The report, manifest, repair tutorials, repair proofs, checked Core, and
+  bytecode artifacts are fingerprinted in the same way as other conformance
+  chapters.
 
 ## Expected Evidence
 
@@ -69,6 +72,11 @@ rejected: route-missing-permission.ail-spec.md AIL-UI-PERMISSION-002
 rejected: dashboard-missing-permission.ail-spec.md AIL-UI-PERMISSION-001
 rejected-repair-tutorial-count 7
 rejected/private-notes-public-timeline-leak.ail-spec.md/repair-tutorial.txt
+rejected-repair-proof-count 7
+rejected/private-notes-public-timeline-leak.ail-spec.md/repair-proof.txt
+rejected/private-notes-public-timeline-leak.ail-spec.md/repair-candidate.ail-spec.md
+rejected/private-notes-public-timeline-leak.ail-spec.md/repair-checked.ail-core.txt
+rejected/private-notes-public-timeline-leak.ail-spec.md/repair-artifact.ailbc.json
 ail conformance: ok
 ```
 
@@ -84,8 +92,10 @@ postmortem before the incident is Resolved. They also cover private-note
 leakage into the public timeline, escalation without commander review, command
 routes without read permission, and service-owner dashboards without read
 permission. Each incident rejection now has a package-local conformance repair
-tutorial that preserves the diagnostic, source provenance, graph item, and
-repair suggestion before a corrected fixture is drafted.
+tutorial and checked repair proof that preserve the diagnostic, source
+provenance, graph item, repair suggestion, corrected fixture candidate, checked
+Core, and verified bytecode before a repaired variant is considered for
+promotion.
 
 ## Relationship To User Story Mode
 

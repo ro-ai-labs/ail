@@ -141,7 +141,7 @@ ACCEPTED_FIXTURES = {
         "spec_count": "3",
         "story_count": "3",
         "interacts_with": "ticket.store,policy.audit,notification.queue",
-        "v03_signal": "Application examples need user-story walkthroughs from intent to runtime trace.",
+        "v03_signal": "Application examples need repaired incident promotion variants and richer stateful application walkthroughs after package-local diagnostics have checked repair proofs.",
         "vm_action": "CloseTicket",
         "runtime_state": "ticket.id=T-1;ticket.status=Open",
     },

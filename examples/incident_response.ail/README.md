@@ -94,18 +94,21 @@ This package includes package-local conformance fixtures:
   permission.
 
 Running conformance with `--artifact-dir` now writes fingerprinted
-package-local repair tutorials for each rejected fixture under
-`rejected/<fixture>/repair-tutorial.txt`. Those tutorials preserve the
-diagnostic, source provenance, affected graph item, and repair suggestion before
-any corrected fixture is drafted.
+package-local repair tutorials and checked repair proofs for each rejected
+fixture under `rejected/<fixture>/`. The proof bundle includes
+`repair-proof.txt`, `repair-candidate.ail-spec.md`,
+`repair-checked.ail-core.txt`, and `repair-artifact.ailbc.json`, preserving the
+diagnostic, source provenance, affected graph item, repair suggestion,
+corrected fixture candidate, checked Core, and verified bytecode before any
+repaired variant is promoted.
 
 ## Next Example To Read
 
 Read `../refund_tool.ail/README.md` before this package if you want the smaller
 AgentTool safety surface first. After this package, the next useful examples
-should show checked repair proof chains for the incident failures, plus a
-richer stateful application that teaches persistence, idempotency, locks, and
-replay after failure.
+should promote repaired incident variants through a corpus-copy import path,
+plus a richer stateful application that teaches persistence, idempotency,
+locks, and replay after failure.
 
 ## v0.3 Learning Signal
 

@@ -487,11 +487,12 @@ as prose. The current examples reveal these next-version gaps:
   for escalation, responder notification pager requirements, resolution after
   mitigation, postmortem after resolution, private-note leakage,
   commander-review policy, and route or dashboard permissions. Conformance now
-  writes fingerprinted package-local repair tutorials for those incident
-  failures so the Application baseline teaches diagnostics with source
-  provenance, affected graph items, and repair suggestions. The next bar is
-  checked repair proof chains and promotion of repaired incident variants back
-  through the Application baseline.
+  writes fingerprinted package-local repair tutorials and checked repair proofs
+  for those incident failures so the Application baseline teaches diagnostics
+  with source provenance, affected graph items, repair suggestions, corrected
+  fixture candidates, checked Core, and verified bytecode. The next bar is
+  promotion of repaired incident variants back through a corpus-copy import path
+  and a richer stateful application walkthrough.
 - UI examples now emit deterministic visual review, accessibility review,
   workflow authoring artifacts, deterministic UI patch plans, a human-approved
   UI patch import demo, and a rejected accessibility diagnostic fixture that

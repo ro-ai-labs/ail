@@ -609,11 +609,21 @@ struct AilLowerArtifactSet<'a> {
 
 struct AilConformanceArtifactSet<'a> {
     report_text: &'a str,
+    repair_proofs: &'a [AilConformanceRepairProofArtifacts],
     native_bytecode_report_text: Option<&'a str>,
     dependency_report_text: Option<&'a str>,
     agent_bytecode_text: Option<&'a str>,
     agent_trace: Option<&'a [String]>,
     agent_native_executables: &'a [AilNativeArtifact],
+}
+
+struct AilConformanceRepairProofArtifacts {
+    fixture: String,
+    expected_diagnostic: String,
+    candidate_fixture: String,
+    candidate_spec_text: String,
+    checked_core_text: String,
+    bytecode_text: String,
 }
 
 struct AilConformanceAgentManifestRequest<'a> {
@@ -7977,7 +7987,10 @@ fn ail_artifact_fingerprint_bytes(bytes: &[u8]) -> String {
     format!("fnv64:{hash:016x}")
 }
 
-fn render_ail_conformance_report(result: &ail::ail::AilConformanceResult) -> String {
+fn render_ail_conformance_report(
+    result: &ail::ail::AilConformanceResult,
+    repair_proofs: &[AilConformanceRepairProofArtifacts],
+) -> String {
     let mut lines = vec![format!("ail conformance: package {}", result.package_name)];
     if result.accepted_diagnostics.is_empty() {
         lines.push(format!("valid: {}", result.accepted_fixture));
@@ -8029,6 +8042,12 @@ fn render_ail_conformance_report(result: &ail::ail::AilConformanceResult) -> Str
             "rejected-repair-tutorial-count {repair_tutorial_count}"
         ));
     }
+    if !repair_proofs.is_empty() {
+        lines.push(format!(
+            "rejected-repair-proof-count {}",
+            repair_proofs.len()
+        ));
+    }
     if result.success() {
         lines.push("ail conformance: ok".to_string());
     } else {
@@ -8066,6 +8085,34 @@ fn render_ail_conformance_manifest(
                 ail_artifact_fingerprint(&repair_tutorial_text)
             ));
         }
+    }
+    for proof in artifacts.repair_proofs {
+        let repair_proof_text = render_ail_conformance_repair_proof(result, proof);
+        let repair_base = ail_conformance_repair_artifact_base_path(&proof.fixture);
+        lines.push(format!(
+            "rejected-repair-proof {} {}/repair-proof.txt {}",
+            proof.fixture,
+            repair_base,
+            ail_artifact_fingerprint(&repair_proof_text)
+        ));
+        lines.push(format!(
+            "rejected-repair-candidate {} {}/repair-candidate.ail-spec.md {}",
+            proof.fixture,
+            repair_base,
+            ail_artifact_fingerprint(&proof.candidate_spec_text)
+        ));
+        lines.push(format!(
+            "rejected-repair-checked-core {} {}/repair-checked.ail-core.txt {}",
+            proof.fixture,
+            repair_base,
+            ail_artifact_fingerprint(&proof.checked_core_text)
+        ));
+        lines.push(format!(
+            "rejected-repair-bytecode {} {}/repair-artifact.ailbc.json {}",
+            proof.fixture,
+            repair_base,
+            ail_artifact_fingerprint(&proof.bytecode_text)
+        ));
     }
     if let Some(agent_bytecode_text) = artifacts.agent_bytecode_text {
         lines.push(format!(
@@ -8108,6 +8155,10 @@ fn ail_conformance_repair_tutorial_artifact_path(fixture: &str) -> String {
     format!("rejected/{fixture}/repair-tutorial.txt")
 }
 
+fn ail_conformance_repair_artifact_base_path(fixture: &str) -> String {
+    format!("rejected/{fixture}")
+}
+
 fn render_ail_conformance_repair_tutorial(
     result: &ail::ail::AilConformanceResult,
     fixture: &ail::ail::AilRejectedConformanceResult,
@@ -8138,6 +8189,124 @@ fn render_ail_conformance_repair_tutorial(
             .to_string(),
     ]);
     format!("{}\n", lines.join("\n"))
+}
+
+fn render_ail_conformance_repair_proof(
+    result: &ail::ail::AilConformanceResult,
+    proof: &AilConformanceRepairProofArtifacts,
+) -> String {
+    let lines = vec![
+        "AIL-Conformance-Repair-Proof:".to_string(),
+        format!("package {}", result.package_name),
+        format!("fixture {}", proof.fixture),
+        "checker-result rejected-to-repaired".to_string(),
+        format!("expected-diagnostic {}", proof.expected_diagnostic),
+        format!("repair-candidate {}", proof.candidate_fixture),
+        format!(
+            "repair-candidate-fingerprint {}",
+            ail_artifact_fingerprint(&proof.candidate_spec_text)
+        ),
+        format!(
+            "repair-checked-core-fingerprint {}",
+            ail_artifact_fingerprint(&proof.checked_core_text)
+        ),
+        format!(
+            "repair-bytecode-fingerprint {}",
+            ail_artifact_fingerprint(&proof.bytecode_text)
+        ),
+        "repair-proof-summary corrected package-local fixture checked into Core and verified bytecode while rejected diagnostic evidence remains preserved.".to_string(),
+    ];
+    format!("{}\n", lines.join("\n"))
+}
+
+fn build_ail_conformance_repair_proofs(
+    package: &AilPackage,
+    result: &ail::ail::AilConformanceResult,
+) -> Result<Vec<AilConformanceRepairProofArtifacts>, String> {
+    let rejected_fixtures = result
+        .rejected
+        .iter()
+        .filter(|fixture| !fixture.diagnostics.is_empty())
+        .collect::<Vec<_>>();
+    if rejected_fixtures.is_empty() {
+        return Ok(Vec::new());
+    }
+    let (candidate_fixture, candidate_path) =
+        ail_conformance_repair_candidate_path(package, result);
+    let candidate_spec_text = fs::read_to_string(&candidate_path).map_err(|error| {
+        format!(
+            "failed to read ail-conformance repair candidate {}: {error}",
+            candidate_path.display()
+        )
+    })?;
+    let document = parse_ail_package_spec_text(package, &candidate_spec_text).map_err(|error| {
+        format!(
+            "ail-conformance repair candidate {} failed to parse: {error}",
+            candidate_path.display()
+        )
+    })?;
+    let core = elaborate_ail_core(package, &document);
+    let core_diagnostics = check_ail_core(&core);
+    if !core_diagnostics.is_empty() {
+        return Err(format!(
+            "ail-conformance repair candidate {} still has diagnostics:\n{}",
+            candidate_path.display(),
+            core_diagnostics.join("\n")
+        ));
+    }
+    let bytecode = compile_ail_core_bytecode(&core)?;
+    let bytecode_diagnostics = verify_ail_bytecode(&bytecode);
+    if !bytecode_diagnostics.is_empty() {
+        return Err(format!(
+            "ail-conformance repair candidate {} has bytecode diagnostics:\n{}",
+            candidate_path.display(),
+            bytecode_diagnostics.join("\n")
+        ));
+    }
+    let checked_core_text = render_ail_core(&core);
+    let bytecode_text = format!("{}\n", render_ail_bytecode(&bytecode));
+    Ok(rejected_fixtures
+        .into_iter()
+        .map(|fixture| AilConformanceRepairProofArtifacts {
+            fixture: fixture.fixture.clone(),
+            expected_diagnostic: fixture
+                .diagnostics
+                .first()
+                .map(|diagnostic| diagnostic.code.clone())
+                .unwrap_or_else(|| "unknown".to_string()),
+            candidate_fixture: candidate_fixture.clone(),
+            candidate_spec_text: candidate_spec_text.clone(),
+            checked_core_text: checked_core_text.clone(),
+            bytecode_text: bytecode_text.clone(),
+        })
+        .collect())
+}
+
+fn ail_conformance_repair_candidate_path(
+    package: &AilPackage,
+    result: &ail::ail::AilConformanceResult,
+) -> (String, std::path::PathBuf) {
+    for fixture in &result.accepted {
+        if fixture.diagnostics.is_empty() {
+            return (
+                format!("examples/accepted/{}", fixture.fixture),
+                package
+                    .root
+                    .join("examples")
+                    .join("accepted")
+                    .join(&fixture.fixture),
+            );
+        }
+    }
+    (
+        package
+            .spec_path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .map(str::to_string)
+            .unwrap_or_else(|| package.spec_path.display().to_string()),
+        package.spec_path.clone(),
+    )
 }
 
 fn write_ail_conformance_artifacts(
@@ -8188,6 +8357,92 @@ fn write_ail_conformance_artifacts(
             format!(
                 "failed to write ail-conformance repair tutorial fingerprint for {}: {error}",
                 fixture.fixture
+            )
+        })?;
+    }
+    for proof in artifacts.repair_proofs {
+        let repair_dir = root.join("rejected").join(&proof.fixture);
+        fs::create_dir_all(&repair_dir).map_err(|error| {
+            format!(
+                "failed to create ail-conformance repair proof dir {}: {error}",
+                repair_dir.display()
+            )
+        })?;
+        let repair_proof_text = render_ail_conformance_repair_proof(result, proof);
+        fs::write(repair_dir.join("repair-proof.txt"), &repair_proof_text).map_err(|error| {
+            format!(
+                "failed to write ail-conformance repair proof for {}: {error}",
+                proof.fixture
+            )
+        })?;
+        fs::write(
+            repair_dir.join("repair-proof.fingerprint.txt"),
+            format!("{}\n", ail_artifact_fingerprint(&repair_proof_text)),
+        )
+        .map_err(|error| {
+            format!(
+                "failed to write ail-conformance repair proof fingerprint for {}: {error}",
+                proof.fixture
+            )
+        })?;
+        fs::write(
+            repair_dir.join("repair-candidate.ail-spec.md"),
+            &proof.candidate_spec_text,
+        )
+        .map_err(|error| {
+            format!(
+                "failed to write ail-conformance repair candidate for {}: {error}",
+                proof.fixture
+            )
+        })?;
+        fs::write(
+            repair_dir.join("repair-candidate.fingerprint.txt"),
+            format!("{}\n", ail_artifact_fingerprint(&proof.candidate_spec_text)),
+        )
+        .map_err(|error| {
+            format!(
+                "failed to write ail-conformance repair candidate fingerprint for {}: {error}",
+                proof.fixture
+            )
+        })?;
+        fs::write(
+            repair_dir.join("repair-checked.ail-core.txt"),
+            &proof.checked_core_text,
+        )
+        .map_err(|error| {
+            format!(
+                "failed to write ail-conformance repair checked core for {}: {error}",
+                proof.fixture
+            )
+        })?;
+        fs::write(
+            repair_dir.join("repair-checked.ail-core.fingerprint.txt"),
+            format!("{}\n", ail_artifact_fingerprint(&proof.checked_core_text)),
+        )
+        .map_err(|error| {
+            format!(
+                "failed to write ail-conformance repair checked core fingerprint for {}: {error}",
+                proof.fixture
+            )
+        })?;
+        fs::write(
+            repair_dir.join("repair-artifact.ailbc.json"),
+            &proof.bytecode_text,
+        )
+        .map_err(|error| {
+            format!(
+                "failed to write ail-conformance repair bytecode for {}: {error}",
+                proof.fixture
+            )
+        })?;
+        fs::write(
+            repair_dir.join("repair-artifact.ailbc.fingerprint.txt"),
+            format!("{}\n", ail_artifact_fingerprint(&proof.bytecode_text)),
+        )
+        .map_err(|error| {
+            format!(
+                "failed to write ail-conformance repair bytecode fingerprint for {}: {error}",
+                proof.fixture
             )
         })?;
     }
@@ -13685,7 +13940,8 @@ fn render_ail_bootstrap_source_conformance_report(
     }
     let package = load_ail_package_dir(path)?;
     let result = run_ail_conformance(&package)?;
-    let report = render_ail_conformance_report(&result);
+    let repair_proofs = build_ail_conformance_repair_proofs(&package, &result)?;
+    let report = render_ail_conformance_report(&result, &repair_proofs);
     if !result.success() {
         return Err(format!("{context} conformance failed:\n{report}"));
     }
@@ -14497,7 +14753,8 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
     }
     if command == "ail-conformance" {
         let result = run_ail_conformance(&package)?;
-        let report_text = render_ail_conformance_report(&result);
+        let repair_proofs = build_ail_conformance_repair_proofs(&package, &result)?;
+        let report_text = render_ail_conformance_report(&result, &repair_proofs);
         let package_dependency_report_text = if package.imports.is_empty() {
             None
         } else {
@@ -14529,6 +14786,7 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
                 &result,
                 &AilConformanceArtifactSet {
                     report_text: &report_text,
+                    repair_proofs: &repair_proofs,
                     native_bytecode_report_text: native_bytecode_report_text.as_deref(),
                     dependency_report_text: dependency_report_text.as_deref(),
                     agent_bytecode_text: Some(agent_bytecode_text.as_str()),
@@ -14562,6 +14820,7 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
                 &result,
                 AilConformanceArtifactSet {
                     report_text: &report_text,
+                    repair_proofs: &repair_proofs,
                     native_bytecode_report_text: native_bytecode_report_text.as_deref(),
                     dependency_report_text: dependency_report_text.as_deref(),
                     agent_bytecode_text: agent_run.as_ref().map(|run| run.bytecode_text.as_str()),
