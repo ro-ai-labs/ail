@@ -362,6 +362,92 @@ test -f /tmp/ail-v03-learning-examples/v03-roadmap.txt
 git diff --check -- examples docs/ail src tests scripts
 ```
 
+## Release Completion Audit
+
+AIL v0.3 release completion requires one current, fingerprinted audit bundle,
+not scattered local command output. The deterministic audit entry point is:
+
+```bash
+python3 scripts/run_v03_release_audit.py --bundle-root /tmp/ail-v03-release-evidence
+```
+
+The audit runner expands to the formatting, whitespace, check, test, clippy,
+interactive manual, examples, roadmap, AgentTool contract, conformance, and
+bootstrap gates that define this file:
+
+```bash
+cargo fmt --check
+git diff --check
+cargo check
+cargo test
+cargo clippy --all-targets -- -D warnings
+python3 scripts/run_ail_interactive_manual.py --all --run-checks
+python3 scripts/run_ail_interactive_manual.py --chapter v03-authoring-gate --run-checks
+cargo run -- ail-agent-contracts examples/agents
+cargo run -- ail-conformance examples/support_ticket.ail --artifact-dir /tmp/ail-v03-release-evidence/artifacts/v03-conformance-support-ticket
+cargo run -- ail-conformance examples/secret_access.ail --artifact-dir /tmp/ail-v03-release-evidence/artifacts/v03-conformance-secret-access
+cargo run -- ail-conformance examples/stateful_counter.ail --artifact-dir /tmp/ail-v03-release-evidence/artifacts/v03-conformance-stateful-counter
+cargo run -- ail-conformance examples/incident_notifications.ail --artifact-dir /tmp/ail-v03-release-evidence/artifacts/v03-conformance-incident-notifications
+cargo run -- ail-bootstrap examples/ail_toolchain_agent.ail --pass examples/compiler_pass.ail --agent examples/ail_toolchain_agent.ail --target linux-x86_64-elf --artifact-dir /tmp/ail-v03-release-evidence/artifacts/v03-bootstrap
+cargo run -- ail-examples examples --artifact-dir /tmp/ail-v03-release-evidence/artifacts/v03-examples --release-evidence
+cargo run -- ail-v03-roadmap examples --artifact-dir /tmp/ail-v03-release-evidence/artifacts/v03-roadmap --release-evidence
+```
+
+The runner writes `release-audit-manifest.txt`,
+`release-audit-manifest.fingerprint.txt`, per-command logs, and all
+artifact-producing command output under the bundle root. The `ail-examples`
+step must emit the 123-entry corpus with 114 accepted and 9 rejected entries,
+plus `examples-report.txt`, `v03-roadmap.txt`,
+`model-executor-manifest.txt`, their fingerprints, and
+`manifest.ail-examples.txt`.
+
+Hosted model evidence remains explicit rather than hidden inside the default
+deterministic audit. After live prompt, User Story mode, and AgentTool policy
+reviewer artifacts have been captured, include their offline review gates:
+
+```bash
+python3 scripts/run_v03_release_audit.py --bundle-root /tmp/ail-v03-release-evidence --include-live \
+  --live-artifact-root /tmp/ail-v03-release-live
+```
+
+With `--include-live`, the runner also requires:
+
+```bash
+python3 scripts/run_v03_prompt_llm_harness.py --review-artifacts /tmp/ail-v03-release-live/prompt-llm
+python3 scripts/run_v03_story_llm_harness.py --review-artifacts /tmp/ail-v03-release-live/story-llm
+python3 scripts/run_v03_agent_policy_live_reviewer_harness.py --review-artifacts /tmp/ail-v03-release-live/agent-policy-live-review
+```
+
+These review commands do not call a model. They accept only already captured
+request, response, model-check, manifest, and reviewer artifacts, then fail if
+the prompt envelope, story artifact, evidence bundle, or reviewer decision
+counts do not match the v0.3 contracts.
+
+## Completion Decision Rule
+
+AIL v0.3 may be called complete only when:
+
+- `scripts/run_v03_release_audit.py` passes from a clean checkout.
+- The release audit bundle preserves manifests, fingerprints, and logs for
+  every artifact-producing command.
+- The `ail-examples` evidence still reports a 123-entry corpus with 114
+  accepted and 9 rejected entries, all stored under `./examples`.
+- The interactive manual `--all --run-checks` path passes without relying on
+  a live endpoint.
+- The v0.3 roadmap is generated from the same examples corpus and every
+  high-count signal is either intentionally deferred in this file or promoted
+  into a checked language, prompt, checker, runtime, target, documentation, or
+  agent-contract capability.
+- Hosted LLM evidence, when claimed for the release, is accepted through the
+  offline `--include-live` review path rather than by trusting a live response
+  directly.
+- No active README, manual chapter, or release gate names stale example counts
+  or claims a category of examples that is not actually stored under
+  `./examples`.
+
+If any item lacks current evidence, the language remains at v0.2 plus
+v0.3-in-progress learning and authoring work.
+
 ## Current v0.3 Signals
 
 Replay now emits `v03-signal-distinct-count` and `v03-signal-count` lines so

@@ -137,10 +137,12 @@ enabled.
 ## Examples
 
 AIL packages live under [examples](examples). The current tree contains 26 package directories,
-plus the 117-entry replay catalog in
-[`examples/examples.md`](examples/examples.md). Each counted catalog entry is
-end-to-end: stored request/response or package source, checked artifact,
-checked AIL-Core, bytecode, VM trace, and binary or target-contract evidence.
+plus the 123-entry replay catalog in
+[`examples/examples.md`](examples/examples.md). Current release replay evidence
+reports `checker-result-count accepted 114` and `checker-result-count rejected 9`.
+Each counted catalog entry is end-to-end: stored request/response or package
+source, checked artifact, checked AIL-Core, bytecode, VM trace, and binary or
+target-contract evidence.
 
 Application and workflow packages:
 

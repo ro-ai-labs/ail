@@ -159,11 +159,13 @@ one of these version surfaces or add a versioned surface through
   versioning, and conformance-link rules
 - `29-first-version-completion-gate.md`: v0.1 completion definition, evidence
   gates, release audit commands, and required release artifacts
-- `30-next-version-completion-gate.md`: v0.2 package and host-boundary
-  portability definition, evidence gates, release audit commands, and required
-  release artifacts
-- `31-v03-learning-and-authoring-gate.md`: v0.3 learning, authoring, and
-  example-usefulness bar that builds on the v0.2 release evidence
+- `30-next-version-completion-gate.md`: v0.2 completed release evidence,
+  package and host-boundary portability definition, evidence gates, release
+  audit commands, and required release artifacts
+- `31-v03-learning-and-authoring-gate.md`: v0.3 release completion, learning,
+  authoring, interactive manual, example-usefulness, and
+  `scripts/run_v03_release_audit.py` audit bar that builds on the v0.2 release
+  evidence
 
 ## Implementation Start
 
@@ -173,5 +175,4 @@ vertical slice is the support-ticket package, followed by agent-tool, systems,
 compiler-pass, conformance, and native Linux ELF workflows.
 Use `29-first-version-completion-gate.md` before claiming AIL v0.1 complete.
 Use `30-next-version-completion-gate.md` before claiming AIL v0.2 complete.
-Use `31-v03-learning-and-authoring-gate.md` to decide how examples should move
-the bar for AIL v0.3.
+Use `31-v03-learning-and-authoring-gate.md` before claiming AIL v0.3 complete.

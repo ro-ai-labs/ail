@@ -1463,6 +1463,109 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
 }
 
 #[test]
+fn docs_define_v03_release_completion_audit() {
+    let docs_index =
+        fs::read_to_string(format!("{}/docs/ail/README.md", env!("CARGO_MANIFEST_DIR"))).unwrap();
+    let v03_gate = fs::read_to_string(format!(
+        "{}/docs/ail/31-v03-learning-and-authoring-gate.md",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .unwrap();
+    let top_readme =
+        fs::read_to_string(format!("{}/README.md", env!("CARGO_MANIFEST_DIR"))).unwrap();
+
+    for required in [
+        "123-entry replay catalog",
+        "checker-result-count accepted 114",
+        "checker-result-count rejected 9",
+    ] {
+        assert!(top_readme.contains(required), "{required}\n{top_readme}");
+    }
+    for required in [
+        "scripts/run_v03_release_audit.py",
+        "AIL v0.3 release completion",
+        "123-entry",
+        "114 accepted",
+        "9 rejected",
+        "python3 scripts/run_ail_interactive_manual.py --all --run-checks",
+        "cargo run -- ail-examples examples --artifact-dir",
+        "cargo run -- ail-v03-roadmap examples --artifact-dir",
+        "cargo run -- ail-agent-contracts examples/agents",
+        "python3 scripts/run_v03_prompt_llm_harness.py --review-artifacts",
+        "python3 scripts/run_v03_story_llm_harness.py --review-artifacts",
+        "python3 scripts/run_v03_agent_policy_live_reviewer_harness.py --review-artifacts",
+    ] {
+        assert!(v03_gate.contains(required), "{required}\n{v03_gate}");
+    }
+    for required in [
+        "30-next-version-completion-gate.md`: v0.2 completed release evidence",
+        "31-v03-learning-and-authoring-gate.md`: v0.3 release completion",
+        "Use `31-v03-learning-and-authoring-gate.md` before claiming AIL v0.3 complete.",
+        "scripts/run_v03_release_audit.py",
+    ] {
+        assert!(docs_index.contains(required), "{required}\n{docs_index}");
+    }
+}
+
+#[test]
+fn script_v03_release_audit_dry_run_lists_completion_gates() {
+    let script = format!(
+        "{}/scripts/run_v03_release_audit.py",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let bundle_root = std::env::temp_dir().join(format!(
+        "ail-v03-release-audit-dry-run-{}",
+        std::process::id()
+    ));
+    let live_root = std::env::temp_dir().join(format!(
+        "ail-v03-release-audit-live-root-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&bundle_root);
+    let output = Command::new("python3")
+        .args([
+            &script,
+            "--bundle-root",
+            bundle_root.to_str().unwrap(),
+            "--dry-run",
+            "--include-live",
+            "--live-artifact-root",
+            live_root.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let manifest = fs::read_to_string(bundle_root.join("release-audit-manifest.txt")).unwrap();
+    for required in [
+        "AIL-v0.3-Release-Audit-Manifest:",
+        "mode dry-run",
+        "step interactive-manual-all command python3 scripts/run_ail_interactive_manual.py --all --run-checks",
+        "step interactive-manual-v03-authoring-gate command python3 scripts/run_ail_interactive_manual.py --chapter v03-authoring-gate --run-checks",
+        "step agent-contracts command cargo run -- ail-agent-contracts examples/agents",
+        "step examples command cargo run -- ail-examples examples --artifact-dir",
+        "step roadmap command cargo run -- ail-v03-roadmap examples --artifact-dir",
+        "step prompt-llm-review command python3 scripts/run_v03_prompt_llm_harness.py --review-artifacts",
+        "step story-llm-review command python3 scripts/run_v03_story_llm_harness.py --review-artifacts",
+        "step agent-policy-live-review command python3 scripts/run_v03_agent_policy_live_reviewer_harness.py --review-artifacts",
+        "artifact-required-file v03-roadmap.txt",
+        "artifact-required-file model-executor-manifest.txt",
+    ] {
+        assert!(manifest.contains(required), "{required}\n{manifest}");
+    }
+    let fingerprint =
+        fs::read_to_string(bundle_root.join("release-audit-manifest.fingerprint.txt")).unwrap();
+    assert_eq!(fingerprint.trim(), fnv64_fingerprint(&manifest));
+    fs::remove_dir_all(bundle_root).unwrap();
+    let _ = fs::remove_dir_all(live_root);
+}
+
+#[test]
 fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
     let script = format!(
         "{}/scripts/run_ail_interactive_manual.py",
