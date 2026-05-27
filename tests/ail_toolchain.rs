@@ -1047,6 +1047,7 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         "manual/07-repair-promotion.md",
         "manual/08-ui-patch-import.md",
         "manual/09-agent-policy-import.md",
+        "manual/10-bootstrap-self-hosting.md",
     ] {
         assert!(
             docs_index.contains(manual_chapter),
@@ -1078,6 +1079,7 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         "repair-promotion",
         "ui-patch-import",
         "agent-policy-import",
+        "bootstrap-self-hosting",
         "v03-authoring-gate",
         "02-examples-release.md",
         "03-prompt-interaction.md",
@@ -1087,6 +1089,7 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         "07-repair-promotion.md",
         "08-ui-patch-import.md",
         "09-agent-policy-import.md",
+        "10-bootstrap-self-hosting.md",
     ] {
         assert!(
             manual_index.contains(required),
@@ -1173,8 +1176,23 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
                 "scripts/run_ail_interactive_manual.py --chapter v03-authoring-gate --run-checks",
                 "run-user-story-mode-checks",
                 "run-agent-entrypoint-checks",
+                "run-bootstrap-self-hosting-checks",
                 "run-ui-patch-import-checks",
                 "run-agent-policy-import-checks",
+            ],
+        ),
+        (
+            "10-bootstrap-self-hosting.md",
+            &[
+                "scripts/run_ail_interactive_manual.py --chapter bootstrap-self-hosting --run-checks",
+                "cargo run -- ail-bootstrap examples/ail_toolchain_agent.ail",
+                "--pass examples/compiler_pass.ail",
+                "bootstrap-fixed-point-report.txt",
+                "fixed-point: ok",
+                "second-pass-changed false",
+                "bootstrap-handoff-report.txt",
+                "manifest.ail-bootstrap.txt",
+                "no-host-backend-source true",
             ],
         ),
         (
@@ -1270,6 +1288,7 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "chapter repair-promotion",
         "chapter ui-patch-import",
         "chapter agent-policy-import",
+        "chapter bootstrap-self-hosting",
         "chapter v03-authoring-gate",
     ] {
         assert!(list_stdout.contains(required), "{required}\n{list_stdout}");
@@ -1415,6 +1434,40 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         );
     }
 
+    let bootstrap_dry_run = Command::new("python3")
+        .args([&script, "--chapter", "bootstrap-self-hosting", "--dry-run"])
+        .output()
+        .unwrap();
+    assert!(
+        bootstrap_dry_run.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&bootstrap_dry_run.stdout),
+        String::from_utf8_lossy(&bootstrap_dry_run.stderr)
+    );
+    let bootstrap_stdout = String::from_utf8_lossy(&bootstrap_dry_run.stdout);
+    for required in [
+        "id bootstrap-self-hosting",
+        "doc docs/ail/manual/10-bootstrap-self-hosting.md",
+        "cargo run -- ail-bootstrap examples/ail_toolchain_agent.ail",
+        "--pass examples/compiler_pass.ail",
+        "--agent examples/ail_toolchain_agent.ail",
+        "--target linux-x86_64-elf",
+        "bootstrap-fixed-point-report.txt",
+        "bootstrap-native-bytecode-report.txt",
+        "bootstrap-host-boundary-report.txt",
+        "bootstrap-dependency-report.txt",
+        "bootstrap-handoff-report.txt",
+        "manifest.ail-bootstrap.txt",
+        "fixed-point: ok",
+        "second-pass-changed false",
+        "no-host-backend-source true",
+    ] {
+        assert!(
+            bootstrap_stdout.contains(required),
+            "{required}\n{bootstrap_stdout}"
+        );
+    }
+
     let repair_promotion_dry_run = Command::new("python3")
         .args([&script, "--chapter", "repair-promotion", "--dry-run"])
         .output()
@@ -1540,12 +1593,19 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "python3 scripts/run_ail_interactive_manual.py --chapter v03-roadmap --run-checks",
         "python3 scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run-checks",
         "python3 scripts/run_ail_interactive_manual.py --chapter agent-entrypoint --run-checks",
+        "python3 scripts/run_ail_interactive_manual.py --chapter bootstrap-self-hosting --run-checks",
         "python3 scripts/run_ail_interactive_manual.py --chapter repair-promotion --run-checks",
         "python3 scripts/run_ail_interactive_manual.py --chapter ui-patch-import --run-checks",
         "python3 scripts/run_ail_interactive_manual.py --chapter agent-policy-import --run-checks",
         "evidence examples-report.txt",
         "evidence v03-roadmap.txt",
         "evidence agent-trace.txt",
+        "evidence bootstrap-fixed-point-report.txt",
+        "evidence fixed-point: ok",
+        "evidence second-pass-changed false",
+        "evidence bootstrap-handoff-report.txt",
+        "evidence manifest.ail-bootstrap.txt",
+        "evidence no-host-backend-source true",
         "evidence repair-promotion-review.txt",
         "evidence repair-promotion-capture-plan.json",
         "evidence repair-promotion-import-demo-report.txt",
@@ -1723,8 +1783,11 @@ fn script_ail_interactive_manual_v03_authoring_gate_run_checks_succeeds() {
         "running run-examples-release-checks",
         "running run-prompt-interaction-checks",
         "running run-agent-entrypoint-checks",
+        "running run-bootstrap-self-hosting-checks",
         "running run-ui-patch-import-checks",
         "running run-agent-policy-import-checks",
+        "ail-bootstrap wrote linux-x86_64-elf bootstrap bundle",
+        "bootstrap-fixed-point-report.txt",
         "running check-ui-patch-runtime-state",
         "AIL-Examples-Report:",
         "AIL-Prompt-Corpus-Portability-Report:",

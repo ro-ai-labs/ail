@@ -115,6 +115,12 @@ Run deterministic agent-entrypoint checks:
 python3 scripts/run_ail_interactive_manual.py --chapter agent-entrypoint --run-checks
 ```
 
+Run deterministic bootstrap self-hosting checks:
+
+```sh
+python3 scripts/run_ail_interactive_manual.py --chapter bootstrap-self-hosting --run-checks
+```
+
 Run deterministic repair-promotion checks:
 
 ```sh
@@ -170,6 +176,10 @@ python3 scripts/run_ail_interactive_manual.py --chapter agent-policy-import --ru
   `04-agent-entrypoint.md`.
 - `v03-roadmap`: direct next-version backlog generated from the examples
   corpus with `ail-v03-roadmap`. Prose: `05-v03-roadmap.md`.
+- `bootstrap-self-hosting`: deterministic bootstrap bundle for the AIL
+  toolchain agent and AIL-Meta compiler pass, with fixed-point,
+  host-boundary, dependency, native handoff, and manifest evidence. Prose:
+  `10-bootstrap-self-hosting.md`.
 - `repair-promotion`: deterministic review of rejected-example repair evidence
   before proposing a repaired artifact for accepted-corpus promotion. Prose:
   `07-repair-promotion.md`.
@@ -184,6 +194,6 @@ python3 scripts/run_ail_interactive_manual.py --chapter agent-policy-import --ru
   `09-agent-policy-import.md`.
 - `v03-authoring-gate`: the deterministic v0.3 audit that runs User Story
   mode, examples replay, roadmap printing, prompt interaction,
-  agent-entrypoint, repair-promotion, UI patch import, and AgentTool policy
-  import checks from one manual chapter.
+  agent-entrypoint, bootstrap self-hosting, repair-promotion, UI patch import,
+  and AgentTool policy import checks from one manual chapter.
   Prose: `06-v03-authoring-gate.md`.

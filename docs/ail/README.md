@@ -118,8 +118,8 @@ one of these version surfaces or add a versioned surface through
 - `manual/05-v03-roadmap.md`: direct `ail-v03-roadmap` backlog view over the
   examples-derived learning signals.
 - `manual/06-v03-authoring-gate.md`: one deterministic audit over User Story
-  mode, examples replay, roadmap, prompt, agent, repair-promotion, UI patch
-  import, and AgentTool policy import checks.
+  mode, examples replay, roadmap, prompt, agent, bootstrap self-hosting,
+  repair-promotion, UI patch import, and AgentTool policy import checks.
 - `manual/07-repair-promotion.md`: deterministic review of rejected-example
   repair evidence before proposing a repaired artifact for accepted-corpus
   promotion.
@@ -131,6 +131,10 @@ one of these version surfaces or add a versioned surface through
   handoff artifacts before importing a human-approved policy trace amendment
   into a replayed corpus copy, writing a role-separated handoff witness, and
   reviewing optional hosted AgentTool reviewer evidence.
+- `manual/10-bootstrap-self-hosting.md`: deterministic bootstrap bundle for
+  the AIL-authored toolchain agent and AIL-Meta compiler pass, including
+  fixed-point, native-bytecode, host-boundary, dependency, handoff, and manifest
+  evidence.
 
 ## Versioned Assets
 

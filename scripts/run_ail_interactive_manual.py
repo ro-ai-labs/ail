@@ -368,6 +368,49 @@ BASE_CHAPTERS: tuple[ManualChapter, ...] = (
         ),
     ),
     ManualChapter(
+        chapter_id="bootstrap-self-hosting",
+        title="Bootstrap Self-Hosting",
+        doc="docs/ail/manual/10-bootstrap-self-hosting.md",
+        purpose=(
+            "Run the AIL-authored toolchain agent and AIL-Meta compiler pass "
+            "through a fixed-point bootstrap bundle."
+        ),
+        commands=(
+            ManualCommand(
+                label="run-bootstrap-self-hosting-bundle",
+                command=(
+                    "cargo",
+                    "run",
+                    "--",
+                    "ail-bootstrap",
+                    "examples/ail_toolchain_agent.ail",
+                    "--pass",
+                    "examples/compiler_pass.ail",
+                    "--agent",
+                    "examples/ail_toolchain_agent.ail",
+                    "--target",
+                    "linux-x86_64-elf",
+                    "--artifact-dir",
+                    "/tmp/ail-manual-bootstrap-self-hosting",
+                ),
+                evidence=(
+                    "bootstrap-fixed-point-report.txt",
+                    "fixed-point: ok",
+                    "second-pass-changed false",
+                    "bootstrap-native-bytecode-report.txt",
+                    "bootstrap-host-boundary-report.txt",
+                    "no-host-backend-source true",
+                    "bootstrap-dependency-report.txt",
+                    "bootstrap-handoff-report.txt",
+                    "handoff-native-role toolchain-agent all-actions ok count 18",
+                    "handoff-native-role compiler-pass all-actions ok count 1",
+                    "handoff-native-role agent all-actions ok count 18",
+                    "manifest.ail-bootstrap.txt",
+                ),
+            ),
+        ),
+    ),
+    ManualChapter(
         chapter_id="repair-promotion",
         title="Repair Promotion Review",
         doc="docs/ail/manual/07-repair-promotion.md",
@@ -829,6 +872,27 @@ V03_AUTHORING_GATE = ManualChapter(
             evidence=(
                 "agent.ailbc.json",
                 "agent-trace.txt",
+            ),
+        ),
+        ManualCommand(
+            label="run-bootstrap-self-hosting-checks",
+            command=(
+                "python3",
+                "scripts/run_ail_interactive_manual.py",
+                "--chapter",
+                "bootstrap-self-hosting",
+                "--run-checks",
+            ),
+            evidence=(
+                "bootstrap-fixed-point-report.txt",
+                "fixed-point: ok",
+                "second-pass-changed false",
+                "bootstrap-native-bytecode-report.txt",
+                "bootstrap-host-boundary-report.txt",
+                "no-host-backend-source true",
+                "bootstrap-dependency-report.txt",
+                "bootstrap-handoff-report.txt",
+                "manifest.ail-bootstrap.txt",
             ),
         ),
         ManualCommand(
