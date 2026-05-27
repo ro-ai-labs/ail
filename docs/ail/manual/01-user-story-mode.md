@@ -301,8 +301,11 @@ That writes:
 The plan records `promotion-decision accepted-for-promotion`,
 `human-approval-required true`, the story review/report/manifest
 fingerprints, model-check fingerprint and model id, transcript check count, and
-prompt-envelope counts. It does not mutate `./examples`; it is the durable
-handoff for a later human-approved batch capture.
+prompt-envelope counts. It also preserves `default-max-tokens`, `max-tokens`,
+`token-budget-default`, and any `token-budget-warning` from the accepted story
+review so a promotion cannot hide truncated hosted generation evidence. It
+does not mutate `./examples`; it is the durable handoff for a later
+human-approved batch capture.
 
 After human approval, run the deterministic import demo against a corpus copy:
 
@@ -322,11 +325,12 @@ That writes:
 /tmp/ail-v03-story-promotion-import-work/story-promotion-import-demo-report.fingerprint.txt
 ```
 
-The report must include `story-artifacts-preserved true` and
-`proposed-accepted true`. The output corpus copy stores the reviewed story
-artifact bundle under `story-artifacts/<entry-id>/`, appends a promoted
-accepted example, and replays it with `--release-evidence`. It still does not
-mutate `./examples`.
+The report must include `story-artifacts-preserved true`,
+`proposed-accepted true`, `default-max-tokens`, `max-tokens`,
+`token-budget-default`, and any `token-budget-warning`. The output corpus copy
+stores the reviewed story artifact bundle under `story-artifacts/<entry-id>/`,
+appends a promoted accepted example, and replays it with `--release-evidence`.
+It still does not mutate `./examples`.
 
 The harness is intentionally outside the default test suite because it depends
 on the hosted llama.cpp server and model behavior. Promote a live run into the

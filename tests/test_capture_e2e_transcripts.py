@@ -142,6 +142,10 @@ def write_prompt_llm_review_fixture(
         "endpoint http://127.0.0.1:8080/v1/chat/completions",
         "models-url http://127.0.0.1:8080/v1/models",
         f"prompt-count {len(REQUIRED_PROMPTS)}",
+        "default-max-tokens 768",
+        "max-tokens 64",
+        "token-budget-default false",
+        "token-budget-warning max-tokens-below-default",
     ]
     manifest_lines = [
         "AIL-Prompt-LLM-Harness-Manifest:",
@@ -268,6 +272,10 @@ def write_story_llm_review_fixture(artifact_dir, omit_agent_trace=False):
         "user-story-id: support-ticket-agent-story\n"
         "semantic-anchor-count: 4\n"
         "llm-endpoint: http://127.0.0.1:8080/v1/chat/completions\n"
+        "default-max-tokens: 4096\n"
+        "max-tokens: 64\n"
+        "token-budget-default: false\n"
+        "token-budget-warning: max-tokens-below-default\n"
         "story-llm-transcript-count: 2\n"
         "story-prompt-envelope-valid-count: 2\n"
         "story-prompt-envelope-invalid-count: 0\n"
@@ -510,6 +518,10 @@ def write_agent_policy_live_reviewer_fixture(
         f"role-count {len(AGENT_POLICY_LIVE_ROLES)}",
         "source-entry-id example-40",
         "proposed-entry-id example-40-policy",
+        "default-max-tokens 768",
+        "max-tokens 64",
+        "token-budget-default false",
+        "token-budget-warning max-tokens-below-default",
     ]
     manifest_lines = [
         "AIL-Agent-Policy-Live-Reviewer-Harness-Manifest:",
@@ -1688,6 +1700,12 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             self.assertIn("story-prompt-envelope-artifact-count 2", plan.stdout)
             self.assertIn("story-prompt-envelope-questions-count 0", plan.stdout)
             self.assertIn("story-model-check-model-id test-story-model", plan.stdout)
+            self.assertIn("default-max-tokens 4096", plan.stdout)
+            self.assertIn("max-tokens 64", plan.stdout)
+            self.assertIn("token-budget-default false", plan.stdout)
+            self.assertIn(
+                "token-budget-warning max-tokens-below-default", plan.stdout
+            )
             self.assertIn("plan-json story-promotion-capture-plan.json", plan.stdout)
 
             plan_json_path = plan_dir / "story-promotion-capture-plan.json"
@@ -1708,6 +1726,12 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             self.assertEqual(plan_payload["story_prompt_envelope_artifact_count"], 2)
             self.assertEqual(plan_payload["story_prompt_envelope_questions_count"], 0)
             self.assertEqual(plan_payload["story_model_check_model_id"], "test-story-model")
+            self.assertEqual(plan_payload["default_max_tokens"], 4096)
+            self.assertEqual(plan_payload["max_tokens"], 64)
+            self.assertFalse(plan_payload["token_budget_default"])
+            self.assertEqual(
+                plan_payload["token_budget_warning"], "max-tokens-below-default"
+            )
             self.assertEqual(
                 plan_payload["story_model_check_fingerprint"],
                 fnv64((artifact_dir / "model-check.json").read_text()),
@@ -2773,6 +2797,10 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             self.assertIn("source-preserved true", report)
             self.assertIn("proposed-accepted true", report)
             self.assertIn("story-artifacts-preserved true", report)
+            self.assertIn("default-max-tokens 4096", report)
+            self.assertIn("max-tokens 64", report)
+            self.assertIn("token-budget-default false", report)
+            self.assertIn("token-budget-warning max-tokens-below-default", report)
             self.assertIn("entry-count 123", report)
             self.assertIn("checker-result-count accepted 114", report)
             self.assertIn("checker-result-count rejected 9", report)

@@ -12,6 +12,7 @@ from pathlib import Path
 BATCH_CAPTURE_SCRIPT = "scripts/capture_example_batch.py"
 STORY_REVIEW_REPORT = "story-llm-harness-report.txt"
 STORY_REVIEW_FINGERPRINT = "story-llm-harness-report.fingerprint.txt"
+DEFAULT_STORY_MAX_TOKENS = "4096"
 
 
 def fnv64(text: str) -> str:
@@ -97,6 +98,28 @@ def validate_story_artifacts(
     require_value(
         review_values, "story-prompt-envelope-invalid-count", "0", "story review", errors
     )
+    require_value(
+        review_values,
+        "default-max-tokens",
+        DEFAULT_STORY_MAX_TOKENS,
+        "story review",
+        errors,
+    )
+    max_tokens = review_values.get("max-tokens", "")
+    if not max_tokens:
+        errors.append("story review missing max-tokens")
+    elif not max_tokens.isdigit():
+        errors.append(f"story review max-tokens must be numeric, got {max_tokens}")
+    token_budget_default = review_values.get("token-budget-default", "")
+    if token_budget_default not in {"true", "false"}:
+        errors.append(
+            "story review token-budget-default expected true or false, "
+            f"got {token_budget_default or '<missing>'}"
+        )
+    elif token_budget_default == "false" and not review_values.get(
+        "token-budget-warning"
+    ):
+        errors.append("story review missing token-budget-warning")
 
     report_path = story_artifacts / "story-mode-report.txt"
     report_text = read_text(report_path, errors)
@@ -200,6 +223,10 @@ def build_plan(
         "story_llm_transcript_check_count": int(
             review_values["story-llm-transcript-check-count"]
         ),
+        "default_max_tokens": int(review_values["default-max-tokens"]),
+        "max_tokens": int(review_values["max-tokens"]),
+        "token_budget_default": review_values["token-budget-default"] == "true",
+        "token_budget_warning": review_values.get("token-budget-warning", ""),
         "story_manifest_fingerprint": story_manifest_fingerprint,
         "story_model_check_fingerprint": model_check_fingerprint,
         "story_model_check_model_id": review_values["model-check-model-id"],
@@ -243,6 +270,10 @@ def render_plan_text(plan: dict[str, object]) -> str:
             f"story-model-check-model-id {plan['story_model_check_model_id']}",
             "story-llm-transcript-check-count "
             f"{plan['story_llm_transcript_check_count']}",
+            f"default-max-tokens {plan['default_max_tokens']}",
+            f"max-tokens {plan['max_tokens']}",
+            f"token-budget-default {str(plan['token_budget_default']).lower()}",
+            f"token-budget-warning {plan['token_budget_warning']}",
             "story-prompt-envelope-valid-count "
             f"{plan['story_prompt_envelope_valid_count']}",
             "story-prompt-envelope-artifact-count "

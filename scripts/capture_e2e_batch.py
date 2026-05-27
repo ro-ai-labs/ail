@@ -316,12 +316,22 @@ def load_story_promotion_capture_plan(
         ("story_llm_transcript_check_count", 6),
         ("story_prompt_envelope_valid_count", 2),
         ("story_prompt_envelope_invalid_count", 0),
+        ("default_max_tokens", 4096),
     ]:
         actual = plan_int(plan, field)
         if actual != expected:
             raise SystemExit(
                 f"story promotion capture plan {field} expected {expected}, got {actual}"
             )
+    max_tokens = plan_int(plan, "max_tokens")
+    if max_tokens <= 0:
+        raise SystemExit("story promotion capture plan max_tokens must be positive")
+    token_budget_default = plan_bool(plan, "token_budget_default")
+    token_budget_warning = plan.get("token_budget_warning")
+    if not isinstance(token_budget_warning, str):
+        raise SystemExit("story promotion capture plan has invalid token_budget_warning")
+    if not token_budget_default and not token_budget_warning:
+        raise SystemExit("story promotion capture plan requires token_budget_warning")
 
     artifact_dir = Path(plan_string(plan, "story_artifact_dir"))
     if not artifact_dir.is_dir():
@@ -368,6 +378,14 @@ def load_story_promotion_capture_plan(
     story_id = plan_string(plan, "story_id")
     if report_fields.get("user-story-id") != story_id:
         raise SystemExit("story promotion report story id does not match capture plan")
+    if report_fields.get("default-max-tokens") != str(plan_int(plan, "default_max_tokens")):
+        raise SystemExit("story promotion report default-max-tokens does not match capture plan")
+    if report_fields.get("max-tokens") != str(max_tokens):
+        raise SystemExit("story promotion report max-tokens does not match capture plan")
+    if report_fields.get("token-budget-default") != str(token_budget_default).lower():
+        raise SystemExit("story promotion report token-budget-default does not match capture plan")
+    if token_budget_warning and report_fields.get("token-budget-warning") != token_budget_warning:
+        raise SystemExit("story promotion report token-budget-warning does not match capture plan")
     if normalized_story_fields.get("user-story-id") != story_id:
         raise SystemExit("story promotion normalized story id does not match capture plan")
     return plan

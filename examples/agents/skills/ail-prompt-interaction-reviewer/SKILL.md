@@ -111,6 +111,10 @@ The review report must include:
 - `story-promotion-import-demo-report.fingerprint.txt`
 - `story-artifacts-preserved true`
 - `proposed-accepted true`
+- `default-max-tokens`
+- `max-tokens`
+- `token-budget-default`
+- `token-budget-warning` when present in the accepted story review
 - `examples-report.txt`
 - `v03-roadmap.txt`
 - `repair-promotion-review.txt`

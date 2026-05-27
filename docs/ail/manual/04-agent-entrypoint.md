@@ -48,8 +48,10 @@ handoff amendment remains proposal-only until the reviewed corpus copy replays.
 For User Story mode promotion, the prompt reviewer contract must also require
 `story-promotion-import-demo-report.txt`,
 `story-promotion-import-demo-report.fingerprint.txt`,
-`story-artifacts-preserved true`, and `proposed-accepted true`. This keeps
-reviewed story-mode output as corpus-copy evidence until a human-approved
+`story-artifacts-preserved true`, `proposed-accepted true`,
+`default-max-tokens`, `max-tokens`, `token-budget-default`, and any
+`token-budget-warning`. This keeps reviewed story-mode output and its visible
+hosted generation budget as corpus-copy evidence until a human-approved
 promotion imports the full story artifact bundle and proves the proposed
 accepted entry replays.
 

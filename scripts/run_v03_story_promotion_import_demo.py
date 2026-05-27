@@ -50,6 +50,20 @@ def plan_string(plan: dict[str, object], field: str) -> str:
     return value
 
 
+def plan_int(plan: dict[str, object], field: str) -> int:
+    value = plan.get(field)
+    if not isinstance(value, int):
+        raise SystemExit(f"capture plan has invalid {field}")
+    return value
+
+
+def plan_bool(plan: dict[str, object], field: str) -> bool:
+    value = plan.get(field)
+    if not isinstance(value, bool):
+        raise SystemExit(f"capture plan has invalid {field}")
+    return value
+
+
 def run_command(command: list[str]) -> None:
     subprocess.run(command, cwd=ROOT, check=True)
 
@@ -131,6 +145,12 @@ def main(argv: list[str]) -> int:
     plan, plan_fingerprint = read_plan(args.capture_plan_dir)
     story_id = plan_string(plan, "story_id")
     story_artifact_dir = Path(plan_string(plan, "story_artifact_dir"))
+    default_max_tokens = plan_int(plan, "default_max_tokens")
+    max_tokens = plan_int(plan, "max_tokens")
+    token_budget_default = plan_bool(plan, "token_budget_default")
+    token_budget_warning = plan.get("token_budget_warning")
+    if not isinstance(token_budget_warning, str):
+        raise SystemExit("capture plan has invalid token_budget_warning")
     if story_artifact_dir.resolve() != args.story_artifacts.resolve():
         raise SystemExit(
             f"capture plan story_artifact_dir {story_artifact_dir} does not match {args.story_artifacts}"
@@ -218,6 +238,10 @@ def main(argv: list[str]) -> int:
         f"source-preserved {str(source_preserved).lower()}",
         f"proposed-accepted {str(proposed_accepted).lower()}",
         f"story-artifacts-preserved {str(story_artifacts_preserved).lower()}",
+        f"default-max-tokens {default_max_tokens}",
+        f"max-tokens {max_tokens}",
+        f"token-budget-default {str(token_budget_default).lower()}",
+        f"token-budget-warning {token_budget_warning}",
         "entry-count 123",
         "checker-result-count accepted 114",
         "checker-result-count rejected 9",
