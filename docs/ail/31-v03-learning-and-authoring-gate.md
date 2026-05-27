@@ -241,6 +241,8 @@ The `ail-examples` replay bundle must also write deterministic story artifacts:
 - `examples/<entry-id>/agent-policy-review.fingerprint.txt` for accepted AgentTool entries
 - `examples/<entry-id>/dependency-review.txt` for accepted package-import entries
 - `examples/<entry-id>/dependency-review.fingerprint.txt` for accepted package-import entries
+- `examples/<entry-id>/stdlib-walkthrough.txt` for accepted stdlib-generic entries
+- `examples/<entry-id>/stdlib-walkthrough.fingerprint.txt` for accepted stdlib-generic entries
 - `examples/<entry-id>/repair-tutorial.txt` for rejected entries
 - `examples/<entry-id>/repair-tutorial.fingerprint.txt` for rejected entries
 - `examples/<entry-id>/repair-candidate.ail-spec.md` for rejected entries
@@ -339,6 +341,13 @@ fingerprints. The report must summarize these files with
 import alias, imported type owner, capability grant, story anchors, runtime
 evidence, and replay fingerprints. The report must summarize these files with
 `dependency-review-fingerprint-*` lines and list each review in
+`manifest.ail-examples.txt`. Accepted stdlib-generic entries must emit
+`stdlib-walkthrough.txt`, which records the generic collection package,
+imported `Core` alias, `Option<T>`, `Result<T,E>`, `List<T>`, `Map<K,V>`,
+`Set<T>`, `Option.map` behavior, accepted and rejected fixtures, story
+anchors, runtime evidence, and replay fingerprints. The report must summarize
+these files with `stdlib-walkthrough-fingerprint-*` lines and list each
+walkthrough in
 `manifest.ail-examples.txt`. A reviewed AgentTool policy handoff can then be
 captured with `scripts/run_v03_agent_policy_capture_plan.py` and imported with
 `scripts/run_v03_agent_policy_import_demo.py`; that demo must preserve the
@@ -503,6 +512,13 @@ as prose. The current examples reveal these next-version gaps:
   into reviewer-facing evidence. The next bar is package-local rejected
   fixtures and story diffs for user requests that change either the local spec
   or the imported shared package.
+- Standard-library generic examples now emit deterministic
+  `stdlib-walkthrough.txt` and fingerprint artifacts for `example-0` through
+  `example-9`, tying `Option<T>`, `Result<T,E>`, `List<T>`, `Map<K,V>`,
+  `Set<T>`, `Option.map`, accepted and rejected fixtures, story anchors, and
+  replay fingerprints into reviewer-facing evidence. The next bar is broader
+  map/filter/fold coverage and story diffs for user requests that change
+  collection behavior while preserving typed variant structure.
 - Prompt matrices need explicit separation between semantic use-case diversity
   and prompt-surface coverage.
 - Application examples now have deterministic User Story mode evidence that

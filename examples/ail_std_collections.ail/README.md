@@ -46,7 +46,9 @@ Useful artifacts include:
 - `examples/example-0/checked.ail-core.txt`
 - `examples/example-0/artifact.ailbc.json`
 - `examples/example-0/user-story.txt`
+- `examples/example-0/stdlib-walkthrough.txt`
 - `examples/example-9/checked.ail-core.txt`
+- `examples/example-9/stdlib-walkthrough.txt`
 
 For focused conformance:
 
@@ -72,6 +74,9 @@ generic values into declared read/write and network effects.
 ## v0.3 Learning Signal
 
 AIL Standard Collections is replay-rich but still too narrow. v0.3 should add
-map/filter/fold examples, stronger semantic anchors for generic names, and
-story amendments that change collection behavior while preserving typed
-variant structure.
+map/filter/fold examples and story amendments that change collection behavior
+while preserving typed variant structure. The current release evidence now
+emits `stdlib-walkthrough.txt` and fingerprint artifacts for `example-0`
+through `example-9`, so reviewers can audit the generic type declarations,
+`Option.map` behavior, accepted/rejected fixtures, story anchors, and replay
+fingerprints before that next expansion.

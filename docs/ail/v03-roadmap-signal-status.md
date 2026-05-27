@@ -29,9 +29,9 @@ rationale: Runtime Generic examples now emit deterministic type-inference review
 evidence: cargo run -- ail-examples examples --release-evidence
 
 signal: Generics need reusable conformance fixtures and teachable stdlib walkthroughs.
-status: deferred
-rationale: Standard-library package and Option.map fixtures exist, but more reusable generic conformance walkthroughs remain an intentional v0.3 learning task.
-evidence: docs/ail/31-v03-learning-and-authoring-gate.md
+status: promoted
+rationale: Standard Collections examples now emit deterministic stdlib walkthrough artifacts for example-0 through example-9, tying generic type declarations, Option.map behavior, accepted and rejected fixtures, story anchors, and replay fingerprints into reviewer-facing evidence.
+evidence: cargo run -- ail-examples examples --release-evidence
 
 signal: Interop needs deeper unsafe-boundary tutorials and more ABI fixture diversity.
 status: deferred

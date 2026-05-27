@@ -503,6 +503,7 @@ struct AilE2eCorpusEvaluation {
     type_inference_review_text: Option<String>,
     state_boundary_review_text: Option<String>,
     dependency_review_text: Option<String>,
+    stdlib_walkthrough_text: Option<String>,
     diagnostics_text: Option<String>,
     repair_tutorial_text: Option<String>,
     repair_proof: Option<AilE2eRepairProofArtifacts>,
@@ -2855,6 +2856,7 @@ fn evaluate_rejected_ail_e2e_corpus_entry(
         type_inference_review_text: None,
         state_boundary_review_text: None,
         dependency_review_text: None,
+        stdlib_walkthrough_text: None,
         diagnostics_text: Some(diagnostics_text),
         repair_tutorial_text: Some(repair_tutorial_text),
         repair_proof: Some(repair_proof),
@@ -3354,6 +3356,7 @@ fn evaluate_ail_e2e_corpus_entry(
             type_inference_review_text: None,
             state_boundary_review_text: None,
             dependency_review_text: None,
+            stdlib_walkthrough_text: None,
             diagnostics_text: None,
             repair_tutorial_text: None,
             repair_proof: None,
@@ -3498,6 +3501,14 @@ fn evaluate_ail_e2e_corpus_entry(
         vm_trace_text.as_deref(),
         target_report_text.as_deref(),
     );
+    let stdlib_walkthrough_text = render_ail_e2e_stdlib_walkthrough_text(
+        entry,
+        &semantic_anchors,
+        Some(&checked_core_text),
+        Some(&bytecode_text),
+        vm_trace_text.as_deref(),
+        target_report_text.as_deref(),
+    );
     Ok(AilE2eCorpusEvaluation {
         entry: entry.clone(),
         semantic_anchors,
@@ -3515,6 +3526,7 @@ fn evaluate_ail_e2e_corpus_entry(
         type_inference_review_text,
         state_boundary_review_text,
         dependency_review_text,
+        stdlib_walkthrough_text,
         diagnostics_text: None,
         repair_tutorial_text: None,
         repair_proof: None,
@@ -3779,6 +3791,17 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
                 .map(|text| ail_artifact_fingerprint(text))
         },
     );
+    push_ail_e2e_fingerprint_reuse_lines(
+        &mut lines,
+        "stdlib-walkthrough",
+        evaluations,
+        |evaluation| {
+            evaluation
+                .stdlib_walkthrough_text
+                .as_ref()
+                .map(|text| ail_artifact_fingerprint(text))
+        },
+    );
     push_ail_e2e_fingerprint_reuse_lines(&mut lines, "diagnostics", evaluations, |evaluation| {
         evaluation
             .diagnostics_text
@@ -4011,6 +4034,14 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
                 entry.id,
                 entry.id,
                 ail_artifact_fingerprint(dependency_review_text)
+            ));
+        }
+        if let Some(stdlib_walkthrough_text) = &evaluation.stdlib_walkthrough_text {
+            lines.push(format!(
+                "entry-artifact {} stdlib-walkthrough examples/{}/stdlib-walkthrough.txt {}",
+                entry.id,
+                entry.id,
+                ail_artifact_fingerprint(stdlib_walkthrough_text)
             ));
         }
         if let Some(diagnostics_text) = &evaluation.diagnostics_text {
@@ -4271,6 +4302,14 @@ fn push_ail_e2e_entry_artifact_lines(
             entry.id,
             entry.id,
             ail_artifact_fingerprint(dependency_review_text)
+        ));
+    }
+    if let Some(stdlib_walkthrough_text) = &evaluation.stdlib_walkthrough_text {
+        lines.push(format!(
+            "{prefix} {} stdlib-walkthrough examples/{}/stdlib-walkthrough.txt {}",
+            entry.id,
+            entry.id,
+            ail_artifact_fingerprint(stdlib_walkthrough_text)
         ));
     }
     if let Some(diagnostics_text) = &evaluation.diagnostics_text {
@@ -4927,6 +4966,102 @@ fn render_ail_e2e_dependency_review_text(
     }
     lines.push(
         "dependency-review-summary Support Composed evidence keeps package identity, Shared alias ownership, imported type use, capability grant, story anchors, and replay fingerprints visible for reviewer audit."
+            .to_string(),
+    );
+    Some(format!("{}\n", lines.join("\n")))
+}
+
+fn render_ail_e2e_stdlib_walkthrough_text(
+    entry: &AilE2eCorpusEntry,
+    semantic_anchors: &[String],
+    checked_core_text: Option<&str>,
+    bytecode_text: Option<&str>,
+    vm_trace_text: Option<&str>,
+    target_report_text: Option<&str>,
+) -> Option<String> {
+    let field = |key: &str| entry.fields.get(key).map(String::as_str).unwrap_or("");
+    let generics_signal =
+        "Generics need reusable conformance fixtures and teachable stdlib walkthroughs.";
+    let is_stdlib_generics_entry = field("capability-under-test") == "stdlib-generics"
+        || field("package").ends_with("ail_std_collections.ail")
+        || field("v0.3-signal") == generics_signal;
+    if !is_stdlib_generics_entry {
+        return None;
+    }
+    let runtime_evidence = if target_report_text.is_some() {
+        "target-report"
+    } else if vm_trace_text.is_some() {
+        "vm-trace"
+    } else if bytecode_text.is_some() {
+        "bytecode"
+    } else {
+        "checked-core"
+    };
+    let mut lines = vec![
+        "AIL-Stdlib-Walkthrough:".to_string(),
+        format!("entry {}", entry.id),
+        format!("semantic-task {}", field("semantic-task")),
+        format!("package {}", field("package")),
+        format!("profile {}", field("profile")),
+        format!("program-domain {}", field("program-domain")),
+        format!("capability-under-test {}", field("capability-under-test")),
+        "stdlib-walkthrough-artifact deterministic-text".to_string(),
+        "stdlib-surface generic-collections".to_string(),
+        "stdlib-package ail.std.collections".to_string(),
+        "imported-package ail.std.core".to_string(),
+        "import-alias Core".to_string(),
+        "generic-type Option<T>".to_string(),
+        "generic-type Result<T,E>".to_string(),
+        "generic-type List<T>".to_string(),
+        "generic-type Map<K,V>".to_string(),
+        "generic-type Set<T>".to_string(),
+        "generic-function Option.map".to_string(),
+        "variant Some(value: T)".to_string(),
+        "variant None".to_string(),
+        "variant Success(value: T)".to_string(),
+        "variant Failure(error: E)".to_string(),
+        "some-behavior Option.map returns Some(mapped value)".to_string(),
+        "none-behavior Option.map returns None".to_string(),
+        "trace-event OptionMapEvaluated".to_string(),
+        "accepted-fixture examples/accepted/option-map-minimal.ail-spec.md".to_string(),
+        "rejected-fixture examples/rejected/invalid-generic-variant-payload.ail-spec.md"
+            .to_string(),
+        "story-anchor Option<T>".to_string(),
+        "story-anchor Result<T,E>".to_string(),
+        "story-anchor Map<K,V>".to_string(),
+        "story-anchor Option.map".to_string(),
+        "story-anchor OptionMapEvaluated".to_string(),
+        format!("runtime-evidence {runtime_evidence}"),
+    ];
+    for anchor in semantic_anchors {
+        lines.push(format!("source-story-anchor {anchor}"));
+    }
+    if let Some(checked_core_text) = checked_core_text {
+        lines.push(format!(
+            "checked-core-fingerprint {}",
+            ail_artifact_fingerprint(checked_core_text)
+        ));
+    }
+    if let Some(bytecode_text) = bytecode_text {
+        lines.push(format!(
+            "bytecode-fingerprint {}",
+            ail_artifact_fingerprint(bytecode_text)
+        ));
+    }
+    if let Some(vm_trace_text) = vm_trace_text {
+        lines.push(format!(
+            "vm-trace-fingerprint {}",
+            ail_artifact_fingerprint(vm_trace_text)
+        ));
+    }
+    if let Some(target_report_text) = target_report_text {
+        lines.push(format!(
+            "target-report-fingerprint {}",
+            ail_artifact_fingerprint(target_report_text)
+        ));
+    }
+    lines.push(
+        "stdlib-walkthrough-summary Standard Collections evidence explains generic types, variants, Option.map behavior, accepted and rejected fixtures, story anchors, and replay fingerprints for reviewer audit."
             .to_string(),
     );
     Some(format!("{}\n", lines.join("\n")))
@@ -6006,6 +6141,24 @@ fn write_ail_e2e_corpus_artifacts(
             )
             .map_err(|error| {
                 format!("failed to write examples dependency review fingerprint: {error}")
+            })?;
+        }
+        if let Some(stdlib_walkthrough_text) = &evaluation.stdlib_walkthrough_text {
+            let entry_dir = root.join("examples").join(&evaluation.entry.id);
+            fs::create_dir_all(&entry_dir).map_err(|error| {
+                format!("failed to create examples entry artifact dir: {error}")
+            })?;
+            fs::write(
+                entry_dir.join("stdlib-walkthrough.txt"),
+                stdlib_walkthrough_text,
+            )
+            .map_err(|error| format!("failed to write examples stdlib walkthrough: {error}"))?;
+            fs::write(
+                entry_dir.join("stdlib-walkthrough.fingerprint.txt"),
+                format!("{}\n", ail_artifact_fingerprint(stdlib_walkthrough_text)),
+            )
+            .map_err(|error| {
+                format!("failed to write examples stdlib walkthrough fingerprint: {error}")
             })?;
         }
         if let Some(diagnostics_text) = &evaluation.diagnostics_text {

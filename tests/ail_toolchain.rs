@@ -1763,7 +1763,9 @@ fn script_v03_signal_status_audit_marks_agent_policy_import_promoted() {
         "signal-status-evidence State examples need clearer persistence and concurrency boundaries. cargo run -- ail-examples examples --release-evidence",
         "signal-status Package graphs need clearer authoring guidance and dependency review views. count 10 status promoted",
         "signal-status-evidence Package graphs need clearer authoring guidance and dependency review views. cargo run -- ail-examples examples --release-evidence",
-        "promoted-count 5",
+        "signal-status Generics need reusable conformance fixtures and teachable stdlib walkthroughs. count 10 status promoted",
+        "signal-status-evidence Generics need reusable conformance fixtures and teachable stdlib walkthroughs. cargo run -- ail-examples examples --release-evidence",
+        "promoted-count 6",
         "missing-status-count 0",
         "audit-result accepted",
     ] {
@@ -28969,6 +28971,14 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
+        report.contains("stdlib-walkthrough-fingerprint-observed-count 10"),
+        "{report}"
+    );
+    assert!(
+        report.contains("stdlib-walkthrough-fingerprint-duplicate-entry-count 0"),
+        "{report}"
+    );
+    assert!(
         report.contains(
             "v03-signal-count UI authoring needs human-approved visual patch import workflows after deterministic UI patch plans are replayed. 4"
         ),
@@ -29267,6 +29277,63 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         report.contains(&format!(
             "entry-artifact example-10 dependency-review examples/example-10/dependency-review.txt {}",
             dependency_review_10_fingerprint.trim()
+        )),
+        "{report}"
+    );
+    let stdlib_walkthrough_0 =
+        fs::read_to_string(artifact_dir.join("examples/example-0/stdlib-walkthrough.txt")).unwrap();
+    assert!(
+        stdlib_walkthrough_0.contains("AIL-Stdlib-Walkthrough:")
+            && stdlib_walkthrough_0.contains("entry example-0")
+            && stdlib_walkthrough_0
+                .contains("semantic-task stdlib-collections-live-codex-interview-0")
+            && stdlib_walkthrough_0.contains("package examples/ail_std_collections.ail")
+            && stdlib_walkthrough_0.contains("profile Application")
+            && stdlib_walkthrough_0.contains("program-domain package-graph")
+            && stdlib_walkthrough_0.contains("capability-under-test stdlib-generics")
+            && stdlib_walkthrough_0.contains("stdlib-walkthrough-artifact deterministic-text")
+            && stdlib_walkthrough_0.contains("stdlib-surface generic-collections")
+            && stdlib_walkthrough_0.contains("stdlib-package ail.std.collections")
+            && stdlib_walkthrough_0.contains("imported-package ail.std.core")
+            && stdlib_walkthrough_0.contains("import-alias Core")
+            && stdlib_walkthrough_0.contains("generic-type Option<T>")
+            && stdlib_walkthrough_0.contains("generic-type Result<T,E>")
+            && stdlib_walkthrough_0.contains("generic-type List<T>")
+            && stdlib_walkthrough_0.contains("generic-type Map<K,V>")
+            && stdlib_walkthrough_0.contains("generic-type Set<T>")
+            && stdlib_walkthrough_0.contains("generic-function Option.map")
+            && stdlib_walkthrough_0.contains("variant Some(value: T)")
+            && stdlib_walkthrough_0.contains("variant None")
+            && stdlib_walkthrough_0.contains("none-behavior Option.map returns None")
+            && stdlib_walkthrough_0.contains("trace-event OptionMapEvaluated")
+            && stdlib_walkthrough_0
+                .contains("accepted-fixture examples/accepted/option-map-minimal.ail-spec.md")
+            && stdlib_walkthrough_0.contains(
+                "rejected-fixture examples/rejected/invalid-generic-variant-payload.ail-spec.md"
+            )
+            && stdlib_walkthrough_0.contains("story-anchor Option<T>")
+            && stdlib_walkthrough_0.contains("story-anchor Result<T,E>")
+            && stdlib_walkthrough_0.contains("story-anchor Map<K,V>")
+            && stdlib_walkthrough_0.contains("story-anchor Option.map")
+            && stdlib_walkthrough_0.contains("story-anchor OptionMapEvaluated")
+            && stdlib_walkthrough_0.contains("runtime-evidence bytecode")
+            && stdlib_walkthrough_0.contains("checked-core-fingerprint ")
+            && stdlib_walkthrough_0.contains("bytecode-fingerprint ")
+            && stdlib_walkthrough_0.contains("stdlib-walkthrough-summary "),
+        "{stdlib_walkthrough_0}"
+    );
+    let stdlib_walkthrough_0_fingerprint = fs::read_to_string(
+        artifact_dir.join("examples/example-0/stdlib-walkthrough.fingerprint.txt"),
+    )
+    .unwrap();
+    assert_eq!(
+        stdlib_walkthrough_0_fingerprint.trim(),
+        fnv64_fingerprint(&stdlib_walkthrough_0)
+    );
+    assert!(
+        report.contains(&format!(
+            "entry-artifact example-0 stdlib-walkthrough examples/example-0/stdlib-walkthrough.txt {}",
+            stdlib_walkthrough_0_fingerprint.trim()
         )),
         "{report}"
     );
@@ -29718,6 +29785,13 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         manifest.contains(&format!(
             "entry-artifact example-10 dependency-review examples/example-10/dependency-review.txt {}",
             dependency_review_10_fingerprint.trim()
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "entry-artifact example-0 stdlib-walkthrough examples/example-0/stdlib-walkthrough.txt {}",
+            stdlib_walkthrough_0_fingerprint.trim()
         )),
         "{manifest}"
     );
