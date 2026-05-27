@@ -211,6 +211,8 @@ def review_artifacts(artifact_dir: str) -> int:
     transcript_checks = 0
     transcript_valid_count = 0
     transcript_invalid_count = 0
+    transcript_artifact_count = 0
+    transcript_questions_count = 0
 
     for path, fingerprint_path in [
         (artifact_root / "story.source.md", artifact_root / "story.source.fingerprint.txt"),
@@ -288,8 +290,15 @@ def review_artifacts(artifact_dir: str) -> int:
                 except json.JSONDecodeError as error:
                     errors.append(f"invalid json llm/{label}: {error}")
         content_kind, content_error = classify_prompt_content(content, expected_kind)
-        if content_kind in {"prompt-envelope-artifact", "prompt-envelope-questions"}:
+        if content_kind == "prompt-envelope-artifact":
             transcript_valid_count += 1
+            transcript_artifact_count += 1
+        elif content_kind == "prompt-envelope-questions":
+            transcript_valid_count += 1
+            transcript_questions_count += 1
+            errors.append(
+                f"story prompt envelope {stem} must contain artifact_text for promotion"
+            )
         else:
             transcript_invalid_count += 1
             errors.append(f"invalid story prompt envelope {stem}: {content_error}")
@@ -350,6 +359,8 @@ def review_artifacts(artifact_dir: str) -> int:
         f"fingerprint-check-count {fingerprint_checks}",
         f"story-llm-transcript-check-count {transcript_checks}",
         f"story-prompt-envelope-valid-count {transcript_valid_count}",
+        f"story-prompt-envelope-artifact-count {transcript_artifact_count}",
+        f"story-prompt-envelope-questions-count {transcript_questions_count}",
         f"story-prompt-envelope-invalid-count {transcript_invalid_count}",
         f"agent-trace {'present' if agent_trace else 'missing'}",
     ]

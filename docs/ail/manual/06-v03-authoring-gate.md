@@ -76,6 +76,8 @@ story-llm-harness-report.txt
 story-llm-harness-report.fingerprint.txt
 story-llm-transcript-check-count
 story-prompt-envelope-valid-count
+story-prompt-envelope-artifact-count
+story-prompt-envelope-questions-count
 story-prompt-envelope-invalid-count
 story-promotion-capture-plan.json
 story-promotion-capture-plan.txt

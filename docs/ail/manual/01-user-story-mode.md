@@ -220,6 +220,11 @@ That review writes:
 The review also rejects the bundle if `agent-trace.fingerprint.txt` is
 missing or does not match `agent-trace.txt`; this keeps promotion import from
 accepting a trace that cannot be independently checked.
+It also rejects question-only `llm/requirements.content.txt` or
+`llm/spec.content.txt` envelopes during promotion review. Promotion evidence
+must contain generated `artifact_text` for both the requirements and spec
+stages, reported as `story-prompt-envelope-artifact-count 2` and
+`story-prompt-envelope-questions-count 0`.
 
 After the review is accepted, create a plan-only promotion capture artifact:
 

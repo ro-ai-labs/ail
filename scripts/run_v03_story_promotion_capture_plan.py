@@ -88,6 +88,12 @@ def validate_story_artifacts(
         review_values, "story-prompt-envelope-valid-count", "2", "story review", errors
     )
     require_value(
+        review_values, "story-prompt-envelope-artifact-count", "2", "story review", errors
+    )
+    require_value(
+        review_values, "story-prompt-envelope-questions-count", "0", "story review", errors
+    )
+    require_value(
         review_values, "story-prompt-envelope-invalid-count", "0", "story review", errors
     )
 
@@ -191,6 +197,12 @@ def build_plan(
         "story_prompt_envelope_invalid_count": int(
             review_values["story-prompt-envelope-invalid-count"]
         ),
+        "story_prompt_envelope_artifact_count": int(
+            review_values["story-prompt-envelope-artifact-count"]
+        ),
+        "story_prompt_envelope_questions_count": int(
+            review_values["story-prompt-envelope-questions-count"]
+        ),
         "story_prompt_envelope_valid_count": int(
             review_values["story-prompt-envelope-valid-count"]
         ),
@@ -220,6 +232,10 @@ def render_plan_text(plan: dict[str, object]) -> str:
             f"{plan['story_llm_transcript_check_count']}",
             "story-prompt-envelope-valid-count "
             f"{plan['story_prompt_envelope_valid_count']}",
+            "story-prompt-envelope-artifact-count "
+            f"{plan['story_prompt_envelope_artifact_count']}",
+            "story-prompt-envelope-questions-count "
+            f"{plan['story_prompt_envelope_questions_count']}",
             "story-prompt-envelope-invalid-count "
             f"{plan['story_prompt_envelope_invalid_count']}",
             "plan-json story-promotion-capture-plan.json",

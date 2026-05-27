@@ -70,7 +70,9 @@ The review writes `story-llm-harness-report.txt` and
 `story-llm-harness-report.fingerprint.txt` in the reviewed artifact directory.
 The report also verifies `agent-trace.fingerprint.txt` before promotion, and
 records `story-llm-transcript-check-count`,
-`story-prompt-envelope-valid-count`, and
+`story-prompt-envelope-valid-count`,
+`story-prompt-envelope-artifact-count`,
+`story-prompt-envelope-questions-count`, and
 `story-prompt-envelope-invalid-count` so prompt-pack conformance is reviewable
 without re-contacting the hosted model.
 

@@ -972,6 +972,8 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             self.assertIn("fingerprint-check-count 11", review.stdout)
             self.assertIn("story-llm-transcript-check-count 6", review.stdout)
             self.assertIn("story-prompt-envelope-valid-count 2", review.stdout)
+            self.assertIn("story-prompt-envelope-artifact-count 2", review.stdout)
+            self.assertIn("story-prompt-envelope-questions-count 0", review.stdout)
             self.assertIn("story-prompt-envelope-invalid-count 0", review.stdout)
             self.assertIn("agent-trace present", review.stdout)
             self.assertIn("review-result accepted", review.stdout)
@@ -1030,6 +1032,72 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             self.assertIn("review-result rejected", review.stdout)
             self.assertIn("missing file", review.stdout)
             self.assertIn("agent-trace.fingerprint.txt", review.stdout)
+        finally:
+            shutil.rmtree(artifact_dir, ignore_errors=True)
+
+    def test_story_llm_harness_review_rejects_question_only_artifact_transcript(self):
+        artifact_dir = Path(tempfile.mkdtemp(prefix="ail-story-llm-question-only-"))
+        try:
+            write_story_llm_review_fixture(artifact_dir)
+            content = (
+                json.dumps(
+                    {
+                        "artifact_kind": "AIL-Spec Canonical",
+                        "artifact_text": "",
+                        "questions": [
+                            "Which exact acceptance criteria should be compiled?"
+                        ],
+                        "checker_handoff": {
+                            "must_check": True,
+                            "expected_profile": "Application",
+                            "expected_features": [],
+                        },
+                    },
+                    sort_keys=True,
+                )
+                + "\n"
+            )
+            write_text(artifact_dir / "llm/spec.content.txt", content)
+            write_text(
+                artifact_dir / "llm/spec.content.fingerprint.txt", fnv64(content) + "\n"
+            )
+            manifest_path = artifact_dir / "manifest.ail-story.txt"
+            manifest = "\n".join(
+                (
+                    f"llm-spec-content llm/spec.content.txt {fnv64(content)}"
+                    if line.startswith("llm-spec-content llm/spec.content.txt ")
+                    else line
+                )
+                for line in manifest_path.read_text().splitlines()
+            )
+            manifest += "\n"
+            write_text(manifest_path, manifest)
+            write_text(
+                artifact_dir / "manifest.ail-story.fingerprint.txt",
+                fnv64(manifest) + "\n",
+            )
+
+            review = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_story_llm_harness.py",
+                    "--review-artifacts",
+                    str(artifact_dir),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertNotEqual(
+                review.returncode,
+                0,
+                f"stdout:\n{review.stdout}\nstderr:\n{review.stderr}",
+            )
+            self.assertIn("review-result rejected", review.stdout)
+            self.assertIn(
+                "story prompt envelope spec must contain artifact_text",
+                review.stdout,
+            )
         finally:
             shutil.rmtree(artifact_dir, ignore_errors=True)
 
@@ -1283,6 +1351,8 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             self.assertIn("human-approval-required true", plan.stdout)
             self.assertIn("story-llm-transcript-check-count 6", plan.stdout)
             self.assertIn("story-prompt-envelope-valid-count 2", plan.stdout)
+            self.assertIn("story-prompt-envelope-artifact-count 2", plan.stdout)
+            self.assertIn("story-prompt-envelope-questions-count 0", plan.stdout)
             self.assertIn("plan-json story-promotion-capture-plan.json", plan.stdout)
 
             plan_json_path = plan_dir / "story-promotion-capture-plan.json"
@@ -1300,6 +1370,8 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             self.assertTrue(plan_payload["human_approval_required"])
             self.assertEqual(plan_payload["promotion_decision"], "accepted-for-promotion")
             self.assertEqual(plan_payload["story_llm_transcript_check_count"], 6)
+            self.assertEqual(plan_payload["story_prompt_envelope_artifact_count"], 2)
+            self.assertEqual(plan_payload["story_prompt_envelope_questions_count"], 0)
             self.assertEqual(
                 plan_fingerprint_path.read_text().strip(),
                 fnv64(plan_json_path.read_text()),

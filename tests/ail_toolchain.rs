@@ -2871,6 +2871,14 @@ fn script_v03_story_llm_harness_review_writes_fingerprinted_report() {
         "{review_stdout}"
     );
     assert!(
+        review_stdout.contains("story-prompt-envelope-artifact-count 2"),
+        "{review_stdout}"
+    );
+    assert!(
+        review_stdout.contains("story-prompt-envelope-questions-count 0"),
+        "{review_stdout}"
+    );
+    assert!(
         review_stdout.contains("story-prompt-envelope-invalid-count 0"),
         "{review_stdout}"
     );
