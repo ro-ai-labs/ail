@@ -20,7 +20,11 @@ ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SERVER = "http://inteligentia-pro-1:8080/"
 DEFAULT_ENDPOINT = "http://inteligentia-pro-1:8080/v1/chat/completions"
 DEFAULT_ARTIFACT_DIR = "/tmp/ail-v03-agent-policy-live-review"
+DEFAULT_EXAMPLES_ARTIFACTS = "/tmp/ail-manual-agent-policy"
+DEFAULT_CAPTURE_PLAN_DIR = "/tmp/ail-manual-agent-policy-capture-plan"
+DEFAULT_IMPORT_WORK_DIR = "/tmp/ail-manual-agent-policy-import-work"
 DEFAULT_MAX_TOKENS = 768
+EVIDENCE_EXCERPT_MAX_CHARS = 1400
 ARTIFACT_KIND = "AIL-AgentTool-Live-Reviewer-Handoff"
 REQUIRED_EVIDENCE = (
     "agent-policy-review.txt",
@@ -90,6 +94,118 @@ def check_fingerprint(
         )
         return False
     return True
+
+
+def bounded_excerpt(text: str, limit: int = EVIDENCE_EXCERPT_MAX_CHARS) -> str:
+    if len(text) <= limit:
+        return text.rstrip()
+    omitted = len(text) - limit
+    return text[:limit].rstrip() + f"\n...[truncated {omitted} chars]"
+
+
+def fingerprint_path_for(path: Path) -> Path:
+    return path.with_suffix(".fingerprint.txt")
+
+
+def evidence_paths(args: argparse.Namespace) -> list[tuple[str, Path]]:
+    return [
+        (
+            "agent-policy-review.txt",
+            Path(args.examples_artifacts)
+            / "examples"
+            / args.source_entry_id
+            / "agent-policy-review.txt",
+        ),
+        (
+            "agent-policy-capture-plan.json",
+            Path(args.capture_plan_dir) / "agent-policy-capture-plan.json",
+        ),
+        (
+            "agent-policy-import-demo-report.txt",
+            Path(args.import_work_dir) / "agent-policy-import-demo-report.txt",
+        ),
+        (
+            "agent-policy-multi-agent-handoff-report.txt",
+            Path(args.import_work_dir)
+            / "agent-policy-multi-agent-handoff-report.txt",
+        ),
+    ]
+
+
+def build_evidence_bundle(args: argparse.Namespace) -> tuple[str, list[str]]:
+    errors: list[str] = []
+    artifact_sections: list[str] = []
+    for artifact_name, path in evidence_paths(args):
+        text = read_required_text(path, errors)
+        fingerprint_path = fingerprint_path_for(path)
+        expected = read_required_text(fingerprint_path, errors).strip()
+        actual = fnv64(text) if text else ""
+        if text and expected and expected != actual:
+            errors.append(
+                f"fingerprint mismatch {path}: expected {expected} got {actual}"
+            )
+        fingerprint_status = "matched" if text and expected == actual else "missing"
+        if text and expected and expected != actual:
+            fingerprint_status = "mismatch"
+        artifact_sections.append(
+            "\n".join(
+                [
+                    f"artifact {artifact_name}",
+                    f"path {path}",
+                    f"fingerprint {actual or '<missing>'}",
+                    f"fingerprint-file {fingerprint_path}",
+                    f"fingerprint-file-value {expected or '<missing>'}",
+                    f"fingerprint-status {fingerprint_status}",
+                    "content-excerpt:",
+                    f"----- begin {artifact_name} -----",
+                    bounded_excerpt(text) if text else "<missing>",
+                    f"----- end {artifact_name} -----",
+                ]
+            )
+        )
+    status = "complete" if not errors else "incomplete"
+    bundle_body = "\n\n".join(artifact_sections)
+    bundle_fingerprint = fnv64(bundle_body)
+    lines = [
+        f"Evidence bundle status: {status}",
+        f"source-entry-id {args.source_entry_id}",
+        f"proposed-entry-id {args.proposed_entry_id}",
+        f"evidence-bundle-fingerprint {bundle_fingerprint}",
+        "",
+        bundle_body,
+    ]
+    if errors:
+        lines.extend(["", "evidence-bundle-errors:"])
+        lines.extend(f"error {error}" for error in errors)
+    return "\n".join(lines).rstrip() + "\n", errors
+
+
+def evidence_bundle_declared_fingerprint(evidence_bundle: str) -> str:
+    for line in evidence_bundle.splitlines():
+        if line.startswith("evidence-bundle-fingerprint "):
+            return line.split(" ", 1)[1]
+    return fnv64(evidence_bundle)
+
+
+def request_has_evidence_bundle(user_probe: str) -> tuple[bool, str]:
+    if "Evidence bundle status: complete" not in user_probe:
+        return False, "request missing complete evidence bundle status"
+    if "evidence-bundle-fingerprint fnv64:" not in user_probe:
+        return False, "request missing evidence bundle fingerprint"
+    for artifact_name in REQUIRED_EVIDENCE:
+        if f"artifact {artifact_name}" not in user_probe:
+            return False, f"request missing evidence artifact {artifact_name}"
+        if f"----- begin {artifact_name} -----" not in user_probe:
+            return False, f"request missing evidence content for {artifact_name}"
+    for required_snippet in [
+        "agent-policy-review-fingerprint-observed-count",
+        "policy-handoff-imported true",
+        "policy-handoff-replayed true",
+        "multi-agent-execution-evidence deterministic-role-handoff",
+    ]:
+        if required_snippet not in user_probe:
+            return False, f"request missing evidence snippet {required_snippet}"
+    return True, ""
 
 
 def load_json(path: Path, errors: list[str]) -> dict[str, object]:
@@ -221,7 +337,9 @@ Rules:
 """
 
 
-def role_probe(role: str, source_entry_id: str, proposed_entry_id: str) -> str:
+def role_probe(
+    role: str, source_entry_id: str, proposed_entry_id: str, evidence_bundle: str
+) -> str:
     reviewed = ", ".join(REQUIRED_EVIDENCE)
     return f"""Review AgentTool policy handoff evidence.
 
@@ -229,6 +347,9 @@ Source entry id: {source_entry_id}
 Proposed entry id: {proposed_entry_id}
 Reviewer role: {role}
 Evidence bundle expected: {reviewed}
+
+Deterministic evidence bundle:
+{evidence_bundle.rstrip()}
 
 Determine whether your role accepts the handoff for human-approved import.
 Do not claim that the corpus was edited by the hosted model.
@@ -338,6 +459,31 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--source-entry-id", default="example-40")
     parser.add_argument("--proposed-entry-id", default="example-40-policy")
     parser.add_argument(
+        "--examples-artifacts",
+        default=DEFAULT_EXAMPLES_ARTIFACTS,
+        help=(
+            "Deterministic ail-examples artifact directory containing "
+            "examples/<source-entry-id>/agent-policy-review.txt "
+            f"(default: {DEFAULT_EXAMPLES_ARTIFACTS})"
+        ),
+    )
+    parser.add_argument(
+        "--capture-plan-dir",
+        default=DEFAULT_CAPTURE_PLAN_DIR,
+        help=(
+            "Directory containing agent-policy-capture-plan.json "
+            f"(default: {DEFAULT_CAPTURE_PLAN_DIR})"
+        ),
+    )
+    parser.add_argument(
+        "--import-work-dir",
+        default=DEFAULT_IMPORT_WORK_DIR,
+        help=(
+            "Directory containing AgentTool import and multi-agent handoff reports "
+            f"(default: {DEFAULT_IMPORT_WORK_DIR})"
+        ),
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Print reviewer probes without contacting the LLM endpoint",
@@ -355,16 +501,25 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 
 
 def print_dry_run(args: argparse.Namespace, contracts: list[tuple[str, str, str]]) -> None:
+    evidence_bundle, evidence_errors = build_evidence_bundle(args)
+    evidence_fingerprint = evidence_bundle_declared_fingerprint(evidence_bundle)
     print("AIL-Agent-Policy-Live-Reviewer-Harness:")
     print(f"model-check curl -sS {models_url_for_endpoint(args.endpoint)}")
     print(f"endpoint {args.endpoint}")
     print(f"artifact-dir {args.artifact_dir}")
+    print(f"examples-artifacts {args.examples_artifacts}")
+    print(f"capture-plan-dir {args.capture_plan_dir}")
+    print(f"import-work-dir {args.import_work_dir}")
     print(f"source-entry-id {args.source_entry_id}")
     print(f"proposed-entry-id {args.proposed_entry_id}")
     print(f"role-count {len(contracts)}")
     print(f"artifact-kind {ARTIFACT_KIND}")
+    print(f"evidence-bundle-fingerprint {evidence_fingerprint}")
+    print(f"evidence-bundle-error-count {len(evidence_errors)}")
     for role, contract_path, contract_text in contracts:
-        probe = role_probe(role, args.source_entry_id, args.proposed_entry_id)
+        probe = role_probe(
+            role, args.source_entry_id, args.proposed_entry_id, evidence_bundle
+        )
         print(
             f"role {role} contract {contract_path} "
             f"contract-fingerprint {fnv64(contract_text)} "
@@ -379,6 +534,7 @@ def review_artifacts(args: argparse.Namespace, contracts: list[tuple[str, str, s
     content_nonempty = 0
     envelope_valid = 0
     envelope_invalid = 0
+    evidence_bundle_present = 0
     decision_accept = 0
     decision_needs_repair = 0
     decision_reject = 0
@@ -446,8 +602,14 @@ def review_artifacts(args: argparse.Namespace, contracts: list[tuple[str, str, s
                 errors.append(f"request contract_file mismatch {role}")
             if request.get("contract_fingerprint") != fnv64(contract_text):
                 errors.append(f"request contract_fingerprint mismatch {role}")
-            if ARTIFACT_KIND not in request_user_probe(request.get("body")):
+            user_probe = request_user_probe(request.get("body"))
+            if ARTIFACT_KIND not in user_probe:
                 errors.append(f"request missing envelope contract {role}")
+            has_evidence, evidence_error = request_has_evidence_bundle(user_probe)
+            if has_evidence:
+                evidence_bundle_present += 1
+            else:
+                errors.append(f"{evidence_error} {role}")
         if not response:
             errors.append(f"missing response json {role}")
         if f"artifact {role} contract {contract_path}" not in manifest_text:
@@ -470,6 +632,7 @@ def review_artifacts(args: argparse.Namespace, contracts: list[tuple[str, str, s
         f"content-nonempty-count {content_nonempty}",
         f"reviewer-envelope-valid-count {envelope_valid}",
         f"reviewer-envelope-invalid-count {envelope_invalid}",
+        f"evidence-bundle-present-count {evidence_bundle_present}",
         f"reviewer-decision-accept-count {decision_accept}",
         f"reviewer-decision-needs-repair-count {decision_needs_repair}",
         f"reviewer-decision-reject-count {decision_reject}",
@@ -500,6 +663,14 @@ def review_artifacts(args: argparse.Namespace, contracts: list[tuple[str, str, s
 
 
 def run_live(args: argparse.Namespace, contracts: list[tuple[str, str, str]]) -> int:
+    evidence_bundle, evidence_errors = build_evidence_bundle(args)
+    evidence_fingerprint = evidence_bundle_declared_fingerprint(evidence_bundle)
+    if evidence_errors:
+        print("AIL-Agent-Policy-Live-Reviewer-Harness:")
+        print("evidence-result rejected")
+        for error in evidence_errors:
+            print(f"error {error}")
+        return 1
     artifact_root = Path(args.artifact_dir)
     artifact_root.mkdir(parents=True, exist_ok=True)
     report_lines = [
@@ -509,6 +680,10 @@ def run_live(args: argparse.Namespace, contracts: list[tuple[str, str, str]]) ->
         f"role-count {len(contracts)}",
         f"source-entry-id {args.source_entry_id}",
         f"proposed-entry-id {args.proposed_entry_id}",
+        f"examples-artifacts {args.examples_artifacts}",
+        f"capture-plan-dir {args.capture_plan_dir}",
+        f"import-work-dir {args.import_work_dir}",
+        f"evidence-bundle-fingerprint {evidence_fingerprint}",
     ]
     manifest_lines = ["AIL-Agent-Policy-Live-Reviewer-Harness-Manifest:"]
     if not args.skip_model_check:
@@ -519,7 +694,9 @@ def run_live(args: argparse.Namespace, contracts: list[tuple[str, str, str]]) ->
         manifest_lines.append("artifact models models.json models.fingerprint.txt")
 
     for role, contract_path, contract_text in contracts:
-        user_probe = role_probe(role, args.source_entry_id, args.proposed_entry_id)
+        user_probe = role_probe(
+            role, args.source_entry_id, args.proposed_entry_id, evidence_bundle
+        )
         body = completion_body(
             args.endpoint, contract_text, user_probe, args.max_tokens, args.model
         )
@@ -532,6 +709,7 @@ def run_live(args: argparse.Namespace, contracts: list[tuple[str, str, str]]) ->
                     "role": role,
                     "contract_file": contract_path,
                     "contract_fingerprint": fnv64(contract_text),
+                    "evidence_bundle_fingerprint": evidence_fingerprint,
                     "probe_fingerprint": fnv64(user_probe),
                     "body": body,
                 },

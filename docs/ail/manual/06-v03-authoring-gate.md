@@ -161,6 +161,7 @@ agent-policy-live-review-review.txt
 agent-policy-live-review-review.fingerprint.txt
 reviewer-envelope-valid-count
 reviewer-envelope-invalid-count
+evidence-bundle-present-count
 reviewer-decision-accept-count
 reviewer-decision-needs-repair-count
 reviewer-decision-reject-count

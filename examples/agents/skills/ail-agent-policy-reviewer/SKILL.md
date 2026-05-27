@@ -81,6 +81,7 @@ The review report must include:
 - `agent-policy-live-review-review.fingerprint.txt`
 - `reviewer-envelope-valid-count`
 - `reviewer-envelope-invalid-count`
+- `evidence-bundle-present-count`
 - `reviewer-decision-accept-count`
 - `reviewer-decision-needs-repair-count`
 - `reviewer-decision-reject-count`
@@ -117,6 +118,10 @@ Return `needs-repair` or `rejected-for-import` when:
 - hosted reviewer evidence is claimed but
   `scripts/run_v03_agent_policy_live_reviewer_harness.py --review-artifacts`
   is missing or reports `review-result rejected`
+- hosted reviewer evidence is claimed but recorded reviewer requests do not
+  include `Evidence bundle status: complete`, an `evidence-bundle-fingerprint`,
+  every required artifact fingerprint, and bounded content excerpts from the
+  policy review, capture plan, import report, and multi-agent handoff report
 - hosted reviewer evidence is claimed but one or more valid reviewer envelopes
   return `needs-repair` or `reject`; preserve the bundle as
   `review-result needs-repair` evidence instead of promotion evidence

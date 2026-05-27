@@ -69,6 +69,7 @@ Return an `AIL-Agent-Policy-Review` report that records:
 - `agent-policy-live-review-review.fingerprint.txt`
 - `reviewer-envelope-valid-count`
 - `reviewer-envelope-invalid-count`
+- `evidence-bundle-present-count`
 - `reviewer-decision-accept-count`
 - `reviewer-decision-needs-repair-count`
 - `reviewer-decision-reject-count`
@@ -154,11 +155,18 @@ python3 scripts/run_v03_agent_policy_live_reviewer_harness.py \
   --review-artifacts /tmp/ail-v03-agent-policy-live-review
 ```
 
+The live harness must not ask hosted reviewers to accept filenames alone. Each
+recorded request must include `Evidence bundle status: complete`, an
+`evidence-bundle-fingerprint`, every required artifact fingerprint, and bounded
+content excerpts from the policy review, capture plan, import report, and
+multi-agent handoff report.
+
 The offline review must include `agent-policy-live-review-report.txt`,
 `agent-policy-live-review-review.txt`,
 `agent-policy-live-review-review.fingerprint.txt`,
 `manifest.v03-agent-policy-live-review.txt`,
 `reviewer-envelope-valid-count`, `reviewer-envelope-invalid-count`,
+`evidence-bundle-present-count`,
 `reviewer-decision-accept-count`,
 `reviewer-decision-needs-repair-count`, and
 `reviewer-decision-reject-count`. Manual `--include-live` runs this path

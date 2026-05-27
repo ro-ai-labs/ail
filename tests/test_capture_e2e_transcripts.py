@@ -487,10 +487,7 @@ def write_agent_policy_live_reviewer_fixture(
     ]
     for role, contract_path in AGENT_POLICY_LIVE_ROLES:
         contract_text = (ROOT / contract_path).read_text()
-        probe_text = (
-            "Review AgentTool policy handoff evidence for example-40 and return the "
-            "AIL-AgentTool-Live-Reviewer-Handoff JSON envelope."
-        )
+        probe_text = agent_policy_live_evidence_probe_text()
         probe_fingerprint = fnv64(probe_text)
         if empty_content_for == role:
             content = ""
@@ -564,6 +561,104 @@ def write_agent_policy_live_reviewer_fixture(
     )
     write_text(artifact_dir / "manifest.v03-agent-policy-live-review.txt", manifest_text)
     write_text(artifact_dir / "manifest.fingerprint.txt", fnv64(manifest_text) + "\n")
+
+
+def write_agent_policy_live_evidence_fixture(
+    examples_artifacts, capture_plan_dir, import_work_dir
+):
+    review_text = (
+        "AIL-Agent-Policy-Review:\n"
+        "entry-id example-40\n"
+        "agent-policy-review-fingerprint-observed-count 1\n"
+        "multi-agent-handoff-review required\n"
+    )
+    review_path = examples_artifacts / "examples" / "example-40" / "agent-policy-review.txt"
+    write_text(review_path, review_text)
+    write_text(review_path.with_suffix(".fingerprint.txt"), fnv64(review_text) + "\n")
+
+    capture_plan = {
+        "artifact_kind": "AIL-AgentTool-Policy-Capture-Plan",
+        "entry_id": "example-40-policy",
+        "human_approval_required": True,
+        "source_entry_id": "example-40",
+    }
+    capture_text = json.dumps(capture_plan, indent=2, sort_keys=True) + "\n"
+    capture_path = capture_plan_dir / "agent-policy-capture-plan.json"
+    write_text(capture_path, capture_text)
+    write_text(capture_path.with_suffix(".fingerprint.txt"), fnv64(capture_text) + "\n")
+
+    import_text = (
+        "AIL-Agent-Policy-Import-Demo:\n"
+        "source-entry-id example-40\n"
+        "proposed-entry-id example-40-policy\n"
+        "source-preserved true\n"
+        "proposed-accepted true\n"
+        "policy-handoff-imported true\n"
+        "policy-handoff-replayed true\n"
+    )
+    import_path = import_work_dir / "agent-policy-import-demo-report.txt"
+    write_text(import_path, import_text)
+    write_text(import_path.with_suffix(".fingerprint.txt"), fnv64(import_text) + "\n")
+
+    handoff_text = (
+        "AIL-Agent-Policy-Multi-Agent-Handoff:\n"
+        "source-entry-id example-40\n"
+        "proposed-entry-id example-40-policy\n"
+        "separate-reviewer-role-count 5\n"
+        "role requirements-writer contract codex-ail-requirements-writer\n"
+        "role spec-writer contract codex-ail-spec-writer\n"
+        "role diagnostic-repairer contract codex-ail-diagnostic-repairer\n"
+        "role prompt-reviewer contract codex-ail-prompt-reviewer\n"
+        "role agent-policy-reviewer contract codex-ail-agent-policy-reviewer\n"
+        "multi-agent-execution-evidence deterministic-role-handoff\n"
+    )
+    handoff_path = import_work_dir / "agent-policy-multi-agent-handoff-report.txt"
+    write_text(handoff_path, handoff_text)
+    write_text(handoff_path.with_suffix(".fingerprint.txt"), fnv64(handoff_text) + "\n")
+
+
+def agent_policy_live_evidence_probe_text():
+    artifact_text = {
+        "agent-policy-review.txt": (
+            "agent-policy-review-fingerprint-observed-count 1\n"
+            "multi-agent-handoff-review required"
+        ),
+        "agent-policy-capture-plan.json": (
+            '"artifact_kind": "AIL-AgentTool-Policy-Capture-Plan"\n'
+            '"human_approval_required": true'
+        ),
+        "agent-policy-import-demo-report.txt": (
+            "policy-handoff-imported true\n"
+            "policy-handoff-replayed true"
+        ),
+        "agent-policy-multi-agent-handoff-report.txt": (
+            "multi-agent-execution-evidence deterministic-role-handoff"
+        ),
+    }
+    sections = []
+    for artifact_name, text in artifact_text.items():
+        sections.append(
+            "\n".join(
+                [
+                    f"artifact {artifact_name}",
+                    f"fingerprint {fnv64(text)}",
+                    "content-excerpt:",
+                    f"----- begin {artifact_name} -----",
+                    text,
+                    f"----- end {artifact_name} -----",
+                ]
+            )
+        )
+    bundle = "\n\n".join(sections)
+    return (
+        "Review AgentTool policy handoff evidence for example-40 and return the "
+        "AIL-AgentTool-Live-Reviewer-Handoff JSON envelope.\n\n"
+        "Evidence bundle status: complete\n"
+        "source-entry-id example-40\n"
+        "proposed-entry-id example-40-policy\n"
+        f"evidence-bundle-fingerprint {fnv64(bundle)}\n\n"
+        f"{bundle}"
+    )
 
 
 class _CompletionHandler(BaseHTTPRequestHandler):
@@ -949,6 +1044,7 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             self.assertIn("role-count 5", review.stdout)
             self.assertIn("reviewer-envelope-valid-count 5", review.stdout)
             self.assertIn("reviewer-envelope-invalid-count 0", review.stdout)
+            self.assertIn("evidence-bundle-present-count 5", review.stdout)
             self.assertIn("reviewer-decision-accept-count 5", review.stdout)
             self.assertIn("reviewer-decision-needs-repair-count 0", review.stdout)
             self.assertIn("reviewer-decision-reject-count 0", review.stdout)
@@ -980,6 +1076,7 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             )
             self.assertIn("reviewer-envelope-valid-count 5", review.stdout)
             self.assertIn("reviewer-envelope-invalid-count 0", review.stdout)
+            self.assertIn("evidence-bundle-present-count 5", review.stdout)
             self.assertIn("reviewer-decision-accept-count 4", review.stdout)
             self.assertIn("reviewer-decision-needs-repair-count 1", review.stdout)
             self.assertIn("reviewer-decision-reject-count 0", review.stdout)
@@ -1013,8 +1110,94 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             self.assertIn("review-result rejected", review.stdout)
             self.assertIn("empty content prompt-reviewer", review.stdout)
             self.assertIn("reviewer-envelope-invalid-count 1", review.stdout)
+            self.assertIn("evidence-bundle-present-count 5", review.stdout)
         finally:
             shutil.rmtree(artifact_dir, ignore_errors=True)
+
+    def test_agent_policy_live_reviewer_requests_include_deterministic_evidence_bundle(self):
+        artifact_dir = Path(tempfile.mkdtemp(prefix="ail-agent-policy-live-requests-"))
+        examples_artifacts = Path(tempfile.mkdtemp(prefix="ail-agent-policy-evidence-"))
+        capture_plan_dir = Path(tempfile.mkdtemp(prefix="ail-agent-policy-plan-"))
+        import_work_dir = Path(tempfile.mkdtemp(prefix="ail-agent-policy-import-"))
+        server = None
+        try:
+            write_agent_policy_live_evidence_fixture(
+                examples_artifacts, capture_plan_dir, import_work_dir
+            )
+            _CompletionHandler.requests = []
+            _CompletionHandler.response_text = ""
+            _CompletionHandler.response_payload = {
+                "choices": [
+                    {
+                        "message": {
+                            "content": agent_policy_live_reviewer_envelope(
+                                "requirements-writer"
+                            )
+                        }
+                    }
+                ],
+                "model": "test-chat-model",
+            }
+            server = HTTPServer(("127.0.0.1", 0), _CompletionHandler)
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+
+            run = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_agent_policy_live_reviewer_harness.py",
+                    "--endpoint",
+                    f"http://127.0.0.1:{server.server_port}/v1/chat/completions",
+                    "--skip-model-check",
+                    "--artifact-dir",
+                    str(artifact_dir),
+                    "--examples-artifacts",
+                    str(examples_artifacts),
+                    "--capture-plan-dir",
+                    str(capture_plan_dir),
+                    "--import-work-dir",
+                    str(import_work_dir),
+                    "--max-tokens",
+                    "64",
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(run.returncode, 0, f"stdout:\n{run.stdout}\nstderr:\n{run.stderr}")
+            self.assertEqual(len(_CompletionHandler.requests), len(AGENT_POLICY_LIVE_ROLES))
+            request = json.loads(
+                (artifact_dir / "requests" / "requirements-writer.json").read_text()
+            )
+            user_probe = request["body"]["messages"][1]["content"]
+            self.assertIn("Evidence bundle status: complete", user_probe)
+            for artifact_name in [
+                "agent-policy-review.txt",
+                "agent-policy-capture-plan.json",
+                "agent-policy-import-demo-report.txt",
+                "agent-policy-multi-agent-handoff-report.txt",
+            ]:
+                self.assertIn(artifact_name, user_probe)
+                self.assertIn(f"artifact {artifact_name}", user_probe)
+                self.assertIn("fingerprint fnv64:", user_probe)
+            self.assertIn("agent-policy-review-fingerprint-observed-count 1", user_probe)
+            self.assertIn("policy-handoff-imported true", user_probe)
+            self.assertIn("policy-handoff-replayed true", user_probe)
+            self.assertIn(
+                "multi-agent-execution-evidence deterministic-role-handoff",
+                user_probe,
+            )
+            self.assertIn("evidence-bundle-fingerprint fnv64:", user_probe)
+            self.assertIn(request["evidence_bundle_fingerprint"], user_probe)
+        finally:
+            _CompletionHandler.response_payload = None
+            if server is not None:
+                server.shutdown()
+                server.server_close()
+            shutil.rmtree(artifact_dir, ignore_errors=True)
+            shutil.rmtree(examples_artifacts, ignore_errors=True)
+            shutil.rmtree(capture_plan_dir, ignore_errors=True)
+            shutil.rmtree(import_work_dir, ignore_errors=True)
 
     def test_story_promotion_capture_plan_writes_fingerprinted_plan(self):
         artifact_dir = Path(tempfile.mkdtemp(prefix="ail-story-promotion-artifacts-"))

@@ -128,11 +128,22 @@ python3 scripts/run_v03_agent_policy_live_reviewer_harness.py --dry-run
 ```
 
 When `http://inteligentia-pro-1:8080/` is reachable, run the hosted reviewer
-harness:
+harness after the deterministic policy review, capture plan, import demo, and
+multi-agent handoff commands above have written their artifacts:
 
 ```sh
-python3 scripts/run_v03_agent_policy_live_reviewer_harness.py
+python3 scripts/run_v03_agent_policy_live_reviewer_harness.py \
+  --examples-artifacts /tmp/ail-manual-agent-policy \
+  --capture-plan-dir /tmp/ail-manual-agent-policy-capture-plan \
+  --import-work-dir /tmp/ail-manual-agent-policy-import-work
 ```
+
+Those paths are the harness defaults. The live request sent to each reviewer
+must include `Evidence bundle status: complete`, an
+`evidence-bundle-fingerprint`, every required artifact fingerprint, and bounded
+content excerpts from `agent-policy-review.txt`,
+`agent-policy-capture-plan.json`, `agent-policy-import-demo-report.txt`, and
+`agent-policy-multi-agent-handoff-report.txt`.
 
 Then review the recorded request, response, and content bundle offline:
 
@@ -150,14 +161,16 @@ agent-policy-live-review-review.txt
 agent-policy-live-review-review.fingerprint.txt
 reviewer-envelope-valid-count
 reviewer-envelope-invalid-count
+evidence-bundle-present-count
 reviewer-decision-accept-count
 reviewer-decision-needs-repair-count
 reviewer-decision-reject-count
 ```
 
 The live reviewer report is accepted only when every reviewer envelope is
-valid and every role returns `decision: accept`. Valid `needs-repair` or
-`reject` decisions produce `review-result needs-repair` and a nonzero exit so
-the hosted output becomes repair backlog instead of promotion evidence. It
-still does not edit `./examples`; promotion remains gated by deterministic
-replay, human approval, and corpus-copy import evidence.
+valid, every recorded request contains the deterministic evidence bundle, and
+every role returns `decision: accept`. Valid `needs-repair` or `reject`
+decisions produce `review-result needs-repair` and a nonzero exit so the hosted
+output becomes repair backlog instead of promotion evidence. It still does not
+edit `./examples`; promotion remains gated by deterministic replay, human
+approval, and corpus-copy import evidence.

@@ -249,8 +249,8 @@ The `ail-examples` replay bundle must also write deterministic story artifacts:
   `manifest.v03-agent-policy-live-review.txt`,
   `agent-policy-live-review-review.txt`, and
   `agent-policy-live-review-review.fingerprint.txt` in a live reviewer artifact
-  directory when hosted AgentTool policy reviewer roles are executed and then
-  reviewed offline.
+  directory when hosted AgentTool policy reviewer roles are executed against a
+  complete deterministic evidence bundle and then reviewed offline.
 
 The story artifact is derived from catalog metadata and fingerprinted in the
 same report and manifest as request, response, checked Core, bytecode, VM
@@ -356,10 +356,12 @@ as prose. The current examples reveal these next-version gaps:
   role-separated multi-agent handoff witness. An opt-in live reviewer harness
   now records hosted request/response/content bundles for five reviewer roles
   and writes an offline review with `reviewer-envelope-valid-count`,
-  `reviewer-envelope-invalid-count`, `reviewer-decision-accept-count`,
+  `reviewer-envelope-invalid-count`, `evidence-bundle-present-count`,
+  `reviewer-decision-accept-count`,
   `reviewer-decision-needs-repair-count`, and
-  `reviewer-decision-reject-count`. The review is accepted only when all
-  reviewer roles return `decision: accept`; valid non-accept decisions become
+  `reviewer-decision-reject-count`. The review is accepted only when every
+  recorded request contains the deterministic evidence bundle and all reviewer
+  roles return `decision: accept`; valid non-accept decisions become
   `review-result needs-repair` evidence. The next bar is broader live reviewer
   coverage where accepted and rejected AgentTool policy handoffs are both
   produced by separate reviewer roles and promoted only after human approval.

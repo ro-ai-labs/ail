@@ -80,7 +80,8 @@ The review writes `prompt-llm-harness-review.txt` and
 directory.
 
 Print the hosted AgentTool policy reviewer harness without contacting the
-model:
+model. The dry run also fingerprints the deterministic evidence bundle when
+the default manual artifact paths already exist:
 
 ```sh
 python3 scripts/run_v03_agent_policy_live_reviewer_harness.py --dry-run
@@ -97,11 +98,13 @@ The review writes `agent-policy-live-review-review.txt` and
 directory, and checks `agent-policy-live-review-report.txt`,
 `manifest.v03-agent-policy-live-review.txt`,
 `reviewer-envelope-valid-count`, `reviewer-envelope-invalid-count`,
+`evidence-bundle-present-count`,
 `reviewer-decision-accept-count`,
 `reviewer-decision-needs-repair-count`, and
 `reviewer-decision-reject-count`. A live reviewer run is accepted only when
-all five reviewer roles return `decision: accept`; valid non-accept decisions
-produce `review-result needs-repair`.
+all five reviewer roles return `decision: accept` and every recorded request
+contains the complete deterministic evidence bundle with artifact
+fingerprints; valid non-accept decisions produce `review-result needs-repair`.
 
 Run deterministic local checks for a chapter:
 
