@@ -1319,6 +1319,7 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
         "codex-ail-prompt-reviewer.md",
         "codex-ail-repair-promotion-reviewer.md",
         "codex-ail-agent-policy-reviewer.md",
+        "codex-ail-ui-patch-reviewer.md",
     ];
     let mut contracts = Vec::new();
     for file_name in required_contracts {
@@ -1336,6 +1337,10 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
         .iter()
         .find(|contract| contract.label == "codex-ail-agent-policy-reviewer")
         .ok_or_else(|| "missing codex-ail-agent-policy-reviewer contract".to_string())?;
+    let ui_patch_reviewer = contracts
+        .iter()
+        .find(|contract| contract.label == "codex-ail-ui-patch-reviewer")
+        .ok_or_else(|| "missing codex-ail-ui-patch-reviewer contract".to_string())?;
     for required in [
         "scripts/run_v03_prompt_llm_harness.py --review-artifacts",
         "scripts/run_v03_story_llm_harness.py --review-artifacts",
@@ -1420,6 +1425,37 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
             return Err(format!(
                 "agent contract {} missing {required}",
                 agent_policy_reviewer.file_name
+            ));
+        }
+    }
+    for required in [
+        "ui-review-patch.txt",
+        "ui-review-patch.fingerprint.txt",
+        "ui-review-patch-fingerprint-observed-count",
+        "scripts/run_v03_ui_patch_capture_plan.py",
+        "ui-patch-capture-plan.json",
+        "ui-patch-capture-plan.fingerprint.txt",
+        "scripts/run_v03_ui_patch_import_demo.py",
+        "ui-patch-import-demo-report.txt",
+        "ui-patch-import-demo-report.fingerprint.txt",
+        "scripts/run_v03_ui_patch_runtime_state_check.py",
+        "ui-patch-runtime-state-check-report.txt",
+        "ui-patch-runtime-state-check-report.fingerprint.txt",
+        "visual-regression-fingerprint-preserved true",
+        "runtime-ui-state-anchor Ticket.reviewStatus",
+        "source-preserved true",
+        "proposed-accepted true",
+        "flow-edit-applied true",
+        "patched-core-replayed true",
+        "human-approval-required true",
+        "agent-contract-check ail-agent-contracts examples/agents",
+        "ail-examples examples --artifact-dir",
+        "manifest.ail-examples.txt",
+    ] {
+        if !ui_patch_reviewer.text.contains(required) {
+            return Err(format!(
+                "agent contract {} missing {required}",
+                ui_patch_reviewer.file_name
             ));
         }
     }
@@ -1594,6 +1630,44 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
             ));
         }
     }
+    let ui_patch_skill_path = root.join("skills/ail-ui-patch-reviewer/SKILL.md");
+    let ui_patch_skill_text = fs::read_to_string(&ui_patch_skill_path).map_err(|error| {
+        format!(
+            "failed to read codex skill {}: {error}",
+            ui_patch_skill_path.display()
+        )
+    })?;
+    for required in [
+        "name: ail-ui-patch-reviewer",
+        "description: Use when",
+        "examples/agents/codex-ail-ui-patch-reviewer.md",
+        "python3 scripts/run_ail_interactive_manual.py --chapter ui-patch-import --run-checks",
+        "cargo run -- ail-agent-contracts examples/agents",
+        "cargo run -- ail-examples examples --artifact-dir",
+        "ui-review-patch.txt",
+        "ui-review-patch.fingerprint.txt",
+        "ui-review-patch-fingerprint-observed-count",
+        "ui-patch-capture-plan.json",
+        "ui-patch-capture-plan.fingerprint.txt",
+        "ui-patch-import-demo-report.txt",
+        "ui-patch-import-demo-report.fingerprint.txt",
+        "ui-patch-runtime-state-check-report.txt",
+        "ui-patch-runtime-state-check-report.fingerprint.txt",
+        "human-approval-required true",
+        "source-preserved true",
+        "proposed-accepted true",
+        "flow-edit-applied true",
+        "patched-core-replayed true",
+        "visual-regression-fingerprint-preserved true",
+        "runtime-ui-state-anchor Ticket.reviewStatus",
+    ] {
+        if !ui_patch_skill_text.contains(required) {
+            return Err(format!(
+                "codex skill {} missing {required}",
+                ui_patch_skill_path.display()
+            ));
+        }
+    }
 
     println!("AIL-Agent-Contracts-Report:");
     println!("contract-count {}", contracts.len());
@@ -1613,12 +1687,15 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
     println!("repair-promotion-import-artifact repair-promotion-import-demo-report.txt");
     println!("agent-policy-import-artifact agent-policy-import-demo-report.txt");
     println!("agent-policy-live-review-artifact agent-policy-live-review-report.txt");
+    println!("ui-patch-import-artifact ui-patch-import-demo-report.txt");
+    println!("ui-patch-runtime-artifact ui-patch-runtime-state-check-report.txt");
     println!("roadmap-artifact v03-roadmap.txt");
     println!("roadmap-command cargo run -- ail-v03-roadmap examples --artifact-dir");
     println!("codex-skill examples/agents/skills/ail-prompt-interaction-reviewer/SKILL.md");
     println!("codex-skill examples/agents/skills/ail-system-prompt-harness-runner/SKILL.md");
     println!("codex-skill examples/agents/skills/ail-repair-promotion-reviewer/SKILL.md");
     println!("codex-skill examples/agents/skills/ail-agent-policy-reviewer/SKILL.md");
+    println!("codex-skill examples/agents/skills/ail-ui-patch-reviewer/SKILL.md");
     println!("agent-contracts-result accepted");
     Ok(0)
 }

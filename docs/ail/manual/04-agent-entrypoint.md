@@ -22,10 +22,11 @@ cargo run -- ail-agent-contracts examples/agents
 ```
 
 The report must include the requirements writer, spec writer, diagnostic
-repairer, prompt reviewer, and repair-promotion reviewer contracts. The prompt
-reviewer contract must require prompt harness review, story harness review,
-examples replay, and `cargo run -- ail-v03-roadmap examples`. The repair
-promotion reviewer contract must require `repair-promotion-review.txt`,
+repairer, prompt reviewer, repair-promotion reviewer, AgentTool policy
+reviewer, and UI patch reviewer contracts. The prompt reviewer contract must
+require prompt harness review, story harness review, examples replay, and
+`cargo run -- ail-v03-roadmap examples`. The repair promotion reviewer contract
+must require `repair-promotion-review.txt`,
 `repair-promotion-review.fingerprint.txt`, and
 `repair-promotion-review-fingerprint-observed-count`.
 
@@ -44,6 +45,18 @@ The AgentTool policy reviewer contract must require `agent-policy-review.txt`,
 `source-preserved true`, `proposed-accepted true`,
 `policy-handoff-imported true`, and `policy-handoff-replayed true` so a policy
 handoff amendment remains proposal-only until the reviewed corpus copy replays.
+
+The UI patch reviewer contract, `codex-ail-ui-patch-reviewer.md`, must require
+`ui-review-patch.txt`, `ui-review-patch.fingerprint.txt`,
+`ui-review-patch-fingerprint-observed-count`,
+`ui-patch-capture-plan.json`, `ui-patch-import-demo-report.txt`, and
+`ui-patch-runtime-state-check-report.txt`. The import and runtime reports must
+include `source-preserved true`, `proposed-accepted true`,
+`flow-edit-applied true`, `patched-core-replayed true`,
+`visual-regression-fingerprint-preserved true`, and
+`runtime-ui-state-anchor Ticket.reviewStatus` so reviewed UI/flow patches stay
+proposal-only until the visual review, patched Core, and runtime UI-state
+witness all agree.
 
 For User Story mode promotion, the prompt reviewer contract must also require
 `story-promotion-import-demo-report.txt`,
@@ -65,13 +78,16 @@ examples/agents/skills/ail-prompt-interaction-reviewer/SKILL.md
 examples/agents/skills/ail-system-prompt-harness-runner/SKILL.md
 examples/agents/skills/ail-repair-promotion-reviewer/SKILL.md
 examples/agents/skills/ail-agent-policy-reviewer/SKILL.md
+examples/agents/skills/ail-ui-patch-reviewer/SKILL.md
 ```
 
 Those skills are the reusable procedures for running and reviewing hosted
 llama.cpp prompt artifacts, User Story mode artifacts, examples replay,
 `v03-roadmap.txt`, and repair promotion and AgentTool policy evidence,
 including deterministic import demos, before generated content is promoted
-into `./examples`.
+into `./examples`. The UI patch reviewer skill adds the visual/flow patch
+import gate for `ui-patch-import-demo-report.txt` and
+`ui-patch-runtime-state-check-report.txt`.
 Hosted llama.cpp prompt-pack evidence must not accept artifacts whose
 model-check was skipped; `model-check skipped` is only valid for local
 fake-server harness tests.

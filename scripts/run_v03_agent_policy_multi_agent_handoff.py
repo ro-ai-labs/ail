@@ -94,13 +94,15 @@ def validate_plan(plan: dict[str, object], source_entry_id: str) -> None:
 def validate_contracts(contracts_text: str) -> None:
     for required in [
         "AIL-Agent-Contracts-Report:",
-        "contract-count 6",
+        "contract-count 7",
         "contract codex-ail-requirements-writer",
         "contract codex-ail-spec-writer",
         "contract codex-ail-diagnostic-repairer",
         "contract codex-ail-prompt-reviewer",
         "contract codex-ail-agent-policy-reviewer",
+        "contract codex-ail-ui-patch-reviewer",
         "agent-policy-import-artifact agent-policy-import-demo-report.txt",
+        "ui-patch-import-artifact ui-patch-import-demo-report.txt",
         "agent-contracts-result accepted",
     ]:
         require_line(contracts_text, required, "agent contracts report")

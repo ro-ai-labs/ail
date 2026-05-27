@@ -1298,6 +1298,10 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
             &[
                 "cargo run -- ail-agent-contracts examples/agents",
                 "examples/ail_toolchain_agent.ail",
+                "codex-ail-ui-patch-reviewer.md",
+                "examples/agents/skills/ail-ui-patch-reviewer/SKILL.md",
+                "ui-patch-import-demo-report.txt",
+                "ui-patch-runtime-state-check-report.txt",
                 "cli_ail_build_agent_verifies_bytecode_artifact_after_compile",
                 "agent-trace.txt",
             ],
@@ -1462,12 +1466,20 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         agent_manual.contains("examples/agents/skills/ail-system-prompt-harness-runner/SKILL.md"),
         "{agent_manual}"
     );
+    assert!(
+        agent_manual.contains("examples/agents/skills/ail-ui-patch-reviewer/SKILL.md"),
+        "{agent_manual}"
+    );
     for required in [
         "repair-promotion-import-demo-report.txt",
         "story-promotion-import-demo-report.txt",
+        "ui-patch-import-demo-report.txt",
+        "ui-patch-runtime-state-check-report.txt",
         "story-artifacts-preserved true",
         "source-preserved true",
         "proposed-accepted true",
+        "flow-edit-applied true",
+        "patched-core-replayed true",
     ] {
         assert!(
             agent_manual.contains(required),
@@ -1958,13 +1970,19 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "rejected: bytecode-verification-without-fingerprint.ail-spec.md AIL-AGENT-001",
         "codex-ail-prompt-reviewer.md",
         "examples/agents/skills/ail-prompt-interaction-reviewer/SKILL.md",
+        "codex-ail-ui-patch-reviewer.md",
+        "examples/agents/skills/ail-ui-patch-reviewer/SKILL.md",
         "cargo run -- ail-agent-contracts examples/agents",
         "repair-promotion-import-demo-report.txt",
         "agent-policy-import-demo-report.txt",
+        "ui-patch-import-demo-report.txt",
+        "ui-patch-runtime-state-check-report.txt",
         "source-preserved true",
         "proposed-accepted true",
         "policy-handoff-imported true",
         "policy-handoff-replayed true",
+        "flow-edit-applied true",
+        "patched-core-replayed true",
         "cargo test ail_toolchain_agent_package_lowers_to_verified_bytecode --test ail_toolchain",
         "cargo test cli_ail_build_runs_toolchain_agent_bytecode --test ail_toolchain",
         "cargo test cli_ail_build_agent_verifies_bytecode_artifact_after_compile --test ail_toolchain",
@@ -2984,6 +3002,108 @@ fn examples_agents_include_agent_policy_review_contract() {
 }
 
 #[test]
+fn examples_agents_include_ui_patch_review_contract() {
+    let agent_readme = fs::read_to_string(format!(
+        "{}/examples/agents/README.md",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .unwrap();
+    let ui_patch_reviewer = fs::read_to_string(format!(
+        "{}/examples/agents/codex-ail-ui-patch-reviewer.md",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .unwrap();
+    let ui_patch_skill = fs::read_to_string(format!(
+        "{}/examples/agents/skills/ail-ui-patch-reviewer/SKILL.md",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .unwrap();
+
+    for required in [
+        "codex-ail-ui-patch-reviewer",
+        "codex-ail-ui-patch-reviewer.md",
+        "UI patch import review report",
+        "examples/agents/skills/ail-ui-patch-reviewer/SKILL.md",
+        "ui-review-patch.txt",
+        "ui-patch-capture-plan.json",
+        "ui-patch-import-demo-report.txt",
+        "ui-patch-runtime-state-check-report.txt",
+        "visual-regression-fingerprint-preserved true",
+        "runtime-ui-state-anchor Ticket.reviewStatus",
+        "flow-edit-applied true",
+        "patched-core-replayed true",
+    ] {
+        assert!(
+            agent_readme.contains(required),
+            "{required}\n{agent_readme}"
+        );
+    }
+    for required in [
+        "version: 0.1.0",
+        "executor-label: codex-ail-ui-patch-reviewer",
+        "executor-family: codex-skill-agent",
+        "target artifact: AIL-UI-Patch-Import-Review",
+        "agent-contract-check ail-agent-contracts examples/agents",
+        "scripts/run_ail_interactive_manual.py --chapter ui-patch-import --run-checks",
+        "cargo run -- ail-examples examples --artifact-dir",
+        "ui-review-patch.txt",
+        "ui-review-patch.fingerprint.txt",
+        "ui-review-patch-fingerprint-observed-count",
+        "scripts/run_v03_ui_patch_capture_plan.py",
+        "ui-patch-capture-plan.json",
+        "ui-patch-capture-plan.fingerprint.txt",
+        "scripts/run_v03_ui_patch_import_demo.py",
+        "ui-patch-import-demo-report.txt",
+        "ui-patch-import-demo-report.fingerprint.txt",
+        "scripts/run_v03_ui_patch_runtime_state_check.py",
+        "ui-patch-runtime-state-check-report.txt",
+        "ui-patch-runtime-state-check-report.fingerprint.txt",
+        "human-approval-required true",
+        "source-preserved true",
+        "proposed-accepted true",
+        "flow-edit-applied true",
+        "patched-core-replayed true",
+        "visual-regression-fingerprint-preserved true",
+        "runtime-ui-state-anchor Ticket.reviewStatus",
+        "Do not promote generated content into ./examples",
+    ] {
+        assert!(
+            ui_patch_reviewer.contains(required),
+            "{required}\n{ui_patch_reviewer}"
+        );
+    }
+    for required in [
+        "name: ail-ui-patch-reviewer",
+        "description: Use when",
+        "examples/agents/codex-ail-ui-patch-reviewer.md",
+        "python3 scripts/run_ail_interactive_manual.py --chapter ui-patch-import --run-checks",
+        "cargo run -- ail-agent-contracts examples/agents",
+        "cargo run -- ail-examples examples --artifact-dir",
+        "ui-review-patch.txt",
+        "ui-review-patch.fingerprint.txt",
+        "ui-review-patch-fingerprint-observed-count",
+        "ui-patch-capture-plan.json",
+        "ui-patch-capture-plan.fingerprint.txt",
+        "ui-patch-import-demo-report.txt",
+        "ui-patch-import-demo-report.fingerprint.txt",
+        "ui-patch-runtime-state-check-report.txt",
+        "ui-patch-runtime-state-check-report.fingerprint.txt",
+        "human-approval-required true",
+        "source-preserved true",
+        "proposed-accepted true",
+        "flow-edit-applied true",
+        "patched-core-replayed true",
+        "visual-regression-fingerprint-preserved true",
+        "runtime-ui-state-anchor Ticket.reviewStatus",
+    ] {
+        assert!(
+            ui_patch_skill.contains(required),
+            "{required}\n{ui_patch_skill}"
+        );
+    }
+}
+
+#[test]
 fn codex_skill_documents_prompt_interaction_review_gate() {
     let skill = fs::read_to_string(format!(
         "{}/examples/agents/skills/ail-prompt-interaction-reviewer/SKILL.md",
@@ -3106,19 +3226,22 @@ fn cli_ail_agent_contracts_validates_prompt_reviewer_contract() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     for required in [
         "AIL-Agent-Contracts-Report:",
-        "contract-count 6",
+        "contract-count 7",
         "contract codex-ail-requirements-writer",
         "contract codex-ail-spec-writer",
         "contract codex-ail-diagnostic-repairer",
         "contract codex-ail-prompt-reviewer",
         "contract codex-ail-repair-promotion-reviewer",
         "contract codex-ail-agent-policy-reviewer",
+        "contract codex-ail-ui-patch-reviewer",
         "review-command scripts/run_v03_prompt_llm_harness.py --review-artifacts",
         "review-command scripts/run_v03_story_llm_harness.py --review-artifacts",
         "review-command scripts/run_v03_agent_policy_live_reviewer_harness.py --review-artifacts",
         "repair-promotion-artifact repair-promotion-review.txt",
         "agent-policy-import-artifact agent-policy-import-demo-report.txt",
         "agent-policy-live-review-artifact agent-policy-live-review-report.txt",
+        "ui-patch-import-artifact ui-patch-import-demo-report.txt",
+        "ui-patch-runtime-artifact ui-patch-runtime-state-check-report.txt",
         "story-promotion-import-artifact story-promotion-import-demo-report.txt",
         "repair-promotion-import-artifact repair-promotion-import-demo-report.txt",
         "roadmap-artifact v03-roadmap.txt",
@@ -3127,6 +3250,7 @@ fn cli_ail_agent_contracts_validates_prompt_reviewer_contract() {
         "codex-skill examples/agents/skills/ail-system-prompt-harness-runner/SKILL.md",
         "codex-skill examples/agents/skills/ail-repair-promotion-reviewer/SKILL.md",
         "codex-skill examples/agents/skills/ail-agent-policy-reviewer/SKILL.md",
+        "codex-skill examples/agents/skills/ail-ui-patch-reviewer/SKILL.md",
         "agent-contracts-result accepted",
     ] {
         assert!(stdout.contains(required), "{required}\n{stdout}");
