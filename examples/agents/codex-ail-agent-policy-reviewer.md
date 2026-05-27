@@ -70,6 +70,10 @@ Return an `AIL-Agent-Policy-Review` report that records:
 - `reviewer-envelope-valid-count`
 - `reviewer-envelope-invalid-count`
 - `evidence-bundle-present-count`
+- `default-max-tokens`
+- `max-tokens`
+- `token-budget-default`
+- `token-budget-warning`
 - `reviewer-decision-accept-count`
 - `reviewer-decision-needs-repair-count`
 - `reviewer-decision-reject-count`
@@ -166,7 +170,8 @@ The offline review must include `agent-policy-live-review-report.txt`,
 `agent-policy-live-review-review.fingerprint.txt`,
 `manifest.v03-agent-policy-live-review.txt`,
 `reviewer-envelope-valid-count`, `reviewer-envelope-invalid-count`,
-`evidence-bundle-present-count`,
+`evidence-bundle-present-count`, `default-max-tokens`, `max-tokens`,
+`token-budget-default`, any `token-budget-warning`,
 `reviewer-decision-accept-count`,
 `reviewer-decision-needs-repair-count`, and
 `reviewer-decision-reject-count`. Manual `--include-live` runs this path

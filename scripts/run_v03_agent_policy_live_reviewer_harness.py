@@ -507,6 +507,10 @@ def print_dry_run(args: argparse.Namespace, contracts: list[tuple[str, str, str]
     print(f"model-check curl -sS {models_url_for_endpoint(args.endpoint)}")
     print(f"endpoint {args.endpoint}")
     print(f"artifact-dir {args.artifact_dir}")
+    print(f"default-max-tokens {DEFAULT_MAX_TOKENS}")
+    print(f"max-tokens {args.max_tokens}")
+    for line in token_budget_lines(args.max_tokens):
+        print(line)
     print(f"examples-artifacts {args.examples_artifacts}")
     print(f"capture-plan-dir {args.capture_plan_dir}")
     print(f"import-work-dir {args.import_work_dir}")
@@ -568,6 +572,22 @@ def review_artifacts(args: argparse.Namespace, contracts: list[tuple[str, str, s
         errors.append("report missing AIL-Agent-Policy-Live-Reviewer-Harness header")
     if f"role-count {len(contracts)}" not in report_text:
         errors.append(f"report missing role-count {len(contracts)}")
+    default_max_tokens = report_field(report_lines, "default-max-tokens")
+    max_tokens = report_field(report_lines, "max-tokens")
+    token_budget_default = report_field(report_lines, "token-budget-default")
+    token_budget_warnings = [
+        line for line in report_lines if line.startswith("token-budget-warning ")
+    ]
+    expected_default = str(DEFAULT_MAX_TOKENS)
+    if default_max_tokens != expected_default:
+        errors.append(
+            "report default-max-tokens mismatch: "
+            f"expected {expected_default} got {default_max_tokens or '<missing>'}"
+        )
+    if max_tokens is None:
+        errors.append("report missing max-tokens")
+    if token_budget_default is None:
+        errors.append("report missing token-budget-default")
 
     for role, contract_path, contract_text in contracts:
         request_path = artifact_root / "requests" / f"{role}.json"
@@ -629,6 +649,10 @@ def review_artifacts(args: argparse.Namespace, contracts: list[tuple[str, str, s
         "AIL-Agent-Policy-Live-Reviewer-Harness-Review:",
         f"artifact-dir {artifact_root}",
         f"role-count {len(contracts)}",
+        f"default-max-tokens {default_max_tokens or '<missing>'}",
+        f"max-tokens {max_tokens or '<missing>'}",
+        f"token-budget-default {token_budget_default or '<missing>'}",
+        *token_budget_warnings,
         f"content-nonempty-count {content_nonempty}",
         f"reviewer-envelope-valid-count {envelope_valid}",
         f"reviewer-envelope-invalid-count {envelope_invalid}",
@@ -662,6 +686,14 @@ def review_artifacts(args: argparse.Namespace, contracts: list[tuple[str, str, s
     return 1 if errors or decision_accept != len(contracts) else 0
 
 
+def report_field(report_lines: list[str], key: str) -> str | None:
+    prefix = f"{key} "
+    for line in report_lines:
+        if line.startswith(prefix):
+            return line[len(prefix) :].strip()
+    return None
+
+
 def run_live(args: argparse.Namespace, contracts: list[tuple[str, str, str]]) -> int:
     evidence_bundle, evidence_errors = build_evidence_bundle(args)
     evidence_fingerprint = evidence_bundle_declared_fingerprint(evidence_bundle)
@@ -677,6 +709,9 @@ def run_live(args: argparse.Namespace, contracts: list[tuple[str, str, str]]) ->
         "AIL-Agent-Policy-Live-Reviewer-Harness:",
         f"endpoint {args.endpoint}",
         f"models-url {models_url_for_endpoint(args.endpoint)}",
+        f"default-max-tokens {DEFAULT_MAX_TOKENS}",
+        f"max-tokens {args.max_tokens}",
+        *token_budget_lines(args.max_tokens),
         f"role-count {len(contracts)}",
         f"source-entry-id {args.source_entry_id}",
         f"proposed-entry-id {args.proposed_entry_id}",
@@ -757,6 +792,20 @@ def run_live(args: argparse.Namespace, contracts: list[tuple[str, str, str]]) ->
     print(report_text, end="")
     print(f"artifacts {artifact_root}")
     return 0
+
+
+def token_budget_lines(max_tokens: int) -> list[str]:
+    if max_tokens < DEFAULT_MAX_TOKENS:
+        return [
+            "token-budget-default false",
+            "token-budget-warning max-tokens-below-default",
+        ]
+    if max_tokens == DEFAULT_MAX_TOKENS:
+        return ["token-budget-default true"]
+    return [
+        "token-budget-default false",
+        "token-budget-warning max-tokens-above-default",
+    ]
 
 
 def main(argv: list[str]) -> int:

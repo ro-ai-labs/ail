@@ -2380,6 +2380,10 @@ fn examples_agents_include_agent_policy_review_contract() {
         "agent-policy-live-review-review.txt",
         "reviewer-envelope-valid-count",
         "evidence-bundle-present-count",
+        "default-max-tokens",
+        "max-tokens",
+        "token-budget-default",
+        "token-budget-warning",
         "policy-handoff-imported true",
         "policy-handoff-replayed true",
     ] {
@@ -2408,6 +2412,10 @@ fn examples_agents_include_agent_policy_review_contract() {
         "reviewer-envelope-valid-count",
         "reviewer-envelope-invalid-count",
         "evidence-bundle-present-count",
+        "default-max-tokens",
+        "max-tokens",
+        "token-budget-default",
+        "token-budget-warning",
         "reviewer-decision-accept-count",
         "reviewer-decision-needs-repair-count",
         "reviewer-decision-reject-count",
@@ -2450,6 +2458,10 @@ fn examples_agents_include_agent_policy_review_contract() {
         "reviewer-envelope-valid-count",
         "reviewer-envelope-invalid-count",
         "evidence-bundle-present-count",
+        "default-max-tokens",
+        "max-tokens",
+        "token-budget-default",
+        "token-budget-warning",
         "reviewer-decision-accept-count",
         "reviewer-decision-needs-repair-count",
         "reviewer-decision-reject-count",
@@ -2620,6 +2632,9 @@ fn script_v03_agent_policy_live_reviewer_harness_help_lists_roles_and_dry_run() 
         "model-check curl -sS http://inteligentia-pro-1:8080/v1/models",
         "endpoint http://inteligentia-pro-1:8080/v1/chat/completions",
         "artifact-dir /tmp/ail-v03-agent-policy-live-review",
+        "default-max-tokens 768",
+        "max-tokens 768",
+        "token-budget-default true",
         "source-entry-id example-40",
         "proposed-entry-id example-40-policy",
         "role-count 5",
@@ -2636,6 +2651,234 @@ fn script_v03_agent_policy_live_reviewer_harness_help_lists_roles_and_dry_run() 
             "{required}\n{dry_run_stdout}"
         );
     }
+
+    let manual = fs::read_to_string(format!(
+        "{}/docs/ail/manual/09-agent-policy-import.md",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .unwrap();
+    assert!(
+        manual.contains("default-max-tokens")
+            && manual.contains("max-tokens")
+            && manual.contains("token-budget-default")
+            && manual.contains("token-budget-warning"),
+        "{manual}"
+    );
+}
+
+#[test]
+fn script_v03_agent_policy_live_reviewer_harness_records_token_budget_evidence() {
+    let script = format!(
+        "{}/scripts/run_v03_agent_policy_live_reviewer_harness.py",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let unique_suffix = format!(
+        "{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-agent-policy-live-review-artifacts-{unique_suffix}"
+    ));
+    let examples_artifacts = std::env::temp_dir().join(format!(
+        "ail-agent-policy-live-review-examples-{unique_suffix}"
+    ));
+    let capture_plan_dir = std::env::temp_dir().join(format!(
+        "ail-agent-policy-live-review-capture-plan-{unique_suffix}"
+    ));
+    let import_work_dir = std::env::temp_dir().join(format!(
+        "ail-agent-policy-live-review-import-work-{unique_suffix}"
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+    let _ = fs::remove_dir_all(&examples_artifacts);
+    let _ = fs::remove_dir_all(&capture_plan_dir);
+    let _ = fs::remove_dir_all(&import_work_dir);
+    let write_fingerprinted = |path: &std::path::Path, text: &str| {
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(path, text).unwrap();
+        fs::write(
+            path.with_extension("fingerprint.txt"),
+            format!("{}\n", fnv64_fingerprint(text)),
+        )
+        .unwrap();
+    };
+    write_fingerprinted(
+        &examples_artifacts
+            .join("examples")
+            .join("example-40")
+            .join("agent-policy-review.txt"),
+        concat!(
+            "AIL-Agent-Policy-Review:\n",
+            "agent-policy-review-fingerprint-observed-count 1\n",
+            "tool-permission-review required\n",
+            "tool-approval-review required\n"
+        ),
+    );
+    write_fingerprinted(
+        &capture_plan_dir.join("agent-policy-capture-plan.json"),
+        concat!(
+            "{\n",
+            "  \"source_entry_id\": \"example-40\",\n",
+            "  \"human_approval_required\": true,\n",
+            "  \"must_supply_request_response_json\": true\n",
+            "}\n"
+        ),
+    );
+    write_fingerprinted(
+        &import_work_dir.join("agent-policy-import-demo-report.txt"),
+        concat!(
+            "AIL-Agent-Policy-Import-Demo-Report:\n",
+            "source-preserved true\n",
+            "proposed-accepted true\n",
+            "policy-handoff-imported true\n",
+            "policy-handoff-replayed true\n"
+        ),
+    );
+    write_fingerprinted(
+        &import_work_dir.join("agent-policy-multi-agent-handoff-report.txt"),
+        concat!(
+            "AIL-Agent-Policy-Multi-Agent-Handoff-Report:\n",
+            "multi-agent-execution-evidence deterministic-role-handoff\n"
+        ),
+    );
+    let roles = [
+        "requirements-writer",
+        "spec-writer",
+        "diagnostic-repairer",
+        "prompt-reviewer",
+        "agent-policy-reviewer",
+    ];
+    let response_bodies = roles
+        .iter()
+        .map(|role| {
+            let envelope = format!(
+                concat!(
+                    "{{",
+                    "\"artifact_kind\":\"AIL-AgentTool-Live-Reviewer-Handoff\",",
+                    "\"role\":{},",
+                    "\"decision\":\"accept\",",
+                    "\"evidence\":[",
+                    "\"agent-policy-review.txt\",",
+                    "\"agent-policy-capture-plan.json\",",
+                    "\"agent-policy-import-demo-report.txt\",",
+                    "\"agent-policy-multi-agent-handoff-report.txt\"",
+                    "],",
+                    "\"questions\":[],",
+                    "\"checker_handoff\":{{",
+                    "\"must_check\":true,",
+                    "\"required_artifacts\":[\"agent-policy-review.txt\"]",
+                    "}}",
+                    "}}"
+                ),
+                json_string(role)
+            );
+            format!(
+                r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+                json_string(&envelope)
+            )
+        })
+        .collect::<Vec<_>>();
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let server = serve_chat_responses(listener, response_bodies);
+
+    let output = Command::new("python3")
+        .args([
+            &script,
+            "--endpoint",
+            &format!("http://127.0.0.1:{}/v1/chat/completions", addr.port()),
+            "--skip-model-check",
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+            "--examples-artifacts",
+            examples_artifacts.to_str().unwrap(),
+            "--capture-plan-dir",
+            capture_plan_dir.to_str().unwrap(),
+            "--import-work-dir",
+            import_work_dir.to_str().unwrap(),
+            "--max-tokens",
+            "64",
+        ])
+        .output()
+        .unwrap();
+    let request_bodies = server.join().unwrap();
+    assert_eq!(request_bodies.len(), 5);
+    for request_body in &request_bodies {
+        assert!(
+            request_body.contains(r#""max_tokens": 64"#),
+            "{request_body}"
+        );
+        assert!(
+            request_body.contains(r#""response_format": {"type": "json_object"}"#),
+            "{request_body}"
+        );
+    }
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let run_stdout = String::from_utf8_lossy(&output.stdout);
+    for required in [
+        "default-max-tokens 768",
+        "max-tokens 64",
+        "token-budget-default false",
+        "token-budget-warning max-tokens-below-default",
+    ] {
+        assert!(run_stdout.contains(required), "{required}\n{run_stdout}");
+    }
+
+    let review = Command::new("python3")
+        .args([
+            &script,
+            "--review-artifacts",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        review.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&review.stdout),
+        String::from_utf8_lossy(&review.stderr)
+    );
+    let review_stdout = String::from_utf8_lossy(&review.stdout);
+    assert!(
+        review_stdout.contains("AIL-Agent-Policy-Live-Reviewer-Harness-Review:"),
+        "{review_stdout}"
+    );
+    assert!(
+        review_stdout.contains("reviewer-envelope-valid-count 5"),
+        "{review_stdout}"
+    );
+    assert!(
+        review_stdout.contains("evidence-bundle-present-count 5"),
+        "{review_stdout}"
+    );
+    for required in [
+        "default-max-tokens 768",
+        "max-tokens 64",
+        "token-budget-default false",
+        "token-budget-warning max-tokens-below-default",
+    ] {
+        assert!(
+            review_stdout.contains(required),
+            "{required}\n{review_stdout}"
+        );
+    }
+    assert!(
+        review_stdout.contains("review-result accepted"),
+        "{review_stdout}"
+    );
+
+    fs::remove_dir_all(artifact_dir).unwrap();
+    fs::remove_dir_all(examples_artifacts).unwrap();
+    fs::remove_dir_all(capture_plan_dir).unwrap();
+    fs::remove_dir_all(import_work_dir).unwrap();
 }
 
 #[test]

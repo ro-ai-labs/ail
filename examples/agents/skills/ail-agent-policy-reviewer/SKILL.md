@@ -82,6 +82,10 @@ The review report must include:
 - `reviewer-envelope-valid-count`
 - `reviewer-envelope-invalid-count`
 - `evidence-bundle-present-count`
+- `default-max-tokens`
+- `max-tokens`
+- `token-budget-default`
+- `token-budget-warning`
 - `reviewer-decision-accept-count`
 - `reviewer-decision-needs-repair-count`
 - `reviewer-decision-reject-count`

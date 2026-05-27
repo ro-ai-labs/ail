@@ -146,6 +146,11 @@ content excerpts from `agent-policy-review.txt`,
 `agent-policy-capture-plan.json`, `agent-policy-import-demo-report.txt`, and
 `agent-policy-multi-agent-handoff-report.txt`.
 
+The default hosted reviewer budget is `--max-tokens 768`. The live report and
+offline review repeat `default-max-tokens`, the actual `max-tokens`,
+`token-budget-default`, and any `token-budget-warning`, so truncated or
+over-budget reviewer evidence is visible before promotion decisions.
+
 Then review the recorded request, response, and content bundle offline:
 
 ```sh
@@ -163,6 +168,10 @@ agent-policy-live-review-review.fingerprint.txt
 reviewer-envelope-valid-count
 reviewer-envelope-invalid-count
 evidence-bundle-present-count
+default-max-tokens
+max-tokens
+token-budget-default
+token-budget-warning
 reviewer-decision-accept-count
 reviewer-decision-needs-repair-count
 reviewer-decision-reject-count
