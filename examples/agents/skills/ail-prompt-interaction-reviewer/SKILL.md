@@ -57,6 +57,12 @@ Review User Story mode artifacts:
 python3 scripts/run_v03_story_llm_harness.py --review-artifacts /tmp/ail-v03-story-llm
 ```
 
+Create the plan-only story promotion handoff:
+
+```sh
+python3 scripts/run_v03_story_promotion_capture_plan.py --story-artifacts /tmp/ail-v03-story-llm --output-dir /tmp/ail-v03-story-promotion-capture-plan
+```
+
 Run the interactive manual live gate when prompt interaction evidence must be
 reproduced end to end:
 
@@ -92,6 +98,9 @@ The review report must include:
 - `prompt-llm-harness-review.txt`
 - `prompt-llm-harness-review.fingerprint.txt`
 - `story-llm-harness-report.txt`
+- `story-promotion-capture-plan.json`
+- `story-promotion-capture-plan.txt`
+- `story-promotion-capture-plan.fingerprint.txt`
 - `examples-report.txt`
 - `v03-roadmap.txt`
 - `repair-promotion-review.txt`
@@ -115,6 +124,7 @@ Return `needs-repair` or `rejected-for-promotion` when:
 - probe metadata is missing, stale, or generic
 - hosted output is non-empty but fails offline review
 - story artifacts lose semantic anchors or agent trace evidence
+- story promotion capture-plan artifacts are missing
 - `examples-report.txt` or `v03-roadmap.txt` is missing
 - generated content was modified silently instead of preserving the original
   hosted output as evidence

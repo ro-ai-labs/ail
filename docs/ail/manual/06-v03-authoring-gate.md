@@ -64,6 +64,9 @@ story-llm-harness-report.fingerprint.txt
 story-llm-transcript-check-count
 story-prompt-envelope-valid-count
 story-prompt-envelope-invalid-count
+story-promotion-capture-plan.json
+story-promotion-capture-plan.txt
+story-promotion-capture-plan.fingerprint.txt
 manifest.ail-story.txt
 story-questions.ail-interview.md
 agent-trace.txt

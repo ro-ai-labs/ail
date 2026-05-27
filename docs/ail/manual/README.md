@@ -113,7 +113,8 @@ python3 scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run
 - `user-story-mode`: story-first authoring with `ail-story`, checked
   requirements, blocking-question evidence, accepted spec, checked Core,
   bytecode, stored LLM request/response/content transcripts, prompt-envelope
-  counts, and agent trace. Prose: `01-user-story-mode.md`.
+  counts, agent trace, and a plan-only story promotion capture artifact.
+  Prose: `01-user-story-mode.md`.
 - `examples-release`: full `./examples` replay with release evidence and
   learning metadata. Prose: `02-examples-release.md`.
 - `prompt-interaction`: prompt-pack and stored transcript inspection for system

@@ -146,10 +146,32 @@ That review writes:
 /tmp/ail-v03-story-llm/story-llm-harness-report.fingerprint.txt
 ```
 
+After the review is accepted, create a plan-only promotion capture artifact:
+
+```sh
+python3 scripts/run_v03_story_promotion_capture_plan.py \
+  --story-artifacts /tmp/ail-v03-story-llm \
+  --output-dir /tmp/ail-v03-story-promotion-capture-plan
+```
+
+That writes:
+
+```text
+/tmp/ail-v03-story-promotion-capture-plan/story-promotion-capture-plan.json
+/tmp/ail-v03-story-promotion-capture-plan/story-promotion-capture-plan.txt
+/tmp/ail-v03-story-promotion-capture-plan/story-promotion-capture-plan.fingerprint.txt
+```
+
+The plan records `promotion-decision accepted-for-promotion`,
+`human-approval-required true`, the story review/report/manifest
+fingerprints, transcript check count, and prompt-envelope counts. It does not
+mutate `./examples`; it is the durable handoff for a later human-approved
+batch capture.
+
 The harness is intentionally outside the default test suite because it depends
 on the hosted llama.cpp server and model behavior. Promote a live run into the
 examples corpus only after the generated requirements, spec, Core, bytecode,
-agent trace, and manifest have been reviewed.
+agent trace, manifest, and story-promotion capture plan have been reviewed.
 
 The review mode is offline. It checks story source and normalized story
 fingerprints, story-mode report metadata, generated requirements, accepted

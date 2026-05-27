@@ -122,6 +122,25 @@ BASE_CHAPTERS: tuple[ManualChapter, ...] = (
                 ),
             ),
             ManualCommand(
+                label="plan-story-promotion-capture",
+                command=(
+                    "python3",
+                    "scripts/run_v03_story_promotion_capture_plan.py",
+                    "--story-artifacts",
+                    "/tmp/ail-v03-story-llm",
+                    "--output-dir",
+                    "/tmp/ail-v03-story-promotion-capture-plan",
+                ),
+                live=True,
+                evidence=(
+                    "story-promotion-capture-plan.json",
+                    "story-promotion-capture-plan.txt",
+                    "story-promotion-capture-plan.fingerprint.txt",
+                    "promotion-decision accepted-for-promotion",
+                    "human-approval-required true",
+                ),
+            ),
+            ManualCommand(
                 label="direct-ail-story-live",
                 command=(
                     "cargo",
@@ -534,6 +553,8 @@ V03_AUTHORING_GATE = ManualChapter(
                 "story-llm-transcript-check-count",
                 "story-prompt-envelope-valid-count",
                 "story-prompt-envelope-invalid-count",
+                "story-promotion-capture-plan.json",
+                "story-promotion-capture-plan.fingerprint.txt",
             ),
         ),
         ManualCommand(

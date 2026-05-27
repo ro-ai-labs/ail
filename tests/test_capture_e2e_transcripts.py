@@ -263,6 +263,7 @@ def write_story_llm_review_fixture(artifact_dir, omit_agent_trace=False):
     story_normalized = story_source + "story-journey: story-to-spec\nstory-roundtrip: semantic-similar\n"
     story_report = (
         "AIL-Story-Mode-Report:\n"
+        "entrypoint: ail-story\n"
         "package: support-ticket\n"
         "user-story-id: support-ticket-agent-story\n"
         "semantic-anchor-count: 4\n"
@@ -757,6 +758,73 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             self.assertIn("agent-trace.txt", review.stdout)
         finally:
             shutil.rmtree(artifact_dir, ignore_errors=True)
+
+    def test_story_promotion_capture_plan_writes_fingerprinted_plan(self):
+        artifact_dir = Path(tempfile.mkdtemp(prefix="ail-story-promotion-artifacts-"))
+        plan_dir = Path(tempfile.mkdtemp(prefix="ail-story-promotion-plan-"))
+        try:
+            write_story_llm_review_fixture(artifact_dir)
+            review = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_story_llm_harness.py",
+                    "--review-artifacts",
+                    str(artifact_dir),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(review.returncode, 0, review.stderr)
+
+            plan = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_story_promotion_capture_plan.py",
+                    "--story-artifacts",
+                    str(artifact_dir),
+                    "--output-dir",
+                    str(plan_dir),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(
+                plan.returncode,
+                0,
+                f"stdout:\n{plan.stdout}\nstderr:\n{plan.stderr}",
+            )
+            self.assertIn("AIL-Story-Promotion-Capture-Plan:", plan.stdout)
+            self.assertIn("story-id support-ticket-agent-story", plan.stdout)
+            self.assertIn("promotion-decision accepted-for-promotion", plan.stdout)
+            self.assertIn("human-approval-required true", plan.stdout)
+            self.assertIn("story-llm-transcript-check-count 6", plan.stdout)
+            self.assertIn("story-prompt-envelope-valid-count 2", plan.stdout)
+            self.assertIn("plan-json story-promotion-capture-plan.json", plan.stdout)
+
+            plan_json_path = plan_dir / "story-promotion-capture-plan.json"
+            plan_text_path = plan_dir / "story-promotion-capture-plan.txt"
+            plan_fingerprint_path = (
+                plan_dir / "story-promotion-capture-plan.fingerprint.txt"
+            )
+            plan_payload = json.loads(plan_json_path.read_text())
+            plan_text_path.read_text()
+            self.assertEqual(
+                plan_payload["artifact_kind"], "AIL-Story-Promotion-Capture-Plan"
+            )
+            self.assertEqual(plan_payload["story_id"], "support-ticket-agent-story")
+            self.assertEqual(plan_payload["status"], "plan-only")
+            self.assertTrue(plan_payload["human_approval_required"])
+            self.assertEqual(plan_payload["promotion_decision"], "accepted-for-promotion")
+            self.assertEqual(plan_payload["story_llm_transcript_check_count"], 6)
+            self.assertEqual(
+                plan_fingerprint_path.read_text().strip(),
+                fnv64(plan_json_path.read_text()),
+            )
+        finally:
+            shutil.rmtree(artifact_dir, ignore_errors=True)
+            shutil.rmtree(plan_dir, ignore_errors=True)
 
     def test_capture_replaces_seed_entry_with_live_llm_transcript(self):
         output_dir = Path(tempfile.mkdtemp(prefix="ail-examples-live-capture-"))
