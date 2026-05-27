@@ -75,6 +75,8 @@ agent-trace.txt
 examples-report.txt
 v03-roadmap.txt
 manifest.ail-examples.txt
+ui-review.txt
+ui-review-fingerprint-observed-count
 prompt-corpus-portability.txt
 manifest.ail-prompt-corpus.txt
 prompt-llm-harness-report.txt

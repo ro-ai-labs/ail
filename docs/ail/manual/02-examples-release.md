@@ -39,7 +39,10 @@ Inspect these files after replay:
 Per-entry directories under `/tmp/ail-manual-examples/examples/` include the
 request transcript, response transcript, extracted artifact, checked Core,
 bytecode, VM trace, target report, diagnostics when rejected, and
-`user-story.txt` when story metadata is present.
+`user-story.txt` when story metadata is present. Accepted UI workflow entries
+and accepted entries tagged with the `ui` surface also include
+`ui-review.txt`, a deterministic visual/accessibility/workflow review artifact
+with upstream fingerprints.
 
 ## Review Rule
 
@@ -47,5 +50,7 @@ Use `examples-report.txt` for corpus coverage and `manifest.ail-examples.txt`
 for fingerprints. Use `model-executor-manifest.txt` to confirm hosted LLM and
 Codex skill-agent provenance. Use `v03-roadmap.txt` to decide which language,
 prompt, checker, runtime, target, or documentation work the corpus is asking
-for next.
-
+for next. For UI workflow and UI-surface entries, check
+`ui-review-fingerprint-*` report lines and the corresponding
+`entry-artifact ... ui-review ...` manifest entries before claiming the
+visual/accessibility review path is covered.

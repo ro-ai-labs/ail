@@ -199,6 +199,8 @@ The `ail-examples` replay bundle must also write deterministic story artifacts:
 
 - `examples/<entry-id>/user-story.txt`
 - `examples/<entry-id>/user-story.fingerprint.txt`
+- `examples/<entry-id>/ui-review.txt` for accepted UI workflow or UI-surface entries
+- `examples/<entry-id>/ui-review.fingerprint.txt` for accepted UI workflow or UI-surface entries
 - `examples/<entry-id>/repair-tutorial.txt` for rejected entries
 - `examples/<entry-id>/repair-tutorial.fingerprint.txt` for rejected entries
 - `examples/<entry-id>/repair-candidate.ail-spec.md` for rejected entries
@@ -213,22 +215,28 @@ The `ail-examples` replay bundle must also write deterministic story artifacts:
 
 The story artifact is derived from catalog metadata and fingerprinted in the
 same report and manifest as request, response, checked Core, bytecode, VM
-trace, native, target-report, diagnostics, and repair-tutorial artifacts. The
-repair tutorial is derived from rejected-entry metadata and diagnostics so the
-corpus teaches how to move from a failed prompt/spec response to a corrected
-spec. The repair proof chain must then show that corrected spec reaching
-checked Core, verified bytecode, and runtime or target evidence. The repair
-diff must connect rejected and repaired fingerprints, mark the expected
-diagnostic as removed, and preserve story semantic anchors for review. The
-repair promotion review must then make the promotion decision explicit,
-including `accepted-for-promotion`, `human-approval-required true`, the
-proposed accepted entry id, and fingerprints for every upstream repair
-artifact. This makes promotion auditable without automatically editing the
-corpus. The
-report must also summarize semantic-anchor preservation with total, preserved,
-and missing counts plus per-entry preservation lines. The roadmap artifact is
-fingerprinted and listed in `manifest.ail-examples.txt` beside the examples
-report and model-executor manifest.
+trace, native, target-report, UI review, diagnostics, and repair-tutorial
+artifacts. Accepted `ui-workflow` entries and accepted entries tagged with the
+`ui` surface must also emit `ui-review.txt`, which records deterministic visual
+review, accessibility review, workflow authoring, runtime evidence,
+semantic-anchor preservation, and upstream fingerprints. The report must
+summarize these files with
+`ui-review-fingerprint-*` lines and list each UI review in
+`manifest.ail-examples.txt`. The repair tutorial is derived from
+rejected-entry metadata and diagnostics so the corpus teaches how to move from
+a failed prompt/spec response to a corrected spec. The repair proof chain must
+then show that corrected spec reaching checked Core, verified bytecode, and
+runtime or target evidence. The repair diff must connect rejected and repaired
+fingerprints, mark the expected diagnostic as removed, and preserve story
+semantic anchors for review. The repair promotion review must then make the
+promotion decision explicit, including `accepted-for-promotion`,
+`human-approval-required true`, the proposed accepted entry id, and
+fingerprints for every upstream repair artifact. This makes promotion
+auditable without automatically editing the corpus. The report must also
+summarize semantic-anchor preservation with total, preserved, and missing
+counts plus per-entry preservation lines. The roadmap artifact is fingerprinted
+and listed in `manifest.ail-examples.txt` beside the examples report and
+model-executor manifest.
 
 ## Minimum Proof Commands
 
@@ -259,8 +267,9 @@ as prose. The current examples reveal these next-version gaps:
   files.
 - Prompt matrices need explicit separation between semantic use-case diversity
   and prompt-surface coverage.
-- UI examples need stronger visual review, accessibility review, and workflow
-  authoring artifacts.
+- UI examples now emit deterministic visual review, accessibility review, and
+  workflow authoring artifacts. The next bar is richer package-local
+  walkthroughs, patch exercises, and accessibility failure fixtures.
 - AgentTool examples need multi-agent handoff and policy-review scenarios.
 - Compiler/self-hosting examples need pass composition and fixed-point checks.
 - Systems examples need hardware-facing contracts, scheduler or interrupt

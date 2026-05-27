@@ -25309,6 +25309,38 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
+        report.contains("ui-review-fingerprint-observed-count 13"),
+        "{report}"
+    );
+    let ui_review_108 =
+        fs::read_to_string(artifact_dir.join("examples/example-108/ui-review.txt")).unwrap();
+    assert!(
+        ui_review_108.contains("AIL-UI-Review:")
+            && ui_review_108.contains("entry example-108")
+            && ui_review_108.contains("program-domain ui-workflow")
+            && ui_review_108.contains("story-evidence target-report")
+            && ui_review_108.contains("visual-review-artifact deterministic-text")
+            && ui_review_108.contains("accessibility-review required")
+            && ui_review_108.contains("workflow-authoring-artifact checked-core")
+            && ui_review_108.contains("target-report-fingerprint ")
+            && ui_review_108.contains("semantic-anchor-missing-count 0"),
+        "{ui_review_108}"
+    );
+    let ui_review_108_fingerprint =
+        fs::read_to_string(artifact_dir.join("examples/example-108/ui-review.fingerprint.txt"))
+            .unwrap();
+    assert_eq!(
+        ui_review_108_fingerprint.trim(),
+        fnv64_fingerprint(&ui_review_108)
+    );
+    assert!(
+        report.contains(&format!(
+            "entry-artifact example-108 ui-review examples/example-108/ui-review.txt {}",
+            ui_review_108_fingerprint.trim()
+        )),
+        "{report}"
+    );
+    assert!(
         report
             .contains("entry-artifact example-99 diagnostics examples/example-99/diagnostics.txt"),
         "{report}"
@@ -25679,6 +25711,13 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
     assert!(manifest.contains("AIL-Examples-Manifest:"), "{manifest}");
     assert!(
         manifest.contains("entry example-99 checker-result rejected target vm"),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "entry-artifact example-108 ui-review examples/example-108/ui-review.txt {}",
+            ui_review_108_fingerprint.trim()
+        )),
         "{manifest}"
     );
     for (entry_id, _, repair_evidence_kind) in rejected_entries {
@@ -26095,6 +26134,42 @@ fn cli_ail_e2e_corpus_replays_ui_profile_specs() {
     assert!(
         bytecode.contains(r#""action":"CreateTicket""#),
         "{bytecode}"
+    );
+    let report = fs::read_to_string(artifact_dir.join("examples-report.txt")).unwrap();
+    assert!(
+        report.contains("ui-review-fingerprint-observed-count 6"),
+        "{report}"
+    );
+    let ui_review =
+        fs::read_to_string(artifact_dir.join("examples/example-65/ui-review.txt")).unwrap();
+    assert!(
+        ui_review.contains("AIL-UI-Review:")
+            && ui_review.contains("entry example-65")
+            && ui_review.contains("program-domain ui-workflow")
+            && ui_review.contains("visual-review-artifact deterministic-text")
+            && ui_review.contains("accessibility-review required")
+            && ui_review.contains("workflow-authoring-artifact checked-core")
+            && ui_review.contains("semantic-anchor-missing-count 0"),
+        "{ui_review}"
+    );
+    let ui_review_fingerprint =
+        fs::read_to_string(artifact_dir.join("examples/example-65/ui-review.fingerprint.txt"))
+            .unwrap();
+    assert_eq!(ui_review_fingerprint.trim(), fnv64_fingerprint(&ui_review));
+    assert!(
+        report.contains(&format!(
+            "entry-artifact example-65 ui-review examples/example-65/ui-review.txt {}",
+            ui_review_fingerprint.trim()
+        )),
+        "{report}"
+    );
+    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-examples.txt")).unwrap();
+    assert!(
+        manifest.contains(&format!(
+            "entry-artifact example-65 ui-review examples/example-65/ui-review.txt {}",
+            ui_review_fingerprint.trim()
+        )),
+        "{manifest}"
     );
 
     let _ = fs::remove_dir_all(corpus_dir);

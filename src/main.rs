@@ -477,6 +477,7 @@ struct AilE2eCorpusEvaluation {
     bytecode_text: Option<String>,
     vm_trace_text: Option<String>,
     target_report_text: Option<String>,
+    ui_review_text: Option<String>,
     diagnostics_text: Option<String>,
     repair_tutorial_text: Option<String>,
     repair_proof: Option<AilE2eRepairProofArtifacts>,
@@ -2333,6 +2334,7 @@ fn evaluate_rejected_ail_e2e_corpus_entry(
         bytecode_text: None,
         vm_trace_text: None,
         target_report_text: None,
+        ui_review_text: None,
         diagnostics_text: Some(diagnostics_text),
         repair_tutorial_text: Some(repair_tutorial_text),
         repair_proof: Some(repair_proof),
@@ -2799,6 +2801,7 @@ fn evaluate_ail_e2e_corpus_entry(
             bytecode_text: None,
             vm_trace_text: None,
             target_report_text: None,
+            ui_review_text: None,
             diagnostics_text: None,
             repair_tutorial_text: None,
             repair_proof: None,
@@ -2886,16 +2889,28 @@ fn evaluate_ail_e2e_corpus_entry(
         }
         _ => None,
     };
+    let semantic_anchors = read_ail_e2e_entry_semantic_anchors(entry)?;
+    let checked_core_text = render_ail_core(&core);
+    let bytecode_text = format!("{}\n", render_ail_bytecode(&bytecode));
+    let ui_review_text = render_ail_e2e_ui_review_text(
+        entry,
+        &semantic_anchors,
+        Some(&checked_core_text),
+        Some(&bytecode_text),
+        vm_trace_text.as_deref(),
+        target_report_text.as_deref(),
+    );
     Ok(AilE2eCorpusEvaluation {
         entry: entry.clone(),
-        semantic_anchors: read_ail_e2e_entry_semantic_anchors(entry)?,
+        semantic_anchors,
         request_fingerprint: Some(ail_artifact_fingerprint(&request_text)),
         response_fingerprint: Some(ail_artifact_fingerprint(&response_text)),
         extracted_artifact_fingerprint: Some(ail_artifact_fingerprint(&spec_text)),
-        checked_core_text: Some(render_ail_core(&core)),
-        bytecode_text: Some(format!("{}\n", render_ail_bytecode(&bytecode))),
+        checked_core_text: Some(checked_core_text),
+        bytecode_text: Some(bytecode_text),
         vm_trace_text,
         target_report_text,
+        ui_review_text,
         diagnostics_text: None,
         repair_tutorial_text: None,
         repair_proof: None,
@@ -3088,6 +3103,12 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
             .as_ref()
             .map(|text| ail_artifact_fingerprint(text))
     });
+    push_ail_e2e_fingerprint_reuse_lines(&mut lines, "ui-review", evaluations, |evaluation| {
+        evaluation
+            .ui_review_text
+            .as_ref()
+            .map(|text| ail_artifact_fingerprint(text))
+    });
     push_ail_e2e_fingerprint_reuse_lines(&mut lines, "diagnostics", evaluations, |evaluation| {
         evaluation
             .diagnostics_text
@@ -3264,6 +3285,14 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
                 entry.id,
                 entry.id,
                 ail_artifact_fingerprint(target_report_text)
+            ));
+        }
+        if let Some(ui_review_text) = &evaluation.ui_review_text {
+            lines.push(format!(
+                "entry-artifact {} ui-review examples/{}/ui-review.txt {}",
+                entry.id,
+                entry.id,
+                ail_artifact_fingerprint(ui_review_text)
             ));
         }
         if let Some(diagnostics_text) = &evaluation.diagnostics_text {
@@ -3470,6 +3499,14 @@ fn push_ail_e2e_entry_artifact_lines(
             ail_artifact_fingerprint(target_report_text)
         ));
     }
+    if let Some(ui_review_text) = &evaluation.ui_review_text {
+        lines.push(format!(
+            "{prefix} {} ui-review examples/{}/ui-review.txt {}",
+            entry.id,
+            entry.id,
+            ail_artifact_fingerprint(ui_review_text)
+        ));
+    }
     if let Some(diagnostics_text) = &evaluation.diagnostics_text {
         lines.push(format!(
             "{prefix} {} diagnostics examples/{}/diagnostics.txt {}",
@@ -3582,6 +3619,102 @@ fn render_ail_e2e_user_story_text(
         field("semantic-task"),
         semantic_anchor_line,
     )
+}
+
+fn render_ail_e2e_ui_review_text(
+    entry: &AilE2eCorpusEntry,
+    semantic_anchors: &[String],
+    checked_core_text: Option<&str>,
+    bytecode_text: Option<&str>,
+    vm_trace_text: Option<&str>,
+    target_report_text: Option<&str>,
+) -> Option<String> {
+    let field = |key: &str| entry.fields.get(key).map(String::as_str).unwrap_or("");
+    let surface_tags = field("surface-tags");
+    let has_ui_surface_tag = surface_tags
+        .split(',')
+        .map(str::trim)
+        .any(|surface_tag| surface_tag == "ui");
+    if field("program-domain") != "ui-workflow" && !has_ui_surface_tag {
+        return None;
+    }
+
+    let story_text = render_ail_e2e_user_story_text(entry, semantic_anchors);
+    let (preserved_count, missing_count) =
+        ail_e2e_semantic_anchor_preservation_counts(&story_text, semantic_anchors);
+    let workflow_authoring_artifact = if checked_core_text.is_some() {
+        "checked-core"
+    } else if bytecode_text.is_some() {
+        "bytecode"
+    } else if target_report_text.is_some() {
+        "target-report"
+    } else if vm_trace_text.is_some() {
+        "vm-trace"
+    } else {
+        "user-story"
+    };
+    let runtime_evidence = if target_report_text.is_some() {
+        "target-report"
+    } else if vm_trace_text.is_some() {
+        "vm-trace"
+    } else if bytecode_text.is_some() {
+        "bytecode"
+    } else {
+        "checked-core"
+    };
+
+    let mut lines = vec![
+        "AIL-UI-Review:".to_string(),
+        format!("entry {}", entry.id),
+        format!("semantic-task {}", field("semantic-task")),
+        format!("profile {}", field("profile")),
+        format!("program-domain {}", field("program-domain")),
+        format!("surface-tags {}", surface_tags),
+        format!("capability-under-test {}", field("capability-under-test")),
+        format!("story-journey {}", field("story-journey")),
+        format!("story-roundtrip {}", field("story-roundtrip")),
+        format!("story-evidence {}", field("story-evidence")),
+        "visual-review-artifact deterministic-text".to_string(),
+        "accessibility-review required".to_string(),
+        "ui-surface-review route,form,dashboard,workflow".to_string(),
+        format!("workflow-authoring-artifact {workflow_authoring_artifact}"),
+        format!("runtime-evidence {runtime_evidence}"),
+        format!("semantic-anchor-count {}", semantic_anchors.len()),
+        format!("semantic-anchor-preserved-count {preserved_count}"),
+        format!("semantic-anchor-missing-count {missing_count}"),
+    ];
+    if let Some(checked_core_text) = checked_core_text {
+        lines.push(format!(
+            "checked-core-fingerprint {}",
+            ail_artifact_fingerprint(checked_core_text)
+        ));
+    }
+    if let Some(bytecode_text) = bytecode_text {
+        lines.push(format!(
+            "bytecode-fingerprint {}",
+            ail_artifact_fingerprint(bytecode_text)
+        ));
+    }
+    if let Some(vm_trace_text) = vm_trace_text {
+        lines.push(format!(
+            "vm-trace-fingerprint {}",
+            ail_artifact_fingerprint(vm_trace_text)
+        ));
+    }
+    if let Some(target_report_text) = target_report_text {
+        lines.push(format!(
+            "target-report-fingerprint {}",
+            ail_artifact_fingerprint(target_report_text)
+        ));
+    }
+    if !semantic_anchors.is_empty() {
+        lines.push(format!("semantic-anchors {}", semantic_anchors.join("; ")));
+    }
+    lines.push(
+        "ui-review-summary UI workflow evidence preserves story, accessibility, visual review, and runtime handoff anchors."
+            .to_string(),
+    );
+    Some(format!("{}\n", lines.join("\n")))
 }
 
 fn ail_join_nonempty_set(values: &BTreeSet<String>) -> String {
@@ -4461,6 +4594,19 @@ fn write_ail_e2e_corpus_artifacts(
             .map_err(|error| {
                 format!("failed to write examples target report fingerprint: {error}")
             })?;
+        }
+        if let Some(ui_review_text) = &evaluation.ui_review_text {
+            let entry_dir = root.join("examples").join(&evaluation.entry.id);
+            fs::create_dir_all(&entry_dir).map_err(|error| {
+                format!("failed to create examples entry artifact dir: {error}")
+            })?;
+            fs::write(entry_dir.join("ui-review.txt"), ui_review_text)
+                .map_err(|error| format!("failed to write examples UI review: {error}"))?;
+            fs::write(
+                entry_dir.join("ui-review.fingerprint.txt"),
+                format!("{}\n", ail_artifact_fingerprint(ui_review_text)),
+            )
+            .map_err(|error| format!("failed to write examples UI review fingerprint: {error}"))?;
         }
         if let Some(diagnostics_text) = &evaluation.diagnostics_text {
             let entry_dir = root.join("examples").join(&evaluation.entry.id);
