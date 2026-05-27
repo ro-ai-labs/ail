@@ -253,8 +253,9 @@ python3 scripts/run_ail_interactive_manual.py --chapter agent-policy-import --ru
   corpus with `ail-v03-roadmap`. Prose: `05-v03-roadmap.md`.
 - `bootstrap-self-hosting`: deterministic bootstrap bundle for the AIL
   toolchain agent and AIL-Meta compiler pass, with fixed-point,
-  pass-composition, pass-order diagnostics, host-boundary, dependency, native
-  handoff, and manifest evidence. Prose: `10-bootstrap-self-hosting.md`.
+  pass-composition, ordered pass-sequence diagnostics, duplicate pass-order
+  conflict fixture evidence, host-boundary, dependency, native handoff, and
+  manifest evidence. Prose: `10-bootstrap-self-hosting.md`.
 - `turing-core`: deterministic recursive function conformance for base-case
   recursion, explicit stack bounds, well-founded termination measures, and
   `AIL-CONTROL-003` rejected fixtures. Prose: `14-turing-core.md`.

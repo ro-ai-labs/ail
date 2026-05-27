@@ -1361,10 +1361,14 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
                 "composition-variant 1 toolchain-agent-fixed-point pass InferReadPermissions status ok",
                 "composition-variant 2 compiler-pass-self-check pass InferReadPermissions status ok",
                 "bootstrap-pass-order-diagnostics.txt",
+                "user-pass-sequence-count 1",
+                "accepted-pass-sequence-count 1",
                 "reviewed-pass-order-conflict-count 1",
                 "AIL-BOOTSTRAP-PASS-ORDER-001",
                 "conflict-resolution fixed-point-gate-required",
                 "pass-order-status ok",
+                "pass-order-status conflict",
+                "user-pass-sequence-count 2",
                 "bootstrap-handoff-report.txt",
                 "manifest.ail-bootstrap.txt",
                 "no-host-backend-source true",
@@ -1606,6 +1610,7 @@ fn script_v03_release_audit_dry_run_lists_completion_gates() {
         "step roadmap command cargo run -- ail-v03-roadmap examples --artifact-dir",
         "step conformance-recursive-factorial command cargo run -- ail-conformance examples/recursive_factorial.ail --artifact-dir",
         "step roadmap-signal-status command python3 scripts/run_v03_signal_status_audit.py --roadmap-file",
+        "step bootstrap-pass-order-conflict command cargo test cli_ail_bootstrap_rejects_duplicate_user_pass_sequence_with_diagnostics --test ail_toolchain -- --exact",
         "step prompt-llm-review command python3 scripts/run_v03_prompt_llm_harness.py --review-artifacts",
         "step story-llm-review command python3 scripts/run_v03_story_llm_harness.py --review-artifacts",
         "step story-promotion-live-review command python3 scripts/run_v03_story_promotion_live_reviewer_harness.py --review-artifacts",
@@ -1819,7 +1824,9 @@ fn script_v03_signal_status_audit_marks_agent_policy_import_promoted() {
         "signal-status-evidence UI examples need richer package-local walkthroughs and stricter semantic tagging. cargo run -- ail-examples examples --release-evidence",
         "signal-status Application examples need more repaired incident promotion variants and richer stateful application walkthroughs after the first package-local repair proof is promoted. count 12 status promoted",
         "signal-status-evidence Application examples need more repaired incident promotion variants and richer stateful application walkthroughs after the first package-local repair proof is promoted. cargo run -- ail-examples examples --release-evidence",
-        "promoted-count 12",
+        "signal-status Self-hosting needs multiple composed compiler-pass variants and reviewer-visible pass-order conflict diagnostics. count 10 status promoted",
+        "signal-status-evidence Self-hosting needs multiple composed compiler-pass variants and reviewer-visible pass-order conflict diagnostics. docs/ail/31-v03-learning-and-authoring-gate.md",
+        "promoted-count 13",
         "missing-status-count 0",
         "audit-result accepted",
     ] {
@@ -2074,10 +2081,15 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "composition-variant 1 toolchain-agent-fixed-point pass InferReadPermissions status ok",
         "composition-variant 2 compiler-pass-self-check pass InferReadPermissions status ok",
         "bootstrap-pass-order-diagnostics.txt",
+        "user-pass-sequence-count 1",
+        "accepted-pass-sequence-count 1",
         "reviewed-pass-order-conflict-count 1",
         "AIL-BOOTSTRAP-PASS-ORDER-001",
         "conflict-resolution fixed-point-gate-required",
         "pass-order-status ok",
+        "cargo test cli_ail_bootstrap_rejects_duplicate_user_pass_sequence_with_diagnostics --test ail_toolchain",
+        "pass-order-status conflict",
+        "user-pass-sequence-count 2",
         "no-host-backend-source true",
     ] {
         assert!(
@@ -2323,10 +2335,14 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "evidence composition-variant 1 toolchain-agent-fixed-point pass InferReadPermissions status ok",
         "evidence composition-variant 2 compiler-pass-self-check pass InferReadPermissions status ok",
         "evidence bootstrap-pass-order-diagnostics.txt",
+        "evidence user-pass-sequence-count 1",
+        "evidence accepted-pass-sequence-count 1",
         "evidence reviewed-pass-order-conflict-count 1",
         "evidence reviewed-pass-order-conflict AIL-BOOTSTRAP-PASS-ORDER-001",
         "evidence conflict-resolution fixed-point-gate-required",
         "evidence pass-order-status ok",
+        "evidence pass-order-status conflict",
+        "evidence user-pass-sequence-count 2",
         "evidence bootstrap-handoff-report.txt",
         "evidence manifest.ail-bootstrap.txt",
         "evidence accepted: recursive-with-stack-bound.ail-spec.md",
@@ -19116,6 +19132,18 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
         "{pass_order_diagnostics}"
     );
     assert!(
+        pass_order_diagnostics.contains("user-pass-sequence-count 1"),
+        "{pass_order_diagnostics}"
+    );
+    assert!(
+        pass_order_diagnostics.contains(&format!("user-pass 1 {compiler_pass}")),
+        "{pass_order_diagnostics}"
+    );
+    assert!(
+        pass_order_diagnostics.contains("accepted-pass-sequence-count 1"),
+        "{pass_order_diagnostics}"
+    );
+    assert!(
         pass_order_diagnostics.contains("reviewed-pass-order-conflict-count 1"),
         "{pass_order_diagnostics}"
     );
@@ -26961,6 +26989,85 @@ fn cli_ail_build_accepts_saved_spec_file_artifact() {
     assert_eq!(bytecode_artifact, stdout);
 
     fs::remove_file(spec_path).unwrap();
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
+fn cli_ail_bootstrap_rejects_duplicate_user_pass_sequence_with_diagnostics() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let toolchain_package = fixture("ail_toolchain_agent.ail");
+    let compiler_pass = fixture("compiler_pass.ail");
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-ail-bootstrap-pass-order-conflict-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-bootstrap",
+            &toolchain_package,
+            "--pass",
+            &compiler_pass,
+            "--pass",
+            &compiler_pass,
+            "--target",
+            "linux-x86_64-elf",
+            "--agent",
+            &toolchain_package,
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    assert!(
+        !output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stderr).contains(
+            "ail-bootstrap pass-order conflict: AIL-BOOTSTRAP-PASS-ORDER-001 duplicate-pass-before-fixed-point"
+        ),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let pass_order_diagnostics =
+        fs::read_to_string(artifact_dir.join("bootstrap-pass-order-diagnostics.txt")).unwrap();
+    for required in [
+        "AIL-Bootstrap-Pass-Order-Diagnostics:",
+        "pass-order-status conflict",
+        "user-pass-sequence-count 2",
+        "reviewed-pass-order-conflict-count 1",
+        "reviewed-pass-order-conflict AIL-BOOTSTRAP-PASS-ORDER-001 duplicate-pass-before-fixed-point",
+        "conflict-resolution fixed-point-gate-required",
+        "diagnostic-visibility reviewer-visible",
+    ] {
+        assert!(
+            pass_order_diagnostics.contains(required),
+            "{required}\n{pass_order_diagnostics}"
+        );
+    }
+    assert!(
+        pass_order_diagnostics.contains(&format!("user-pass 1 {compiler_pass}")),
+        "{pass_order_diagnostics}"
+    );
+    assert!(
+        pass_order_diagnostics.contains(&format!("user-pass 2 {compiler_pass}")),
+        "{pass_order_diagnostics}"
+    );
+    let pass_order_diagnostics_fingerprint =
+        fs::read_to_string(artifact_dir.join("bootstrap-pass-order-diagnostics.fingerprint.txt"))
+            .unwrap();
+    assert_eq!(
+        pass_order_diagnostics_fingerprint.trim(),
+        fnv64_fingerprint(&pass_order_diagnostics)
+    );
+
     fs::remove_dir_all(artifact_dir).unwrap();
 }
 

@@ -138,6 +138,18 @@ def build_v03_audit_plan(
             ),
         ),
         AuditStep(
+            "bootstrap-pass-order-conflict",
+            [
+                "cargo",
+                "test",
+                "cli_ail_bootstrap_rejects_duplicate_user_pass_sequence_with_diagnostics",
+                "--test",
+                "ail_toolchain",
+                "--",
+                "--exact",
+            ],
+        ),
+        AuditStep(
             "examples",
             [
                 "cargo",

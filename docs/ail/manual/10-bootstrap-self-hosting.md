@@ -27,6 +27,11 @@ cargo run -- ail-bootstrap examples/ail_toolchain_agent.ail \
   --artifact-dir /tmp/ail-manual-bootstrap-self-hosting
 ```
 
+`ail-bootstrap` preserves repeated `--pass` values as an ordered user-supplied
+pass sequence. The current promoted path accepts the single
+`InferReadPermissions` pass and verifies its fixed point; a duplicate pass
+before the fixed-point gate is rejected as a pass-order conflict fixture.
+
 The command writes source snapshots for both AIL packages, checked Core,
 bytecode, native ELF artifacts, conformance reports, fixed-point evidence,
 pass-composition evidence, host-boundary evidence, dependency evidence, native
@@ -65,10 +70,31 @@ composition remains valid:
 bootstrap-pass-order-diagnostics.txt
 bootstrap-pass-order-diagnostics.fingerprint.txt
 AIL-Bootstrap-Pass-Order-Diagnostics:
+user-pass-sequence-count 1
+user-pass 1 examples/compiler_pass.ail
+accepted-pass-sequence-count 1
 reviewed-pass-order-conflict-count 1
 reviewed-pass-order-conflict AIL-BOOTSTRAP-PASS-ORDER-001 duplicate-pass-before-fixed-point pass InferReadPermissions
+pass-order-status ok
 conflict-resolution fixed-point-gate-required
 composition-variant-count 2
+```
+
+The conflicting-order fixture is exercised by the manual and release audit:
+
+```sh
+cargo test cli_ail_bootstrap_rejects_duplicate_user_pass_sequence_with_diagnostics --test ail_toolchain -- --exact
+```
+
+It records:
+
+```text
+bootstrap-pass-order-diagnostics.txt
+pass-order-status conflict
+user-pass-sequence-count 2
+reviewed-pass-order-conflict AIL-BOOTSTRAP-PASS-ORDER-001 duplicate-pass-before-fixed-point
+conflict-resolution fixed-point-gate-required
+diagnostic-visibility reviewer-visible
 ```
 
 The host-boundary and dependency reports must include:
@@ -121,5 +147,6 @@ bootstrap evidence slice: AIL-authored toolchain and compiler-pass packages
 produce checked artifacts, the compiler pass reaches a stable fixed point over
 the toolchain agent Core, the compiler pass is also replayed over its own
 Compiler-profile Core as a second composition variant, pass-order conflicts are
-reported in a fingerprinted diagnostics artifact, and the native handoff
-remains executable without generated host-language source.
+reported in fingerprinted diagnostics artifacts for both the accepted sequence
+and a duplicate user-supplied sequence fixture, and the native handoff remains
+executable without generated host-language source.

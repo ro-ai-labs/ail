@@ -54,8 +54,8 @@ rationale: Secret Access examples now emit deterministic threat-model audit arti
 evidence: cargo run -- ail-examples examples --release-evidence
 
 signal: Self-hosting needs multiple composed compiler-pass variants and reviewer-visible pass-order conflict diagnostics.
-status: deferred
-rationale: The bootstrap chapter now records a second compiler-pass self-check composition variant plus reviewer-visible AIL-BOOTSTRAP-PASS-ORDER-001 pass-order diagnostics, but repeatable user-supplied pass sequencing and conflicting-order fixtures remain open before this signal can be fully promoted.
+status: promoted
+rationale: The bootstrap chapter now records a second compiler-pass self-check composition variant, preserves ordered user-supplied --pass sequencing, and rejects a duplicate pass before the fixed-point gate as a fingerprinted AIL-BOOTSTRAP-PASS-ORDER-001 conflicting-order fixture. Broader accepted multi-pass compiler families remain a post-promotion bar.
 evidence: docs/ail/31-v03-learning-and-authoring-gate.md
 
 signal: State examples need clearer persistence and concurrency boundaries.

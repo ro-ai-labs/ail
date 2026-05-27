@@ -697,7 +697,9 @@ command runs the AIL-Meta compiler pass bytecode over the toolchain agent
 checked IR, reruns the same pass over that output to prove the transformed IR
 is stable, reruns the pass over its own Compiler-profile Core as a second
 composition variant, writes reviewer-visible pass-composition and
-pass-order diagnostics reports, compiles the toolchain bytecode from the first
+pass-order diagnostics reports, preserves the ordered user-supplied `--pass`
+sequence, rejects duplicate pass entries before the fixed-point gate with
+`AIL-BOOTSTRAP-PASS-ORDER-001`, compiles the toolchain bytecode from the first
 transformed IR, and records the machine-bytecode identity of every emitted
 native artifact. It also runs every generated native AIL toolchain-agent
 action, every generated native AIL verifier-agent action, and the native

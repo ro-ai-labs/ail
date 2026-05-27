@@ -32,6 +32,7 @@ struct CliOptions {
     ail_prompt: Option<String>,
     ail_pass_target: Option<String>,
     ail_build_pass: Option<String>,
+    ail_build_passes: Vec<String>,
     ail_build_agent: Option<String>,
     ail_build_base_model: Option<String>,
     ail_build_target_model: Option<String>,
@@ -150,7 +151,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
 }
 
 fn usage() -> String {
-    "usage: ail <ail-check|ail-core|ail-flow|ail-flow-edit|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-interview|ail-requirements|ail-spec|ail-draft|ail-build|ail-story|ail-pass|ail-bootstrap|ail-agent-contracts|ail-v03-roadmap|ail-prompt-corpus|ail-examples|ail-patch> <path> [patch|target-package] [--action name] [--prompt text] [--story-file path] [--interview-file path] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--base-model name] [--target-model name] [--out path] [--all-actions] [--diagnostics-json] [--artifact-dir path] [--llm-endpoint url] [--max-tokens count] [--release-evidence] [key=value ...]\nsaved-core usage: ail <ail-spec|ail-lower|ail-compile|ail-run|ail-build> --core-file <checked-core> [--action name] [--target target] [--out path] [--artifact-dir path] [key=value ...]\nwasm-contract usage: ail ail-compile <package-or-artifact.ailbc.json> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir> OR ail ail-compile --core-file <checked-core> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir>\ncore-patch usage: ail ail-patch --core-file <checked-core> <ail-core.patch.json>\nflow-edit usage: ail ail-flow-edit --core-file <checked-core> <ail-flow.edit.json>\nail-pass usage: ail ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR ail ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]\nail-bootstrap usage: ail ail-bootstrap <toolchain-agent-package> --pass <compiler-pass-package> --agent <toolchain-agent-package> --target linux-x86_64-elf --artifact-dir <dir>\nail-story usage: ail ail-story <package> --story-file <story.md> [--artifact-dir <dir>] [--llm-endpoint <url>] [--max-tokens count] [--agent <agent-package-or-bytecode>] [--target <target> --action <ActionName> --out <path>]\nail-agent-contracts usage: ail ail-agent-contracts examples/agents\nail-v03-roadmap usage: ail ail-v03-roadmap examples --artifact-dir <dir> [--release-evidence]\nail-prompt-corpus usage: ail ail-prompt-corpus <corpus-file-or-dir> --artifact-dir <dir>\nail-examples usage: ail ail-examples examples --artifact-dir <dir> [--release-evidence]\ncompatibility alias: ail ail-e2e-corpus <examples-dir> --artifact-dir <dir> [--release-evidence]"
+    "usage: ail <ail-check|ail-core|ail-flow|ail-flow-edit|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-interview|ail-requirements|ail-spec|ail-draft|ail-build|ail-story|ail-pass|ail-bootstrap|ail-agent-contracts|ail-v03-roadmap|ail-prompt-corpus|ail-examples|ail-patch> <path> [patch|target-package] [--action name] [--prompt text] [--story-file path] [--interview-file path] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--base-model name] [--target-model name] [--out path] [--all-actions] [--diagnostics-json] [--artifact-dir path] [--llm-endpoint url] [--max-tokens count] [--release-evidence] [key=value ...]\nsaved-core usage: ail <ail-spec|ail-lower|ail-compile|ail-run|ail-build> --core-file <checked-core> [--action name] [--target target] [--out path] [--artifact-dir path] [key=value ...]\nwasm-contract usage: ail ail-compile <package-or-artifact.ailbc.json> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir> OR ail ail-compile --core-file <checked-core> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir>\ncore-patch usage: ail ail-patch --core-file <checked-core> <ail-core.patch.json>\nflow-edit usage: ail ail-flow-edit --core-file <checked-core> <ail-flow.edit.json>\nail-pass usage: ail ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR ail ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]\nail-bootstrap usage: ail ail-bootstrap <toolchain-agent-package> --pass <compiler-pass-package> [--pass <compiler-pass-package> ...] --agent <toolchain-agent-package> --target linux-x86_64-elf --artifact-dir <dir>\nail-story usage: ail ail-story <package> --story-file <story.md> [--artifact-dir <dir>] [--llm-endpoint <url>] [--max-tokens count] [--agent <agent-package-or-bytecode>] [--target <target> --action <ActionName> --out <path>]\nail-agent-contracts usage: ail ail-agent-contracts examples/agents\nail-v03-roadmap usage: ail ail-v03-roadmap examples --artifact-dir <dir> [--release-evidence]\nail-prompt-corpus usage: ail ail-prompt-corpus <corpus-file-or-dir> --artifact-dir <dir>\nail-examples usage: ail ail-examples examples --artifact-dir <dir> [--release-evidence]\ncompatibility alias: ail ail-e2e-corpus <examples-dir> --artifact-dir <dir> [--release-evidence]"
         .to_string()
 }
 
@@ -16042,22 +16043,34 @@ fn render_ail_bootstrap_pass_composition_report(
 
 fn render_ail_bootstrap_pass_order_diagnostics_report(
     compiler_pass_action: &str,
+    pass_paths: &[String],
     input_core_text: &str,
     output_core_text: &str,
     compiler_pass_self_output_core_text: &str,
     fixed_point_report_text: &str,
 ) -> String {
+    let pass_sequence = render_ail_bootstrap_user_pass_sequence(pass_paths);
     format!(
         concat!(
             "AIL-Bootstrap-Pass-Order-Diagnostics:\n",
+            "{}",
+            "accepted-pass-sequence-count 1\n",
+            "accepted-pass-sequence 1 pass {} source {}\n",
             "composition-variant-count 2\n",
             "composition-variant 1 toolchain-agent-fixed-point pass {} status ok output {}\n",
             "composition-variant 2 compiler-pass-self-check pass {} status ok output {}\n",
             "reviewed-pass-order-conflict-count 1\n",
             "reviewed-pass-order-conflict AIL-BOOTSTRAP-PASS-ORDER-001 duplicate-pass-before-fixed-point pass {} input {} output {} fixed-point {}\n",
+            "pass-order-status ok\n",
             "conflict-resolution fixed-point-gate-required\n",
             "diagnostic-visibility reviewer-visible\n",
         ),
+        pass_sequence,
+        compiler_pass_action,
+        pass_paths
+            .first()
+            .map(String::as_str)
+            .unwrap_or("compiler-pass.source.ail-spec.md"),
         compiler_pass_action,
         ail_artifact_fingerprint(output_core_text),
         compiler_pass_action,
@@ -16067,6 +16080,66 @@ fn render_ail_bootstrap_pass_order_diagnostics_report(
         ail_artifact_fingerprint(output_core_text),
         ail_artifact_fingerprint(fixed_point_report_text)
     )
+}
+
+fn render_ail_bootstrap_user_pass_sequence(pass_paths: &[String]) -> String {
+    let mut lines = format!("user-pass-sequence-count {}\n", pass_paths.len());
+    for (index, path) in pass_paths.iter().enumerate() {
+        lines.push_str(&format!("user-pass {} {}\n", index + 1, path));
+    }
+    lines
+}
+
+fn find_duplicate_ail_bootstrap_pass_source(pass_paths: &[String]) -> Option<String> {
+    let mut seen = BTreeSet::new();
+    for path in pass_paths {
+        if !seen.insert(path.as_str()) {
+            return Some(path.clone());
+        }
+    }
+    None
+}
+
+fn render_ail_bootstrap_rejected_pass_order_diagnostics_report(
+    pass_paths: &[String],
+    duplicate_pass_source: &str,
+) -> String {
+    format!(
+        concat!(
+            "AIL-Bootstrap-Pass-Order-Diagnostics:\n",
+            "{}",
+            "reviewed-pass-order-conflict-count 1\n",
+            "reviewed-pass-order-conflict AIL-BOOTSTRAP-PASS-ORDER-001 duplicate-pass-before-fixed-point pass-source {}\n",
+            "pass-order-status conflict\n",
+            "conflict-resolution fixed-point-gate-required\n",
+            "diagnostic-visibility reviewer-visible\n",
+        ),
+        render_ail_bootstrap_user_pass_sequence(pass_paths),
+        duplicate_pass_source
+    )
+}
+
+fn write_ail_bootstrap_pass_order_diagnostics_artifacts(
+    artifact_dir: &str,
+    report_text: &str,
+) -> Result<(), String> {
+    let root = std::path::Path::new(artifact_dir);
+    fs::create_dir_all(root).map_err(|error| {
+        format!("failed to create ail-bootstrap artifact dir {artifact_dir}: {error}")
+    })?;
+    fs::write(
+        root.join("bootstrap-pass-order-diagnostics.txt"),
+        report_text,
+    )
+    .map_err(|error| format!("failed to write ail-bootstrap pass order diagnostics: {error}"))?;
+    fs::write(
+        root.join("bootstrap-pass-order-diagnostics.fingerprint.txt"),
+        format!("{}\n", ail_artifact_fingerprint(report_text)),
+    )
+    .map_err(|error| {
+        format!("failed to write ail-bootstrap pass order diagnostics fingerprint: {error}")
+    })?;
+    Ok(())
 }
 
 fn run_ail_bootstrap_command(path: &str, cli_options: &CliOptions) -> Result<u8, String> {
@@ -16081,6 +16154,29 @@ fn run_ail_bootstrap_command(path: &str, cli_options: &CliOptions) -> Result<u8,
     let pass_path = cli_options
         .ail_build_pass
         .as_deref()
+        .ok_or_else(|| "ail-bootstrap requires --pass <compiler-pass>".to_string())?;
+    let pass_paths = if cli_options.ail_build_passes.is_empty() {
+        vec![pass_path.to_string()]
+    } else {
+        cli_options.ail_build_passes.clone()
+    };
+    if let Some(duplicate_pass_source) = find_duplicate_ail_bootstrap_pass_source(&pass_paths) {
+        let pass_order_diagnostics_report_text =
+            render_ail_bootstrap_rejected_pass_order_diagnostics_report(
+                &pass_paths,
+                &duplicate_pass_source,
+            );
+        write_ail_bootstrap_pass_order_diagnostics_artifacts(
+            artifact_dir,
+            &pass_order_diagnostics_report_text,
+        )?;
+        return Err(format!(
+            "ail-bootstrap pass-order conflict: AIL-BOOTSTRAP-PASS-ORDER-001 duplicate-pass-before-fixed-point pass-source {duplicate_pass_source}"
+        ));
+    }
+    let pass_path = pass_paths
+        .first()
+        .map(String::as_str)
         .ok_or_else(|| "ail-bootstrap requires --pass <compiler-pass>".to_string())?;
     let agent_path = cli_options
         .ail_build_agent
@@ -16218,6 +16314,7 @@ fn run_ail_bootstrap_command(path: &str, cli_options: &CliOptions) -> Result<u8,
         format!("{}\n", render_ail_core(&compiler_pass_self_result.core));
     let pass_order_diagnostics_report_text = render_ail_bootstrap_pass_order_diagnostics_report(
         &compiler_pass_action,
+        &pass_paths,
         &toolchain_core_text,
         &toolchain_pass_output_core_text,
         &compiler_pass_self_output_core_text,
@@ -17332,6 +17429,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
     let mut ail_prompt = None;
     let mut ail_pass_target = None;
     let mut ail_build_pass = None;
+    let mut ail_build_passes = Vec::new();
     let mut ail_build_agent = None;
     let mut ail_build_base_model = None;
     let mut ail_build_target_model = None;
@@ -17481,7 +17579,10 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
             let Some(path) = args.get(index + 1) else {
                 return Err("missing value for --pass".to_string());
             };
-            ail_build_pass = Some(path.clone());
+            if ail_build_pass.is_none() {
+                ail_build_pass = Some(path.clone());
+            }
+            ail_build_passes.push(path.clone());
             index += 2;
             continue;
         }
@@ -17691,6 +17792,12 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         }
     }
     if command == "ail-build" {
+        if ail_build_passes.len() > 1 {
+            return Err(
+                "ail-build accepts exactly one --pass; repeatable pass sequencing is supported by ail-bootstrap"
+                    .to_string(),
+            );
+        }
         let native_requested = ail_compile_target.is_some() || ail_compile_out.is_some();
         if native_requested && ail_compile_target.is_none() {
             return Err("ail-build native output requires --target <target>".to_string());
@@ -17775,6 +17882,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         ail_prompt,
         ail_pass_target,
         ail_build_pass,
+        ail_build_passes,
         ail_build_agent,
         ail_build_base_model,
         ail_build_target_model,

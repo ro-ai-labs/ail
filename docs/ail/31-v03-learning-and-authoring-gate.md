@@ -654,10 +654,12 @@ as prose. The current examples reveal these next-version gaps:
   `bootstrap-pass-composition-report.txt`, verifies fixed-point pass output,
   records a second compiler-pass self-check composition variant, writes
   reviewer-visible `bootstrap-pass-order-diagnostics.txt` with
-  `AIL-BOOTSTRAP-PASS-ORDER-001` conflict guidance, records host-boundary and
-  dependency reports, and runs native handoff checks. The next bar is
-  repeatable user-supplied pass sequencing and conflicting-order fixtures
-  beyond the built-in fixed-point gate.
+  `AIL-BOOTSTRAP-PASS-ORDER-001` conflict guidance, preserves the ordered
+  user-supplied `--pass` sequence, rejects a duplicate pass before the
+  fixed-point gate as a fingerprinted conflicting-order fixture, records
+  host-boundary and dependency reports, and runs native handoff checks. The
+  next bar is broader accepted multi-pass compiler families beyond the current
+  `InferReadPermissions` bootstrap path.
 - Systems examples now include a deterministic manual chapter for
   `network_driver.ail` that runs package-local conformance, accepts scheduler
   and interrupt fixtures, rejects invalid interrupt/task contracts with stable
