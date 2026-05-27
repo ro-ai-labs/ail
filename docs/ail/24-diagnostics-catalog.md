@@ -137,6 +137,24 @@ severity, blocking behavior, and at least one invalid fixture.
 - invalid fixture:
   `examples/support_ticket.ail/examples/rejected/failure-without-handling.ail-spec.md`
 
+### AIL-CONTROL-003
+
+- condition: a self-recursive function has no checker-visible base-case branch,
+  return, or decreasing recursive argument
+- affected graph item: `Function`
+- message template: `function {name} has unproven recursive termination`
+- non-engineer explanation: the checker cannot prove that the function will
+  stop calling itself
+- agent follow-up question: `What base case or bound proves that {name}
+  terminates?`
+- repair suggestion: add a base-case branch return, a decreasing recursive
+  argument, or an explicit stack/termination bound
+- AIL-Flow highlight: Function recursion section
+- severity: error
+- blocking behavior: blocks acceptance
+- invalid fixture:
+  `examples/recursive_factorial.ail/examples/rejected/recursive-without-base-case.ail-spec.md`
+
 ### AIL-APP-001
 
 - condition: an Application action writes `Ticket.assignee` without a

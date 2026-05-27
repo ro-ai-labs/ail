@@ -28,7 +28,11 @@ commands that prove the examples still replay end to end.
 - Package README guides: 26
 - Support-only package manifest: `examples/support-packages.md`
 
-The authoritative replay manifest is `examples/examples.md`. Package
+Stored response artifacts are JSON transcript envelopes. Replay extracts the
+checked AIL artifact from each envelope and fingerprints the extracted
+artifact separately, so response counts and extracted-spec file counts do not
+need to match one-to-one. The authoritative replay manifest is
+`examples/examples.md`. Package
 directories provide source manifests, specifications, support packages,
 profile-specific fixtures, and teaching guides. A catalog entry counts as an
 AIL example only when `ail-examples` can replay it through stored prompt or

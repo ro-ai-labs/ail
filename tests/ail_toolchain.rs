@@ -815,6 +815,49 @@ fn docs_example_inventory_names_every_package_directory() {
         inventory.contains("Counted catalog examples: 122"),
         "{inventory}"
     );
+    let story_count = fs::read_dir(format!("{examples_dir}/stories"))
+        .unwrap()
+        .filter_map(Result::ok)
+        .filter(|entry| {
+            entry.file_name().to_string_lossy().starts_with("example-")
+                && entry
+                    .path()
+                    .extension()
+                    .is_some_and(|extension| extension == "md")
+        })
+        .count();
+    let request_count = fs::read_dir(format!("{examples_dir}/requests"))
+        .unwrap()
+        .filter_map(Result::ok)
+        .filter(|entry| {
+            entry
+                .path()
+                .extension()
+                .is_some_and(|extension| extension == "json")
+        })
+        .count();
+    let response_count = fs::read_dir(format!("{examples_dir}/responses"))
+        .unwrap()
+        .filter_map(Result::ok)
+        .filter(|entry| {
+            entry
+                .path()
+                .extension()
+                .is_some_and(|extension| extension == "json")
+        })
+        .count();
+    assert_eq!(story_count, 122, "story file count drifted");
+    assert_eq!(request_count, 122, "request transcript count drifted");
+    assert_eq!(response_count, 122, "response artifact count drifted");
+    assert!(inventory.contains("Story files: 122"), "{inventory}");
+    assert!(
+        inventory.contains("Stored request transcripts: 122"),
+        "{inventory}"
+    );
+    assert!(
+        inventory.contains("Stored response artifacts: 122"),
+        "{inventory}"
+    );
     assert!(
         inventory.contains("Support-only package manifest: `examples/support-packages.md`"),
         "{inventory}"
@@ -1225,6 +1268,7 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
             &[
                 "cargo run -- ail-v03-roadmap examples",
                 "v03-roadmap.txt",
+                "v03-roadmap.fingerprint.txt",
                 "AIL-v0.3-Roadmap",
             ],
         ),
@@ -1765,6 +1809,7 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "python3 scripts/run_ail_interactive_manual.py --chapter agent-policy-import --run-checks",
         "evidence examples-report.txt",
         "evidence v03-roadmap.txt",
+        "evidence v03-roadmap.fingerprint.txt",
         "evidence accepted: bytecode-verification-minimal.ail-spec.md",
         "evidence rejected: bytecode-verification-without-fingerprint.ail-spec.md AIL-AGENT-001",
         "evidence agent-trace.txt",
@@ -1996,6 +2041,7 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "--artifact-dir /tmp/ail-manual-v03-roadmap",
         "evidence AIL-v0.3-Roadmap",
         "evidence v03-roadmap.txt",
+        "evidence v03-roadmap.fingerprint.txt",
     ] {
         assert!(
             roadmap_stdout.contains(required),
@@ -5566,6 +5612,84 @@ fn ail_spec_lowers_function_surface_into_runnable_bytecode() {
             .contains(&"function return n multiplied by the recursive result".to_string())
     );
     assert!(run.trace.contains(&"trace FactorialCalled".to_string()));
+}
+
+#[test]
+fn ail_core_reports_recursive_function_without_base_case() {
+    let package = load_ail_package_dir(fixture("recursive_factorial.ail")).unwrap();
+    let spec = r#"Function: countdown.
+
+The function needs:
+
+- n: Int
+
+The function produces:
+
+- result: Int
+
+When countdown runs:
+
+- the function calls countdown with n minus 1
+- the function returns the recursive result
+- the function records a trace event named CountdownCalled
+"#;
+
+    let document = parse_ail_spec_text(spec).unwrap();
+    let diagnostics = check_ail_core_diagnostics(&elaborate_ail_core(&package, &document));
+    let diagnostic = diagnostics
+        .iter()
+        .find(|diagnostic| {
+            diagnostic.code == "AIL-CONTROL-003"
+                && diagnostic.message == "function countdown has unproven recursive termination"
+        })
+        .unwrap_or_else(|| panic!("missing AIL-CONTROL-003 diagnostic: {diagnostics:?}"));
+
+    assert_eq!(
+        diagnostic.source_provenance.as_deref(),
+        Some("function:countdown")
+    );
+    assert!(
+        diagnostic
+            .affected_graph_item
+            .as_deref()
+            .is_some_and(|item| item.starts_with("node:Function:countdown:")),
+        "{diagnostic:?}"
+    );
+    assert_eq!(
+        diagnostic.repair_suggestion.as_deref(),
+        Some(
+            "Add a base-case branch return, a decreasing recursive argument, or an explicit stack/termination bound for function countdown."
+        )
+    );
+}
+
+#[test]
+fn cli_ail_conformance_checks_recursive_termination_fixture() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("recursive_factorial.ail");
+
+    let output = Command::new(binary)
+        .args(["ail-conformance", &package])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("valid: spec.ail-spec.md"), "{stdout}");
+    assert!(
+        stdout.contains("rejected: recursive-without-base-case.ail-spec.md AIL-CONTROL-003"),
+        "{stdout}"
+    );
+    assert!(stdout.contains("source=function:countdown"), "{stdout}");
+    assert!(
+        stdout.contains("repair=Add a base-case branch return, a decreasing recursive argument, or an explicit stack/termination bound for function countdown."),
+        "{stdout}"
+    );
+    assert!(stdout.contains("ail conformance: ok"), "{stdout}");
 }
 
 #[test]

@@ -397,9 +397,9 @@ escapes are rejected before replay so example evidence remains portable and
 human-reviewable.
 
 This is checked release evidence with four replay-clean live LLM
-captures and one hundred thirteen replay-clean live Codex skill-agent captures. The
+captures and one hundred eighteen replay-clean live Codex skill-agent captures. The
 current corpus marks zero entries `capture-origin: deterministic-seed`, four
-entries `capture-origin: live-llm`, and one hundred thirteen `codex-ail-spec-writer`
+entries `capture-origin: live-llm`, and one hundred eighteen `codex-ail-spec-writer`
 entries `capture-origin: live-codex`. The replay report exposes
 capability-level counts, program-scale counts, story-journey counts,
 program-domain counts, story-evidence counts, capture-origin counts, response,

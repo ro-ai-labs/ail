@@ -284,6 +284,7 @@ BASE_CHAPTERS: tuple[ManualChapter, ...] = (
                 evidence=(
                     "AIL-v0.3-Roadmap",
                     "v03-roadmap.txt",
+                    "v03-roadmap.fingerprint.txt",
                     "manifest.ail-examples.txt",
                 ),
             ),
@@ -1053,6 +1054,7 @@ V03_AUTHORING_GATE = ManualChapter(
             evidence=(
                 "AIL-v0.3-Roadmap",
                 "v03-roadmap.txt",
+                "v03-roadmap.fingerprint.txt",
             ),
         ),
         ManualCommand(

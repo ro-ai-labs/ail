@@ -4100,6 +4100,7 @@ pub fn check_ail_core_diagnostics(core: &AilCore) -> Vec<AilDiagnostic> {
     diagnostics.extend(check_unknown_field_references(core));
     diagnostics.extend(check_failure_handling(core));
     diagnostics.extend(check_failure_trace_coverage(core));
+    diagnostics.extend(check_recursive_function_termination(core));
     diagnostics.extend(check_semantic_node_provenance(core));
     diagnostics.extend(check_guarantee_attachment(core));
     diagnostics.extend(check_trace_attachment(core));
@@ -15069,6 +15070,98 @@ fn check_failure_trace_coverage(core: &AilCore) -> Vec<AilDiagnostic> {
             ))
         })
         .collect()
+}
+
+fn check_recursive_function_termination(core: &AilCore) -> Vec<AilDiagnostic> {
+    let node_by_id = graph_node_by_id(core);
+    let mut diagnostics = Vec::new();
+    for function in core
+        .graph
+        .nodes
+        .iter()
+        .filter(|node| node.kind == "Function")
+    {
+        let recursive_calls = core
+            .graph
+            .edges
+            .iter()
+            .filter(|edge| edge.kind == "calls" && edge.source == function.id)
+            .filter_map(|edge| node_by_id.get(&edge.target))
+            .filter(|call| {
+                call.kind == "Call"
+                    && call
+                        .attributes
+                        .get("target")
+                        .is_some_and(|target| target == &function.name)
+            })
+            .collect::<Vec<_>>();
+        if recursive_calls.is_empty() {
+            continue;
+        }
+        let has_base_case_branch = core
+            .graph
+            .edges
+            .iter()
+            .filter(|edge| edge.kind == "contains" && edge.source == function.id)
+            .filter_map(|edge| node_by_id.get(&edge.target))
+            .any(|node| node.kind == "Branch" && branch_looks_like_base_case(node));
+        let has_return = core
+            .graph
+            .edges
+            .iter()
+            .filter(|edge| edge.kind == "contains" && edge.source == function.id)
+            .filter_map(|edge| node_by_id.get(&edge.target))
+            .any(|node| node.kind == "Return");
+        let has_decreasing_call = recursive_calls
+            .iter()
+            .any(|call| recursive_call_looks_decreasing(&call.name));
+        if has_base_case_branch && has_return && has_decreasing_call {
+            continue;
+        }
+        diagnostics.push(
+            AilDiagnostic::error(
+                "AIL-CONTROL-003",
+                format!(
+                    "function {} has unproven recursive termination",
+                    function.name
+                ),
+            )
+            .with_source_provenance(node_provenance(core, &function.id))
+            .with_affected_graph_item(format!("node:{}", function.id))
+            .with_repair_suggestion(format!(
+                "Add a base-case branch return, a decreasing recursive argument, or an explicit stack/termination bound for function {}.",
+                function.name
+            )),
+        );
+    }
+    diagnostics
+}
+
+fn branch_looks_like_base_case(branch: &crate::core_model::Node) -> bool {
+    let condition = branch
+        .attributes
+        .get("condition")
+        .unwrap_or(&branch.name)
+        .to_ascii_lowercase();
+    condition.contains(" is 0")
+        || condition.contains(" equals 0")
+        || condition.contains(" == 0")
+        || condition.contains(" <= 0")
+        || condition.contains(" zero")
+        || condition.contains(" empty")
+        || condition.contains(" none")
+        || condition.contains(" null")
+        || condition.contains(" base")
+}
+
+fn recursive_call_looks_decreasing(call_text: &str) -> bool {
+    let call_text = call_text.to_ascii_lowercase();
+    call_text.contains(" minus ")
+        || call_text.contains(" - ")
+        || call_text.contains("decrement")
+        || call_text.contains("predecessor")
+        || call_text.contains("smaller")
+        || call_text.contains("less")
 }
 
 fn check_semantic_node_provenance(core: &AilCore) -> Vec<AilDiagnostic> {
