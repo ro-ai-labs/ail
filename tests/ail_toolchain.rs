@@ -761,6 +761,12 @@ fn example_learning_readmes_cover_repeated_family_gaps() {
             assert!(readme.contains(required), "{path} {required}\n{readme}");
         }
     }
+    let std_security_readme =
+        fs::read_to_string(fixture("ail_std_security.ail/README.md")).unwrap();
+    assert!(
+        std_security_readme.contains("secret-reveal-without-redaction.ail-spec.md"),
+        "{std_security_readme}"
+    );
 
     let incident_readme = fs::read_to_string(fixture("incident_response.ail/README.md")).unwrap();
     for required in [
@@ -6900,6 +6906,26 @@ fn cli_ail_std_rejects_missing_capability_grant() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(
         stdout.contains("rejected: missing-capability-grant.ail AIL-PACKAGE-001"),
+        "{stdout}"
+    );
+}
+
+#[test]
+fn cli_ail_std_rejects_secret_reveal_without_redaction() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let output = Command::new(binary)
+        .args(["ail-conformance", &fixture("ail_std_security.ail")])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("rejected: secret-reveal-without-redaction.ail-spec.md AIL005"),
         "{stdout}"
     );
 }
@@ -21370,6 +21396,15 @@ fn cli_ail_conformance_checks_v02_package_host_boundary_fixtures() {
             [
                 "accepted: run-task-minimal.ail-spec.md",
                 "rejected: missing-capability-grant.ail AIL-PACKAGE-001",
+                "ail conformance: ok",
+            ]
+            .as_slice(),
+        ),
+        (
+            "ail_std_security.ail",
+            [
+                "accepted: reveal-secret-minimal.ail-spec.md",
+                "rejected: secret-reveal-without-redaction.ail-spec.md AIL005",
                 "ail conformance: ok",
             ]
             .as_slice(),

@@ -115,7 +115,8 @@ packages visible without making a separate non-end-to-end example category.
 - `ail_std_effects.ail/README.md`: declared resource effects, read/write and
   network effect traces, and host-effect repair gaps.
 - `ail_std_security.ail/README.md`: `Secret<T>`, permission and capability
-  requirements, redaction guarantees, and secret-leakage repair gaps.
+  requirements, redaction guarantees, a rejected reveal-without-redaction
+  fixture, and secret-leakage repair gaps.
 - `ail_std_runtime.ail/README.md`: runtime tasks, failure handling,
   dependency reports, capability grants, and missing-grant diagnostics.
 

@@ -27,6 +27,8 @@ traces.
 - `spec.ail-spec.md`: canonical security package specification.
 - `examples/accepted/reveal-secret-minimal.ail-spec.md`: accepted minimal
   reveal fixture.
+- `examples/rejected/secret-reveal-without-redaction.ail-spec.md`: rejected
+  fixture for reading `Secret<Text>` without explicit redaction evidence.
 - `../refund_tool.ail/README.md`: AgentTool example that applies secret and
   approval concepts in a workflow.
 - `../support_ticket.ail/README.md`: Application example with secret internal
@@ -52,10 +54,14 @@ guarantees.
 
 ## Rejected Fixtures
 
-This package currently has no local rejected fixture. v0.3 should add rejected
-fixtures for revealing `Secret<Text>` without permission, missing capability
-requirements, leaking secret payloads into traces, and treating redaction as a
-comment instead of a checked guarantee.
+The package includes
+`examples/rejected/secret-reveal-without-redaction.ail-spec.md`, which verifies
+that reading `Secret<Text>` must be paired with explicit redaction evidence
+before conformance accepts the fixture.
+
+v0.3 should add more rejected fixtures for revealing `Secret<Text>` without
+permission, missing capability requirements, leaking secret payloads into
+traces, and treating redaction as a comment instead of a checked guarantee.
 
 ## Next Example To Read
 
