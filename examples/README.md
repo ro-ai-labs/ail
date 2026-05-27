@@ -219,6 +219,12 @@ so the same deterministic wrapper can be run against a corpus copy that already
 contains one promoted story entry to prove a second reviewed variant. It still
 requires offline `ail-examples` replay before any generated corpus copy is
 committed.
+The default corpus replay promotes that decision into
+`examples/<entry-id>/story-promotion-review.txt` for accepted
+`user-story-mode-promotion` entries. The review binds the story artifact
+bundle, story-mode report, LLM harness report, model-check output, agent trace,
+source entry, promotion decision, semantic anchors, checked Core, bytecode,
+and runtime or target evidence into one fingerprinted artifact.
 Release story files must include `semantic-anchors` for the terms, actions,
 modules, targets, or diagnostics that must survive story/spec/Core
 round-trips. In `--release-evidence` mode, `ail-examples` rejects any catalog
@@ -379,6 +385,11 @@ live LLM access. The current corpus stores:
   runtime state, action, stateful boundary, trace event, checked Core,
   bytecode, runtime or target evidence, semantic anchors, and upstream
   fingerprints.
+- `examples/<entry-id>/story-promotion-review.txt`: generated for accepted
+  User Story mode promotion entries to record the reviewer decision, preserved
+  story artifact bundle, story-mode report, LLM harness report, model-check
+  output, agent trace, source entry, semantic anchors, runtime evidence, and
+  upstream fingerprints.
 - `ui-patch-capture-plan.json`, `ui-patch-import-demo-report.txt`, and
   `ui-patch-runtime-state-check-report.txt`: generated in scratch artifact
   directories by `scripts/run_v03_ui_patch_capture_plan.py`,
@@ -469,6 +480,10 @@ Accepted Application-signal replay must emit
 `application-walkthrough-fingerprint-*` report lines plus
 `application-walkthrough` manifest entries before claiming stateful
 application walkthrough evidence.
+Accepted User Story mode promotion replay must emit
+`story-promotion-review-fingerprint-*` report lines plus
+`story-promotion-review` manifest entries before claiming reviewer-produced
+promotion decision evidence.
 Rejected example replay
 includes stored prompt-envelope diagnostics for malformed model outputs and
 profile mismatch checker-handoff diagnostics, plus checked AIL-Spec
@@ -531,6 +546,12 @@ emit `application-walkthrough.txt` artifacts that bind user story,
 requirements, spec, checked Core, bytecode, runtime or target proof, stateful
 boundary, trace event, repair provenance, semantic anchors, and replay
 fingerprints into reviewer-facing application evidence.
+Promoted support-ticket User Story mode entries emit
+`story-promotion-review.txt` artifacts that bind the preserved
+`story-artifacts/<entry-id>/` bundle, reviewer decision, source entry, hosted
+model-check identity, story prompt-envelope counts, agent trace, checked Core,
+bytecode, runtime or target proof, semantic anchors, and replay fingerprints
+into reviewer-facing promotion evidence.
 
 Replay with:
 

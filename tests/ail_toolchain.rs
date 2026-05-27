@@ -29613,6 +29613,14 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
+        report.contains("story-promotion-review-fingerprint-observed-count 2"),
+        "{report}"
+    );
+    assert!(
+        report.contains("story-promotion-review-fingerprint-duplicate-entry-count 0"),
+        "{report}"
+    );
+    assert!(
         report.contains("dependency-review-fingerprint-observed-count 10"),
         "{report}"
     );
@@ -30178,6 +30186,100 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         report.contains(&format!(
             "entry-artifact example-122 application-walkthrough examples/example-122/application-walkthrough.txt {}",
             application_walkthrough_122_fingerprint.trim()
+        )),
+        "{report}"
+    );
+    let story_promotion_review_30 = fs::read_to_string(
+        artifact_dir.join("examples/example-30-story/story-promotion-review.txt"),
+    )
+    .unwrap();
+    assert!(
+        story_promotion_review_30.contains("AIL-Story-Promotion-Review:")
+            && story_promotion_review_30.contains("entry example-30-story")
+            && story_promotion_review_30.contains("semantic-task support-ticket-story-promoted-30")
+            && story_promotion_review_30.contains("package examples/support_ticket.ail")
+            && story_promotion_review_30.contains("profile Application")
+            && story_promotion_review_30.contains("capability-under-test user-story-mode-promotion")
+            && story_promotion_review_30
+                .contains("story-promotion-review-artifact deterministic-text")
+            && story_promotion_review_30
+                .contains("reviewer-agent codex-ail-story-promotion-reviewer-demo")
+            && story_promotion_review_30.contains("promotion-decision accepted-for-promotion")
+            && story_promotion_review_30.contains("human-approval-required true")
+            && story_promotion_review_30.contains("source-entry example-30")
+            && story_promotion_review_30
+                .contains("story-artifacts story-artifacts/example-30-story")
+            && story_promotion_review_30.contains(
+                "story-mode-report story-artifacts/example-30-story/story-mode-report.txt"
+            )
+            && story_promotion_review_30.contains(
+                "story-llm-harness-report story-artifacts/example-30-story/story-llm-harness-report.txt"
+            )
+            && story_promotion_review_30
+                .contains("agent-trace story-artifacts/example-30-story/agent-trace.txt")
+            && story_promotion_review_30
+                .contains("model-check story-artifacts/example-30-story/model-check.json")
+            && story_promotion_review_30.contains("story-artifacts-preserved true")
+            && story_promotion_review_30.contains("story-prompt-envelope-valid-count 2")
+            && story_promotion_review_30.contains("story-prompt-envelope-invalid-count 0")
+            && story_promotion_review_30
+                .contains("model-check-model-id unsloth/Qwen3.6-35B-A3B-GGUF:UD-Q4_K_XL")
+            && story_promotion_review_30.contains("runtime-evidence target-report")
+            && story_promotion_review_30.contains("story-anchor Support Tickets")
+            && story_promotion_review_30.contains("story-anchor Close ticket")
+            && story_promotion_review_30.contains("checked-core-fingerprint ")
+            && story_promotion_review_30.contains("bytecode-fingerprint ")
+            && story_promotion_review_30.contains("vm-trace-fingerprint ")
+            && story_promotion_review_30.contains("target-report-fingerprint ")
+            && story_promotion_review_30.contains("story-promotion-review-summary "),
+        "{story_promotion_review_30}"
+    );
+    let story_promotion_review_30_fingerprint = fs::read_to_string(
+        artifact_dir.join("examples/example-30-story/story-promotion-review.fingerprint.txt"),
+    )
+    .unwrap();
+    assert_eq!(
+        story_promotion_review_30_fingerprint.trim(),
+        fnv64_fingerprint(&story_promotion_review_30)
+    );
+    assert!(
+        report.contains(&format!(
+            "entry-artifact example-30-story story-promotion-review examples/example-30-story/story-promotion-review.txt {}",
+            story_promotion_review_30_fingerprint.trim()
+        )),
+        "{report}"
+    );
+    let story_promotion_review_90 = fs::read_to_string(
+        artifact_dir.join("examples/example-90-story/story-promotion-review.txt"),
+    )
+    .unwrap();
+    assert!(
+        story_promotion_review_90.contains("AIL-Story-Promotion-Review:")
+            && story_promotion_review_90.contains("entry example-90-story")
+            && story_promotion_review_90.contains("semantic-task support-ticket-story-promoted-90")
+            && story_promotion_review_90.contains("profile System")
+            && story_promotion_review_90.contains("source-entry example-90")
+            && story_promotion_review_90
+                .contains("story-artifacts story-artifacts/example-90-story")
+            && story_promotion_review_90
+                .contains("target-contract aarch64-apple-darwin-libsystem-macho")
+            && story_promotion_review_90.contains("runtime-evidence target-report")
+            && story_promotion_review_90.contains("agent-story-id-match true")
+            && story_promotion_review_90.contains("agent-semantic-anchor-missing-count 0"),
+        "{story_promotion_review_90}"
+    );
+    let story_promotion_review_90_fingerprint = fs::read_to_string(
+        artifact_dir.join("examples/example-90-story/story-promotion-review.fingerprint.txt"),
+    )
+    .unwrap();
+    assert_eq!(
+        story_promotion_review_90_fingerprint.trim(),
+        fnv64_fingerprint(&story_promotion_review_90)
+    );
+    assert!(
+        report.contains(&format!(
+            "entry-artifact example-90-story story-promotion-review examples/example-90-story/story-promotion-review.txt {}",
+            story_promotion_review_90_fingerprint.trim()
         )),
         "{report}"
     );
@@ -30765,6 +30867,20 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         manifest.contains(&format!(
             "entry-artifact example-122 application-walkthrough examples/example-122/application-walkthrough.txt {}",
             application_walkthrough_122_fingerprint.trim()
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "entry-artifact example-30-story story-promotion-review examples/example-30-story/story-promotion-review.txt {}",
+            story_promotion_review_30_fingerprint.trim()
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "entry-artifact example-90-story story-promotion-review examples/example-90-story/story-promotion-review.txt {}",
+            story_promotion_review_90_fingerprint.trim()
         )),
         "{manifest}"
     );

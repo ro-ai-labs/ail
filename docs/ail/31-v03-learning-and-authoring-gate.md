@@ -247,6 +247,8 @@ The `ail-examples` replay bundle must also write deterministic story artifacts:
 - `examples/<entry-id>/complex-story-graph.fingerprint.txt` for accepted incident-response complex-system entries
 - `examples/<entry-id>/application-walkthrough.txt` for accepted Application-signal entries
 - `examples/<entry-id>/application-walkthrough.fingerprint.txt` for accepted Application-signal entries
+- `examples/<entry-id>/story-promotion-review.txt` for accepted User Story mode promotion entries
+- `examples/<entry-id>/story-promotion-review.fingerprint.txt` for accepted User Story mode promotion entries
 - `examples/<entry-id>/dependency-review.txt` for accepted package-import entries
 - `examples/<entry-id>/dependency-review.fingerprint.txt` for accepted package-import entries
 - `examples/<entry-id>/stdlib-walkthrough.txt` for accepted stdlib-generic entries
@@ -370,8 +372,14 @@ target contract, runtime state, action, story-to-requirements-to-spec-to-Core
 walkthrough steps, stateful boundary, trace event, semantic anchors, runtime
 or target evidence, and replay fingerprints. The report must summarize these
 files with `application-walkthrough-fingerprint-*` lines and list each
-walkthrough in `manifest.ail-examples.txt`. Accepted package-import entries
-must emit
+walkthrough in `manifest.ail-examples.txt`. Accepted User Story mode promotion
+entries must emit `story-promotion-review.txt`, which
+records the preserved story artifact bundle, source entry, reviewer agent,
+promotion decision, story-mode report, LLM harness report, model-check output,
+agent trace, semantic anchors, runtime evidence, and replay fingerprints. The
+report must summarize these files with
+`story-promotion-review-fingerprint-*` lines and list each review in
+`manifest.ail-examples.txt`. Accepted package-import entries must emit
 `dependency-review.txt`, which records the local package, imported package,
 import alias, imported type owner, capability grant, story anchors, runtime
 evidence, and replay fingerprints. The report must summarize these files with

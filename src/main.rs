@@ -508,6 +508,7 @@ struct AilE2eCorpusEvaluation {
     unsafe_boundary_review_text: Option<String>,
     complex_story_graph_text: Option<String>,
     application_walkthrough_text: Option<String>,
+    story_promotion_review_text: Option<String>,
     dependency_review_text: Option<String>,
     stdlib_walkthrough_text: Option<String>,
     diagnostics_text: Option<String>,
@@ -3008,6 +3009,7 @@ fn evaluate_rejected_ail_e2e_corpus_entry(
         unsafe_boundary_review_text: None,
         complex_story_graph_text: None,
         application_walkthrough_text: None,
+        story_promotion_review_text: None,
         dependency_review_text: None,
         stdlib_walkthrough_text: None,
         diagnostics_text: Some(diagnostics_text),
@@ -3513,6 +3515,7 @@ fn evaluate_ail_e2e_corpus_entry(
             unsafe_boundary_review_text: None,
             complex_story_graph_text: None,
             application_walkthrough_text: None,
+            story_promotion_review_text: None,
             dependency_review_text: None,
             stdlib_walkthrough_text: None,
             diagnostics_text: None,
@@ -3689,6 +3692,15 @@ fn evaluate_ail_e2e_corpus_entry(
         vm_trace_text.as_deref(),
         target_report_text.as_deref(),
     );
+    let story_promotion_review_text = render_ail_e2e_story_promotion_review_text(
+        entry,
+        &semantic_anchors,
+        &request_text,
+        Some(&checked_core_text),
+        Some(&bytecode_text),
+        vm_trace_text.as_deref(),
+        target_report_text.as_deref(),
+    )?;
     let dependency_review_text = render_ail_e2e_dependency_review_text(
         entry,
         &semantic_anchors,
@@ -3726,6 +3738,7 @@ fn evaluate_ail_e2e_corpus_entry(
         unsafe_boundary_review_text,
         complex_story_graph_text,
         application_walkthrough_text,
+        story_promotion_review_text,
         dependency_review_text,
         stdlib_walkthrough_text,
         diagnostics_text: None,
@@ -4038,6 +4051,17 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
     );
     push_ail_e2e_fingerprint_reuse_lines(
         &mut lines,
+        "story-promotion-review",
+        evaluations,
+        |evaluation| {
+            evaluation
+                .story_promotion_review_text
+                .as_ref()
+                .map(|text| ail_artifact_fingerprint(text))
+        },
+    );
+    push_ail_e2e_fingerprint_reuse_lines(
+        &mut lines,
         "dependency-review",
         evaluations,
         |evaluation| {
@@ -4322,6 +4346,14 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
                 entry.id,
                 entry.id,
                 ail_artifact_fingerprint(application_walkthrough_text)
+            ));
+        }
+        if let Some(story_promotion_review_text) = &evaluation.story_promotion_review_text {
+            lines.push(format!(
+                "entry-artifact {} story-promotion-review examples/{}/story-promotion-review.txt {}",
+                entry.id,
+                entry.id,
+                ail_artifact_fingerprint(story_promotion_review_text)
             ));
         }
         if let Some(dependency_review_text) = &evaluation.dependency_review_text {
@@ -4630,6 +4662,14 @@ fn push_ail_e2e_entry_artifact_lines(
             entry.id,
             entry.id,
             ail_artifact_fingerprint(application_walkthrough_text)
+        ));
+    }
+    if let Some(story_promotion_review_text) = &evaluation.story_promotion_review_text {
+        lines.push(format!(
+            "{prefix} {} story-promotion-review examples/{}/story-promotion-review.txt {}",
+            entry.id,
+            entry.id,
+            ail_artifact_fingerprint(story_promotion_review_text)
         ));
     }
     if let Some(dependency_review_text) = &evaluation.dependency_review_text {
@@ -5714,6 +5754,243 @@ fn render_ail_e2e_application_walkthrough_text(
             .to_string(),
     );
     Some(format!("{}\n", lines.join("\n")))
+}
+
+fn extract_ail_e2e_report_line_value<'a>(text: &'a str, prefix: &str) -> Option<&'a str> {
+    text.lines()
+        .find_map(|line| line.strip_prefix(prefix).map(str::trim))
+}
+
+fn extract_ail_e2e_report_line_value_any<'a>(text: &'a str, prefixes: &[&str]) -> Option<&'a str> {
+    prefixes
+        .iter()
+        .find_map(|prefix| extract_ail_e2e_report_line_value(text, prefix))
+}
+
+fn render_ail_e2e_story_promotion_review_text(
+    entry: &AilE2eCorpusEntry,
+    semantic_anchors: &[String],
+    request_text: &str,
+    checked_core_text: Option<&str>,
+    bytecode_text: Option<&str>,
+    vm_trace_text: Option<&str>,
+    target_report_text: Option<&str>,
+) -> Result<Option<String>, String> {
+    let field = |key: &str| entry.fields.get(key).map(String::as_str).unwrap_or("");
+    if field("capability-under-test") != "user-story-mode-promotion" {
+        return Ok(None);
+    }
+    let story_artifacts = field("story-artifacts");
+    if story_artifacts.is_empty() {
+        return Err(format!(
+            "examples catalog entry {} user-story-mode-promotion is missing story-artifacts",
+            entry.id
+        ));
+    }
+    ail_e2e_validate_catalog_relative_path(&entry.id, "story-artifacts", story_artifacts)?;
+    let story_artifacts_path = ail_e2e_entry_source_dir(entry).join(story_artifacts);
+    let read_story_artifact = |file_name: &str| -> Result<String, String> {
+        fs::read_to_string(story_artifacts_path.join(file_name)).map_err(|error| {
+            format!(
+                "failed to read examples story promotion artifact {} for {}: {error}",
+                story_artifacts_path.join(file_name).display(),
+                entry.id
+            )
+        })
+    };
+    let story_mode_report_text = read_story_artifact("story-mode-report.txt")?;
+    let story_llm_harness_report_text = read_story_artifact("story-llm-harness-report.txt")?;
+    let story_manifest_text = read_story_artifact("manifest.ail-story.txt")?;
+    let agent_trace_text = read_story_artifact("agent-trace.txt")?;
+    let model_check_text = read_story_artifact("model-check.json")?;
+    let runtime_evidence = if target_report_text.is_some() {
+        "target-report"
+    } else if vm_trace_text.is_some() {
+        "vm-trace"
+    } else if bytecode_text.is_some() {
+        "bytecode"
+    } else {
+        "checked-core"
+    };
+    let source_entry = extract_ail_e2e_json_string_field(request_text, "source_entry_id")
+        .or_else(|| {
+            entry
+                .id
+                .strip_suffix("-story")
+                .map(|source| source.to_string())
+        })
+        .unwrap_or_else(|| "unknown".to_string());
+    let reviewer_agent = extract_ail_e2e_json_string_field(request_text, "executor_label")
+        .or_else(|| entry.fields.get("executor-label").cloned())
+        .unwrap_or_else(|| "codex-ail-story-promotion-reviewer".to_string());
+    let agent_contract = extract_ail_e2e_json_string_field(request_text, "agent_contract")
+        .unwrap_or_else(|| "examples/agents/codex-ail-story-promotion-reviewer.md".to_string());
+    let approval_mode = extract_ail_e2e_json_string_field(request_text, "approval_mode")
+        .unwrap_or_else(|| "deterministic-demo".to_string());
+    let capture_plan_fingerprint =
+        extract_ail_e2e_json_string_field(request_text, "story_promotion_capture_plan_fingerprint")
+            .unwrap_or_else(|| "unknown".to_string());
+    let story_text = render_ail_e2e_user_story_text(entry, semantic_anchors);
+    let (preserved_count, missing_count) =
+        ail_e2e_semantic_anchor_preservation_counts(&story_text, semantic_anchors);
+    let mut lines = vec![
+        "AIL-Story-Promotion-Review:".to_string(),
+        format!("entry {}", entry.id),
+        format!("semantic-task {}", field("semantic-task")),
+        format!("package {}", field("package")),
+        format!("profile {}", field("profile")),
+        format!("capability-under-test {}", field("capability-under-test")),
+        "story-promotion-review-artifact deterministic-text".to_string(),
+        format!("reviewer-agent {reviewer_agent}"),
+        format!("agent-contract {agent_contract}"),
+        format!("approval-mode {approval_mode}"),
+        "promotion-decision accepted-for-promotion".to_string(),
+        "human-approval-required true".to_string(),
+        format!("source-entry {source_entry}"),
+        format!("proposed-accepted-entry-id {}", entry.id),
+        format!("user-story-id {}", field("user-story-id")),
+        format!("story-journey {}", field("story-journey")),
+        format!("story-roundtrip {}", field("story-roundtrip")),
+        format!("story-evidence {}", field("story-evidence")),
+        format!("target-contract {}", field("target")),
+        format!("runtime-evidence {runtime_evidence}"),
+        format!("story-artifacts {story_artifacts}"),
+        "story-artifacts-preserved true".to_string(),
+        format!("story-promotion-capture-plan-fingerprint {capture_plan_fingerprint}"),
+        format!("story-mode-report {story_artifacts}/story-mode-report.txt"),
+        format!(
+            "story-mode-report-fingerprint {}",
+            ail_artifact_fingerprint(&story_mode_report_text)
+        ),
+        format!("story-llm-harness-report {story_artifacts}/story-llm-harness-report.txt"),
+        format!(
+            "story-llm-harness-report-fingerprint {}",
+            ail_artifact_fingerprint(&story_llm_harness_report_text)
+        ),
+        format!("story-manifest {story_artifacts}/manifest.ail-story.txt"),
+        format!(
+            "story-manifest-fingerprint {}",
+            ail_artifact_fingerprint(&story_manifest_text)
+        ),
+        format!("agent-trace {story_artifacts}/agent-trace.txt"),
+        format!(
+            "agent-trace-fingerprint {}",
+            ail_artifact_fingerprint(&agent_trace_text)
+        ),
+        format!("model-check {story_artifacts}/model-check.json"),
+        format!(
+            "model-check-fingerprint {}",
+            ail_artifact_fingerprint(&model_check_text)
+        ),
+    ];
+    for (label, text, prefixes) in [
+        (
+            "story-prompt-envelope-valid-count",
+            story_mode_report_text.as_str(),
+            &[
+                "story-prompt-envelope-valid-count:",
+                "story-prompt-envelope-valid-count ",
+            ][..],
+        ),
+        (
+            "story-prompt-envelope-invalid-count",
+            story_mode_report_text.as_str(),
+            &[
+                "story-prompt-envelope-invalid-count:",
+                "story-prompt-envelope-invalid-count ",
+            ][..],
+        ),
+        (
+            "story-llm-transcript-count",
+            story_mode_report_text.as_str(),
+            &["story-llm-transcript-count:", "story-llm-transcript-count "][..],
+        ),
+        (
+            "manifest-entry-check-count",
+            story_llm_harness_report_text.as_str(),
+            &["manifest-entry-check-count "][..],
+        ),
+        (
+            "fingerprint-check-count",
+            story_llm_harness_report_text.as_str(),
+            &["fingerprint-check-count "][..],
+        ),
+        (
+            "story-llm-transcript-check-count",
+            story_llm_harness_report_text.as_str(),
+            &["story-llm-transcript-check-count "][..],
+        ),
+        (
+            "model-check-model-count",
+            story_llm_harness_report_text.as_str(),
+            &["model-check-model-count "][..],
+        ),
+        (
+            "model-check-model-id",
+            story_llm_harness_report_text.as_str(),
+            &["model-check-model-id "][..],
+        ),
+        (
+            "review-result",
+            story_llm_harness_report_text.as_str(),
+            &["review-result "][..],
+        ),
+    ] {
+        if let Some(value) = extract_ail_e2e_report_line_value_any(text, prefixes) {
+            lines.push(format!("{label} {value}"));
+        }
+    }
+    for (label, prefix) in [
+        ("agent-story-id-match", "agent-story-id-match "),
+        (
+            "agent-semantic-anchor-match-count",
+            "agent-semantic-anchor-match-count ",
+        ),
+        (
+            "agent-semantic-anchor-missing-count",
+            "agent-semantic-anchor-missing-count ",
+        ),
+    ] {
+        if let Some(value) =
+            extract_ail_e2e_report_line_value(&story_llm_harness_report_text, prefix)
+        {
+            lines.push(format!("{label} {value}"));
+        }
+    }
+    lines.push(format!("semantic-anchor-preserved-count {preserved_count}"));
+    lines.push(format!("semantic-anchor-missing-count {missing_count}"));
+    for anchor in semantic_anchors {
+        lines.push(format!("story-anchor {anchor}"));
+    }
+    if let Some(checked_core_text) = checked_core_text {
+        lines.push(format!(
+            "checked-core-fingerprint {}",
+            ail_artifact_fingerprint(checked_core_text)
+        ));
+    }
+    if let Some(bytecode_text) = bytecode_text {
+        lines.push(format!(
+            "bytecode-fingerprint {}",
+            ail_artifact_fingerprint(bytecode_text)
+        ));
+    }
+    if let Some(vm_trace_text) = vm_trace_text {
+        lines.push(format!(
+            "vm-trace-fingerprint {}",
+            ail_artifact_fingerprint(vm_trace_text)
+        ));
+    }
+    if let Some(target_report_text) = target_report_text {
+        lines.push(format!(
+            "target-report-fingerprint {}",
+            ail_artifact_fingerprint(target_report_text)
+        ));
+    }
+    lines.push(
+        "story-promotion-review-summary User Story mode promotion review connects stored story artifact bundle, LLM harness, model check, agent trace, accepted spec, checked Core, bytecode, runtime or target proof, semantic anchors, and promotion decision for reviewer audit."
+            .to_string(),
+    );
+    Ok(Some(format!("{}\n", lines.join("\n"))))
 }
 
 fn render_ail_e2e_dependency_review_text(
@@ -7052,6 +7329,27 @@ fn write_ail_e2e_corpus_artifacts(
             )
             .map_err(|error| {
                 format!("failed to write examples application walkthrough fingerprint: {error}")
+            })?;
+        }
+        if let Some(story_promotion_review_text) = &evaluation.story_promotion_review_text {
+            let entry_dir = root.join("examples").join(&evaluation.entry.id);
+            fs::create_dir_all(&entry_dir).map_err(|error| {
+                format!("failed to create examples entry artifact dir: {error}")
+            })?;
+            fs::write(
+                entry_dir.join("story-promotion-review.txt"),
+                story_promotion_review_text,
+            )
+            .map_err(|error| format!("failed to write examples story promotion review: {error}"))?;
+            fs::write(
+                entry_dir.join("story-promotion-review.fingerprint.txt"),
+                format!(
+                    "{}\n",
+                    ail_artifact_fingerprint(story_promotion_review_text)
+                ),
+            )
+            .map_err(|error| {
+                format!("failed to write examples story promotion review fingerprint: {error}")
             })?;
         }
         if let Some(dependency_review_text) = &evaluation.dependency_review_text {

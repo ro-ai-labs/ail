@@ -181,3 +181,11 @@ harness plan, copies the full story artifact bundle into the corpus copy under
 `story-artifacts/<entry-id>/`, writes fresh transcript and story files, and
 still relies on offline replay for spec -> Core -> bytecode -> runtime or
 target evidence.
+When the promoted entry is accepted, default `ail-examples` replay also emits
+`examples/<entry-id>/story-promotion-review.txt`. That artifact records the
+source entry, reviewer agent, preserved story bundle, story-mode report, LLM
+harness report, model-check output, agent trace, `accepted-for-promotion`
+decision, semantic anchors, checked Core, bytecode, and runtime or target
+evidence. `examples-report.txt` and `manifest.ail-examples.txt` must include
+the `story-promotion-review` fingerprint before the promotion is counted as
+reviewer-produced corpus evidence.

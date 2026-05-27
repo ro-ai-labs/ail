@@ -62,6 +62,11 @@ Application-signal entries include `application-walkthrough.txt`, a
 deterministic walkthrough artifact that links the user-story id, story journey,
 runtime state, action, stateful boundary, trace event, checked Core, bytecode,
 runtime or target evidence, semantic anchors, and replay fingerprints.
+User Story mode promotion entries include `story-promotion-review.txt`, a
+deterministic promotion review artifact that links the preserved story bundle,
+source entry, reviewer decision, story-mode report, LLM harness report,
+model-check output, agent trace, checked Core, bytecode, runtime or target
+evidence, semantic anchors, and replay fingerprints.
 
 ## Review Rule
 
@@ -92,3 +97,7 @@ For Application-signal entries, check
 `application-walkthrough-fingerprint-*` report lines and the corresponding
 `entry-artifact ... application-walkthrough ...` manifest entries before
 claiming stateful application walkthrough evidence is covered.
+For User Story mode promotion entries, check
+`story-promotion-review-fingerprint-*` report lines and the corresponding
+`entry-artifact ... story-promotion-review ...` manifest entries before
+claiming reviewer-produced promotion decision evidence is covered.

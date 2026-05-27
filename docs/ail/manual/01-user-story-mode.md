@@ -361,6 +361,18 @@ accepted example, writes
 prove a second story-promotion variant without relying on hardcoded corpus
 counts. It still does not mutate `./examples`.
 
+Default `ail-examples` replay turns accepted User Story mode promotion entries
+into `story-promotion-review.txt` artifacts under the generated per-entry
+artifact directory. Each review records the preserved `story-artifacts`
+bundle, source entry, reviewer agent, `accepted-for-promotion` decision,
+story-mode report, LLM harness report, model-check output, agent trace,
+semantic anchors, checked Core, bytecode, and runtime or target evidence. The
+examples report must include
+`story-promotion-review-fingerprint-observed-count` and
+`story-promotion-review-fingerprint-duplicate-entry-count 0`; the manifest
+must list each `entry-artifact ... story-promotion-review ...` line before the
+promotion decision is treated as corpus evidence.
+
 The harness is intentionally outside the default test suite because it depends
 on the hosted llama.cpp server and model behavior. Promote a live run into the
 examples corpus only after the generated requirements, spec, Core, bytecode,
