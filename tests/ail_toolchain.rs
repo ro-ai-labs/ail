@@ -1391,8 +1391,11 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "examples/agents/skills/ail-prompt-interaction-reviewer/SKILL.md",
         "cargo run -- ail-agent-contracts examples/agents",
         "repair-promotion-import-demo-report.txt",
+        "agent-policy-import-demo-report.txt",
         "source-preserved true",
         "proposed-accepted true",
+        "policy-handoff-imported true",
+        "policy-handoff-replayed true",
         "cargo test ail_toolchain_agent_package_lowers_to_verified_bytecode --test ail_toolchain",
         "cargo test cli_ail_build_runs_toolchain_agent_bytecode --test ail_toolchain",
         "evidence agent.ailbc.json",
@@ -1779,6 +1782,90 @@ fn examples_agents_include_prompt_review_contract() {
 }
 
 #[test]
+fn examples_agents_include_agent_policy_review_contract() {
+    let agent_readme = fs::read_to_string(format!(
+        "{}/examples/agents/README.md",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .unwrap();
+    let policy_reviewer = fs::read_to_string(format!(
+        "{}/examples/agents/codex-ail-agent-policy-reviewer.md",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .unwrap();
+    let policy_skill = fs::read_to_string(format!(
+        "{}/examples/agents/skills/ail-agent-policy-reviewer/SKILL.md",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .unwrap();
+
+    for required in [
+        "codex-ail-agent-policy-reviewer",
+        "codex-ail-agent-policy-reviewer.md",
+        "AgentTool policy handoff review report",
+        "scripts/run_v03_agent_policy_capture_plan.py",
+        "scripts/run_v03_agent_policy_import_demo.py",
+        "agent-policy-review.txt",
+        "agent-policy-import-demo-report.txt",
+        "policy-handoff-imported true",
+        "policy-handoff-replayed true",
+    ] {
+        assert!(
+            agent_readme.contains(required),
+            "{required}\n{agent_readme}"
+        );
+    }
+    for required in [
+        "version: 0.1.0",
+        "executor-label: codex-ail-agent-policy-reviewer",
+        "executor-family: codex-skill-agent",
+        "target artifact: AIL-Agent-Policy-Review",
+        "agent-policy-review.txt",
+        "agent-policy-review.fingerprint.txt",
+        "agent-policy-review-fingerprint-observed-count",
+        "scripts/run_v03_agent_policy_capture_plan.py",
+        "agent-policy-capture-plan.json",
+        "scripts/run_v03_agent_policy_import_demo.py",
+        "agent-policy-import-demo-report.txt",
+        "source-preserved true",
+        "proposed-accepted true",
+        "policy-handoff-imported true",
+        "policy-handoff-replayed true",
+        "human-approval-required true",
+        "Do not promote generated content into ./examples",
+    ] {
+        assert!(
+            policy_reviewer.contains(required),
+            "{required}\n{policy_reviewer}"
+        );
+    }
+    for required in [
+        "name: ail-agent-policy-reviewer",
+        "description: Use when",
+        "examples/agents/codex-ail-agent-policy-reviewer.md",
+        "python3 scripts/run_ail_interactive_manual.py --chapter agent-policy-import --run-checks",
+        "cargo run -- ail-agent-contracts examples/agents",
+        "cargo run -- ail-examples examples --artifact-dir",
+        "agent-policy-review.txt",
+        "agent-policy-review.fingerprint.txt",
+        "agent-policy-review-fingerprint-observed-count",
+        "agent-policy-capture-plan.json",
+        "agent-policy-capture-plan.fingerprint.txt",
+        "agent-policy-import-demo-report.txt",
+        "agent-policy-import-demo-report.fingerprint.txt",
+        "source-preserved true",
+        "proposed-accepted true",
+        "policy-handoff-imported true",
+        "policy-handoff-replayed true",
+    ] {
+        assert!(
+            policy_skill.contains(required),
+            "{required}\n{policy_skill}"
+        );
+    }
+}
+
+#[test]
 fn codex_skill_documents_prompt_interaction_review_gate() {
     let skill = fs::read_to_string(format!(
         "{}/examples/agents/skills/ail-prompt-interaction-reviewer/SKILL.md",
@@ -1861,21 +1948,24 @@ fn cli_ail_agent_contracts_validates_prompt_reviewer_contract() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     for required in [
         "AIL-Agent-Contracts-Report:",
-        "contract-count 5",
+        "contract-count 6",
         "contract codex-ail-requirements-writer",
         "contract codex-ail-spec-writer",
         "contract codex-ail-diagnostic-repairer",
         "contract codex-ail-prompt-reviewer",
         "contract codex-ail-repair-promotion-reviewer",
+        "contract codex-ail-agent-policy-reviewer",
         "review-command scripts/run_v03_prompt_llm_harness.py --review-artifacts",
         "review-command scripts/run_v03_story_llm_harness.py --review-artifacts",
         "repair-promotion-artifact repair-promotion-review.txt",
+        "agent-policy-import-artifact agent-policy-import-demo-report.txt",
         "story-promotion-import-artifact story-promotion-import-demo-report.txt",
         "repair-promotion-import-artifact repair-promotion-import-demo-report.txt",
         "roadmap-artifact v03-roadmap.txt",
         "roadmap-command cargo run -- ail-v03-roadmap examples --artifact-dir",
         "codex-skill examples/agents/skills/ail-prompt-interaction-reviewer/SKILL.md",
         "codex-skill examples/agents/skills/ail-repair-promotion-reviewer/SKILL.md",
+        "codex-skill examples/agents/skills/ail-agent-policy-reviewer/SKILL.md",
         "agent-contracts-result accepted",
     ] {
         assert!(stdout.contains(required), "{required}\n{stdout}");

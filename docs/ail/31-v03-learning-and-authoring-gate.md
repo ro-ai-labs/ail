@@ -315,17 +315,20 @@ as prose. The current examples reveal these next-version gaps:
 - AgentTool examples now emit deterministic policy review artifacts with
   multi-agent handoff roles, contract checks, permission and approval review,
   external-call review, secret-redaction review, audit-trace review, runtime
-  evidence, and a human-approved AgentTool policy import demo. The next bar is
-  multi-agent execution evidence where the policy handoff is produced by
-  separate reviewer roles rather than one deterministic import script.
+  evidence, a reusable Codex AgentTool policy reviewer contract and skill, and
+  a human-approved AgentTool policy import demo. The next bar is multi-agent
+  execution evidence where the policy handoff is produced by separate reviewer
+  roles rather than one deterministic import script.
 - Compiler/self-hosting examples need pass composition and fixed-point checks.
 - Systems examples need hardware-facing contracts, scheduler or interrupt
   semantics, and clearer unsupported-target migration guidance.
 - Rejected examples now emit repair tutorials, corrected repair proof chains,
-  semantic repair diffs, deterministic promotion review artifacts, and
-  plan-only repair promotion capture plans; the next bar is a human-approved
-  batch capture/import flow that can create the proposed accepted corpus entry
-  while preserving the rejected evidence.
+  semantic repair diffs, deterministic promotion review artifacts, plan-only
+  repair promotion capture plans, and a human-approved batch import demo that
+  can create the proposed accepted corpus entry while preserving the rejected
+  evidence. The next bar is broader multi-diagnostic promotion coverage and
+  reviewer-produced promotion decisions instead of one deterministic import
+  script.
 - Incident-response examples show that complex systems need richer story
   graphs across imported modules, UI surfaces, workflow transitions, target
   contracts, and regenerated story views.

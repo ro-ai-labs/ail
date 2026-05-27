@@ -1282,6 +1282,7 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
         "codex-ail-diagnostic-repairer.md",
         "codex-ail-prompt-reviewer.md",
         "codex-ail-repair-promotion-reviewer.md",
+        "codex-ail-agent-policy-reviewer.md",
     ];
     let mut contracts = Vec::new();
     for file_name in required_contracts {
@@ -1295,6 +1296,10 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
         .iter()
         .find(|contract| contract.label == "codex-ail-repair-promotion-reviewer")
         .ok_or_else(|| "missing codex-ail-repair-promotion-reviewer contract".to_string())?;
+    let agent_policy_reviewer = contracts
+        .iter()
+        .find(|contract| contract.label == "codex-ail-agent-policy-reviewer")
+        .ok_or_else(|| "missing codex-ail-agent-policy-reviewer contract".to_string())?;
     for required in [
         "scripts/run_v03_prompt_llm_harness.py --review-artifacts",
         "scripts/run_v03_story_llm_harness.py --review-artifacts",
@@ -1334,6 +1339,37 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
             return Err(format!(
                 "agent contract {} missing {required}",
                 repair_promotion_reviewer.file_name
+            ));
+        }
+    }
+    for required in [
+        "agent-policy-review.txt",
+        "agent-policy-review.fingerprint.txt",
+        "agent-policy-review-fingerprint-observed-count",
+        "scripts/run_v03_agent_policy_capture_plan.py",
+        "agent-policy-capture-plan.json",
+        "scripts/run_v03_agent_policy_import_demo.py",
+        "agent-policy-import-demo-report.txt",
+        "source-preserved true",
+        "proposed-accepted true",
+        "policy-handoff-imported true",
+        "policy-handoff-replayed true",
+        "accepted-for-import",
+        "human-approval-required true",
+        "agent-contract-check ail-agent-contracts examples/agents",
+        "multi-agent-handoff-review required",
+        "tool-permission-review required",
+        "tool-approval-review required",
+        "external-call-review required",
+        "secret-redaction-review required",
+        "audit-trace-review required",
+        "ail-examples examples --artifact-dir",
+        "manifest.ail-examples.txt",
+    ] {
+        if !agent_policy_reviewer.text.contains(required) {
+            return Err(format!(
+                "agent contract {} missing {required}",
+                agent_policy_reviewer.file_name
             ));
         }
     }
@@ -1421,6 +1457,40 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
             ));
         }
     }
+    let agent_policy_skill_path = root.join("skills/ail-agent-policy-reviewer/SKILL.md");
+    let agent_policy_skill_text =
+        fs::read_to_string(&agent_policy_skill_path).map_err(|error| {
+            format!(
+                "failed to read codex skill {}: {error}",
+                agent_policy_skill_path.display()
+            )
+        })?;
+    for required in [
+        "name: ail-agent-policy-reviewer",
+        "description: Use when",
+        "examples/agents/codex-ail-agent-policy-reviewer.md",
+        "python3 scripts/run_ail_interactive_manual.py --chapter agent-policy-import --run-checks",
+        "cargo run -- ail-agent-contracts examples/agents",
+        "cargo run -- ail-examples examples --artifact-dir",
+        "agent-policy-review.txt",
+        "agent-policy-review.fingerprint.txt",
+        "agent-policy-review-fingerprint-observed-count",
+        "agent-policy-capture-plan.json",
+        "agent-policy-capture-plan.fingerprint.txt",
+        "agent-policy-import-demo-report.txt",
+        "agent-policy-import-demo-report.fingerprint.txt",
+        "source-preserved true",
+        "proposed-accepted true",
+        "policy-handoff-imported true",
+        "policy-handoff-replayed true",
+    ] {
+        if !agent_policy_skill_text.contains(required) {
+            return Err(format!(
+                "codex skill {} missing {required}",
+                agent_policy_skill_path.display()
+            ));
+        }
+    }
 
     println!("AIL-Agent-Contracts-Report:");
     println!("contract-count {}", contracts.len());
@@ -1435,10 +1505,12 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
     println!("story-promotion-import-artifact story-promotion-import-demo-report.txt");
     println!("repair-promotion-artifact repair-promotion-review.txt");
     println!("repair-promotion-import-artifact repair-promotion-import-demo-report.txt");
+    println!("agent-policy-import-artifact agent-policy-import-demo-report.txt");
     println!("roadmap-artifact v03-roadmap.txt");
     println!("roadmap-command cargo run -- ail-v03-roadmap examples --artifact-dir");
     println!("codex-skill examples/agents/skills/ail-prompt-interaction-reviewer/SKILL.md");
     println!("codex-skill examples/agents/skills/ail-repair-promotion-reviewer/SKILL.md");
+    println!("codex-skill examples/agents/skills/ail-agent-policy-reviewer/SKILL.md");
     println!("agent-contracts-result accepted");
     Ok(0)
 }

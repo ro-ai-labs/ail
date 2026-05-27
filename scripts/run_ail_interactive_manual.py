@@ -329,8 +329,11 @@ BASE_CHAPTERS: tuple[ManualChapter, ...] = (
                     "codex-ail-prompt-reviewer.md",
                     "examples/agents/skills/ail-prompt-interaction-reviewer/SKILL.md",
                     "repair-promotion-import-demo-report.txt",
+                    "agent-policy-import-demo-report.txt",
                     "source-preserved true",
                     "proposed-accepted true",
+                    "policy-handoff-imported true",
+                    "policy-handoff-replayed true",
                 ),
             ),
             ManualCommand(

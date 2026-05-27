@@ -167,19 +167,19 @@ binds the rejected diagnostic, repair proof, repair diff, semantic anchors, and
 human-approval requirement before any repaired artifact is proposed as a new
 accepted corpus entry. That makes diagnostic examples end-to-end authoring
 loops instead of prose-only negative cases.
-The next promotion step is still plan-only: run
-`scripts/run_v03_repair_promotion_capture_plan.py` against the replay artifacts
-to write `repair-promotion-capture-plan.json`, `.txt`, and `.fingerprint.txt`.
-The plan requires human-approved request/response JSON for
+Repair promotion follows the same corpus-copy rule as other reviewed imports.
+Run `scripts/run_v03_repair_promotion_capture_plan.py` against the replay
+artifacts to write `repair-promotion-capture-plan.json`, `.txt`, and
+`.fingerprint.txt`. The plan requires human-approved request/response JSON for
 `scripts/capture_example_batch.py` and records `preserve_rejected_entry: true`
-so the rejected learning evidence remains in the corpus.
-Batch import can then append `proposed_entry_id` from the plan by supplying a
-batch entry with `source_entry_id`, `entry_id`, approved request/response JSON,
-and `repair_promotion_capture_plan_json`. The importer validates the plan
-fingerprint, keeps the rejected source entry unchanged, writes new
-`requests/`, `responses/`, and `stories/` files for the repaired accepted entry,
-and still requires offline `ail-examples` replay before any generated corpus
-copy is committed.
+so the rejected learning evidence remains in the corpus. Batch import can then
+append `proposed_entry_id` from the plan by supplying a batch entry with
+`source_entry_id`, `entry_id`, approved request/response JSON, and
+`repair_promotion_capture_plan_json`. The deterministic wrapper
+`scripts/run_v03_repair_promotion_import_demo.py` validates the plan
+fingerprint, keeps the rejected source entry unchanged, writes new `requests/`,
+`responses/`, and `stories/` files for the repaired accepted entry, and replays
+the corpus copy before any generated corpus copy is committed.
 User Story mode promotion follows the same corpus-copy rule. After
 `scripts/run_v03_story_promotion_capture_plan.py` writes
 `story-promotion-capture-plan.json`, a batch entry may supply
@@ -351,6 +351,11 @@ live LLM access. The current corpus stores:
   multi-agent policy handoff, append `example-40-policy` to a corpus copy, and
   replay that copy through checked Core, bytecode, VM trace, and native target
   evidence.
+- `examples/agents/codex-ail-agent-policy-reviewer.md` and
+  `examples/agents/skills/ail-agent-policy-reviewer/SKILL.md`: reusable Codex
+  reviewer contract and skill for checking AgentTool policy handoff evidence
+  before any human-approved policy trace amendment is proposed for corpus-copy
+  promotion.
 
 This is checked release evidence with four replay-clean live LLM
 captures and one hundred thirteen replay-clean live Codex skill-agent captures. The

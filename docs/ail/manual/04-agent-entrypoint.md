@@ -36,6 +36,15 @@ and `proposed-accepted true`. This keeps the agent from treating a repaired
 candidate as promotable unless the rejected source entry remains intact and the
 proposed accepted entry replays in a corpus copy.
 
+The AgentTool policy reviewer contract must require `agent-policy-review.txt`,
+`agent-policy-review.fingerprint.txt`,
+`agent-policy-review-fingerprint-observed-count`,
+`agent-policy-capture-plan.json`, and
+`agent-policy-import-demo-report.txt`. The import report must include
+`source-preserved true`, `proposed-accepted true`,
+`policy-handoff-imported true`, and `policy-handoff-replayed true` so a policy
+handoff amendment remains proposal-only until the reviewed corpus copy replays.
+
 For User Story mode promotion, the prompt reviewer contract must also require
 `story-promotion-import-demo-report.txt`,
 `story-promotion-import-demo-report.fingerprint.txt`,
@@ -49,12 +58,13 @@ The same gate also validates the repo-local Codex skills:
 ```text
 examples/agents/skills/ail-prompt-interaction-reviewer/SKILL.md
 examples/agents/skills/ail-repair-promotion-reviewer/SKILL.md
+examples/agents/skills/ail-agent-policy-reviewer/SKILL.md
 ```
 
 Those skills are the reusable procedures for reviewing hosted llama.cpp prompt
 artifacts, User Story mode artifacts, examples replay, `v03-roadmap.txt`, and
-repair promotion evidence, including the deterministic import demo, before
-generated content is promoted into `./examples`.
+repair promotion and AgentTool policy evidence, including deterministic import
+demos, before generated content is promoted into `./examples`.
 
 ## Toolchain Agent Package
 
