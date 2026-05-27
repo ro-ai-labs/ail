@@ -314,6 +314,7 @@ cargo test cli_ail_e2e_corpus_requires_story_diversity
 cargo test cli_ail_e2e_corpus_requires_accepted_example_for_each_prompt_file
 cargo test cli_ail_e2e_corpus_requires_v03_signal_diversity
 cargo test cli_ail_e2e_corpus_replays_checked_live_release_corpus
+cargo test --test ail_toolchain cli_ail_story_native_target_executes_story_runtime_trace
 cargo test --test ail_toolchain script_ail_interactive_manual_v03_authoring_gate_run_checks_succeeds
 cargo test --test ail_toolchain script_ail_interactive_manual_systems_profile_run_checks_succeeds
 cargo run -- ail-examples examples --artifact-dir /tmp/ail-v03-learning-examples --release-evidence
@@ -332,6 +333,13 @@ as prose. The current examples reveal these next-version gaps:
   files.
 - Prompt matrices need explicit separation between semantic use-case diversity
   and prompt-surface coverage.
+- Application examples now have deterministic User Story mode evidence that
+  starts from a support-ticket story, asks the toolchain agent to participate,
+  writes requirements/spec/Core/bytecode/story manifests, compiles
+  `CloseTicket` to a Linux x86_64 executable, and runs that binary to observe
+  `ticket.status=Closed` plus `trace TicketClosed`. The next bar is
+  package-local rejected fixtures and explicit story-amendment comparisons
+  across the application family.
 - UI examples now emit deterministic visual review, accessibility review,
   workflow authoring artifacts, deterministic UI patch plans, a human-approved
   UI patch import demo, and a rejected accessibility diagnostic fixture that

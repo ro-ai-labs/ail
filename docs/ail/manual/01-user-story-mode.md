@@ -18,7 +18,9 @@ python3 scripts/run_ail_interactive_manual.py --chapter user-story-mode --run-ch
 These checks exercise the local `ail-story` path with a stubbed chat endpoint
 and verify both the plain story authoring path and the toolchain-agent
 entrypoint path. They also verify the blocking-question branch where the model
-needs clarification before requirements can be trusted.
+needs clarification before requirements can be trusted, and the native target
+branch where a story-authored `CloseTicket` executable is run to produce a
+runtime trace.
 
 ## Story-First Run
 
@@ -118,6 +120,28 @@ cargo run -- ail-story examples/support_ticket.ail \
 
 The native path writes the same story evidence and delegates target artifact
 checks to the existing build-agent verification path.
+
+The deterministic local check for this branch is:
+
+```sh
+cargo test cli_ail_story_native_target_executes_story_runtime_trace --test ail_toolchain
+```
+
+It uses a stubbed chat endpoint, writes `target.elf`,
+`native-bytecode-report.txt`, `dependency-report.txt`,
+`manifest.ail-build.txt`, `manifest.ail-story.txt`, and `agent-trace.txt`,
+then runs the generated native executable with:
+
+```text
+ticket.id=T-1 ticket.status=Open
+```
+
+The runtime evidence must include:
+
+```text
+ticket.status=Closed
+trace TicketClosed
+```
 
 ## Live Harness
 

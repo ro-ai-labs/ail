@@ -168,8 +168,9 @@ python3 scripts/run_ail_interactive_manual.py --chapter agent-policy-import --ru
 - `user-story-mode`: story-first authoring with `ail-story`, checked
   requirements, blocking-question evidence, accepted spec, checked Core,
   bytecode, stored LLM request/response/content transcripts, prompt-envelope
-  counts, agent trace, a story promotion capture artifact, and a corpus-copy
-  import demo with `story-promotion-import-demo-report.txt`,
+  counts, agent trace, native target runtime-trace evidence, a
+  story promotion capture artifact, and a corpus-copy import demo with
+  `story-promotion-import-demo-report.txt`,
   `story-artifacts-preserved true`, and `proposed-accepted true`. Prose:
   `01-user-story-mode.md`.
 - `examples-release`: full `./examples` replay with release evidence and

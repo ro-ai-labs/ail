@@ -107,8 +107,8 @@ one of these version surfaces or add a versioned surface through
   authoring chapters.
 - `manual/01-user-story-mode.md`: story-first authoring with `ail-story`,
   checked requirements, accepted spec, checked Core, bytecode, agent trace, and
-  live llama.cpp harness evidence, including story-promotion import-demo
-  evidence for corpus-copy promotion.
+  native runtime-trace evidence, plus live llama.cpp harness evidence,
+  including story-promotion import-demo evidence for corpus-copy promotion.
 - `manual/02-examples-release.md`: full examples replay, release evidence,
   model/executor manifest, and learning artifact review.
 - `manual/03-prompt-interaction.md`: prompt corpus, prompt-surface replay,

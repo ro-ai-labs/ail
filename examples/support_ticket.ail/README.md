@@ -81,6 +81,18 @@ For a direct native build of one action:
 cargo run -- ail-build examples/support_ticket.ail --spec-file examples/support_ticket.ail/spec.ail-spec.md --artifact-dir /tmp/ail-support-ticket-build --target linux-x86_64-elf --action CloseTicket
 ```
 
+For the story-first native runtime trace used by the interactive manual:
+
+```bash
+cargo test cli_ail_story_native_target_executes_story_runtime_trace --test ail_toolchain
+```
+
+That check starts from a support-ticket story, runs `ail-story` through checked
+requirements, accepted spec, checked Core, bytecode, the toolchain agent, and a
+Linux x86_64 native target, then executes the generated `CloseTicket` binary
+with `ticket.id=T-1` and `ticket.status=Open`. The observed runtime evidence is
+`ticket.status=Closed` and `trace TicketClosed`.
+
 ## Rejected Fixtures
 
 The current package-level conformance path relies on corpus-level rejected
@@ -107,7 +119,8 @@ larger multi-module application benchmark.
 Support Ticket is replay-clean and useful as the Application baseline. Its
 accepted and diagnostic story files now carry semantic anchors for the core
 ticket action, secret internal notes, prompt surfaces, target reports, and
-diagnostic failure taxonomies. v0.3 should turn it into a guided application
-tutorial with package-local rejected fixtures, explicit story amendment
-examples, and a comparison between prompt-surface replay, package-import
-replay, and native binary evidence.
+diagnostic failure taxonomies. v0.3 now has deterministic manual evidence that
+starts from a story and reaches native runtime trace output. The next bar is a
+guided application tutorial with package-local rejected fixtures, explicit
+story amendment examples, and a comparison between prompt-surface replay,
+package-import replay, and native binary evidence.

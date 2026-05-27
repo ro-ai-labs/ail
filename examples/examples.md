@@ -1119,7 +1119,7 @@ story-file: stories/example-30.md
 story-journey: story-to-spec
 story-roundtrip: semantic-similar
 distinctness-claim: support-ticket-live-codex-interview-30 exercises docs/ail/prompts/interview.system.md over application-workflow.
-v0.3-signal: Application examples need user-story walkthroughs from intent to runtime trace.
+v0.3-signal: Application examples need package-local rejected fixtures and story amendment comparisons after story-to-runtime walkthroughs.
 prompt-file: docs/ail/prompts/interview.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
@@ -1155,7 +1155,7 @@ story-file: stories/example-31.md
 story-journey: story-to-spec
 story-roundtrip: semantic-similar
 distinctness-claim: support-ticket-live-codex-requirements-31 exercises docs/ail/prompts/requirements.system.md over application-workflow.
-v0.3-signal: Application examples need user-story walkthroughs from intent to runtime trace.
+v0.3-signal: Application examples need package-local rejected fixtures and story amendment comparisons after story-to-runtime walkthroughs.
 prompt-file: docs/ail/prompts/requirements.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
@@ -1191,7 +1191,7 @@ story-file: stories/example-32.md
 story-journey: story-to-spec
 story-roundtrip: semantic-similar
 distinctness-claim: support-ticket-live-spec-input-32 exercises docs/ail/prompts/spec-draft.system.md over application-workflow.
-v0.3-signal: Application examples need user-story walkthroughs from intent to runtime trace.
+v0.3-signal: Application examples need package-local rejected fixtures and story amendment comparisons after story-to-runtime walkthroughs.
 prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
@@ -1228,7 +1228,7 @@ story-file: stories/example-33.md
 story-journey: story-to-spec
 story-roundtrip: semantic-similar
 distinctness-claim: support-ticket-live-codex-core-draft-33 exercises docs/ail/prompts/core-draft.system.md over application-workflow.
-v0.3-signal: Application examples need user-story walkthroughs from intent to runtime trace.
+v0.3-signal: Application examples need package-local rejected fixtures and story amendment comparisons after story-to-runtime walkthroughs.
 prompt-file: docs/ail/prompts/core-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:0175222e4a84bec4
@@ -1264,7 +1264,7 @@ story-file: stories/example-34.md
 story-journey: story-amendment
 story-roundtrip: semantic-similar
 distinctness-claim: support-ticket-live-codex-diagnostic-repair-34 exercises docs/ail/prompts/diagnostic-repair.system.md over application-workflow.
-v0.3-signal: Application examples need user-story walkthroughs from intent to runtime trace.
+v0.3-signal: Application examples need package-local rejected fixtures and story amendment comparisons after story-to-runtime walkthroughs.
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:c9700f2c2e57e49e
@@ -3248,7 +3248,7 @@ story-file: stories/example-90.md
 story-journey: story-to-spec
 story-roundtrip: semantic-similar
 distinctness-claim: support-ticket-live-codex-interview-90 exercises docs/ail/prompts/interview.system.md over application-workflow.
-v0.3-signal: Application examples need user-story walkthroughs from intent to runtime trace.
+v0.3-signal: Application examples need package-local rejected fixtures and story amendment comparisons after story-to-runtime walkthroughs.
 prompt-file: docs/ail/prompts/interview.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
@@ -3284,7 +3284,7 @@ story-file: stories/example-91.md
 story-journey: story-to-spec
 story-roundtrip: semantic-similar
 distinctness-claim: support-ticket-live-codex-requirements-91 exercises docs/ail/prompts/requirements.system.md over application-workflow.
-v0.3-signal: Application examples need user-story walkthroughs from intent to runtime trace.
+v0.3-signal: Application examples need package-local rejected fixtures and story amendment comparisons after story-to-runtime walkthroughs.
 prompt-file: docs/ail/prompts/requirements.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
@@ -3320,7 +3320,7 @@ story-file: stories/example-92.md
 story-journey: story-to-spec
 story-roundtrip: semantic-similar
 distinctness-claim: support-ticket-live-codex-spec-92 exercises docs/ail/prompts/spec-draft.system.md over application-workflow.
-v0.3-signal: Application examples need user-story walkthroughs from intent to runtime trace.
+v0.3-signal: Application examples need package-local rejected fixtures and story amendment comparisons after story-to-runtime walkthroughs.
 prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
@@ -3356,7 +3356,7 @@ story-file: stories/example-93.md
 story-journey: story-to-spec
 story-roundtrip: semantic-similar
 distinctness-claim: support-ticket-live-codex-core-draft-93 exercises docs/ail/prompts/core-draft.system.md over application-workflow.
-v0.3-signal: Application examples need user-story walkthroughs from intent to runtime trace.
+v0.3-signal: Application examples need package-local rejected fixtures and story amendment comparisons after story-to-runtime walkthroughs.
 prompt-file: docs/ail/prompts/core-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:0175222e4a84bec4
@@ -3392,7 +3392,7 @@ story-file: stories/example-94.md
 story-journey: story-amendment
 story-roundtrip: semantic-similar
 distinctness-claim: support-ticket-live-codex-diagnostic-repair-94 exercises docs/ail/prompts/diagnostic-repair.system.md over application-workflow.
-v0.3-signal: Application examples need user-story walkthroughs from intent to runtime trace.
+v0.3-signal: Application examples need package-local rejected fixtures and story amendment comparisons after story-to-runtime walkthroughs.
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:c9700f2c2e57e49e

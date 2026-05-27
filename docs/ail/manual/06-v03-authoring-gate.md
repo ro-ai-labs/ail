@@ -79,6 +79,12 @@ story-promotion-capture-plan.txt
 story-promotion-capture-plan.fingerprint.txt
 story-promotion-import-demo-report.txt
 story-promotion-import-demo-report.fingerprint.txt
+target.elf
+native-bytecode-report.txt
+dependency-report.txt
+manifest.ail-build.txt
+ticket.status=Closed
+trace TicketClosed
 manifest.ail-story.txt
 story-questions.ail-interview.md
 agent-trace.txt

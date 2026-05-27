@@ -1133,6 +1133,13 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         "story-artifacts-preserved true",
         "promotion-decision accepted-for-promotion",
         "human-approval-required true",
+        "cli_ail_story_native_target_executes_story_runtime_trace",
+        "target.elf",
+        "native-bytecode-report.txt",
+        "dependency-report.txt",
+        "manifest.ail-build.txt",
+        "ticket.status=Closed",
+        "trace TicketClosed",
         "story-questions.ail-interview.md",
         "ail-story blocking questions",
         "http://inteligentia-pro-1:8080/",
@@ -1337,9 +1344,14 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "cargo test cli_ail_story_builds_checked_artifacts_from_story_file --test ail_toolchain",
         "cargo test cli_ail_story_agent_records_story_entrypoint_before_compile --test ail_toolchain",
         "cargo test cli_ail_story_surfaces_blocking_questions_as_story_artifact --test ail_toolchain",
+        "cargo test cli_ail_story_native_target_executes_story_runtime_trace --test ail_toolchain",
         "evidence manifest.ail-story.txt",
         "evidence agent-trace.txt",
         "evidence story-questions.ail-interview.md",
+        "evidence target.elf",
+        "evidence native-bytecode-report.txt",
+        "evidence ticket.status=Closed",
+        "evidence trace TicketClosed",
         "evidence llm/requirements.request.json",
         "evidence llm/spec.content.txt",
         "evidence story-prompt-envelope-valid-count",
@@ -1850,6 +1862,7 @@ fn script_ail_interactive_manual_v03_authoring_gate_run_checks_succeeds() {
     for required in [
         "running run-user-story-mode-checks",
         "running run-examples-release-checks",
+        "running verify-story-runtime-trace-local",
         "running run-prompt-interaction-checks",
         "running run-agent-entrypoint-checks",
         "running run-bootstrap-self-hosting-checks",
@@ -1869,6 +1882,10 @@ fn script_ail_interactive_manual_v03_authoring_gate_run_checks_succeeds() {
         "AIL-UI-Patch-Runtime-State-Check:",
         "story-questions.ail-interview.md",
         "agent-trace.txt",
+        "target.elf",
+        "native-bytecode-report.txt",
+        "ticket.status=Closed",
+        "trace TicketClosed",
     ] {
         assert!(stdout.contains(required), "{required}\n{stdout}");
     }
@@ -21319,6 +21336,161 @@ fn cli_ail_story_agent_records_story_entrypoint_before_compile() {
 }
 
 #[test]
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+fn cli_ail_story_native_target_executes_story_runtime_trace() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("support_ticket.ail");
+    let agent_package = fixture("ail_toolchain_agent.ail");
+    let unique_suffix = format!(
+        "{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
+    let story_file =
+        std::env::temp_dir().join(format!("ail-story-native-runtime-{unique_suffix}.md"));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-story-native-runtime-artifacts-{unique_suffix}"
+    ));
+    let executable_path = artifact_dir.join("CloseTicket");
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::write(
+        &story_file,
+        concat!(
+            "# Support Ticket Runtime Story\n\n",
+            "user-story-id: support-ticket-runtime-story\n",
+            "user-story: As a support agent I can turn a support-ticket story into a native executable and observe the TicketClosed runtime trace.\n",
+            "acceptance-criteria: checked requirements exist; checked spec exists; native target exists; runtime trace records TicketClosed\n",
+            "semantic-anchors: Support Tickets; Close ticket; TicketClosed; linux-x86_64-elf\n"
+        ),
+    )
+    .unwrap();
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let requirements = concat!(
+        "AIL-Requirements:\n",
+        "- The application manages support tickets.\n",
+        "- Ticket fields include id, title, status, and secret internal notes.\n",
+        "- The CloseTicket action requires ticket id input and ticket status not to be Closed.\n",
+        "- Failure NotFound happens when ticket id is missing and records TicketNotFound.\n",
+        "- The action guarantees closed tickets do not appear in the open queue.\n",
+        "- The action records trace event TicketClosed.\n"
+    );
+    let requirements_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(&format!(
+            r#"{{"artifact_kind":"AIL-Requirements","artifact_text":{},"questions":[],"checker_handoff":{{"must_check":true,"expected_profile":"Application","expected_features":[]}}}}"#,
+            json_string(requirements)
+        ))
+    );
+    let response_spec = fs::read_to_string(format!("{package}/spec.ail-spec.md")).unwrap();
+    let spec_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(&format!(
+            r#"{{"artifact_kind":"AIL-Spec Canonical","artifact_text":{},"questions":[],"checker_handoff":{{"must_check":true,"expected_profile":"Application","expected_features":[]}}}}"#,
+            json_string(&response_spec)
+        ))
+    );
+    let server = serve_chat_responses(listener, vec![requirements_body, spec_body]);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-story",
+            &package,
+            "--story-file",
+            story_file.to_str().unwrap(),
+            "--agent",
+            &agent_package,
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+            "--llm-endpoint",
+            &format!("http://127.0.0.1:{}/v1/chat/completions", addr.port()),
+            "--target",
+            "linux-x86_64-elf",
+            "--action",
+            "CloseTicket",
+            "--out",
+            executable_path.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    let request_bodies = server.join().unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(request_bodies.len(), 2);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("ail-build wrote linux-x86_64-elf executable"),
+        "{stdout}"
+    );
+    assert!(executable_path.is_file(), "{}", executable_path.display());
+
+    let run = Command::new(&executable_path)
+        .args(["ticket.id=T-1", "ticket.status=Open"])
+        .output()
+        .unwrap();
+    assert!(
+        run.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&run.stdout),
+        String::from_utf8_lossy(&run.stderr)
+    );
+    let runtime_stdout = String::from_utf8_lossy(&run.stdout);
+    let runtime_stderr = String::from_utf8_lossy(&run.stderr);
+    assert!(
+        runtime_stdout.contains("ticket.status=Closed"),
+        "{runtime_stdout}"
+    );
+    assert!(
+        runtime_stderr.contains("trace TicketClosed"),
+        "{runtime_stderr}"
+    );
+
+    for artifact in [
+        "story-mode-report.txt",
+        "manifest.ail-story.txt",
+        "manifest.ail-build.txt",
+        "target.elf",
+        "native-bytecode-report.txt",
+        "dependency-report.txt",
+        "agent-trace.txt",
+    ] {
+        assert!(artifact_dir.join(artifact).is_file(), "{artifact}");
+    }
+    let story_manifest = fs::read_to_string(artifact_dir.join("manifest.ail-story.txt")).unwrap();
+    assert!(
+        story_manifest.contains("build-manifest manifest.ail-build.txt"),
+        "{story_manifest}"
+    );
+    let build_manifest = fs::read_to_string(artifact_dir.join("manifest.ail-build.txt")).unwrap();
+    assert!(
+        build_manifest.contains("machine-bytecode-contract linux-x86_64-elf"),
+        "{build_manifest}"
+    );
+    assert!(
+        build_manifest.contains("native-bytecode native-bytecode-report.txt"),
+        "{build_manifest}"
+    );
+    let agent_trace = fs::read_to_string(artifact_dir.join("agent-trace.txt")).unwrap();
+    assert!(
+        agent_trace.contains("entrypoint=ail-story")
+            && agent_trace.contains("action CompileNativeTarget started")
+            && agent_trace.contains("action VerifyTargetArtifact started"),
+        "{agent_trace}"
+    );
+
+    fs::remove_file(story_file).unwrap();
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
 fn cli_ail_story_surfaces_blocking_questions_as_story_artifact() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
@@ -29689,6 +29861,51 @@ fn cli_ail_v03_roadmap_advances_completed_systems_signal() {
     assert!(
         !stdout.contains(
             "Systems profile needs hardware-facing contracts and scheduler/interrupt examples."
+        ),
+        "{stdout}"
+    );
+
+    let roadmap = fs::read_to_string(artifact_dir.join("v03-roadmap.txt")).unwrap();
+    assert_eq!(stdout, roadmap);
+
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
+fn cli_ail_v03_roadmap_advances_completed_application_story_signal() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-v03-roadmap-release-application-story-signal-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-v03-roadmap",
+            "examples",
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+            "--release-evidence",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains(
+            "signal Application examples need package-local rejected fixtures and story amendment comparisons after story-to-runtime walkthroughs. count 10"
+        ),
+        "{stdout}"
+    );
+    assert!(
+        !stdout.contains(
+            "Application examples need user-story walkthroughs from intent to runtime trace."
         ),
         "{stdout}"
     );
