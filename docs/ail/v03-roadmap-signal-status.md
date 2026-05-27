@@ -24,9 +24,9 @@ rationale: Incident-response examples now span imported modules and target evide
 evidence: docs/ail/31-v03-learning-and-authoring-gate.md
 
 signal: Generic runtime behavior needs clearer type-inference explanations.
-status: deferred
-rationale: Runtime generic examples are replayable, but the teaching surface still needs clearer type-inference explanations for reviewers.
-evidence: docs/ail/31-v03-learning-and-authoring-gate.md
+status: promoted
+rationale: Runtime Generic examples now emit deterministic type-inference review artifacts for example-35 through example-39, tying inferred state variants, preconditions, state transitions, trace coverage, and replay fingerprints into reviewer-facing evidence.
+evidence: cargo run -- ail-examples examples --release-evidence
 
 signal: Generics need reusable conformance fixtures and teachable stdlib walkthroughs.
 status: deferred

@@ -578,6 +578,12 @@ as prose. The current examples reveal these next-version gaps:
   evidence now emits `threat-model-audit.txt` and fingerprint artifacts for
   `example-75` through `example-79`, connecting `AIL-SECRET-ROLE-001`, `AIL005`,
   and `AIL-TRACE-002` to reviewer-facing security stories and replay evidence.
+- Runtime Generic examples now emit deterministic `type-inference-review.txt`
+  and fingerprint artifacts for `example-35` through `example-39`, explaining
+  inferred `State<Low, High>` and `State<Open, Closed>` fields, preconditions,
+  the `Low -> High` transition, `TicketPrioritized` trace coverage, and replay
+  fingerprints. The next bar is rejected invalid-transition fixtures and story
+  diffs for user requests that change the type contract.
 - Incident-response examples show that complex systems need richer story
   graphs across imported modules, UI surfaces, workflow transitions, target
   contracts, and regenerated story views.

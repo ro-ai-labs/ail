@@ -500,6 +500,7 @@ struct AilE2eCorpusEvaluation {
     ui_review_patch_text: Option<String>,
     agent_policy_review_text: Option<String>,
     threat_model_audit_text: Option<String>,
+    type_inference_review_text: Option<String>,
     diagnostics_text: Option<String>,
     repair_tutorial_text: Option<String>,
     repair_proof: Option<AilE2eRepairProofArtifacts>,
@@ -2849,6 +2850,7 @@ fn evaluate_rejected_ail_e2e_corpus_entry(
         ui_review_patch_text: None,
         agent_policy_review_text: None,
         threat_model_audit_text: None,
+        type_inference_review_text: None,
         diagnostics_text: Some(diagnostics_text),
         repair_tutorial_text: Some(repair_tutorial_text),
         repair_proof: Some(repair_proof),
@@ -3345,6 +3347,7 @@ fn evaluate_ail_e2e_corpus_entry(
             ui_review_patch_text: None,
             agent_policy_review_text: None,
             threat_model_audit_text: None,
+            type_inference_review_text: None,
             diagnostics_text: None,
             repair_tutorial_text: None,
             repair_proof: None,
@@ -3467,6 +3470,13 @@ fn evaluate_ail_e2e_corpus_entry(
         vm_trace_text.as_deref(),
         target_report_text.as_deref(),
     );
+    let type_inference_review_text = render_ail_e2e_type_inference_review_text(
+        entry,
+        Some(&checked_core_text),
+        Some(&bytecode_text),
+        vm_trace_text.as_deref(),
+        target_report_text.as_deref(),
+    );
     Ok(AilE2eCorpusEvaluation {
         entry: entry.clone(),
         semantic_anchors,
@@ -3481,6 +3491,7 @@ fn evaluate_ail_e2e_corpus_entry(
         ui_review_patch_text,
         agent_policy_review_text,
         threat_model_audit_text,
+        type_inference_review_text,
         diagnostics_text: None,
         repair_tutorial_text: None,
         repair_proof: None,
@@ -3712,6 +3723,17 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
                 .map(|text| ail_artifact_fingerprint(text))
         },
     );
+    push_ail_e2e_fingerprint_reuse_lines(
+        &mut lines,
+        "type-inference-review",
+        evaluations,
+        |evaluation| {
+            evaluation
+                .type_inference_review_text
+                .as_ref()
+                .map(|text| ail_artifact_fingerprint(text))
+        },
+    );
     push_ail_e2e_fingerprint_reuse_lines(&mut lines, "diagnostics", evaluations, |evaluation| {
         evaluation
             .diagnostics_text
@@ -3920,6 +3942,14 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
                 entry.id,
                 entry.id,
                 ail_artifact_fingerprint(threat_model_audit_text)
+            ));
+        }
+        if let Some(type_inference_review_text) = &evaluation.type_inference_review_text {
+            lines.push(format!(
+                "entry-artifact {} type-inference-review examples/{}/type-inference-review.txt {}",
+                entry.id,
+                entry.id,
+                ail_artifact_fingerprint(type_inference_review_text)
             ));
         }
         if let Some(diagnostics_text) = &evaluation.diagnostics_text {
@@ -4156,6 +4186,14 @@ fn push_ail_e2e_entry_artifact_lines(
             entry.id,
             entry.id,
             ail_artifact_fingerprint(threat_model_audit_text)
+        ));
+    }
+    if let Some(type_inference_review_text) = &evaluation.type_inference_review_text {
+        lines.push(format!(
+            "{prefix} {} type-inference-review examples/{}/type-inference-review.txt {}",
+            entry.id,
+            entry.id,
+            ail_artifact_fingerprint(type_inference_review_text)
         ));
     }
     if let Some(diagnostics_text) = &evaluation.diagnostics_text {
@@ -4572,6 +4610,85 @@ fn render_ail_e2e_threat_model_audit_text(
     }
     lines.push(
         "threat-model-summary Secret Access binds role checks, customer redaction, denied-access traces, diagnostics, and replay evidence for reviewer audit."
+            .to_string(),
+    );
+    Some(format!("{}\n", lines.join("\n")))
+}
+
+fn render_ail_e2e_type_inference_review_text(
+    entry: &AilE2eCorpusEntry,
+    checked_core_text: Option<&str>,
+    bytecode_text: Option<&str>,
+    vm_trace_text: Option<&str>,
+    target_report_text: Option<&str>,
+) -> Option<String> {
+    let field = |key: &str| entry.fields.get(key).map(String::as_str).unwrap_or("");
+    let generic_runtime_signal =
+        "Generic runtime behavior needs clearer type-inference explanations.";
+    let is_runtime_generic_entry = field("capability-under-test") == "runtime-generics"
+        || field("package").ends_with("runtime_generic.ail")
+        || field("v0.3-signal") == generic_runtime_signal;
+    if !is_runtime_generic_entry {
+        return None;
+    }
+    let runtime_evidence = if target_report_text.is_some() {
+        "target-report"
+    } else if vm_trace_text.is_some() {
+        "vm-trace"
+    } else if bytecode_text.is_some() {
+        "bytecode"
+    } else {
+        "checked-core"
+    };
+    let mut lines = vec![
+        "AIL-Type-Inference-Review:".to_string(),
+        format!("entry {}", entry.id),
+        format!("semantic-task {}", field("semantic-task")),
+        format!("package {}", field("package")),
+        format!("profile {}", field("profile")),
+        format!("program-domain {}", field("program-domain")),
+        format!("capability-under-test {}", field("capability-under-test")),
+        "type-inference-artifact deterministic-text".to_string(),
+        "type-surface runtime-generics".to_string(),
+        "entity Runtime Tickets".to_string(),
+        "action Prioritize ticket".to_string(),
+        "inferred-field ticket.priority State<Low, High>".to_string(),
+        "inferred-field ticket.status State<Open, Closed>".to_string(),
+        "inferred-field SupportTicket.priority State<Low, High>".to_string(),
+        "initial-state ticket.priority=Low".to_string(),
+        "precondition ticket exists".to_string(),
+        "precondition ticket priority not High".to_string(),
+        "state-transition ticket.priority Low -> High".to_string(),
+        "postcondition high priority tickets are handled first".to_string(),
+        "trace-event TicketPrioritized".to_string(),
+        format!("runtime-evidence {runtime_evidence}"),
+    ];
+    if let Some(checked_core_text) = checked_core_text {
+        lines.push(format!(
+            "checked-core-fingerprint {}",
+            ail_artifact_fingerprint(checked_core_text)
+        ));
+    }
+    if let Some(bytecode_text) = bytecode_text {
+        lines.push(format!(
+            "bytecode-fingerprint {}",
+            ail_artifact_fingerprint(bytecode_text)
+        ));
+    }
+    if let Some(vm_trace_text) = vm_trace_text {
+        lines.push(format!(
+            "vm-trace-fingerprint {}",
+            ail_artifact_fingerprint(vm_trace_text)
+        ));
+    }
+    if let Some(target_report_text) = target_report_text {
+        lines.push(format!(
+            "target-report-fingerprint {}",
+            ail_artifact_fingerprint(target_report_text)
+        ));
+    }
+    lines.push(
+        "type-inference-summary Runtime Generic evidence explains inferred state variants, preconditions, state transition, trace coverage, and replay fingerprints for reviewer audit."
             .to_string(),
     );
     Some(format!("{}\n", lines.join("\n")))
@@ -5597,6 +5714,24 @@ fn write_ail_e2e_corpus_artifacts(
             )
             .map_err(|error| {
                 format!("failed to write examples threat model audit fingerprint: {error}")
+            })?;
+        }
+        if let Some(type_inference_review_text) = &evaluation.type_inference_review_text {
+            let entry_dir = root.join("examples").join(&evaluation.entry.id);
+            fs::create_dir_all(&entry_dir).map_err(|error| {
+                format!("failed to create examples entry artifact dir: {error}")
+            })?;
+            fs::write(
+                entry_dir.join("type-inference-review.txt"),
+                type_inference_review_text,
+            )
+            .map_err(|error| format!("failed to write examples type inference review: {error}"))?;
+            fs::write(
+                entry_dir.join("type-inference-review.fingerprint.txt"),
+                format!("{}\n", ail_artifact_fingerprint(type_inference_review_text)),
+            )
+            .map_err(|error| {
+                format!("failed to write examples type inference review fingerprint: {error}")
             })?;
         }
         if let Some(diagnostics_text) = &evaluation.diagnostics_text {

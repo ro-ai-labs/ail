@@ -1755,9 +1755,11 @@ fn script_v03_signal_status_audit_marks_agent_policy_import_promoted() {
     for required in [
         "signal-status AgentTool authoring needs human-approved multi-agent policy handoff imports after deterministic policy reviews are replayed. count 15 status promoted",
         "signal-status-evidence AgentTool authoring needs human-approved multi-agent policy handoff imports after deterministic policy reviews are replayed. scripts/run_v03_agent_policy_import_audit.py",
+        "signal-status Generic runtime behavior needs clearer type-inference explanations. count 5 status promoted",
+        "signal-status-evidence Generic runtime behavior needs clearer type-inference explanations. cargo run -- ail-examples examples --release-evidence",
         "signal-status Security examples need threat-model annotations and audit trails. count 5 status promoted",
         "signal-status-evidence Security examples need threat-model annotations and audit trails. cargo run -- ail-examples examples --release-evidence",
-        "promoted-count 2",
+        "promoted-count 3",
         "missing-status-count 0",
         "audit-result accepted",
     ] {
@@ -28939,6 +28941,14 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
+        report.contains("type-inference-review-fingerprint-observed-count 5"),
+        "{report}"
+    );
+    assert!(
+        report.contains("type-inference-review-fingerprint-duplicate-entry-count 0"),
+        "{report}"
+    );
+    assert!(
         report.contains(
             "v03-signal-count UI authoring needs human-approved visual patch import workflows after deterministic UI patch plans are replayed. 4"
         ),
@@ -29097,6 +29107,45 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         report.contains(&format!(
             "entry-artifact example-75 threat-model-audit examples/example-75/threat-model-audit.txt {}",
             threat_model_audit_75_fingerprint.trim()
+        )),
+        "{report}"
+    );
+    let type_inference_review_35 =
+        fs::read_to_string(artifact_dir.join("examples/example-35/type-inference-review.txt"))
+            .unwrap();
+    assert!(
+        type_inference_review_35.contains("AIL-Type-Inference-Review:")
+            && type_inference_review_35.contains("entry example-35")
+            && type_inference_review_35
+                .contains("semantic-task runtime-generic-live-codex-core-to-spec-35")
+            && type_inference_review_35.contains("type-surface runtime-generics")
+            && type_inference_review_35.contains("entity Runtime Tickets")
+            && type_inference_review_35.contains("action Prioritize ticket")
+            && type_inference_review_35.contains("inferred-field ticket.priority State<Low, High>")
+            && type_inference_review_35.contains("initial-state ticket.priority=Low")
+            && type_inference_review_35.contains("precondition ticket exists")
+            && type_inference_review_35.contains("precondition ticket priority not High")
+            && type_inference_review_35.contains("state-transition ticket.priority Low -> High")
+            && type_inference_review_35.contains("trace-event TicketPrioritized")
+            && type_inference_review_35.contains("runtime-evidence target-report")
+            && type_inference_review_35.contains("checked-core-fingerprint ")
+            && type_inference_review_35.contains("bytecode-fingerprint ")
+            && type_inference_review_35.contains("target-report-fingerprint ")
+            && type_inference_review_35.contains("type-inference-summary "),
+        "{type_inference_review_35}"
+    );
+    let type_inference_review_35_fingerprint = fs::read_to_string(
+        artifact_dir.join("examples/example-35/type-inference-review.fingerprint.txt"),
+    )
+    .unwrap();
+    assert_eq!(
+        type_inference_review_35_fingerprint.trim(),
+        fnv64_fingerprint(&type_inference_review_35)
+    );
+    assert!(
+        report.contains(&format!(
+            "entry-artifact example-35 type-inference-review examples/example-35/type-inference-review.txt {}",
+            type_inference_review_35_fingerprint.trim()
         )),
         "{report}"
     );
@@ -29527,6 +29576,13 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         manifest.contains(&format!(
             "entry-artifact example-75 threat-model-audit examples/example-75/threat-model-audit.txt {}",
             threat_model_audit_75_fingerprint.trim()
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "entry-artifact example-35 type-inference-review examples/example-35/type-inference-review.txt {}",
+            type_inference_review_35_fingerprint.trim()
         )),
         "{manifest}"
     );

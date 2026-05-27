@@ -47,8 +47,11 @@ Useful artifacts after replay include:
 - `examples/example-35/checked.ail-core.txt`
 - `examples/example-35/artifact.ailbc.json`
 - `examples/example-35/target-report.txt`
+- `examples/example-35/type-inference-review.txt`
+- `examples/example-35/type-inference-review.fingerprint.txt`
 - `examples/example-35/user-story.txt`
 - `examples/example-39/target-report.txt`
+- `examples/example-39/type-inference-review.txt`
 
 For a focused package check:
 
@@ -77,6 +80,8 @@ behavior, and target evidence.
 ## v0.3 Learning Signal
 
 Runtime Generic now has package-local guidance and story anchors for typed
-runtime flow. v0.3 should add clearer type-inference explanations, rejected
-fixtures for invalid state transitions, and story diffs that show how a user
-request changes the type contract.
+runtime flow. Its v0.3 generic-runtime signal is now promoted by deterministic
+type-inference review artifacts that explain inferred state variants,
+preconditions, state transitions, trace coverage, and replay fingerprints. The
+next bar is rejected fixtures for invalid state transitions and story diffs
+that show how a user request changes the type contract.
