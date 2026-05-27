@@ -250,11 +250,13 @@ The `ail-examples` replay bundle must also write deterministic story artifacts:
 - `examples/<entry-id>/repair-promotion-review.txt` for rejected entries
 - `v03-roadmap.txt`
 - `v03-roadmap.fingerprint.txt`
-- `bootstrap-fixed-point-report.txt`, `bootstrap-native-bytecode-report.txt`,
-  `bootstrap-host-boundary-report.txt`, `bootstrap-dependency-report.txt`,
-  `bootstrap-handoff-report.txt`, and `manifest.ail-bootstrap.txt` in a
-  scratch bootstrap artifact directory when the AIL-authored toolchain agent
-  and AIL-Meta compiler pass are run through `ail-bootstrap`.
+- `bootstrap-fixed-point-report.txt`,
+  `bootstrap-pass-composition-report.txt`,
+  `bootstrap-native-bytecode-report.txt`, `bootstrap-host-boundary-report.txt`,
+  `bootstrap-dependency-report.txt`, `bootstrap-handoff-report.txt`, and
+  `manifest.ail-bootstrap.txt` in a scratch bootstrap artifact directory when
+  the AIL-authored toolchain agent and AIL-Meta compiler pass are run through
+  `ail-bootstrap`.
 - `ui-patch-capture-plan.json`, `ui-patch-capture-plan.txt`, and
   `ui-patch-capture-plan.fingerprint.txt` in a scratch capture-plan directory
   when a UI patch is proposed for human-approved import.
@@ -524,10 +526,11 @@ as prose. The current examples reveal these next-version gaps:
   approval, plus runtime evidence for bounded notification retry attempts.
 - Compiler/self-hosting examples now include a deterministic `ail-bootstrap`
   manual check that composes the AIL-authored toolchain agent with the
-  AIL-Meta `InferReadPermissions` compiler pass, verifies fixed-point pass
-  output, records host-boundary and dependency reports, and runs native handoff
-  checks. The next bar is pass-order diagnostics and multiple composed
-  compiler-pass variants.
+  AIL-Meta `InferReadPermissions` compiler pass, writes a fingerprinted
+  `bootstrap-pass-composition-report.txt`, verifies fixed-point pass output,
+  records host-boundary and dependency reports, and runs native handoff checks.
+  The next bar is reviewer-visible pass-order conflict diagnostics and
+  multiple composed compiler-pass variants.
 - Systems examples now include a deterministic manual chapter for
   `network_driver.ail` that runs package-local conformance, accepts scheduler
   and interrupt fixtures, rejects invalid interrupt/task contracts with stable

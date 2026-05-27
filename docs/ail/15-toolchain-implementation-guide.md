@@ -688,12 +688,14 @@ It writes source package snapshots, `toolchain-agent.checked.ail-core.txt`,
 `toolchain-agent.ailbc.json`, `compiler-pass.checked.ail-core.txt`,
 `compiler-pass.ailbc.json`, native ELF executables for every action in both
 packages, package conformance reports, `agent.ailbc.json`, `agent-trace.txt`,
-`bootstrap-fixed-point-report.txt`, `bootstrap-native-bytecode-report.txt`,
+`bootstrap-fixed-point-report.txt`,
+`bootstrap-pass-composition-report.txt`, `bootstrap-native-bytecode-report.txt`,
 `bootstrap-host-boundary-report.txt`, `bootstrap-dependency-report.txt`,
 `bootstrap-handoff-report.txt`, and `manifest.ail-bootstrap.txt`. The bootstrap
 command runs the AIL-Meta compiler pass bytecode over the toolchain agent
 checked IR, reruns the same pass over that output to prove the transformed IR
-is stable, compiles the toolchain bytecode from the first transformed IR, and
+is stable, writes a reviewer-visible pass-composition report for the pass
+order, compiles the toolchain bytecode from the first transformed IR, and
 records the machine-bytecode identity of every emitted native artifact. It also
 runs every generated native AIL toolchain-agent action, every generated native
 AIL verifier-agent action, and the native AIL-Meta `InferReadPermissions`

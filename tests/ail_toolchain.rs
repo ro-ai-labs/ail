@@ -1328,6 +1328,9 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
                 "bootstrap-fixed-point-report.txt",
                 "fixed-point: ok",
                 "second-pass-changed false",
+                "bootstrap-pass-composition-report.txt",
+                "composition-pass-count 1",
+                "pass-order-status ok",
                 "bootstrap-handoff-report.txt",
                 "manifest.ail-bootstrap.txt",
                 "no-host-backend-source true",
@@ -1779,6 +1782,7 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "--agent examples/ail_toolchain_agent.ail",
         "--target linux-x86_64-elf",
         "bootstrap-fixed-point-report.txt",
+        "bootstrap-pass-composition-report.txt",
         "bootstrap-native-bytecode-report.txt",
         "bootstrap-host-boundary-report.txt",
         "bootstrap-dependency-report.txt",
@@ -1786,6 +1790,9 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "manifest.ail-bootstrap.txt",
         "fixed-point: ok",
         "second-pass-changed false",
+        "composition-pass-count 1",
+        "composition-pass 1 InferReadPermissions",
+        "pass-order-status ok",
         "no-host-backend-source true",
     ] {
         assert!(
@@ -2018,6 +2025,10 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "evidence bootstrap-fixed-point-report.txt",
         "evidence fixed-point: ok",
         "evidence second-pass-changed false",
+        "evidence bootstrap-pass-composition-report.txt",
+        "evidence composition-pass-count 1",
+        "evidence composition-pass 1 InferReadPermissions",
+        "evidence pass-order-status ok",
         "evidence bootstrap-handoff-report.txt",
         "evidence manifest.ail-bootstrap.txt",
         "evidence no-host-backend-source true",
@@ -2331,6 +2342,7 @@ fn script_ail_interactive_manual_v03_authoring_gate_run_checks_succeeds() {
         "running run-agent-policy-import-checks",
         "ail-bootstrap wrote linux-x86_64-elf bootstrap bundle",
         "bootstrap-fixed-point-report.txt",
+        "bootstrap-pass-composition-report.txt",
         "ail conformance: package network-driver",
         "accepted: scheduler-task-minimal.ail-spec.md",
         "accepted: interrupt-context-minimal.ail-spec.md",
@@ -18169,6 +18181,69 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
         fixed_point_fingerprint.trim(),
         fnv64_fingerprint(&fixed_point_report)
     );
+    let pass_composition_report =
+        fs::read_to_string(artifact_dir.join("bootstrap-pass-composition-report.txt")).unwrap();
+    assert!(
+        pass_composition_report.contains("AIL-Bootstrap-Pass-Composition:"),
+        "{pass_composition_report}"
+    );
+    assert!(
+        pass_composition_report.contains("target linux-x86_64-elf"),
+        "{pass_composition_report}"
+    );
+    assert!(
+        pass_composition_report.contains("composition-pass-count 1"),
+        "{pass_composition_report}"
+    );
+    assert!(
+        pass_composition_report.contains(
+            "composition-pass 1 InferReadPermissions source compiler-pass.source.ail-spec.md bytecode compiler-pass.ailbc.json core compiler-pass.checked.ail-core.txt"
+        ),
+        "{pass_composition_report}"
+    );
+    assert!(
+        pass_composition_report.contains(&format!(
+            "composition-input toolchain-agent.checked.ail-core.txt {}",
+            fnv64_fingerprint(&toolchain_core)
+        )),
+        "{pass_composition_report}"
+    );
+    assert!(
+        pass_composition_report.contains(&format!(
+            "composition-output toolchain-agent.pass-output.ail-core.txt {}",
+            fnv64_fingerprint(&toolchain_pass_output)
+        )),
+        "{pass_composition_report}"
+    );
+    assert!(
+        pass_composition_report.contains(&format!(
+            "composition-trace toolchain-agent.pass-trace.txt {}",
+            fnv64_fingerprint(&toolchain_pass_trace)
+        )),
+        "{pass_composition_report}"
+    );
+    assert!(
+        pass_composition_report.contains(&format!(
+            "composition-fixed-point bootstrap-fixed-point-report.txt {}",
+            fnv64_fingerprint(&fixed_point_report)
+        )),
+        "{pass_composition_report}"
+    );
+    assert!(
+        pass_composition_report.contains("pass-order-diagnostic-count 0"),
+        "{pass_composition_report}"
+    );
+    assert!(
+        pass_composition_report.contains("pass-order-status ok"),
+        "{pass_composition_report}"
+    );
+    let pass_composition_report_fingerprint =
+        fs::read_to_string(artifact_dir.join("bootstrap-pass-composition-report.fingerprint.txt"))
+            .unwrap();
+    assert_eq!(
+        pass_composition_report_fingerprint.trim(),
+        fnv64_fingerprint(&pass_composition_report)
+    );
 
     let toolchain_conformance =
         fs::read_to_string(artifact_dir.join("toolchain-agent-conformance-report.txt")).unwrap();
@@ -18434,6 +18509,8 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
     assert!(agent_trace.contains("read buildrequest.compiler pass trace"));
     assert!(agent_trace.contains("read buildrequest.fixed point report"));
     assert!(agent_trace.contains("read buildrequest.fixed point report fingerprint"));
+    assert!(agent_trace.contains("read buildrequest.compiler pass composition report"));
+    assert!(agent_trace.contains("read buildrequest.compiler pass composition report fingerprint"));
     assert!(agent_trace.contains("read buildrequest.conformance report"));
     assert!(agent_trace.contains("read buildrequest.conformance report fingerprint"));
     assert!(agent_trace.contains("read buildrequest.machine bytecode contract"));
@@ -18467,6 +18544,8 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
             "buildrequest.compiler pass trace=ok",
             "buildrequest.fixed point report=ok",
             "buildrequest.fixed point report fingerprint=fnv64:fixed-point",
+            "buildrequest.compiler pass composition report=ok",
+            "buildrequest.compiler pass composition report fingerprint=fnv64:pass-composition",
             "buildrequest.conformance report=ok",
             "buildrequest.conformance report fingerprint=fnv64:conformance",
             "buildrequest.machine bytecode contract=machine-bytecode-contract linux-x86_64-elf bytecode-level machine bytecode-container linux-elf-executable bytecode-format elf64-little-x86_64-executable",
@@ -18563,6 +18642,13 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
         manifest.contains(&format!(
             "bootstrap-fixed-point bootstrap-fixed-point-report.txt {}",
             fnv64_fingerprint(&fixed_point_report)
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "bootstrap-pass-composition bootstrap-pass-composition-report.txt {}",
+            fnv64_fingerprint(&pass_composition_report)
         )),
         "{manifest}"
     );
@@ -32760,6 +32846,49 @@ fn cli_ail_v03_roadmap_advances_completed_application_story_signal() {
         !stdout.contains(
             "Application examples need user-story walkthroughs from intent to runtime trace."
         ),
+        "{stdout}"
+    );
+
+    let roadmap = fs::read_to_string(artifact_dir.join("v03-roadmap.txt")).unwrap();
+    assert_eq!(stdout, roadmap);
+
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
+fn cli_ail_v03_roadmap_advances_completed_self_hosting_signal() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-v03-roadmap-release-self-hosting-signal-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-v03-roadmap",
+            "examples",
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+            "--release-evidence",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains(
+            "signal Self-hosting needs multiple composed compiler-pass variants and reviewer-visible pass-order conflict diagnostics. count 10"
+        ),
+        "{stdout}"
+    );
+    assert!(
+        !stdout.contains("Self-hosting needs pass-composition examples and fixed-point checks."),
         "{stdout}"
     );
 

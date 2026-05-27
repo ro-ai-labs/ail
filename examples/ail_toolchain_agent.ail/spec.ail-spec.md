@@ -29,6 +29,8 @@ A BuildRequest has:
 - compiler pass source package fingerprint: Text
 - compiler pass target artifact fingerprint: Text
 - compiler pass trace: Text
+- compiler pass composition report: Text
+- compiler pass composition report fingerprint: Text
 - compiler pass review report: Text
 - conformance report: Text
 - conformance report fingerprint: Text
@@ -321,6 +323,8 @@ When the toolchain agent verifies an AIL bootstrap bundle:
 - the system reads the BuildRequest compiler pass trace
 - the system reads the BuildRequest fixed point report
 - the system reads the BuildRequest fixed point report fingerprint
+- the system reads the BuildRequest compiler pass composition report
+- the system reads the BuildRequest compiler pass composition report fingerprint
 - the system reads the BuildRequest conformance report
 - the system reads the BuildRequest conformance report fingerprint
 - the system reads the BuildRequest machine bytecode contract
@@ -335,7 +339,7 @@ When the toolchain agent verifies an AIL bootstrap bundle:
 - the system reads the BuildRequest target artifact fingerprint
 - the system reads the BuildRequest compiler pass target artifact fingerprint
 - the system changes the BuildRequest artifact manifest verification report to Verified
-- the system guarantees the bootstrap manifest ties AIL source packages, checked AIL-Core IR, AIL-Bytecode, conformance reports, AIL-authored toolchain agent, AIL-Meta compiler pass, and Linux native executable bytes with deterministic fingerprints and no Rust or host-language backend source
+- the system guarantees the bootstrap manifest ties AIL source packages, checked AIL-Core IR, AIL-Bytecode, compiler-pass composition order, fixed-point reports, conformance reports, AIL-authored toolchain agent, AIL-Meta compiler pass, and Linux native executable bytes with deterministic fingerprints and no Rust or host-language backend source
 - the system records a trace event named BootstrapManifestVerified
 
 Action: Verify pass manifest.

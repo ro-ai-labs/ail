@@ -64,7 +64,7 @@ packages visible without making a separate non-end-to-end example category.
   permission-denied declarations imported by composed support packages.
 - `compiler_pass.ail/README.md`: Compiler profile pass semantics,
   `InferReadPermissions`, AIL-Core graph transforms, native pass evidence, and
-  fixed-point bootstrap self-hosting evidence.
+  pass-composition/fixed-point bootstrap self-hosting evidence.
 - `recursive_factorial.ail/README.md`: compact recursive function and
   arithmetic bytecode fixture for executable semantics.
 - `network_driver.ail/README.md`: low-level System profile resources,

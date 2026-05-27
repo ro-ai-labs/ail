@@ -138,6 +138,11 @@ bootstrap-fixed-point-report.txt
 bootstrap-fixed-point-report.fingerprint.txt
 fixed-point: ok
 second-pass-changed false
+bootstrap-pass-composition-report.txt
+bootstrap-pass-composition-report.fingerprint.txt
+composition-pass-count 1
+composition-pass 1 InferReadPermissions
+pass-order-status ok
 bootstrap-native-bytecode-report.txt
 bootstrap-host-boundary-report.txt
 no-host-backend-source true

@@ -116,6 +116,10 @@ def build_v03_audit_plan(
             ],
             artifacts / "v03-bootstrap",
             "manifest.ail-bootstrap.txt",
+            (
+                "bootstrap-pass-composition-report.txt",
+                "bootstrap-pass-composition-report.fingerprint.txt",
+            ),
         ),
         AuditStep(
             "examples",

@@ -220,8 +220,8 @@ python3 scripts/run_ail_interactive_manual.py --chapter agent-policy-import --ru
   corpus with `ail-v03-roadmap`. Prose: `05-v03-roadmap.md`.
 - `bootstrap-self-hosting`: deterministic bootstrap bundle for the AIL
   toolchain agent and AIL-Meta compiler pass, with fixed-point,
-  host-boundary, dependency, native handoff, and manifest evidence. Prose:
-  `10-bootstrap-self-hosting.md`.
+  pass-composition, host-boundary, dependency, native handoff, and manifest
+  evidence. Prose: `10-bootstrap-self-hosting.md`.
 - `systems-profile`: deterministic conformance, native compile, and runtime
   trace evidence for the `network_driver.ail` low-level Systems profile package,
   including scheduler and interrupt accepted/rejected fixtures. Prose:

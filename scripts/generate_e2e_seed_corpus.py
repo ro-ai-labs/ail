@@ -189,7 +189,7 @@ ACCEPTED_FIXTURES = {
         "spec_count": "1",
         "story_count": "1",
         "interacts_with": "none",
-        "v03_signal": "Self-hosting needs pass-composition examples and fixed-point checks.",
+        "v03_signal": "Self-hosting needs multiple composed compiler-pass variants and reviewer-visible pass-order conflict diagnostics.",
         "vm_action": "InferReadPermissions",
     },
     "network-driver": {

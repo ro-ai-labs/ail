@@ -29,8 +29,8 @@ cargo run -- ail-bootstrap examples/ail_toolchain_agent.ail \
 
 The command writes source snapshots for both AIL packages, checked Core,
 bytecode, native ELF artifacts, conformance reports, fixed-point evidence,
-host-boundary evidence, dependency evidence, native handoff evidence, and a
-fingerprinted bootstrap manifest.
+pass-composition evidence, host-boundary evidence, dependency evidence, native
+handoff evidence, and a fingerprinted bootstrap manifest.
 
 The fixed-point report must include:
 
@@ -39,6 +39,19 @@ bootstrap-fixed-point-report.txt
 bootstrap-fixed-point-report.fingerprint.txt
 fixed-point: ok
 second-pass-changed false
+```
+
+The pass-composition report must include:
+
+```text
+bootstrap-pass-composition-report.txt
+bootstrap-pass-composition-report.fingerprint.txt
+composition-pass-count 1
+composition-pass 1 InferReadPermissions
+composition-input toolchain-agent.checked.ail-core.txt
+composition-output toolchain-agent.pass-output.ail-core.txt
+composition-fixed-point bootstrap-fixed-point-report.txt
+pass-order-status ok
 ```
 
 The host-boundary and dependency reports must include:
@@ -78,6 +91,7 @@ no-host-backend-source true
 toolchain-agent-pass-output toolchain-agent.pass-output.ail-core.txt
 toolchain-agent-pass-trace toolchain-agent.pass-trace.txt
 bootstrap-fixed-point bootstrap-fixed-point-report.txt
+bootstrap-pass-composition bootstrap-pass-composition-report.txt
 bootstrap-native-bytecode bootstrap-native-bytecode-report.txt
 bootstrap-host-boundary bootstrap-host-boundary-report.txt
 bootstrap-dependencies bootstrap-dependency-report.txt

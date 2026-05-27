@@ -559,6 +559,7 @@ struct AilBootstrapArtifactSet<'a> {
     toolchain_pass_output_core_text: &'a str,
     toolchain_pass_trace_text: &'a str,
     fixed_point_report_text: &'a str,
+    pass_composition_report_text: &'a str,
     native_bytecode_report_text: &'a str,
     host_boundary_report_text: &'a str,
     dependency_report_text: &'a str,
@@ -6176,6 +6177,10 @@ fn render_ail_bootstrap_manifest(artifacts: &AilBootstrapArtifactSet<'_>) -> Str
             ail_artifact_fingerprint(artifacts.fixed_point_report_text)
         ),
         format!(
+            "bootstrap-pass-composition bootstrap-pass-composition-report.txt {}",
+            ail_artifact_fingerprint(artifacts.pass_composition_report_text)
+        ),
+        format!(
             "bootstrap-native-bytecode bootstrap-native-bytecode-report.txt {}",
             ail_artifact_fingerprint(artifacts.native_bytecode_report_text)
         ),
@@ -6879,6 +6884,21 @@ fn write_ail_bootstrap_artifacts(
     )
     .map_err(|error| {
         format!("failed to write ail-bootstrap fixed point report fingerprint: {error}")
+    })?;
+    fs::write(
+        root.join("bootstrap-pass-composition-report.txt"),
+        artifacts.pass_composition_report_text,
+    )
+    .map_err(|error| format!("failed to write ail-bootstrap pass composition report: {error}"))?;
+    fs::write(
+        root.join("bootstrap-pass-composition-report.fingerprint.txt"),
+        format!(
+            "{}\n",
+            ail_artifact_fingerprint(artifacts.pass_composition_report_text)
+        ),
+    )
+    .map_err(|error| {
+        format!("failed to write ail-bootstrap pass composition report fingerprint: {error}")
     })?;
     fs::write(
         root.join("bootstrap-native-bytecode-report.txt"),
@@ -10484,6 +10504,7 @@ struct AilBootstrapAgentManifestRequest<'a> {
     toolchain_pass_output_core_text: &'a str,
     toolchain_pass_trace_text: &'a str,
     fixed_point_report_text: &'a str,
+    pass_composition_report_text: &'a str,
     native_bytecode_report_text: &'a str,
     host_boundary_report_text: &'a str,
     dependency_report_text: &'a str,
@@ -10514,6 +10535,7 @@ fn run_ail_bootstrap_agent_verify_manifest(
         toolchain_pass_output_core_text,
         toolchain_pass_trace_text,
         fixed_point_report_text,
+        pass_composition_report_text,
         native_bytecode_report_text,
         host_boundary_report_text,
         dependency_report_text,
@@ -10589,6 +10611,14 @@ fn run_ail_bootstrap_agent_verify_manifest(
         (
             "buildrequest.fixed point report fingerprint".to_string(),
             ail_artifact_fingerprint(fixed_point_report_text),
+        ),
+        (
+            "buildrequest.compiler pass composition report".to_string(),
+            pass_composition_report_text.to_string(),
+        ),
+        (
+            "buildrequest.compiler pass composition report fingerprint".to_string(),
+            ail_artifact_fingerprint(pass_composition_report_text),
         ),
         (
             "buildrequest.machine bytecode contract".to_string(),
@@ -10793,6 +10823,7 @@ fn render_ail_bootstrap_host_boundary_report(
         "ail-bytecode compiler-pass.ailbc.json".to_string(),
         "ail-bytecode agent.ailbc.json".to_string(),
         "report bootstrap-fixed-point-report.txt".to_string(),
+        "report bootstrap-pass-composition-report.txt".to_string(),
         "report bootstrap-native-bytecode-report.txt".to_string(),
         "report toolchain-agent-conformance-report.txt".to_string(),
         "report compiler-pass-conformance-report.txt".to_string(),
@@ -13717,6 +13748,38 @@ fn render_ail_bootstrap_fixed_point_report(
     )
 }
 
+fn render_ail_bootstrap_pass_composition_report(
+    target_name: &str,
+    compiler_pass_action: &str,
+    input_core_text: &str,
+    output_core_text: &str,
+    pass_trace_text: &str,
+    fixed_point_report_text: &str,
+) -> String {
+    format!(
+        concat!(
+            "AIL-Bootstrap-Pass-Composition:\n",
+            "target {}\n",
+            "composition-pass-count 1\n",
+            "composition-pass 1 {} source compiler-pass.source.ail-spec.md bytecode compiler-pass.ailbc.json core compiler-pass.checked.ail-core.txt\n",
+            "composition-input toolchain-agent.checked.ail-core.txt {}\n",
+            "composition-output toolchain-agent.pass-output.ail-core.txt {}\n",
+            "composition-trace toolchain-agent.pass-trace.txt {}\n",
+            "composition-fixed-point bootstrap-fixed-point-report.txt {}\n",
+            "pass-order-diagnostic-count 0\n",
+            "pass-order-status ok\n",
+            "supported-variant single-pass-fixed-point\n",
+            "pending-variant multi-pass-sequence\n",
+        ),
+        target_name,
+        compiler_pass_action,
+        ail_artifact_fingerprint(input_core_text),
+        ail_artifact_fingerprint(output_core_text),
+        ail_artifact_fingerprint(pass_trace_text),
+        ail_artifact_fingerprint(fixed_point_report_text)
+    )
+}
+
 fn run_ail_bootstrap_command(path: &str, cli_options: &CliOptions) -> Result<u8, String> {
     let target = cli_options
         .ail_compile_target
@@ -13834,6 +13897,14 @@ fn run_ail_bootstrap_command(path: &str, cli_options: &CliOptions) -> Result<u8,
             "ail-bootstrap fixed-point changed compiler output:\n{fixed_point_report_text}"
         ));
     }
+    let pass_composition_report_text = render_ail_bootstrap_pass_composition_report(
+        target,
+        &compiler_pass_action,
+        &toolchain_core_text,
+        &toolchain_pass_output_core_text,
+        &toolchain_pass_trace_text,
+        &fixed_point_report_text,
+    );
     let toolchain_bytecode = compile_ail_core_bytecode(&toolchain_pass_result.core)?;
     let toolchain_bytecode_text = format!("{}\n", render_ail_bytecode(&toolchain_bytecode));
     let toolchain_diagnostics = verify_ail_bytecode(&toolchain_bytecode);
@@ -13890,6 +13961,7 @@ fn run_ail_bootstrap_command(path: &str, cli_options: &CliOptions) -> Result<u8,
         toolchain_pass_output_core_text: &toolchain_pass_output_core_text,
         toolchain_pass_trace_text: &toolchain_pass_trace_text,
         fixed_point_report_text: &fixed_point_report_text,
+        pass_composition_report_text: &pass_composition_report_text,
         native_bytecode_report_text: &native_bytecode_report_text,
         host_boundary_report_text: &host_boundary_report_text,
         dependency_report_text: &dependency_report_text,
@@ -13916,6 +13988,7 @@ fn run_ail_bootstrap_command(path: &str, cli_options: &CliOptions) -> Result<u8,
         toolchain_pass_output_core_text: &toolchain_pass_output_core_text,
         toolchain_pass_trace_text: &toolchain_pass_trace_text,
         fixed_point_report_text: &fixed_point_report_text,
+        pass_composition_report_text: &pass_composition_report_text,
         native_bytecode_report_text: &native_bytecode_report_text,
         host_boundary_report_text: &host_boundary_report_text,
         dependency_report_text: &dependency_report_text,
@@ -13944,6 +14017,7 @@ fn run_ail_bootstrap_command(path: &str, cli_options: &CliOptions) -> Result<u8,
             toolchain_pass_output_core_text: &toolchain_pass_output_core_text,
             toolchain_pass_trace_text: &toolchain_pass_trace_text,
             fixed_point_report_text: &fixed_point_report_text,
+            pass_composition_report_text: &pass_composition_report_text,
             native_bytecode_report_text: &native_bytecode_report_text,
             host_boundary_report_text: &host_boundary_report_text,
             dependency_report_text: &dependency_report_text,

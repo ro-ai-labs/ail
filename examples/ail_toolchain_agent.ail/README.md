@@ -5,14 +5,15 @@
 This package is the AIL-authored agent used by the development toolchain. It
 models the handoff from developer intent through requirements, accepted spec,
 checked Core, bytecode, target artifacts, prompt portability reports, and
-manifest verification.
+manifest verification, including bootstrap pass-composition evidence.
 
 ## Concepts Taught
 
 - AI Agent participation without making the agent part of the trusted compiler
   core.
 - `BuildRequest` state transitions across requirements, spec, Core, flow,
-  compiler-pass, bytecode, native target, and manifest review.
+  compiler-pass, pass-composition, bytecode, native target, and manifest
+  review.
 - Agent-authored trace events such as `RequirementsCaptured`,
   `ApplicationBytecodeCompiled`, `TargetArtifactVerified`, and
   `BuildManifestVerified`.

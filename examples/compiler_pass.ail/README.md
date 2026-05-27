@@ -23,8 +23,9 @@ native target reports.
 - Diagnostics instead of silent permission inference when a read target
   contains `Secret`.
 - Native Linux target evidence for the pass action `InferReadPermissions`.
-- Self-hosting direction: AIL-authored passes need pass composition,
-  fixed-point execution, and pass-order review before v0.3 can raise the bar.
+- Self-hosting direction: AIL-authored passes now need multiple composed pass
+  variants and reviewer-visible pass-order conflict diagnostics before v0.3
+  can raise the bar again.
 
 ## Files To Inspect
 
@@ -94,7 +95,9 @@ compiler-pass review as the language grows.
 ## v0.3 Learning Signal
 
 Compiler Pass is the current bridge from language use cases to language
-implementation. It is replay-clean, but v0.3 needs pass-composition examples,
-fixed-point checks, pass-order diagnostics, richer secret-read fixtures, and a
-walkthrough that compares the input Core graph, transformed graph, provenance
-edges, bytecode trace, and native target report side by side.
+implementation. It is replay-clean, and bootstrap now records a pass
+composition plus fixed-point report for `InferReadPermissions`. The next v0.3
+bar is multiple composed compiler-pass variants, reviewer-visible pass-order
+conflict diagnostics, richer secret-read fixtures, and a walkthrough that
+compares the input Core graph, transformed graph, provenance edges, bytecode
+trace, and native target report side by side.
