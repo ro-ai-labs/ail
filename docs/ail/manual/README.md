@@ -64,6 +64,10 @@ python3 scripts/run_v03_story_llm_harness.py --review-artifacts /tmp/ail-v03-sto
 
 The review writes `story-llm-harness-report.txt` and
 `story-llm-harness-report.fingerprint.txt` in the reviewed artifact directory.
+The report also records `story-llm-transcript-check-count`,
+`story-prompt-envelope-valid-count`, and
+`story-prompt-envelope-invalid-count` so prompt-pack conformance is reviewable
+without re-contacting the hosted model.
 
 Review completed hosted prompt-pack artifacts before promotion:
 
@@ -108,7 +112,8 @@ python3 scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run
 
 - `user-story-mode`: story-first authoring with `ail-story`, checked
   requirements, blocking-question evidence, accepted spec, checked Core,
-  bytecode, and agent trace. Prose: `01-user-story-mode.md`.
+  bytecode, stored LLM request/response/content transcripts, prompt-envelope
+  counts, and agent trace. Prose: `01-user-story-mode.md`.
 - `examples-release`: full `./examples` replay with release evidence and
   learning metadata. Prose: `02-examples-release.md`.
 - `prompt-interaction`: prompt-pack and stored transcript inspection for system

@@ -60,14 +60,23 @@ After a successful compile run, inspect these files:
 /tmp/ail-user-story-mode/artifact.ailbc.json
 /tmp/ail-user-story-mode/manifest.ail-story.txt
 /tmp/ail-user-story-mode/agent-trace.txt
+/tmp/ail-user-story-mode/llm/requirements.request.json
+/tmp/ail-user-story-mode/llm/requirements.response.json
+/tmp/ail-user-story-mode/llm/requirements.content.txt
+/tmp/ail-user-story-mode/llm/spec.request.json
+/tmp/ail-user-story-mode/llm/spec.response.json
+/tmp/ail-user-story-mode/llm/spec.content.txt
 ```
 
 `story.normalized.md` records defaulted story metadata such as
 `story-journey: story-to-spec` and `story-roundtrip: semantic-similar`.
 `story-mode-report.txt` records package identity, story identity, endpoint, and
-semantic-anchor count. `manifest.ail-story.txt` fingerprints story, generated
-requirements, accepted spec, checked Core, bytecode, and the underlying
-`ail-build` manifest.
+semantic-anchor count. It also records `story-llm-transcript-count`,
+`story-prompt-envelope-valid-count`, and
+`story-prompt-envelope-invalid-count` when LLM transcripts are present.
+`manifest.ail-story.txt` fingerprints story, generated requirements, accepted
+spec, checked Core, bytecode, each stored LLM request/response/content
+transcript, and the underlying `ail-build` manifest.
 
 When the requirements prompt returns blocking questions instead of an
 `AIL-Requirements` artifact, `ail-story` prints `ail-story blocking questions:`,
@@ -144,10 +153,11 @@ agent trace, and manifest have been reviewed.
 
 The review mode is offline. It checks story source and normalized story
 fingerprints, story-mode report metadata, generated requirements, accepted
-spec, checked Core, flow review, bytecode, story manifest fingerprints, and
-toolchain-agent trace order, then persists the same accepted/rejected review
-text as a fingerprinted harness report before a live run can be treated as
-promotion candidate evidence.
+spec, checked Core, flow review, bytecode, story manifest fingerprints,
+stored LLM request/response/content transcripts, prompt-envelope validity
+counts, and toolchain-agent trace order. It then persists the same
+accepted/rejected review text as a fingerprinted harness report before a live
+run can be treated as promotion candidate evidence.
 
 The harness probes `http://inteligentia-pro-1:8080/v1/models` and runs
 `ail-story` against `http://inteligentia-pro-1:8080/v1/chat/completions` by

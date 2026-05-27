@@ -111,6 +111,68 @@ def parse_story_report(report_text: str) -> dict[str, str]:
     return values
 
 
+def prompt_envelope_json(content: str) -> tuple[dict[str, object] | None, str]:
+    candidate = content.strip()
+    if not candidate:
+        return None, "prompt response content is empty"
+    if candidate.startswith("```"):
+        lines = candidate.splitlines()
+        if lines:
+            lines = lines[1:]
+        if lines and lines[-1].strip().startswith("```"):
+            lines = lines[:-1]
+        candidate = "\n".join(lines).strip()
+    try:
+        value = json.loads(candidate)
+    except json.JSONDecodeError:
+        start = candidate.find("{")
+        end = candidate.rfind("}")
+        if start == -1 or end <= start:
+            return None, "prompt response must be a JSON prompt-pack envelope"
+        try:
+            value = json.loads(candidate[start : end + 1])
+        except json.JSONDecodeError as error:
+            return None, f"prompt response contains invalid JSON envelope: {error}"
+    if not isinstance(value, dict):
+        return None, "prompt response envelope must be a JSON object"
+    return value, ""
+
+
+def classify_prompt_content(content: str, expected_kind: str) -> tuple[str, str]:
+    envelope, error = prompt_envelope_json(content)
+    if envelope is None:
+        return "empty" if not content.strip() else "invalid", error
+    artifact_kind = envelope.get("artifact_kind")
+    if artifact_kind != expected_kind:
+        return (
+            "invalid",
+            f"prompt envelope artifact_kind must be {expected_kind}, got {artifact_kind}",
+        )
+    artifact_text = envelope.get("artifact_text", "")
+    if not isinstance(artifact_text, str):
+        return "invalid", "prompt envelope artifact_text must be a string"
+    questions_value = envelope.get("questions", [])
+    if not isinstance(questions_value, list) or not all(
+        isinstance(question, str) for question in questions_value
+    ):
+        return "invalid", "prompt envelope questions must be a list of strings"
+    questions = [question.strip() for question in questions_value if question.strip()]
+    has_artifact = bool(artifact_text.strip())
+    has_questions = bool(questions)
+    if has_artifact and has_questions:
+        return "invalid", "prompt envelope cannot contain both artifact_text and questions"
+    if not has_artifact and not has_questions:
+        return "invalid", "prompt envelope must contain artifact_text or questions"
+    checker_handoff = envelope.get("checker_handoff")
+    if not isinstance(checker_handoff, dict):
+        return "invalid", "prompt envelope checker_handoff must be an object"
+    if checker_handoff.get("must_check") is not True:
+        return "invalid", "prompt envelope checker_handoff.must_check must be true"
+    if has_questions:
+        return "prompt-envelope-questions", ""
+    return "prompt-envelope-artifact", ""
+
+
 def manifest_entries(manifest_text: str) -> list[tuple[str, str, str]]:
     entries: list[tuple[str, str, str]] = []
     for line in manifest_text.splitlines():
@@ -147,6 +209,9 @@ def review_artifacts(artifact_dir: str) -> int:
     report_text = read_required_text(artifact_root / "story-mode-report.txt", errors)
     normalized_story = read_required_text(artifact_root / "story.normalized.md", errors)
     agent_trace = read_required_text(artifact_root / "agent-trace.txt", errors)
+    transcript_checks = 0
+    transcript_valid_count = 0
+    transcript_invalid_count = 0
 
     for path, fingerprint_path in [
         (artifact_root / "story.source.md", artifact_root / "story.source.fingerprint.txt"),
@@ -189,6 +254,42 @@ def review_artifacts(artifact_dir: str) -> int:
             artifact_root / "manifest.fingerprint.txt",
         ):
             fingerprint_checks += 1
+
+    for stem, expected_kind in [
+        ("requirements", "AIL-Requirements"),
+        ("spec", "AIL-Spec Canonical"),
+    ]:
+        for suffix in ["request.json", "response.json", "content.txt"]:
+            path = artifact_root / "llm" / f"{stem}.{suffix}"
+            if check_fingerprint(path, errors):
+                transcript_checks += 1
+            manifest_label = f"llm-{stem}-{suffix.split('.', 1)[0]}"
+            if manifest_label not in manifest_text:
+                errors.append(f"manifest missing {manifest_label}")
+        request_text = read_required_text(
+            artifact_root / "llm" / f"{stem}.request.json", errors
+        )
+        response_text = read_required_text(
+            artifact_root / "llm" / f"{stem}.response.json", errors
+        )
+        content = read_required_text(
+            artifact_root / "llm" / f"{stem}.content.txt", errors
+        )
+        for label, text in [
+            (f"{stem}.request.json", request_text),
+            (f"{stem}.response.json", response_text),
+        ]:
+            if text:
+                try:
+                    json.loads(text)
+                except json.JSONDecodeError as error:
+                    errors.append(f"invalid json llm/{label}: {error}")
+        content_kind, content_error = classify_prompt_content(content, expected_kind)
+        if content_kind in {"prompt-envelope-artifact", "prompt-envelope-questions"}:
+            transcript_valid_count += 1
+        else:
+            transcript_invalid_count += 1
+            errors.append(f"invalid story prompt envelope {stem}: {content_error}")
 
     manifest_match_count = check_manifest_entries(artifact_root, manifest_text, errors)
     if "AIL-Story-Manifest:" not in manifest_text:
@@ -238,6 +339,9 @@ def review_artifacts(artifact_dir: str) -> int:
         f"semantic-anchor-count {anchor_count or '<missing>'}",
         f"manifest-entry-check-count {manifest_match_count}",
         f"fingerprint-check-count {fingerprint_checks}",
+        f"story-llm-transcript-check-count {transcript_checks}",
+        f"story-prompt-envelope-valid-count {transcript_valid_count}",
+        f"story-prompt-envelope-invalid-count {transcript_invalid_count}",
         f"agent-trace {'present' if agent_trace else 'missing'}",
     ]
     if errors:

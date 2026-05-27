@@ -8,7 +8,8 @@ use ail::ail::{
     ail_document_from_core, apply_ail_core_patch_text, apply_ail_flow_edit_text, apply_ail_patch,
     check_ail_core, check_ail_requirements, compile_ail_bytecode_native_elf,
     compile_ail_core_bytecode, compile_ail_core_native_elf, draft_ail_interview,
-    draft_ail_requirements_response, draft_ail_spec, draft_ail_spec_from_requirements,
+    draft_ail_requirements_response, draft_ail_requirements_response_recorded, draft_ail_spec,
+    draft_ail_spec_from_requirements, draft_ail_spec_from_requirements_recorded,
     elaborate_ail_core, load_ail_package_dir, parse_ail_bytecode, parse_ail_core_text,
     parse_ail_package_document, parse_ail_package_spec_text, parse_ail_patch_text,
     parse_ail_spec_text, render_ail_bytecode, render_ail_core, render_ail_flow_view,
@@ -341,6 +342,16 @@ struct AilStoryModeArtifactSet<'a> {
     story_normalized_text: &'a str,
     story_fields: &'a BTreeMap<String, String>,
     llm_endpoint: Option<&'a str>,
+    llm_transcripts: &'a [AilStoryLlmTranscript],
+}
+
+struct AilStoryLlmTranscript {
+    stage: &'static str,
+    artifact_kind: &'static str,
+    request_body: String,
+    response_body: String,
+    content_text: String,
+    content_kind: String,
 }
 
 struct AilStoryManifestArtifactSet<'a> {
@@ -352,6 +363,7 @@ struct AilStoryManifestArtifactSet<'a> {
     core_text: &'a str,
     bytecode_text: &'a str,
     build_manifest_text: Option<&'a str>,
+    llm_transcripts: &'a [AilStoryLlmTranscript],
 }
 
 struct AilStoryQuestionsManifestArtifactSet<'a> {
@@ -6249,6 +6261,28 @@ fn render_ail_story_mode_report(artifacts: &AilStoryModeArtifactSet<'_>) -> Stri
     if let Some(endpoint) = artifacts.llm_endpoint {
         lines.push(format!("llm-endpoint: {endpoint}"));
     }
+    if !artifacts.llm_transcripts.is_empty() {
+        let valid_count = artifacts
+            .llm_transcripts
+            .iter()
+            .filter(|transcript| transcript.content_kind.starts_with("prompt-envelope-"))
+            .count();
+        let invalid_count = artifacts.llm_transcripts.len().saturating_sub(valid_count);
+        lines.push(format!(
+            "story-llm-transcript-count: {}",
+            artifacts.llm_transcripts.len()
+        ));
+        lines.push(format!("story-prompt-envelope-valid-count: {valid_count}"));
+        lines.push(format!(
+            "story-prompt-envelope-invalid-count: {invalid_count}"
+        ));
+        for transcript in artifacts.llm_transcripts {
+            lines.push(format!(
+                "story-llm-transcript: {} artifact-kind {} content-kind {}",
+                transcript.stage, transcript.artifact_kind, transcript.content_kind
+            ));
+        }
+    }
     for anchor in anchors {
         lines.push(format!("semantic-anchor: {anchor}"));
     }
@@ -6288,6 +6322,26 @@ fn render_ail_story_manifest(artifacts: &AilStoryManifestArtifactSet<'_>) -> Str
             ail_artifact_fingerprint(artifacts.bytecode_text)
         ),
     ];
+    for transcript in artifacts.llm_transcripts {
+        lines.push(format!(
+            "llm-{}-request llm/{}.request.json {}",
+            transcript.stage,
+            transcript.stage,
+            ail_artifact_fingerprint(&ensure_trailing_newline(transcript.request_body.clone()))
+        ));
+        lines.push(format!(
+            "llm-{}-response llm/{}.response.json {}",
+            transcript.stage,
+            transcript.stage,
+            ail_artifact_fingerprint(&ensure_trailing_newline(transcript.response_body.clone()))
+        ));
+        lines.push(format!(
+            "llm-{}-content llm/{}.content.txt {}",
+            transcript.stage,
+            transcript.stage,
+            ail_artifact_fingerprint(&ensure_trailing_newline(transcript.content_text.clone()))
+        ));
+    }
     if let Some(build_manifest_text) = artifacts.build_manifest_text {
         lines.push(format!(
             "build-manifest manifest.ail-build.txt {}",
@@ -6458,6 +6512,38 @@ fn write_ail_story_mode_artifacts(
     let spec_text = read_required_story_build_artifact(root, "accepted.ail-spec.md")?;
     let core_text = read_required_story_build_artifact(root, "checked.ail-core.txt")?;
     let bytecode_text = read_required_story_build_artifact(root, "artifact.ailbc.json")?;
+    if !artifacts.llm_transcripts.is_empty() {
+        fs::create_dir_all(root.join("llm"))
+            .map_err(|error| format!("failed to create ail-story llm artifact dir: {error}"))?;
+    }
+    for transcript in artifacts.llm_transcripts {
+        for (suffix, text) in [
+            ("request.json", transcript.request_body.as_str()),
+            ("response.json", transcript.response_body.as_str()),
+            ("content.txt", transcript.content_text.as_str()),
+        ] {
+            let artifact_text = ensure_trailing_newline(text.to_string());
+            let path = root
+                .join("llm")
+                .join(format!("{}.{}", transcript.stage, suffix));
+            fs::write(&path, &artifact_text).map_err(|error| {
+                format!(
+                    "failed to write ail-story llm transcript artifact {}: {error}",
+                    path.display()
+                )
+            })?;
+            fs::write(
+                path.with_extension("fingerprint.txt"),
+                format!("{}\n", ail_artifact_fingerprint(&artifact_text)),
+            )
+            .map_err(|error| {
+                format!(
+                    "failed to write ail-story llm transcript fingerprint {}: {error}",
+                    path.display()
+                )
+            })?;
+        }
+    }
     let build_manifest_text = fs::read_to_string(root.join("manifest.ail-build.txt")).ok();
     let manifest_text = render_ail_story_manifest(&AilStoryManifestArtifactSet {
         story_source_text: &story_source_text,
@@ -6468,6 +6554,7 @@ fn write_ail_story_mode_artifacts(
         core_text: &core_text,
         bytecode_text: &bytecode_text,
         build_manifest_text: build_manifest_text.as_deref(),
+        llm_transcripts: artifacts.llm_transcripts,
     });
     fs::write(root.join("manifest.ail-story.txt"), &manifest_text)
         .map_err(|error| format!("failed to write ail-story manifest artifact: {error}"))?;
@@ -10877,6 +10964,86 @@ fn draft_checked_ail_requirements_for_package(
     }
 }
 
+fn push_story_llm_transcript(
+    transcripts: &mut Vec<AilStoryLlmTranscript>,
+    stage: &'static str,
+    artifact_kind: &'static str,
+    recorded: &ail::llm::LlmRecordedArtifactResponse,
+) {
+    transcripts.push(AilStoryLlmTranscript {
+        stage,
+        artifact_kind,
+        request_body: recorded.request_body.clone(),
+        response_body: recorded.response_body.clone(),
+        content_text: recorded.content_text.clone(),
+        content_kind: recorded.content_kind.clone(),
+    });
+}
+
+fn draft_checked_ail_requirements_for_story_or_questions(
+    package: &ail::ail::AilPackage,
+    prompt: &str,
+    endpoint: &str,
+    agent_requirements_context: Option<&str>,
+    retry_prompt_envelope_errors: bool,
+    transcripts: &mut Vec<AilStoryLlmTranscript>,
+) -> Result<AilRequirementsDraftOutcome, String> {
+    let grounded_prompt = grounded_ail_requirements_prompt(prompt, agent_requirements_context);
+    let mut requirements =
+        match draft_ail_requirements_response_recorded(package, &grounded_prompt, endpoint) {
+            Ok(recorded) => {
+                push_story_llm_transcript(
+                    transcripts,
+                    "requirements",
+                    "AIL-Requirements",
+                    &recorded,
+                );
+                match recorded.outcome {
+                    ail::llm::LlmArtifactResponse::Artifact(requirements) => requirements,
+                    ail::llm::LlmArtifactResponse::Questions(questions) => {
+                        return Ok(AilRequirementsDraftOutcome::Questions(questions));
+                    }
+                }
+            }
+            Err(error)
+                if retry_prompt_envelope_errors && is_prompt_envelope_protocol_error(&error) =>
+            {
+                let retry_prompt =
+                    prompt_envelope_retry_prompt(&grounded_prompt, &error, "AIL-Requirements");
+                let recorded =
+                    draft_ail_requirements_response_recorded(package, &retry_prompt, endpoint)?;
+                push_story_llm_transcript(
+                    transcripts,
+                    "requirements",
+                    "AIL-Requirements",
+                    &recorded,
+                );
+                match recorded.outcome {
+                    ail::llm::LlmArtifactResponse::Artifact(requirements) => requirements,
+                    ail::llm::LlmArtifactResponse::Questions(questions) => {
+                        return Ok(AilRequirementsDraftOutcome::Questions(questions));
+                    }
+                }
+            }
+            Err(error) => return Err(error),
+        };
+    let mut diagnostics = check_ail_requirements(package, &requirements);
+    if !diagnostics.is_empty() {
+        requirements = repair_ail_requirements_from_diagnostics(
+            package,
+            &grounded_prompt,
+            &requirements,
+            &diagnostics,
+            endpoint,
+        )?;
+        diagnostics = check_ail_requirements(package, &requirements);
+    }
+    Ok(AilRequirementsDraftOutcome::Requirements {
+        text: requirements,
+        diagnostics,
+    })
+}
+
 fn prompt_with_saved_interview_answers(
     prompt: &str,
     interview_file: Option<&str>,
@@ -10962,6 +11129,68 @@ fn draft_checked_ail_spec_for_requirements(
             }
             Err(error) => return Err(error),
         };
+    if !draft.success() {
+        draft = repair_ail_spec_from_diagnostics(
+            package,
+            &grounded_prompt,
+            requirements,
+            &draft.spec_text,
+            &draft.diagnostics,
+            endpoint,
+        )?;
+    }
+    Ok(draft)
+}
+
+fn draft_checked_ail_spec_for_story_requirements(
+    package: &ail::ail::AilPackage,
+    prompt: &str,
+    requirements: &str,
+    endpoint: &str,
+    agent_spec_context: Option<&str>,
+    retry_prompt_envelope_errors: bool,
+    transcripts: &mut Vec<AilStoryLlmTranscript>,
+) -> Result<ail::ail::AilDraftResult, String> {
+    let grounded_prompt = if let Some(agent_spec_context) =
+        agent_spec_context.filter(|context| !context.trim().is_empty())
+    {
+        format!(
+            concat!(
+                "{}\n\n",
+                "Use this AIL agent preflight state as a spec coverage checklist. ",
+                "Do not restate it by itself; produce a complete AIL-Spec candidate that preserves the checked requirements, domain model, actions, failures, guarantees, traces, secrets, runtime inputs, and bytecode compilation path.\n\n",
+                "AGENT SPEC CONTEXT:\n",
+                "{}"
+            ),
+            prompt, agent_spec_context
+        )
+    } else {
+        prompt.to_string()
+    };
+    let mut draft = match draft_ail_spec_from_requirements_recorded(
+        package,
+        &grounded_prompt,
+        requirements,
+        endpoint,
+    ) {
+        Ok((draft, recorded)) => {
+            push_story_llm_transcript(transcripts, "spec", "AIL-Spec Canonical", &recorded);
+            draft
+        }
+        Err(error) if retry_prompt_envelope_errors && is_prompt_envelope_protocol_error(&error) => {
+            let retry_prompt =
+                prompt_envelope_retry_prompt(&grounded_prompt, &error, "AIL-Spec Canonical");
+            let (draft, recorded) = draft_ail_spec_from_requirements_recorded(
+                package,
+                &retry_prompt,
+                requirements,
+                endpoint,
+            )?;
+            push_story_llm_transcript(transcripts, "spec", "AIL-Spec Canonical", &recorded);
+            draft
+        }
+        Err(error) => return Err(error),
+    };
     if !draft.success() {
         draft = repair_ail_spec_from_diagnostics(
             package,
@@ -12535,12 +12764,14 @@ fn run_ail_story_command(
     let agent_requirements_context = agent_start
         .as_ref()
         .map(render_ail_build_agent_requirements_context);
-    let requirements_outcome = draft_checked_ail_requirements_for_package_or_questions(
+    let mut story_llm_transcripts = Vec::new();
+    let requirements_outcome = draft_checked_ail_requirements_for_story_or_questions(
         package,
         &requirements_prompt,
         endpoint,
         agent_requirements_context.as_deref(),
         true,
+        &mut story_llm_transcripts,
     )?;
     let (requirements, requirements_diagnostics) = match requirements_outcome {
         AilRequirementsDraftOutcome::Requirements { text, diagnostics } => (text, diagnostics),
@@ -12559,6 +12790,7 @@ fn run_ail_story_command(
                         story_normalized_text: &normalized_story_text,
                         story_fields: &normalized_story_fields,
                         llm_endpoint: cli_options.llm_endpoint.as_deref(),
+                        llm_transcripts: &[],
                     },
                     &questions_text,
                     agent_start.as_ref().map(|agent| agent.trace.as_slice()),
@@ -12597,13 +12829,14 @@ fn run_ail_story_command(
             .and(cli_options.ail_action.as_deref()),
     );
     let spec_prompt = prompt_with_source_spec_context(&spec_prompt, &source_artifacts.spec_text);
-    let draft = draft_checked_ail_spec_for_requirements(
+    let draft = draft_checked_ail_spec_for_story_requirements(
         package,
         &spec_prompt,
         &requirements,
         endpoint,
         agent_spec_context.as_deref(),
         true,
+        &mut story_llm_transcripts,
     )?;
     if !draft.success() {
         println!("ail-story diagnostics:");
@@ -12646,6 +12879,7 @@ fn run_ail_story_command(
                 story_normalized_text: &normalized_story_text,
                 story_fields: &normalized_story_fields,
                 llm_endpoint: cli_options.llm_endpoint.as_deref(),
+                llm_transcripts: &story_llm_transcripts,
             },
         )?;
     }

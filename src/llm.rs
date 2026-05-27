@@ -28,6 +28,14 @@ pub enum LlmArtifactResponse {
     Questions(Vec<String>),
 }
 
+pub struct LlmRecordedArtifactResponse {
+    pub outcome: LlmArtifactResponse,
+    pub request_body: String,
+    pub response_body: String,
+    pub content_text: String,
+    pub content_kind: String,
+}
+
 pub fn invoke_llm_artifact_response(
     endpoint: &str,
     prompt: &str,
@@ -39,6 +47,19 @@ pub fn invoke_llm_artifact_response(
         expected_profile,
     };
     invoke_llm_artifact_response_with_expectation(endpoint, prompt, &expectation)
+}
+
+pub fn invoke_llm_artifact_response_recorded(
+    endpoint: &str,
+    prompt: &str,
+    expected_artifact_kind: &str,
+    expected_profile: &str,
+) -> Result<LlmRecordedArtifactResponse, String> {
+    let expectation = PromptEnvelopeExpectation {
+        artifact_kind: expected_artifact_kind,
+        expected_profile,
+    };
+    invoke_llm_artifact_response_recorded_with_expectation(endpoint, prompt, &expectation)
 }
 
 fn invoke_llm_text_with_expectation(
@@ -66,15 +87,47 @@ fn invoke_llm_artifact_response_with_expectation(
     prompt: &str,
     expectation: &PromptEnvelopeExpectation<'_>,
 ) -> Result<LlmArtifactResponse, String> {
-    let response = invoke_completion(endpoint, prompt)?;
-    let text = sanitize_model_text(&response);
-    match extract_prompt_envelope(&text, Some(expectation)) {
-        Some(PromptEnvelope::Artifact(artifact_text)) => {
-            Ok(LlmArtifactResponse::Artifact(artifact_text))
-        }
-        Some(PromptEnvelope::Questions(questions)) => Ok(LlmArtifactResponse::Questions(questions)),
+    Ok(
+        invoke_llm_artifact_response_recorded_with_expectation(endpoint, prompt, expectation)?
+            .outcome,
+    )
+}
+
+fn invoke_llm_artifact_response_recorded_with_expectation(
+    endpoint: &str,
+    prompt: &str,
+    expectation: &PromptEnvelopeExpectation<'_>,
+) -> Result<LlmRecordedArtifactResponse, String> {
+    let completion = invoke_completion(endpoint, prompt)?;
+    let text = sanitize_model_text(&completion.content);
+    let (outcome, content_kind) = artifact_response_from_text(&text, Some(expectation))?;
+    Ok(LlmRecordedArtifactResponse {
+        outcome,
+        request_body: completion.request_body,
+        response_body: completion.response_body,
+        content_text: text,
+        content_kind,
+    })
+}
+
+fn artifact_response_from_text(
+    text: &str,
+    expectation: Option<&PromptEnvelopeExpectation<'_>>,
+) -> Result<(LlmArtifactResponse, String), String> {
+    match extract_prompt_envelope(text, expectation) {
+        Some(PromptEnvelope::Artifact(artifact_text)) => Ok((
+            LlmArtifactResponse::Artifact(artifact_text),
+            "prompt-envelope-artifact".to_string(),
+        )),
+        Some(PromptEnvelope::Questions(questions)) => Ok((
+            LlmArtifactResponse::Questions(questions),
+            "prompt-envelope-questions".to_string(),
+        )),
         Some(PromptEnvelope::Invalid(message)) => Err(message),
-        None => Ok(LlmArtifactResponse::Artifact(text)),
+        None => Ok((
+            LlmArtifactResponse::Artifact(text.to_string()),
+            "raw-artifact".to_string(),
+        )),
     }
 }
 
@@ -82,19 +135,18 @@ fn invoke_llm_artifact_response_without_expectation(
     endpoint: &str,
     prompt: &str,
 ) -> Result<LlmArtifactResponse, String> {
-    let response = invoke_completion(endpoint, prompt)?;
-    let text = sanitize_model_text(&response);
-    match extract_prompt_envelope(&text, None) {
-        Some(PromptEnvelope::Artifact(artifact_text)) => {
-            Ok(LlmArtifactResponse::Artifact(artifact_text))
-        }
-        Some(PromptEnvelope::Questions(questions)) => Ok(LlmArtifactResponse::Questions(questions)),
-        Some(PromptEnvelope::Invalid(message)) => Err(message),
-        None => Ok(LlmArtifactResponse::Artifact(text)),
-    }
+    let completion = invoke_completion(endpoint, prompt)?;
+    let text = sanitize_model_text(&completion.content);
+    artifact_response_from_text(&text, None).map(|(outcome, _kind)| outcome)
 }
 
-fn invoke_completion(endpoint: &str, prompt: &str) -> Result<String, String> {
+struct LlmHttpCompletion {
+    request_body: String,
+    response_body: String,
+    content: String,
+}
+
+fn invoke_completion(endpoint: &str, prompt: &str) -> Result<LlmHttpCompletion, String> {
     let parsed = parse_http_endpoint(endpoint)?;
     let body = if is_chat_completion_path(&parsed.path) {
         format!(
@@ -137,8 +189,13 @@ fn invoke_completion(endpoint: &str, prompt: &str) -> Result<String, String> {
         .split_once("\r\n\r\n")
         .map(|(_, body)| body)
         .ok_or_else(|| "invalid HTTP response body".to_string())?;
-    extract_json_string_field(response_body, "content")
-        .ok_or_else(|| "model response missing content field".to_string())
+    let content = extract_json_string_field(response_body, "content")
+        .ok_or_else(|| "model response missing content field".to_string())?;
+    Ok(LlmHttpCompletion {
+        request_body: body,
+        response_body: response_body.to_string(),
+        content,
+    })
 }
 
 fn is_chat_completion_path(path: &str) -> bool {

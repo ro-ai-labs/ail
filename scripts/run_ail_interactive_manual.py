@@ -58,6 +58,14 @@ BASE_CHAPTERS: tuple[ManualChapter, ...] = (
                 evidence=(
                     "story-mode-report.txt",
                     "manifest.ail-story.txt",
+                    "llm/requirements.request.json",
+                    "llm/requirements.response.json",
+                    "llm/requirements.content.txt",
+                    "llm/spec.request.json",
+                    "llm/spec.response.json",
+                    "llm/spec.content.txt",
+                    "story-prompt-envelope-valid-count",
+                    "story-prompt-envelope-invalid-count",
                 ),
             ),
             ManualCommand(
@@ -108,6 +116,9 @@ BASE_CHAPTERS: tuple[ManualChapter, ...] = (
                     "story-mode-report.txt",
                     "manifest.ail-story.txt",
                     "agent-trace.txt",
+                    "story-llm-transcript-check-count",
+                    "story-prompt-envelope-valid-count",
+                    "story-prompt-envelope-invalid-count",
                 ),
             ),
             ManualCommand(
@@ -418,6 +429,8 @@ V03_AUTHORING_GATE = ManualChapter(
             evidence=(
                 "story-mode-report.txt",
                 "manifest.ail-story.txt",
+                "story-prompt-envelope-valid-count",
+                "story-prompt-envelope-invalid-count",
                 "story-questions.ail-interview.md",
                 "agent-trace.txt",
             ),
@@ -515,6 +528,9 @@ V03_AUTHORING_GATE = ManualChapter(
                 "story-mode-report.txt",
                 "manifest.ail-story.txt",
                 "agent-trace.txt",
+                "story-llm-transcript-check-count",
+                "story-prompt-envelope-valid-count",
+                "story-prompt-envelope-invalid-count",
             ),
         ),
         ManualCommand(

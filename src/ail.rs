@@ -11611,6 +11611,20 @@ pub fn draft_ail_requirements_response(
     )
 }
 
+pub fn draft_ail_requirements_response_recorded(
+    package: &AilPackage,
+    user_prompt: &str,
+    endpoint: &str,
+) -> Result<crate::llm::LlmRecordedArtifactResponse, String> {
+    let prompt = build_ail_requirements_prompt(package, user_prompt);
+    crate::llm::invoke_llm_artifact_response_recorded(
+        endpoint,
+        &prompt,
+        "AIL-Requirements",
+        package.metadata.profile.as_str(),
+    )
+}
+
 pub fn draft_ail_interview(
     package: &AilPackage,
     user_prompt: &str,
@@ -11714,6 +11728,29 @@ pub fn draft_ail_spec_from_requirements(
         package,
         spec_text,
         Some(requirements_text),
+    ))
+}
+
+pub fn draft_ail_spec_from_requirements_recorded(
+    package: &AilPackage,
+    user_prompt: &str,
+    requirements_text: &str,
+    endpoint: &str,
+) -> Result<(AilDraftResult, crate::llm::LlmRecordedArtifactResponse), String> {
+    let grounded_prompt = format!("{user_prompt}\n\nDRAFT REQUIREMENTS:\n{requirements_text}");
+    let prompt = build_ail_draft_prompt(package, &grounded_prompt);
+    let recorded = crate::llm::invoke_llm_artifact_response_recorded(
+        endpoint,
+        &prompt,
+        "AIL-Spec Canonical",
+        package.metadata.profile.as_str(),
+    )?;
+    let crate::llm::LlmArtifactResponse::Artifact(spec_text) = &recorded.outcome else {
+        return Err("model returned blocking questions for AIL-Spec Canonical".to_string());
+    };
+    Ok((
+        check_ail_draft_spec_with_requirements(package, spec_text.clone(), Some(requirements_text)),
+        recorded,
     ))
 }
 

@@ -61,6 +61,9 @@ The gate should surface:
 story-mode-report.txt
 story-llm-harness-report.txt
 story-llm-harness-report.fingerprint.txt
+story-llm-transcript-check-count
+story-prompt-envelope-valid-count
+story-prompt-envelope-invalid-count
 manifest.ail-story.txt
 story-questions.ail-interview.md
 agent-trace.txt

@@ -1088,6 +1088,15 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         "artifact.ailbc.json",
         "manifest.ail-story.txt",
         "agent-trace.txt",
+        "llm/requirements.request.json",
+        "llm/requirements.response.json",
+        "llm/requirements.content.txt",
+        "llm/spec.request.json",
+        "llm/spec.response.json",
+        "llm/spec.content.txt",
+        "story-llm-transcript-count",
+        "story-prompt-envelope-valid-count",
+        "story-prompt-envelope-invalid-count",
         "story-questions.ail-interview.md",
         "ail-story blocking questions",
         "http://inteligentia-pro-1:8080/",
@@ -1219,6 +1228,10 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "evidence manifest.ail-story.txt",
         "evidence agent-trace.txt",
         "evidence story-questions.ail-interview.md",
+        "evidence llm/requirements.request.json",
+        "evidence llm/spec.content.txt",
+        "evidence story-prompt-envelope-valid-count",
+        "evidence story-prompt-envelope-invalid-count",
         "python3 scripts/run_v03_story_llm_harness.py --dry-run",
         "python3 scripts/run_v03_story_llm_harness.py --review-artifacts /tmp/ail-v03-story-llm",
         "evidence story-llm-harness-report.txt",
@@ -1403,6 +1416,9 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "evidence story-llm-harness-report.txt",
         "evidence story-llm-harness-report.fingerprint.txt",
         "evidence story-mode-report.txt",
+        "evidence story-llm-transcript-check-count",
+        "evidence story-prompt-envelope-valid-count",
+        "evidence story-prompt-envelope-invalid-count",
         "run-prompt-interaction-live-checks",
         "python3 scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run-checks --include-live",
         "evidence prompt-llm-harness-report.txt",
@@ -2037,14 +2053,22 @@ fn script_v03_story_llm_harness_review_writes_fingerprinted_report() {
         "- The action guarantees closed tickets do not appear in the open queue.\n",
         "- The action records trace event TicketClosed.\n"
     );
-    let requirements_body = format!(
-        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+    let requirements_envelope = format!(
+        r#"{{"artifact_kind":"AIL-Requirements","artifact_text":{},"questions":[],"checker_handoff":{{"must_check":true,"expected_profile":"Application","expected_features":[]}}}}"#,
         json_string(requirements)
     );
+    let requirements_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(&requirements_envelope)
+    );
     let response_spec = fs::read_to_string(format!("{package}/spec.ail-spec.md")).unwrap();
+    let spec_envelope = format!(
+        r#"{{"artifact_kind":"AIL-Spec Canonical","artifact_text":{},"questions":[],"checker_handoff":{{"must_check":true,"expected_profile":"Application","expected_features":[]}}}}"#,
+        json_string(&response_spec)
+    );
     let spec_body = format!(
         r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
-        json_string(&format!("```ail\n{response_spec}\n```"))
+        json_string(&spec_envelope)
     );
     let server = serve_chat_responses(listener, vec![requirements_body, spec_body]);
 
@@ -2094,6 +2118,18 @@ fn script_v03_story_llm_harness_review_writes_fingerprinted_report() {
     );
     assert!(
         review_stdout.contains("review-result accepted"),
+        "{review_stdout}"
+    );
+    assert!(
+        review_stdout.contains("story-prompt-envelope-valid-count 2"),
+        "{review_stdout}"
+    );
+    assert!(
+        review_stdout.contains("story-prompt-envelope-invalid-count 0"),
+        "{review_stdout}"
+    );
+    assert!(
+        review_stdout.contains("story-llm-transcript-check-count 6"),
         "{review_stdout}"
     );
     let review_report =
@@ -20314,12 +20350,18 @@ fn cli_ail_story_builds_checked_artifacts_from_story_file() {
     );
     let requirements_body = format!(
         r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
-        json_string(requirements)
+        json_string(&format!(
+            r#"{{"artifact_kind":"AIL-Requirements","artifact_text":{},"questions":[],"checker_handoff":{{"must_check":true,"expected_profile":"Application","expected_features":[]}}}}"#,
+            json_string(requirements)
+        ))
     );
     let response_spec = fs::read_to_string(format!("{package}/spec.ail-spec.md")).unwrap();
     let spec_body = format!(
         r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
-        json_string(&format!("```ail\n{response_spec}\n```"))
+        json_string(&format!(
+            r#"{{"artifact_kind":"AIL-Spec Canonical","artifact_text":{},"questions":[],"checker_handoff":{{"must_check":true,"expected_profile":"Application","expected_features":[]}}}}"#,
+            json_string(&response_spec)
+        ))
     );
     let server = serve_chat_responses(listener, vec![requirements_body, spec_body]);
 
@@ -20416,6 +20458,16 @@ fn cli_ail_story_builds_checked_artifacts_from_story_file() {
         manifest.contains("requirements requirements.ail-requirements.md"),
         "{manifest}"
     );
+    for required in [
+        "llm-requirements-request llm/requirements.request.json",
+        "llm-requirements-response llm/requirements.response.json",
+        "llm-requirements-content llm/requirements.content.txt",
+        "llm-spec-request llm/spec.request.json",
+        "llm-spec-response llm/spec.response.json",
+        "llm-spec-content llm/spec.content.txt",
+    ] {
+        assert!(manifest.contains(required), "{required}\n{manifest}");
+    }
     assert!(
         manifest.contains("bytecode artifact.ailbc.json"),
         "{manifest}"
@@ -20424,6 +20476,41 @@ fn cli_ail_story_builds_checked_artifacts_from_story_file() {
     assert!(report.contains("package: support-ticket"));
     assert!(report.contains("user-story-id: support-ticket-story"));
     assert!(report.contains("semantic-anchor-count: 4"));
+    assert!(report.contains("story-llm-transcript-count: 2"), "{report}");
+    assert!(
+        report.contains("story-prompt-envelope-valid-count: 2"),
+        "{report}"
+    );
+    assert!(
+        report.contains("story-prompt-envelope-invalid-count: 0"),
+        "{report}"
+    );
+    for artifact in [
+        "llm/requirements.request.json",
+        "llm/requirements.response.json",
+        "llm/requirements.content.txt",
+        "llm/spec.request.json",
+        "llm/spec.response.json",
+        "llm/spec.content.txt",
+    ] {
+        let path = artifact_dir.join(artifact);
+        assert!(path.is_file(), "{artifact}");
+        assert!(
+            path.with_extension("fingerprint.txt").is_file(),
+            "{artifact}"
+        );
+    }
+    let requirements_content =
+        fs::read_to_string(artifact_dir.join("llm/requirements.content.txt")).unwrap();
+    assert!(
+        requirements_content.contains(r#""artifact_kind":"AIL-Requirements""#),
+        "{requirements_content}"
+    );
+    let spec_content = fs::read_to_string(artifact_dir.join("llm/spec.content.txt")).unwrap();
+    assert!(
+        spec_content.contains(r#""artifact_kind":"AIL-Spec Canonical""#),
+        "{spec_content}"
+    );
 
     fs::remove_file(story_file).unwrap();
     fs::remove_dir_all(artifact_dir).unwrap();
