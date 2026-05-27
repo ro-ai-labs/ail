@@ -121,6 +121,12 @@ Run deterministic bootstrap self-hosting checks:
 python3 scripts/run_ail_interactive_manual.py --chapter bootstrap-self-hosting --run-checks
 ```
 
+Run deterministic Systems profile checks:
+
+```sh
+python3 scripts/run_ail_interactive_manual.py --chapter systems-profile --run-checks
+```
+
 Run deterministic repair-promotion checks:
 
 ```sh
@@ -180,6 +186,10 @@ python3 scripts/run_ail_interactive_manual.py --chapter agent-policy-import --ru
   toolchain agent and AIL-Meta compiler pass, with fixed-point,
   host-boundary, dependency, native handoff, and manifest evidence. Prose:
   `10-bootstrap-self-hosting.md`.
+- `systems-profile`: deterministic conformance, native compile, and runtime
+  trace evidence for the `network_driver.ail` low-level Systems profile package,
+  including scheduler and interrupt accepted/rejected fixtures. Prose:
+  `11-systems-profile.md`.
 - `repair-promotion`: deterministic review of rejected-example repair evidence
   before proposing a repaired artifact for accepted-corpus promotion. Prose:
   `07-repair-promotion.md`.
@@ -194,6 +204,7 @@ python3 scripts/run_ail_interactive_manual.py --chapter agent-policy-import --ru
   `09-agent-policy-import.md`.
 - `v03-authoring-gate`: the deterministic v0.3 audit that runs User Story
   mode, examples replay, roadmap printing, prompt interaction,
-  agent-entrypoint, bootstrap self-hosting, repair-promotion, UI patch import,
-  and AgentTool policy import checks from one manual chapter.
+  agent-entrypoint, bootstrap self-hosting, Systems profile,
+  repair-promotion, UI patch import, and AgentTool policy import checks from
+  one manual chapter.
   Prose: `06-v03-authoring-gate.md`.

@@ -1048,6 +1048,7 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         "manual/08-ui-patch-import.md",
         "manual/09-agent-policy-import.md",
         "manual/10-bootstrap-self-hosting.md",
+        "manual/11-systems-profile.md",
     ] {
         assert!(
             docs_index.contains(manual_chapter),
@@ -1080,6 +1081,7 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         "ui-patch-import",
         "agent-policy-import",
         "bootstrap-self-hosting",
+        "systems-profile",
         "v03-authoring-gate",
         "02-examples-release.md",
         "03-prompt-interaction.md",
@@ -1090,6 +1092,7 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         "08-ui-patch-import.md",
         "09-agent-policy-import.md",
         "10-bootstrap-self-hosting.md",
+        "11-systems-profile.md",
     ] {
         assert!(
             manual_index.contains(required),
@@ -1177,6 +1180,7 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
                 "run-user-story-mode-checks",
                 "run-agent-entrypoint-checks",
                 "run-bootstrap-self-hosting-checks",
+                "run-systems-profile-checks",
                 "run-ui-patch-import-checks",
                 "run-agent-policy-import-checks",
             ],
@@ -1193,6 +1197,25 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
                 "bootstrap-handoff-report.txt",
                 "manifest.ail-bootstrap.txt",
                 "no-host-backend-source true",
+            ],
+        ),
+        (
+            "11-systems-profile.md",
+            &[
+                "scripts/run_ail_interactive_manual.py --chapter systems-profile --run-checks",
+                "cargo run -- ail-conformance examples/network_driver.ail",
+                "cargo run -- ail-compile examples/network_driver.ail",
+                "--action NetworkPacketReceiver",
+                "--target linux-x86_64-elf",
+                "/tmp/ail-manual-systems-profile-network-driver.elf",
+                "conformance-report.txt",
+                "accepted: scheduler-task-minimal.ail-spec.md",
+                "accepted: interrupt-context-minimal.ail-spec.md",
+                "AIL033",
+                "AIL035",
+                "native-bytecode-report.txt",
+                "system effect read network device",
+                "trace PacketReceived",
             ],
         ),
         (
@@ -1289,6 +1312,7 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "chapter ui-patch-import",
         "chapter agent-policy-import",
         "chapter bootstrap-self-hosting",
+        "chapter systems-profile",
         "chapter v03-authoring-gate",
     ] {
         assert!(list_stdout.contains(required), "{required}\n{list_stdout}");
@@ -1468,6 +1492,42 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         );
     }
 
+    let systems_profile_dry_run = Command::new("python3")
+        .args([&script, "--chapter", "systems-profile", "--dry-run"])
+        .output()
+        .unwrap();
+    assert!(
+        systems_profile_dry_run.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&systems_profile_dry_run.stdout),
+        String::from_utf8_lossy(&systems_profile_dry_run.stderr)
+    );
+    let systems_profile_stdout = String::from_utf8_lossy(&systems_profile_dry_run.stdout);
+    for required in [
+        "id systems-profile",
+        "doc docs/ail/manual/11-systems-profile.md",
+        "cargo run -- ail-conformance examples/network_driver.ail",
+        "--artifact-dir /tmp/ail-manual-systems-profile-conformance",
+        "accepted: scheduler-task-minimal.ail-spec.md",
+        "accepted: interrupt-context-minimal.ail-spec.md",
+        "rejected: interrupt-context-blocking-effect.ail-spec.md AIL033",
+        "rejected: scheduler-task-unknown-context.ail-spec.md AIL035",
+        "cargo run -- ail-compile examples/network_driver.ail",
+        "--action NetworkPacketReceiver",
+        "--target linux-x86_64-elf",
+        "--out /tmp/ail-manual-systems-profile-network-driver.elf",
+        "evidence native-bytecode-report.txt",
+        "evidence machine-bytecode-contract linux-x86_64-elf",
+        "/tmp/ail-manual-systems-profile-network-driver.elf",
+        "evidence system effect read network device",
+        "evidence trace PacketReceived",
+    ] {
+        assert!(
+            systems_profile_stdout.contains(required),
+            "{required}\n{systems_profile_stdout}"
+        );
+    }
+
     let repair_promotion_dry_run = Command::new("python3")
         .args([&script, "--chapter", "repair-promotion", "--dry-run"])
         .output()
@@ -1594,6 +1654,7 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "python3 scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run-checks",
         "python3 scripts/run_ail_interactive_manual.py --chapter agent-entrypoint --run-checks",
         "python3 scripts/run_ail_interactive_manual.py --chapter bootstrap-self-hosting --run-checks",
+        "python3 scripts/run_ail_interactive_manual.py --chapter systems-profile --run-checks",
         "python3 scripts/run_ail_interactive_manual.py --chapter repair-promotion --run-checks",
         "python3 scripts/run_ail_interactive_manual.py --chapter ui-patch-import --run-checks",
         "python3 scripts/run_ail_interactive_manual.py --chapter agent-policy-import --run-checks",
@@ -1606,6 +1667,13 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "evidence bootstrap-handoff-report.txt",
         "evidence manifest.ail-bootstrap.txt",
         "evidence no-host-backend-source true",
+        "evidence conformance-report.txt",
+        "evidence accepted: scheduler-task-minimal.ail-spec.md",
+        "evidence accepted: interrupt-context-minimal.ail-spec.md",
+        "evidence native-bytecode-report.txt",
+        "evidence machine-bytecode-contract linux-x86_64-elf",
+        "evidence system effect read network device",
+        "evidence trace PacketReceived",
         "evidence repair-promotion-review.txt",
         "evidence repair-promotion-capture-plan.json",
         "evidence repair-promotion-import-demo-report.txt",
@@ -1707,6 +1775,7 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "chapter prompt-interaction",
         "chapter agent-entrypoint",
         "chapter v03-roadmap",
+        "chapter systems-profile",
         "chapter v03-authoring-gate",
     ] {
         assert!(all_stdout.contains(required), "{required}\n{all_stdout}");
@@ -1784,10 +1853,16 @@ fn script_ail_interactive_manual_v03_authoring_gate_run_checks_succeeds() {
         "running run-prompt-interaction-checks",
         "running run-agent-entrypoint-checks",
         "running run-bootstrap-self-hosting-checks",
+        "running run-systems-profile-checks",
         "running run-ui-patch-import-checks",
         "running run-agent-policy-import-checks",
         "ail-bootstrap wrote linux-x86_64-elf bootstrap bundle",
         "bootstrap-fixed-point-report.txt",
+        "ail conformance: package network-driver",
+        "accepted: scheduler-task-minimal.ail-spec.md",
+        "accepted: interrupt-context-minimal.ail-spec.md",
+        "ail-compile wrote linux-x86_64-elf executable",
+        "native-bytecode-report.txt",
         "running check-ui-patch-runtime-state",
         "AIL-Examples-Report:",
         "AIL-Prompt-Corpus-Portability-Report:",
@@ -1796,6 +1871,62 @@ fn script_ail_interactive_manual_v03_authoring_gate_run_checks_succeeds() {
         "agent-trace.txt",
     ] {
         assert!(stdout.contains(required), "{required}\n{stdout}");
+    }
+}
+
+#[test]
+fn script_ail_interactive_manual_systems_profile_run_checks_succeeds() {
+    let manual = fs::read_to_string(format!(
+        "{}/docs/ail/manual/11-systems-profile.md",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .unwrap();
+    assert!(
+        manual.contains(
+            "python3 scripts/run_ail_interactive_manual.py --chapter systems-profile --run-checks"
+        ),
+        "{manual}"
+    );
+
+    let script = format!(
+        "{}/scripts/run_ail_interactive_manual.py",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let output = Command::new("python3")
+        .args([&script, "--chapter", "systems-profile", "--run-checks"])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    for required in [
+        "running check-network-driver-conformance",
+        "evidence conformance-report.txt",
+        "accepted: scheduler-task-minimal.ail-spec.md",
+        "accepted: interrupt-context-minimal.ail-spec.md",
+        "AIL033",
+        "AIL035",
+        "running compile-network-driver-native",
+        "ail-compile wrote linux-x86_64-elf executable /tmp/ail-manual-systems-profile-network-driver.elf",
+        "evidence native-bytecode-report.txt",
+        "evidence machine-bytecode-contract linux-x86_64-elf",
+        "running run-network-driver-native",
+        "evidence system effect read network device",
+        "evidence trace PacketReceived",
+    ] {
+        assert!(stdout.contains(required), "{required}\n{stdout}");
+    }
+    for required in [
+        "system component Network packet receiver started",
+        "system effect read network device",
+        "trace PacketReceived",
+    ] {
+        assert!(stderr.contains(required), "{required}\n{stderr}");
     }
 }
 
@@ -29514,6 +29645,51 @@ fn cli_ail_v03_roadmap_advances_completed_agent_tool_signal() {
     assert!(
         !stdout
             .contains("AgentTool examples need multi-agent handoff and policy-review exercises."),
+        "{stdout}"
+    );
+
+    let roadmap = fs::read_to_string(artifact_dir.join("v03-roadmap.txt")).unwrap();
+    assert_eq!(stdout, roadmap);
+
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
+fn cli_ail_v03_roadmap_advances_completed_systems_signal() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-v03-roadmap-release-systems-signal-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-v03-roadmap",
+            "examples",
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+            "--release-evidence",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains(
+            "signal Systems profile needs unsupported-target migration guidance and broader transmit/interrupt runtime variants. count 9"
+        ),
+        "{stdout}"
+    );
+    assert!(
+        !stdout.contains(
+            "Systems profile needs hardware-facing contracts and scheduler/interrupt examples."
+        ),
         "{stdout}"
     );
 

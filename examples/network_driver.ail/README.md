@@ -4,8 +4,9 @@
 
 `network_driver.ail` is the low-level System profile teaching package for
 device-facing code. It shows how AIL can model ownership, borrowing, allocation
-placement, device effects, capability grants, and trace guarantees before any
-native or target-contract artifact is trusted.
+placement, scheduler tasks, interrupt contexts, device effects, capability
+grants, and trace guarantees before any native or target-contract artifact is
+trusted.
 
 This package is intentionally small. Its value is that the same concepts used
 by application workflows also apply to a packet receiver that owns a buffer,
@@ -18,6 +19,8 @@ buffer, releases it, and records packet processing evidence.
   guarantees.
 - Ownership and borrowing for `rx buffer` and `packet metadata`.
 - Region placement for packet processing memory.
+- Scheduler task, priority, and timing declarations.
+- Interrupt context, priority, and mask declarations.
 - Device effects that require declared capability grants.
 - Trace evidence for packet receive behavior.
 - Prompt-surface coverage across summary, flow patch, trace debug, interop,
@@ -31,6 +34,12 @@ buffer, releases it, and records packet processing evidence.
   boundary.
 - `spec.ail-spec.md`: canonical packet receiver specification.
 - `checked.ail-core.md`: checked Core projection for the package.
+- `examples/accepted/*.ail-spec.md`: minimal accepted fixtures for layout,
+  allocation, locks, moves, mutable borrows, scheduler tasks, and interrupt
+  rules.
+- `examples/rejected/*.ail-spec.md`: minimal rejected fixtures for unknown
+  resources, missing capabilities, invalid scheduler/interrupt references,
+  use-after-release, use-after-move, and borrow conflicts.
 - `../examples.md`: entries `example-66` through `example-74` cover accepted
   network-driver prompt surfaces; `example-106` covers the rejected
   effect-without-capability diagnostic.
@@ -62,17 +71,39 @@ The direct conformance check is:
 cargo run -- ail-conformance examples/network_driver.ail --artifact-dir /tmp/ail-network-driver-conformance
 ```
 
+The interactive manual Systems profile chapter composes conformance, native
+compile, and runtime trace evidence:
+
+```bash
+python3 scripts/run_ail_interactive_manual.py --chapter systems-profile --run-checks
+```
+
+The native compile step used by the manual is:
+
+```bash
+cargo run -- ail-compile examples/network_driver.ail \
+  --action NetworkPacketReceiver \
+  --target linux-x86_64-elf \
+  --out /tmp/ail-manual-systems-profile-network-driver.elf \
+  --artifact-dir /tmp/ail-manual-systems-profile-native
+```
+
+Running `/tmp/ail-manual-systems-profile-network-driver.elf` should emit
+resource, capability, effect, guarantee, and `trace PacketReceived` evidence.
+
 ## Rejected Fixtures
 
-`example-106` is the current rejected fixture for this package. It verifies that
-the System profile rejects a network device effect when the spec does not
-declare the matching capability.
+`example-106` is the catalog rejected fixture for this package. The
+package-local rejected fixtures are broader and verify that the System profile
+rejects a network device effect without a matching capability, blocking effects
+in interrupt context, scheduler references to unknown contexts or tasks,
+interrupt masks for unknown contexts, writes without ownership, use after move,
+use after release, and conflicting shared/mutable borrows.
 
-High-value v0.3 rejected fixtures should add:
+High-value next fixtures should add:
 
 - borrowed packet metadata escaping the packet processing region;
 - double release of `rx buffer`;
-- writing to the receive buffer after release;
 - interrupt-context effects that require a stronger capability;
 - scheduler priority or interrupt-mask combinations that violate the package
   guarantees.
@@ -86,7 +117,8 @@ layout, and status-map diagnostics.
 ## v0.3 Learning Signal
 
 Network Driver is the current low-level System profile anchor, but it is still
-too narrow to prove realistic driver development. v0.3 should expand it into a
-small driver family with receive, transmit, interrupt handler, scheduler task,
-and rejected lifetime fixtures so AIL can prove low-level programs as strongly
-as it proves high-level workflows.
+too narrow to prove realistic driver development. v0.3 now has deterministic
+manual evidence for receive-path conformance, scheduler and interrupt fixtures,
+native target artifacts, and runtime traces. The next bar is a small driver
+family with transmit and interrupt-handler runtime variants plus clearer
+unsupported-target migration guidance.

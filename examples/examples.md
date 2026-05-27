@@ -2407,7 +2407,7 @@ story-file: stories/example-66.md
 story-journey: spec-to-story
 story-roundtrip: semantic-similar
 distinctness-claim: network-driver-live-codex-core-to-summary-66 exercises docs/ail/prompts/core-to-summary.system.md over system-driver.
-v0.3-signal: Systems profile needs hardware-facing contracts and scheduler/interrupt examples.
+v0.3-signal: Systems profile needs unsupported-target migration guidance and broader transmit/interrupt runtime variants.
 prompt-file: docs/ail/prompts/core-to-summary.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:49f26ec41d722633
@@ -2441,7 +2441,7 @@ story-file: stories/example-67.md
 story-journey: story-amendment
 story-roundtrip: semantic-similar
 distinctness-claim: network-driver-live-codex-flow-patch-67 exercises docs/ail/prompts/flow-patch.system.md over system-driver.
-v0.3-signal: Systems profile needs hardware-facing contracts and scheduler/interrupt examples.
+v0.3-signal: Systems profile needs unsupported-target migration guidance and broader transmit/interrupt runtime variants.
 prompt-file: docs/ail/prompts/flow-patch.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:30136a21ab8d8eb6
@@ -2475,7 +2475,7 @@ story-file: stories/example-68.md
 story-journey: story-amendment
 story-roundtrip: semantic-similar
 distinctness-claim: network-driver-live-codex-trace-debug-68 exercises docs/ail/prompts/trace-debug.system.md over system-driver.
-v0.3-signal: Systems profile needs hardware-facing contracts and scheduler/interrupt examples.
+v0.3-signal: Systems profile needs unsupported-target migration guidance and broader transmit/interrupt runtime variants.
 prompt-file: docs/ail/prompts/trace-debug.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:f5fffd069da83242
@@ -2509,7 +2509,7 @@ story-file: stories/example-69.md
 story-journey: story-amendment
 story-roundtrip: semantic-similar
 distinctness-claim: network-driver-live-codex-interop-69 exercises docs/ail/prompts/interop.system.md over system-driver.
-v0.3-signal: Systems profile needs hardware-facing contracts and scheduler/interrupt examples.
+v0.3-signal: Systems profile needs unsupported-target migration guidance and broader transmit/interrupt runtime variants.
 prompt-file: docs/ail/prompts/interop.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:87f6dd1772d48729
@@ -2543,7 +2543,7 @@ story-file: stories/example-70.md
 story-journey: story-to-spec
 story-roundtrip: semantic-similar
 distinctness-claim: network-driver-live-codex-interview-70 exercises docs/ail/prompts/interview.system.md over system-driver.
-v0.3-signal: Systems profile needs hardware-facing contracts and scheduler/interrupt examples.
+v0.3-signal: Systems profile needs unsupported-target migration guidance and broader transmit/interrupt runtime variants.
 prompt-file: docs/ail/prompts/interview.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
@@ -2577,7 +2577,7 @@ story-file: stories/example-71.md
 story-journey: story-to-spec
 story-roundtrip: semantic-similar
 distinctness-claim: network-driver-live-codex-requirements-71 exercises docs/ail/prompts/requirements.system.md over system-driver.
-v0.3-signal: Systems profile needs hardware-facing contracts and scheduler/interrupt examples.
+v0.3-signal: Systems profile needs unsupported-target migration guidance and broader transmit/interrupt runtime variants.
 prompt-file: docs/ail/prompts/requirements.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
@@ -2611,7 +2611,7 @@ story-file: stories/example-72.md
 story-journey: story-to-spec
 story-roundtrip: semantic-similar
 distinctness-claim: network-driver-live-codex-spec-draft-72 exercises docs/ail/prompts/spec-draft.system.md over system-driver.
-v0.3-signal: Systems profile needs hardware-facing contracts and scheduler/interrupt examples.
+v0.3-signal: Systems profile needs unsupported-target migration guidance and broader transmit/interrupt runtime variants.
 prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
@@ -2645,7 +2645,7 @@ story-file: stories/example-73.md
 story-journey: story-to-spec
 story-roundtrip: semantic-similar
 distinctness-claim: network-driver-live-codex-core-draft-73 exercises docs/ail/prompts/core-draft.system.md over system-driver.
-v0.3-signal: Systems profile needs hardware-facing contracts and scheduler/interrupt examples.
+v0.3-signal: Systems profile needs unsupported-target migration guidance and broader transmit/interrupt runtime variants.
 prompt-file: docs/ail/prompts/core-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:0175222e4a84bec4
@@ -2679,7 +2679,7 @@ story-file: stories/example-74.md
 story-journey: story-amendment
 story-roundtrip: semantic-similar
 distinctness-claim: network-driver-live-codex-diagnostic-repair-74 exercises docs/ail/prompts/diagnostic-repair.system.md over system-driver.
-v0.3-signal: Systems profile needs hardware-facing contracts and scheduler/interrupt examples.
+v0.3-signal: Systems profile needs unsupported-target migration guidance and broader transmit/interrupt runtime variants.
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:c9700f2c2e57e49e

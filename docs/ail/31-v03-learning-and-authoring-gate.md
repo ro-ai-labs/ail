@@ -315,6 +315,7 @@ cargo test cli_ail_e2e_corpus_requires_accepted_example_for_each_prompt_file
 cargo test cli_ail_e2e_corpus_requires_v03_signal_diversity
 cargo test cli_ail_e2e_corpus_replays_checked_live_release_corpus
 cargo test --test ail_toolchain script_ail_interactive_manual_v03_authoring_gate_run_checks_succeeds
+cargo test --test ail_toolchain script_ail_interactive_manual_systems_profile_run_checks_succeeds
 cargo run -- ail-examples examples --artifact-dir /tmp/ail-v03-learning-examples --release-evidence
 cargo run -- ail-v03-roadmap examples --artifact-dir /tmp/ail-v03-roadmap --release-evidence
 test -f /tmp/ail-v03-learning-examples/v03-roadmap.txt
@@ -360,8 +361,13 @@ as prose. The current examples reveal these next-version gaps:
   output, records host-boundary and dependency reports, and runs native handoff
   checks. The next bar is pass-order diagnostics and multiple composed
   compiler-pass variants.
-- Systems examples need hardware-facing contracts, scheduler or interrupt
-  semantics, and clearer unsupported-target migration guidance.
+- Systems examples now include a deterministic manual chapter for
+  `network_driver.ail` that runs package-local conformance, accepts scheduler
+  and interrupt fixtures, rejects invalid interrupt/task contracts with stable
+  diagnostics, compiles `NetworkPacketReceiver` to a Linux x86_64 ELF target,
+  and runs the executable to observe resource, capability, effect, and trace
+  output. The next bar is clearer unsupported-target migration guidance and a
+  broader driver family with transmit and interrupt-handler runtime variants.
 - Rejected examples now emit repair tutorials, corrected repair proof chains,
   semantic repair diffs, deterministic promotion review artifacts, plan-only
   repair promotion capture plans, and a human-approved batch import demo that

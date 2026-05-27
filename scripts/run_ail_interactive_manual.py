@@ -411,6 +411,76 @@ BASE_CHAPTERS: tuple[ManualChapter, ...] = (
         ),
     ),
     ManualChapter(
+        chapter_id="systems-profile",
+        title="Systems Profile",
+        doc="docs/ail/manual/11-systems-profile.md",
+        purpose=(
+            "Check the low-level System profile package, scheduler and "
+            "interrupt fixtures, native target contract, and runtime trace."
+        ),
+        commands=(
+            ManualCommand(
+                label="check-network-driver-conformance",
+                command=(
+                    "cargo",
+                    "run",
+                    "--",
+                    "ail-conformance",
+                    "examples/network_driver.ail",
+                    "--artifact-dir",
+                    "/tmp/ail-manual-systems-profile-conformance",
+                ),
+                evidence=(
+                    "conformance-report.txt",
+                    "manifest.ail-conformance.txt",
+                    "accepted: scheduler-task-minimal.ail-spec.md",
+                    "accepted: interrupt-context-minimal.ail-spec.md",
+                    "rejected: interrupt-context-blocking-effect.ail-spec.md AIL033",
+                    "rejected: scheduler-task-unknown-context.ail-spec.md AIL035",
+                    "rejected: interrupt-mask-unknown-context.ail-spec.md AIL040",
+                ),
+            ),
+            ManualCommand(
+                label="compile-network-driver-native",
+                command=(
+                    "cargo",
+                    "run",
+                    "--",
+                    "ail-compile",
+                    "examples/network_driver.ail",
+                    "--action",
+                    "NetworkPacketReceiver",
+                    "--target",
+                    "linux-x86_64-elf",
+                    "--out",
+                    "/tmp/ail-manual-systems-profile-network-driver.elf",
+                    "--artifact-dir",
+                    "/tmp/ail-manual-systems-profile-native",
+                ),
+                evidence=(
+                    "checked.ail-core.txt",
+                    "artifact.ailbc.json",
+                    "native-bytecode-report.txt",
+                    "dependency-report.txt",
+                    "manifest.ail-compile.txt",
+                    "machine-bytecode-contract linux-x86_64-elf",
+                ),
+            ),
+            ManualCommand(
+                label="run-network-driver-native",
+                command=(
+                    "/tmp/ail-manual-systems-profile-network-driver.elf",
+                ),
+                evidence=(
+                    "system component Network packet receiver started",
+                    "system effect read network device",
+                    "system effect release rx buffer",
+                    "trace PacketReceived",
+                ),
+            ),
+        ),
+    ),
+    ManualChapter(
         chapter_id="repair-promotion",
         title="Repair Promotion Review",
         doc="docs/ail/manual/07-repair-promotion.md",
@@ -795,7 +865,10 @@ V03_AUTHORING_GATE = ManualChapter(
     chapter_id="v03-authoring-gate",
     title="v0.3 Authoring Gate",
     doc="docs/ail/manual/06-v03-authoring-gate.md",
-    purpose="Run the deterministic story, examples, roadmap, prompt, and agent checks as one v0.3 audit.",
+    purpose=(
+        "Run the deterministic story, examples, roadmap, prompt, agent, "
+        "self-hosting, Systems, and promotion checks as one v0.3 audit."
+    ),
     commands=(
         ManualCommand(
             label="run-user-story-mode-checks",
@@ -893,6 +966,27 @@ V03_AUTHORING_GATE = ManualChapter(
                 "bootstrap-dependency-report.txt",
                 "bootstrap-handoff-report.txt",
                 "manifest.ail-bootstrap.txt",
+            ),
+        ),
+        ManualCommand(
+            label="run-systems-profile-checks",
+            command=(
+                "python3",
+                "scripts/run_ail_interactive_manual.py",
+                "--chapter",
+                "systems-profile",
+                "--run-checks",
+            ),
+            evidence=(
+                "conformance-report.txt",
+                "accepted: scheduler-task-minimal.ail-spec.md",
+                "accepted: interrupt-context-minimal.ail-spec.md",
+                "rejected: interrupt-context-blocking-effect.ail-spec.md AIL033",
+                "rejected: scheduler-task-unknown-context.ail-spec.md AIL035",
+                "native-bytecode-report.txt",
+                "machine-bytecode-contract linux-x86_64-elf",
+                "system effect read network device",
+                "trace PacketReceived",
             ),
         ),
         ManualCommand(

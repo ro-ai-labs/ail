@@ -119,7 +119,8 @@ one of these version surfaces or add a versioned surface through
   examples-derived learning signals.
 - `manual/06-v03-authoring-gate.md`: one deterministic audit over User Story
   mode, examples replay, roadmap, prompt, agent, bootstrap self-hosting,
-  repair-promotion, UI patch import, and AgentTool policy import checks.
+  Systems profile, repair-promotion, UI patch import, and AgentTool policy
+  import checks.
 - `manual/07-repair-promotion.md`: deterministic review of rejected-example
   repair evidence before proposing a repaired artifact for accepted-corpus
   promotion.
@@ -135,6 +136,10 @@ one of these version surfaces or add a versioned surface through
   the AIL-authored toolchain agent and AIL-Meta compiler pass, including
   fixed-point, native-bytecode, host-boundary, dependency, handoff, and manifest
   evidence.
+- `manual/11-systems-profile.md`: deterministic Systems profile evidence for
+  `network_driver.ail`, including scheduler and interrupt conformance fixtures,
+  Linux x86_64 native target artifacts, and runtime resource/effect trace
+  output.
 
 ## Versioned Assets
 

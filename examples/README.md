@@ -63,7 +63,8 @@ All 26 package directories include a README.md guide.
 - `recursive_factorial.ail/README.md`: compact recursive function and
   arithmetic bytecode fixture for executable semantics.
 - `network_driver.ail/README.md`: low-level System profile resources,
-  ownership, borrowing, device effects, and missing-capability diagnostics.
+  ownership, borrowing, device effects, scheduler and interrupt fixtures,
+  native target evidence, runtime traces, and rejected contract diagnostics.
 - `c_interop.ail/README.md`: C ABI, pointer ownership, callbacks, layout,
   status-map failures, host imports, and invalid interop repair gaps.
 - `darwin_linux_effect.ail/README.md`: target portability, Linux syscall
