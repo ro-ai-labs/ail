@@ -48,6 +48,7 @@ severity, blocking behavior, and at least one invalid fixture.
 | `AIL-STATE-002` | `ail.application.state.retry-idempotent` | retryable counter mutation lacks idempotency key | error | yes | add request id or dedupe state |
 | `AIL-STATE-003` | `ail.application.state.shared-serialized` | shared counter mutation lacks lock or serialization rule | error | yes | add lock guard or serialization guarantee |
 | `AIL-STATE-004` | `ail.application.state.replay-policy` | failure after counter write lacks replay recovery policy | error | yes | add rollback, resume, or idempotent replay guarantee |
+| `AIL-WORKFLOW-001` | `ail.application.workflow.temporal-policy` | repeated action claims scheduler behavior without temporal policy | error | yes | add a temporal policy or remove the scheduler claim |
 | `AIL-SECRET-READ-001` | `ail.core.secret-read.requires-protection` | secret read lacks explicit protection | error | yes | add permission and secret protection |
 | `AIL-SECRET-ROLE-001` | `ail.application.secret-read.requires-support-role` | secret internal notes read lacks support-role requirement | error | yes | add SupportAgent or SupportManager role requirement |
 | `AIL-SECRET-WRITE-001` | `ail.core.secret-write.requires-redaction` | secret write lacks redaction or protection | error | yes | add redaction policy |
@@ -357,6 +358,27 @@ severity, blocking behavior, and at least one invalid fixture.
 - blocking behavior: blocks acceptance
 - invalid fixture:
   `examples/stateful_counter.ail/examples/rejected/failure-after-write-without-replay-policy.ail-spec.md`
+
+### AIL-WORKFLOW-001
+
+- condition: an Application action repeats another action and claims scheduler
+  behavior, but has no temporal policy guarantee
+- affected graph item: scheduler-behavior `Guarantee` node on the repeated
+  action
+- message template: `action {name} claims scheduler behavior without a
+  temporal policy`
+- non-engineer explanation: repeated execution can be compiled
+  deterministically, but a schedule claim needs a named policy before reviewers
+  can tell when or why the repeated work should run
+- agent follow-up question: `Which temporal policy, window, cadence, or
+  scheduler rule governs this repeated work?`
+- repair suggestion: add a temporal policy guarantee to the repeated action or
+  remove the scheduler behavior claim
+- AIL-Flow highlight: Action Card guarantee section
+- severity: error
+- blocking behavior: blocks acceptance
+- invalid fixture:
+  `examples/repeated_task.ail/examples/rejected/scheduler-without-temporal-policy.ail-spec.md`
 
 ### AIL-SECRET-READ-001
 

@@ -22219,6 +22219,44 @@ fn cli_ail_conformance_checks_system_profile_fixtures() {
 }
 
 #[test]
+fn cli_ail_conformance_checks_repeated_task_temporal_policy_fixtures() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("repeated_task.ail");
+
+    let output = Command::new(binary)
+        .args(["ail-conformance", &package])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("ail conformance: package repeated-task"));
+    assert!(stdout.contains("valid: spec.ail-spec.md"));
+    assert!(stdout.contains("accepted: temporal-policy-minimal.ail-spec.md"));
+    assert!(
+        stdout.contains("rejected: scheduler-without-temporal-policy.ail-spec.md AIL-WORKFLOW-001"),
+        "{stdout}"
+    );
+    assert!(
+        stdout.contains(
+            "source=action:RunMaintenanceCycle.guarantee:scheduler behavior for daily maintenance"
+        ),
+        "{stdout}"
+    );
+    assert!(
+        stdout.contains(
+            "repair=Add a temporal policy guarantee to action RunMaintenanceCycle or remove the scheduler behavior claim."
+        ),
+        "{stdout}"
+    );
+    assert!(stdout.contains("ail conformance: ok"));
+}
+
+#[test]
 fn cli_ail_draft_uses_llm_endpoint_and_checks_candidate_spec() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");

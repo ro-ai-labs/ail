@@ -2893,7 +2893,7 @@ story-file: stories/example-80.md
 story-journey: story-to-spec
 story-roundtrip: semantic-similar
 distinctness-claim: repeated-task-live-codex-interview-80 exercises docs/ail/prompts/interview.system.md over scheduled-workflow.
-v0.3-signal: Workflow examples need temporal policies and retry/backoff semantics.
+v0.3-signal: Workflow examples need retry/backoff semantics and richer scheduler policies beyond temporal-policy diagnostics.
 prompt-file: docs/ail/prompts/interview.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
@@ -2929,7 +2929,7 @@ story-file: stories/example-81.md
 story-journey: story-to-spec
 story-roundtrip: semantic-similar
 distinctness-claim: repeated-task-live-codex-requirements-81 exercises docs/ail/prompts/requirements.system.md over scheduled-workflow.
-v0.3-signal: Workflow examples need temporal policies and retry/backoff semantics.
+v0.3-signal: Workflow examples need retry/backoff semantics and richer scheduler policies beyond temporal-policy diagnostics.
 prompt-file: docs/ail/prompts/requirements.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
@@ -2965,7 +2965,7 @@ story-file: stories/example-82.md
 story-journey: story-to-spec
 story-roundtrip: semantic-similar
 distinctness-claim: repeated-task-live-codex-spec-draft-82 exercises docs/ail/prompts/spec-draft.system.md over scheduled-workflow.
-v0.3-signal: Workflow examples need temporal policies and retry/backoff semantics.
+v0.3-signal: Workflow examples need retry/backoff semantics and richer scheduler policies beyond temporal-policy diagnostics.
 prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
@@ -3001,7 +3001,7 @@ story-file: stories/example-83.md
 story-journey: story-to-spec
 story-roundtrip: semantic-similar
 distinctness-claim: repeated-task-live-codex-core-draft-83 exercises docs/ail/prompts/core-draft.system.md over scheduled-workflow.
-v0.3-signal: Workflow examples need temporal policies and retry/backoff semantics.
+v0.3-signal: Workflow examples need retry/backoff semantics and richer scheduler policies beyond temporal-policy diagnostics.
 prompt-file: docs/ail/prompts/core-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:0175222e4a84bec4
@@ -3037,7 +3037,7 @@ story-file: stories/example-84.md
 story-journey: story-amendment
 story-roundtrip: semantic-similar
 distinctness-claim: repeated-task-live-codex-diagnostic-repair-84 exercises docs/ail/prompts/diagnostic-repair.system.md over scheduled-workflow.
-v0.3-signal: Workflow examples need temporal policies and retry/backoff semantics.
+v0.3-signal: Workflow examples need retry/backoff semantics and richer scheduler policies beyond temporal-policy diagnostics.
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:c9700f2c2e57e49e

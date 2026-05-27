@@ -38,7 +38,10 @@ record for review, or preserve a safe intermediate state.
 A guarantee is a condition the program promises after successful execution or
 after a named failure path. Guarantees may cover data consistency, permissions,
 secret protection, external effects, ordering, trace coverage, memory safety,
-or lowering correctness.
+lowering correctness, or temporal behavior. Application actions that claim
+scheduler behavior for repeated work must also name a temporal policy so the
+checker can distinguish deterministic repeated-action lowering from scheduler
+declaration errors.
 
 ## Trace Events
 

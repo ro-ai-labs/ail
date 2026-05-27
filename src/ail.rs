@@ -4123,6 +4123,7 @@ pub fn check_ail_core_diagnostics(core: &AilCore) -> Vec<AilDiagnostic> {
     diagnostics.extend(check_application_private_notes_public_timeline(core));
     diagnostics.extend(check_application_incident_escalation_policy_review(core));
     diagnostics.extend(check_application_stateful_counter_runtime_policy(core));
+    diagnostics.extend(check_application_repeated_scheduler_temporal_policy(core));
     diagnostics.extend(check_toolchain_agent_artifact_fingerprint_reads(core));
     diagnostics.extend(check_tool_secret_output_disclosure(core));
     diagnostics.extend(check_unknown_field_references(core));
@@ -15506,6 +15507,62 @@ fn check_application_stateful_counter_runtime_policy(core: &AilCore) -> Vec<AilD
     diagnostics
 }
 
+fn check_application_repeated_scheduler_temporal_policy(core: &AilCore) -> Vec<AilDiagnostic> {
+    if core.package.profile != "Application" {
+        return Vec::new();
+    }
+    let node_by_id = graph_node_by_id(core);
+    let mut diagnostics = Vec::new();
+    for action in core.graph.nodes.iter().filter(|node| node.kind == "Action") {
+        if outgoing_edges(core, action, "repeats").is_empty() {
+            continue;
+        }
+        let guarantees = outgoing_nodes(core, &node_by_id, action, "guarantees")
+            .into_iter()
+            .filter(|node| node.kind == "Guarantee")
+            .collect::<Vec<_>>();
+        if guarantees.iter().any(is_temporal_policy_guarantee) {
+            continue;
+        }
+        for guarantee in &guarantees {
+            if !is_scheduler_claim(guarantee) {
+                continue;
+            }
+            diagnostics.push(
+                AilDiagnostic::error(
+                    "AIL-WORKFLOW-001",
+                    format!(
+                        "action {} claims scheduler behavior without a temporal policy",
+                        action.name
+                    ),
+                )
+                .with_source_provenance(node_provenance(core, &guarantee.id))
+                .with_affected_graph_item(format!("node:{}", guarantee.id))
+                .with_repair_suggestion(format!(
+                    "Add a temporal policy guarantee to action {} or remove the scheduler behavior claim.",
+                    action.name
+                )),
+            );
+        }
+    }
+    diagnostics
+}
+
+fn is_scheduler_claim(node: &Node) -> bool {
+    let text = compact_semantic_text(&node.name);
+    text.contains("schedulerbehavior")
+        || text.contains("scheduledbehavior")
+        || text.contains("schedulerclaim")
+        || text.contains("scheduledtask")
+}
+
+fn is_temporal_policy_guarantee(node: &Node) -> bool {
+    let text = compact_semantic_text(&node.name);
+    text.contains("temporalpolicy")
+        || text.contains("schedulepolicy")
+        || text.contains("schedulerpolicy")
+}
+
 fn action_counter_state_write_edge(
     core: &AilCore,
     node_by_id: &BTreeMap<String, Node>,
@@ -19830,6 +19887,14 @@ fn parse_action_bullet(document: &mut AilDocument, action_name: &str, bullet: &s
         action.writes.push(trim_sentence(text));
     } else if let Some(text) = bullet.strip_prefix("the system guarantees ") {
         action.guarantees.push(trim_sentence(text));
+    } else if let Some(text) = bullet.strip_prefix("the system claims scheduler behavior for ") {
+        action
+            .guarantees
+            .push(format!("scheduler behavior for {}", trim_sentence(text)));
+    } else if let Some(text) = bullet.strip_prefix("the system uses temporal policy ") {
+        action
+            .guarantees
+            .push(format!("temporal policy {}", trim_sentence(text)));
     } else if let Some(text) = bullet.strip_prefix("Guarantees ") {
         action.guarantees.push(trim_sentence(text));
     } else if let Some(text) = bullet.strip_prefix("the system does not reveal ") {

@@ -106,6 +106,9 @@ Stage-0 action bullets use one verb phrase per semantic operation:
 - the system reads <thing.field>
 - the system changes <thing.field> to <value>
 - the system calls <action or function> with <arguments>
+- the system repeats <ActionName> <count> times
+- the system claims scheduler behavior for <scheduled work>
+- the system uses temporal policy <policy name or window>
 - the system records a trace event named <TraceName>
 - the system guarantees <guarantee>
 ```

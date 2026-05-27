@@ -16,6 +16,7 @@ bytecode, target report, and regenerated user story.
 - Repeated action execution through `Run maintenance cycle`.
 - Integer state mutation on `Counter.value`.
 - Reuse of the `IncrementCounter` action inside a larger workflow.
+- Temporal policy authoring with explicit scheduler-behavior claims.
 - Trace coverage through `CounterIncremented` and
   `MaintenanceCycleCompleted`.
 - Scheduled-workflow metadata with `scheduler`, `task.store`, and `audit.log`
@@ -59,11 +60,18 @@ cargo run -- ail-conformance examples/repeated_task.ail --artifact-dir /tmp/ail-
 
 ## Rejected Fixtures
 
-This package does not yet include package-local rejected fixtures. v0.3 should
-add rejected specs for dropping `MaintenanceCycleCompleted`, repeating the
-wrong action, changing the repeat count without a story amendment, omitting
-counter state mutation, and claiming scheduler behavior without temporal
-policy.
+Package-local fixtures now cover the first scheduler-policy boundary:
+
+- `examples/accepted/temporal-policy-minimal.ail-spec.md` keeps the repeated
+  `IncrementCounter` lowering and adds an explicit scheduler-behavior claim
+  plus temporal policy.
+- `examples/rejected/scheduler-without-temporal-policy.ail-spec.md` claims
+  scheduler behavior for the repeated maintenance cycle without a temporal
+  policy and must report `AIL-WORKFLOW-001`.
+
+Future rejected fixtures should cover dropping `MaintenanceCycleCompleted`,
+repeating the wrong action, changing the repeat count without a story
+amendment, and omitting counter state mutation.
 
 ## Next Example To Read
 
@@ -76,6 +84,7 @@ roles, permissions, UI, and target-contract surfaces.
 
 Repeated Task now has package-local guidance and story anchors for the
 maintenance cycle, repeated action, trace event, and scheduled-workflow
-metadata. v0.3 should add temporal policy syntax, retry/backoff semantics, and
-diagnostics that distinguish repeated action lowering from scheduler
-declaration errors.
+metadata. v0.3 now includes temporal policy syntax and an `AIL-WORKFLOW-001`
+diagnostic that distinguishes repeated action lowering from scheduler
+declaration errors. The next bar is retry/backoff semantics, richer scheduler
+policy forms, and story amendments that explain temporal policy changes.
