@@ -152,7 +152,10 @@ offline review repeat `default-max-tokens`, the actual `max-tokens`,
 over-budget reviewer evidence is visible before promotion decisions.
 The live harness also records the endpoint model list in `models.json` and
 `models.fingerprint.txt`; `--skip-model-check` must record an explicit skipped
-model-check artifact instead of silently omitting the check.
+model-check artifact instead of silently omitting the check. Offline review
+rejects skipped model checks by default, so hosted AgentTool reviewer evidence
+must show `model-check present`; use `--allow-skipped-model-check` only for
+local fake-server tests.
 
 Then review the recorded request, response, and content bundle offline:
 
@@ -173,6 +176,7 @@ agent-policy-live-review-review.fingerprint.txt
 model-check
 model-check-model-count
 model-check-model-id
+no model-check skipped
 reviewer-envelope-valid-count
 reviewer-envelope-invalid-count
 evidence-bundle-present-count
@@ -186,8 +190,9 @@ reviewer-decision-reject-count
 ```
 
 The live reviewer report is accepted only when every reviewer envelope is
-valid, each response `model` is present in `models.json` when the model check is
-not skipped, every recorded request contains the deterministic evidence bundle,
+valid, `model-check present` names the hosted model list, each response `model`
+is present in `models.json`, every recorded request contains the deterministic
+evidence bundle,
 and every role returns `decision: accept`. Valid `needs-repair` or `reject`
 decisions produce `review-result needs-repair` and a nonzero exit so the hosted
 output becomes repair backlog instead of promotion evidence. It still does not

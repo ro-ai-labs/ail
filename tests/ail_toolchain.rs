@@ -3011,6 +3011,7 @@ fn script_v03_agent_policy_live_reviewer_harness_records_token_budget_evidence()
             &script,
             "--review-artifacts",
             artifact_dir.to_str().unwrap(),
+            "--allow-skipped-model-check",
         ])
         .output()
         .unwrap();
@@ -3038,9 +3039,9 @@ fn script_v03_agent_policy_live_reviewer_harness_records_token_budget_evidence()
         "max-tokens 64",
         "token-budget-default false",
         "token-budget-warning max-tokens-below-default",
-        "model-check present",
-        "model-check-model-count 1",
-        "model-check-model-id <skipped>",
+        "model-check skipped",
+        "model-check-model-count 0",
+        "model-check-model-id <missing>",
     ] {
         assert!(
             review_stdout.contains(required),

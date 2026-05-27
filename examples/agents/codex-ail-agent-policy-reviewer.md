@@ -74,6 +74,7 @@ Return an `AIL-Agent-Policy-Review` report that records:
 - `model-check present`
 - `model-check-model-count`
 - `model-check-model-id`
+- no `model-check skipped`; skipped model checks are local fake-server evidence only
 - `reviewer-envelope-valid-count`
 - `reviewer-envelope-invalid-count`
 - `evidence-bundle-present-count`

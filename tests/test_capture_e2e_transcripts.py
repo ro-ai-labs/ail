@@ -1448,8 +1448,18 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
                 combined_stdout,
             )
             self.assertIn(
+                "python3 scripts/run_v03_prompt_llm_harness.py "
+                f"--review-artifacts {artifact_root / 'prompt-llm'} --allow-skipped-model-check",
+                combined_stdout,
+            )
+            self.assertIn(
                 "python3 scripts/run_v03_agent_policy_live_reviewer_harness.py "
                 f"--endpoint {endpoint} --skip-model-check --artifact-dir {artifact_root / 'agent-policy-live-review'}",
+                combined_stdout,
+            )
+            self.assertIn(
+                "python3 scripts/run_v03_agent_policy_live_reviewer_harness.py "
+                f"--review-artifacts {artifact_root / 'agent-policy-live-review'} --allow-skipped-model-check",
                 combined_stdout,
             )
             self.assertGreaterEqual(
@@ -1642,6 +1652,51 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             self.assertIn("model-check-model-id test-model", review.stdout)
             self.assertIn(
                 "response model unlisted-model not present in models.json for prompt-reviewer",
+                review.stdout,
+            )
+        finally:
+            shutil.rmtree(artifact_dir, ignore_errors=True)
+
+    def test_agent_policy_live_reviewer_harness_review_rejects_skipped_model_check_by_default(
+        self,
+    ):
+        artifact_dir = Path(
+            tempfile.mkdtemp(prefix="ail-agent-policy-live-skipped-model-")
+        )
+        try:
+            write_agent_policy_live_reviewer_fixture(artifact_dir)
+
+            models_text = (
+                json.dumps(
+                    {
+                        "skipped": True,
+                        "endpoint": "http://127.0.0.1:8080/v1/chat/completions",
+                    },
+                    indent=2,
+                    sort_keys=True,
+                )
+                + "\n"
+            )
+            write_text(artifact_dir / "models.json", models_text)
+            write_text(artifact_dir / "models.fingerprint.txt", fnv64(models_text) + "\n")
+
+            review = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_agent_policy_live_reviewer_harness.py",
+                    "--review-artifacts",
+                    str(artifact_dir),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+
+            self.assertNotEqual(review.returncode, 0)
+            self.assertIn("review-result rejected", review.stdout)
+            self.assertIn("model-check skipped", review.stdout)
+            self.assertIn(
+                "model-check skipped; hosted AgentTool reviewer evidence requires models.json from /v1/models",
                 review.stdout,
             )
         finally:

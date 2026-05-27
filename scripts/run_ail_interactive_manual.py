@@ -1628,6 +1628,8 @@ def materialize_command(command: ManualCommand, overrides: LiveOverrides) -> tup
                         "--artifact-dir",
                         str(Path(overrides.artifact_root) / "prompt-llm"),
                     )
+            elif overrides.skip_model_check:
+                set_flag(args, "--allow-skipped-model-check")
         elif script == "scripts/run_v03_agent_policy_live_reviewer_harness.py":
             if "--review-artifacts" not in args:
                 add_live_harness_options(args, overrides)
@@ -1637,6 +1639,8 @@ def materialize_command(command: ManualCommand, overrides: LiveOverrides) -> tup
                     set_option(args, "--examples-artifacts", str(root / "agent-policy"))
                     set_option(args, "--capture-plan-dir", str(root / "agent-policy-capture-plan"))
                     set_option(args, "--import-work-dir", str(root / "agent-policy-import-work"))
+            elif overrides.skip_model_check:
+                set_flag(args, "--allow-skipped-model-check")
     elif command.live and len(args) >= 4 and args[:3] == ["cargo", "run", "--"]:
         if "ail-story" in args and overrides.endpoint:
             set_option(args, "--llm-endpoint", overrides.endpoint)

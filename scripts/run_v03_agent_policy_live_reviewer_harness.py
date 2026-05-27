@@ -223,22 +223,27 @@ def load_json(path: Path, errors: list[str]) -> dict[str, object]:
     return value
 
 
-def model_entries(models_text: str) -> tuple[bool, list[str], str]:
+SKIPPED_MODEL_CHECK_ERROR = (
+    "model-check skipped; hosted AgentTool reviewer evidence requires models.json from /v1/models"
+)
+
+
+def model_entries(models_text: str) -> tuple[str, list[str], str]:
     if not models_text.strip():
-        return False, [], "models.json is empty"
+        return "missing", [], "models.json is empty"
     try:
         payload = json.loads(models_text)
     except json.JSONDecodeError as error:
-        return False, [], f"invalid json models.json: {error}"
+        return "missing", [], f"invalid json models.json: {error}"
     if not isinstance(payload, dict):
-        return False, [], "models.json must be a JSON object"
+        return "missing", [], "models.json must be a JSON object"
     if payload.get("skipped") is True:
-        return True, ["<skipped>"], ""
+        return "skipped", [], ""
     raw_entries = payload.get("data")
     if not isinstance(raw_entries, list):
         raw_entries = payload.get("models")
     if not isinstance(raw_entries, list):
-        return False, [], "models.json must include data or models list"
+        return "missing", [], "models.json must include data or models list"
     ids: list[str] = []
     for entry in raw_entries:
         if not isinstance(entry, dict):
@@ -247,8 +252,8 @@ def model_entries(models_text: str) -> tuple[bool, list[str], str]:
         if isinstance(model_id, str) and model_id.strip():
             ids.append(model_id.strip())
     if not ids:
-        return False, [], "models.json did not name any models"
-    return True, ids, ""
+        return "missing", [], "models.json did not name any models"
+    return "present", ids, ""
 
 
 def request_user_probe(body: object) -> str:
@@ -525,6 +530,14 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         "--review-artifacts",
         help="Review an existing AgentTool live reviewer artifact directory without network access",
     )
+    parser.add_argument(
+        "--allow-skipped-model-check",
+        action="store_true",
+        help=(
+            "Allow review of artifacts produced with --skip-model-check. "
+            "Use only for local fake-server tests, not hosted llama.cpp evidence."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -577,9 +590,11 @@ def review_artifacts(args: argparse.Namespace, contracts: list[tuple[str, str, s
         artifact_root / "agent-policy-live-review-report.txt", errors
     )
     models_text = read_required_text(artifact_root / "models.json", errors)
-    model_check_ok, model_ids, model_check_error = model_entries(models_text)
+    model_check_status, model_ids, model_check_error = model_entries(models_text)
     if model_check_error:
         errors.append(model_check_error)
+    if model_check_status == "skipped" and not args.allow_skipped_model_check:
+        errors.append(SKIPPED_MODEL_CHECK_ERROR)
     model_id_set = set(model_ids)
     report_lines = report_text.splitlines()
 
@@ -664,7 +679,7 @@ def review_artifacts(args: argparse.Namespace, contracts: list[tuple[str, str, s
                 errors.append(f"{evidence_error} {role}")
         if not response:
             errors.append(f"missing response json {role}")
-        elif model_check_ok and model_ids != ["<skipped>"]:
+        elif model_check_status == "present":
             response_model = response.get("model")
             if not isinstance(response_model, str) or not response_model.strip():
                 errors.append(f"response model missing for {role}")
@@ -700,7 +715,7 @@ def review_artifacts(args: argparse.Namespace, contracts: list[tuple[str, str, s
         f"reviewer-decision-accept-count {decision_accept}",
         f"reviewer-decision-needs-repair-count {decision_needs_repair}",
         f"reviewer-decision-reject-count {decision_reject}",
-        f"model-check {'present' if model_check_ok else 'missing'}",
+        f"model-check {model_check_status}",
         f"model-check-model-count {len(model_ids)}",
         f"model-check-model-id {','.join(model_ids) if model_ids else '<missing>'}",
         f"fingerprint-check-count {fingerprint_checks}",
