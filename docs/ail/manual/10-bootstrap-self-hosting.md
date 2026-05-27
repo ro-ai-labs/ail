@@ -47,11 +47,28 @@ The pass-composition report must include:
 bootstrap-pass-composition-report.txt
 bootstrap-pass-composition-report.fingerprint.txt
 composition-pass-count 1
+composition-variant-count 2
 composition-pass 1 InferReadPermissions
+composition-variant 1 toolchain-agent-fixed-point pass InferReadPermissions status ok
+composition-variant 2 compiler-pass-self-check pass InferReadPermissions status ok
 composition-input toolchain-agent.checked.ail-core.txt
 composition-output toolchain-agent.pass-output.ail-core.txt
 composition-fixed-point bootstrap-fixed-point-report.txt
+pass-order-diagnostics bootstrap-pass-order-diagnostics.txt
 pass-order-status ok
+```
+
+The pass-order diagnostics report is reviewer-visible even when the accepted
+composition remains valid:
+
+```text
+bootstrap-pass-order-diagnostics.txt
+bootstrap-pass-order-diagnostics.fingerprint.txt
+AIL-Bootstrap-Pass-Order-Diagnostics:
+reviewed-pass-order-conflict-count 1
+reviewed-pass-order-conflict AIL-BOOTSTRAP-PASS-ORDER-001 duplicate-pass-before-fixed-point pass InferReadPermissions
+conflict-resolution fixed-point-gate-required
+composition-variant-count 2
 ```
 
 The host-boundary and dependency reports must include:
@@ -92,6 +109,7 @@ toolchain-agent-pass-output toolchain-agent.pass-output.ail-core.txt
 toolchain-agent-pass-trace toolchain-agent.pass-trace.txt
 bootstrap-fixed-point bootstrap-fixed-point-report.txt
 bootstrap-pass-composition bootstrap-pass-composition-report.txt
+bootstrap-pass-order-diagnostics bootstrap-pass-order-diagnostics.txt
 bootstrap-native-bytecode bootstrap-native-bytecode-report.txt
 bootstrap-host-boundary bootstrap-host-boundary-report.txt
 bootstrap-dependencies bootstrap-dependency-report.txt
@@ -101,5 +119,7 @@ bootstrap-handoff bootstrap-handoff-report.txt
 This is not a claim that the full compiler is self-hosted. It is the v0.3
 bootstrap evidence slice: AIL-authored toolchain and compiler-pass packages
 produce checked artifacts, the compiler pass reaches a stable fixed point over
-the toolchain agent Core, and the native handoff remains executable without
-generated host-language source.
+the toolchain agent Core, the compiler pass is also replayed over its own
+Compiler-profile Core as a second composition variant, pass-order conflicts are
+reported in a fingerprinted diagnostics artifact, and the native handoff
+remains executable without generated host-language source.

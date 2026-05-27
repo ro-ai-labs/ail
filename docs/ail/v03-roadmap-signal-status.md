@@ -55,7 +55,7 @@ evidence: cargo run -- ail-examples examples --release-evidence
 
 signal: Self-hosting needs multiple composed compiler-pass variants and reviewer-visible pass-order conflict diagnostics.
 status: deferred
-rationale: The bootstrap chapter proves one fixed-point compiler-pass composition, but multiple composed variants and pass-order conflict diagnostics remain open.
+rationale: The bootstrap chapter now records a second compiler-pass self-check composition variant plus reviewer-visible AIL-BOOTSTRAP-PASS-ORDER-001 pass-order diagnostics, but repeatable user-supplied pass sequencing and conflicting-order fixtures remain open before this signal can be fully promoted.
 evidence: docs/ail/31-v03-learning-and-authoring-gate.md
 
 signal: State examples need clearer persistence and concurrency boundaries.

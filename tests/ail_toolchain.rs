@@ -1357,6 +1357,13 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
                 "second-pass-changed false",
                 "bootstrap-pass-composition-report.txt",
                 "composition-pass-count 1",
+                "composition-variant-count 2",
+                "composition-variant 1 toolchain-agent-fixed-point pass InferReadPermissions status ok",
+                "composition-variant 2 compiler-pass-self-check pass InferReadPermissions status ok",
+                "bootstrap-pass-order-diagnostics.txt",
+                "reviewed-pass-order-conflict-count 1",
+                "AIL-BOOTSTRAP-PASS-ORDER-001",
+                "conflict-resolution fixed-point-gate-required",
                 "pass-order-status ok",
                 "bootstrap-handoff-report.txt",
                 "manifest.ail-bootstrap.txt",
@@ -1604,6 +1611,7 @@ fn script_v03_release_audit_dry_run_lists_completion_gates() {
         "step story-promotion-live-review command python3 scripts/run_v03_story_promotion_live_reviewer_harness.py --review-artifacts",
         "step agent-policy-live-review command python3 scripts/run_v03_agent_policy_live_reviewer_harness.py --review-artifacts",
         "artifact-required-file agent-policy-import-audit-report.txt",
+        "artifact-required-file bootstrap-pass-order-diagnostics.txt",
         "artifact-required-file v03-roadmap.txt",
         "artifact-required-file v03-roadmap-signal-status.txt",
         "artifact-required-file model-executor-manifest.txt",
@@ -2061,7 +2069,14 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "fixed-point: ok",
         "second-pass-changed false",
         "composition-pass-count 1",
+        "composition-variant-count 2",
         "composition-pass 1 InferReadPermissions",
+        "composition-variant 1 toolchain-agent-fixed-point pass InferReadPermissions status ok",
+        "composition-variant 2 compiler-pass-self-check pass InferReadPermissions status ok",
+        "bootstrap-pass-order-diagnostics.txt",
+        "reviewed-pass-order-conflict-count 1",
+        "AIL-BOOTSTRAP-PASS-ORDER-001",
+        "conflict-resolution fixed-point-gate-required",
         "pass-order-status ok",
         "no-host-backend-source true",
     ] {
@@ -2303,7 +2318,14 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "evidence second-pass-changed false",
         "evidence bootstrap-pass-composition-report.txt",
         "evidence composition-pass-count 1",
+        "evidence composition-variant-count 2",
         "evidence composition-pass 1 InferReadPermissions",
+        "evidence composition-variant 1 toolchain-agent-fixed-point pass InferReadPermissions status ok",
+        "evidence composition-variant 2 compiler-pass-self-check pass InferReadPermissions status ok",
+        "evidence bootstrap-pass-order-diagnostics.txt",
+        "evidence reviewed-pass-order-conflict-count 1",
+        "evidence reviewed-pass-order-conflict AIL-BOOTSTRAP-PASS-ORDER-001",
+        "evidence conflict-resolution fixed-point-gate-required",
         "evidence pass-order-status ok",
         "evidence bootstrap-handoff-report.txt",
         "evidence manifest.ail-bootstrap.txt",
@@ -2646,6 +2668,8 @@ fn script_ail_interactive_manual_v03_authoring_gate_run_checks_succeeds() {
         "ail-bootstrap wrote linux-x86_64-elf bootstrap bundle",
         "bootstrap-fixed-point-report.txt",
         "bootstrap-pass-composition-report.txt",
+        "bootstrap-pass-order-diagnostics.txt",
+        "AIL-BOOTSTRAP-PASS-ORDER-001",
         "ail conformance: package network-driver",
         "accepted: scheduler-task-minimal.ail-spec.md",
         "accepted: interrupt-context-minimal.ail-spec.md",
@@ -19016,6 +19040,22 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
         "{pass_composition_report}"
     );
     assert!(
+        pass_composition_report.contains("composition-variant-count 2"),
+        "{pass_composition_report}"
+    );
+    assert!(
+        pass_composition_report.contains(
+            "composition-variant 1 toolchain-agent-fixed-point pass InferReadPermissions status ok"
+        ),
+        "{pass_composition_report}"
+    );
+    assert!(
+        pass_composition_report.contains(
+            "composition-variant 2 compiler-pass-self-check pass InferReadPermissions status ok"
+        ),
+        "{pass_composition_report}"
+    );
+    assert!(
         pass_composition_report.contains(
             "composition-pass 1 InferReadPermissions source compiler-pass.source.ail-spec.md bytecode compiler-pass.ailbc.json core compiler-pass.checked.ail-core.txt"
         ),
@@ -19054,6 +19094,11 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
         "{pass_composition_report}"
     );
     assert!(
+        pass_composition_report
+            .contains("pass-order-diagnostics bootstrap-pass-order-diagnostics.txt"),
+        "{pass_composition_report}"
+    );
+    assert!(
         pass_composition_report.contains("pass-order-status ok"),
         "{pass_composition_report}"
     );
@@ -19063,6 +19108,37 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
     assert_eq!(
         pass_composition_report_fingerprint.trim(),
         fnv64_fingerprint(&pass_composition_report)
+    );
+    let pass_order_diagnostics =
+        fs::read_to_string(artifact_dir.join("bootstrap-pass-order-diagnostics.txt")).unwrap();
+    assert!(
+        pass_order_diagnostics.contains("AIL-Bootstrap-Pass-Order-Diagnostics:"),
+        "{pass_order_diagnostics}"
+    );
+    assert!(
+        pass_order_diagnostics.contains("reviewed-pass-order-conflict-count 1"),
+        "{pass_order_diagnostics}"
+    );
+    assert!(
+        pass_order_diagnostics.contains(
+            "reviewed-pass-order-conflict AIL-BOOTSTRAP-PASS-ORDER-001 duplicate-pass-before-fixed-point pass InferReadPermissions"
+        ),
+        "{pass_order_diagnostics}"
+    );
+    assert!(
+        pass_order_diagnostics.contains("conflict-resolution fixed-point-gate-required"),
+        "{pass_order_diagnostics}"
+    );
+    assert!(
+        pass_order_diagnostics.contains("composition-variant-count 2"),
+        "{pass_order_diagnostics}"
+    );
+    let pass_order_diagnostics_fingerprint =
+        fs::read_to_string(artifact_dir.join("bootstrap-pass-order-diagnostics.fingerprint.txt"))
+            .unwrap();
+    assert_eq!(
+        pass_order_diagnostics_fingerprint.trim(),
+        fnv64_fingerprint(&pass_order_diagnostics)
     );
 
     let toolchain_conformance =
@@ -19331,6 +19407,8 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
     assert!(agent_trace.contains("read buildrequest.fixed point report fingerprint"));
     assert!(agent_trace.contains("read buildrequest.compiler pass composition report"));
     assert!(agent_trace.contains("read buildrequest.compiler pass composition report fingerprint"));
+    assert!(agent_trace.contains("read buildrequest.compiler pass order diagnostics"));
+    assert!(agent_trace.contains("read buildrequest.compiler pass order diagnostics fingerprint"));
     assert!(agent_trace.contains("read buildrequest.conformance report"));
     assert!(agent_trace.contains("read buildrequest.conformance report fingerprint"));
     assert!(agent_trace.contains("read buildrequest.machine bytecode contract"));
@@ -19366,6 +19444,8 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
             "buildrequest.fixed point report fingerprint=fnv64:fixed-point",
             "buildrequest.compiler pass composition report=ok",
             "buildrequest.compiler pass composition report fingerprint=fnv64:pass-composition",
+            "buildrequest.compiler pass order diagnostics=ok",
+            "buildrequest.compiler pass order diagnostics fingerprint=fnv64:pass-order",
             "buildrequest.conformance report=ok",
             "buildrequest.conformance report fingerprint=fnv64:conformance",
             "buildrequest.machine bytecode contract=machine-bytecode-contract linux-x86_64-elf bytecode-level machine bytecode-container linux-elf-executable bytecode-format elf64-little-x86_64-executable",
@@ -19469,6 +19549,13 @@ fn cli_ail_bootstrap_writes_native_toolchain_bundle() {
         manifest.contains(&format!(
             "bootstrap-pass-composition bootstrap-pass-composition-report.txt {}",
             fnv64_fingerprint(&pass_composition_report)
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "bootstrap-pass-order-diagnostics bootstrap-pass-order-diagnostics.txt {}",
+            fnv64_fingerprint(&pass_order_diagnostics)
         )),
         "{manifest}"
     );

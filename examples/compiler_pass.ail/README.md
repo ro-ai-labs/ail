@@ -96,8 +96,9 @@ compiler-pass review as the language grows.
 
 Compiler Pass is the current bridge from language use cases to language
 implementation. It is replay-clean, and bootstrap now records a pass
-composition plus fixed-point report for `InferReadPermissions`. The next v0.3
-bar is multiple composed compiler-pass variants, reviewer-visible pass-order
-conflict diagnostics, richer secret-read fixtures, and a walkthrough that
+composition, fixed-point report, compiler-pass self-check variant, and
+reviewer-visible `AIL-BOOTSTRAP-PASS-ORDER-001` pass-order diagnostic for
+`InferReadPermissions`. The next v0.3 bar is repeatable user-supplied
+compiler-pass sequencing, richer secret-read fixtures, and a walkthrough that
 compares the input Core graph, transformed graph, provenance edges, bytecode
 trace, and native target report side by side.

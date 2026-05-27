@@ -133,6 +133,8 @@ def build_v03_audit_plan(
             (
                 "bootstrap-pass-composition-report.txt",
                 "bootstrap-pass-composition-report.fingerprint.txt",
+                "bootstrap-pass-order-diagnostics.txt",
+                "bootstrap-pass-order-diagnostics.fingerprint.txt",
             ),
         ),
         AuditStep(

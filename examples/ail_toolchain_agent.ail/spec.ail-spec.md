@@ -31,6 +31,8 @@ A BuildRequest has:
 - compiler pass trace: Text
 - compiler pass composition report: Text
 - compiler pass composition report fingerprint: Text
+- compiler pass order diagnostics: Text
+- compiler pass order diagnostics fingerprint: Text
 - compiler pass review report: Text
 - conformance report: Text
 - conformance report fingerprint: Text
@@ -325,6 +327,8 @@ When the toolchain agent verifies an AIL bootstrap bundle:
 - the system reads the BuildRequest fixed point report fingerprint
 - the system reads the BuildRequest compiler pass composition report
 - the system reads the BuildRequest compiler pass composition report fingerprint
+- the system reads the BuildRequest compiler pass order diagnostics
+- the system reads the BuildRequest compiler pass order diagnostics fingerprint
 - the system reads the BuildRequest conformance report
 - the system reads the BuildRequest conformance report fingerprint
 - the system reads the BuildRequest machine bytecode contract

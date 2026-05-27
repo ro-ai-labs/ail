@@ -652,9 +652,12 @@ as prose. The current examples reveal these next-version gaps:
   manual check that composes the AIL-authored toolchain agent with the
   AIL-Meta `InferReadPermissions` compiler pass, writes a fingerprinted
   `bootstrap-pass-composition-report.txt`, verifies fixed-point pass output,
-  records host-boundary and dependency reports, and runs native handoff checks.
-  The next bar is reviewer-visible pass-order conflict diagnostics and
-  multiple composed compiler-pass variants.
+  records a second compiler-pass self-check composition variant, writes
+  reviewer-visible `bootstrap-pass-order-diagnostics.txt` with
+  `AIL-BOOTSTRAP-PASS-ORDER-001` conflict guidance, records host-boundary and
+  dependency reports, and runs native handoff checks. The next bar is
+  repeatable user-supplied pass sequencing and conflicting-order fixtures
+  beyond the built-in fixed-point gate.
 - Systems examples now include a deterministic manual chapter for
   `network_driver.ail` that runs package-local conformance, accepts scheduler
   and interrupt fixtures, rejects invalid interrupt/task contracts with stable
