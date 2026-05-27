@@ -81,6 +81,8 @@ The review report must include:
 - `models.fingerprint.txt`
 - `agent-policy-live-review-review.txt`
 - `agent-policy-live-review-review.fingerprint.txt`
+- `agent-policy-live-review-repair-backlog.txt`
+- `agent-policy-live-review-repair-backlog.fingerprint.txt`
 - `model-check present`
 - `model-check-model-count`
 - `model-check-model-id`
@@ -95,6 +97,7 @@ The review report must include:
 - `reviewer-decision-accept-count`
 - `reviewer-decision-needs-repair-count`
 - `reviewer-decision-reject-count`
+- `repair-source hosted-reviewer-nonaccept`
 - `accepted-for-import`, `needs-repair`, or `rejected-for-import`
 - `human-approval-required true`
 - `agent-contract-check ail-agent-contracts examples/agents`
@@ -137,7 +140,8 @@ Return `needs-repair` or `rejected-for-import` when:
   policy review, capture plan, import report, and multi-agent handoff report
 - hosted reviewer evidence is claimed but one or more valid reviewer envelopes
   return `needs-repair` or `reject`; preserve the bundle as
-  `review-result needs-repair` evidence instead of promotion evidence
+  `review-result needs-repair` evidence and
+  `agent-policy-live-review-repair-backlog.txt` instead of promotion evidence
 - the artifact implies automatic promotion without human approval
 
 Do not promote generated content into `./examples` unless deterministic replay,

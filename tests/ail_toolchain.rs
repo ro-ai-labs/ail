@@ -1415,6 +1415,8 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
                 "agent-policy-import-demo-report.txt",
                 "agent-policy-live-review-report.txt",
                 "agent-policy-live-review-review.txt",
+                "agent-policy-live-review-repair-backlog.txt",
+                "repair-backlog-fingerprint",
                 "models.json",
                 "models.fingerprint.txt",
                 "model-check-model-id",
@@ -2119,6 +2121,8 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "evidence agent-policy-live-review-report.fingerprint.txt",
         "evidence agent-policy-live-review-review.txt",
         "evidence agent-policy-live-review-review.fingerprint.txt",
+        "evidence agent-policy-live-review-repair-backlog.txt",
+        "evidence agent-policy-live-review-repair-backlog.fingerprint.txt",
         "evidence manifest.v03-agent-policy-live-review.txt",
         "evidence models.json",
         "evidence models.fingerprint.txt",
@@ -2129,6 +2133,7 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "evidence reviewer-decision-accept-count",
         "evidence reviewer-decision-needs-repair-count",
         "evidence reviewer-decision-reject-count",
+        "evidence repair-backlog-fingerprint",
     ] {
         assert!(
             gate_live_stdout.contains(required),
@@ -2607,6 +2612,7 @@ fn examples_agents_include_agent_policy_review_contract() {
         "agent-policy-import-demo-report.txt",
         "agent-policy-live-review-report.txt",
         "agent-policy-live-review-review.txt",
+        "agent-policy-live-review-repair-backlog.txt",
         "models.json",
         "models.fingerprint.txt",
         "model-check-model-id",
@@ -2641,6 +2647,8 @@ fn examples_agents_include_agent_policy_review_contract() {
         "scripts/run_v03_agent_policy_live_reviewer_harness.py --review-artifacts",
         "agent-policy-live-review-report.txt",
         "agent-policy-live-review-review.txt",
+        "agent-policy-live-review-repair-backlog.txt",
+        "repair-backlog-fingerprint",
         "models.json",
         "models.fingerprint.txt",
         "model-check present",
@@ -2656,6 +2664,7 @@ fn examples_agents_include_agent_policy_review_contract() {
         "reviewer-decision-accept-count",
         "reviewer-decision-needs-repair-count",
         "reviewer-decision-reject-count",
+        "repair-source hosted-reviewer-nonaccept",
         "source-preserved true",
         "proposed-accepted true",
         "policy-handoff-imported true",
@@ -2694,6 +2703,8 @@ fn examples_agents_include_agent_policy_review_contract() {
         "models.fingerprint.txt",
         "agent-policy-live-review-review.txt",
         "agent-policy-live-review-review.fingerprint.txt",
+        "agent-policy-live-review-repair-backlog.txt",
+        "agent-policy-live-review-repair-backlog.fingerprint.txt",
         "model-check present",
         "model-check-model-count",
         "model-check-model-id",
@@ -2707,6 +2718,7 @@ fn examples_agents_include_agent_policy_review_contract() {
         "reviewer-decision-accept-count",
         "reviewer-decision-needs-repair-count",
         "reviewer-decision-reject-count",
+        "repair-source hosted-reviewer-nonaccept",
         "source-preserved true",
         "proposed-accepted true",
         "policy-handoff-imported true",
@@ -3155,6 +3167,214 @@ fn script_v03_agent_policy_live_reviewer_harness_records_token_budget_evidence()
         review_stdout.contains("review-result accepted"),
         "{review_stdout}"
     );
+
+    fs::remove_dir_all(artifact_dir).unwrap();
+    fs::remove_dir_all(examples_artifacts).unwrap();
+    fs::remove_dir_all(capture_plan_dir).unwrap();
+    fs::remove_dir_all(import_work_dir).unwrap();
+}
+
+#[test]
+fn script_v03_agent_policy_live_reviewer_harness_writes_nonaccept_backlog() {
+    let script = format!(
+        "{}/scripts/run_v03_agent_policy_live_reviewer_harness.py",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let unique_suffix = format!(
+        "{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-agent-policy-live-review-nonaccept-artifacts-{unique_suffix}"
+    ));
+    let examples_artifacts = std::env::temp_dir().join(format!(
+        "ail-agent-policy-live-review-nonaccept-examples-{unique_suffix}"
+    ));
+    let capture_plan_dir = std::env::temp_dir().join(format!(
+        "ail-agent-policy-live-review-nonaccept-capture-plan-{unique_suffix}"
+    ));
+    let import_work_dir = std::env::temp_dir().join(format!(
+        "ail-agent-policy-live-review-nonaccept-import-work-{unique_suffix}"
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+    let _ = fs::remove_dir_all(&examples_artifacts);
+    let _ = fs::remove_dir_all(&capture_plan_dir);
+    let _ = fs::remove_dir_all(&import_work_dir);
+    let write_fingerprinted = |path: &std::path::Path, text: &str| {
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(path, text).unwrap();
+        fs::write(
+            path.with_extension("fingerprint.txt"),
+            format!("{}\n", fnv64_fingerprint(text)),
+        )
+        .unwrap();
+    };
+    write_fingerprinted(
+        &examples_artifacts
+            .join("examples")
+            .join("example-40")
+            .join("agent-policy-review.txt"),
+        concat!(
+            "AIL-Agent-Policy-Review:\n",
+            "agent-policy-review-fingerprint-observed-count 1\n",
+            "tool-permission-review required\n",
+            "tool-approval-review required\n"
+        ),
+    );
+    write_fingerprinted(
+        &capture_plan_dir.join("agent-policy-capture-plan.json"),
+        concat!(
+            "{\n",
+            "  \"source_entry_id\": \"example-40\",\n",
+            "  \"human_approval_required\": true,\n",
+            "  \"must_supply_request_response_json\": true\n",
+            "}\n"
+        ),
+    );
+    write_fingerprinted(
+        &import_work_dir.join("agent-policy-import-demo-report.txt"),
+        concat!(
+            "AIL-Agent-Policy-Import-Demo-Report:\n",
+            "source-preserved true\n",
+            "proposed-accepted true\n",
+            "policy-handoff-imported true\n",
+            "policy-handoff-replayed true\n"
+        ),
+    );
+    write_fingerprinted(
+        &import_work_dir.join("agent-policy-multi-agent-handoff-report.txt"),
+        concat!(
+            "AIL-Agent-Policy-Multi-Agent-Handoff-Report:\n",
+            "multi-agent-execution-evidence deterministic-role-handoff\n"
+        ),
+    );
+    let roles = [
+        ("requirements-writer", "accept"),
+        ("spec-writer", "needs-repair"),
+        ("diagnostic-repairer", "accept"),
+        ("prompt-reviewer", "reject"),
+        ("agent-policy-reviewer", "accept"),
+    ];
+    let response_bodies = roles
+        .iter()
+        .map(|(role, decision)| {
+            let questions = if *decision == "accept" {
+                "[]".to_string()
+            } else {
+                format!(
+                    "[{}]",
+                    json_string("Explain the missing reviewer evidence.")
+                )
+            };
+            let envelope = format!(
+                concat!(
+                    "{{",
+                    "\"artifact_kind\":\"AIL-AgentTool-Live-Reviewer-Handoff\",",
+                    "\"role\":{},",
+                    "\"decision\":{},",
+                    "\"evidence\":[",
+                    "\"agent-policy-review.txt\",",
+                    "\"agent-policy-capture-plan.json\",",
+                    "\"agent-policy-import-demo-report.txt\",",
+                    "\"agent-policy-multi-agent-handoff-report.txt\"",
+                    "],",
+                    "\"questions\":{},",
+                    "\"checker_handoff\":{{",
+                    "\"must_check\":true,",
+                    "\"required_artifacts\":[\"agent-policy-review.txt\"]",
+                    "}}",
+                    "}}"
+                ),
+                json_string(role),
+                json_string(decision),
+                questions
+            );
+            format!(
+                r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+                json_string(&envelope)
+            )
+        })
+        .collect::<Vec<_>>();
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let server = serve_chat_responses(listener, response_bodies);
+
+    let output = Command::new("python3")
+        .args([
+            &script,
+            "--endpoint",
+            &format!("http://127.0.0.1:{}/v1/chat/completions", addr.port()),
+            "--skip-model-check",
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+            "--examples-artifacts",
+            examples_artifacts.to_str().unwrap(),
+            "--capture-plan-dir",
+            capture_plan_dir.to_str().unwrap(),
+            "--import-work-dir",
+            import_work_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    let request_bodies = server.join().unwrap();
+    assert_eq!(request_bodies.len(), 5);
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let review = Command::new("python3")
+        .args([
+            &script,
+            "--review-artifacts",
+            artifact_dir.to_str().unwrap(),
+            "--allow-skipped-model-check",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !review.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&review.stdout),
+        String::from_utf8_lossy(&review.stderr)
+    );
+    let review_stdout = String::from_utf8_lossy(&review.stdout);
+    for required in [
+        "reviewer-decision-accept-count 3",
+        "reviewer-decision-needs-repair-count 1",
+        "reviewer-decision-reject-count 1",
+        "review-result needs-repair",
+        "repair-backlog agent-policy-live-review-repair-backlog.txt",
+    ] {
+        assert!(
+            review_stdout.contains(required),
+            "{required}\n{review_stdout}"
+        );
+    }
+    let backlog =
+        fs::read_to_string(artifact_dir.join("agent-policy-live-review-repair-backlog.txt"))
+            .unwrap();
+    for required in [
+        "AIL-Agent-Policy-Live-Review-Repair-Backlog:",
+        "promotion-blocked true",
+        "repair-source hosted-reviewer-nonaccept",
+        "role spec-writer decision needs-repair",
+        "role prompt-reviewer decision reject",
+        "question Explain the missing reviewer evidence.",
+    ] {
+        assert!(backlog.contains(required), "{required}\n{backlog}");
+    }
+    let backlog_fingerprint = fs::read_to_string(
+        artifact_dir.join("agent-policy-live-review-repair-backlog.fingerprint.txt"),
+    )
+    .unwrap();
+    assert_eq!(backlog_fingerprint.trim(), fnv64_fingerprint(&backlog));
 
     fs::remove_dir_all(artifact_dir).unwrap();
     fs::remove_dir_all(examples_artifacts).unwrap();

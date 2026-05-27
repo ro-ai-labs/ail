@@ -459,6 +459,56 @@ def classify_reviewer_content(content: str, role: str) -> tuple[str, str, str]:
     return "reviewer-envelope", str(decision), ""
 
 
+def nonaccept_backlog_entry(role: str, content: str, decision: str) -> list[str]:
+    if decision not in {"needs-repair", "reject"}:
+        return []
+    envelope, error = parse_envelope(content)
+    if envelope is None:
+        return [
+            f"role {role} decision {decision}",
+            f"role {role} envelope-error {error}",
+        ]
+    evidence = envelope.get("evidence", [])
+    if isinstance(evidence, list):
+        evidence_text = ",".join(str(item) for item in evidence)
+    else:
+        evidence_text = "<invalid>"
+    questions = envelope.get("questions", [])
+    lines = [
+        f"role {role} decision {decision}",
+        f"role {role} evidence {evidence_text or '<missing>'}",
+    ]
+    if isinstance(questions, list):
+        for question in questions:
+            if isinstance(question, str) and question.strip():
+                lines.append(f"role {role} question {question.strip()}")
+    return lines
+
+
+def render_nonaccept_backlog(
+    artifact_root: Path,
+    role_count: int,
+    decision_accept: int,
+    decision_needs_repair: int,
+    decision_reject: int,
+    entries: list[str],
+) -> str:
+    lines = [
+        "AIL-Agent-Policy-Live-Review-Repair-Backlog:",
+        f"artifact-dir {artifact_root}",
+        f"role-count {role_count}",
+        f"reviewer-decision-accept-count {decision_accept}",
+        f"reviewer-decision-needs-repair-count {decision_needs_repair}",
+        f"reviewer-decision-reject-count {decision_reject}",
+        "review-result needs-repair",
+        "promotion-blocked true",
+        "human-approval-required true",
+        "repair-source hosted-reviewer-nonaccept",
+        *entries,
+    ]
+    return "\n".join(lines) + "\n"
+
+
 def role_contracts() -> list[tuple[str, str, str]]:
     contracts: list[tuple[str, str, str]] = []
     for role, contract_path in ROLE_CONTRACTS:
@@ -583,6 +633,7 @@ def review_artifacts(args: argparse.Namespace, contracts: list[tuple[str, str, s
     decision_accept = 0
     decision_needs_repair = 0
     decision_reject = 0
+    nonaccept_entries: list[str] = []
     manifest_text = read_required_text(
         artifact_root / "manifest.v03-agent-policy-live-review.txt", errors
     )
@@ -644,6 +695,7 @@ def review_artifacts(args: argparse.Namespace, contracts: list[tuple[str, str, s
         response = load_json(response_path, errors)
         content = read_required_text(content_path, errors)
         content_kind, decision, content_error = classify_reviewer_content(content, role)
+        nonaccept_entries.extend(nonaccept_backlog_entry(role, content, decision))
         if content.strip():
             content_nonempty += 1
         else:
@@ -720,6 +772,19 @@ def review_artifacts(args: argparse.Namespace, contracts: list[tuple[str, str, s
         f"model-check-model-id {','.join(model_ids) if model_ids else '<missing>'}",
         f"fingerprint-check-count {fingerprint_checks}",
     ]
+    nonaccept_backlog_text = ""
+    nonaccept_backlog_fingerprint = ""
+    if not errors and decision_accept != len(contracts):
+        nonaccept_backlog_text = render_nonaccept_backlog(
+            artifact_root,
+            len(contracts),
+            decision_accept,
+            decision_needs_repair,
+            decision_reject,
+            nonaccept_entries,
+        )
+        nonaccept_backlog_fingerprint = fnv64(nonaccept_backlog_text)
+
     if errors:
         review_lines.append("review-result rejected")
         for error in errors:
@@ -727,6 +792,8 @@ def review_artifacts(args: argparse.Namespace, contracts: list[tuple[str, str, s
     elif decision_accept != len(contracts):
         review_lines.append("review-result needs-repair")
         review_lines.append("error reviewer decisions require repair before promotion")
+        review_lines.append("repair-backlog agent-policy-live-review-repair-backlog.txt")
+        review_lines.append(f"repair-backlog-fingerprint {nonaccept_backlog_fingerprint}")
     else:
         review_lines.append("review-result accepted")
     review_text = "\n".join(review_lines) + "\n"
@@ -736,6 +803,15 @@ def review_artifacts(args: argparse.Namespace, contracts: list[tuple[str, str, s
             artifact_root / "agent-policy-live-review-review.fingerprint.txt",
             fnv64(review_text) + "\n",
         )
+        if nonaccept_backlog_text:
+            write_text(
+                artifact_root / "agent-policy-live-review-repair-backlog.txt",
+                nonaccept_backlog_text,
+            )
+            write_text(
+                artifact_root / "agent-policy-live-review-repair-backlog.fingerprint.txt",
+                nonaccept_backlog_fingerprint + "\n",
+            )
     except OSError as error:
         print(review_text, end="")
         print(f"error failed to write AgentTool live reviewer review report: {error}")

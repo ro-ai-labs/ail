@@ -71,6 +71,8 @@ Return an `AIL-Agent-Policy-Review` report that records:
 - `models.fingerprint.txt`
 - `agent-policy-live-review-review.txt`
 - `agent-policy-live-review-review.fingerprint.txt`
+- `agent-policy-live-review-repair-backlog.txt`
+- `agent-policy-live-review-repair-backlog.fingerprint.txt`
 - `model-check present`
 - `model-check-model-count`
 - `model-check-model-id`
@@ -85,6 +87,8 @@ Return an `AIL-Agent-Policy-Review` report that records:
 - `reviewer-decision-accept-count`
 - `reviewer-decision-needs-repair-count`
 - `reviewer-decision-reject-count`
+- `repair-backlog-fingerprint`
+- `repair-source hosted-reviewer-nonaccept`
 - `source-preserved true`
 - `proposed-accepted true`
 - `policy-handoff-imported true`
@@ -104,7 +108,8 @@ Return an `AIL-Agent-Policy-Review` report that records:
   `scripts/run_v03_agent_policy_live_reviewer_harness.py --review-artifacts`
   reports `review-result accepted`.
 - Do not treat valid hosted reviewer `needs-repair` or `reject` decisions as
-  promotion evidence; they must be recorded as `review-result needs-repair`.
+  promotion evidence; they must be recorded as `review-result needs-repair`
+  and preserved in `agent-policy-live-review-repair-backlog.txt`.
 - Do not rewrite the reviewed source entry during promotion; the source
   AgentTool entry remains part of the learning corpus.
 - Do not treat `accepted-for-import` as an automatic corpus edit.

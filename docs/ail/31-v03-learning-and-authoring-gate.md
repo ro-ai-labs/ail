@@ -285,6 +285,12 @@ The `ail-examples` replay bundle must also write deterministic story artifacts:
   `agent-policy-live-review-review.fingerprint.txt` in a live reviewer artifact
   directory when hosted AgentTool policy reviewer roles are executed against a
   complete deterministic evidence bundle and then reviewed offline.
+- `agent-policy-live-review-repair-backlog.txt` and
+  `agent-policy-live-review-repair-backlog.fingerprint.txt` in the same live
+  reviewer artifact directory when hosted reviewer roles return valid
+  `needs-repair` or `reject` envelopes; this preserves
+  `repair-source hosted-reviewer-nonaccept` evidence without promoting the
+  handoff.
 
 The story artifact is derived from catalog metadata and fingerprinted in the
 same report and manifest as request, response, checked Core, bytecode, VM
@@ -505,8 +511,9 @@ as prose. The current examples reveal these next-version gaps:
   `reviewer-decision-needs-repair-count`, and
   `reviewer-decision-reject-count`. The review is accepted only when every
   recorded request contains the deterministic evidence bundle and all reviewer
-  roles return `decision: accept`; valid non-accept decisions become
-  `review-result needs-repair` evidence. Incident notification support now has
+  roles return `decision: accept`; valid non-accept decisions now write
+  fingerprinted `agent-policy-live-review-repair-backlog.txt` evidence with
+  `repair-source hosted-reviewer-nonaccept`. Incident notification support now has
   package-local accepted/rejected AgentTool conformance fixtures for approval
   rules, permission rules, secret output redaction, and
   `AIL-AGENT-AUDIT-001` provider-call audit evidence,

@@ -173,6 +173,8 @@ models.json
 models.fingerprint.txt
 agent-policy-live-review-review.txt
 agent-policy-live-review-review.fingerprint.txt
+agent-policy-live-review-repair-backlog.txt
+agent-policy-live-review-repair-backlog.fingerprint.txt
 model-check
 model-check-model-count
 model-check-model-id
@@ -187,6 +189,7 @@ token-budget-warning
 reviewer-decision-accept-count
 reviewer-decision-needs-repair-count
 reviewer-decision-reject-count
+repair-backlog-fingerprint
 ```
 
 The live reviewer report is accepted only when every reviewer envelope is
@@ -194,7 +197,9 @@ valid, `model-check present` names the hosted model list, each response `model`
 is present in `models.json`, every recorded request contains the deterministic
 evidence bundle,
 and every role returns `decision: accept`. Valid `needs-repair` or `reject`
-decisions produce `review-result needs-repair` and a nonzero exit so the hosted
-output becomes repair backlog instead of promotion evidence. It still does not
+decisions produce `review-result needs-repair`, a nonzero exit, and
+`agent-policy-live-review-repair-backlog.txt` with
+`repair-source hosted-reviewer-nonaccept` so the hosted output becomes
+fingerprinted repair backlog instead of promotion evidence. It still does not
 edit `./examples`; promotion remains gated by deterministic replay, human
 approval, and corpus-copy import evidence.
