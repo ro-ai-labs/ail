@@ -1444,6 +1444,10 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         agent_manual.contains("examples/agents/skills/ail-prompt-interaction-reviewer/SKILL.md"),
         "{agent_manual}"
     );
+    assert!(
+        agent_manual.contains("examples/agents/skills/ail-system-prompt-harness-runner/SKILL.md"),
+        "{agent_manual}"
+    );
     for required in [
         "repair-promotion-import-demo-report.txt",
         "story-promotion-import-demo-report.txt",
@@ -2398,7 +2402,9 @@ fn examples_agents_include_prompt_review_contract() {
         "codex-ail-prompt-reviewer.md",
         "codex-ail-repair-promotion-reviewer",
         "codex-ail-repair-promotion-reviewer.md",
+        "examples/agents/skills/ail-system-prompt-harness-runner/SKILL.md",
         "Prompt and story harness review report",
+        "system prompt harness runner",
         "Repair promotion review report",
         "scripts/run_v03_prompt_llm_harness.py --review-artifacts",
         "scripts/run_v03_story_llm_harness.py --review-artifacts",
@@ -2662,6 +2668,36 @@ fn codex_skill_documents_prompt_interaction_review_gate() {
     ] {
         assert!(skill.contains(required), "{required}\n{skill}");
     }
+    let runner_skill = fs::read_to_string(format!(
+        "{}/examples/agents/skills/ail-system-prompt-harness-runner/SKILL.md",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .unwrap();
+    for required in [
+        "name: ail-system-prompt-harness-runner",
+        "description: Use when",
+        "http://inteligentia-pro-1:8080/",
+        "python3 scripts/run_v03_prompt_llm_harness.py --dry-run",
+        "python3 scripts/run_v03_prompt_llm_harness.py",
+        "python3 scripts/run_v03_prompt_llm_harness.py --review-artifacts /tmp/ail-v03-prompt-llm",
+        "python3 scripts/run_v03_story_llm_harness.py --review-artifacts /tmp/ail-v03-story-llm",
+        "python3 scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run-checks --include-live",
+        "python3 scripts/run_ail_interactive_manual.py --chapter user-story-mode --run-checks --include-live",
+        "python3 scripts/run_ail_interactive_manual.py --chapter v03-authoring-gate --run-checks --include-live",
+        "model-check present",
+        "model-check-model-id",
+        "prompt-envelope-valid-count",
+        "story-prompt-envelope-valid-count",
+        "agent-trace present",
+        "cargo run -- ail-agent-contracts examples/agents",
+        "cargo run -- ail-examples examples --artifact-dir",
+        "cargo run -- ail-v03-roadmap examples --artifact-dir",
+    ] {
+        assert!(
+            runner_skill.contains(required),
+            "{required}\n{runner_skill}"
+        );
+    }
     let repair_skill = fs::read_to_string(format!(
         "{}/examples/agents/skills/ail-repair-promotion-reviewer/SKILL.md",
         env!("CARGO_MANIFEST_DIR")
@@ -2715,6 +2751,7 @@ fn cli_ail_agent_contracts_validates_prompt_reviewer_contract() {
         "roadmap-artifact v03-roadmap.txt",
         "roadmap-command cargo run -- ail-v03-roadmap examples --artifact-dir",
         "codex-skill examples/agents/skills/ail-prompt-interaction-reviewer/SKILL.md",
+        "codex-skill examples/agents/skills/ail-system-prompt-harness-runner/SKILL.md",
         "codex-skill examples/agents/skills/ail-repair-promotion-reviewer/SKILL.md",
         "codex-skill examples/agents/skills/ail-agent-policy-reviewer/SKILL.md",
         "agent-contracts-result accepted",

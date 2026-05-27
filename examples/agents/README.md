@@ -51,6 +51,13 @@ llama.cpp endpoint, and lists the deterministic commands and evidence required
 before promoting generated prompt or User Story mode artifacts, including the
 story-promotion import demo evidence.
 
+The system prompt harness runner is stored at
+`examples/agents/skills/ail-system-prompt-harness-runner/SKILL.md`. It is the
+execution companion for the reviewer skill: it runs the prompt-pack dry run,
+hosted prompt harness, User Story mode review, interactive manual live checks,
+examples replay, and v0.3 roadmap evidence while preserving model-check
+artifacts for reviewer handoff.
+
 The reusable repair-promotion review skill is stored at
 `examples/agents/skills/ail-repair-promotion-reviewer/SKILL.md`. It mirrors
 `codex-ail-repair-promotion-reviewer.md` and lists the deterministic

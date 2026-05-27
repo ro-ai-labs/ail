@@ -59,14 +59,16 @@ The same gate also validates the repo-local Codex skills:
 
 ```text
 examples/agents/skills/ail-prompt-interaction-reviewer/SKILL.md
+examples/agents/skills/ail-system-prompt-harness-runner/SKILL.md
 examples/agents/skills/ail-repair-promotion-reviewer/SKILL.md
 examples/agents/skills/ail-agent-policy-reviewer/SKILL.md
 ```
 
-Those skills are the reusable procedures for reviewing hosted llama.cpp prompt
-artifacts, User Story mode artifacts, examples replay, `v03-roadmap.txt`, and
-repair promotion and AgentTool policy evidence, including deterministic import
-demos, before generated content is promoted into `./examples`.
+Those skills are the reusable procedures for running and reviewing hosted
+llama.cpp prompt artifacts, User Story mode artifacts, examples replay,
+`v03-roadmap.txt`, and repair promotion and AgentTool policy evidence,
+including deterministic import demos, before generated content is promoted
+into `./examples`.
 
 ## Toolchain Agent Package
 

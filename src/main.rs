@@ -1463,6 +1463,40 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
             ));
         }
     }
+    let runner_skill_path = root.join("skills/ail-system-prompt-harness-runner/SKILL.md");
+    let runner_skill_text = fs::read_to_string(&runner_skill_path).map_err(|error| {
+        format!(
+            "failed to read codex skill {}: {error}",
+            runner_skill_path.display()
+        )
+    })?;
+    for required in [
+        "name: ail-system-prompt-harness-runner",
+        "description: Use when",
+        "http://inteligentia-pro-1:8080/",
+        "python3 scripts/run_v03_prompt_llm_harness.py --dry-run",
+        "python3 scripts/run_v03_prompt_llm_harness.py",
+        "python3 scripts/run_v03_prompt_llm_harness.py --review-artifacts /tmp/ail-v03-prompt-llm",
+        "python3 scripts/run_v03_story_llm_harness.py --review-artifacts /tmp/ail-v03-story-llm",
+        "python3 scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run-checks --include-live",
+        "python3 scripts/run_ail_interactive_manual.py --chapter user-story-mode --run-checks --include-live",
+        "python3 scripts/run_ail_interactive_manual.py --chapter v03-authoring-gate --run-checks --include-live",
+        "model-check present",
+        "model-check-model-id",
+        "prompt-envelope-valid-count",
+        "story-prompt-envelope-valid-count",
+        "agent-trace present",
+        "cargo run -- ail-agent-contracts examples/agents",
+        "cargo run -- ail-examples examples --artifact-dir",
+        "cargo run -- ail-v03-roadmap examples --artifact-dir",
+    ] {
+        if !runner_skill_text.contains(required) {
+            return Err(format!(
+                "codex skill {} missing {required}",
+                runner_skill_path.display()
+            ));
+        }
+    }
     let repair_skill_path = root.join("skills/ail-repair-promotion-reviewer/SKILL.md");
     let repair_skill_text = fs::read_to_string(&repair_skill_path).map_err(|error| {
         format!(
@@ -1565,6 +1599,7 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
     println!("roadmap-artifact v03-roadmap.txt");
     println!("roadmap-command cargo run -- ail-v03-roadmap examples --artifact-dir");
     println!("codex-skill examples/agents/skills/ail-prompt-interaction-reviewer/SKILL.md");
+    println!("codex-skill examples/agents/skills/ail-system-prompt-harness-runner/SKILL.md");
     println!("codex-skill examples/agents/skills/ail-repair-promotion-reviewer/SKILL.md");
     println!("codex-skill examples/agents/skills/ail-agent-policy-reviewer/SKILL.md");
     println!("agent-contracts-result accepted");
