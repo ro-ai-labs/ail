@@ -49,6 +49,7 @@ severity, blocking behavior, and at least one invalid fixture.
 | `AIL-STATE-003` | `ail.application.state.shared-serialized` | shared counter mutation lacks lock or serialization rule | error | yes | add lock guard or serialization guarantee |
 | `AIL-STATE-004` | `ail.application.state.replay-policy` | failure after counter write lacks replay recovery policy | error | yes | add rollback, resume, or idempotent replay guarantee |
 | `AIL-SECRET-READ-001` | `ail.core.secret-read.requires-protection` | secret read lacks explicit protection | error | yes | add permission and secret protection |
+| `AIL-SECRET-ROLE-001` | `ail.application.secret-read.requires-support-role` | secret internal notes read lacks support-role requirement | error | yes | add SupportAgent or SupportManager role requirement |
 | `AIL-SECRET-WRITE-001` | `ail.core.secret-write.requires-redaction` | secret write lacks redaction or protection | error | yes | add redaction policy |
 | `AIL-SECRET-OUTPUT-001` | `ail.tool.output.secret-requires-approval` | tool output exposes a secret without reveal permission | error | yes | remove secret output or add reveal approval |
 | `AIL-PERMISSION-001` | `ail.tool.permission.requires-rule` | permission reference has no rule or scope | error | yes | attach rule and scope |
@@ -305,6 +306,24 @@ severity, blocking behavior, and at least one invalid fixture.
 - blocking behavior: blocks acceptance
 - invalid fixture:
   `examples/support_ticket.ail/examples/rejected/secret-read-without-protection.ail-spec.md`
+
+### AIL-SECRET-ROLE-001
+
+- condition: an Application action reads secret `internal notes` without a
+  support-role requirement
+- affected graph item: `reads` edge from the action to `Ticket.internal notes`
+- message template: `action {name} reads Ticket.internal notes without a
+  support-role requirement`
+- non-engineer explanation: a customer or non-support actor could reach secret
+  internal notes even if the action still promises redaction
+- agent follow-up question: `Which support roles may read these internal notes?`
+- repair suggestion: add a requirement such as
+  `the requester role to be SupportAgent or SupportManager`
+- AIL-Flow highlight: Action Card requirements section
+- severity: error
+- blocking behavior: blocks acceptance
+- invalid fixture:
+  `examples/secret_access.ail/examples/rejected/internal-notes-without-support-role.ail-spec.md`
 
 ### AIL-FFI-OWNERSHIP-001
 

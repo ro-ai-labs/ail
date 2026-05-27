@@ -1,0 +1,29 @@
+# Rejected Internal Notes Without Support Role Fixture
+
+The application Secret Access manages restricted internal notes.
+
+A Requester has:
+
+- id: Text
+- role: State<Customer, SupportAgent, SupportManager>
+
+A Ticket has:
+
+- id: Text
+- internal notes: Secret<List<Text>>
+
+Action: View internal notes.
+
+When a requester views internal notes:
+
+- the system requires the ticket to exist
+- the system reads ticket internal notes
+- if PermissionDenied
+- the system does not reveal internal notes to the customer
+- the system guarantees only support staff can see internal notes
+- the system records a trace event named InternalNotesViewed
+
+Failure PermissionDenied happens when requester role is not SupportAgent or SupportManager:
+
+- the caller sees "Permission denied"
+- the trace records InternalNotesDenied

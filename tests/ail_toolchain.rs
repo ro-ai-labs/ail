@@ -535,6 +535,10 @@ fn example_learning_readmes_cover_repeated_family_gaps() {
         "InternalNotesViewed",
         "InternalNotesDenied",
         "PermissionDenied",
+        "view-internal-notes-minimal.ail-spec.md",
+        "internal-notes-without-support-role.ail-spec.md",
+        "internal-notes-without-redaction.ail-spec.md",
+        "permission-denied-without-trace.ail-spec.md",
         "example-75",
         "example-79",
     ] {
@@ -10688,6 +10692,47 @@ fn ail_core_reports_stateful_runtime_diagnostics() {
 }
 
 #[test]
+fn ail_core_reports_secret_access_runtime_diagnostics() {
+    let package = load_ail_package_dir(fixture("secret_access.ail")).unwrap();
+    for (fixture_name, expected_code, expected_message) in [
+        (
+            "internal-notes-without-support-role.ail-spec.md",
+            "AIL-SECRET-ROLE-001",
+            "action ViewInternalNotes reads Ticket.internal notes without a support-role requirement",
+        ),
+        (
+            "internal-notes-without-redaction.ail-spec.md",
+            "AIL005",
+            "secret field Ticket.internal notes is read without an explicit protection rule",
+        ),
+        (
+            "permission-denied-without-trace.ail-spec.md",
+            "AIL-TRACE-002",
+            "failure PermissionDenied is missing trace coverage",
+        ),
+        (
+            "permission-denied-without-failure-section.ail-spec.md",
+            "AIL003",
+            "action ViewInternalNotes names failure 'PermissionDenied' without a declared Failure section",
+        ),
+    ] {
+        let spec = fs::read_to_string(format!(
+            "{}/examples/rejected/{fixture_name}",
+            fixture("secret_access.ail")
+        ))
+        .unwrap();
+        let document = parse_ail_package_spec_text(&package, &spec).unwrap();
+        let diagnostics = check_ail_core_diagnostics(&elaborate_ail_core(&package, &document));
+        assert!(
+            diagnostics.iter().any(|diagnostic| {
+                diagnostic.code == expected_code && diagnostic.message == expected_message
+            }),
+            "missing {expected_code} for {fixture_name}: {diagnostics:?}"
+        );
+    }
+}
+
+#[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn ail_native_elf_executes_bytecode_action_call_control_flow() {
     use std::os::unix::fs::PermissionsExt;
@@ -20751,6 +20796,18 @@ fn cli_ail_conformance_checks_v02_package_host_boundary_fixtures() {
                 "accepted: ui-minimal.ail-spec.md",
                 "rejected: form-missing-action.ail-spec.md AIL-UI-FORM-001",
                 "rejected: inaccessible-error-text.ail-spec.md AIL-UI-A11Y-001",
+                "ail conformance: ok",
+            ]
+            .as_slice(),
+        ),
+        (
+            "secret_access.ail",
+            [
+                "accepted: view-internal-notes-minimal.ail-spec.md",
+                "rejected: internal-notes-without-support-role.ail-spec.md AIL-SECRET-ROLE-001",
+                "rejected: internal-notes-without-redaction.ail-spec.md AIL005",
+                "rejected: permission-denied-without-trace.ail-spec.md AIL-TRACE-002",
+                "rejected: permission-denied-without-failure-section.ail-spec.md AIL003",
                 "ail conformance: ok",
             ]
             .as_slice(),

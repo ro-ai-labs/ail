@@ -352,6 +352,7 @@ cargo test --test ail_toolchain cli_ail_story_native_target_executes_story_runti
 cargo test --test ail_toolchain script_ail_interactive_manual_v03_authoring_gate_run_checks_succeeds
 cargo test --test ail_toolchain script_ail_interactive_manual_systems_profile_run_checks_succeeds
 cargo run -- ail-conformance examples/support_ticket.ail --artifact-dir /tmp/ail-v03-application-baseline
+cargo run -- ail-conformance examples/secret_access.ail --artifact-dir /tmp/ail-v03-secret-access
 cargo run -- ail-conformance examples/stateful_counter.ail --artifact-dir /tmp/ail-v03-stateful-counter
 cargo run -- ail-examples examples --artifact-dir /tmp/ail-v03-learning-examples --release-evidence
 cargo run -- ail-v03-roadmap examples --artifact-dir /tmp/ail-v03-roadmap --release-evidence
@@ -440,6 +441,11 @@ as prose. The current examples reveal these next-version gaps:
   evidence. The next bar is broader multi-diagnostic promotion coverage and
   reviewer-produced promotion decisions instead of one deterministic import
   script.
+- Secret Access examples now include package-local accepted/rejected
+  conformance fixtures for support-role guarded secret reads, redaction,
+  denied-access traces, and declared `PermissionDenied` failures. The next bar
+  is threat-model annotations and audit-trail artifacts that connect secret
+  diagnostics to reviewer-facing security stories.
 - Incident-response examples show that complex systems need richer story
   graphs across imported modules, UI surfaces, workflow transitions, target
   contracts, and regenerated story views.

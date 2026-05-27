@@ -10,6 +10,10 @@ The package is useful when reviewing whether AIL can preserve security intent
 through checked specification, checked Core, bytecode, target report, and
 regenerated user stories without leaking the secret value.
 
+The top-level spec is the clean path. The package-local conformance fixtures
+teach the v0.3 failure paths for support-role requirements, redaction, denied
+access traces, and declared failure handling.
+
 ## Concepts Taught
 
 - `Secret<List<Text>>` fields for internal notes.
@@ -25,6 +29,16 @@ regenerated user stories without leaking the secret value.
 - `ail-package.md`: Application profile metadata and secret/failure feature
   declarations.
 - `spec.ail-spec.md`: the Secret Access specification.
+- `examples/accepted/view-internal-notes-minimal.ail-spec.md`: minimal accepted
+  fixture for support-role gated secret reads and denied-access tracing.
+- `examples/rejected/internal-notes-without-support-role.ail-spec.md`: rejected
+  fixture for `AIL-SECRET-ROLE-001`.
+- `examples/rejected/internal-notes-without-redaction.ail-spec.md`: rejected
+  fixture for `AIL005`.
+- `examples/rejected/permission-denied-without-trace.ail-spec.md`: rejected
+  fixture for `AIL-TRACE-002`.
+- `examples/rejected/permission-denied-without-failure-section.ail-spec.md`:
+  rejected fixture for `AIL003`.
 - `../examples.md`: entries `example-75` through `example-79` exercise
   security-permissions over core-to-spec, core-to-summary, flow-patch,
   trace-debug, and interop prompt surfaces.
@@ -56,10 +70,12 @@ cargo run -- ail-conformance examples/secret_access.ail --artifact-dir /tmp/ail-
 
 ## Rejected Fixtures
 
-This package does not yet include package-local rejected fixtures. v0.3 should
-add rejected specs for revealing secret notes to customers, dropping
-`InternalNotesDenied`, allowing access without a support role, omitting
-`PermissionDenied`, and removing the redaction guarantee.
+The rejected fixtures are intentionally narrow:
+
+- `internal-notes-without-support-role.ail-spec.md` -> `AIL-SECRET-ROLE-001`
+- `internal-notes-without-redaction.ail-spec.md` -> `AIL005`
+- `permission-denied-without-trace.ail-spec.md` -> `AIL-TRACE-002`
+- `permission-denied-without-failure-section.ail-spec.md` -> `AIL003`
 
 ## Next Example To Read
 
@@ -70,7 +86,8 @@ history.
 
 ## v0.3 Learning Signal
 
-Secret Access now has package-local guidance and story anchors for secret data,
-permission checks, success traces, and denied-access traces. v0.3 should add
-threat-model annotations, audit-trail artifacts, and rejected fixtures that
-prove secret leakage is caught before compile or runtime replay.
+Secret Access now has package-local accepted/rejected fixtures that prove secret
+read permission, redaction, failure declaration, and denied-access trace gaps
+are caught before compile or runtime replay. The next v0.3 bar is threat-model
+annotations and audit-trail artifacts that connect these diagnostics to
+reviewer-facing security stories.

@@ -4092,6 +4092,7 @@ pub fn check_ail_core_diagnostics(core: &AilCore) -> Vec<AilDiagnostic> {
     diagnostics.extend(check_action_failure_declarations(core));
     diagnostics.extend(check_secret_write_protection(core));
     diagnostics.extend(check_secret_read_protection(core));
+    diagnostics.extend(check_secret_internal_notes_role_requirements(core));
     diagnostics.extend(check_application_assignment_role_requirements(core));
     diagnostics.extend(check_application_overdue_time_requirements(core));
     diagnostics.extend(check_application_status_public_update(core));
@@ -14682,6 +14683,78 @@ fn check_secret_read_protection(core: &AilCore) -> Vec<AilDiagnostic> {
         "AIL005",
         "read without an explicit protection rule",
     )
+}
+
+fn check_secret_internal_notes_role_requirements(core: &AilCore) -> Vec<AilDiagnostic> {
+    if core.package.profile != "Application" {
+        return Vec::new();
+    }
+    let node_by_id = graph_node_by_id(core);
+    let mut diagnostics = Vec::new();
+    for edge in core.graph.edges.iter().filter(|edge| edge.kind == "reads") {
+        let Some(action) = node_by_id.get(&edge.source) else {
+            continue;
+        };
+        if action.kind != "Action" {
+            continue;
+        }
+        let Some(target) = node_by_id.get(&edge.target) else {
+            continue;
+        };
+        if target.kind != "Field"
+            || !target
+                .name
+                .to_ascii_lowercase()
+                .ends_with(".internal notes")
+            || target
+                .attributes
+                .get("secret")
+                .is_none_or(|value| value != "true")
+        {
+            continue;
+        }
+        if action_has_secret_support_role_requirement(core, &node_by_id, action) {
+            continue;
+        }
+        diagnostics.push(
+            AilDiagnostic::error(
+                "AIL-SECRET-ROLE-001",
+                format!(
+                    "action {} reads {} without a support-role requirement",
+                    action.name, target.name
+                ),
+            )
+            .with_source_provenance(
+                edge.attributes
+                    .get("provenance")
+                    .cloned()
+                    .or_else(|| node_provenance(core, &action.id)),
+            )
+            .with_affected_graph_item(format!("edge:{}", edge.id))
+            .with_repair_suggestion(format!(
+                "Add a requirement such as 'the requester role to be SupportAgent or SupportManager' to action {}.",
+                action.name
+            )),
+        );
+    }
+    diagnostics
+}
+
+fn action_has_secret_support_role_requirement(
+    core: &AilCore,
+    node_by_id: &BTreeMap<String, Node>,
+    action: &Node,
+) -> bool {
+    outgoing_nodes(core, node_by_id, action, "requires")
+        .into_iter()
+        .filter(|node| node.kind == "Rule")
+        .any(|rule| {
+            let compact = compact_semantic_text(&rule.name);
+            compact.contains("role")
+                && (compact.contains("supportagent")
+                    || compact.contains("supportmanager")
+                    || compact.contains("supportstaff"))
+        })
 }
 
 fn check_application_assignment_role_requirements(core: &AilCore) -> Vec<AilDiagnostic> {
