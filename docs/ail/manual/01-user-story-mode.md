@@ -281,7 +281,11 @@ That review writes:
 
 The review also rejects the bundle if `agent-trace.fingerprint.txt` is
 missing or does not match `agent-trace.txt`; this keeps promotion import from
-accepting a trace that cannot be independently checked.
+accepting a trace that cannot be independently checked. It also binds the
+agent trace back to the reviewed story by requiring `agent-story-id-match true`,
+`agent-semantic-anchor-match-count <n>`, and
+`agent-semantic-anchor-missing-count 0`; a copied trace from another story is
+rejected even if the manifest and fingerprints were recomputed.
 It validates `model-check.json` and records `model-check-model-id` so promotion
 evidence can prove which live model discovery response was reviewed.
 It repeats `default-max-tokens`, `max-tokens`, `token-budget-default`, and any

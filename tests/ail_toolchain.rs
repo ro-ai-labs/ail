@@ -1870,6 +1870,9 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "python3 scripts/run_v03_story_promotion_capture_plan.py --story-artifacts /tmp/ail-v03-story-llm",
         "python3 scripts/run_v03_story_promotion_import_demo.py",
         "evidence story-llm-harness-report.txt",
+        "evidence agent-story-id-match",
+        "evidence agent-semantic-anchor-match-count",
+        "evidence agent-semantic-anchor-missing-count",
         "evidence story-promotion-capture-plan.json",
         "evidence story-promotion-capture-plan.fingerprint.txt",
         "evidence story-promotion-import-demo-report.txt",
@@ -2340,6 +2343,9 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "evidence model-check.json",
         "evidence model-check.fingerprint.txt",
         "evidence model-check-model-id",
+        "evidence agent-story-id-match",
+        "evidence agent-semantic-anchor-match-count",
+        "evidence agent-semantic-anchor-missing-count",
         "evidence story-llm-transcript-check-count",
         "evidence story-prompt-envelope-valid-count",
         "evidence story-prompt-envelope-invalid-count",
@@ -4342,6 +4348,18 @@ fn script_v03_story_llm_harness_review_writes_fingerprinted_report() {
         review_stdout.contains("story-prompt-envelope-invalid-count 0"),
         "{review_stdout}"
     );
+    assert!(
+        review_stdout.contains("agent-story-id-match true"),
+        "{review_stdout}"
+    );
+    assert!(
+        review_stdout.contains("agent-semantic-anchor-match-count 4"),
+        "{review_stdout}"
+    );
+    assert!(
+        review_stdout.contains("agent-semantic-anchor-missing-count 0"),
+        "{review_stdout}"
+    );
     for required in [
         "default-max-tokens 4096",
         "max-tokens 64",
@@ -4373,6 +4391,181 @@ fn script_v03_story_llm_harness_review_writes_fingerprinted_report() {
     assert_eq!(
         review_report_fingerprint.trim(),
         fnv64_fingerprint(&review_report)
+    );
+
+    fs::remove_file(story_file).unwrap();
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
+fn script_v03_story_llm_harness_rejects_mismatched_agent_story_binding() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let script = format!(
+        "{}/scripts/run_v03_story_llm_harness.py",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let package = fixture("support_ticket.ail");
+    let agent_package = fixture("ail_toolchain_agent.ail");
+    let unique_suffix = format!(
+        "{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
+    let story_file =
+        std::env::temp_dir().join(format!("ail-story-harness-binding-{unique_suffix}.md"));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-story-harness-binding-artifacts-{unique_suffix}"
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::write(
+        &story_file,
+        concat!(
+            "# Support Ticket Harness Binding Story\n\n",
+            "user-story-id: support-ticket-harness-binding-story\n",
+            "user-story: As a reviewer I can prove the agent trace belongs to the reviewed story artifacts.\n",
+            "acceptance-criteria: checked requirements exist; checked spec exists; bytecode exists; agent trace story binding is verified\n",
+            "semantic-anchors: Support Tickets; Close ticket; TicketClosed; story harness binding\n"
+        ),
+    )
+    .unwrap();
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let requirements = concat!(
+        "AIL-Requirements:\n",
+        "- The application manages support tickets.\n",
+        "- Ticket fields include id, title, status, and secret internal notes.\n",
+        "- The CloseTicket action requires ticket id input and ticket status not to be Closed.\n",
+        "- Failure NotFound happens when ticket id is missing and records TicketNotFound.\n",
+        "- The action guarantees closed tickets do not appear in the open queue.\n",
+        "- The action records trace event TicketClosed.\n"
+    );
+    let requirements_envelope = format!(
+        r#"{{"artifact_kind":"AIL-Requirements","artifact_text":{},"questions":[],"checker_handoff":{{"must_check":true,"expected_profile":"Application","expected_features":[]}}}}"#,
+        json_string(requirements)
+    );
+    let requirements_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(&requirements_envelope)
+    );
+    let response_spec = fs::read_to_string(format!("{package}/spec.ail-spec.md")).unwrap();
+    let spec_envelope = format!(
+        r#"{{"artifact_kind":"AIL-Spec Canonical","artifact_text":{},"questions":[],"checker_handoff":{{"must_check":true,"expected_profile":"Application","expected_features":[]}}}}"#,
+        json_string(&response_spec)
+    );
+    let spec_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(&spec_envelope)
+    );
+    let server = serve_chat_responses(listener, vec![requirements_body, spec_body]);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-story",
+            &package,
+            "--story-file",
+            story_file.to_str().unwrap(),
+            "--agent",
+            &agent_package,
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+            "--llm-endpoint",
+            &format!("http://127.0.0.1:{}/v1/chat/completions", addr.port()),
+            "--max-tokens",
+            "64",
+        ])
+        .output()
+        .unwrap();
+
+    assert_eq!(server.join().unwrap().len(), 2);
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let model_check_text = "{\"data\":[{\"id\":\"test-story-rust-model\",\"object\":\"model\"}],\"object\":\"list\"}\n";
+    fs::write(artifact_dir.join("model-check.json"), model_check_text).unwrap();
+    fs::write(
+        artifact_dir.join("model-check.fingerprint.txt"),
+        format!("{}\n", fnv64_fingerprint(model_check_text)),
+    )
+    .unwrap();
+
+    let agent_trace_path = artifact_dir.join("agent-trace.txt");
+    let mut agent_trace = fs::read_to_string(&agent_trace_path).unwrap();
+    agent_trace = agent_trace
+        .replace(
+            "buildrequest.story-id=support-ticket-harness-binding-story",
+            "buildrequest.story-id=wrong-story",
+        )
+        .replace(
+            "buildrequest.semantic-anchors=Support Tickets; Close ticket; TicketClosed; story harness binding",
+            "buildrequest.semantic-anchors=Wrong; Anchors; Here",
+        );
+    fs::write(&agent_trace_path, &agent_trace).unwrap();
+    fs::write(
+        artifact_dir.join("agent-trace.fingerprint.txt"),
+        format!("{}\n", fnv64_fingerprint(&agent_trace)),
+    )
+    .unwrap();
+
+    let manifest_path = artifact_dir.join("manifest.ail-story.txt");
+    let mut manifest_lines = Vec::new();
+    for line in fs::read_to_string(&manifest_path).unwrap().lines() {
+        if line.starts_with("agent-trace agent-trace.txt ") {
+            manifest_lines.push(format!(
+                "agent-trace agent-trace.txt {}",
+                fnv64_fingerprint(&agent_trace)
+            ));
+        } else {
+            manifest_lines.push(line.to_string());
+        }
+    }
+    manifest_lines.push(format!(
+        "model-check model-check.json {}",
+        fnv64_fingerprint(model_check_text)
+    ));
+    let manifest_text = format!("{}\n", manifest_lines.join("\n"));
+    fs::write(&manifest_path, &manifest_text).unwrap();
+    fs::write(
+        artifact_dir.join("manifest.ail-story.fingerprint.txt"),
+        format!("{}\n", fnv64_fingerprint(&manifest_text)),
+    )
+    .unwrap();
+
+    let review = Command::new("python3")
+        .args([
+            &script,
+            "--review-artifacts",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !review.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&review.stdout),
+        String::from_utf8_lossy(&review.stderr)
+    );
+    let review_stdout = String::from_utf8_lossy(&review.stdout);
+    assert!(
+        review_stdout.contains("review-result rejected"),
+        "{review_stdout}"
+    );
+    assert!(
+        review_stdout.contains("agent trace story-id mismatch"),
+        "{review_stdout}"
+    );
+    assert!(
+        review_stdout.contains("agent trace missing semantic anchor Support Tickets"),
+        "{review_stdout}"
+    );
+    assert!(
+        review_stdout.contains("agent-semantic-anchor-missing-count 4"),
+        "{review_stdout}"
     );
 
     fs::remove_file(story_file).unwrap();

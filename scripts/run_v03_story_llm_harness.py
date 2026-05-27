@@ -119,6 +119,28 @@ def parse_story_report(report_text: str) -> dict[str, str]:
     return values
 
 
+def story_report_semantic_anchors(report_text: str) -> list[str]:
+    anchors: list[str] = []
+    for line in report_text.splitlines():
+        if not line.startswith("semantic-anchor:"):
+            continue
+        anchor = line.split(":", 1)[1].strip()
+        if anchor:
+            anchors.append(anchor)
+    return anchors
+
+
+def agent_trace_value(agent_trace: str, prefix: str) -> str:
+    for line in agent_trace.splitlines():
+        if line.startswith(prefix):
+            return line[len(prefix) :].strip()
+    return ""
+
+
+def split_semantic_anchors(value: str) -> list[str]:
+    return [part.strip() for part in value.split(";") if part.strip()]
+
+
 def prompt_envelope_json(content: str) -> tuple[dict[str, object] | None, str]:
     candidate = content.strip()
     if not candidate:
@@ -407,6 +429,7 @@ def review_artifacts(artifact_dir: str) -> int:
 
     report_values = parse_story_report(report_text)
     story_id = report_values.get("user-story-id", "")
+    story_anchors = story_report_semantic_anchors(report_text)
     anchor_count = report_values.get("semantic-anchor-count", "")
     default_max_tokens = report_values.get("default-max-tokens", "")
     max_tokens = report_values.get("max-tokens", "")
@@ -438,6 +461,21 @@ def review_artifacts(artifact_dir: str) -> int:
             errors.append(f"normalized story missing {required}")
     if "entrypoint=ail-story" not in agent_trace:
         errors.append("agent trace missing entrypoint=ail-story")
+    agent_story_id = agent_trace_value(agent_trace, "buildrequest.story-id=")
+    agent_story_id_match = bool(story_id and agent_story_id == story_id)
+    if story_id and agent_story_id != story_id:
+        errors.append(
+            "agent trace story-id mismatch: "
+            f"expected {story_id} got {agent_story_id or '<missing>'}"
+        )
+    agent_anchor_text = agent_trace_value(agent_trace, "buildrequest.semantic-anchors=")
+    agent_anchors = split_semantic_anchors(agent_anchor_text)
+    missing_agent_anchors = [
+        anchor for anchor in story_anchors if anchor not in agent_anchors
+    ]
+    for anchor in missing_agent_anchors:
+        errors.append(f"agent trace missing semantic anchor {anchor}")
+    agent_anchor_match_count = len(story_anchors) - len(missing_agent_anchors)
     for action in [
         "action CaptureRequirements started",
         "action PrepareSpecDraft started",
@@ -470,6 +508,9 @@ def review_artifacts(artifact_dir: str) -> int:
         f"story-prompt-envelope-artifact-count {transcript_artifact_count}",
         f"story-prompt-envelope-questions-count {transcript_questions_count}",
         f"story-prompt-envelope-invalid-count {transcript_invalid_count}",
+        f"agent-story-id-match {str(agent_story_id_match).lower()}",
+        f"agent-semantic-anchor-match-count {agent_anchor_match_count}",
+        f"agent-semantic-anchor-missing-count {len(missing_agent_anchors)}",
         f"agent-trace {'present' if agent_trace else 'missing'}",
         f"model-check {'present' if model_check_ok else 'missing'}",
         f"model-check-model-count {len(model_ids)}",
