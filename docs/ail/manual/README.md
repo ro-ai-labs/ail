@@ -134,6 +134,12 @@ Run deterministic Systems profile checks:
 python3 scripts/run_ail_interactive_manual.py --chapter systems-profile --run-checks
 ```
 
+Run deterministic Application baseline checks:
+
+```sh
+python3 scripts/run_ail_interactive_manual.py --chapter application-baseline --run-checks
+```
+
 Run deterministic repair-promotion checks:
 
 ```sh
@@ -198,6 +204,10 @@ python3 scripts/run_ail_interactive_manual.py --chapter agent-policy-import --ru
   trace evidence for the `network_driver.ail` low-level Systems profile package,
   including scheduler and interrupt accepted/rejected fixtures. Prose:
   `11-systems-profile.md`.
+- `application-baseline`: deterministic conformance evidence for the
+  `support_ticket.ail` high-level Application profile package, including
+  package-local accepted and rejected fixtures. Prose:
+  `12-application-baseline.md`.
 - `repair-promotion`: deterministic review of rejected-example repair evidence
   before proposing a repaired artifact for accepted-corpus promotion. Prose:
   `07-repair-promotion.md`.
@@ -213,6 +223,7 @@ python3 scripts/run_ail_interactive_manual.py --chapter agent-policy-import --ru
 - `v03-authoring-gate`: the deterministic v0.3 audit that runs User Story
   mode, examples replay, roadmap printing, prompt interaction,
   agent-entrypoint, bootstrap self-hosting, Systems profile,
+  Application baseline,
   repair-promotion, UI patch import, and AgentTool policy import checks from
   one manual chapter.
   Prose: `06-v03-authoring-gate.md`.

@@ -95,17 +95,44 @@ with `ticket.id=T-1` and `ticket.status=Open`. The observed runtime evidence is
 
 ## Rejected Fixtures
 
-The current package-level conformance path relies on corpus-level rejected
-examples rather than local rejected specs. The important rejected paths are:
+Package-level conformance now includes local rejected specs under
+`examples/support_ticket.ail/examples/rejected/`. These are the first
+diagnostic fixtures to inspect when changing Application checker behavior:
+
+- `action-without-trace.ail-spec.md`: rejects a ticket action without required
+  trace coverage (`AIL-TRACE-001`).
+- `failure-without-handling.ail-spec.md`: rejects an action that declares a
+  failure but has no handling rule (`AIL-FAILURE-001`).
+- `failure-without-trace.ail-spec.md`: rejects a failure path that has no
+  trace (`AIL-TRACE-002`).
+- `missing-failure-handler.ail-spec.md`: rejects a missing failure handler
+  reference (`AIL003`).
+- `missing-reference.ail-spec.md`: rejects unknown semantic references
+  (`AIL001`).
+- `secret-leak.ail-spec.md`: rejects a customer-visible view that exposes the
+  secret internal note (`AIL002`).
+- `secret-read-without-protection.ail-spec.md`: rejects an unprotected secret
+  read (`AIL005`).
+- `unknown-field-type.ail-spec.md`: rejects an unsupported field type
+  (`AIL-TYPE-001`).
+- `unknown-field.ail-spec.md`: rejects references to unknown ticket fields
+  (`AIL004`).
+- `unknown-requirement-field.ail-spec.md`: rejects requirement checks over
+  fields that do not exist (`AIL007`).
+
+The focused conformance command writes `conformance-report.txt`,
+`conformance-report.fingerprint.txt`, `manifest.ail-conformance.txt`, and
+`manifest.fingerprint.txt` in the artifact directory. It must accept
+`examples/accepted/close-ticket-minimal.ail-spec.md`, reject each local
+negative fixture with the expected diagnostic, and end with
+`ail conformance: ok`.
+
+The corpus-level rejected paths remain useful for broader prompt and repair
+work:
 
 - `example-99`: semantic drift over the support-ticket family.
 - `example-101`: prompt envelope profile mismatch before spec acceptance.
 - `example-102`: missing trace coverage for `CloseTicket`.
-
-v0.3 should add package-local rejected fixtures for customer access to secret
-internal notes, scheduler mutation without overdue-time requirements, closing
-an already closed ticket, assigning to a non-support user, and dropping
-customer-visible public updates.
 
 ## Next Example To Read
 
@@ -121,6 +148,6 @@ accepted and diagnostic story files now carry semantic anchors for the core
 ticket action, secret internal notes, prompt surfaces, target reports, and
 diagnostic failure taxonomies. v0.3 now has deterministic manual evidence that
 starts from a story and reaches native runtime trace output. The next bar is a
-guided application tutorial with package-local rejected fixtures, explicit
-story amendment examples, and a comparison between prompt-surface replay,
-package-import replay, and native binary evidence.
+guided application tutorial that compares package-local conformance, explicit
+story amendment examples, prompt-surface replay, package-import replay, and
+native binary evidence.

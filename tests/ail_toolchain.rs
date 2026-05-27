@@ -1049,6 +1049,7 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         "manual/09-agent-policy-import.md",
         "manual/10-bootstrap-self-hosting.md",
         "manual/11-systems-profile.md",
+        "manual/12-application-baseline.md",
     ] {
         assert!(
             docs_index.contains(manual_chapter),
@@ -1082,6 +1083,7 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         "agent-policy-import",
         "bootstrap-self-hosting",
         "systems-profile",
+        "application-baseline",
         "v03-authoring-gate",
         "02-examples-release.md",
         "03-prompt-interaction.md",
@@ -1093,6 +1095,7 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         "09-agent-policy-import.md",
         "10-bootstrap-self-hosting.md",
         "11-systems-profile.md",
+        "12-application-baseline.md",
     ] {
         assert!(
             manual_index.contains(required),
@@ -1548,6 +1551,37 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         );
     }
 
+    let application_baseline_dry_run = Command::new("python3")
+        .args([&script, "--chapter", "application-baseline", "--dry-run"])
+        .output()
+        .unwrap();
+    assert!(
+        application_baseline_dry_run.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&application_baseline_dry_run.stdout),
+        String::from_utf8_lossy(&application_baseline_dry_run.stderr)
+    );
+    let application_baseline_stdout = String::from_utf8_lossy(&application_baseline_dry_run.stdout);
+    for required in [
+        "id application-baseline",
+        "doc docs/ail/manual/12-application-baseline.md",
+        "cargo run -- ail-conformance examples/support_ticket.ail",
+        "--artifact-dir /tmp/ail-manual-application-baseline-conformance",
+        "evidence conformance-report.txt",
+        "evidence manifest.ail-conformance.txt",
+        "evidence accepted: close-ticket-minimal.ail-spec.md",
+        "evidence rejected: secret-leak.ail-spec.md AIL002",
+        "evidence rejected: action-without-trace.ail-spec.md AIL-TRACE-001",
+        "evidence rejected: failure-without-trace.ail-spec.md AIL-TRACE-002",
+        "evidence rejected: unknown-field-type.ail-spec.md AIL-TYPE-001",
+        "evidence ail conformance: ok",
+    ] {
+        assert!(
+            application_baseline_stdout.contains(required),
+            "{required}\n{application_baseline_stdout}"
+        );
+    }
+
     let repair_promotion_dry_run = Command::new("python3")
         .args([&script, "--chapter", "repair-promotion", "--dry-run"])
         .output()
@@ -1675,6 +1709,7 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "python3 scripts/run_ail_interactive_manual.py --chapter agent-entrypoint --run-checks",
         "python3 scripts/run_ail_interactive_manual.py --chapter bootstrap-self-hosting --run-checks",
         "python3 scripts/run_ail_interactive_manual.py --chapter systems-profile --run-checks",
+        "python3 scripts/run_ail_interactive_manual.py --chapter application-baseline --run-checks",
         "python3 scripts/run_ail_interactive_manual.py --chapter repair-promotion --run-checks",
         "python3 scripts/run_ail_interactive_manual.py --chapter ui-patch-import --run-checks",
         "python3 scripts/run_ail_interactive_manual.py --chapter agent-policy-import --run-checks",
@@ -1694,6 +1729,10 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "evidence machine-bytecode-contract linux-x86_64-elf",
         "evidence system effect read network device",
         "evidence trace PacketReceived",
+        "evidence accepted: close-ticket-minimal.ail-spec.md",
+        "evidence rejected: secret-leak.ail-spec.md AIL002",
+        "evidence rejected: action-without-trace.ail-spec.md AIL-TRACE-001",
+        "evidence rejected: unknown-field-type.ail-spec.md AIL-TYPE-001",
         "evidence repair-promotion-review.txt",
         "evidence repair-promotion-capture-plan.json",
         "evidence repair-promotion-import-demo-report.txt",
@@ -1797,6 +1836,7 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "chapter agent-entrypoint",
         "chapter v03-roadmap",
         "chapter systems-profile",
+        "chapter application-baseline",
         "chapter v03-authoring-gate",
     ] {
         assert!(all_stdout.contains(required), "{required}\n{all_stdout}");
@@ -1877,6 +1917,7 @@ fn script_ail_interactive_manual_v03_authoring_gate_run_checks_succeeds() {
         "running run-agent-entrypoint-checks",
         "running run-bootstrap-self-hosting-checks",
         "running run-systems-profile-checks",
+        "running run-application-baseline-checks",
         "running run-ui-patch-import-checks",
         "running run-agent-policy-import-checks",
         "ail-bootstrap wrote linux-x86_64-elf bootstrap bundle",
@@ -1884,6 +1925,9 @@ fn script_ail_interactive_manual_v03_authoring_gate_run_checks_succeeds() {
         "ail conformance: package network-driver",
         "accepted: scheduler-task-minimal.ail-spec.md",
         "accepted: interrupt-context-minimal.ail-spec.md",
+        "accepted: close-ticket-minimal.ail-spec.md",
+        "rejected: secret-leak.ail-spec.md AIL002",
+        "rejected: action-without-trace.ail-spec.md AIL-TRACE-001",
         "ail-compile wrote linux-x86_64-elf executable",
         "native-bytecode-report.txt",
         "running check-ui-patch-runtime-state",

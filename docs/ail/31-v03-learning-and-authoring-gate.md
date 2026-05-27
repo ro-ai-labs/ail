@@ -317,6 +317,7 @@ cargo test cli_ail_e2e_corpus_replays_checked_live_release_corpus
 cargo test --test ail_toolchain cli_ail_story_native_target_executes_story_runtime_trace
 cargo test --test ail_toolchain script_ail_interactive_manual_v03_authoring_gate_run_checks_succeeds
 cargo test --test ail_toolchain script_ail_interactive_manual_systems_profile_run_checks_succeeds
+cargo run -- ail-conformance examples/support_ticket.ail --artifact-dir /tmp/ail-v03-application-baseline
 cargo run -- ail-examples examples --artifact-dir /tmp/ail-v03-learning-examples --release-evidence
 cargo run -- ail-v03-roadmap examples --artifact-dir /tmp/ail-v03-roadmap --release-evidence
 test -f /tmp/ail-v03-learning-examples/v03-roadmap.txt
@@ -341,8 +342,12 @@ as prose. The current examples reveal these next-version gaps:
   also write fingerprinted `story-amendment-comparison.txt` evidence that
   binds source story, normalized story, generated requirements, accepted spec,
   checked Core, and bytecode fingerprints to semantic-anchor preservation
-  counts. The next bar is package-local rejected fixtures and broader
-  story-amendment comparisons across the application family.
+  counts. The support-ticket package now has package-local accepted/rejected
+  conformance fixtures surfaced by the `application-baseline` manual chapter,
+  including secret leaks, missing traces, invalid fields, and failure-handling
+  diagnostics. The next bar is broader story-amendment comparisons across the
+  application family and more application-specific rejected fixtures for
+  scheduler, assignment, and public-update semantics.
 - UI examples now emit deterministic visual review, accessibility review,
   workflow authoring artifacts, deterministic UI patch plans, a human-approved
   UI patch import demo, and a rejected accessibility diagnostic fixture that

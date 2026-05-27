@@ -4,9 +4,10 @@
 
 The v0.3 authoring gate chapter runs the deterministic audit that ties the
 manual together. It proves the current story-first workflow, examples replay,
-roadmap printing, prompt interaction checks, agent entrypoint checks, and
-bootstrap self-hosting, Systems profile, repair promotion, UI patch import, and
-AgentTool policy import checks can be executed from one command.
+roadmap printing, prompt interaction checks, agent entrypoint checks, bootstrap
+self-hosting, Systems profile, Application baseline, repair promotion, UI
+patch import, and AgentTool policy import checks can be executed from one
+command.
 
 Run the gate:
 
@@ -26,6 +27,7 @@ run-prompt-interaction-checks
 run-agent-entrypoint-checks
 run-bootstrap-self-hosting-checks
 run-systems-profile-checks
+run-application-baseline-checks
 run-repair-promotion-checks
 run-ui-patch-import-checks
 run-agent-policy-import-checks
@@ -41,6 +43,7 @@ python3 scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run
 python3 scripts/run_ail_interactive_manual.py --chapter agent-entrypoint --run-checks
 python3 scripts/run_ail_interactive_manual.py --chapter bootstrap-self-hosting --run-checks
 python3 scripts/run_ail_interactive_manual.py --chapter systems-profile --run-checks
+python3 scripts/run_ail_interactive_manual.py --chapter application-baseline --run-checks
 python3 scripts/run_ail_interactive_manual.py --chapter repair-promotion --run-checks
 python3 scripts/run_ail_interactive_manual.py --chapter ui-patch-import --run-checks
 python3 scripts/run_ail_interactive_manual.py --chapter agent-policy-import --run-checks
@@ -126,6 +129,11 @@ accepted: scheduler-task-minimal.ail-spec.md
 accepted: interrupt-context-minimal.ail-spec.md
 rejected: interrupt-context-blocking-effect.ail-spec.md AIL033
 rejected: scheduler-task-unknown-context.ail-spec.md AIL035
+accepted: close-ticket-minimal.ail-spec.md
+rejected: secret-leak.ail-spec.md AIL002
+rejected: action-without-trace.ail-spec.md AIL-TRACE-001
+rejected: failure-without-trace.ail-spec.md AIL-TRACE-002
+rejected: unknown-field-type.ail-spec.md AIL-TYPE-001
 checked.ail-core.txt
 artifact.ailbc.json
 native-bytecode-report.txt

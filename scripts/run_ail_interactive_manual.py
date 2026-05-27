@@ -519,6 +519,39 @@ BASE_CHAPTERS: tuple[ManualChapter, ...] = (
         ),
     ),
     ManualChapter(
+        chapter_id="application-baseline",
+        title="Application Baseline",
+        doc="docs/ail/manual/12-application-baseline.md",
+        purpose=(
+            "Check the high-level Support Ticket Application baseline with "
+            "package-local accepted and rejected conformance fixtures."
+        ),
+        commands=(
+            ManualCommand(
+                label="check-support-ticket-conformance",
+                command=(
+                    "cargo",
+                    "run",
+                    "--",
+                    "ail-conformance",
+                    "examples/support_ticket.ail",
+                    "--artifact-dir",
+                    "/tmp/ail-manual-application-baseline-conformance",
+                ),
+                evidence=(
+                    "conformance-report.txt",
+                    "manifest.ail-conformance.txt",
+                    "accepted: close-ticket-minimal.ail-spec.md",
+                    "rejected: secret-leak.ail-spec.md AIL002",
+                    "rejected: action-without-trace.ail-spec.md AIL-TRACE-001",
+                    "rejected: failure-without-trace.ail-spec.md AIL-TRACE-002",
+                    "rejected: unknown-field-type.ail-spec.md AIL-TYPE-001",
+                    "ail conformance: ok",
+                ),
+            ),
+        ),
+    ),
+    ManualChapter(
         chapter_id="repair-promotion",
         title="Repair Promotion Review",
         doc="docs/ail/manual/07-repair-promotion.md",
@@ -906,7 +939,8 @@ V03_AUTHORING_GATE = ManualChapter(
     doc="docs/ail/manual/06-v03-authoring-gate.md",
     purpose=(
         "Run the deterministic story, examples, roadmap, prompt, agent, "
-        "self-hosting, Systems, and promotion checks as one v0.3 audit."
+        "self-hosting, Systems, Application baseline, and promotion checks "
+        "as one v0.3 audit."
     ),
     commands=(
         ManualCommand(
@@ -1036,6 +1070,25 @@ V03_AUTHORING_GATE = ManualChapter(
                 "machine-bytecode-contract linux-x86_64-elf",
                 "system effect read network device",
                 "trace PacketReceived",
+            ),
+        ),
+        ManualCommand(
+            label="run-application-baseline-checks",
+            command=(
+                "python3",
+                "scripts/run_ail_interactive_manual.py",
+                "--chapter",
+                "application-baseline",
+                "--run-checks",
+            ),
+            evidence=(
+                "conformance-report.txt",
+                "manifest.ail-conformance.txt",
+                "accepted: close-ticket-minimal.ail-spec.md",
+                "rejected: secret-leak.ail-spec.md AIL002",
+                "rejected: action-without-trace.ail-spec.md AIL-TRACE-001",
+                "rejected: unknown-field-type.ail-spec.md AIL-TYPE-001",
+                "ail conformance: ok",
             ),
         ),
         ManualCommand(
