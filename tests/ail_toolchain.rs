@@ -19879,6 +19879,82 @@ fn ail_core_reports_agent_tool_provider_calls_without_audit_policy() {
 }
 
 #[test]
+fn ail_core_reports_agent_tool_provider_calls_without_failure_policy() {
+    let package = load_ail_package_dir(fixture("incident_notifications.ail")).unwrap();
+    let spec = fs::read_to_string(format!(
+        "{}/examples/rejected/provider-call-without-failure-policy.ail-spec.md",
+        fixture("incident_notifications.ail")
+    ))
+    .unwrap();
+    let document = parse_ail_spec_text(&spec).unwrap();
+    let diagnostics = check_ail_core_diagnostics(&elaborate_ail_core(&package, &document));
+    let diagnostic = diagnostics
+        .iter()
+        .find(|diagnostic| {
+            diagnostic.code == "AIL-AGENT-FAILURE-001"
+                && diagnostic.message
+                    == "tool NotifyIncidentResponder calls PagerProvider.notify without provider failure policy"
+        })
+        .unwrap_or_else(|| panic!("missing AIL-AGENT-FAILURE-001 diagnostic: {diagnostics:?}"));
+
+    assert_eq!(
+        diagnostic.source_provenance.as_deref(),
+        Some("tool:NotifyIncidentResponder.call:PagerProvider.notify")
+    );
+    assert!(
+        diagnostic
+            .affected_graph_item
+            .as_deref()
+            .is_some_and(|item| item.starts_with("edge:edge:calls:")),
+        "{diagnostic:?}"
+    );
+    assert_eq!(
+        diagnostic.repair_suggestion.as_deref(),
+        Some(
+            "Add a Failure section for provider call PagerProvider.notify in tool NotifyIncidentResponder."
+        )
+    );
+}
+
+#[test]
+fn ail_core_reports_agent_tool_provider_failures_without_recovery_policy() {
+    let package = load_ail_package_dir(fixture("incident_notifications.ail")).unwrap();
+    let spec = fs::read_to_string(format!(
+        "{}/examples/rejected/provider-failure-without-retry-policy.ail-spec.md",
+        fixture("incident_notifications.ail")
+    ))
+    .unwrap();
+    let document = parse_ail_spec_text(&spec).unwrap();
+    let diagnostics = check_ail_core_diagnostics(&elaborate_ail_core(&package, &document));
+    let diagnostic = diagnostics
+        .iter()
+        .find(|diagnostic| {
+            diagnostic.code == "AIL-AGENT-RECOVERY-001"
+                && diagnostic.message
+                    == "failure ProviderDeliveryFailed for tool NotifyIncidentResponder has no recovery policy for PagerProvider.notify"
+        })
+        .unwrap_or_else(|| panic!("missing AIL-AGENT-RECOVERY-001 diagnostic: {diagnostics:?}"));
+
+    assert_eq!(
+        diagnostic.source_provenance.as_deref(),
+        Some("failure:ProviderDeliveryFailed")
+    );
+    assert!(
+        diagnostic
+            .affected_graph_item
+            .as_deref()
+            .is_some_and(|item| item.starts_with("node:Failure:providerdeliveryfailed:")),
+        "{diagnostic:?}"
+    );
+    assert_eq!(
+        diagnostic.repair_suggestion.as_deref(),
+        Some(
+            "Add retry, fallback, queue, escalation, or human-review handling to Failure ProviderDeliveryFailed."
+        )
+    );
+}
+
+#[test]
 fn ail_core_reports_system_effects_without_capabilities() {
     let package = load_ail_package_dir(fixture("network_driver.ail")).unwrap();
     let spec = fs::read_to_string(format!(
@@ -20858,6 +20934,8 @@ fn cli_ail_conformance_checks_v02_package_host_boundary_fixtures() {
                 "rejected: permission-without-rule.ail-spec.md AIL019",
                 "rejected: pager-token-secret-output.ail-spec.md AIL020",
                 "rejected: provider-call-without-audit-entry.ail-spec.md AIL-AGENT-AUDIT-001",
+                "rejected: provider-call-without-failure-policy.ail-spec.md AIL-AGENT-FAILURE-001",
+                "rejected: provider-failure-without-retry-policy.ail-spec.md AIL-AGENT-RECOVERY-001",
                 "ail conformance: ok",
             ]
             .as_slice(),

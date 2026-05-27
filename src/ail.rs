@@ -4120,6 +4120,8 @@ pub fn check_ail_core_diagnostics(core: &AilCore) -> Vec<AilDiagnostic> {
     diagnostics.extend(check_tool_approval_mentions(core));
     diagnostics.extend(check_tool_permission_mentions(core));
     diagnostics.extend(check_tool_provider_call_audit_evidence(core));
+    diagnostics.extend(check_tool_provider_call_failure_policy(core));
+    diagnostics.extend(check_tool_provider_failure_recovery_policy(core));
     diagnostics.extend(check_system_effect_capabilities(core));
     diagnostics.extend(check_system_effect_resources(core));
     diagnostics.extend(check_system_device_effect_capabilities(core));
@@ -16836,6 +16838,167 @@ fn tool_has_audit_evidence(
             let compact = compact_semantic_text(&target.name);
             compact.contains("audit") || compact.contains("ledger")
         })
+}
+
+fn check_tool_provider_call_failure_policy(core: &AilCore) -> Vec<AilDiagnostic> {
+    if core.package.profile != "AgentTool" {
+        return Vec::new();
+    }
+    let node_by_id = graph_node_by_id(core);
+    let mut diagnostics = Vec::new();
+    for edge in core.graph.edges.iter().filter(|edge| edge.kind == "calls") {
+        let Some(tool) = node_by_id.get(&edge.source) else {
+            continue;
+        };
+        if tool.kind != "Tool" {
+            continue;
+        }
+        let Some(call) = node_by_id.get(&edge.target) else {
+            continue;
+        };
+        if !is_external_provider_call(&call.name)
+            || !tool_provider_failures(core, &node_by_id, tool, &call.name).is_empty()
+        {
+            continue;
+        }
+        diagnostics.push(
+            AilDiagnostic::error(
+                "AIL-AGENT-FAILURE-001",
+                format!(
+                    "tool {} calls {} without provider failure policy",
+                    tool.name, call.name
+                ),
+            )
+            .with_source_provenance(node_provenance(core, &call.id).or_else(|| {
+                edge.attributes
+                    .get("provenance")
+                    .cloned()
+                    .or_else(|| node_provenance(core, &tool.id))
+            }))
+            .with_affected_graph_item(format!("edge:{}", edge.id))
+            .with_repair_suggestion(format!(
+                "Add a Failure section for provider call {} in tool {}.",
+                call.name, tool.name
+            )),
+        );
+    }
+    diagnostics
+}
+
+fn check_tool_provider_failure_recovery_policy(core: &AilCore) -> Vec<AilDiagnostic> {
+    if core.package.profile != "AgentTool" {
+        return Vec::new();
+    }
+    let node_by_id = graph_node_by_id(core);
+    let mut diagnostics = Vec::new();
+    for edge in core.graph.edges.iter().filter(|edge| edge.kind == "calls") {
+        let Some(tool) = node_by_id.get(&edge.source) else {
+            continue;
+        };
+        if tool.kind != "Tool" {
+            continue;
+        }
+        let Some(call) = node_by_id.get(&edge.target) else {
+            continue;
+        };
+        if !is_external_provider_call(&call.name) {
+            continue;
+        }
+        for failure in tool_provider_failures(core, &node_by_id, tool, &call.name) {
+            if failure_has_recovery_policy(core, &node_by_id, failure) {
+                continue;
+            }
+            diagnostics.push(
+                AilDiagnostic::error(
+                    "AIL-AGENT-RECOVERY-001",
+                    format!(
+                        "failure {} for tool {} has no recovery policy for {}",
+                        failure.name, tool.name, call.name
+                    ),
+                )
+                .with_source_provenance(node_provenance(core, &failure.id))
+                .with_affected_graph_item(format!("node:{}", failure.id))
+                .with_repair_suggestion(format!(
+                    "Add retry, fallback, queue, escalation, or human-review handling to Failure {}.",
+                    failure.name
+                )),
+            );
+        }
+    }
+    diagnostics
+}
+
+fn tool_provider_failures<'a>(
+    core: &'a AilCore,
+    node_by_id: &'a BTreeMap<String, Node>,
+    tool: &Node,
+    call_name: &str,
+) -> Vec<&'a Node> {
+    core.graph
+        .edges
+        .iter()
+        .filter(|edge| edge.kind == "may_fail_with" && edge.source == tool.id)
+        .filter_map(|edge| node_by_id.get(&edge.target))
+        .filter(|failure| {
+            failure.kind == "Failure"
+                && failure
+                    .attributes
+                    .get("declared")
+                    .is_some_and(|value| value == "true")
+                && failure_matches_provider_call(failure, call_name)
+        })
+        .collect()
+}
+
+fn failure_matches_provider_call(failure: &Node, call_name: &str) -> bool {
+    let compact_failure = compact_semantic_text(&format!(
+        "{} {}",
+        failure.name,
+        failure
+            .attributes
+            .get("condition")
+            .map(String::as_str)
+            .unwrap_or("")
+    ));
+    let compact_call = compact_semantic_text(call_name);
+    let compact_provider = compact_semantic_text(
+        call_name
+            .split_once('.')
+            .map_or(call_name, |(provider, _)| provider),
+    );
+    compact_failure.contains(&compact_call)
+        || (!compact_provider.is_empty() && compact_failure.contains(&compact_provider))
+        || compact_failure.contains("provider")
+}
+
+fn failure_has_recovery_policy(
+    core: &AilCore,
+    node_by_id: &BTreeMap<String, Node>,
+    failure: &Node,
+) -> bool {
+    core.graph
+        .edges
+        .iter()
+        .filter(|edge| edge.kind == "handles_failure" && edge.source == failure.id)
+        .filter_map(|edge| node_by_id.get(&edge.target))
+        .any(|handling| is_recovery_policy_text(&handling.name))
+}
+
+fn is_recovery_policy_text(text: &str) -> bool {
+    let compact = compact_semantic_text(text);
+    [
+        "retry",
+        "retri",
+        "backoff",
+        "fallback",
+        "queue",
+        "escalat",
+        "humanreview",
+        "manualreview",
+        "reviewtask",
+    ]
+    .iter()
+    .any(|term| compact.contains(term))
 }
 
 fn check_system_effect_capabilities(core: &AilCore) -> Vec<AilDiagnostic> {

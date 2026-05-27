@@ -19,7 +19,8 @@ the incident-response workflow.
 - `examples/accepted/notify-responder-minimal.ail-spec.md`: minimal accepted
   notification contract for package-local conformance.
 - `examples/rejected/*.ail-spec.md`: rejected notification contracts that teach
-  approval, permission, secret-output, and provider-audit repairs.
+  approval, permission, secret-output, provider-audit, provider-failure, and
+  provider-recovery repairs.
 - `../incident_response.ail/spec.ail-spec.md`: the application action that
   records notification audit evidence.
 
@@ -49,6 +50,12 @@ Rejected fixtures are:
 - `provider-call-without-audit-entry.ail-spec.md`: teaches
   `AIL-AGENT-AUDIT-001` when an external provider call lacks an audit write or
   audit-trace guarantee.
+- `provider-call-without-failure-policy.ail-spec.md`: teaches
+  `AIL-AGENT-FAILURE-001` when an external provider call lacks a declared
+  provider failure policy.
+- `provider-failure-without-retry-policy.ail-spec.md`: teaches
+  `AIL-AGENT-RECOVERY-001` when a provider failure has trace coverage but no
+  retry, fallback, queue, escalation, or human-review recovery path.
 
 ## Next Example To Read
 
@@ -58,6 +65,7 @@ a complete incident lifecycle.
 ## v0.3 Learning Signal
 
 Incident notification examples now teach AgentTool-specific repair tutorials
-for approval, permission, secret redaction, and provider-call audit evidence.
-The next bar is provider failure and retry-policy fixtures that connect
-notification delivery failures to incident workflow recovery.
+for approval, permission, secret redaction, provider-call audit evidence,
+provider failure declaration, and provider recovery policy. The next bar is
+runtime evidence for bounded retry attempts and live reviewer checks that
+separate acceptable recovery policy from policy needing human repair.

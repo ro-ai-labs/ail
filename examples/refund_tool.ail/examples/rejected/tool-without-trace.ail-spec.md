@@ -17,6 +17,7 @@ The tool produces:
 The tool can:
 
 - call PaymentProvider.refund
+- write a RefundLedger entry
 
 The tool must not:
 
@@ -33,3 +34,9 @@ The tool requires approval:
 The tool guarantees:
 
 - payment token is redacted from all agent-visible output
+
+Failure ProviderRejected happens when PaymentProvider rejects the refund:
+
+- the system records failure ProviderRejected
+- a human review task is created
+- the trace records RefundProviderRejected

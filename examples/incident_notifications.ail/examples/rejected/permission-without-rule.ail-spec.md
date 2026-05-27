@@ -40,3 +40,10 @@ The tool guarantees:
 
 - pager token is redacted from all agent-visible output
 - every notification request is represented in the audit trace
+
+Failure ProviderDeliveryFailed happens when PagerProvider.notify rejects delivery:
+
+- the system records failure ProviderDeliveryFailed
+- the system retries PagerProvider.notify with bounded backoff
+- the system escalates to the incident commander if delivery still fails
+- the trace records NotificationProviderDeliveryFailed

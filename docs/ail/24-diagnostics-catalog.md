@@ -55,6 +55,8 @@ severity, blocking behavior, and at least one invalid fixture.
 | `AIL-PERMISSION-001` | `ail.tool.permission.requires-rule` | permission reference has no rule or scope | error | yes | attach rule and scope |
 | `AIL-APPROVAL-001` | `ail.tool.approval.requires-rule` | approval has no triggering rule | error | yes | attach rule and trace |
 | `AIL-AGENT-AUDIT-001` | `ail.agent-tool.provider-call.audit-evidence` | AgentTool external provider call lacks audit evidence | error | yes | add an audit write or audit-trace guarantee |
+| `AIL-AGENT-FAILURE-001` | `ail.agent-tool.provider-call.failure-policy` | AgentTool external provider call lacks a declared provider failure | error | yes | add a provider Failure section |
+| `AIL-AGENT-RECOVERY-001` | `ail.agent-tool.provider-failure.recovery-policy` | provider failure lacks retry, fallback, queue, escalation, or human-review recovery | error | yes | add recovery handling to the provider Failure section |
 | `AIL-CONTROL-001` | `ail.runtime.branch.exhaustive` | branch has no matching outcome or else | error | yes | add exhaustive outcome |
 | `AIL-CONTROL-002` | `ail.runtime.match.exhaustive` | match over finite variants is non-exhaustive | error | yes | cover every variant |
 | `AIL-CONTROL-003` | `ail.runtime.termination.proven` | termination-required profile has unproven recursion or loop | error | yes | add proof, bound, or profile policy |
@@ -162,6 +164,47 @@ severity, blocking behavior, and at least one invalid fixture.
 - blocking behavior: blocks acceptance
 - invalid fixture:
   `examples/incident_notifications.ail/examples/rejected/provider-call-without-audit-entry.ail-spec.md`
+
+### AIL-AGENT-FAILURE-001
+
+- condition: an `AgentTool` tool calls an external provider but has no
+  declared provider failure section attached to the tool
+- affected graph item: `calls` edge from the tool to the external provider
+  call
+- message template: `tool {tool} calls {provider_call} without provider
+  failure policy`
+- non-engineer explanation: the agent can ask an external service to act, but
+  the spec does not say what happens if that provider rejects, times out, or
+  fails delivery
+- agent follow-up question: `What named failure should be recorded if
+  {provider_call} rejects, times out, or fails?`
+- repair suggestion: add a `Failure ... happens when ...` section for the
+  provider call with handling and trace bullets
+- AIL-Flow highlight: Tool Card failure section
+- severity: error
+- blocking behavior: blocks acceptance
+- invalid fixture:
+  `examples/incident_notifications.ail/examples/rejected/provider-call-without-failure-policy.ail-spec.md`
+
+### AIL-AGENT-RECOVERY-001
+
+- condition: an `AgentTool` provider failure has handling and trace coverage,
+  but the handling does not describe retry, fallback, queueing, escalation, or
+  human-review recovery
+- affected graph item: provider `Failure` node
+- message template: `failure {failure} for tool {tool} has no recovery policy
+  for {provider_call}`
+- non-engineer explanation: reviewers can see that the provider failed, but
+  they cannot see how the agent or system should recover
+- agent follow-up question: `Should {failure} retry, queue work, fall back,
+  escalate, or send the case for human review?`
+- repair suggestion: add retry, fallback, queue, escalation, or human-review
+  handling to the provider Failure section
+- AIL-Flow highlight: Failure Card handling section
+- severity: error
+- blocking behavior: blocks acceptance
+- invalid fixture:
+  `examples/incident_notifications.ail/examples/rejected/provider-failure-without-retry-policy.ail-spec.md`
 
 ### AIL-CONTROL-003
 

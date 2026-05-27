@@ -422,11 +422,12 @@ as prose. The current examples reveal these next-version gaps:
   `review-result needs-repair` evidence. Incident notification support now has
   package-local accepted/rejected AgentTool conformance fixtures for approval
   rules, permission rules, secret output redaction, and
-  `AIL-AGENT-AUDIT-001` provider-call audit evidence. The next bar is broader
+  `AIL-AGENT-AUDIT-001` provider-call audit evidence,
+  `AIL-AGENT-FAILURE-001` provider failure declarations, and
+  `AIL-AGENT-RECOVERY-001` provider recovery policy. The next bar is broader
   live reviewer coverage where accepted and rejected AgentTool policy handoffs
   are both produced by separate reviewer roles and promoted only after human
-  approval, plus provider failure and retry-policy fixtures for notification
-  delivery.
+  approval, plus runtime evidence for bounded notification retry attempts.
 - Compiler/self-hosting examples now include a deterministic `ail-bootstrap`
   manual check that composes the AIL-authored toolchain agent with the
   AIL-Meta `InferReadPermissions` compiler pass, verifies fixed-point pass

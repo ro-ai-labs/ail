@@ -1,4 +1,4 @@
-# Rejected Notification Approval Without Rule Fixture
+# Rejected Provider Failure Without Retry Policy Fixture
 
 Tool: Notify incident responder.
 
@@ -6,6 +6,7 @@ The AI Agent may request Notify incident responder when:
 
 - the incident exists
 - a responder is assigned
+- the notification channel is approved
 
 The tool needs:
 
@@ -27,11 +28,14 @@ The tool can:
 The tool must not:
 
 - reveal the pager token
-- notify Sev1 incidents without incident commander approval
 
 The tool requires permission:
 
 - requester may notify responders
+
+The tool requires approval:
+
+- incident commander approval when severity is Sev1
 
 The tool records:
 
@@ -45,6 +49,4 @@ The tool guarantees:
 Failure ProviderDeliveryFailed happens when PagerProvider.notify rejects delivery:
 
 - the system records failure ProviderDeliveryFailed
-- the system retries PagerProvider.notify with bounded backoff
-- the system escalates to the incident commander if delivery still fails
 - the trace records NotificationProviderDeliveryFailed

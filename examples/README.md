@@ -99,7 +99,8 @@ packages visible without making a separate non-end-to-end example category.
   definitions for incident workflows.
 - `incident_notifications.ail/README.md`: AgentTool notification support
   contract with pager-token secrecy, provider calls, approvals, audit traces,
-  and package-local rejected fixtures for provider-call audit evidence.
+  and package-local rejected fixtures for provider-call audit, failure, and
+  recovery evidence.
 - `missing_registry_import.ail/README.md`: rejected package-resolution fixture
   for unresolved registry import diagnostics.
 - `ail_std_core.ail/README.md`: standard-library primitive contracts,
