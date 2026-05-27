@@ -206,7 +206,9 @@ python3 scripts/run_ail_interactive_manual.py --chapter agent-policy-import --ru
   counts, agent trace and fingerprint evidence, native target runtime-trace evidence, a
   story promotion capture artifact, and a corpus-copy import demo with
   `story-promotion-import-demo-report.txt`,
-  `story-artifacts-preserved true`, and `proposed-accepted true`. Prose:
+  `story-artifacts-preserved true`, `proposed-accepted true`,
+  `promotion-source human-approved-story-promotion-batch`, and
+  `batch-plan-fingerprint`. Prose:
   `01-user-story-mode.md`.
 - `examples-release`: full `./examples` replay with release evidence and
   learning metadata. Prose: `02-examples-release.md`.

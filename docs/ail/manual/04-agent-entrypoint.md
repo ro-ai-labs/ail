@@ -49,11 +49,14 @@ For User Story mode promotion, the prompt reviewer contract must also require
 `story-promotion-import-demo-report.txt`,
 `story-promotion-import-demo-report.fingerprint.txt`,
 `story-artifacts-preserved true`, `proposed-accepted true`,
+`capture-plan story-promotion-capture-plan.json`,
+`promotion-decision accepted-for-promotion`, `human-approval-required true`,
+`promotion-source human-approved-story-promotion-batch`, `batch-plan-fingerprint`,
 `default-max-tokens`, `max-tokens`, `token-budget-default`, and any
-`token-budget-warning`. This keeps reviewed story-mode output and its visible
-hosted generation budget as corpus-copy evidence until a human-approved
-promotion imports the full story artifact bundle and proves the proposed
-accepted entry replays.
+`token-budget-warning`. This keeps reviewed story-mode output, its visible
+hosted generation budget, and the human-approved promotion batch as corpus-copy
+evidence until a promotion imports the full story artifact bundle and proves
+the proposed accepted entry replays.
 
 The same gate also validates the repo-local Codex skills:
 

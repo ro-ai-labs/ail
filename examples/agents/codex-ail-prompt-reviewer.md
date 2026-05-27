@@ -57,7 +57,13 @@ Return an `AIL-Prompt-Interaction-Review` report that records:
   `story-promotion-import-demo-report.txt` and
   `story-promotion-import-demo-report.fingerprint.txt`
 - story promotion import-demo checks:
-  `story-artifacts-preserved true` and `proposed-accepted true`
+  `story-artifacts-preserved true`, `proposed-accepted true`,
+  `capture-plan story-promotion-capture-plan.json`,
+  `promotion-decision accepted-for-promotion`, `human-approval-required true`,
+  `promotion-source human-approved-story-promotion-batch`, and
+  `batch-plan-fingerprint`
+- story promotion import-demo batch fingerprint:
+  `human-approved-story-promotion-batch.fingerprint.txt`
 - story promotion budget checks:
   `default-max-tokens`, `max-tokens`, `token-budget-default`, and any
   `token-budget-warning` preserved by the capture plan and import-demo report
@@ -96,7 +102,10 @@ The review is accepted only when both relevant offline review commands pass,
 the story-promotion capture plan exists for reviewed User Story mode artifacts,
 `scripts/run_v03_story_promotion_import_demo.py` writes
 `story-promotion-import-demo-report.txt` with `story-artifacts-preserved true`
-and `proposed-accepted true`, both promotion artifacts preserve
+and `proposed-accepted true`, binds the accepted capture plan through
+`capture-plan story-promotion-capture-plan.json`, records
+`promotion-source human-approved-story-promotion-batch`, writes
+`human-approved-story-promotion-batch.fingerprint.txt`, preserves
 `default-max-tokens`, `max-tokens`, `token-budget-default`, and any
 `token-budget-warning`, and the promoted corpus copy passes
 `ail-examples examples --artifact-dir ...` with `--release-evidence`,

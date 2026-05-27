@@ -326,11 +326,17 @@ That writes:
 ```
 
 The report must include `story-artifacts-preserved true`,
-`proposed-accepted true`, `default-max-tokens`, `max-tokens`,
-`token-budget-default`, and any `token-budget-warning`. The output corpus copy
-stores the reviewed story artifact bundle under `story-artifacts/<entry-id>/`,
-appends a promoted accepted example, and replays it with `--release-evidence`.
-It still does not mutate `./examples`.
+`proposed-accepted true`,
+`capture-plan story-promotion-capture-plan.json <fingerprint>`,
+`promotion-decision accepted-for-promotion`, `human-approval-required true`,
+`promotion-source human-approved-story-promotion-batch`,
+`batch-plan-fingerprint`, the preserved
+`default-max-tokens`, `max-tokens`, `token-budget-default`, and any
+`token-budget-warning`. The output corpus copy stores the reviewed story
+artifact bundle under `story-artifacts/<entry-id>/`, appends a promoted
+accepted example, writes
+`human-approved-story-promotion-batch.fingerprint.txt`, and replays it with
+`--release-evidence`. It still does not mutate `./examples`.
 
 The harness is intentionally outside the default test suite because it depends
 on the hosted llama.cpp server and model behavior. Promote a live run into the

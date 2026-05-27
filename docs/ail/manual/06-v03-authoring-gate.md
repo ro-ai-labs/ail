@@ -100,6 +100,12 @@ story-promotion-capture-plan.txt
 story-promotion-capture-plan.fingerprint.txt
 story-promotion-import-demo-report.txt
 story-promotion-import-demo-report.fingerprint.txt
+capture-plan story-promotion-capture-plan.json
+promotion-decision accepted-for-promotion
+human-approval-required true
+promotion-source human-approved-story-promotion-batch
+human-approved-story-promotion-batch.fingerprint.txt
+batch-plan-fingerprint
 story-amendment-comparison.txt
 story-amendment-comparison.fingerprint.txt
 story-amendment-comparison: present

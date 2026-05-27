@@ -114,6 +114,12 @@ The review report must include:
 - `story-promotion-import-demo-report.fingerprint.txt`
 - `story-artifacts-preserved true`
 - `proposed-accepted true`
+- `capture-plan story-promotion-capture-plan.json`
+- `promotion-decision accepted-for-promotion`
+- `human-approval-required true`
+- `promotion-source human-approved-story-promotion-batch`
+- `human-approved-story-promotion-batch.fingerprint.txt`
+- `batch-plan-fingerprint`
 - `default-max-tokens`
 - `max-tokens`
 - `token-budget-default`

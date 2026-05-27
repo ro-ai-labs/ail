@@ -202,8 +202,14 @@ User Story mode promotion follows the same corpus-copy rule. After
 `story_promotion_capture_plan_json` with human-approved request/response JSON.
 The importer validates the plan fingerprint, copies the reviewed story artifact
 bundle under `story-artifacts/<entry-id>/`, writes fresh `requests/`,
-`responses/`, and `stories/` files, and still requires offline `ail-examples`
-replay before any generated corpus copy is committed.
+`responses/`, and `stories/` files, writes
+`human-approved-story-promotion-batch.fingerprint.txt`, records
+`capture-plan story-promotion-capture-plan.json <fingerprint>`,
+`promotion-decision accepted-for-promotion`,
+`promotion-source human-approved-story-promotion-batch`, and
+`batch-plan-fingerprint` in the
+import report, and still requires offline `ail-examples` replay before any
+generated corpus copy is committed.
 Release story files must include `semantic-anchors` for the terms, actions,
 modules, targets, or diagnostics that must survive story/spec/Core
 round-trips. In `--release-evidence` mode, `ail-examples` rejects any catalog

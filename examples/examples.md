@@ -4428,7 +4428,7 @@ story-file: stories/example-30-story.md
 story-journey: story-to-spec
 story-roundtrip: semantic-similar
 distinctness-claim: support-ticket-story-promoted-30 validates user-story-mode-promotion with stored transcript replay and promoted executor evidence.
-v0.3-signal: User Story mode needs replayable promotion evidence that preserves the story artifact bundle while appending an accepted corpus candidate.
+v0.3-signal: User Story mode needs reviewer-produced promotion decisions and multi-story promotion variants after deterministic promotion imports are replayed.
 prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c

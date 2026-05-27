@@ -1254,6 +1254,10 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         "story-promotion-import-demo-report.txt",
         "story-promotion-import-demo-report.fingerprint.txt",
         "story-artifacts-preserved true",
+        "capture-plan story-promotion-capture-plan.json",
+        "promotion-source human-approved-story-promotion-batch",
+        "human-approved-story-promotion-batch.fingerprint.txt",
+        "batch-plan-fingerprint",
         "promotion-decision accepted-for-promotion",
         "human-approval-required true",
         "cli_ail_story_native_target_executes_story_runtime_trace",
@@ -1655,6 +1659,12 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "evidence story-promotion-import-demo-report.txt",
         "evidence story-artifacts-preserved true",
         "evidence proposed-accepted true",
+        "evidence capture-plan story-promotion-capture-plan.json",
+        "evidence promotion-decision accepted-for-promotion",
+        "evidence human-approval-required true",
+        "evidence promotion-source human-approved-story-promotion-batch",
+        "evidence human-approved-story-promotion-batch.fingerprint.txt",
+        "evidence batch-plan-fingerprint",
         "live false",
     ] {
         assert!(
@@ -2112,6 +2122,12 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "evidence story-promotion-import-demo-report.fingerprint.txt",
         "evidence story-artifacts-preserved true",
         "evidence proposed-accepted true",
+        "evidence capture-plan story-promotion-capture-plan.json",
+        "evidence promotion-decision accepted-for-promotion",
+        "evidence human-approval-required true",
+        "evidence promotion-source human-approved-story-promotion-batch",
+        "evidence human-approved-story-promotion-batch.fingerprint.txt",
+        "evidence batch-plan-fingerprint",
         "run-prompt-interaction-live-checks",
         "python3 scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run-checks --include-live",
         "evidence prompt-llm-harness-report.txt",
@@ -2533,6 +2549,10 @@ fn examples_agents_include_prompt_review_contract() {
         "story-promotion-capture-plan.json",
         "story-promotion-import-demo-report.txt",
         "story-artifacts-preserved true",
+        "capture-plan story-promotion-capture-plan.json",
+        "promotion-source human-approved-story-promotion-batch",
+        "human-approved-story-promotion-batch.fingerprint.txt",
+        "batch-plan-fingerprint",
         "default-max-tokens",
         "max-tokens",
         "token-budget-default",
@@ -2560,6 +2580,12 @@ fn examples_agents_include_prompt_review_contract() {
         "story-promotion-import-demo-report.txt",
         "story-promotion-import-demo-report.fingerprint.txt",
         "story-artifacts-preserved true",
+        "capture-plan story-promotion-capture-plan.json",
+        "promotion-decision accepted-for-promotion",
+        "human-approval-required true",
+        "promotion-source human-approved-story-promotion-batch",
+        "human-approved-story-promotion-batch.fingerprint.txt",
+        "batch-plan-fingerprint",
         "default-max-tokens",
         "max-tokens",
         "token-budget-default",
@@ -2778,6 +2804,12 @@ fn codex_skill_documents_prompt_interaction_review_gate() {
         "story-promotion-import-demo-report.txt",
         "story-promotion-import-demo-report.fingerprint.txt",
         "story-artifacts-preserved true",
+        "capture-plan story-promotion-capture-plan.json",
+        "promotion-decision accepted-for-promotion",
+        "human-approval-required true",
+        "promotion-source human-approved-story-promotion-batch",
+        "human-approved-story-promotion-batch.fingerprint.txt",
+        "batch-plan-fingerprint",
         "default-max-tokens",
         "max-tokens",
         "token-budget-default",
@@ -32889,6 +32921,51 @@ fn cli_ail_v03_roadmap_advances_completed_self_hosting_signal() {
     );
     assert!(
         !stdout.contains("Self-hosting needs pass-composition examples and fixed-point checks."),
+        "{stdout}"
+    );
+
+    let roadmap = fs::read_to_string(artifact_dir.join("v03-roadmap.txt")).unwrap();
+    assert_eq!(stdout, roadmap);
+
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
+fn cli_ail_v03_roadmap_advances_completed_story_promotion_signal() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-v03-roadmap-release-story-promotion-signal-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-v03-roadmap",
+            "examples",
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+            "--release-evidence",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains(
+            "signal User Story mode needs reviewer-produced promotion decisions and multi-story promotion variants after deterministic promotion imports are replayed. count 1"
+        ),
+        "{stdout}"
+    );
+    assert!(
+        !stdout.contains(
+            "User Story mode needs replayable promotion evidence that preserves the story artifact bundle while appending an accepted corpus candidate."
+        ),
         "{stdout}"
     );
 

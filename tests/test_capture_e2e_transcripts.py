@@ -2997,6 +2997,25 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             self.assertIn("source-preserved true", report)
             self.assertIn("proposed-accepted true", report)
             self.assertIn("story-artifacts-preserved true", report)
+            capture_plan_fingerprint = (
+                capture_plan_dir / "story-promotion-capture-plan.fingerprint.txt"
+            ).read_text().strip()
+            self.assertIn(
+                f"capture-plan story-promotion-capture-plan.json {capture_plan_fingerprint}",
+                report,
+            )
+            self.assertIn("promotion-decision accepted-for-promotion", report)
+            self.assertIn("human-approval-required true", report)
+            self.assertIn("promotion-source human-approved-story-promotion-batch", report)
+            batch_plan = work_dir / "human-approved-story-promotion-batch.json"
+            batch_fingerprint = fnv64(batch_plan.read_text())
+            self.assertEqual(
+                (work_dir / "human-approved-story-promotion-batch.fingerprint.txt")
+                .read_text()
+                .strip(),
+                batch_fingerprint,
+            )
+            self.assertIn(f"batch-plan-fingerprint {batch_fingerprint}", report)
             self.assertIn("default-max-tokens 4096", report)
             self.assertIn("max-tokens 64", report)
             self.assertIn("token-budget-default false", report)

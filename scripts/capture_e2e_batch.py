@@ -646,8 +646,9 @@ def apply_codex_entry(
                 "bundle that already produced requirements, spec, Core, bytecode, and trace evidence."
             )
             fields["v0.3-signal"] = optional_string(entry, "v03_signal") or (
-                "User Story mode needs replayable promotion evidence that preserves the "
-                "story artifact bundle while appending an accepted corpus candidate."
+                "User Story mode needs reviewer-produced promotion decisions and "
+                "multi-story promotion variants after deterministic promotion imports "
+                "are replayed."
             )
             fields["story-artifacts"] = f"story-artifacts/{entry_id}"
             artifact_output = output_dir / fields["story-artifacts"]

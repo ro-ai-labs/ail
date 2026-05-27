@@ -90,7 +90,7 @@ def build_batch_plan(
     request_path: Path,
     response_path: Path,
     batch_plan_path: Path,
-) -> None:
+) -> str:
     write_json(
         batch_plan_path,
         {
@@ -111,6 +111,11 @@ def build_batch_plan(
             ]
         },
     )
+    batch_plan_fingerprint = fnv64(batch_plan_path.read_text())
+    batch_plan_path.with_name(
+        "human-approved-story-promotion-batch.fingerprint.txt"
+    ).write_text(batch_plan_fingerprint + "\n")
+    return batch_plan_fingerprint
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
@@ -148,6 +153,14 @@ def main(argv: list[str]) -> int:
     default_max_tokens = plan_int(plan, "default_max_tokens")
     max_tokens = plan_int(plan, "max_tokens")
     token_budget_default = plan_bool(plan, "token_budget_default")
+    promotion_decision = plan_string(plan, "promotion_decision")
+    if promotion_decision != "accepted-for-promotion":
+        raise SystemExit(
+            f"capture plan promotion_decision must be accepted-for-promotion, got {promotion_decision}"
+        )
+    human_approval_required = plan_bool(plan, "human_approval_required")
+    if not human_approval_required:
+        raise SystemExit("capture plan must require human approval")
     token_budget_warning = plan.get("token_budget_warning")
     if not isinstance(token_budget_warning, str):
         raise SystemExit("capture plan has invalid token_budget_warning")
@@ -182,7 +195,9 @@ def main(argv: list[str]) -> int:
             "model": "human-approved-story-promotion-demo",
         },
     )
-    build_batch_plan(args, request_path, response_path, batch_plan_path)
+    batch_plan_fingerprint = build_batch_plan(
+        args, request_path, response_path, batch_plan_path
+    )
 
     run_command(
         [
@@ -238,6 +253,12 @@ def main(argv: list[str]) -> int:
         f"source-preserved {str(source_preserved).lower()}",
         f"proposed-accepted {str(proposed_accepted).lower()}",
         f"story-artifacts-preserved {str(story_artifacts_preserved).lower()}",
+        f"story-artifacts-source {args.story_artifacts}",
+        f"capture-plan story-promotion-capture-plan.json {plan_fingerprint}",
+        f"promotion-decision {promotion_decision}",
+        f"human-approval-required {str(human_approval_required).lower()}",
+        "promotion-source human-approved-story-promotion-batch",
+        f"batch-plan-fingerprint {batch_plan_fingerprint}",
         f"default-max-tokens {default_max_tokens}",
         f"max-tokens {max_tokens}",
         f"token-budget-default {str(token_budget_default).lower()}",
