@@ -1350,6 +1350,14 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
         "agent-policy-capture-plan.json",
         "scripts/run_v03_agent_policy_import_demo.py",
         "agent-policy-import-demo-report.txt",
+        "agent-policy-multi-agent-handoff-report.txt",
+        "scripts/run_v03_agent_policy_live_reviewer_harness.py --dry-run",
+        "scripts/run_v03_agent_policy_live_reviewer_harness.py --review-artifacts",
+        "agent-policy-live-review-report.txt",
+        "agent-policy-live-review-review.txt",
+        "reviewer-envelope-valid-count",
+        "reviewer-envelope-invalid-count",
+        "reviewer-decision-accept-count",
         "source-preserved true",
         "proposed-accepted true",
         "policy-handoff-imported true",
@@ -1479,6 +1487,19 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
         "agent-policy-capture-plan.fingerprint.txt",
         "agent-policy-import-demo-report.txt",
         "agent-policy-import-demo-report.fingerprint.txt",
+        "agent-policy-multi-agent-handoff-report.txt",
+        "agent-policy-multi-agent-handoff-report.fingerprint.txt",
+        "python3 scripts/run_v03_agent_policy_live_reviewer_harness.py --dry-run",
+        "python3 scripts/run_v03_agent_policy_live_reviewer_harness.py --review-artifacts /tmp/ail-v03-agent-policy-live-review",
+        "python3 scripts/run_ail_interactive_manual.py --chapter agent-policy-import --run-checks --include-live",
+        "agent-policy-live-review-report.txt",
+        "agent-policy-live-review-report.fingerprint.txt",
+        "manifest.v03-agent-policy-live-review.txt",
+        "agent-policy-live-review-review.txt",
+        "agent-policy-live-review-review.fingerprint.txt",
+        "reviewer-envelope-valid-count",
+        "reviewer-envelope-invalid-count",
+        "reviewer-decision-accept-count",
         "source-preserved true",
         "proposed-accepted true",
         "policy-handoff-imported true",
@@ -1502,10 +1523,14 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
     }
     println!("review-command scripts/run_v03_prompt_llm_harness.py --review-artifacts");
     println!("review-command scripts/run_v03_story_llm_harness.py --review-artifacts");
+    println!(
+        "review-command scripts/run_v03_agent_policy_live_reviewer_harness.py --review-artifacts"
+    );
     println!("story-promotion-import-artifact story-promotion-import-demo-report.txt");
     println!("repair-promotion-artifact repair-promotion-review.txt");
     println!("repair-promotion-import-artifact repair-promotion-import-demo-report.txt");
     println!("agent-policy-import-artifact agent-policy-import-demo-report.txt");
+    println!("agent-policy-live-review-artifact agent-policy-live-review-report.txt");
     println!("roadmap-artifact v03-roadmap.txt");
     println!("roadmap-command cargo run -- ail-v03-roadmap examples --artifact-dir");
     println!("codex-skill examples/agents/skills/ail-prompt-interaction-reviewer/SKILL.md");

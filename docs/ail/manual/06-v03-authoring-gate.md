@@ -43,8 +43,8 @@ python3 scripts/run_ail_interactive_manual.py --chapter agent-policy-import --ru
 ```
 
 Live hosted evidence remains opt-in. When the llama.cpp server is reachable,
-include the live User Story mode review and live prompt interaction review in
-the gate dry-run or execution:
+include the live User Story mode review, live prompt interaction review, and
+live AgentTool policy reviewer evidence in the gate dry-run or execution:
 
 ```sh
 python3 scripts/run_ail_interactive_manual.py --chapter v03-authoring-gate --dry-run --include-live
@@ -56,6 +56,7 @@ The live gate delegates to:
 ```sh
 python3 scripts/run_ail_interactive_manual.py --chapter user-story-mode --run-checks --include-live
 python3 scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run-checks --include-live
+python3 scripts/run_ail_interactive_manual.py --chapter agent-policy-import --run-checks --include-live
 ```
 
 ## Evidence
@@ -114,6 +115,14 @@ agent-policy-import-demo-report.txt
 agent-policy-import-demo-report.fingerprint.txt
 agent-policy-multi-agent-handoff-report.txt
 agent-policy-multi-agent-handoff-report.fingerprint.txt
+agent-policy-live-review-report.txt
+agent-policy-live-review-report.fingerprint.txt
+manifest.v03-agent-policy-live-review.txt
+agent-policy-live-review-review.txt
+agent-policy-live-review-review.fingerprint.txt
+reviewer-envelope-valid-count
+reviewer-envelope-invalid-count
+reviewer-decision-accept-count
 policy-handoff-imported true
 policy-handoff-replayed true
 multi-agent-execution-evidence deterministic-role-handoff

@@ -40,7 +40,7 @@ lowers to bytecode, and verifies that `ail-build` writes `agent.ailbc.json` and
 | `codex-ail-diagnostic-repairer` | `codex-ail-diagnostic-repairer.md` | repaired AIL-Spec or rejected diagnostic explanation | repaired artifact passes or the expected diagnostic is reproduced |
 | `codex-ail-prompt-reviewer` | `codex-ail-prompt-reviewer.md` | Prompt and story harness review report | `scripts/run_v03_prompt_llm_harness.py --review-artifacts`, `scripts/run_v03_story_llm_harness.py --review-artifacts`, `scripts/run_v03_story_promotion_capture_plan.py --story-artifacts` writes `story-promotion-capture-plan.json`, then `scripts/run_v03_story_promotion_import_demo.py` writes `story-promotion-import-demo-report.txt` with `story-artifacts-preserved true` and `proposed-accepted true`; `ail-examples examples --artifact-dir ... --release-evidence` and `cargo run -- ail-v03-roadmap examples ...` write `v03-roadmap.txt` and pass before promotion |
 | `codex-ail-repair-promotion-reviewer` | `codex-ail-repair-promotion-reviewer.md` | Repair promotion review report and capture plan | `ail-examples examples --artifact-dir ... --release-evidence` writes `repair-promotion-review.txt`, then `scripts/run_v03_repair_promotion_capture_plan.py` writes `repair-promotion-capture-plan.json`, and `scripts/run_v03_repair_promotion_import_demo.py` writes `repair-promotion-import-demo-report.txt` with `source-preserved true` and `proposed-accepted true` before any repaired artifact is proposed for human-approved corpus promotion |
-| `codex-ail-agent-policy-reviewer` | `codex-ail-agent-policy-reviewer.md` | AgentTool policy handoff review report and capture plan | `ail-examples examples --artifact-dir ... --release-evidence` writes `agent-policy-review.txt`, then `scripts/run_v03_agent_policy_capture_plan.py` writes `agent-policy-capture-plan.json`, and `scripts/run_v03_agent_policy_import_demo.py` writes `agent-policy-import-demo-report.txt` with `source-preserved true`, `proposed-accepted true`, `policy-handoff-imported true`, and `policy-handoff-replayed true` before any AgentTool policy handoff is proposed for human-approved corpus promotion |
+| `codex-ail-agent-policy-reviewer` | `codex-ail-agent-policy-reviewer.md` | AgentTool policy handoff review report and capture plan | `ail-examples examples --artifact-dir ... --release-evidence` writes `agent-policy-review.txt`, then `scripts/run_v03_agent_policy_capture_plan.py` writes `agent-policy-capture-plan.json`, `scripts/run_v03_agent_policy_import_demo.py` writes `agent-policy-import-demo-report.txt` with `source-preserved true`, `proposed-accepted true`, `policy-handoff-imported true`, and `policy-handoff-replayed true`, and `scripts/run_v03_agent_policy_live_reviewer_harness.py --review-artifacts /tmp/ail-v03-agent-policy-live-review` reviews optional hosted reviewer evidence before any AgentTool policy handoff is proposed for human-approved corpus promotion |
 
 ## Codex Skills
 
@@ -62,8 +62,12 @@ The reusable AgentTool policy review skill is stored at
 `examples/agents/skills/ail-agent-policy-reviewer/SKILL.md`. It mirrors
 `codex-ail-agent-policy-reviewer.md` and lists the deterministic
 `agent-policy-import` manual chapter evidence plus the plan-only capture
-artifact and import-demo evidence required before a policy handoff amendment
-can be proposed as an accepted corpus entry.
+artifact, import-demo evidence, deterministic handoff witness, and optional
+hosted live reviewer artifact review required before a policy handoff
+amendment can be proposed as an accepted corpus entry. Hosted review evidence
+must include `agent-policy-live-review-report.txt`,
+`agent-policy-live-review-review.txt`, `reviewer-envelope-valid-count`, and
+`reviewer-decision-accept-count` when it is claimed.
 
 ## Request JSON Shape
 

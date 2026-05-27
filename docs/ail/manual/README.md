@@ -79,6 +79,26 @@ The review writes `prompt-llm-harness-review.txt` and
 `prompt-llm-harness-review.fingerprint.txt` in the reviewed artifact
 directory.
 
+Print the hosted AgentTool policy reviewer harness without contacting the
+model:
+
+```sh
+python3 scripts/run_v03_agent_policy_live_reviewer_harness.py --dry-run
+```
+
+Review completed hosted AgentTool policy reviewer artifacts before promotion:
+
+```sh
+python3 scripts/run_v03_agent_policy_live_reviewer_harness.py --review-artifacts /tmp/ail-v03-agent-policy-live-review
+```
+
+The review writes `agent-policy-live-review-review.txt` and
+`agent-policy-live-review-review.fingerprint.txt` in the reviewed artifact
+directory, and checks `agent-policy-live-review-report.txt`,
+`manifest.v03-agent-policy-live-review.txt`,
+`reviewer-envelope-valid-count`, `reviewer-envelope-invalid-count`, and
+`reviewer-decision-accept-count`.
+
 Run deterministic local checks for a chapter:
 
 ```sh
@@ -120,6 +140,13 @@ offline artifact review:
 python3 scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run-checks --include-live
 ```
 
+For AgentTool policy evidence, `--include-live` runs the hosted reviewer
+harness and the offline artifact review:
+
+```sh
+python3 scripts/run_ail_interactive_manual.py --chapter agent-policy-import --run-checks --include-live
+```
+
 ## Chapters
 
 - `user-story-mode`: story-first authoring with `ail-story`, checked
@@ -148,7 +175,8 @@ python3 scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run
 - `agent-policy-import`: deterministic review of AgentTool policy handoff
   artifacts before importing a human-approved policy trace amendment into a
   replayed corpus copy, then writing a role-separated deterministic
-  multi-agent handoff witness. Prose: `09-agent-policy-import.md`.
+  multi-agent handoff witness and optional hosted reviewer evidence. Prose:
+  `09-agent-policy-import.md`.
 - `v03-authoring-gate`: the deterministic v0.3 audit that runs User Story
   mode, examples replay, roadmap printing, prompt interaction,
   agent-entrypoint, repair-promotion, UI patch import, and AgentTool policy

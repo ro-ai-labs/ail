@@ -36,6 +36,25 @@ Run the AgentTool policy import manual chapter:
 python3 scripts/run_ail_interactive_manual.py --chapter agent-policy-import --run-checks
 ```
 
+Print the optional hosted reviewer probes before contacting the live endpoint:
+
+```sh
+python3 scripts/run_v03_agent_policy_live_reviewer_harness.py --dry-run
+```
+
+When hosted AgentTool reviewer execution is claimed, review the recorded
+artifacts offline:
+
+```sh
+python3 scripts/run_v03_agent_policy_live_reviewer_harness.py --review-artifacts /tmp/ail-v03-agent-policy-live-review
+```
+
+The full manual live path is:
+
+```sh
+python3 scripts/run_ail_interactive_manual.py --chapter agent-policy-import --run-checks --include-live
+```
+
 Replay examples directly when reviewing a different artifact directory:
 
 ```sh
@@ -53,6 +72,16 @@ The review report must include:
 - `agent-policy-capture-plan.fingerprint.txt`
 - `agent-policy-import-demo-report.txt`
 - `agent-policy-import-demo-report.fingerprint.txt`
+- `agent-policy-multi-agent-handoff-report.txt`
+- `agent-policy-multi-agent-handoff-report.fingerprint.txt`
+- `agent-policy-live-review-report.txt`
+- `agent-policy-live-review-report.fingerprint.txt`
+- `manifest.v03-agent-policy-live-review.txt`
+- `agent-policy-live-review-review.txt`
+- `agent-policy-live-review-review.fingerprint.txt`
+- `reviewer-envelope-valid-count`
+- `reviewer-envelope-invalid-count`
+- `reviewer-decision-accept-count`
 - `accepted-for-import`, `needs-repair`, or `rejected-for-import`
 - `human-approval-required true`
 - `agent-contract-check ail-agent-contracts examples/agents`
@@ -83,6 +112,9 @@ Return `needs-repair` or `rejected-for-import` when:
   `policy-handoff-replayed true`
 - agent contract checks, permission review, approval review, external-call
   review, secret-redaction review, or audit-trace review is missing
+- hosted reviewer evidence is claimed but
+  `scripts/run_v03_agent_policy_live_reviewer_harness.py --review-artifacts`
+  is missing or reports `review-result rejected`
 - the artifact implies automatic promotion without human approval
 
 Do not promote generated content into `./examples` unless deterministic replay,

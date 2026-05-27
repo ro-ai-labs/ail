@@ -1195,8 +1195,12 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
                 "scripts/run_ail_interactive_manual.py --chapter agent-policy-import --run-checks",
                 "scripts/run_v03_agent_policy_capture_plan.py",
                 "scripts/run_v03_agent_policy_import_demo.py",
+                "scripts/run_v03_agent_policy_live_reviewer_harness.py --dry-run",
+                "scripts/run_v03_agent_policy_live_reviewer_harness.py --review-artifacts /tmp/ail-v03-agent-policy-live-review",
                 "agent-policy-capture-plan.json",
                 "agent-policy-import-demo-report.txt",
+                "agent-policy-live-review-report.txt",
+                "agent-policy-live-review-review.txt",
                 "policy-handoff-imported true",
                 "policy-handoff-replayed true",
             ],
@@ -1492,6 +1496,9 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "agent-policy-import-demo-report.txt",
         "scripts/run_v03_agent_policy_multi_agent_handoff.py",
         "agent-policy-multi-agent-handoff-report.txt",
+        "scripts/run_v03_agent_policy_live_reviewer_harness.py --dry-run",
+        "AIL-Agent-Policy-Live-Reviewer-Harness",
+        "artifact-kind AIL-AgentTool-Live-Reviewer-Handoff",
         "separate-reviewer-role-count 5",
         "source-preserved true",
         "proposed-accepted true",
@@ -1590,6 +1597,16 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "evidence prompt-envelope-questions-expected-count",
         "evidence prompt-outcome-match-count",
         "evidence prompt-envelope-invalid-count",
+        "run-agent-policy-import-live-checks",
+        "python3 scripts/run_ail_interactive_manual.py --chapter agent-policy-import --run-checks --include-live",
+        "evidence agent-policy-live-review-report.txt",
+        "evidence agent-policy-live-review-report.fingerprint.txt",
+        "evidence agent-policy-live-review-review.txt",
+        "evidence agent-policy-live-review-review.fingerprint.txt",
+        "evidence manifest.v03-agent-policy-live-review.txt",
+        "evidence reviewer-envelope-valid-count",
+        "evidence reviewer-envelope-invalid-count",
+        "evidence reviewer-decision-accept-count",
     ] {
         assert!(
             gate_live_stdout.contains(required),
@@ -1811,8 +1828,12 @@ fn examples_agents_include_agent_policy_review_contract() {
         "AgentTool policy handoff review report",
         "scripts/run_v03_agent_policy_capture_plan.py",
         "scripts/run_v03_agent_policy_import_demo.py",
+        "scripts/run_v03_agent_policy_live_reviewer_harness.py --review-artifacts",
         "agent-policy-review.txt",
         "agent-policy-import-demo-report.txt",
+        "agent-policy-live-review-report.txt",
+        "agent-policy-live-review-review.txt",
+        "reviewer-envelope-valid-count",
         "policy-handoff-imported true",
         "policy-handoff-replayed true",
     ] {
@@ -1833,6 +1854,14 @@ fn examples_agents_include_agent_policy_review_contract() {
         "agent-policy-capture-plan.json",
         "scripts/run_v03_agent_policy_import_demo.py",
         "agent-policy-import-demo-report.txt",
+        "agent-policy-multi-agent-handoff-report.txt",
+        "scripts/run_v03_agent_policy_live_reviewer_harness.py --dry-run",
+        "scripts/run_v03_agent_policy_live_reviewer_harness.py --review-artifacts",
+        "agent-policy-live-review-report.txt",
+        "agent-policy-live-review-review.txt",
+        "reviewer-envelope-valid-count",
+        "reviewer-envelope-invalid-count",
+        "reviewer-decision-accept-count",
         "source-preserved true",
         "proposed-accepted true",
         "policy-handoff-imported true",
@@ -1859,6 +1888,19 @@ fn examples_agents_include_agent_policy_review_contract() {
         "agent-policy-capture-plan.fingerprint.txt",
         "agent-policy-import-demo-report.txt",
         "agent-policy-import-demo-report.fingerprint.txt",
+        "agent-policy-multi-agent-handoff-report.txt",
+        "agent-policy-multi-agent-handoff-report.fingerprint.txt",
+        "python3 scripts/run_v03_agent_policy_live_reviewer_harness.py --dry-run",
+        "python3 scripts/run_v03_agent_policy_live_reviewer_harness.py --review-artifacts /tmp/ail-v03-agent-policy-live-review",
+        "python3 scripts/run_ail_interactive_manual.py --chapter agent-policy-import --run-checks --include-live",
+        "agent-policy-live-review-report.txt",
+        "agent-policy-live-review-report.fingerprint.txt",
+        "manifest.v03-agent-policy-live-review.txt",
+        "agent-policy-live-review-review.txt",
+        "agent-policy-live-review-review.fingerprint.txt",
+        "reviewer-envelope-valid-count",
+        "reviewer-envelope-invalid-count",
+        "reviewer-decision-accept-count",
         "source-preserved true",
         "proposed-accepted true",
         "policy-handoff-imported true",
@@ -1963,8 +2005,10 @@ fn cli_ail_agent_contracts_validates_prompt_reviewer_contract() {
         "contract codex-ail-agent-policy-reviewer",
         "review-command scripts/run_v03_prompt_llm_harness.py --review-artifacts",
         "review-command scripts/run_v03_story_llm_harness.py --review-artifacts",
+        "review-command scripts/run_v03_agent_policy_live_reviewer_harness.py --review-artifacts",
         "repair-promotion-artifact repair-promotion-review.txt",
         "agent-policy-import-artifact agent-policy-import-demo-report.txt",
+        "agent-policy-live-review-artifact agent-policy-live-review-report.txt",
         "story-promotion-import-artifact story-promotion-import-demo-report.txt",
         "repair-promotion-import-artifact repair-promotion-import-demo-report.txt",
         "roadmap-artifact v03-roadmap.txt",
@@ -1975,6 +2019,70 @@ fn cli_ail_agent_contracts_validates_prompt_reviewer_contract() {
         "agent-contracts-result accepted",
     ] {
         assert!(stdout.contains(required), "{required}\n{stdout}");
+    }
+}
+
+#[test]
+fn script_v03_agent_policy_live_reviewer_harness_help_lists_roles_and_dry_run() {
+    let script = format!(
+        "{}/scripts/run_v03_agent_policy_live_reviewer_harness.py",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let output = Command::new("python3")
+        .args([&script, "--help"])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    for required in [
+        "AgentTool policy reviewer",
+        "--dry-run",
+        "--review-artifacts",
+        "--endpoint",
+        "--source-entry-id",
+        "--proposed-entry-id",
+        "http://inteligentia-pro-1:8080",
+        "/v1/chat/completions",
+    ] {
+        assert!(stdout.contains(required), "{required}\n{stdout}");
+    }
+
+    let dry_run = Command::new("python3")
+        .args([&script, "--dry-run"])
+        .output()
+        .unwrap();
+    assert!(
+        dry_run.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&dry_run.stdout),
+        String::from_utf8_lossy(&dry_run.stderr)
+    );
+    let dry_run_stdout = String::from_utf8_lossy(&dry_run.stdout);
+    for required in [
+        "AIL-Agent-Policy-Live-Reviewer-Harness:",
+        "model-check curl -sS http://inteligentia-pro-1:8080/v1/models",
+        "endpoint http://inteligentia-pro-1:8080/v1/chat/completions",
+        "artifact-dir /tmp/ail-v03-agent-policy-live-review",
+        "source-entry-id example-40",
+        "proposed-entry-id example-40-policy",
+        "role-count 5",
+        "artifact-kind AIL-AgentTool-Live-Reviewer-Handoff",
+        "role requirements-writer contract examples/agents/codex-ail-requirements-writer.md",
+        "role spec-writer contract examples/agents/codex-ail-spec-writer.md",
+        "role diagnostic-repairer contract examples/agents/codex-ail-diagnostic-repairer.md",
+        "role prompt-reviewer contract examples/agents/codex-ail-prompt-reviewer.md",
+        "role agent-policy-reviewer contract examples/agents/codex-ail-agent-policy-reviewer.md",
+        "probe-fingerprint fnv64:",
+    ] {
+        assert!(
+            dry_run_stdout.contains(required),
+            "{required}\n{dry_run_stdout}"
+        );
     }
 }
 

@@ -25,6 +25,15 @@ corpus entry.
 - `agent-policy-capture-plan.fingerprint.txt`
 - `agent-policy-import-demo-report.txt`
 - `agent-policy-import-demo-report.fingerprint.txt`
+- `agent-policy-multi-agent-handoff-report.txt`
+- `agent-policy-multi-agent-handoff-report.fingerprint.txt`
+- optional hosted reviewer artifact directory produced by
+  `scripts/run_v03_agent_policy_live_reviewer_harness.py`
+- `agent-policy-live-review-report.txt`
+- `agent-policy-live-review-report.fingerprint.txt`
+- `manifest.v03-agent-policy-live-review.txt`
+- `agent-policy-live-review-review.txt`
+- `agent-policy-live-review-review.fingerprint.txt`
 - reviewer notes about intended AgentTool policy handoff promotion
 
 ## Required Output
@@ -51,6 +60,16 @@ Return an `AIL-Agent-Policy-Review` report that records:
 - `agent-policy-capture-plan.fingerprint.txt`
 - `agent-policy-import-demo-report.txt`
 - `agent-policy-import-demo-report.fingerprint.txt`
+- `agent-policy-multi-agent-handoff-report.txt`
+- `agent-policy-multi-agent-handoff-report.fingerprint.txt`
+- `agent-policy-live-review-report.txt`
+- `agent-policy-live-review-report.fingerprint.txt`
+- `manifest.v03-agent-policy-live-review.txt`
+- `agent-policy-live-review-review.txt`
+- `agent-policy-live-review-review.fingerprint.txt`
+- `reviewer-envelope-valid-count`
+- `reviewer-envelope-invalid-count`
+- `reviewer-decision-accept-count`
 - `source-preserved true`
 - `proposed-accepted true`
 - `policy-handoff-imported true`
@@ -66,6 +85,9 @@ Return an `AIL-Agent-Policy-Review` report that records:
 - Do not accept an AgentTool policy handoff when permission review, approval
   review, external-call review, secret-redaction review, audit-trace review,
   or agent contract checks are missing.
+- Do not treat hosted reviewer output as accepted unless
+  `scripts/run_v03_agent_policy_live_reviewer_harness.py --review-artifacts`
+  reports `review-result accepted`.
 - Do not rewrite the reviewed source entry during promotion; the source
   AgentTool entry remains part of the learning corpus.
 - Do not treat `accepted-for-import` as an automatic corpus edit.
@@ -117,3 +139,25 @@ reviewer may then prepare a batch entry with `source_entry_id`, `entry_id`,
 `agent_policy_capture_plan_json`. The batch importer must append the proposed
 accepted entry in a corpus copy and must not rewrite or delete the AgentTool
 source entry.
+
+Hosted reviewer evidence is optional but must use the live reviewer harness
+when claimed:
+
+```sh
+python3 scripts/run_v03_agent_policy_live_reviewer_harness.py --dry-run
+python3 scripts/run_v03_agent_policy_live_reviewer_harness.py
+python3 scripts/run_v03_agent_policy_live_reviewer_harness.py \
+  --review-artifacts /tmp/ail-v03-agent-policy-live-review
+```
+
+The offline review must include `agent-policy-live-review-report.txt`,
+`agent-policy-live-review-review.txt`,
+`agent-policy-live-review-review.fingerprint.txt`,
+`manifest.v03-agent-policy-live-review.txt`,
+`reviewer-envelope-valid-count`, `reviewer-envelope-invalid-count`, and
+`reviewer-decision-accept-count`. Manual `--include-live` runs this path
+through:
+
+```sh
+python3 scripts/run_ail_interactive_manual.py --chapter agent-policy-import --run-checks --include-live
+```

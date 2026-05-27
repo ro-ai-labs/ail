@@ -114,7 +114,46 @@ role agent-policy-reviewer contract codex-ail-agent-policy-reviewer
 multi-agent-execution-evidence deterministic-role-handoff
 ```
 
-This is still deterministic local evidence, not a live multi-agent execution
-claim. It raises the AgentTool handoff from one import script to a reusable
-role-separated review witness before the next v0.3 step adds live reviewer
-execution.
+This is deterministic local evidence, not a live multi-agent execution claim.
+It raises the AgentTool handoff from one import script to a reusable
+role-separated review witness.
+
+## Live Reviewer Evidence
+
+Live reviewer execution stays opt-in because it contacts the hosted llama.cpp
+server. Print the five reviewer probes without contacting the server first:
+
+```sh
+python3 scripts/run_v03_agent_policy_live_reviewer_harness.py --dry-run
+```
+
+When `http://inteligentia-pro-1:8080/` is reachable, run the hosted reviewer
+harness:
+
+```sh
+python3 scripts/run_v03_agent_policy_live_reviewer_harness.py
+```
+
+Then review the recorded request, response, and content bundle offline:
+
+```sh
+python3 scripts/run_v03_agent_policy_live_reviewer_harness.py --review-artifacts /tmp/ail-v03-agent-policy-live-review
+```
+
+The review must write and validate:
+
+```text
+agent-policy-live-review-report.txt
+agent-policy-live-review-report.fingerprint.txt
+manifest.v03-agent-policy-live-review.txt
+agent-policy-live-review-review.txt
+agent-policy-live-review-review.fingerprint.txt
+reviewer-envelope-valid-count
+reviewer-envelope-invalid-count
+reviewer-decision-accept-count
+```
+
+The live reviewer report is evidence that separate reviewer roles executed
+against the AgentTool handoff contract. It still does not edit `./examples`;
+promotion remains gated by deterministic replay, human approval, and
+corpus-copy import evidence.

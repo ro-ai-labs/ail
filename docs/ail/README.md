@@ -128,7 +128,8 @@ one of these version surfaces or add a versioned surface through
   copy.
 - `manual/09-agent-policy-import.md`: deterministic review of AgentTool policy
   handoff artifacts before importing a human-approved policy trace amendment
-  into a replayed corpus copy and writing a role-separated handoff witness.
+  into a replayed corpus copy, writing a role-separated handoff witness, and
+  reviewing optional hosted AgentTool reviewer evidence.
 
 ## Versioned Assets
 

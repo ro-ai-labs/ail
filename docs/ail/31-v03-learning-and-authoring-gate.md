@@ -235,6 +235,13 @@ The `ail-examples` replay bundle must also write deterministic story artifacts:
   `agent-policy-multi-agent-handoff-report.fingerprint.txt` in the same
   scratch import work directory when the AgentTool policy import is validated
   by a role-separated deterministic handoff witness.
+- `agent-policy-live-review-report.txt`,
+  `agent-policy-live-review-report.fingerprint.txt`,
+  `manifest.v03-agent-policy-live-review.txt`,
+  `agent-policy-live-review-review.txt`, and
+  `agent-policy-live-review-review.fingerprint.txt` in a live reviewer artifact
+  directory when hosted AgentTool policy reviewer roles are executed and then
+  reviewed offline.
 
 The story artifact is derived from catalog metadata and fingerprinted in the
 same report and manifest as request, response, checked Core, bytecode, VM
@@ -321,9 +328,13 @@ as prose. The current examples reveal these next-version gaps:
   external-call review, secret-redaction review, audit-trace review, runtime
   evidence, a reusable Codex AgentTool policy reviewer contract and skill, a
   human-approved AgentTool policy import demo, and a deterministic
-  role-separated multi-agent handoff witness. The next bar is live reviewer
-  execution evidence where the policy handoff is produced by separate reviewer
-  roles rather than derived from deterministic replay artifacts.
+  role-separated multi-agent handoff witness. An opt-in live reviewer harness
+  now records hosted request/response/content bundles for five reviewer roles
+  and writes an offline review with `reviewer-envelope-valid-count`,
+  `reviewer-envelope-invalid-count`, and `reviewer-decision-accept-count`. The
+  next bar is broader live reviewer coverage where accepted and rejected
+  AgentTool policy handoffs are both produced by separate reviewer roles and
+  promoted only after human approval.
 - Compiler/self-hosting examples need pass composition and fixed-point checks.
 - Systems examples need hardware-facing contracts, scheduler or interrupt
   semantics, and clearer unsupported-target migration guidance.

@@ -425,6 +425,144 @@ def write_story_llm_review_fixture(artifact_dir, omit_agent_trace=False):
     write_text(artifact_dir / "manifest.ail-story.fingerprint.txt", fnv64(manifest) + "\n")
 
 
+AGENT_POLICY_LIVE_ROLES = (
+    ("requirements-writer", "examples/agents/codex-ail-requirements-writer.md"),
+    ("spec-writer", "examples/agents/codex-ail-spec-writer.md"),
+    ("diagnostic-repairer", "examples/agents/codex-ail-diagnostic-repairer.md"),
+    ("prompt-reviewer", "examples/agents/codex-ail-prompt-reviewer.md"),
+    ("agent-policy-reviewer", "examples/agents/codex-ail-agent-policy-reviewer.md"),
+)
+
+
+def agent_policy_live_reviewer_envelope(role):
+    return (
+        json.dumps(
+            {
+                "artifact_kind": "AIL-AgentTool-Live-Reviewer-Handoff",
+                "role": role,
+                "decision": "accept",
+                "evidence": [
+                    "agent-policy-review.txt",
+                    "agent-policy-capture-plan.json",
+                    "agent-policy-import-demo-report.txt",
+                    "agent-policy-multi-agent-handoff-report.txt",
+                ],
+                "questions": [],
+                "checker_handoff": {
+                    "must_check": True,
+                    "required_artifacts": [
+                        "agent-policy-review.txt",
+                        "agent-policy-import-demo-report.txt",
+                    ],
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n"
+    )
+
+
+def write_agent_policy_live_reviewer_fixture(artifact_dir, empty_content_for=None):
+    artifact_dir.mkdir(parents=True, exist_ok=True)
+    models_text = (
+        json.dumps({"object": "list", "data": [{"id": "test-model"}]}, sort_keys=True)
+        + "\n"
+    )
+    write_text(artifact_dir / "models.json", models_text)
+    write_text(artifact_dir / "models.fingerprint.txt", fnv64(models_text) + "\n")
+    report_lines = [
+        "AIL-Agent-Policy-Live-Reviewer-Harness:",
+        "endpoint http://127.0.0.1:8080/v1/chat/completions",
+        "models-url http://127.0.0.1:8080/v1/models",
+        f"role-count {len(AGENT_POLICY_LIVE_ROLES)}",
+        "source-entry-id example-40",
+        "proposed-entry-id example-40-policy",
+    ]
+    manifest_lines = [
+        "AIL-Agent-Policy-Live-Reviewer-Harness-Manifest:",
+        "artifact models models.json models.fingerprint.txt",
+    ]
+    for role, contract_path in AGENT_POLICY_LIVE_ROLES:
+        contract_text = (ROOT / contract_path).read_text()
+        probe_text = (
+            "Review AgentTool policy handoff evidence for example-40 and return the "
+            "AIL-AgentTool-Live-Reviewer-Handoff JSON envelope."
+        )
+        probe_fingerprint = fnv64(probe_text)
+        if empty_content_for == role:
+            content = ""
+            content_kind = "empty"
+            decision = "missing"
+        else:
+            content = agent_policy_live_reviewer_envelope(role)
+            content_kind = "reviewer-envelope"
+            decision = "accept"
+        response = {"choices": [{"message": {"content": content.strip()}}], "model": "test-model"}
+        request_text = (
+            json.dumps(
+                {
+                    "endpoint": "http://127.0.0.1:8080/v1/chat/completions",
+                    "method": "POST",
+                    "role": role,
+                    "contract_file": contract_path,
+                    "contract_fingerprint": fnv64(contract_text),
+                    "probe_fingerprint": probe_fingerprint,
+                    "body": {
+                        "messages": [
+                            {"role": "system", "content": contract_text},
+                            {"role": "user", "content": probe_text},
+                        ],
+                        "max_tokens": 64,
+                        "temperature": 0.0,
+                        "stream": False,
+                    },
+                },
+                indent=2,
+                sort_keys=True,
+            )
+            + "\n"
+        )
+        response_text = json.dumps(response, indent=2, sort_keys=True) + "\n"
+        write_text(artifact_dir / "requests" / f"{role}.json", request_text)
+        write_text(
+            artifact_dir / "requests" / f"{role}.fingerprint.txt",
+            fnv64(request_text) + "\n",
+        )
+        write_text(artifact_dir / "responses" / f"{role}.json", response_text)
+        write_text(
+            artifact_dir / "responses" / f"{role}.fingerprint.txt",
+            fnv64(response_text) + "\n",
+        )
+        write_text(artifact_dir / "content" / f"{role}.txt", content)
+        write_text(
+            artifact_dir / "content" / f"{role}.fingerprint.txt",
+            fnv64(content) + "\n",
+        )
+        report_lines.append(
+            f"role {role} contract {contract_path} "
+            f"contract-fingerprint {fnv64(contract_text)} "
+            f"probe-fingerprint {probe_fingerprint} "
+            f"response-fingerprint {fnv64(response_text)} "
+            f"content-kind {content_kind} decision {decision} "
+            f"content-bytes {len(content.encode())}"
+        )
+        manifest_lines.append(
+            f"artifact {role} contract {contract_path} "
+            f"request requests/{role}.json requests/{role}.fingerprint.txt "
+            f"response responses/{role}.json responses/{role}.fingerprint.txt "
+            f"content content/{role}.txt content/{role}.fingerprint.txt"
+        )
+    report_text = "\n".join(report_lines) + "\n"
+    manifest_text = "\n".join(manifest_lines) + "\n"
+    write_text(artifact_dir / "agent-policy-live-review-report.txt", report_text)
+    write_text(
+        artifact_dir / "agent-policy-live-review-report.fingerprint.txt",
+        fnv64(report_text) + "\n",
+    )
+    write_text(artifact_dir / "manifest.v03-agent-policy-live-review.txt", manifest_text)
+    write_text(artifact_dir / "manifest.fingerprint.txt", fnv64(manifest_text) + "\n")
+
+
 class _CompletionHandler(BaseHTTPRequestHandler):
     response_text = ""
     response_payload = None
@@ -752,6 +890,92 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             self.assertIn("review-result rejected", review.stdout)
             self.assertIn("missing file", review.stdout)
             self.assertIn("agent-trace.txt", review.stdout)
+        finally:
+            shutil.rmtree(artifact_dir, ignore_errors=True)
+
+    def test_agent_policy_live_reviewer_harness_dry_run_lists_roles(self):
+        dry_run = subprocess.run(
+            [
+                "python3",
+                "scripts/run_v03_agent_policy_live_reviewer_harness.py",
+                "--dry-run",
+            ],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+        )
+        self.assertEqual(
+            dry_run.returncode,
+            0,
+            f"stdout:\n{dry_run.stdout}\nstderr:\n{dry_run.stderr}",
+        )
+        self.assertIn("AIL-Agent-Policy-Live-Reviewer-Harness:", dry_run.stdout)
+        self.assertIn("role-count 5", dry_run.stdout)
+        self.assertIn(
+            "role requirements-writer contract examples/agents/codex-ail-requirements-writer.md",
+            dry_run.stdout,
+        )
+        self.assertIn(
+            "role agent-policy-reviewer contract examples/agents/codex-ail-agent-policy-reviewer.md",
+            dry_run.stdout,
+        )
+        self.assertIn("artifact-kind AIL-AgentTool-Live-Reviewer-Handoff", dry_run.stdout)
+        self.assertIn("model-check curl -sS http://inteligentia-pro-1:8080/v1/models", dry_run.stdout)
+
+    def test_agent_policy_live_reviewer_harness_review_accepts_complete_bundle(self):
+        artifact_dir = Path(tempfile.mkdtemp(prefix="ail-agent-policy-live-review-"))
+        try:
+            write_agent_policy_live_reviewer_fixture(artifact_dir)
+            review = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_agent_policy_live_reviewer_harness.py",
+                    "--review-artifacts",
+                    str(artifact_dir),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(
+                review.returncode,
+                0,
+                f"stdout:\n{review.stdout}\nstderr:\n{review.stderr}",
+            )
+            self.assertIn("AIL-Agent-Policy-Live-Reviewer-Harness-Review:", review.stdout)
+            self.assertIn("role-count 5", review.stdout)
+            self.assertIn("reviewer-envelope-valid-count 5", review.stdout)
+            self.assertIn("reviewer-envelope-invalid-count 0", review.stdout)
+            self.assertIn("reviewer-decision-accept-count 5", review.stdout)
+            self.assertIn("review-result accepted", review.stdout)
+        finally:
+            shutil.rmtree(artifact_dir, ignore_errors=True)
+
+    def test_agent_policy_live_reviewer_harness_review_rejects_empty_content(self):
+        artifact_dir = Path(tempfile.mkdtemp(prefix="ail-agent-policy-live-empty-"))
+        try:
+            write_agent_policy_live_reviewer_fixture(
+                artifact_dir, empty_content_for="prompt-reviewer"
+            )
+            review = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_agent_policy_live_reviewer_harness.py",
+                    "--review-artifacts",
+                    str(artifact_dir),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertNotEqual(
+                review.returncode,
+                0,
+                f"stdout:\n{review.stdout}\nstderr:\n{review.stderr}",
+            )
+            self.assertIn("review-result rejected", review.stdout)
+            self.assertIn("empty content prompt-reviewer", review.stdout)
+            self.assertIn("reviewer-envelope-invalid-count 1", review.stdout)
         finally:
             shutil.rmtree(artifact_dir, ignore_errors=True)
 
