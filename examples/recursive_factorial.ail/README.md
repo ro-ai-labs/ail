@@ -24,10 +24,11 @@ bytecode control-flow behavior can be inspected directly.
 
 ## Expected Replay Artifacts
 
-Focused tests lower this package into checked Core and runnable bytecode for
-the recursive function surface. Future catalog entries should add stored
-request/response transcripts and per-entry VM trace evidence for factorial
-inputs.
+Focused tests and catalog entries `example-117` through `example-121` lower
+this package into checked Core, verified bytecode, and VM traces for recursive
+factorial inputs. The stored prompt and response transcripts exercise the
+interview, spec draft, Core draft, Core-to-spec, and trace-debug prompt
+surfaces against the same compact recursion fixture.
 
 ## Rejected Fixtures
 

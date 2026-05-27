@@ -337,8 +337,8 @@ def main(argv: list[str]) -> int:
     )
     report_text = (args.output_artifacts / "examples-report.txt").read_text()
     for line in [
-        "entry-count 118",
-        "checker-result-count accepted 109",
+        "entry-count 123",
+        "checker-result-count accepted 114",
         "checker-result-count rejected 9",
         f"entry {source_entry_id} ",
         f"entry {proposed_entry_id} ",
@@ -356,8 +356,8 @@ def main(argv: list[str]) -> int:
         f"{str(source_core_fingerprint_preserved).lower()}",
         f"flow-edit-applied {str(flow_edit_applied).lower()}",
         f"patched-core-replayed {str(patched_core_replayed).lower()}",
-        "entry-count 118",
-        "checker-result-count accepted 109",
+        "entry-count 123",
+        "checker-result-count accepted 114",
         "checker-result-count rejected 9",
         f"flow-edit {flow_edit_path}",
         f"batch-plan {batch_plan_path}",

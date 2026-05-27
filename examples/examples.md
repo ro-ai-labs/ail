@@ -4221,3 +4221,188 @@ vm-action: CreateTicketForm
 runtime-state: ticket.title=Incident 116
 expected-diagnostic: AIL-UI-A11Y-001
 failure-taxonomy: ui-accessibility
+
+## Example: example-117
+semantic-task: recursive-factorial-live-codex-interview-117
+profile: Application
+surface-tags: turing-core,functions,recursion
+package: examples/recursive_factorial.ail
+use-case: Recursive factorial function semantics that prove base-case, self-call, arithmetic return, and VM trace behavior.
+capability-level: low-level
+capability-under-test: turing-core-recursion
+program-scale: utility
+program-domain: runtime
+module-count: 1
+spec-count: 1
+story-count: 1
+interacts-with: none
+user-story-id: recursive-factorial-story
+user-story: As a language implementer I can inspect recursive factorial execution so that Turing-core recursion remains reviewable.
+acceptance-criteria: checked recursive spec exists; checked core exists; bytecode exists; VM trace records factorial entry, branch, recursive call, return, and trace event
+story-evidence: vm-trace
+story-file: stories/example-117.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
+distinctness-claim: recursive-factorial-live-codex-interview-117 validates turing-core-recursion through docs/ail/prompts/interview.system.md and VM trace evidence.
+v0.3-signal: Turing Core examples need termination and stack-safety diagnostics for recursive functions.
+prompt-file: docs/ail/prompts/interview.system.md
+prompt-version: ail-prompts.v0.2
+prompt-fingerprint: fnv64:5ca61a4509169980
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
+request-file: requests/example-117.json
+response-file: responses/example-117.json
+artifact-kind: ail-spec
+checker-result: accepted
+target: vm
+vm-action: factorial
+runtime-state: n=3
+
+## Example: example-118
+semantic-task: recursive-factorial-live-codex-spec-draft-118
+profile: Application
+surface-tags: turing-core,functions,recursion
+package: examples/recursive_factorial.ail
+use-case: Recursive factorial function semantics that prove base-case, self-call, arithmetic return, and VM trace behavior.
+capability-level: low-level
+capability-under-test: turing-core-recursion
+program-scale: utility
+program-domain: runtime
+module-count: 1
+spec-count: 1
+story-count: 1
+interacts-with: none
+user-story-id: recursive-factorial-story
+user-story: As a language implementer I can inspect recursive factorial execution so that Turing-core recursion remains reviewable.
+acceptance-criteria: checked recursive spec exists; checked core exists; bytecode exists; VM trace records factorial entry, branch, recursive call, return, and trace event
+story-evidence: vm-trace
+story-file: stories/example-118.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
+distinctness-claim: recursive-factorial-live-codex-spec-draft-118 validates turing-core-recursion through docs/ail/prompts/spec-draft.system.md and VM trace evidence.
+v0.3-signal: Turing Core examples need termination and stack-safety diagnostics for recursive functions.
+prompt-file: docs/ail/prompts/spec-draft.system.md
+prompt-version: ail-prompts.v0.2
+prompt-fingerprint: fnv64:b23778093326102c
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
+request-file: requests/example-118.json
+response-file: responses/example-118.json
+artifact-kind: ail-spec
+checker-result: accepted
+target: vm
+vm-action: factorial
+runtime-state: n=4
+
+## Example: example-119
+semantic-task: recursive-factorial-live-codex-core-draft-119
+profile: Application
+surface-tags: turing-core,functions,recursion
+package: examples/recursive_factorial.ail
+use-case: Recursive factorial function semantics that prove base-case, self-call, arithmetic return, and VM trace behavior.
+capability-level: low-level
+capability-under-test: turing-core-recursion
+program-scale: utility
+program-domain: runtime
+module-count: 1
+spec-count: 1
+story-count: 1
+interacts-with: none
+user-story-id: recursive-factorial-story
+user-story: As a language implementer I can inspect recursive factorial execution so that Turing-core recursion remains reviewable.
+acceptance-criteria: checked recursive spec exists; checked core exists; bytecode exists; VM trace records factorial entry, branch, recursive call, return, and trace event
+story-evidence: vm-trace
+story-file: stories/example-119.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
+distinctness-claim: recursive-factorial-live-codex-core-draft-119 validates turing-core-recursion through docs/ail/prompts/core-draft.system.md and VM trace evidence.
+v0.3-signal: Turing Core examples need termination and stack-safety diagnostics for recursive functions.
+prompt-file: docs/ail/prompts/core-draft.system.md
+prompt-version: ail-prompts.v0.2
+prompt-fingerprint: fnv64:0175222e4a84bec4
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
+request-file: requests/example-119.json
+response-file: responses/example-119.json
+artifact-kind: ail-spec
+checker-result: accepted
+target: vm
+vm-action: factorial
+runtime-state: n=5
+
+## Example: example-120
+semantic-task: recursive-factorial-live-codex-core-to-spec-120
+profile: Application
+surface-tags: turing-core,functions,recursion
+package: examples/recursive_factorial.ail
+use-case: Recursive factorial function semantics that prove base-case, self-call, arithmetic return, and VM trace behavior.
+capability-level: low-level
+capability-under-test: turing-core-recursion
+program-scale: utility
+program-domain: runtime
+module-count: 1
+spec-count: 1
+story-count: 1
+interacts-with: none
+user-story-id: recursive-factorial-story
+user-story: As a language implementer I can inspect recursive factorial execution so that Turing-core recursion remains reviewable.
+acceptance-criteria: checked recursive spec exists; checked core exists; bytecode exists; VM trace records factorial entry, branch, recursive call, return, and trace event
+story-evidence: vm-trace
+story-file: stories/example-120.md
+story-journey: spec-to-story
+story-roundtrip: semantic-similar
+distinctness-claim: recursive-factorial-live-codex-core-to-spec-120 validates turing-core-recursion through docs/ail/prompts/core-to-spec.system.md and VM trace evidence.
+v0.3-signal: Turing Core examples need termination and stack-safety diagnostics for recursive functions.
+prompt-file: docs/ail/prompts/core-to-spec.system.md
+prompt-version: ail-prompts.v0.2
+prompt-fingerprint: fnv64:9f447e07620792b2
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
+request-file: requests/example-120.json
+response-file: responses/example-120.json
+artifact-kind: ail-spec
+checker-result: accepted
+target: vm
+vm-action: factorial
+runtime-state: n=6
+
+## Example: example-121
+semantic-task: recursive-factorial-live-codex-trace-debug-121
+profile: Application
+surface-tags: turing-core,functions,recursion
+package: examples/recursive_factorial.ail
+use-case: Recursive factorial function semantics that prove base-case, self-call, arithmetic return, and VM trace behavior.
+capability-level: low-level
+capability-under-test: turing-core-recursion
+program-scale: utility
+program-domain: runtime
+module-count: 1
+spec-count: 1
+story-count: 1
+interacts-with: none
+user-story-id: recursive-factorial-story
+user-story: As a language implementer I can inspect recursive factorial execution so that Turing-core recursion remains reviewable.
+acceptance-criteria: checked recursive spec exists; checked core exists; bytecode exists; VM trace records factorial entry, branch, recursive call, return, and trace event
+story-evidence: vm-trace
+story-file: stories/example-121.md
+story-journey: story-amendment
+story-roundtrip: semantic-similar
+distinctness-claim: recursive-factorial-live-codex-trace-debug-121 validates turing-core-recursion through docs/ail/prompts/trace-debug.system.md and VM trace evidence.
+v0.3-signal: Turing Core examples need termination and stack-safety diagnostics for recursive functions.
+prompt-file: docs/ail/prompts/trace-debug.system.md
+prompt-version: ail-prompts.v0.2
+prompt-fingerprint: fnv64:f5fffd069da83242
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
+request-file: requests/example-121.json
+response-file: responses/example-121.json
+artifact-kind: ail-spec
+checker-result: accepted
+target: vm
+vm-action: factorial
+runtime-state: n=7

@@ -45,11 +45,6 @@ role: support-only
 used-by: examples/incident_response.ail
 reason: AgentTool notification contracts and pager-token boundaries are imported by counted incident-response workflow examples.
 
-## Support Package: examples/recursive_factorial.ail
-role: support-only
-used-by: test:ail_spec_parses_function_surface_into_core_and_round_trips, test:ail_spec_lowers_function_surface_into_runnable_bytecode, docs:docs/ail/README.md
-reason: Recursive function semantics are currently verified by focused parser, Core round-trip, bytecode, and VM tests before being promoted into catalog replay entries.
-
 ## Support Package: examples/support_shared.ail
 role: support-only
 used-by: examples/support_composed.ail

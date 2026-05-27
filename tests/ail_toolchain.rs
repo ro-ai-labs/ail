@@ -812,12 +812,24 @@ fn docs_example_inventory_names_every_package_directory() {
     );
     assert!(inventory.contains("Package directories: 26"), "{inventory}");
     assert!(
-        inventory.contains("Counted catalog examples: 117"),
+        inventory.contains("Counted catalog examples: 122"),
         "{inventory}"
     );
     assert!(
         inventory.contains("Support-only package manifest: `examples/support-packages.md`"),
         "{inventory}"
+    );
+    let recursive_factorial_count = catalog
+        .lines()
+        .filter(|line| line.trim() == "package: examples/recursive_factorial.ail")
+        .count();
+    assert!(
+        recursive_factorial_count >= 5,
+        "recursive_factorial.ail should be counted as a Turing-core end-to-end example family\n{catalog}"
+    );
+    assert!(
+        !support_manifest.contains("## Support Package: examples/recursive_factorial.ail"),
+        "{support_manifest}"
     );
 
     for package in package_dirs {
@@ -25805,9 +25817,9 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         String::from_utf8_lossy(&output.stderr)
     );
     let report = fs::read_to_string(artifact_dir.join("examples-report.txt")).unwrap();
-    assert!(report.contains("entry-count 117"), "{report}");
+    assert!(report.contains("entry-count 122"), "{report}");
     assert!(
-        report.contains("checker-result-count accepted 108"),
+        report.contains("checker-result-count accepted 113"),
         "{report}"
     );
     assert!(
@@ -25815,7 +25827,7 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("capability-level-count low-level 32"),
+        report.contains("capability-level-count low-level 37"),
         "{report}"
     );
     assert!(
@@ -25871,7 +25883,7 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("capture-origin-count live-codex 113"),
+        report.contains("capture-origin-count live-codex 118"),
         "{report}"
     );
     assert!(
@@ -26538,6 +26550,20 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
+        report.contains("entry example-117")
+            && report.contains("semantic-task recursive-factorial-live-codex-interview-117")
+            && report.contains("entry-artifact example-117 vm-trace")
+            && report.contains("FactorialCalledScenario117"),
+        "{report}"
+    );
+    assert!(
+        report.contains("entry example-121")
+            && report.contains("semantic-task recursive-factorial-live-codex-trace-debug-121")
+            && report.contains("entry-artifact example-121 vm-trace")
+            && report.contains("turing-core-recursion"),
+        "{report}"
+    );
+    assert!(
         report.contains("entry example-110")
             && report.contains("semantic-task stateful-counter-live-codex-repair-110")
             && report.contains("prompt-count docs/ail/prompts/repair.system.md 1")
@@ -26569,12 +26595,13 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
     assert!(
         report.contains("program-domain-count application 10")
             && report.contains("program-domain-count diagnostic 9")
+            && report.contains("program-domain-count runtime 21")
             && report.contains("program-scale-count multi-module-system 53")
-            && report.contains("story-roundtrip-count semantic-similar 108"),
+            && report.contains("story-roundtrip-count semantic-similar 113"),
         "{report}"
     );
     assert!(
-        report.contains("semantic-anchor-story-count 117")
+        report.contains("semantic-anchor-story-count 122")
             && report.contains(
                 "entry-semantic-anchors example-0 Option<T>; Result<T; E>; Map<K; V>; Option.map; OptionMapEvaluated; interview.system.md"
             )
@@ -26613,6 +26640,9 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
             )
             && report.contains(
                 "entry-semantic-anchors example-111 Incident; Declare incident; IncidentDeclared; incident_identity; incident_policy; incident_notifications"
+            )
+            && report.contains(
+                "entry-semantic-anchors example-117 factorial; n is 0; recursive result; FactorialCalledScenario117; turing-core-recursion; interview.system.md"
             ),
         "{report}"
     );
@@ -27276,9 +27306,9 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
     let model_executor_manifest =
         fs::read_to_string(artifact_dir.join("model-executor-manifest.txt")).unwrap();
     assert!(
-        model_executor_manifest.contains("entry-count 117")
-            && model_executor_manifest.contains("executor-family codex-skill-agent count 113")
-            && model_executor_manifest.contains("capture-origin live-codex count 113")
+        model_executor_manifest.contains("entry-count 122")
+            && model_executor_manifest.contains("executor-family codex-skill-agent count 118")
+            && model_executor_manifest.contains("capture-origin live-codex count 118")
             && model_executor_manifest.contains(
                 "entry example-100 semantic-task stateful-counter-live-codex-accepted-100"
             )
@@ -27315,6 +27345,12 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
                 .contains("entry example-115 semantic-task incident-response-live-codex-115")
             && model_executor_manifest.contains(
                 "entry example-116 semantic-task ui-workflow-inaccessible-error-rejected-116"
+            )
+            && model_executor_manifest.contains(
+                "entry example-117 semantic-task recursive-factorial-live-codex-interview-117"
+            )
+            && model_executor_manifest.contains(
+                "entry example-121 semantic-task recursive-factorial-live-codex-trace-debug-121"
             ),
         "{model_executor_manifest}"
     );

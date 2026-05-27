@@ -1,0 +1,5 @@
+{
+  "agent": "codex-ail-spec-writer",
+  "content": "# Recursive Factorial AIL-Spec Example 118\n\nThe application Calculator manages arithmetic workflows.\n\nFunction: factorial.\n\nThe function needs:\n\n- n: Int\n\nThe function produces:\n\n- result: Int\n\nWhen factorial runs:\n\n- if n is 0, the function returns 1\n- otherwise the function calls factorial with n minus 1\n- the function returns n multiplied by the recursive result\n- the function records a trace event named FactorialCalledScenario118",
+  "model": "codex-subagent-default"
+}

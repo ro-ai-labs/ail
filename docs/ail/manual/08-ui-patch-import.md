@@ -76,8 +76,8 @@ ui-review-patch-fingerprint-preserved true
 checked-core-fingerprint-preserved true
 flow-edit-applied true
 patched-core-replayed true
-entry-count 118
-checker-result-count accepted 109
+entry-count 123
+checker-result-count accepted 114
 checker-result-count rejected 9
 ```
 
