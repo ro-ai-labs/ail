@@ -84,7 +84,8 @@ packages visible without making a separate non-end-to-end example category.
   persistence, idempotency, locking, replay-after-failure diagnostics, and
   native artifact evidence.
 - `repeated_task.ail/README.md`: scheduled-workflow behavior, repeated action
-  lowering, maintenance-cycle trace evidence, temporal-policy fixtures, and
+  lowering, maintenance-cycle trace evidence, temporal-policy fixtures,
+  retry/backoff policy fixtures, workflow-scheduler review artifacts, and
   scheduler-policy diagnostics.
 - `runtime_generic.ail/README.md`: typed runtime priority flow,
   `TicketPrioritized` trace evidence, a rejected missing-trace fixture, target

@@ -79,6 +79,6 @@ rationale: UI examples now include deterministic review, accessibility, patch im
 evidence: docs/ail/31-v03-learning-and-authoring-gate.md
 
 signal: Workflow examples need retry/backoff semantics and richer scheduler policies beyond temporal-policy diagnostics.
-status: deferred
-rationale: Repeated-task examples prove current scheduled-workflow behavior, but retry/backoff semantics and richer scheduler policies remain intentionally deferred.
-evidence: docs/ail/31-v03-learning-and-authoring-gate.md
+status: promoted
+rationale: Repeated-task examples now emit deterministic workflow-scheduler review artifacts for example-80 through example-84, tying temporal policy, bounded retry policy, exponential backoff policy, accepted and rejected retry/backoff fixtures, stable AIL-WORKFLOW-001 and AIL-WORKFLOW-002 diagnostics, trace coverage, and replay fingerprints into reviewer-facing evidence.
+evidence: cargo run -- ail-examples examples --release-evidence

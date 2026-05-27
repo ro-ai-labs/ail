@@ -49,6 +49,7 @@ severity, blocking behavior, and at least one invalid fixture.
 | `AIL-STATE-003` | `ail.application.state.shared-serialized` | shared counter mutation lacks lock or serialization rule | error | yes | add lock guard or serialization guarantee |
 | `AIL-STATE-004` | `ail.application.state.replay-policy` | failure after counter write lacks replay recovery policy | error | yes | add rollback, resume, or idempotent replay guarantee |
 | `AIL-WORKFLOW-001` | `ail.application.workflow.temporal-policy` | repeated action claims scheduler behavior without temporal policy | error | yes | add a temporal policy or remove the scheduler claim |
+| `AIL-WORKFLOW-002` | `ail.application.workflow.retry-backoff-policy` | repeated scheduled action declares retry without backoff | error | yes | add a backoff policy or remove the retry policy |
 | `AIL-SECRET-READ-001` | `ail.core.secret-read.requires-protection` | secret read lacks explicit protection | error | yes | add permission and secret protection |
 | `AIL-SECRET-ROLE-001` | `ail.application.secret-read.requires-support-role` | secret internal notes read lacks support-role requirement | error | yes | add SupportAgent or SupportManager role requirement |
 | `AIL-SECRET-WRITE-001` | `ail.core.secret-write.requires-redaction` | secret write lacks redaction or protection | error | yes | add redaction policy |
@@ -381,6 +382,26 @@ severity, blocking behavior, and at least one invalid fixture.
 - blocking behavior: blocks acceptance
 - invalid fixture:
   `examples/repeated_task.ail/examples/rejected/scheduler-without-temporal-policy.ail-spec.md`
+
+### AIL-WORKFLOW-002
+
+- condition: an Application action repeats another action, claims scheduler
+  behavior, and declares a retry policy, but has no backoff policy guarantee
+- affected graph item: retry-policy `Guarantee` node on the repeated action
+- message template: `action {name} declares retry policy without backoff
+  policy`
+- non-engineer explanation: retrying scheduled work without an explicit
+  backoff policy can overload a downstream service or hide repeated failures
+  from reviewers
+- agent follow-up question: `Which backoff policy, delay, or retry budget
+  governs this scheduled retry?`
+- repair suggestion: add a backoff policy guarantee to the repeated action or
+  remove the retry policy
+- AIL-Flow highlight: Action Card guarantee section
+- severity: error
+- blocking behavior: blocks acceptance
+- invalid fixture:
+  `examples/repeated_task.ail/examples/rejected/retry-policy-without-backoff.ail-spec.md`
 
 ### AIL-SECRET-READ-001
 

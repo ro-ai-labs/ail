@@ -17,6 +17,7 @@ bytecode, target report, and regenerated user story.
 - Integer state mutation on `Counter.value`.
 - Reuse of the `IncrementCounter` action inside a larger workflow.
 - Temporal policy authoring with explicit scheduler-behavior claims.
+- Retry and backoff policy authoring for scheduled repeated workflows.
 - Trace coverage through `CounterIncremented` and
   `MaintenanceCycleCompleted`.
 - Scheduled-workflow metadata with `scheduler`, `task.store`, and `audit.log`
@@ -65,9 +66,15 @@ Package-local fixtures now cover the first scheduler-policy boundary:
 - `examples/accepted/temporal-policy-minimal.ail-spec.md` keeps the repeated
   `IncrementCounter` lowering and adds an explicit scheduler-behavior claim
   plus temporal policy.
+- `examples/accepted/retry-backoff-policy-minimal.ail-spec.md` adds a bounded
+  retry policy and exponential backoff policy to the scheduled maintenance
+  workflow.
 - `examples/rejected/scheduler-without-temporal-policy.ail-spec.md` claims
   scheduler behavior for the repeated maintenance cycle without a temporal
   policy and must report `AIL-WORKFLOW-001`.
+- `examples/rejected/retry-policy-without-backoff.ail-spec.md` declares a
+  retry policy for the scheduled maintenance cycle without a backoff policy and
+  must report `AIL-WORKFLOW-002`.
 
 Future rejected fixtures should cover dropping `MaintenanceCycleCompleted`,
 repeating the wrong action, changing the repeat count without a story
@@ -84,7 +91,10 @@ roles, permissions, UI, and target-contract surfaces.
 
 Repeated Task now has package-local guidance and story anchors for the
 maintenance cycle, repeated action, trace event, and scheduled-workflow
-metadata. v0.3 now includes temporal policy syntax and an `AIL-WORKFLOW-001`
-diagnostic that distinguishes repeated action lowering from scheduler
-declaration errors. The next bar is retry/backoff semantics, richer scheduler
-policy forms, and story amendments that explain temporal policy changes.
+metadata. v0.3 now includes temporal policy syntax, retry/backoff policy
+syntax, an `AIL-WORKFLOW-001` diagnostic for missing temporal policies, and an
+`AIL-WORKFLOW-002` diagnostic for retry policies without backoff. Release
+evidence emits `workflow-scheduler-review.txt` and a fingerprint for each
+repeated-task corpus entry so reviewers can connect scheduled-workflow stories
+to accepted and rejected policy fixtures. The next bar is richer scheduler
+policy forms and story amendments that explain temporal policy changes.

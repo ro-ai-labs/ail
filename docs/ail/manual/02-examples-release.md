@@ -42,7 +42,11 @@ bytecode, VM trace, target report, diagnostics when rejected, and
 `user-story.txt` when story metadata is present. Accepted UI workflow entries
 and accepted entries tagged with the `ui` surface also include
 `ui-review.txt`, a deterministic visual/accessibility/workflow review artifact
-with upstream fingerprints.
+with upstream fingerprints. Repeated Task entries also include
+`workflow-scheduler-review.txt`, a deterministic scheduler/retry/backoff
+review artifact that links the repeated action, temporal policy, retry policy,
+backoff policy, `AIL-WORKFLOW-*` diagnostics, package-local fixtures, and
+runtime fingerprints.
 
 ## Review Rule
 
@@ -54,3 +58,7 @@ for next. For UI workflow and UI-surface entries, check
 `ui-review-fingerprint-*` report lines and the corresponding
 `entry-artifact ... ui-review ...` manifest entries before claiming the
 visual/accessibility review path is covered.
+For scheduled-workflow entries, check
+`workflow-scheduler-review-fingerprint-*` report lines and the corresponding
+`entry-artifact ... workflow-scheduler-review ...` manifest entries before
+claiming retry/backoff scheduler evidence is covered.

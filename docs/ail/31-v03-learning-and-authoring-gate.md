@@ -624,6 +624,14 @@ as prose. The current examples reveal these next-version gaps:
   `AIL-STATE-001` through `AIL-STATE-004`, and VM/native replay fingerprints
   into reviewer-facing evidence. The next bar is richer state coverage for
   migrations, stale-state conflicts, and multi-action transactions.
+- Repeated Task examples now emit deterministic
+  `workflow-scheduler-review.txt` and fingerprint artifacts for `example-80`
+  through `example-84`, tying the `Run maintenance cycle` repeated action,
+  temporal policy, bounded retry policy, exponential backoff policy,
+  `AIL-WORKFLOW-001`, `AIL-WORKFLOW-002`, `CounterIncremented`,
+  `MaintenanceCycleCompleted`, accepted/rejected package fixtures, and replay
+  fingerprints into reviewer-facing evidence. The next bar is richer scheduler
+  policy forms and story amendments that explain temporal policy changes.
 - Incident-response examples show that complex systems need richer story
   graphs across imported modules, UI surfaces, workflow transitions, target
   contracts, and regenerated story views.

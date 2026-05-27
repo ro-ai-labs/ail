@@ -1783,7 +1783,9 @@ fn script_v03_signal_status_audit_marks_agent_policy_import_promoted() {
         "signal-status-evidence Generics need reusable conformance fixtures and teachable stdlib walkthroughs. cargo run -- ail-examples examples --release-evidence",
         "signal-status Turing Core examples need richer termination proofs beyond base-case, decreasing-argument, and numeric stack-bound patterns. count 5 status promoted",
         "signal-status-evidence Turing Core examples need richer termination proofs beyond base-case, decreasing-argument, and numeric stack-bound patterns. docs/ail/manual/14-turing-core.md",
-        "promoted-count 7",
+        "signal-status Workflow examples need retry/backoff semantics and richer scheduler policies beyond temporal-policy diagnostics. count 5 status promoted",
+        "signal-status-evidence Workflow examples need retry/backoff semantics and richer scheduler policies beyond temporal-policy diagnostics. cargo run -- ail-examples examples --release-evidence",
+        "promoted-count 8",
         "missing-status-count 0",
         "audit-result accepted",
     ] {
@@ -12521,6 +12523,63 @@ fn ail_spec_lowers_repeated_task_to_repeat_action_bytecode() {
             .contains(&"trace MaintenanceCycleCompleted".to_string()),
         "{:?}",
         run.trace
+    );
+}
+
+#[test]
+fn ail_spec_accepts_repeated_task_retry_backoff_policy() {
+    let package = load_ail_package_dir(fixture("repeated_task.ail")).unwrap();
+    let spec = fs::read_to_string(fixture(
+        "repeated_task.ail/examples/accepted/retry-backoff-policy-minimal.ail-spec.md",
+    ))
+    .unwrap();
+    let document = parse_ail_package_spec_text(&package, &spec).unwrap();
+    let core = elaborate_ail_core(&package, &document);
+
+    assert_eq!(check_ail_core(&core), Vec::<String>::new());
+    let rendered_core = render_ail_core(&core);
+    assert!(
+        rendered_core.contains("node Guarantee retry policy bounded maintenance retry"),
+        "{rendered_core}"
+    );
+    assert!(
+        rendered_core.contains("node Guarantee backoff policy exponential maintenance backoff"),
+        "{rendered_core}"
+    );
+    assert!(
+        rendered_core.contains("edge guarantees Action:RunMaintenanceCycle -> Guarantee:retry policy bounded maintenance retry"),
+        "{rendered_core}"
+    );
+    assert!(
+        rendered_core.contains("edge guarantees Action:RunMaintenanceCycle -> Guarantee:backoff policy exponential maintenance backoff"),
+        "{rendered_core}"
+    );
+}
+
+#[test]
+fn ail_spec_rejects_repeated_task_retry_policy_without_backoff() {
+    let package = load_ail_package_dir(fixture("repeated_task.ail")).unwrap();
+    let spec = fs::read_to_string(fixture(
+        "repeated_task.ail/examples/rejected/retry-policy-without-backoff.ail-spec.md",
+    ))
+    .unwrap();
+    let document = parse_ail_package_spec_text(&package, &spec).unwrap();
+    let core = elaborate_ail_core(&package, &document);
+    let diagnostics = check_ail_core_diagnostics(&core);
+
+    assert!(
+        diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.code == "AIL-WORKFLOW-002"
+                && diagnostic.message
+                    == "action RunMaintenanceCycle declares retry policy without backoff policy"
+                && diagnostic
+                    .source_provenance
+                    .as_deref()
+                    == Some("action:RunMaintenanceCycle.guarantee:retry policy bounded maintenance retry")
+                && diagnostic.repair_suggestion.as_deref()
+                    == Some("Add a backoff policy guarantee to action RunMaintenanceCycle or remove the retry policy.")),
+        "{diagnostics:?}"
     );
 }
 
@@ -23529,8 +23588,13 @@ fn cli_ail_conformance_checks_repeated_task_temporal_policy_fixtures() {
     assert!(stdout.contains("ail conformance: package repeated-task"));
     assert!(stdout.contains("valid: spec.ail-spec.md"));
     assert!(stdout.contains("accepted: temporal-policy-minimal.ail-spec.md"));
+    assert!(stdout.contains("accepted: retry-backoff-policy-minimal.ail-spec.md"));
     assert!(
         stdout.contains("rejected: scheduler-without-temporal-policy.ail-spec.md AIL-WORKFLOW-001"),
+        "{stdout}"
+    );
+    assert!(
+        stdout.contains("rejected: retry-policy-without-backoff.ail-spec.md AIL-WORKFLOW-002"),
         "{stdout}"
     );
     assert!(
@@ -23542,6 +23606,18 @@ fn cli_ail_conformance_checks_repeated_task_temporal_policy_fixtures() {
     assert!(
         stdout.contains(
             "repair=Add a temporal policy guarantee to action RunMaintenanceCycle or remove the scheduler behavior claim."
+        ),
+        "{stdout}"
+    );
+    assert!(
+        stdout.contains(
+            "source=action:RunMaintenanceCycle.guarantee:retry policy bounded maintenance retry"
+        ),
+        "{stdout}"
+    );
+    assert!(
+        stdout.contains(
+            "repair=Add a backoff policy guarantee to action RunMaintenanceCycle or remove the retry policy."
         ),
         "{stdout}"
     );
@@ -29489,6 +29565,14 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
+        report.contains("workflow-scheduler-review-fingerprint-observed-count 5"),
+        "{report}"
+    );
+    assert!(
+        report.contains("workflow-scheduler-review-fingerprint-duplicate-entry-count 0"),
+        "{report}"
+    );
+    assert!(
         report.contains("dependency-review-fingerprint-observed-count 10"),
         "{report}"
     );
@@ -29752,6 +29836,46 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         report.contains(&format!(
             "entry-artifact example-95 state-boundary-review examples/example-95/state-boundary-review.txt {}",
             state_boundary_review_95_fingerprint.trim()
+        )),
+        "{report}"
+    );
+    let workflow_scheduler_review_80 =
+        fs::read_to_string(artifact_dir.join("examples/example-80/workflow-scheduler-review.txt"))
+            .unwrap();
+    assert!(
+        workflow_scheduler_review_80.contains("AIL-Workflow-Scheduler-Review:")
+            && workflow_scheduler_review_80.contains("entry example-80")
+            && workflow_scheduler_review_80
+                .contains("semantic-task repeated-task-live-codex-interview-80")
+            && workflow_scheduler_review_80.contains("workflow-surface scheduler-retry-backoff")
+            && workflow_scheduler_review_80.contains("action Run maintenance cycle")
+            && workflow_scheduler_review_80.contains("repeated-action IncrementCounter")
+            && workflow_scheduler_review_80.contains("repeat-count 3")
+            && workflow_scheduler_review_80.contains("temporal-policy daily maintenance window")
+            && workflow_scheduler_review_80.contains("retry-policy bounded maintenance retry")
+            && workflow_scheduler_review_80
+                .contains("backoff-policy exponential maintenance backoff")
+            && workflow_scheduler_review_80.contains("diagnostic-link AIL-WORKFLOW-001")
+            && workflow_scheduler_review_80.contains("diagnostic-link AIL-WORKFLOW-002")
+            && workflow_scheduler_review_80.contains("runtime-evidence target-report")
+            && workflow_scheduler_review_80.contains("checked-core-fingerprint ")
+            && workflow_scheduler_review_80.contains("bytecode-fingerprint ")
+            && workflow_scheduler_review_80.contains("target-report-fingerprint ")
+            && workflow_scheduler_review_80.contains("workflow-scheduler-summary "),
+        "{workflow_scheduler_review_80}"
+    );
+    let workflow_scheduler_review_80_fingerprint = fs::read_to_string(
+        artifact_dir.join("examples/example-80/workflow-scheduler-review.fingerprint.txt"),
+    )
+    .unwrap();
+    assert_eq!(
+        workflow_scheduler_review_80_fingerprint.trim(),
+        fnv64_fingerprint(&workflow_scheduler_review_80)
+    );
+    assert!(
+        report.contains(&format!(
+            "entry-artifact example-80 workflow-scheduler-review examples/example-80/workflow-scheduler-review.txt {}",
+            workflow_scheduler_review_80_fingerprint.trim()
         )),
         "{report}"
     );

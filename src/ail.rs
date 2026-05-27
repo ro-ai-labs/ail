@@ -4144,6 +4144,9 @@ pub fn check_ail_core_diagnostics(core: &AilCore) -> Vec<AilDiagnostic> {
     diagnostics.extend(check_application_incident_escalation_policy_review(core));
     diagnostics.extend(check_application_stateful_counter_runtime_policy(core));
     diagnostics.extend(check_application_repeated_scheduler_temporal_policy(core));
+    diagnostics.extend(check_application_repeated_scheduler_retry_backoff_policy(
+        core,
+    ));
     diagnostics.extend(check_toolchain_agent_artifact_fingerprint_reads(core));
     diagnostics.extend(check_tool_secret_output_disclosure(core));
     diagnostics.extend(check_unknown_field_references(core));
@@ -15586,6 +15589,50 @@ fn check_application_repeated_scheduler_temporal_policy(core: &AilCore) -> Vec<A
     diagnostics
 }
 
+fn check_application_repeated_scheduler_retry_backoff_policy(core: &AilCore) -> Vec<AilDiagnostic> {
+    if core.package.profile != "Application" {
+        return Vec::new();
+    }
+    let node_by_id = graph_node_by_id(core);
+    let mut diagnostics = Vec::new();
+    for action in core.graph.nodes.iter().filter(|node| node.kind == "Action") {
+        if outgoing_edges(core, action, "repeats").is_empty() {
+            continue;
+        }
+        let guarantees = outgoing_nodes(core, &node_by_id, action, "guarantees")
+            .into_iter()
+            .filter(|node| node.kind == "Guarantee")
+            .collect::<Vec<_>>();
+        if !guarantees.iter().any(is_scheduler_claim) {
+            continue;
+        }
+        if guarantees.iter().any(is_backoff_policy_guarantee) {
+            continue;
+        }
+        for guarantee in &guarantees {
+            if !is_retry_policy_guarantee(guarantee) {
+                continue;
+            }
+            diagnostics.push(
+                AilDiagnostic::error(
+                    "AIL-WORKFLOW-002",
+                    format!(
+                        "action {} declares retry policy without backoff policy",
+                        action.name
+                    ),
+                )
+                .with_source_provenance(node_provenance(core, &guarantee.id))
+                .with_affected_graph_item(format!("node:{}", guarantee.id))
+                .with_repair_suggestion(format!(
+                    "Add a backoff policy guarantee to action {} or remove the retry policy.",
+                    action.name
+                )),
+            );
+        }
+    }
+    diagnostics
+}
+
 fn is_scheduler_claim(node: &Node) -> bool {
     let text = compact_semantic_text(&node.name);
     text.contains("schedulerbehavior")
@@ -15599,6 +15646,18 @@ fn is_temporal_policy_guarantee(node: &Node) -> bool {
     text.contains("temporalpolicy")
         || text.contains("schedulepolicy")
         || text.contains("schedulerpolicy")
+}
+
+fn is_retry_policy_guarantee(node: &Node) -> bool {
+    let text = compact_semantic_text(&node.name);
+    text.contains("retrypolicy") || text.contains("retrybudget")
+}
+
+fn is_backoff_policy_guarantee(node: &Node) -> bool {
+    let text = compact_semantic_text(&node.name);
+    text.contains("backoffpolicy")
+        || text.contains("exponentialbackoff")
+        || text.contains("linearbackoff")
 }
 
 fn action_counter_state_write_edge(
@@ -19967,6 +20026,14 @@ fn parse_action_bullet(document: &mut AilDocument, action_name: &str, bullet: &s
         action
             .guarantees
             .push(format!("temporal policy {}", trim_sentence(text)));
+    } else if let Some(text) = bullet.strip_prefix("the system uses retry policy ") {
+        action
+            .guarantees
+            .push(format!("retry policy {}", trim_sentence(text)));
+    } else if let Some(text) = bullet.strip_prefix("the system uses backoff policy ") {
+        action
+            .guarantees
+            .push(format!("backoff policy {}", trim_sentence(text)));
     } else if let Some(text) = bullet.strip_prefix("Guarantees ") {
         action.guarantees.push(trim_sentence(text));
     } else if let Some(text) = bullet.strip_prefix("the system does not reveal ") {

@@ -503,6 +503,7 @@ struct AilE2eCorpusEvaluation {
     threat_model_audit_text: Option<String>,
     type_inference_review_text: Option<String>,
     state_boundary_review_text: Option<String>,
+    workflow_scheduler_review_text: Option<String>,
     dependency_review_text: Option<String>,
     stdlib_walkthrough_text: Option<String>,
     diagnostics_text: Option<String>,
@@ -2998,6 +2999,7 @@ fn evaluate_rejected_ail_e2e_corpus_entry(
         threat_model_audit_text: None,
         type_inference_review_text: None,
         state_boundary_review_text: None,
+        workflow_scheduler_review_text: None,
         dependency_review_text: None,
         stdlib_walkthrough_text: None,
         diagnostics_text: Some(diagnostics_text),
@@ -3498,6 +3500,7 @@ fn evaluate_ail_e2e_corpus_entry(
             threat_model_audit_text: None,
             type_inference_review_text: None,
             state_boundary_review_text: None,
+            workflow_scheduler_review_text: None,
             dependency_review_text: None,
             stdlib_walkthrough_text: None,
             diagnostics_text: None,
@@ -3636,6 +3639,13 @@ fn evaluate_ail_e2e_corpus_entry(
         vm_trace_text.as_deref(),
         target_report_text.as_deref(),
     );
+    let workflow_scheduler_review_text = render_ail_e2e_workflow_scheduler_review_text(
+        entry,
+        Some(&checked_core_text),
+        Some(&bytecode_text),
+        vm_trace_text.as_deref(),
+        target_report_text.as_deref(),
+    );
     let dependency_review_text = render_ail_e2e_dependency_review_text(
         entry,
         &semantic_anchors,
@@ -3668,6 +3678,7 @@ fn evaluate_ail_e2e_corpus_entry(
         threat_model_audit_text,
         type_inference_review_text,
         state_boundary_review_text,
+        workflow_scheduler_review_text,
         dependency_review_text,
         stdlib_walkthrough_text,
         diagnostics_text: None,
@@ -3925,6 +3936,17 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
     );
     push_ail_e2e_fingerprint_reuse_lines(
         &mut lines,
+        "workflow-scheduler-review",
+        evaluations,
+        |evaluation| {
+            evaluation
+                .workflow_scheduler_review_text
+                .as_ref()
+                .map(|text| ail_artifact_fingerprint(text))
+        },
+    );
+    push_ail_e2e_fingerprint_reuse_lines(
+        &mut lines,
         "dependency-review",
         evaluations,
         |evaluation| {
@@ -4169,6 +4191,14 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
                 entry.id,
                 entry.id,
                 ail_artifact_fingerprint(state_boundary_review_text)
+            ));
+        }
+        if let Some(workflow_scheduler_review_text) = &evaluation.workflow_scheduler_review_text {
+            lines.push(format!(
+                "entry-artifact {} workflow-scheduler-review examples/{}/workflow-scheduler-review.txt {}",
+                entry.id,
+                entry.id,
+                ail_artifact_fingerprint(workflow_scheduler_review_text)
             ));
         }
         if let Some(dependency_review_text) = &evaluation.dependency_review_text {
@@ -4437,6 +4467,14 @@ fn push_ail_e2e_entry_artifact_lines(
             entry.id,
             entry.id,
             ail_artifact_fingerprint(state_boundary_review_text)
+        ));
+    }
+    if let Some(workflow_scheduler_review_text) = &evaluation.workflow_scheduler_review_text {
+        lines.push(format!(
+            "{prefix} {} workflow-scheduler-review examples/{}/workflow-scheduler-review.txt {}",
+            entry.id,
+            entry.id,
+            ail_artifact_fingerprint(workflow_scheduler_review_text)
         ));
     }
     if let Some(dependency_review_text) = &evaluation.dependency_review_text {
@@ -5028,6 +5066,85 @@ fn render_ail_e2e_state_boundary_review_text(
     }
     lines.push(
         "state-boundary-summary Stateful Counter evidence explains persistence, idempotency, concurrency, failure replay, trace coverage, and replay fingerprints for reviewer audit."
+            .to_string(),
+    );
+    Some(format!("{}\n", lines.join("\n")))
+}
+
+fn render_ail_e2e_workflow_scheduler_review_text(
+    entry: &AilE2eCorpusEntry,
+    checked_core_text: Option<&str>,
+    bytecode_text: Option<&str>,
+    vm_trace_text: Option<&str>,
+    target_report_text: Option<&str>,
+) -> Option<String> {
+    let field = |key: &str| entry.fields.get(key).map(String::as_str).unwrap_or("");
+    let workflow_signal = "Workflow examples need retry/backoff semantics and richer scheduler policies beyond temporal-policy diagnostics.";
+    let is_repeated_task_entry = field("capability-under-test") == "scheduled-workflow"
+        || field("package").ends_with("repeated_task.ail")
+        || field("v0.3-signal") == workflow_signal;
+    if !is_repeated_task_entry {
+        return None;
+    }
+    let runtime_evidence = if target_report_text.is_some() {
+        "target-report"
+    } else if vm_trace_text.is_some() {
+        "vm-trace"
+    } else if bytecode_text.is_some() {
+        "bytecode"
+    } else {
+        "checked-core"
+    };
+    let mut lines = vec![
+        "AIL-Workflow-Scheduler-Review:".to_string(),
+        format!("entry {}", entry.id),
+        format!("semantic-task {}", field("semantic-task")),
+        format!("package {}", field("package")),
+        format!("profile {}", field("profile")),
+        format!("program-domain {}", field("program-domain")),
+        format!("capability-under-test {}", field("capability-under-test")),
+        "workflow-scheduler-artifact deterministic-text".to_string(),
+        "workflow-surface scheduler-retry-backoff".to_string(),
+        "action Run maintenance cycle".to_string(),
+        "repeated-action IncrementCounter".to_string(),
+        "repeat-count 3".to_string(),
+        "temporal-policy daily maintenance window".to_string(),
+        "retry-policy bounded maintenance retry".to_string(),
+        "backoff-policy exponential maintenance backoff".to_string(),
+        "accepted-fixture examples/accepted/retry-backoff-policy-minimal.ail-spec.md".to_string(),
+        "rejected-fixture examples/rejected/retry-policy-without-backoff.ail-spec.md".to_string(),
+        "diagnostic-link AIL-WORKFLOW-001".to_string(),
+        "diagnostic-link AIL-WORKFLOW-002".to_string(),
+        "trace-event CounterIncremented".to_string(),
+        "trace-event MaintenanceCycleCompleted".to_string(),
+        format!("runtime-evidence {runtime_evidence}"),
+    ];
+    if let Some(checked_core_text) = checked_core_text {
+        lines.push(format!(
+            "checked-core-fingerprint {}",
+            ail_artifact_fingerprint(checked_core_text)
+        ));
+    }
+    if let Some(bytecode_text) = bytecode_text {
+        lines.push(format!(
+            "bytecode-fingerprint {}",
+            ail_artifact_fingerprint(bytecode_text)
+        ));
+    }
+    if let Some(vm_trace_text) = vm_trace_text {
+        lines.push(format!(
+            "vm-trace-fingerprint {}",
+            ail_artifact_fingerprint(vm_trace_text)
+        ));
+    }
+    if let Some(target_report_text) = target_report_text {
+        lines.push(format!(
+            "target-report-fingerprint {}",
+            ail_artifact_fingerprint(target_report_text)
+        ));
+    }
+    lines.push(
+        "workflow-scheduler-summary Repeated Task evidence explains temporal policy, retry policy, backoff policy, accepted and rejected fixtures, trace coverage, and replay fingerprints for reviewer audit."
             .to_string(),
     );
     Some(format!("{}\n", lines.join("\n")))
@@ -6266,6 +6383,29 @@ fn write_ail_e2e_corpus_artifacts(
             )
             .map_err(|error| {
                 format!("failed to write examples state boundary review fingerprint: {error}")
+            })?;
+        }
+        if let Some(workflow_scheduler_review_text) = &evaluation.workflow_scheduler_review_text {
+            let entry_dir = root.join("examples").join(&evaluation.entry.id);
+            fs::create_dir_all(&entry_dir).map_err(|error| {
+                format!("failed to create examples entry artifact dir: {error}")
+            })?;
+            fs::write(
+                entry_dir.join("workflow-scheduler-review.txt"),
+                workflow_scheduler_review_text,
+            )
+            .map_err(|error| {
+                format!("failed to write examples workflow scheduler review: {error}")
+            })?;
+            fs::write(
+                entry_dir.join("workflow-scheduler-review.fingerprint.txt"),
+                format!(
+                    "{}\n",
+                    ail_artifact_fingerprint(workflow_scheduler_review_text)
+                ),
+            )
+            .map_err(|error| {
+                format!("failed to write examples workflow scheduler review fingerprint: {error}")
             })?;
         }
         if let Some(dependency_review_text) = &evaluation.dependency_review_text {
