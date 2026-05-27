@@ -478,6 +478,7 @@ struct AilE2eCorpusEvaluation {
     vm_trace_text: Option<String>,
     target_report_text: Option<String>,
     ui_review_text: Option<String>,
+    ui_review_patch_text: Option<String>,
     diagnostics_text: Option<String>,
     repair_tutorial_text: Option<String>,
     repair_proof: Option<AilE2eRepairProofArtifacts>,
@@ -2335,6 +2336,7 @@ fn evaluate_rejected_ail_e2e_corpus_entry(
         vm_trace_text: None,
         target_report_text: None,
         ui_review_text: None,
+        ui_review_patch_text: None,
         diagnostics_text: Some(diagnostics_text),
         repair_tutorial_text: Some(repair_tutorial_text),
         repair_proof: Some(repair_proof),
@@ -2802,6 +2804,7 @@ fn evaluate_ail_e2e_corpus_entry(
             vm_trace_text: None,
             target_report_text: None,
             ui_review_text: None,
+            ui_review_patch_text: None,
             diagnostics_text: None,
             repair_tutorial_text: None,
             repair_proof: None,
@@ -2900,6 +2903,16 @@ fn evaluate_ail_e2e_corpus_entry(
         vm_trace_text.as_deref(),
         target_report_text.as_deref(),
     );
+    let ui_review_patch_text = ui_review_text.as_ref().map(|text| {
+        render_ail_e2e_ui_review_patch_text(
+            entry,
+            text,
+            Some(&checked_core_text),
+            Some(&bytecode_text),
+            vm_trace_text.as_deref(),
+            target_report_text.as_deref(),
+        )
+    });
     Ok(AilE2eCorpusEvaluation {
         entry: entry.clone(),
         semantic_anchors,
@@ -2911,6 +2924,7 @@ fn evaluate_ail_e2e_corpus_entry(
         vm_trace_text,
         target_report_text,
         ui_review_text,
+        ui_review_patch_text,
         diagnostics_text: None,
         repair_tutorial_text: None,
         repair_proof: None,
@@ -3109,6 +3123,17 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
             .as_ref()
             .map(|text| ail_artifact_fingerprint(text))
     });
+    push_ail_e2e_fingerprint_reuse_lines(
+        &mut lines,
+        "ui-review-patch",
+        evaluations,
+        |evaluation| {
+            evaluation
+                .ui_review_patch_text
+                .as_ref()
+                .map(|text| ail_artifact_fingerprint(text))
+        },
+    );
     push_ail_e2e_fingerprint_reuse_lines(&mut lines, "diagnostics", evaluations, |evaluation| {
         evaluation
             .diagnostics_text
@@ -3293,6 +3318,14 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
                 entry.id,
                 entry.id,
                 ail_artifact_fingerprint(ui_review_text)
+            ));
+        }
+        if let Some(ui_review_patch_text) = &evaluation.ui_review_patch_text {
+            lines.push(format!(
+                "entry-artifact {} ui-review-patch examples/{}/ui-review-patch.txt {}",
+                entry.id,
+                entry.id,
+                ail_artifact_fingerprint(ui_review_patch_text)
             ));
         }
         if let Some(diagnostics_text) = &evaluation.diagnostics_text {
@@ -3507,6 +3540,14 @@ fn push_ail_e2e_entry_artifact_lines(
             ail_artifact_fingerprint(ui_review_text)
         ));
     }
+    if let Some(ui_review_patch_text) = &evaluation.ui_review_patch_text {
+        lines.push(format!(
+            "{prefix} {} ui-review-patch examples/{}/ui-review-patch.txt {}",
+            entry.id,
+            entry.id,
+            ail_artifact_fingerprint(ui_review_patch_text)
+        ));
+    }
     if let Some(diagnostics_text) = &evaluation.diagnostics_text {
         lines.push(format!(
             "{prefix} {} diagnostics examples/{}/diagnostics.txt {}",
@@ -3715,6 +3756,61 @@ fn render_ail_e2e_ui_review_text(
             .to_string(),
     );
     Some(format!("{}\n", lines.join("\n")))
+}
+
+fn render_ail_e2e_ui_review_patch_text(
+    entry: &AilE2eCorpusEntry,
+    ui_review_text: &str,
+    checked_core_text: Option<&str>,
+    bytecode_text: Option<&str>,
+    vm_trace_text: Option<&str>,
+    target_report_text: Option<&str>,
+) -> String {
+    let field = |key: &str| entry.fields.get(key).map(String::as_str).unwrap_or("");
+    let mut lines = vec![
+        "AIL-UI-Review-Patch:".to_string(),
+        format!("entry {}", entry.id),
+        format!("semantic-task {}", field("semantic-task")),
+        "patch-source ui-review".to_string(),
+        "visual-review-patch-plan deterministic-text".to_string(),
+        "patch-command ail-flow-edit".to_string(),
+        "patch-scope route,form,dashboard,workflow".to_string(),
+        "human-approval-required true".to_string(),
+        "patch-import-status proposed-only".to_string(),
+        format!(
+            "ui-review-fingerprint {}",
+            ail_artifact_fingerprint(ui_review_text)
+        ),
+    ];
+    if let Some(checked_core_text) = checked_core_text {
+        lines.push(format!(
+            "checked-core-fingerprint {}",
+            ail_artifact_fingerprint(checked_core_text)
+        ));
+    }
+    if let Some(bytecode_text) = bytecode_text {
+        lines.push(format!(
+            "bytecode-fingerprint {}",
+            ail_artifact_fingerprint(bytecode_text)
+        ));
+    }
+    if let Some(vm_trace_text) = vm_trace_text {
+        lines.push(format!(
+            "vm-trace-fingerprint {}",
+            ail_artifact_fingerprint(vm_trace_text)
+        ));
+    }
+    if let Some(target_report_text) = target_report_text {
+        lines.push(format!(
+            "target-report-fingerprint {}",
+            ail_artifact_fingerprint(target_report_text)
+        ));
+    }
+    lines.push(
+        "ui-review-patch-summary Patch plan is reviewable and fingerprinted, but import still requires human approval."
+            .to_string(),
+    );
+    format!("{}\n", lines.join("\n"))
 }
 
 fn ail_join_nonempty_set(values: &BTreeSet<String>) -> String {
@@ -4607,6 +4703,21 @@ fn write_ail_e2e_corpus_artifacts(
                 format!("{}\n", ail_artifact_fingerprint(ui_review_text)),
             )
             .map_err(|error| format!("failed to write examples UI review fingerprint: {error}"))?;
+        }
+        if let Some(ui_review_patch_text) = &evaluation.ui_review_patch_text {
+            let entry_dir = root.join("examples").join(&evaluation.entry.id);
+            fs::create_dir_all(&entry_dir).map_err(|error| {
+                format!("failed to create examples entry artifact dir: {error}")
+            })?;
+            fs::write(entry_dir.join("ui-review-patch.txt"), ui_review_patch_text)
+                .map_err(|error| format!("failed to write examples UI review patch: {error}"))?;
+            fs::write(
+                entry_dir.join("ui-review-patch.fingerprint.txt"),
+                format!("{}\n", ail_artifact_fingerprint(ui_review_patch_text)),
+            )
+            .map_err(|error| {
+                format!("failed to write examples UI review patch fingerprint: {error}")
+            })?;
         }
         if let Some(diagnostics_text) = &evaluation.diagnostics_text {
             let entry_dir = root.join("examples").join(&evaluation.entry.id);

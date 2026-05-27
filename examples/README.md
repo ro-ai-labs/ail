@@ -320,6 +320,9 @@ live LLM access. The current corpus stores:
   UI workflow or UI-surface entry to record deterministic visual review,
   accessibility review, workflow authoring evidence, runtime evidence,
   semantic-anchor preservation, and upstream fingerprints.
+- `examples/<entry-id>/ui-review-patch.txt`: generated beside each UI review
+  to record a proposed-only `ail-flow-edit` patch plan, human approval
+  requirement, patch scope, and upstream UI review fingerprint.
 
 This is checked release evidence with four replay-clean live LLM
 captures and one hundred thirteen replay-clean live Codex skill-agent captures. The
@@ -329,13 +332,15 @@ entries `capture-origin: live-codex`. The replay report exposes
 capability-level counts, program-scale counts, story-journey counts,
 program-domain counts, story-evidence counts, capture-origin counts, response,
 extracted-artifact, checked Core, bytecode, VM trace, native, target-report,
-UI review, diagnostics, repair-tutorial, repair-candidate, repair-checked-core,
-repair-bytecode, repair-vm-trace, repair-target-report, repair-diff, and
-repair-promotion-review fingerprint reuse. Response, extracted-artifact, and
-target-report duplicate counts must remain zero before claiming the v0.2
-prompt-to-artifact release gate. Accepted UI workflow and UI-surface replay
-must emit `ui-review-fingerprint-*` report lines and `ui-review` manifest
-entries before claiming the visual/accessibility review path. Rejected example replay
+UI review, UI review patch, diagnostics, repair-tutorial, repair-candidate,
+repair-checked-core, repair-bytecode, repair-vm-trace, repair-target-report,
+repair-diff, and repair-promotion-review fingerprint reuse. Response,
+extracted-artifact, and target-report duplicate counts must remain zero before
+claiming the v0.2 prompt-to-artifact release gate. Accepted UI workflow and
+UI-surface replay must emit `ui-review-fingerprint-*` and
+`ui-review-patch-fingerprint-*` report lines plus `ui-review` and
+`ui-review-patch` manifest entries before claiming the visual/accessibility
+patch-planning path. Rejected example replay
 includes stored prompt-envelope diagnostics for malformed model outputs and
 profile mismatch checker-handoff diagnostics, plus checked AIL-Spec
 diagnostics for missing trace coverage and hallucinated capability or
@@ -366,8 +371,9 @@ bytecode, VM trace, and Wasm target-contract artifacts across the core-to-spec,
 spec-draft, and requirements prompt surfaces, plus a rejected accessibility
 diagnostic that repairs to the same checked target path. All accepted UI workflow entries
 and complex application entries tagged with the `ui` surface also produce
-`ui-review.txt` so visual review, accessibility review, workflow authoring, and
-runtime handoff are fingerprinted in the replay bundle. Other UI-tagged seed
+`ui-review.txt` and `ui-review-patch.txt` so visual review, accessibility
+review, workflow authoring, proposed patch planning, and runtime handoff are
+fingerprinted in the replay bundle. Other UI-tagged seed
 entries still use surface metadata to keep threshold checks active. Package-import seed
 entries replay through package-aware import resolution and compile the composed
 support package through checked Core, bytecode, and VM trace artifacts.

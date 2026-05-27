@@ -201,6 +201,8 @@ The `ail-examples` replay bundle must also write deterministic story artifacts:
 - `examples/<entry-id>/user-story.fingerprint.txt`
 - `examples/<entry-id>/ui-review.txt` for accepted UI workflow or UI-surface entries
 - `examples/<entry-id>/ui-review.fingerprint.txt` for accepted UI workflow or UI-surface entries
+- `examples/<entry-id>/ui-review-patch.txt` for accepted UI workflow or UI-surface entries
+- `examples/<entry-id>/ui-review-patch.fingerprint.txt` for accepted UI workflow or UI-surface entries
 - `examples/<entry-id>/repair-tutorial.txt` for rejected entries
 - `examples/<entry-id>/repair-tutorial.fingerprint.txt` for rejected entries
 - `examples/<entry-id>/repair-candidate.ail-spec.md` for rejected entries
@@ -215,14 +217,16 @@ The `ail-examples` replay bundle must also write deterministic story artifacts:
 
 The story artifact is derived from catalog metadata and fingerprinted in the
 same report and manifest as request, response, checked Core, bytecode, VM
-trace, native, target-report, UI review, diagnostics, and repair-tutorial
+trace, native, target-report, UI review, UI review patch, diagnostics, and repair-tutorial
 artifacts. Accepted `ui-workflow` entries and accepted entries tagged with the
 `ui` surface must also emit `ui-review.txt`, which records deterministic visual
 review, accessibility review, workflow authoring, runtime evidence,
-semantic-anchor preservation, and upstream fingerprints. The report must
-summarize these files with
-`ui-review-fingerprint-*` lines and list each UI review in
-`manifest.ail-examples.txt`. The repair tutorial is derived from
+semantic-anchor preservation, and upstream fingerprints. Replay must also emit
+`ui-review-patch.txt`, a proposed-only deterministic patch plan that names the
+`ail-flow-edit` handoff, requires human approval, and binds itself to the UI
+review fingerprint. The report must summarize these files with
+`ui-review-fingerprint-*` and `ui-review-patch-fingerprint-*` lines and list
+each UI review and patch plan in `manifest.ail-examples.txt`. The repair tutorial is derived from
 rejected-entry metadata and diagnostics so the corpus teaches how to move from
 a failed prompt/spec response to a corrected spec. The repair proof chain must
 then show that corrected spec reaching checked Core, verified bytecode, and
@@ -268,9 +272,10 @@ as prose. The current examples reveal these next-version gaps:
 - Prompt matrices need explicit separation between semantic use-case diversity
   and prompt-surface coverage.
 - UI examples now emit deterministic visual review, accessibility review,
-  workflow authoring artifacts, and a rejected accessibility diagnostic fixture
-  that repairs to checked Core, verified bytecode, and Wasm target-contract
-  evidence. The next bar is patchable visual review workflows.
+  workflow authoring artifacts, deterministic UI patch plans, and a rejected
+  accessibility diagnostic fixture that repairs to checked Core, verified
+  bytecode, and Wasm target-contract evidence. The next bar is a human-approved
+  visual patch import workflow.
 - AgentTool examples need multi-agent handoff and policy-review scenarios.
 - Compiler/self-hosting examples need pass composition and fixed-point checks.
 - Systems examples need hardware-facing contracts, scheduler or interrupt

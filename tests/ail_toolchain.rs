@@ -25339,13 +25339,17 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
+        report.contains("ui-review-patch-fingerprint-observed-count 13"),
+        "{report}"
+    );
+    assert!(
         report.contains(
-            "v03-signal-count UI authoring needs patchable visual review workflows after accessibility diagnostics are replayed. 4"
+            "v03-signal-count UI authoring needs human-approved visual patch import workflows after deterministic UI patch plans are replayed. 4"
         ),
         "{report}"
     );
     assert!(
-        !report.contains("UI authoring needs accessibility failure fixtures and patchable visual review workflows."),
+        !report.contains("UI authoring needs patchable visual review workflows after accessibility diagnostics are replayed."),
         "{report}"
     );
     assert!(
@@ -25377,6 +25381,38 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         report.contains(&format!(
             "entry-artifact example-108 ui-review examples/example-108/ui-review.txt {}",
             ui_review_108_fingerprint.trim()
+        )),
+        "{report}"
+    );
+    let ui_review_patch_108 =
+        fs::read_to_string(artifact_dir.join("examples/example-108/ui-review-patch.txt")).unwrap();
+    assert!(
+        ui_review_patch_108.contains("AIL-UI-Review-Patch:")
+            && ui_review_patch_108.contains("entry example-108")
+            && ui_review_patch_108.contains("patch-source ui-review")
+            && ui_review_patch_108.contains("visual-review-patch-plan deterministic-text")
+            && ui_review_patch_108.contains("patch-command ail-flow-edit")
+            && ui_review_patch_108.contains("patch-scope route,form,dashboard,workflow")
+            && ui_review_patch_108.contains("human-approval-required true")
+            && ui_review_patch_108.contains(&format!(
+                "ui-review-fingerprint {}",
+                ui_review_108_fingerprint.trim()
+            ))
+            && ui_review_patch_108.contains("target-report-fingerprint "),
+        "{ui_review_patch_108}"
+    );
+    let ui_review_patch_108_fingerprint = fs::read_to_string(
+        artifact_dir.join("examples/example-108/ui-review-patch.fingerprint.txt"),
+    )
+    .unwrap();
+    assert_eq!(
+        ui_review_patch_108_fingerprint.trim(),
+        fnv64_fingerprint(&ui_review_patch_108)
+    );
+    assert!(
+        report.contains(&format!(
+            "entry-artifact example-108 ui-review-patch examples/example-108/ui-review-patch.txt {}",
+            ui_review_patch_108_fingerprint.trim()
         )),
         "{report}"
     );
@@ -25770,6 +25806,13 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         manifest.contains(&format!(
             "entry-artifact example-108 ui-review examples/example-108/ui-review.txt {}",
             ui_review_108_fingerprint.trim()
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "entry-artifact example-108 ui-review-patch examples/example-108/ui-review-patch.txt {}",
+            ui_review_patch_108_fingerprint.trim()
         )),
         "{manifest}"
     );
@@ -26196,6 +26239,10 @@ fn cli_ail_e2e_corpus_replays_ui_profile_specs() {
         report.contains("ui-review-fingerprint-observed-count 6"),
         "{report}"
     );
+    assert!(
+        report.contains("ui-review-patch-fingerprint-observed-count 6"),
+        "{report}"
+    );
     let ui_review =
         fs::read_to_string(artifact_dir.join("examples/example-65/ui-review.txt")).unwrap();
     assert!(
@@ -26219,11 +26266,48 @@ fn cli_ail_e2e_corpus_replays_ui_profile_specs() {
         )),
         "{report}"
     );
+    let ui_review_patch =
+        fs::read_to_string(artifact_dir.join("examples/example-65/ui-review-patch.txt")).unwrap();
+    assert!(
+        ui_review_patch.contains("AIL-UI-Review-Patch:")
+            && ui_review_patch.contains("entry example-65")
+            && ui_review_patch.contains("patch-source ui-review")
+            && ui_review_patch.contains("visual-review-patch-plan deterministic-text")
+            && ui_review_patch.contains("patch-command ail-flow-edit")
+            && ui_review_patch.contains("human-approval-required true")
+            && ui_review_patch.contains(&format!(
+                "ui-review-fingerprint {}",
+                ui_review_fingerprint.trim()
+            )),
+        "{ui_review_patch}"
+    );
+    let ui_review_patch_fingerprint = fs::read_to_string(
+        artifact_dir.join("examples/example-65/ui-review-patch.fingerprint.txt"),
+    )
+    .unwrap();
+    assert_eq!(
+        ui_review_patch_fingerprint.trim(),
+        fnv64_fingerprint(&ui_review_patch)
+    );
+    assert!(
+        report.contains(&format!(
+            "entry-artifact example-65 ui-review-patch examples/example-65/ui-review-patch.txt {}",
+            ui_review_patch_fingerprint.trim()
+        )),
+        "{report}"
+    );
     let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-examples.txt")).unwrap();
     assert!(
         manifest.contains(&format!(
             "entry-artifact example-65 ui-review examples/example-65/ui-review.txt {}",
             ui_review_fingerprint.trim()
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "entry-artifact example-65 ui-review-patch examples/example-65/ui-review-patch.txt {}",
+            ui_review_patch_fingerprint.trim()
         )),
         "{manifest}"
     );
@@ -28922,12 +29006,12 @@ fn cli_ail_v03_roadmap_advances_completed_ui_authoring_signal() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(
         stdout.contains(
-            "signal UI authoring needs patchable visual review workflows after accessibility diagnostics are replayed. count 4"
+            "signal UI authoring needs human-approved visual patch import workflows after deterministic UI patch plans are replayed. count 4"
         ),
         "{stdout}"
     );
     assert!(
-        !stdout.contains("UI authoring needs accessibility failure fixtures and patchable visual review workflows.")
+        !stdout.contains("UI authoring needs patchable visual review workflows after accessibility diagnostics are replayed.")
             && !stdout.contains("UI authoring needs stronger visual review artifacts"),
         "{stdout}"
     );
