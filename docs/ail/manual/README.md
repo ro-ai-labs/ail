@@ -103,6 +103,12 @@ Run deterministic UI patch import checks:
 python3 scripts/run_ail_interactive_manual.py --chapter ui-patch-import --run-checks
 ```
 
+Run deterministic AgentTool policy import checks:
+
+```sh
+python3 scripts/run_ail_interactive_manual.py --chapter agent-policy-import --run-checks
+```
+
 Live LLM chapters are opt-in. Add `--include-live` only when
 `http://inteligentia-pro-1:8080/` is reachable and the generated artifacts will
 be reviewed before promotion into `./examples`.
@@ -139,8 +145,11 @@ python3 scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run
 - `ui-patch-import`: deterministic review of UI patch plans before importing a
   human-approved `ail-flow-edit` candidate into a replayed corpus copy. Prose:
   `08-ui-patch-import.md`.
+- `agent-policy-import`: deterministic review of AgentTool policy handoff
+  artifacts before importing a human-approved policy trace amendment into a
+  replayed corpus copy. Prose: `09-agent-policy-import.md`.
 - `v03-authoring-gate`: the deterministic v0.3 audit that runs User Story
   mode, examples replay, roadmap printing, prompt interaction,
-  agent-entrypoint, repair-promotion, and UI patch import checks from one
-  manual chapter.
+  agent-entrypoint, repair-promotion, UI patch import, and AgentTool policy
+  import checks from one manual chapter.
   Prose: `06-v03-authoring-gate.md`.

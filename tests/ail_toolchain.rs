@@ -1046,6 +1046,7 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         "manual/06-v03-authoring-gate.md",
         "manual/07-repair-promotion.md",
         "manual/08-ui-patch-import.md",
+        "manual/09-agent-policy-import.md",
     ] {
         assert!(
             docs_index.contains(manual_chapter),
@@ -1076,6 +1077,7 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         "v03-roadmap",
         "repair-promotion",
         "ui-patch-import",
+        "agent-policy-import",
         "v03-authoring-gate",
         "02-examples-release.md",
         "03-prompt-interaction.md",
@@ -1084,6 +1086,7 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         "06-v03-authoring-gate.md",
         "07-repair-promotion.md",
         "08-ui-patch-import.md",
+        "09-agent-policy-import.md",
     ] {
         assert!(
             manual_index.contains(required),
@@ -1171,6 +1174,7 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
                 "run-user-story-mode-checks",
                 "run-agent-entrypoint-checks",
                 "run-ui-patch-import-checks",
+                "run-agent-policy-import-checks",
             ],
         ),
         (
@@ -1183,6 +1187,18 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
                 "ui-patch-import-demo-report.txt",
                 "flow-edit-applied true",
                 "patched-core-replayed true",
+            ],
+        ),
+        (
+            "09-agent-policy-import.md",
+            &[
+                "scripts/run_ail_interactive_manual.py --chapter agent-policy-import --run-checks",
+                "scripts/run_v03_agent_policy_capture_plan.py",
+                "scripts/run_v03_agent_policy_import_demo.py",
+                "agent-policy-capture-plan.json",
+                "agent-policy-import-demo-report.txt",
+                "policy-handoff-imported true",
+                "policy-handoff-replayed true",
             ],
         ),
     ];
@@ -1245,6 +1261,7 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "chapter v03-roadmap",
         "chapter repair-promotion",
         "chapter ui-patch-import",
+        "chapter agent-policy-import",
         "chapter v03-authoring-gate",
     ] {
         assert!(list_stdout.contains(required), "{required}\n{list_stdout}");
@@ -1449,6 +1466,38 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         );
     }
 
+    let agent_policy_dry_run = Command::new("python3")
+        .args([&script, "--chapter", "agent-policy-import", "--dry-run"])
+        .output()
+        .unwrap();
+    assert!(
+        agent_policy_dry_run.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&agent_policy_dry_run.stdout),
+        String::from_utf8_lossy(&agent_policy_dry_run.stderr)
+    );
+    let agent_policy_stdout = String::from_utf8_lossy(&agent_policy_dry_run.stdout);
+    for required in [
+        "id agent-policy-import",
+        "doc docs/ail/manual/09-agent-policy-import.md",
+        "cargo run -- ail-examples examples",
+        "agent-policy-review.txt",
+        "agent-policy-review-fingerprint-observed-count",
+        "scripts/run_v03_agent_policy_capture_plan.py",
+        "agent-policy-capture-plan.json",
+        "scripts/run_v03_agent_policy_import_demo.py",
+        "agent-policy-import-demo-report.txt",
+        "source-preserved true",
+        "proposed-accepted true",
+        "policy-handoff-imported true",
+        "policy-handoff-replayed true",
+    ] {
+        assert!(
+            agent_policy_stdout.contains(required),
+            "{required}\n{agent_policy_stdout}"
+        );
+    }
+
     let gate_dry_run = Command::new("python3")
         .args([&script, "--chapter", "v03-authoring-gate", "--dry-run"])
         .output()
@@ -1470,6 +1519,7 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "python3 scripts/run_ail_interactive_manual.py --chapter agent-entrypoint --run-checks",
         "python3 scripts/run_ail_interactive_manual.py --chapter repair-promotion --run-checks",
         "python3 scripts/run_ail_interactive_manual.py --chapter ui-patch-import --run-checks",
+        "python3 scripts/run_ail_interactive_manual.py --chapter agent-policy-import --run-checks",
         "evidence examples-report.txt",
         "evidence v03-roadmap.txt",
         "evidence agent-trace.txt",
@@ -1480,6 +1530,10 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "evidence ui-patch-import-demo-report.txt",
         "evidence flow-edit-applied true",
         "evidence patched-core-replayed true",
+        "evidence agent-policy-capture-plan.json",
+        "evidence agent-policy-import-demo-report.txt",
+        "evidence policy-handoff-imported true",
+        "evidence policy-handoff-replayed true",
     ] {
         assert!(gate_stdout.contains(required), "{required}\n{gate_stdout}");
     }
@@ -1629,6 +1683,7 @@ fn script_ail_interactive_manual_v03_authoring_gate_run_checks_succeeds() {
         "running run-prompt-interaction-checks",
         "running run-agent-entrypoint-checks",
         "running run-ui-patch-import-checks",
+        "running run-agent-policy-import-checks",
         "AIL-Examples-Report:",
         "AIL-Prompt-Corpus-Portability-Report:",
         "story-questions.ail-interview.md",

@@ -5,7 +5,8 @@
 The v0.3 authoring gate chapter runs the deterministic audit that ties the
 manual together. It proves the current story-first workflow, examples replay,
 roadmap printing, prompt interaction checks, agent entrypoint checks, and
-repair promotion plus UI patch import checks can be executed from one command.
+repair promotion, UI patch import, and AgentTool policy import checks can be
+executed from one command.
 
 Run the gate:
 
@@ -25,6 +26,7 @@ run-prompt-interaction-checks
 run-agent-entrypoint-checks
 run-repair-promotion-checks
 run-ui-patch-import-checks
+run-agent-policy-import-checks
 ```
 
 These are wrappers around the individual chapters:
@@ -37,6 +39,7 @@ python3 scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run
 python3 scripts/run_ail_interactive_manual.py --chapter agent-entrypoint --run-checks
 python3 scripts/run_ail_interactive_manual.py --chapter repair-promotion --run-checks
 python3 scripts/run_ail_interactive_manual.py --chapter ui-patch-import --run-checks
+python3 scripts/run_ail_interactive_manual.py --chapter agent-policy-import --run-checks
 ```
 
 Live hosted evidence remains opt-in. When the llama.cpp server is reachable,
@@ -104,6 +107,13 @@ ui-patch-import-demo-report.txt
 ui-patch-import-demo-report.fingerprint.txt
 flow-edit-applied true
 patched-core-replayed true
+agent-policy-capture-plan.json
+agent-policy-capture-plan.txt
+agent-policy-capture-plan.fingerprint.txt
+agent-policy-import-demo-report.txt
+agent-policy-import-demo-report.fingerprint.txt
+policy-handoff-imported true
+policy-handoff-replayed true
 ```
 
 Passing this chapter is not the same as declaring AIL v0.3 complete. It is the

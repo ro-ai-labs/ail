@@ -223,6 +223,14 @@ The `ail-examples` replay bundle must also write deterministic story artifacts:
   `ui-patch-import-demo-report.fingerprint.txt` in a scratch import work
   directory when the approved UI patch is appended to a corpus copy and
   replayed.
+- `agent-policy-capture-plan.json`, `agent-policy-capture-plan.txt`, and
+  `agent-policy-capture-plan.fingerprint.txt` in a scratch capture-plan
+  directory when an AgentTool policy handoff is proposed for human-approved
+  import.
+- `agent-policy-import-demo-report.txt` and
+  `agent-policy-import-demo-report.fingerprint.txt` in a scratch import work
+  directory when the approved policy handoff is appended to a corpus copy and
+  replayed.
 
 The story artifact is derived from catalog metadata and fingerprinted in the
 same report and manifest as request, response, checked Core, bytecode, VM
@@ -248,7 +256,12 @@ permission and approval review, external-call review, secret-redaction review,
 audit-trace review, human approval requirement, runtime evidence, and upstream
 fingerprints. The report must summarize these files with
 `agent-policy-review-fingerprint-*` lines and list each review in
-`manifest.ail-examples.txt`. The repair tutorial is derived from
+`manifest.ail-examples.txt`. A reviewed AgentTool policy handoff can then be
+captured with `scripts/run_v03_agent_policy_capture_plan.py` and imported with
+`scripts/run_v03_agent_policy_import_demo.py`; that demo must preserve the
+source entry, append an accepted `example-40-policy` candidate to a corpus copy,
+and replay the copy until `policy-handoff-imported true` and
+`policy-handoff-replayed true` are recorded. The repair tutorial is derived from
 rejected-entry metadata and diagnostics so the corpus teaches how to move from
 a failed prompt/spec response to a corrected spec. The repair proof chain must
 then show that corrected spec reaching checked Core, verified bytecode, and
@@ -301,9 +314,10 @@ as prose. The current examples reveal these next-version gaps:
   checks for imported patches.
 - AgentTool examples now emit deterministic policy review artifacts with
   multi-agent handoff roles, contract checks, permission and approval review,
-  external-call review, secret-redaction review, audit-trace review, and
-  runtime evidence. The next bar is a human-approved multi-agent policy
-  handoff import workflow.
+  external-call review, secret-redaction review, audit-trace review, runtime
+  evidence, and a human-approved AgentTool policy import demo. The next bar is
+  multi-agent execution evidence where the policy handoff is produced by
+  separate reviewer roles rather than one deterministic import script.
 - Compiler/self-hosting examples need pass composition and fixed-point checks.
 - Systems examples need hardware-facing contracts, scheduler or interrupt
   semantics, and clearer unsupported-target migration guidance.

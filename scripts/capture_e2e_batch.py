@@ -151,6 +151,13 @@ def ui_patch_plan_fingerprint_path(plan_path: Path) -> Path:
     return plan_path.with_suffix(".fingerprint.txt")
 
 
+def agent_policy_plan_fingerprint_path(plan_path: Path) -> Path:
+    canonical = plan_path.with_name("agent-policy-capture-plan.fingerprint.txt")
+    if canonical.exists():
+        return canonical
+    return plan_path.with_suffix(".fingerprint.txt")
+
+
 def require_story_artifact_fingerprint(
     artifact_dir: Path,
     relative_path: str,
@@ -377,6 +384,56 @@ def load_ui_patch_capture_plan(
     return plan
 
 
+def load_agent_policy_capture_plan(
+    entry: dict[str, object],
+) -> dict[str, object] | None:
+    plan_json = optional_string(entry, "agent_policy_capture_plan_json")
+    if plan_json is None:
+        return None
+    plan_path = Path(plan_json)
+    plan_text = plan_path.read_text()
+    expected_fingerprint = agent_policy_plan_fingerprint_path(plan_path).read_text().strip()
+    actual_fingerprint = fnv64(plan_text)
+    if expected_fingerprint != actual_fingerprint:
+        raise SystemExit(
+            "agent policy capture plan fingerprint mismatch: "
+            f"expected {expected_fingerprint} got {actual_fingerprint}"
+        )
+    plan = json.loads(plan_text)
+    if not isinstance(plan, dict):
+        raise SystemExit("agent policy capture plan must be an object")
+    if plan_string(plan, "artifact_kind") != "AIL-Agent-Policy-Capture-Plan":
+        raise SystemExit("agent policy capture plan has invalid artifact_kind")
+    for field, expected in [
+        ("status", "plan-only"),
+        ("policy_import_decision", "accepted-for-import"),
+        ("policy_import_status", "proposed-only"),
+        ("agent_contract_check", "ail-agent-contracts examples/agents"),
+        ("batch_capture_script", "scripts/capture_example_batch.py"),
+    ]:
+        actual = plan_string(plan, field)
+        if actual != expected:
+            raise SystemExit(
+                f"agent policy capture plan {field} expected {expected}, got {actual}"
+            )
+    for field in [
+        "human_approval_required",
+        "must_supply_request_response_json",
+        "preserve_source_entry",
+    ]:
+        if not plan_bool(plan, field):
+            raise SystemExit(f"agent policy capture plan requires {field}")
+    entry_id = required_string(entry, "entry_id")
+    if plan_string(plan, "proposed_entry_id") != entry_id:
+        raise SystemExit("agent policy capture plan proposed_entry_id must match batch entry_id")
+    source_entry_id = optional_string(entry, "source_entry_id")
+    if source_entry_id is not None and plan_string(plan, "source_entry_id") != source_entry_id:
+        raise SystemExit(
+            "agent policy capture plan source_entry_id must match batch source_entry_id"
+        )
+    return plan
+
+
 def apply_llm_entry(
     output_dir: Path,
     entries: list[tuple[str | None, list[str]]],
@@ -430,12 +487,15 @@ def apply_codex_entry(
     repair_plan = load_repair_promotion_capture_plan(entry)
     story_plan = load_story_promotion_capture_plan(entry)
     ui_patch_plan = load_ui_patch_capture_plan(entry)
+    agent_policy_plan = load_agent_policy_capture_plan(entry)
     plan_count = sum(
-        1 for plan in [repair_plan, story_plan, ui_patch_plan] if plan is not None
+        1
+        for plan in [repair_plan, story_plan, ui_patch_plan, agent_policy_plan]
+        if plan is not None
     )
     if plan_count > 1:
         raise SystemExit(
-            "batch entry cannot use repair, story, and UI patch promotion plans together"
+            "batch entry cannot use repair, story, UI patch, and agent policy plans together"
         )
     append_entry = plan_count == 1
     source_entry_id = (
@@ -443,6 +503,8 @@ def apply_codex_entry(
         if repair_plan is not None
         else plan_string(ui_patch_plan, "source_entry_id")
         if ui_patch_plan is not None
+        else plan_string(agent_policy_plan, "source_entry_id")
+        if agent_policy_plan is not None
         else required_string(entry, "source_entry_id")
         if story_plan is not None
         else entry_id
@@ -579,6 +641,29 @@ def apply_codex_entry(
             fields["v0.3-signal"] = optional_string(entry, "v03_signal") or (
                 "UI authoring needs imported visual patch plans to carry replay evidence "
                 "after human-approved ail-flow-edit changes are applied."
+            )
+        if agent_policy_plan is not None:
+            fields["story-file"] = f"stories/{entry_id}.md"
+            fields["story-journey"] = optional_string(entry, "story_journey") or "story-amendment"
+            fields["story-roundtrip"] = (
+                optional_string(entry, "story_roundtrip") or "semantic-similar"
+            )
+            fields["story-evidence"] = optional_string(entry, "story_evidence") or "target-report"
+            fields["surface-tags"] = (
+                optional_string(entry, "surface_tags") or "agent-policy,handoff"
+            )
+            fields["capability-under-test"] = (
+                optional_string(entry, "capability_under_test")
+                or "agent-policy-handoff-import"
+            )
+            fields["use-case"] = optional_string(entry, "use_case") or (
+                f"Human-approved AgentTool policy handoff import for deterministic review plan "
+                f"{source_entry_id} that preserves policy evidence while replaying an approved "
+                "trace amendment through Core, bytecode, target contract, and runtime evidence."
+            )
+            fields["v0.3-signal"] = optional_string(entry, "v03_signal") or (
+                "AgentTool authoring needs imported policy handoff decisions to carry replay "
+                "evidence after deterministic policy reviews are approved."
             )
         story_path = output_dir / fields["story-file"]
         story_path.parent.mkdir(parents=True, exist_ok=True)

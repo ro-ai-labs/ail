@@ -283,9 +283,9 @@ Each plan entry uses `executor_family: llm-http` with endpoint, prompt, and
 model labels, or `executor_family: codex-skill-agent` with recorded request and
 response JSON files. Codex entries may also provide
 `repair_promotion_capture_plan_json`, `story_promotion_capture_plan_json`, or
-`ui_patch_capture_plan_json` when the batch appends a human-approved promotion
-candidate. The batch output still must be replayed with `ail-examples` before
-promotion.
+`ui_patch_capture_plan_json`, or `agent_policy_capture_plan_json` when the
+batch appends a human-approved promotion candidate. The batch output still must
+be replayed with `ail-examples` before promotion.
 
 The generated files are committed so release verification does not depend on
 live LLM access. The current corpus stores:
@@ -344,6 +344,13 @@ live LLM access. The current corpus stores:
   external-call review, secret-redaction review, audit-trace review, human
   approval requirement, runtime evidence, and upstream fingerprints. It is
   fingerprinted beside the review as `agent-policy-review.fingerprint.txt`.
+- `agent-policy-capture-plan.json` and
+  `agent-policy-import-demo-report.txt`: generated in scratch artifact
+  directories by `scripts/run_v03_agent_policy_capture_plan.py` and
+  `scripts/run_v03_agent_policy_import_demo.py` to validate a human-approved
+  multi-agent policy handoff, append `example-40-policy` to a corpus copy, and
+  replay that copy through checked Core, bytecode, VM trace, and native target
+  evidence.
 
 This is checked release evidence with four replay-clean live LLM
 captures and one hundred thirteen replay-clean live Codex skill-agent captures. The
@@ -368,6 +375,11 @@ patch-planning path. The human-approved import path is checked by
 `patched-core-replayed true`. Accepted AgentTool replay must emit
 `agent-policy-review-fingerprint-*` report lines plus `agent-policy-review`
 manifest entries before claiming the multi-agent policy handoff review path.
+The human-approved AgentTool import path is checked by
+`scripts/run_v03_agent_policy_capture_plan.py` followed by
+`scripts/run_v03_agent_policy_import_demo.py`; the import report must include
+`source-preserved true`, `proposed-accepted true`,
+`policy-handoff-imported true`, and `policy-handoff-replayed true`.
 Rejected example replay
 includes stored prompt-envelope diagnostics for malformed model outputs and
 profile mismatch checker-handoff diagnostics, plus checked AIL-Spec
@@ -410,8 +422,10 @@ The AgentTool seed entries replay the refund tool across the prompt pack and
 now produce `agent-policy-review.txt` artifacts. These reviews bind the
 Codex/LLM executor label, prompt file, named payment provider, policy engine,
 audit log interactions, human approval requirement, and runtime evidence into a
-fingerprinted artifact so the next v0.3 step can import approved multi-agent
-policy handoff decisions instead of treating prompt-surface coverage as enough.
+fingerprinted artifact. The policy import demo then turns example-40 review
+evidence into a human-approved `example-40-policy` corpus-copy entry with
+`PolicyHandoffApprovedScenario40` replayed through checked Core, bytecode,
+native target evidence, and VM trace.
 
 The corpus also includes `incident_response.ail`, a multi-module application
 that imports identity, policy, and notification support packages and exercises

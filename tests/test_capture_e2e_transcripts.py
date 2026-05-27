@@ -1961,6 +1961,115 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             shutil.rmtree(output_corpus, ignore_errors=True)
             shutil.rmtree(output_artifacts, ignore_errors=True)
 
+    def test_agent_policy_import_demo_replays_promoted_entry(self):
+        work_dir = Path(tempfile.mkdtemp(prefix="ail-agent-policy-demo-work-"))
+        examples_artifacts = Path(
+            tempfile.mkdtemp(prefix="ail-agent-policy-demo-artifacts-")
+        )
+        capture_plan_dir = Path(tempfile.mkdtemp(prefix="ail-agent-policy-demo-plan-"))
+        output_corpus = Path(tempfile.mkdtemp(prefix="ail-agent-policy-demo-corpus-"))
+        output_artifacts = Path(
+            tempfile.mkdtemp(prefix="ail-agent-policy-demo-output-artifacts-")
+        )
+        shutil.rmtree(output_corpus)
+        shutil.rmtree(output_artifacts)
+        try:
+            replay = subprocess.run(
+                [
+                    "cargo",
+                    "run",
+                    "--quiet",
+                    "--",
+                    "ail-examples",
+                    "examples",
+                    "--artifact-dir",
+                    str(examples_artifacts),
+                    "--release-evidence",
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(replay.returncode, 0, replay.stderr)
+            plan = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_agent_policy_capture_plan.py",
+                    "--examples-artifacts",
+                    str(examples_artifacts),
+                    "--entry-id",
+                    "example-40",
+                    "--output-dir",
+                    str(capture_plan_dir),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(plan.returncode, 0, plan.stderr)
+            demo = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_agent_policy_import_demo.py",
+                    "--base-corpus",
+                    "examples",
+                    "--examples-artifacts",
+                    str(examples_artifacts),
+                    "--capture-plan-dir",
+                    str(capture_plan_dir),
+                    "--source-entry-id",
+                    "example-40",
+                    "--work-dir",
+                    str(work_dir),
+                    "--output-corpus",
+                    str(output_corpus),
+                    "--output-artifacts",
+                    str(output_artifacts),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(demo.returncode, 0, demo.stderr)
+            report = (work_dir / "agent-policy-import-demo-report.txt").read_text()
+            report_fingerprint = (
+                work_dir / "agent-policy-import-demo-report.fingerprint.txt"
+            ).read_text()
+            self.assertIn("AIL-Agent-Policy-Import-Demo:", report)
+            self.assertIn("source-entry-id example-40", report)
+            self.assertIn("proposed-entry-id example-40-policy", report)
+            self.assertIn("source-preserved true", report)
+            self.assertIn("proposed-accepted true", report)
+            self.assertIn("agent-policy-review-fingerprint-preserved true", report)
+            self.assertIn("checked-core-fingerprint-preserved true", report)
+            self.assertIn("policy-handoff-imported true", report)
+            self.assertIn("entry-count 118", report)
+            self.assertIn("checker-result-count accepted 109", report)
+            self.assertIn("checker-result-count rejected 9", report)
+            self.assertEqual(report_fingerprint.strip(), fnv64(report))
+
+            examples = (output_corpus / "examples.md").read_text()
+            source_section = examples.split("## Example: example-40", 1)[1].split(
+                "## Example:", 1
+            )[0]
+            promoted_section = examples.split("## Example: example-40-policy", 1)[1]
+            self.assertIn("checker-result: accepted", source_section)
+            self.assertIn("checker-result: accepted", promoted_section)
+            checked_core = (
+                output_artifacts
+                / "examples"
+                / "example-40-policy"
+                / "checked.ail-core.txt"
+            )
+            self.assertTrue(checked_core.exists())
+            self.assertIn("node Trace PolicyHandoffApprovedScenario40", checked_core.read_text())
+        finally:
+            shutil.rmtree(work_dir, ignore_errors=True)
+            shutil.rmtree(examples_artifacts, ignore_errors=True)
+            shutil.rmtree(capture_plan_dir, ignore_errors=True)
+            shutil.rmtree(output_corpus, ignore_errors=True)
+            shutil.rmtree(output_artifacts, ignore_errors=True)
+
 
 if __name__ == "__main__":
     unittest.main()
