@@ -370,6 +370,10 @@ live LLM access. The current corpus stores:
 - `examples/<entry-id>/ui-review-patch.txt`: generated beside each UI review
   to record a proposed-only `ail-flow-edit` patch plan, human approval
   requirement, patch scope, and upstream UI review fingerprint.
+- `examples/<entry-id>/ui-semantic-tags.txt`: generated for accepted
+  `option_map.ail` UI-surface bridge entries to record the package-local
+  `Option.map` walkthrough, `ui.form`, `ui.route`, `ui.state`, story anchors,
+  runtime evidence, and upstream fingerprints.
 - `ui-patch-capture-plan.json`, `ui-patch-import-demo-report.txt`, and
   `ui-patch-runtime-state-check-report.txt`: generated in scratch artifact
   directories by `scripts/run_v03_ui_patch_capture_plan.py`,
@@ -426,18 +430,21 @@ twenty-two entries `capture-origin: live-codex`, and one hundred eighteen
 capability-level counts, program-scale counts, story-journey counts,
 program-domain counts, story-evidence counts, capture-origin counts, response,
 extracted-artifact, checked Core, bytecode, VM trace, native, target-report,
-UI review, UI review patch, agent policy review, unsafe-boundary review,
-complex story graph, diagnostics, repair-tutorial, repair-candidate,
-repair-checked-core, repair-bytecode, repair-vm-trace, repair-target-report,
-repair-diff, and repair-promotion-review fingerprint reuse. Response and
-extracted-artifact duplicate counts are intentionally
+UI review, UI review patch, UI semantic tags, agent policy review,
+unsafe-boundary review, complex story graph, diagnostics, repair-tutorial,
+repair-candidate, repair-checked-core, repair-bytecode, repair-vm-trace,
+repair-target-report, repair-diff, and repair-promotion-review fingerprint
+reuse. Response and extracted-artifact duplicate counts are intentionally
 nonzero for the paired `example-122` and `example-123` incident repair
 promotions, while target-report duplicate counts must remain zero before
 claiming the v0.2 prompt-to-artifact release gate. Accepted UI workflow and
 UI-surface replay must emit `ui-review-fingerprint-*` and
 `ui-review-patch-fingerprint-*` report lines plus `ui-review` and
 `ui-review-patch` manifest entries before claiming the visual/accessibility
-patch-planning path. The human-approved import path is checked by
+patch-planning path. Option Map UI-surface bridge replay must emit
+`ui-semantic-tags-fingerprint-*` report lines plus `ui-semantic-tags` manifest
+entries before claiming package-local UI semantic tagging. The human-approved
+import path is checked by
 `scripts/run_v03_ui_patch_capture_plan.py`,
 `scripts/run_v03_ui_patch_import_demo.py`, and
 `scripts/run_v03_ui_patch_runtime_state_check.py`; the reports must include
@@ -485,8 +492,10 @@ diagnostic that repairs to the same checked target path. All accepted UI workflo
 and complex application entries tagged with the `ui` surface also produce
 `ui-review.txt` and `ui-review-patch.txt` so visual review, accessibility
 review, workflow authoring, proposed patch planning, and runtime handoff are
-fingerprinted in the replay bundle. Other UI-tagged seed
-entries still use surface metadata to keep threshold checks active. Package-import seed
+fingerprinted in the replay bundle. Option Map UI-tagged bridge entries also
+produce `ui-semantic-tags.txt` so `Option.map`, `ui.form`, `ui.route`,
+`ui.state`, story anchors, and replay fingerprints are reviewer-facing instead
+of only threshold metadata. Package-import seed
 entries replay through package-aware import resolution and compile the composed
 support package through checked Core, bytecode, and VM trace artifacts.
 

@@ -499,6 +499,7 @@ struct AilE2eCorpusEvaluation {
     target_report_text: Option<String>,
     ui_review_text: Option<String>,
     ui_review_patch_text: Option<String>,
+    ui_semantic_tags_text: Option<String>,
     agent_policy_review_text: Option<String>,
     threat_model_audit_text: Option<String>,
     type_inference_review_text: Option<String>,
@@ -2997,6 +2998,7 @@ fn evaluate_rejected_ail_e2e_corpus_entry(
         target_report_text: None,
         ui_review_text: None,
         ui_review_patch_text: None,
+        ui_semantic_tags_text: None,
         agent_policy_review_text: None,
         threat_model_audit_text: None,
         type_inference_review_text: None,
@@ -3500,6 +3502,7 @@ fn evaluate_ail_e2e_corpus_entry(
             target_report_text: None,
             ui_review_text: None,
             ui_review_patch_text: None,
+            ui_semantic_tags_text: None,
             agent_policy_review_text: None,
             threat_model_audit_text: None,
             type_inference_review_text: None,
@@ -3617,6 +3620,14 @@ fn evaluate_ail_e2e_corpus_entry(
             target_report_text.as_deref(),
         )
     });
+    let ui_semantic_tags_text = render_ail_e2e_ui_semantic_tags_text(
+        entry,
+        &semantic_anchors,
+        Some(&checked_core_text),
+        Some(&bytecode_text),
+        vm_trace_text.as_deref(),
+        target_report_text.as_deref(),
+    );
     let agent_policy_review_text = render_ail_e2e_agent_policy_review_text(
         entry,
         Some(&checked_core_text),
@@ -3695,6 +3706,7 @@ fn evaluate_ail_e2e_corpus_entry(
         target_report_text,
         ui_review_text,
         ui_review_patch_text,
+        ui_semantic_tags_text,
         agent_policy_review_text,
         threat_model_audit_text,
         type_inference_review_text,
@@ -3909,6 +3921,17 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
         |evaluation| {
             evaluation
                 .ui_review_patch_text
+                .as_ref()
+                .map(|text| ail_artifact_fingerprint(text))
+        },
+    );
+    push_ail_e2e_fingerprint_reuse_lines(
+        &mut lines,
+        "ui-semantic-tags",
+        evaluations,
+        |evaluation| {
+            evaluation
+                .ui_semantic_tags_text
                 .as_ref()
                 .map(|text| ail_artifact_fingerprint(text))
         },
@@ -4206,6 +4229,14 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
                 ail_artifact_fingerprint(ui_review_patch_text)
             ));
         }
+        if let Some(ui_semantic_tags_text) = &evaluation.ui_semantic_tags_text {
+            lines.push(format!(
+                "entry-artifact {} ui-semantic-tags examples/{}/ui-semantic-tags.txt {}",
+                entry.id,
+                entry.id,
+                ail_artifact_fingerprint(ui_semantic_tags_text)
+            ));
+        }
         if let Some(agent_policy_review_text) = &evaluation.agent_policy_review_text {
             lines.push(format!(
                 "entry-artifact {} agent-policy-review examples/{}/agent-policy-review.txt {}",
@@ -4496,6 +4527,14 @@ fn push_ail_e2e_entry_artifact_lines(
             entry.id,
             entry.id,
             ail_artifact_fingerprint(ui_review_patch_text)
+        ));
+    }
+    if let Some(ui_semantic_tags_text) = &evaluation.ui_semantic_tags_text {
+        lines.push(format!(
+            "{prefix} {} ui-semantic-tags examples/{}/ui-semantic-tags.txt {}",
+            entry.id,
+            entry.id,
+            ail_artifact_fingerprint(ui_semantic_tags_text)
         ));
     }
     if let Some(agent_policy_review_text) = &evaluation.agent_policy_review_text {
@@ -4833,6 +4872,88 @@ fn render_ail_e2e_ui_review_patch_text(
             .to_string(),
     );
     format!("{}\n", lines.join("\n"))
+}
+
+fn render_ail_e2e_ui_semantic_tags_text(
+    entry: &AilE2eCorpusEntry,
+    semantic_anchors: &[String],
+    checked_core_text: Option<&str>,
+    bytecode_text: Option<&str>,
+    vm_trace_text: Option<&str>,
+    target_report_text: Option<&str>,
+) -> Option<String> {
+    let field = |key: &str| entry.fields.get(key).map(String::as_str).unwrap_or("");
+    let ui_signal =
+        "UI examples need richer package-local walkthroughs and stricter semantic tagging.";
+    let is_option_map_ui_bridge =
+        field("v0.3-signal") == ui_signal && field("package").ends_with("option_map.ail");
+    if !is_option_map_ui_bridge {
+        return None;
+    }
+    let runtime_evidence = if target_report_text.is_some() {
+        "target-report"
+    } else if vm_trace_text.is_some() {
+        "vm-trace"
+    } else if bytecode_text.is_some() {
+        "bytecode"
+    } else {
+        "checked-core"
+    };
+    let mut lines = vec![
+        "AIL-UI-Semantic-Tags:".to_string(),
+        format!("entry {}", entry.id),
+        format!("semantic-task {}", field("semantic-task")),
+        format!("package {}", field("package")),
+        format!("profile {}", field("profile")),
+        format!("program-domain {}", field("program-domain")),
+        format!("surface-tags {}", field("surface-tags")),
+        format!("capability-under-test {}", field("capability-under-test")),
+        "ui-semantic-tags-artifact deterministic-text".to_string(),
+        "package-local-walkthrough option_map".to_string(),
+        "semantic-tag ui.form".to_string(),
+        "semantic-tag ui.route".to_string(),
+        "semantic-tag ui.state".to_string(),
+        "ui-bridge-surface option-map-transform".to_string(),
+        "generic-contract Option<T>".to_string(),
+        "generic-function Option.map".to_string(),
+        "trace-event OptionMapEvaluated".to_string(),
+        format!("story-journey {}", field("story-journey")),
+        format!("story-roundtrip {}", field("story-roundtrip")),
+        format!("story-evidence {}", field("story-evidence")),
+        format!("runtime-evidence {runtime_evidence}"),
+    ];
+    for anchor in semantic_anchors {
+        lines.push(format!("story-anchor {anchor}"));
+    }
+    if let Some(checked_core_text) = checked_core_text {
+        lines.push(format!(
+            "checked-core-fingerprint {}",
+            ail_artifact_fingerprint(checked_core_text)
+        ));
+    }
+    if let Some(bytecode_text) = bytecode_text {
+        lines.push(format!(
+            "bytecode-fingerprint {}",
+            ail_artifact_fingerprint(bytecode_text)
+        ));
+    }
+    if let Some(vm_trace_text) = vm_trace_text {
+        lines.push(format!(
+            "vm-trace-fingerprint {}",
+            ail_artifact_fingerprint(vm_trace_text)
+        ));
+    }
+    if let Some(target_report_text) = target_report_text {
+        lines.push(format!(
+            "target-report-fingerprint {}",
+            ail_artifact_fingerprint(target_report_text)
+        ));
+    }
+    lines.push(
+        "ui-semantic-tags-summary Option Map evidence connects package-local generic behavior, ui.form/ui.route/ui.state tags, story anchors, and replay fingerprints for reviewer audit."
+            .to_string(),
+    );
+    Some(format!("{}\n", lines.join("\n")))
 }
 
 fn render_ail_e2e_agent_policy_review_text(
@@ -6569,6 +6690,24 @@ fn write_ail_e2e_corpus_artifacts(
             )
             .map_err(|error| {
                 format!("failed to write examples UI review patch fingerprint: {error}")
+            })?;
+        }
+        if let Some(ui_semantic_tags_text) = &evaluation.ui_semantic_tags_text {
+            let entry_dir = root.join("examples").join(&evaluation.entry.id);
+            fs::create_dir_all(&entry_dir).map_err(|error| {
+                format!("failed to create examples entry artifact dir: {error}")
+            })?;
+            fs::write(
+                entry_dir.join("ui-semantic-tags.txt"),
+                ui_semantic_tags_text,
+            )
+            .map_err(|error| format!("failed to write examples UI semantic tags: {error}"))?;
+            fs::write(
+                entry_dir.join("ui-semantic-tags.fingerprint.txt"),
+                format!("{}\n", ail_artifact_fingerprint(ui_semantic_tags_text)),
+            )
+            .map_err(|error| {
+                format!("failed to write examples UI semantic tags fingerprint: {error}")
             })?;
         }
         if let Some(agent_policy_review_text) = &evaluation.agent_policy_review_text {

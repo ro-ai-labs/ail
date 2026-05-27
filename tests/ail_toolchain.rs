@@ -1789,7 +1789,9 @@ fn script_v03_signal_status_audit_marks_agent_policy_import_promoted() {
         "signal-status-evidence Turing Core examples need richer termination proofs beyond base-case, decreasing-argument, and numeric stack-bound patterns. docs/ail/manual/14-turing-core.md",
         "signal-status Workflow examples need retry/backoff semantics and richer scheduler policies beyond temporal-policy diagnostics. count 5 status promoted",
         "signal-status-evidence Workflow examples need retry/backoff semantics and richer scheduler policies beyond temporal-policy diagnostics. cargo run -- ail-examples examples --release-evidence",
-        "promoted-count 10",
+        "signal-status UI examples need richer package-local walkthroughs and stricter semantic tagging. count 5 status promoted",
+        "signal-status-evidence UI examples need richer package-local walkthroughs and stricter semantic tagging. cargo run -- ail-examples examples --release-evidence",
+        "promoted-count 11",
         "missing-status-count 0",
         "audit-result accepted",
     ] {
@@ -29541,6 +29543,14 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
+        report.contains("ui-semantic-tags-fingerprint-observed-count 5"),
+        "{report}"
+    );
+    assert!(
+        report.contains("ui-semantic-tags-fingerprint-duplicate-entry-count 0"),
+        "{report}"
+    );
+    assert!(
         report.contains("agent-policy-review-fingerprint-observed-count 15"),
         "{report}"
     );
@@ -29690,6 +29700,49 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         report.contains(&format!(
             "entry-artifact example-108 ui-review-patch examples/example-108/ui-review-patch.txt {}",
             ui_review_patch_108_fingerprint.trim()
+        )),
+        "{report}"
+    );
+    let ui_semantic_tags_20 =
+        fs::read_to_string(artifact_dir.join("examples/example-20/ui-semantic-tags.txt")).unwrap();
+    assert!(
+        ui_semantic_tags_20.contains("AIL-UI-Semantic-Tags:")
+            && ui_semantic_tags_20.contains("entry example-20")
+            && ui_semantic_tags_20.contains("semantic-task option-map-live-codex-interview-20")
+            && ui_semantic_tags_20.contains("package examples/option_map.ail")
+            && ui_semantic_tags_20.contains("program-domain ui-workflow")
+            && ui_semantic_tags_20.contains("capability-under-test ui-surface-coverage")
+            && ui_semantic_tags_20.contains("ui-semantic-tags-artifact deterministic-text")
+            && ui_semantic_tags_20.contains("package-local-walkthrough option_map")
+            && ui_semantic_tags_20.contains("semantic-tag ui.form")
+            && ui_semantic_tags_20.contains("semantic-tag ui.route")
+            && ui_semantic_tags_20.contains("semantic-tag ui.state")
+            && ui_semantic_tags_20.contains("ui-bridge-surface option-map-transform")
+            && ui_semantic_tags_20.contains("generic-contract Option<T>")
+            && ui_semantic_tags_20.contains("generic-function Option.map")
+            && ui_semantic_tags_20.contains("trace-event OptionMapEvaluated")
+            && ui_semantic_tags_20.contains("story-journey story-to-spec")
+            && ui_semantic_tags_20.contains("story-evidence checked-core")
+            && ui_semantic_tags_20.contains("story-anchor Option<T>")
+            && ui_semantic_tags_20.contains("story-anchor ui.form")
+            && ui_semantic_tags_20.contains("runtime-evidence bytecode")
+            && ui_semantic_tags_20.contains("checked-core-fingerprint ")
+            && ui_semantic_tags_20.contains("bytecode-fingerprint ")
+            && ui_semantic_tags_20.contains("ui-semantic-tags-summary "),
+        "{ui_semantic_tags_20}"
+    );
+    let ui_semantic_tags_20_fingerprint = fs::read_to_string(
+        artifact_dir.join("examples/example-20/ui-semantic-tags.fingerprint.txt"),
+    )
+    .unwrap();
+    assert_eq!(
+        ui_semantic_tags_20_fingerprint.trim(),
+        fnv64_fingerprint(&ui_semantic_tags_20)
+    );
+    assert!(
+        report.contains(&format!(
+            "entry-artifact example-20 ui-semantic-tags examples/example-20/ui-semantic-tags.txt {}",
+            ui_semantic_tags_20_fingerprint.trim()
         )),
         "{report}"
     );
@@ -30530,6 +30583,13 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         manifest.contains(&format!(
             "entry-artifact example-108 ui-review-patch examples/example-108/ui-review-patch.txt {}",
             ui_review_patch_108_fingerprint.trim()
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "entry-artifact example-20 ui-semantic-tags examples/example-20/ui-semantic-tags.txt {}",
+            ui_semantic_tags_20_fingerprint.trim()
         )),
         "{manifest}"
     );

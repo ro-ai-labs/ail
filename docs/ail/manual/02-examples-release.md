@@ -42,7 +42,10 @@ bytecode, VM trace, target report, diagnostics when rejected, and
 `user-story.txt` when story metadata is present. Accepted UI workflow entries
 and accepted entries tagged with the `ui` surface also include
 `ui-review.txt`, a deterministic visual/accessibility/workflow review artifact
-with upstream fingerprints. Repeated Task entries also include
+with upstream fingerprints. Accepted Option Map UI-surface bridge entries also
+include `ui-semantic-tags.txt`, a deterministic package-local walkthrough that
+links `Option.map`, `ui.form`, `ui.route`, `ui.state`, story anchors, and
+replay fingerprints. Repeated Task entries also include
 `workflow-scheduler-review.txt`, a deterministic scheduler/retry/backoff
 review artifact that links the repeated action, temporal policy, retry policy,
 backoff policy, `AIL-WORKFLOW-*` diagnostics, package-local fixtures, and
@@ -66,6 +69,10 @@ for next. For UI workflow and UI-surface entries, check
 `ui-review-fingerprint-*` report lines and the corresponding
 `entry-artifact ... ui-review ...` manifest entries before claiming the
 visual/accessibility review path is covered.
+For Option Map UI-surface bridge entries, check
+`ui-semantic-tags-fingerprint-*` report lines and the corresponding
+`entry-artifact ... ui-semantic-tags ...` manifest entries before claiming
+package-local UI semantic tagging is covered.
 For scheduled-workflow entries, check
 `workflow-scheduler-review-fingerprint-*` report lines and the corresponding
 `entry-artifact ... workflow-scheduler-review ...` manifest entries before

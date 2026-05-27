@@ -74,9 +74,9 @@ rationale: Recursive factorial conformance now includes an accepted well-founded
 evidence: docs/ail/manual/14-turing-core.md
 
 signal: UI examples need richer package-local walkthroughs and stricter semantic tagging.
-status: deferred
-rationale: UI examples now include deterministic review, accessibility, patch import, and runtime state evidence, but more package-local walkthroughs and stricter semantic tagging are still needed.
-evidence: docs/ail/31-v03-learning-and-authoring-gate.md
+status: promoted
+rationale: Option Map UI-surface examples now emit deterministic ui-semantic-tags artifacts for example-20 through example-24, tying package-local Option.map behavior, ui.form/ui.route/ui.state semantic tags, story anchors, checked Core, bytecode, and replay fingerprints into reviewer-facing evidence.
+evidence: cargo run -- ail-examples examples --release-evidence
 
 signal: Workflow examples need retry/backoff semantics and richer scheduler policies beyond temporal-policy diagnostics.
 status: promoted

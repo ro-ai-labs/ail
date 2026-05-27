@@ -48,6 +48,7 @@ Useful artifacts after replay include:
 - `examples/example-20/checked.ail-core.txt`
 - `examples/example-20/artifact.ailbc.json`
 - `examples/example-20/user-story.txt`
+- `examples/example-20/ui-semantic-tags.txt`
 - `examples/example-24/checked.ail-core.txt`
 - `examples/example-24/user-story.txt`
 
@@ -73,7 +74,9 @@ routes, forms, dashboards, accessibility checks, and Wasm target reports.
 
 ## v0.3 Learning Signal
 
-Option Map now has package-local guidance and story anchors for the exact
-generic transform plus its UI-tagged prompt surfaces. v0.3 should either keep
-it as a deliberately small bridge example or extend it with package-local
-rejected fixtures and a real UI wrapper that calls the checked transform.
+Option Map now has package-local guidance, story anchors, and deterministic
+`ui-semantic-tags.txt` replay artifacts for the exact generic transform plus
+its `ui.form`, `ui.route`, and `ui.state` prompt surfaces. The next bar is a
+real UI wrapper that calls the checked transform and package-local rejected
+fixtures for losing `OptionMapEvaluated`, the mapper requirement, or the
+generic `Option<T>` contract.

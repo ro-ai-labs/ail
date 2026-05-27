@@ -237,6 +237,8 @@ The `ail-examples` replay bundle must also write deterministic story artifacts:
 - `examples/<entry-id>/ui-review.fingerprint.txt` for accepted UI workflow or UI-surface entries
 - `examples/<entry-id>/ui-review-patch.txt` for accepted UI workflow or UI-surface entries
 - `examples/<entry-id>/ui-review-patch.fingerprint.txt` for accepted UI workflow or UI-surface entries
+- `examples/<entry-id>/ui-semantic-tags.txt` for accepted Option Map UI-surface bridge entries
+- `examples/<entry-id>/ui-semantic-tags.fingerprint.txt` for accepted Option Map UI-surface bridge entries
 - `examples/<entry-id>/agent-policy-review.txt` for accepted AgentTool entries
 - `examples/<entry-id>/agent-policy-review.fingerprint.txt` for accepted AgentTool entries
 - `examples/<entry-id>/unsafe-boundary-review.txt` for accepted C interop entries
@@ -323,7 +325,13 @@ deterministic patch plan that names the `ail-flow-edit` handoff, requires human
 approval, and binds itself to the UI review fingerprint. The report must
 summarize these files with
 `ui-review-fingerprint-*` and `ui-review-patch-fingerprint-*` lines and list
-each UI review and patch plan in `manifest.ail-examples.txt`. A reviewed UI
+each UI review and patch plan in `manifest.ail-examples.txt`. Accepted Option
+Map UI-surface bridge entries must also emit `ui-semantic-tags.txt`, which
+records the package-local `Option.map` walkthrough, `ui.form`, `ui.route`, and
+`ui.state` tags, the `Option<T>` and `OptionMapEvaluated` anchors, runtime
+evidence, and replay fingerprints. The report must summarize these files with
+`ui-semantic-tags-fingerprint-*` lines and list each semantic-tag walkthrough
+in `manifest.ail-examples.txt`. A reviewed UI
 patch can then be captured with `scripts/run_v03_ui_patch_capture_plan.py` and
 imported with `scripts/run_v03_ui_patch_import_demo.py`; that demo must
 preserve the source entry, apply `ail-flow-edit`, append an accepted
@@ -579,13 +587,17 @@ as prose. The current examples reveal these next-version gaps:
   proof chain. The next bar is a richer stateful application walkthrough and
   broader repaired incident promotion coverage.
 - UI examples now emit deterministic visual review, accessibility review,
-  workflow authoring artifacts, deterministic UI patch plans, a human-approved
-  UI patch import demo, and a rejected accessibility diagnostic fixture that
-  repairs to checked Core, verified bytecode, and Wasm target-contract
-  evidence. Imported UI patches now also emit deterministic visual-regression
-  fingerprint evidence and runtime UI-state checks that bind the patch to a
-  promoted target report. The next bar is browser-backed visual regression
-  evidence for UI surfaces and additional imported patch variants.
+  workflow authoring artifacts, deterministic UI patch plans, package-local
+  `ui-semantic-tags.txt` walkthroughs for the Option Map bridge entries, a
+  human-approved UI patch import demo, and a rejected accessibility diagnostic
+  fixture that repairs to checked Core, verified bytecode, and Wasm
+  target-contract evidence. The semantic-tag walkthroughs tie `Option.map`,
+  `Option<T>`, `OptionMapEvaluated`, `ui.form`, `ui.route`, `ui.state`, story
+  anchors, and replay fingerprints into reviewer-facing evidence. Imported UI
+  patches now also emit deterministic visual-regression fingerprint evidence
+  and runtime UI-state checks that bind the patch to a promoted target report.
+  The next bar is browser-backed visual regression evidence for UI surfaces and
+  additional imported patch variants.
 - AgentTool examples now emit deterministic policy review artifacts with
   multi-agent handoff roles, contract checks, permission and approval review,
   external-call review, secret-redaction review, audit-trace review, runtime
