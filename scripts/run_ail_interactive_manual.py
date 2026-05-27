@@ -263,6 +263,82 @@ BASE_CHAPTERS: tuple[ManualChapter, ...] = (
                 ),
             ),
             ManualCommand(
+                label="replay-story-promotion-examples",
+                command=(
+                    "cargo",
+                    "run",
+                    "--",
+                    "ail-examples",
+                    "examples",
+                    "--artifact-dir",
+                    "/tmp/ail-manual-story-promotion-examples",
+                    "--release-evidence",
+                ),
+                live=True,
+                evidence=(
+                    "examples-report.txt",
+                    "examples-report.fingerprint.txt",
+                    "story-promotion-review.txt",
+                    "story-promotion-review.fingerprint.txt",
+                    "story-promotion-review-fingerprint-observed-count",
+                    "entry-artifact example-30-story story-promotion-review",
+                ),
+            ),
+            ManualCommand(
+                label="show-story-promotion-live-reviewer-command",
+                command=(
+                    "python3",
+                    "scripts/run_v03_story_promotion_live_reviewer_harness.py",
+                    "--dry-run",
+                ),
+                live=True,
+                evidence=(
+                    "AIL-Story-Promotion-Live-Reviewer-Harness:",
+                    "artifact-kind AIL-Story-Promotion-Live-Reviewer-Decision",
+                    "role-count 1",
+                    "story-promotion-reviewer",
+                    "evidence-bundle-fingerprint",
+                ),
+            ),
+            ManualCommand(
+                label="run-story-promotion-live-reviewer",
+                command=(
+                    "python3",
+                    "scripts/run_v03_story_promotion_live_reviewer_harness.py",
+                ),
+                live=True,
+                evidence=(
+                    "story-promotion-live-review-report.txt",
+                    "story-promotion-live-review-report.fingerprint.txt",
+                    "manifest.v03-story-promotion-live-review.txt",
+                    "models.json",
+                    "models.fingerprint.txt",
+                    "content/story-promotion-reviewer.txt",
+                ),
+            ),
+            ManualCommand(
+                label="review-story-promotion-live-reviewer-artifacts",
+                command=(
+                    "python3",
+                    "scripts/run_v03_story_promotion_live_reviewer_harness.py",
+                    "--review-artifacts",
+                    "/tmp/ail-v03-story-promotion-live-review",
+                ),
+                live=True,
+                evidence=(
+                    "story-promotion-live-review-review.txt",
+                    "story-promotion-live-review-review.fingerprint.txt",
+                    "manifest.v03-story-promotion-live-review.txt",
+                    "AIL-Story-Promotion-Live-Reviewer-Decision",
+                    "reviewer-envelope-valid-count",
+                    "reviewer-envelope-invalid-count",
+                    "evidence-bundle-present-count",
+                    "reviewer-decision-accept-count",
+                    "review-result accepted",
+                    "repair-source hosted-reviewer-nonaccept",
+                ),
+            ),
+            ManualCommand(
                 label="direct-ail-story-live",
                 command=(
                     "cargo",
@@ -1501,6 +1577,18 @@ V03_AUTHORING_GATE = ManualChapter(
                 "story-promotion-capture-plan.fingerprint.txt",
                 "story-promotion-import-demo-report.txt",
                 "story-promotion-import-demo-report.fingerprint.txt",
+                "story-promotion-live-review-report.txt",
+                "story-promotion-live-review-report.fingerprint.txt",
+                "story-promotion-live-review-review.txt",
+                "story-promotion-live-review-review.fingerprint.txt",
+                "manifest.v03-story-promotion-live-review.txt",
+                "AIL-Story-Promotion-Live-Reviewer-Decision",
+                "reviewer-envelope-valid-count",
+                "reviewer-envelope-invalid-count",
+                "evidence-bundle-present-count",
+                "reviewer-decision-accept-count",
+                "review-result accepted",
+                "repair-source hosted-reviewer-nonaccept",
                 "story-artifacts-preserved true",
                 "proposed-accepted true",
                 "capture-plan story-promotion-capture-plan.json",
@@ -1653,6 +1741,7 @@ LIVE_ARTIFACT_PREFIXES: tuple[tuple[str, str], ...] = (
     ("/tmp/ail-v03-story-promotion-import-corpus", "story-promotion-import-corpus"),
     ("/tmp/ail-v03-story-promotion-capture-plan", "story-promotion-capture-plan"),
     ("/tmp/ail-v03-story-promotion-import-work", "story-promotion-import-work"),
+    ("/tmp/ail-v03-story-promotion-live-review", "story-promotion-live-review"),
     ("/tmp/ail-v03-agent-policy-live-review", "agent-policy-live-review"),
     ("/tmp/ail-v03-story-llm", "story-llm"),
     ("/tmp/ail-v03-prompt-llm", "prompt-llm"),
@@ -1736,6 +1825,18 @@ def materialize_command(command: ManualCommand, overrides: LiveOverrides) -> tup
                         "--artifact-dir",
                         str(Path(overrides.artifact_root) / "prompt-llm"),
                     )
+            elif overrides.skip_model_check:
+                set_flag(args, "--allow-skipped-model-check")
+        elif script == "scripts/run_v03_story_promotion_live_reviewer_harness.py":
+            if "--review-artifacts" not in args:
+                add_live_harness_options(args, overrides)
+                if overrides.artifact_root:
+                    root = Path(overrides.artifact_root)
+                    set_option(args, "--artifact-dir", str(root / "story-promotion-live-review"))
+                    set_option(args, "--examples-artifacts", str(root / "story-promotion-examples"))
+                    set_option(args, "--story-artifacts", str(root / "story-llm"))
+                    set_option(args, "--capture-plan-dir", str(root / "story-promotion-capture-plan"))
+                    set_option(args, "--import-work-dir", str(root / "story-promotion-import-work"))
             elif overrides.skip_model_check:
                 set_flag(args, "--allow-skipped-model-check")
         elif script == "scripts/run_v03_agent_policy_live_reviewer_harness.py":

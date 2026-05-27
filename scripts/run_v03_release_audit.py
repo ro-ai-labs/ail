@@ -248,6 +248,15 @@ def build_v03_audit_plan(
                     ],
                 ),
                 AuditStep(
+                    "story-promotion-live-review",
+                    [
+                        "python3",
+                        "scripts/run_v03_story_promotion_live_reviewer_harness.py",
+                        "--review-artifacts",
+                        str(live_artifact_root / "story-promotion-live-review"),
+                    ],
+                ),
+                AuditStep(
                     "agent-policy-live-review",
                     [
                         "python3",
@@ -361,7 +370,10 @@ def main(argv: list[str] | None = None) -> int:
         "--live-artifact-root",
         type=Path,
         default=Path("/tmp/ail-v03-release-live"),
-        help="root containing prompt-llm, story-llm, and agent-policy-live-review artifacts",
+        help=(
+            "root containing prompt-llm, story-llm, "
+            "story-promotion-live-review, and agent-policy-live-review artifacts"
+        ),
     )
     args = parser.parse_args(argv)
     try:

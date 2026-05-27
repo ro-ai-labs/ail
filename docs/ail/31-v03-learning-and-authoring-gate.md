@@ -494,8 +494,9 @@ classify every roadmap signal with count `5` or higher as `promoted` or
 `manifest.v03-roadmap-signal-status.txt`.
 
 Hosted model evidence remains explicit rather than hidden inside the default
-deterministic audit. After live prompt, User Story mode, and AgentTool policy
-reviewer artifacts have been captured, include their offline review gates:
+deterministic audit. After live prompt, User Story mode, Story Promotion
+reviewer, and AgentTool policy reviewer artifacts have been captured, include
+their offline review gates:
 
 ```bash
 python3 scripts/run_v03_release_audit.py --bundle-root /tmp/ail-v03-release-evidence --include-live \
@@ -507,6 +508,7 @@ With `--include-live`, the runner also requires:
 ```bash
 python3 scripts/run_v03_prompt_llm_harness.py --review-artifacts /tmp/ail-v03-release-live/prompt-llm
 python3 scripts/run_v03_story_llm_harness.py --review-artifacts /tmp/ail-v03-release-live/story-llm
+python3 scripts/run_v03_story_promotion_live_reviewer_harness.py --review-artifacts /tmp/ail-v03-release-live/story-promotion-live-review
 python3 scripts/run_v03_agent_policy_live_reviewer_harness.py --review-artifacts /tmp/ail-v03-release-live/agent-policy-live-review
 ```
 

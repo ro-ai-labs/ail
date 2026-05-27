@@ -703,6 +703,257 @@ def agent_policy_live_evidence_probe_text():
     )
 
 
+STORY_PROMOTION_LIVE_ROLE = (
+    "story-promotion-reviewer",
+    "examples/agents/codex-ail-story-promotion-reviewer.md",
+)
+
+
+def story_promotion_live_reviewer_envelope(decision="accept"):
+    return (
+        json.dumps(
+            {
+                "artifact_kind": "AIL-Story-Promotion-Live-Reviewer-Decision",
+                "role": STORY_PROMOTION_LIVE_ROLE[0],
+                "decision": decision,
+                "evidence": [
+                    "story-promotion-review.txt",
+                    "story-llm-harness-report.txt",
+                    "story-promotion-capture-plan.json",
+                    "story-promotion-import-demo-report.txt",
+                ],
+                "questions": [],
+                "checker_handoff": {
+                    "must_check": True,
+                    "required_artifacts": [
+                        "story-promotion-review.txt",
+                        "story-promotion-import-demo-report.txt",
+                    ],
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n"
+    )
+
+
+def story_promotion_live_evidence_probe_text():
+    artifact_text = {
+        "story-promotion-review.txt": (
+            "story-promotion-review-artifact deterministic-text\n"
+            "story-promotion-review-fingerprint-observed-count 2\n"
+            "promotion-decision accepted-for-promotion\n"
+            "story-artifacts-preserved true"
+        ),
+        "story-llm-harness-report.txt": (
+            "story-prompt-envelope-artifact-count 2\n"
+            "story-prompt-envelope-questions-count 0\n"
+            "story-prompt-envelope-invalid-count 0\n"
+            "model-check-model-id test-model"
+        ),
+        "story-promotion-capture-plan.json": (
+            '"promotion_decision": "accepted-for-promotion"\n'
+            '"human_approval_required": true'
+        ),
+        "story-promotion-import-demo-report.txt": (
+            "story-artifacts-preserved true\n"
+            "promotion-source human-approved-story-promotion-batch"
+        ),
+    }
+    sections = []
+    for artifact_name, text in artifact_text.items():
+        sections.append(
+            "\n".join(
+                [
+                    f"artifact {artifact_name}",
+                    f"fingerprint {fnv64(text)}",
+                    "content-excerpt:",
+                    f"----- begin {artifact_name} -----",
+                    text,
+                    f"----- end {artifact_name} -----",
+                ]
+            )
+        )
+    bundle = "\n\n".join(sections)
+    return (
+        "Review User Story mode promotion evidence for example-30-story and "
+        "return the AIL-Story-Promotion-Live-Reviewer-Decision JSON envelope.\n\n"
+        "Evidence bundle status: complete\n"
+        "source-entry-id example-30\n"
+        "proposed-entry-id example-30-story\n"
+        f"evidence-bundle-fingerprint {fnv64(bundle)}\n\n"
+        f"{bundle}"
+    )
+
+
+def write_story_promotion_live_reviewer_fixture(
+    artifact_dir, empty_content=False, decision="accept"
+):
+    artifact_dir.mkdir(parents=True, exist_ok=True)
+    models_text = (
+        json.dumps({"object": "list", "data": [{"id": "test-model"}]}, sort_keys=True)
+        + "\n"
+    )
+    write_text(artifact_dir / "models.json", models_text)
+    write_text(artifact_dir / "models.fingerprint.txt", fnv64(models_text) + "\n")
+    role, contract_path = STORY_PROMOTION_LIVE_ROLE
+    contract_text = (ROOT / contract_path).read_text()
+    probe_text = story_promotion_live_evidence_probe_text()
+    content = "" if empty_content else story_promotion_live_reviewer_envelope(decision)
+    content_kind = "empty" if empty_content else "reviewer-envelope"
+    envelope_decision = "missing" if empty_content else decision
+    response = {"choices": [{"message": {"content": content.strip()}}], "model": "test-model"}
+    request_text = (
+        json.dumps(
+            {
+                "endpoint": "http://127.0.0.1:8080/v1/chat/completions",
+                "method": "POST",
+                "role": role,
+                "contract_file": contract_path,
+                "contract_fingerprint": fnv64(contract_text),
+                "probe_fingerprint": fnv64(probe_text),
+                "body": {
+                    "messages": [
+                        {"role": "system", "content": contract_text},
+                        {"role": "user", "content": probe_text},
+                    ],
+                    "max_tokens": 64,
+                    "temperature": 0.0,
+                    "stream": False,
+                },
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n"
+    )
+    response_text = json.dumps(response, indent=2, sort_keys=True) + "\n"
+    write_text(artifact_dir / "requests" / f"{role}.json", request_text)
+    write_text(
+        artifact_dir / "requests" / f"{role}.fingerprint.txt",
+        fnv64(request_text) + "\n",
+    )
+    write_text(artifact_dir / "responses" / f"{role}.json", response_text)
+    write_text(
+        artifact_dir / "responses" / f"{role}.fingerprint.txt",
+        fnv64(response_text) + "\n",
+    )
+    write_text(artifact_dir / "content" / f"{role}.txt", content)
+    write_text(
+        artifact_dir / "content" / f"{role}.fingerprint.txt",
+        fnv64(content) + "\n",
+    )
+    report_text = "\n".join(
+        [
+            "AIL-Story-Promotion-Live-Reviewer-Harness:",
+            "endpoint http://127.0.0.1:8080/v1/chat/completions",
+            "models-url http://127.0.0.1:8080/v1/models",
+            "role-count 1",
+            "source-entry-id example-30",
+            "proposed-entry-id example-30-story",
+            "default-max-tokens 768",
+            "max-tokens 64",
+            "token-budget-default false",
+            "token-budget-warning max-tokens-below-default",
+            f"role {role} contract {contract_path} "
+            f"contract-fingerprint {fnv64(contract_text)} "
+            f"probe-fingerprint {fnv64(probe_text)} "
+            f"response-fingerprint {fnv64(response_text)} "
+            f"content-kind {content_kind} decision {envelope_decision} "
+            f"content-bytes {len(content.encode())}",
+        ]
+    ) + "\n"
+    manifest_text = "\n".join(
+        [
+            "AIL-Story-Promotion-Live-Reviewer-Harness-Manifest:",
+            "artifact models models.json models.fingerprint.txt",
+            f"artifact {role} contract {contract_path} "
+            f"request requests/{role}.json requests/{role}.fingerprint.txt "
+            f"response responses/{role}.json responses/{role}.fingerprint.txt "
+            f"content content/{role}.txt content/{role}.fingerprint.txt",
+        ]
+    ) + "\n"
+    write_text(artifact_dir / "story-promotion-live-review-report.txt", report_text)
+    write_text(
+        artifact_dir / "story-promotion-live-review-report.fingerprint.txt",
+        fnv64(report_text) + "\n",
+    )
+    write_text(artifact_dir / "manifest.v03-story-promotion-live-review.txt", manifest_text)
+    write_text(artifact_dir / "manifest.fingerprint.txt", fnv64(manifest_text) + "\n")
+
+
+def write_story_promotion_live_evidence_fixture(
+    examples_artifacts, story_artifacts, capture_plan_dir, import_work_dir
+):
+    review_text = (
+        "AIL-Story-Promotion-Review:\n"
+        "entry example-30-story\n"
+        "story-promotion-review-artifact deterministic-text\n"
+        "promotion-decision accepted-for-promotion\n"
+        "story-artifacts-preserved true\n"
+    )
+    review_path = (
+        examples_artifacts
+        / "examples"
+        / "example-30-story"
+        / "story-promotion-review.txt"
+    )
+    write_text(review_path, review_text)
+    write_text(review_path.with_suffix(".fingerprint.txt"), fnv64(review_text) + "\n")
+    examples_report = (
+        "AIL-Examples-Report:\n"
+        "story-promotion-review-fingerprint-observed-count 2\n"
+        "entry-artifact example-30-story story-promotion-review "
+        "examples/example-30-story/story-promotion-review.txt fnv64:abc\n"
+    )
+    write_text(examples_artifacts / "examples-report.txt", examples_report)
+    write_text(
+        examples_artifacts / "examples-report.fingerprint.txt",
+        fnv64(examples_report) + "\n",
+    )
+
+    story_review = (
+        "AIL-Story-LLM-Harness-Review:\n"
+        "story-prompt-envelope-artifact-count 2\n"
+        "story-prompt-envelope-questions-count 0\n"
+        "story-prompt-envelope-invalid-count 0\n"
+        "model-check present\n"
+        "model-check-model-count 1\n"
+        "model-check-model-id test-model\n"
+        "review-result accepted\n"
+    )
+    write_text(story_artifacts / "story-llm-harness-report.txt", story_review)
+    write_text(
+        story_artifacts / "story-llm-harness-report.fingerprint.txt",
+        fnv64(story_review) + "\n",
+    )
+
+    capture_plan = {
+        "artifact_kind": "AIL-Story-Promotion-Capture-Plan",
+        "entry_id": "example-30-story",
+        "human_approval_required": True,
+        "promotion_decision": "accepted-for-promotion",
+        "source_entry_id": "example-30",
+    }
+    capture_text = json.dumps(capture_plan, indent=2, sort_keys=True) + "\n"
+    capture_path = capture_plan_dir / "story-promotion-capture-plan.json"
+    write_text(capture_path, capture_text)
+    write_text(capture_path.with_suffix(".fingerprint.txt"), fnv64(capture_text) + "\n")
+
+    import_text = (
+        "AIL-Story-Promotion-Import-Demo:\n"
+        "source-entry-id example-30\n"
+        "proposed-entry-id example-30-story\n"
+        "story-artifacts-preserved true\n"
+        "proposed-accepted true\n"
+        "promotion-decision accepted-for-promotion\n"
+        "promotion-source human-approved-story-promotion-batch\n"
+    )
+    import_path = import_work_dir / "story-promotion-import-demo-report.txt"
+    write_text(import_path, import_text)
+    write_text(import_path.with_suffix(".fingerprint.txt"), fnv64(import_text) + "\n")
+
+
 class _CompletionHandler(BaseHTTPRequestHandler):
     response_text = ""
     response_payload = None
@@ -1371,6 +1622,38 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
         self.assertIn("artifact-kind AIL-AgentTool-Live-Reviewer-Handoff", dry_run.stdout)
         self.assertIn("model-check curl -sS http://inteligentia-pro-1:8080/v1/models", dry_run.stdout)
 
+    def test_story_promotion_live_reviewer_harness_dry_run_lists_contract(self):
+        dry_run = subprocess.run(
+            [
+                "python3",
+                "scripts/run_v03_story_promotion_live_reviewer_harness.py",
+                "--dry-run",
+            ],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+        )
+        self.assertEqual(
+            dry_run.returncode,
+            0,
+            f"stdout:\n{dry_run.stdout}\nstderr:\n{dry_run.stderr}",
+        )
+        self.assertIn("AIL-Story-Promotion-Live-Reviewer-Harness:", dry_run.stdout)
+        self.assertIn("role-count 1", dry_run.stdout)
+        self.assertIn(
+            "role story-promotion-reviewer contract examples/agents/codex-ail-story-promotion-reviewer.md",
+            dry_run.stdout,
+        )
+        self.assertIn(
+            "artifact-kind AIL-Story-Promotion-Live-Reviewer-Decision",
+            dry_run.stdout,
+        )
+        self.assertIn(
+            "model-check curl -sS http://inteligentia-pro-1:8080/v1/models",
+            dry_run.stdout,
+        )
+        self.assertIn("story-artifacts /tmp/ail-v03-story-llm", dry_run.stdout)
+
     def test_interactive_manual_v03_authoring_gate_dry_run_threads_fake_live_endpoint(self):
         artifact_root = Path(tempfile.mkdtemp(prefix="ail-manual-live-root-"))
         server = None
@@ -1443,6 +1726,22 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
                 combined_stdout,
             )
             self.assertIn(
+                "python3 scripts/run_v03_story_promotion_live_reviewer_harness.py "
+                f"--endpoint {endpoint} --skip-model-check "
+                f"--artifact-dir {artifact_root / 'story-promotion-live-review'} "
+                f"--examples-artifacts {artifact_root / 'story-promotion-examples'} "
+                f"--story-artifacts {artifact_root / 'story-llm'} "
+                f"--capture-plan-dir {artifact_root / 'story-promotion-capture-plan'} "
+                f"--import-work-dir {artifact_root / 'story-promotion-import-work'}",
+                combined_stdout,
+            )
+            self.assertIn(
+                "python3 scripts/run_v03_story_promotion_live_reviewer_harness.py "
+                f"--review-artifacts {artifact_root / 'story-promotion-live-review'} "
+                "--allow-skipped-model-check",
+                combined_stdout,
+            )
+            self.assertIn(
                 "python3 scripts/run_v03_prompt_llm_harness.py "
                 f"--endpoint {endpoint} --skip-model-check --artifact-dir {artifact_root / 'prompt-llm'}",
                 combined_stdout,
@@ -1497,7 +1796,9 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
 
             def story_response_for(payload):
                 request_text = json.dumps(payload)
-                if "spec-draft.system" in request_text or "AIL-Spec Canonical" in request_text:
+                if "AIL-Story-Promotion-Live-Reviewer-Decision" in request_text:
+                    content = story_promotion_live_reviewer_envelope()
+                elif "spec-draft.system" in request_text or "AIL-Spec Canonical" in request_text:
                     content = json.dumps(
                         {
                             "artifact_kind": "AIL-Spec Canonical",
@@ -1569,6 +1870,20 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             self.assertTrue(
                 (
                     artifact_root
+                    / "story-promotion-live-review"
+                    / "story-promotion-live-review-report.txt"
+                ).exists()
+            )
+            self.assertTrue(
+                (
+                    artifact_root
+                    / "story-promotion-live-review"
+                    / "story-promotion-live-review-review.txt"
+                ).exists()
+            )
+            self.assertTrue(
+                (
+                    artifact_root
                     / "story-promotion-capture-plan"
                     / "story-promotion-capture-plan.json"
                 ).exists()
@@ -1613,6 +1928,92 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             self.assertIn("model-check-model-count 1", review.stdout)
             self.assertIn("model-check-model-id test-model", review.stdout)
             self.assertIn("review-result accepted", review.stdout)
+        finally:
+            shutil.rmtree(artifact_dir, ignore_errors=True)
+
+    def test_story_promotion_live_reviewer_harness_review_accepts_complete_bundle(self):
+        artifact_dir = Path(tempfile.mkdtemp(prefix="ail-story-promotion-live-review-"))
+        try:
+            write_story_promotion_live_reviewer_fixture(artifact_dir)
+            review = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_story_promotion_live_reviewer_harness.py",
+                    "--review-artifacts",
+                    str(artifact_dir),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(
+                review.returncode,
+                0,
+                f"stdout:\n{review.stdout}\nstderr:\n{review.stderr}",
+            )
+            self.assertIn(
+                "AIL-Story-Promotion-Live-Reviewer-Harness-Review:",
+                review.stdout,
+            )
+            self.assertIn("role-count 1", review.stdout)
+            self.assertIn("reviewer-envelope-valid-count 1", review.stdout)
+            self.assertIn("reviewer-envelope-invalid-count 0", review.stdout)
+            self.assertIn("evidence-bundle-present-count 1", review.stdout)
+            self.assertIn("reviewer-decision-accept-count 1", review.stdout)
+            self.assertIn("reviewer-decision-needs-repair-count 0", review.stdout)
+            self.assertIn("reviewer-decision-reject-count 0", review.stdout)
+            self.assertIn("model-check present", review.stdout)
+            self.assertIn("model-check-model-count 1", review.stdout)
+            self.assertIn("model-check-model-id test-model", review.stdout)
+            self.assertIn("review-result accepted", review.stdout)
+        finally:
+            shutil.rmtree(artifact_dir, ignore_errors=True)
+
+    def test_story_promotion_live_reviewer_harness_writes_nonaccept_backlog(self):
+        artifact_dir = Path(tempfile.mkdtemp(prefix="ail-story-promotion-live-repair-"))
+        try:
+            write_story_promotion_live_reviewer_fixture(
+                artifact_dir, decision="needs-repair"
+            )
+            review = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_story_promotion_live_reviewer_harness.py",
+                    "--review-artifacts",
+                    str(artifact_dir),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertNotEqual(
+                review.returncode,
+                0,
+                f"stdout:\n{review.stdout}\nstderr:\n{review.stderr}",
+            )
+            self.assertIn("reviewer-envelope-valid-count 1", review.stdout)
+            self.assertIn("reviewer-envelope-invalid-count 0", review.stdout)
+            self.assertIn("reviewer-decision-accept-count 0", review.stdout)
+            self.assertIn("reviewer-decision-needs-repair-count 1", review.stdout)
+            self.assertIn("review-result needs-repair", review.stdout)
+            self.assertIn(
+                "repair-backlog story-promotion-live-review-repair-backlog.txt",
+                review.stdout,
+            )
+            backlog = (
+                artifact_dir / "story-promotion-live-review-repair-backlog.txt"
+            ).read_text()
+            self.assertIn("AIL-Story-Promotion-Live-Review-Repair-Backlog:", backlog)
+            self.assertIn("promotion-blocked true", backlog)
+            self.assertIn("repair-source hosted-reviewer-nonaccept", backlog)
+            self.assertIn("role story-promotion-reviewer decision needs-repair", backlog)
+            self.assertEqual(
+                (
+                    artifact_dir
+                    / "story-promotion-live-review-repair-backlog.fingerprint.txt"
+                ).read_text().strip(),
+                fnv64(backlog),
+            )
         finally:
             shutil.rmtree(artifact_dir, ignore_errors=True)
 
@@ -1856,6 +2257,116 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
                 server.server_close()
             shutil.rmtree(artifact_dir, ignore_errors=True)
             shutil.rmtree(examples_artifacts, ignore_errors=True)
+            shutil.rmtree(capture_plan_dir, ignore_errors=True)
+            shutil.rmtree(import_work_dir, ignore_errors=True)
+
+    def test_story_promotion_live_reviewer_requests_include_deterministic_evidence_bundle(
+        self,
+    ):
+        artifact_dir = Path(tempfile.mkdtemp(prefix="ail-story-promotion-live-requests-"))
+        examples_artifacts = Path(tempfile.mkdtemp(prefix="ail-story-promotion-evidence-"))
+        story_artifacts = Path(tempfile.mkdtemp(prefix="ail-story-promotion-story-artifacts-"))
+        capture_plan_dir = Path(tempfile.mkdtemp(prefix="ail-story-promotion-plan-"))
+        import_work_dir = Path(tempfile.mkdtemp(prefix="ail-story-promotion-import-"))
+        server = None
+        try:
+            write_story_promotion_live_evidence_fixture(
+                examples_artifacts, story_artifacts, capture_plan_dir, import_work_dir
+            )
+            _CompletionHandler.requests = []
+            _CompletionHandler.response_text = ""
+
+            def response_for_payload(_request_payload):
+                return {
+                    "choices": [
+                        {
+                            "message": {
+                                "content": story_promotion_live_reviewer_envelope()
+                            }
+                        }
+                    ],
+                    "model": "test-chat-model",
+                }
+
+            _CompletionHandler.response_for_payload = response_for_payload
+            server = HTTPServer(("127.0.0.1", 0), _CompletionHandler)
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+
+            run = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_story_promotion_live_reviewer_harness.py",
+                    "--endpoint",
+                    f"http://127.0.0.1:{server.server_port}/v1/chat/completions",
+                    "--skip-model-check",
+                    "--artifact-dir",
+                    str(artifact_dir),
+                    "--examples-artifacts",
+                    str(examples_artifacts),
+                    "--story-artifacts",
+                    str(story_artifacts),
+                    "--capture-plan-dir",
+                    str(capture_plan_dir),
+                    "--import-work-dir",
+                    str(import_work_dir),
+                    "--max-tokens",
+                    "64",
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(run.returncode, 0, f"stdout:\n{run.stdout}\nstderr:\n{run.stderr}")
+            models = json.loads((artifact_dir / "models.json").read_text())
+            self.assertEqual(models["skipped"], True)
+            self.assertEqual(len(_CompletionHandler.requests), 1)
+            request = json.loads(
+                (artifact_dir / "requests" / "story-promotion-reviewer.json").read_text()
+            )
+            user_probe = request["body"]["messages"][1]["content"]
+            self.assertIn("Evidence bundle status: complete", user_probe)
+            for artifact_name in [
+                "story-promotion-review.txt",
+                "story-llm-harness-report.txt",
+                "story-promotion-capture-plan.json",
+                "story-promotion-import-demo-report.txt",
+            ]:
+                self.assertIn(f"artifact {artifact_name}", user_probe)
+                self.assertIn(f"----- begin {artifact_name} -----", user_probe)
+            self.assertIn("story-promotion-review-fingerprint-observed-count 2", user_probe)
+            self.assertIn("story-prompt-envelope-artifact-count 2", user_probe)
+            self.assertIn("promotion-source human-approved-story-promotion-batch", user_probe)
+            self.assertIn("evidence-bundle-fingerprint fnv64:", user_probe)
+
+            review = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_story_promotion_live_reviewer_harness.py",
+                    "--review-artifacts",
+                    str(artifact_dir),
+                    "--allow-skipped-model-check",
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(
+                review.returncode,
+                0,
+                f"stdout:\n{review.stdout}\nstderr:\n{review.stderr}",
+            )
+            self.assertIn("review-result accepted", review.stdout)
+            self.assertIn("model-check skipped", review.stdout)
+        finally:
+            _CompletionHandler.response_payload = None
+            _CompletionHandler.response_for_payload = None
+            if server is not None:
+                server.shutdown()
+                server.server_close()
+            shutil.rmtree(artifact_dir, ignore_errors=True)
+            shutil.rmtree(examples_artifacts, ignore_errors=True)
+            shutil.rmtree(story_artifacts, ignore_errors=True)
             shutil.rmtree(capture_plan_dir, ignore_errors=True)
             shutil.rmtree(import_work_dir, ignore_errors=True)
 

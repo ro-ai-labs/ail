@@ -20,6 +20,7 @@ promotion evidence, but deterministic replay remains the authority.
 - `story-llm-harness-report.txt`.
 - `manifest.v03-story-llm.txt`.
 - Story promotion capture plan artifacts.
+- Optional hosted Story Promotion live reviewer artifacts.
 - Human-approved request/response JSON for the proposed promoted story entry.
 - Current examples replay and v0.3 roadmap artifacts.
 
@@ -49,6 +50,13 @@ Run the deterministic story promotion import demo after human approval:
 python3 scripts/run_v03_story_promotion_import_demo.py --story-artifacts /tmp/ail-v03-story-llm --capture-plan-dir /tmp/ail-v03-story-promotion-capture-plan
 ```
 
+Review hosted Story Promotion reviewer evidence when it is claimed:
+
+```sh
+python3 scripts/run_v03_story_promotion_live_reviewer_harness.py --dry-run
+python3 scripts/run_v03_story_promotion_live_reviewer_harness.py --review-artifacts /tmp/ail-v03-story-promotion-live-review
+```
+
 Replay examples and write the v0.3 roadmap evidence before promotion:
 
 ```sh
@@ -69,6 +77,18 @@ The review report must include:
 - `story-promotion-capture-plan.fingerprint.txt`
 - `story-promotion-import-demo-report.txt`
 - `story-promotion-import-demo-report.fingerprint.txt`
+- `story-promotion-live-review-report.txt`
+- `story-promotion-live-review-review.txt`
+- `manifest.v03-story-promotion-live-review.txt`
+- `models.json`
+- `models.fingerprint.txt`
+- `model-check-model-id`
+- `AIL-Story-Promotion-Live-Reviewer-Decision`
+- `reviewer-envelope-valid-count`
+- `reviewer-envelope-invalid-count`
+- `evidence-bundle-present-count`
+- `reviewer-decision-accept-count`
+- `repair-source hosted-reviewer-nonaccept` for non-accept envelopes
 - `story-artifacts-preserved true`
 - `proposed-accepted true`
 - `capture-plan story-promotion-capture-plan.json`
@@ -107,6 +127,10 @@ Return `needs-repair` or `rejected-for-promotion` when:
 - replay counts are hardcoded instead of copied from the generated corpus
   replay report
 - the visible hosted generation budget is missing
+- hosted reviewer evidence is claimed but `models.json`,
+  `model-check-model-id`, or the live reviewer review report is missing
+- a hosted reviewer returns `needs-repair` or `reject` without a repair backlog
+  that records `repair-source hosted-reviewer-nonaccept`
 - `examples-report.txt` or `v03-roadmap.txt` is missing
 - generated content was modified silently instead of preserving the original
   hosted output as evidence

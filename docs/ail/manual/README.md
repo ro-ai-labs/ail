@@ -78,6 +78,30 @@ records `story-llm-transcript-check-count`,
 `story-prompt-envelope-invalid-count` so prompt-pack conformance is reviewable
 without re-contacting the hosted model.
 
+Print the hosted Story Promotion reviewer harness without contacting the model:
+
+```sh
+python3 scripts/run_v03_story_promotion_live_reviewer_harness.py --dry-run
+```
+
+Review completed hosted Story Promotion reviewer artifacts before promotion:
+
+```sh
+python3 scripts/run_v03_story_promotion_live_reviewer_harness.py --review-artifacts /tmp/ail-v03-story-promotion-live-review
+```
+
+The review writes `story-promotion-live-review-review.txt` and
+`story-promotion-live-review-review.fingerprint.txt`, then checks
+`story-promotion-live-review-report.txt`,
+`manifest.v03-story-promotion-live-review.txt`,
+`models.json`, `models.fingerprint.txt`,
+`AIL-Story-Promotion-Live-Reviewer-Decision`,
+`reviewer-envelope-valid-count`, `reviewer-envelope-invalid-count`,
+`evidence-bundle-present-count`, and
+`reviewer-decision-accept-count`. A non-accept envelope writes a
+`story-promotion-live-review-repair-backlog.txt` with
+`repair-source hosted-reviewer-nonaccept`.
+
 Review completed hosted prompt-pack artifacts before promotion:
 
 ```sh

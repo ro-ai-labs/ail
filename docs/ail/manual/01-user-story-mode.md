@@ -361,6 +361,38 @@ accepted example, writes
 prove a second story-promotion variant without relying on hardcoded corpus
 counts. It still does not mutate `./examples`.
 
+Replay the examples corpus to produce the deterministic
+`story-promotion-review.txt` artifacts that the hosted Story Promotion reviewer
+will inspect:
+
+```sh
+cargo run -- ail-examples examples \
+  --artifact-dir /tmp/ail-manual-story-promotion-examples \
+  --release-evidence
+```
+
+Then print, run, and review the hosted Story Promotion reviewer harness:
+
+```sh
+python3 scripts/run_v03_story_promotion_live_reviewer_harness.py --dry-run
+python3 scripts/run_v03_story_promotion_live_reviewer_harness.py
+python3 scripts/run_v03_story_promotion_live_reviewer_harness.py --review-artifacts /tmp/ail-v03-story-promotion-live-review
+```
+
+The live reviewer records `story-promotion-live-review-report.txt`,
+`story-promotion-live-review-report.fingerprint.txt`,
+`manifest.v03-story-promotion-live-review.txt`, `models.json`,
+`models.fingerprint.txt`, and
+`AIL-Story-Promotion-Live-Reviewer-Decision` content under
+`content/story-promotion-reviewer.txt`. Offline review writes
+`story-promotion-live-review-review.txt` and
+`story-promotion-live-review-review.fingerprint.txt`, then requires
+`reviewer-envelope-valid-count`, `reviewer-envelope-invalid-count`,
+`evidence-bundle-present-count`, `reviewer-decision-accept-count`, and
+`review-result accepted`. A valid hosted non-accept response writes
+`story-promotion-live-review-repair-backlog.txt` with
+`repair-source hosted-reviewer-nonaccept` and blocks promotion.
+
 Default `ail-examples` replay turns accepted User Story mode promotion entries
 into `story-promotion-review.txt` artifacts under the generated per-entry
 artifact directory. Each review records the preserved `story-artifacts`
@@ -377,7 +409,8 @@ The harness is intentionally outside the default test suite because it depends
 on the hosted llama.cpp server and model behavior. Promote a live run into the
 examples corpus only after the generated requirements, spec, Core, bytecode,
 agent trace, manifest, story-promotion reviewer contract, story-promotion
-capture plan, and story-promotion import demo report have been reviewed.
+capture plan, story-promotion import demo report, and hosted Story Promotion
+reviewer artifacts have been reviewed.
 
 The review mode is offline. It checks story source and normalized story
 fingerprints, story-mode report metadata, generated requirements, accepted

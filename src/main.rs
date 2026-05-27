@@ -1751,8 +1751,12 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
     println!(
         "review-command scripts/run_v03_agent_policy_live_reviewer_harness.py --review-artifacts"
     );
+    println!(
+        "review-command scripts/run_v03_story_promotion_live_reviewer_harness.py --review-artifacts"
+    );
     println!("story-promotion-contract codex-ail-story-promotion-reviewer");
     println!("story-promotion-import-artifact story-promotion-import-demo-report.txt");
+    println!("story-promotion-live-review-artifact story-promotion-live-review-report.txt");
     println!("repair-promotion-artifact repair-promotion-review.txt");
     println!("repair-promotion-import-artifact repair-promotion-import-demo-report.txt");
     println!("agent-policy-import-artifact agent-policy-import-demo-report.txt");

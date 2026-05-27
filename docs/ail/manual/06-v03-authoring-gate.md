@@ -74,7 +74,8 @@ python3 scripts/run_ail_interactive_manual.py --chapter v03-authoring-gate --dry
 
 The gate forwards those flags to its live User Story mode, prompt interaction,
 and AgentTool policy chapters, and those chapters forward them to the concrete
-story, prompt-pack, reviewer, and direct `ail-story` commands.
+story, prompt-pack, Story Promotion reviewer, AgentTool reviewer, and direct
+`ail-story` commands.
 
 The live gate delegates to:
 
@@ -104,6 +105,17 @@ story-promotion-capture-plan.txt
 story-promotion-capture-plan.fingerprint.txt
 story-promotion-import-demo-report.txt
 story-promotion-import-demo-report.fingerprint.txt
+story-promotion-live-review-report.txt
+story-promotion-live-review-report.fingerprint.txt
+story-promotion-live-review-review.txt
+story-promotion-live-review-review.fingerprint.txt
+manifest.v03-story-promotion-live-review.txt
+AIL-Story-Promotion-Live-Reviewer-Decision
+reviewer-envelope-valid-count
+reviewer-envelope-invalid-count
+evidence-bundle-present-count
+reviewer-decision-accept-count
+repair-source hosted-reviewer-nonaccept
 capture-plan story-promotion-capture-plan.json
 promotion-decision accepted-for-promotion
 human-approval-required true

@@ -19,6 +19,7 @@ before any story-derived generated content is proposed for promotion into
 - `story-llm-harness-report.txt`
 - `manifest.v03-story-llm.txt`
 - story promotion capture plan artifacts
+- optional hosted Story Promotion live reviewer artifacts
 - human-approved request/response JSON for the proposed promoted story entry
 - current examples replay report from `ail-examples examples --artifact-dir`
 - current examples v0.3 roadmap artifact, `v03-roadmap.txt`
@@ -34,6 +35,10 @@ Return an `AIL-Story-Promotion-Review` report that records:
   `scripts/run_v03_story_promotion_capture_plan.py --story-artifacts`
 - story promotion import-demo command:
   `scripts/run_v03_story_promotion_import_demo.py`
+- hosted Story Promotion live reviewer dry-run command:
+  `scripts/run_v03_story_promotion_live_reviewer_harness.py --dry-run`
+- hosted Story Promotion live reviewer review command:
+  `scripts/run_v03_story_promotion_live_reviewer_harness.py --review-artifacts`
 - story id and normalized story id
 - agent trace status, including `agent-trace` evidence
 - semantic anchor review, including `semantic-anchor-missing-count 0`
@@ -52,6 +57,17 @@ Return an `AIL-Story-Promotion-Review` report that records:
   `batch-plan-fingerprint`
 - story promotion import-demo batch fingerprint:
   `human-approved-story-promotion-batch.fingerprint.txt`
+- hosted Story Promotion live reviewer artifacts:
+  `story-promotion-live-review-report.txt`,
+  `story-promotion-live-review-review.txt`,
+  `manifest.v03-story-promotion-live-review.txt`,
+  `models.json`, `models.fingerprint.txt`, and
+  `AIL-Story-Promotion-Live-Reviewer-Decision`
+- hosted Story Promotion live reviewer checks:
+  `model-check-model-id`, `reviewer-envelope-valid-count`,
+  `reviewer-envelope-invalid-count`, `evidence-bundle-present-count`,
+  `reviewer-decision-accept-count`, and
+  `repair-source hosted-reviewer-nonaccept` for non-accept envelopes
 - hosted generation budget checks:
   `default-max-tokens`, `max-tokens`, `token-budget-default`, and any
   `token-budget-warning` preserved by the capture plan and import-demo report
@@ -117,3 +133,21 @@ batch entry with `source_entry_id`, `entry_id`,
 `story_promotion_capture_plan_json`. The batch importer must append the
 proposed accepted story entry in a corpus copy and must not rewrite the source
 entry or the reviewed story artifact bundle.
+
+When hosted reviewer evidence is claimed, run:
+
+```sh
+python3 scripts/run_v03_story_promotion_live_reviewer_harness.py --dry-run
+python3 scripts/run_v03_story_promotion_live_reviewer_harness.py \
+  --review-artifacts /tmp/ail-v03-story-promotion-live-review
+```
+
+The hosted review must preserve `story-promotion-live-review-report.txt`,
+`story-promotion-live-review-review.txt`,
+`manifest.v03-story-promotion-live-review.txt`, `models.json`,
+`models.fingerprint.txt`, `model-check-model-id`, `default-max-tokens`,
+`max-tokens`, `token-budget-default`, and any `token-budget-warning`.
+It must report `reviewer-envelope-valid-count`,
+`evidence-bundle-present-count`, and `reviewer-decision-accept-count` before
+the promotion is accepted. Any hosted `needs-repair` or `reject` decision must
+write a repair backlog with `repair-source hosted-reviewer-nonaccept`.
