@@ -1563,11 +1563,13 @@ fn script_v03_release_audit_dry_run_lists_completion_gates() {
         "step interactive-manual-v03-authoring-gate command python3 scripts/run_ail_interactive_manual.py --chapter v03-authoring-gate --run-checks",
         "step agent-contracts command cargo run -- ail-agent-contracts examples/agents",
         "step examples command cargo run -- ail-examples examples --artifact-dir",
+        "step agent-policy-import command python3 scripts/run_v03_agent_policy_import_audit.py --examples-artifacts",
         "step roadmap command cargo run -- ail-v03-roadmap examples --artifact-dir",
         "step roadmap-signal-status command python3 scripts/run_v03_signal_status_audit.py --roadmap-file",
         "step prompt-llm-review command python3 scripts/run_v03_prompt_llm_harness.py --review-artifacts",
         "step story-llm-review command python3 scripts/run_v03_story_llm_harness.py --review-artifacts",
         "step agent-policy-live-review command python3 scripts/run_v03_agent_policy_live_reviewer_harness.py --review-artifacts",
+        "artifact-required-file agent-policy-import-audit-report.txt",
         "artifact-required-file v03-roadmap.txt",
         "artifact-required-file v03-roadmap-signal-status.txt",
         "artifact-required-file model-executor-manifest.txt",
@@ -1690,6 +1692,76 @@ evidence: docs/ail/31-v03-learning-and-authoring-gate.md\n",
         String::from_utf8_lossy(&rejected.stdout),
         String::from_utf8_lossy(&rejected.stderr)
     );
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn script_v03_signal_status_audit_marks_agent_policy_import_promoted() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let root = std::env::temp_dir().join(format!(
+        "ail-v03-signal-status-agent-policy-{}",
+        std::process::id()
+    ));
+    let roadmap_dir = root.join("roadmap");
+    let status_dir = root.join("status");
+    let _ = fs::remove_dir_all(&root);
+
+    let roadmap = Command::new(binary)
+        .args([
+            "ail-v03-roadmap",
+            "examples",
+            "--artifact-dir",
+            roadmap_dir.to_str().unwrap(),
+            "--release-evidence",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        roadmap.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&roadmap.stdout),
+        String::from_utf8_lossy(&roadmap.stderr)
+    );
+
+    let script = format!(
+        "{}/scripts/run_v03_signal_status_audit.py",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let status_file = format!(
+        "{}/docs/ail/v03-roadmap-signal-status.md",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let status = Command::new("python3")
+        .args([
+            &script,
+            "--roadmap-file",
+            roadmap_dir.join("v03-roadmap.txt").to_str().unwrap(),
+            "--status-file",
+            &status_file,
+            "--output-dir",
+            status_dir.to_str().unwrap(),
+            "--min-count",
+            "5",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        status.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&status.stdout),
+        String::from_utf8_lossy(&status.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&status.stdout);
+    for required in [
+        "signal-status AgentTool authoring needs human-approved multi-agent policy handoff imports after deterministic policy reviews are replayed. count 15 status promoted",
+        "signal-status-evidence AgentTool authoring needs human-approved multi-agent policy handoff imports after deterministic policy reviews are replayed. scripts/run_v03_agent_policy_import_audit.py",
+        "promoted-count 1",
+        "missing-status-count 0",
+        "audit-result accepted",
+    ] {
+        assert!(stdout.contains(required), "{required}\n{stdout}");
+    }
+
     fs::remove_dir_all(root).unwrap();
 }
 

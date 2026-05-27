@@ -74,6 +74,9 @@ The review report must include:
 - `agent-policy-import-demo-report.fingerprint.txt`
 - `agent-policy-multi-agent-handoff-report.txt`
 - `agent-policy-multi-agent-handoff-report.fingerprint.txt`
+- `agent-policy-import-audit-report.txt`
+- `agent-policy-import-audit-report.fingerprint.txt`
+- `manifest.v03-agent-policy-import.txt`
 - `agent-policy-live-review-report.txt`
 - `agent-policy-live-review-report.fingerprint.txt`
 - `manifest.v03-agent-policy-live-review.txt`
@@ -154,4 +157,5 @@ The deterministic wrapper is:
 
 ```sh
 python3 scripts/run_v03_agent_policy_import_demo.py
+python3 scripts/run_v03_agent_policy_import_audit.py --examples-artifacts /tmp/ail-agent-policy-review
 ```

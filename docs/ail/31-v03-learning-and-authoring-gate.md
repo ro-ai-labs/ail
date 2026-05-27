@@ -284,6 +284,11 @@ The `ail-examples` replay bundle must also write deterministic story artifacts:
   `agent-policy-multi-agent-handoff-report.fingerprint.txt` in the same
   scratch import work directory when the AgentTool policy import is validated
   by a role-separated deterministic handoff witness.
+- `agent-policy-import-audit-report.txt`,
+  `agent-policy-import-audit-report.fingerprint.txt`, and
+  `manifest.v03-agent-policy-import.txt` in the release audit bundle when the
+  AgentTool capture plan, import demo, and multi-agent handoff witness are
+  preserved as v0.3 promotion evidence.
 - `agent-policy-live-review-report.txt`,
   `agent-policy-live-review-report.fingerprint.txt`,
   `manifest.v03-agent-policy-live-review.txt`,
@@ -332,7 +337,10 @@ captured with `scripts/run_v03_agent_policy_capture_plan.py` and imported with
 `scripts/run_v03_agent_policy_import_demo.py`; that demo must preserve the
 source entry, append an accepted `example-40-policy` candidate to a corpus copy,
 and replay the copy until `policy-handoff-imported true` and
-`policy-handoff-replayed true` are recorded. The repair tutorial is derived from
+`policy-handoff-replayed true` are recorded. The release audit bundles this
+promotion path through `scripts/run_v03_agent_policy_import_audit.py`, which
+preserves the capture plan, import report, promoted checked Core, and
+role-separated multi-agent handoff report. The repair tutorial is derived from
 rejected-entry metadata and diagnostics so the corpus teaches how to move from
 a failed prompt/spec response to a corrected spec. The repair proof chain must
 then show that corrected spec reaching checked Core, verified bytecode, and
@@ -402,6 +410,7 @@ cargo run -- ail-conformance examples/stateful_counter.ail --artifact-dir /tmp/a
 cargo run -- ail-conformance examples/incident_notifications.ail --artifact-dir /tmp/ail-v03-release-evidence/artifacts/v03-conformance-incident-notifications
 cargo run -- ail-bootstrap examples/ail_toolchain_agent.ail --pass examples/compiler_pass.ail --agent examples/ail_toolchain_agent.ail --target linux-x86_64-elf --artifact-dir /tmp/ail-v03-release-evidence/artifacts/v03-bootstrap
 cargo run -- ail-examples examples --artifact-dir /tmp/ail-v03-release-evidence/artifacts/v03-examples --release-evidence
+python3 scripts/run_v03_agent_policy_import_audit.py --examples-artifacts /tmp/ail-v03-release-evidence/artifacts/v03-examples --base-corpus examples --source-entry-id example-40 --output-dir /tmp/ail-v03-release-evidence/artifacts/v03-agent-policy-import
 cargo run -- ail-v03-roadmap examples --artifact-dir /tmp/ail-v03-release-evidence/artifacts/v03-roadmap --release-evidence
 python3 scripts/run_v03_signal_status_audit.py --roadmap-file /tmp/ail-v03-release-evidence/artifacts/v03-roadmap/v03-roadmap.txt --status-file docs/ail/v03-roadmap-signal-status.md --output-dir /tmp/ail-v03-release-evidence/artifacts/v03-roadmap-signal-status --min-count 5
 ```
@@ -412,7 +421,12 @@ artifact-producing command output under the bundle root. The `ail-examples`
 step must emit the 124-entry corpus with 115 accepted and 9 rejected entries,
 plus `examples-report.txt`, `v03-roadmap.txt`,
 `model-executor-manifest.txt`, their fingerprints, and
-`manifest.ail-examples.txt`. The roadmap signal-status step must then
+`manifest.ail-examples.txt`. The AgentTool import step must preserve
+`agent-policy-import-audit-report.txt`,
+`agent-policy-import-demo-report.txt`, and
+`agent-policy-multi-agent-handoff-report.txt` so the high-count AgentTool
+handoff signal can be marked promoted from deterministic release evidence. The
+roadmap signal-status step must then
 classify every roadmap signal with count `5` or higher as `promoted` or
 `deferred` in `docs/ail/v03-roadmap-signal-status.md` and write
 `v03-roadmap-signal-status.txt`, its fingerprint, and

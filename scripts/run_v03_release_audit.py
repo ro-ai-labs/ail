@@ -145,6 +145,31 @@ def build_v03_audit_plan(
             ),
         ),
         AuditStep(
+            "agent-policy-import",
+            [
+                "python3",
+                "scripts/run_v03_agent_policy_import_audit.py",
+                "--examples-artifacts",
+                str(artifacts / "v03-examples"),
+                "--base-corpus",
+                "examples",
+                "--source-entry-id",
+                "example-40",
+                "--output-dir",
+                str(artifacts / "v03-agent-policy-import"),
+            ],
+            artifacts / "v03-agent-policy-import",
+            "manifest.v03-agent-policy-import.txt",
+            (
+                "agent-policy-import-audit-report.txt",
+                "agent-policy-import-audit-report.fingerprint.txt",
+                "agent-policy-import-demo-report.txt",
+                "agent-policy-import-demo-report.fingerprint.txt",
+                "agent-policy-multi-agent-handoff-report.txt",
+                "agent-policy-multi-agent-handoff-report.fingerprint.txt",
+            ),
+        ),
+        AuditStep(
             "roadmap",
             [
                 "cargo",

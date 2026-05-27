@@ -3349,6 +3349,80 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             shutil.rmtree(output_corpus, ignore_errors=True)
             shutil.rmtree(output_artifacts, ignore_errors=True)
 
+    def test_agent_policy_import_audit_bundles_promoted_handoff_evidence(self):
+        examples_artifacts = Path(
+            tempfile.mkdtemp(prefix="ail-agent-policy-audit-examples-")
+        )
+        output_dir = Path(tempfile.mkdtemp(prefix="ail-agent-policy-audit-output-"))
+        shutil.rmtree(output_dir)
+        try:
+            replay = subprocess.run(
+                [
+                    "cargo",
+                    "run",
+                    "--quiet",
+                    "--",
+                    "ail-examples",
+                    "examples",
+                    "--artifact-dir",
+                    str(examples_artifacts),
+                    "--release-evidence",
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(replay.returncode, 0, replay.stderr)
+
+            audit = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_agent_policy_import_audit.py",
+                    "--base-corpus",
+                    "examples",
+                    "--examples-artifacts",
+                    str(examples_artifacts),
+                    "--source-entry-id",
+                    "example-40",
+                    "--output-dir",
+                    str(output_dir),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(audit.returncode, 0, audit.stderr)
+            report = (output_dir / "agent-policy-import-audit-report.txt").read_text()
+            report_fingerprint = (
+                output_dir / "agent-policy-import-audit-report.fingerprint.txt"
+            ).read_text()
+            manifest = (output_dir / "manifest.v03-agent-policy-import.txt").read_text()
+            manifest_fingerprint = (output_dir / "manifest.fingerprint.txt").read_text()
+            for required in [
+                "AIL-v0.3-Agent-Policy-Import-Audit:",
+                "source-entry-id example-40",
+                "proposed-entry-id example-40-policy",
+                "capture-plan capture-plan/agent-policy-capture-plan.json",
+                "import-demo import-work/agent-policy-import-demo-report.txt",
+                "multi-agent-handoff handoff/agent-policy-multi-agent-handoff-report.txt",
+                "policy-handoff-imported true",
+                "policy-handoff-replayed true",
+                "output-corpus-entry example-40-policy",
+                "output-artifact examples/example-40-policy/checked.ail-core.txt",
+                "audit-result accepted",
+            ]:
+                self.assertIn(required, report)
+            self.assertEqual(report_fingerprint.strip(), fnv64(report))
+            self.assertIn("report agent-policy-import-audit-report.txt", manifest)
+            self.assertIn(
+                "artifact agent-policy-multi-agent-handoff-report.txt", manifest
+            )
+            self.assertIn("audit-result accepted", manifest)
+            self.assertEqual(manifest_fingerprint.strip(), fnv64(manifest))
+        finally:
+            shutil.rmtree(examples_artifacts, ignore_errors=True)
+            shutil.rmtree(output_dir, ignore_errors=True)
+
     def test_agent_policy_capture_plan_rejects_stale_handoff_roles(self):
         examples_artifacts = Path(tempfile.mkdtemp(prefix="ail-agent-policy-stale-roles-"))
         capture_plan_dir = Path(tempfile.mkdtemp(prefix="ail-agent-policy-stale-plan-"))

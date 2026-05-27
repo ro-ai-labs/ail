@@ -9,9 +9,9 @@ agent-contract evidence. `deferred` means the signal remains an intentional
 v0.3 follow-up with an explicit rationale.
 
 signal: AgentTool authoring needs human-approved multi-agent policy handoff imports after deterministic policy reviews are replayed.
-status: deferred
-rationale: Deterministic policy import and role-separated handoff evidence exists, but broader live reviewer coverage with both accepted and rejected handoffs is still the next bar.
-evidence: docs/ail/31-v03-learning-and-authoring-gate.md
+status: promoted
+rationale: The v0.3 release audit now bundles the AgentTool capture plan, human-approved policy import demo, and deterministic multi-agent handoff report for example-40-policy.
+evidence: scripts/run_v03_agent_policy_import_audit.py
 
 signal: Application examples need more repaired incident promotion variants and richer stateful application walkthroughs after the first package-local repair proof is promoted.
 status: deferred
