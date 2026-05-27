@@ -230,6 +230,10 @@ python3 scripts/run_ail_interactive_manual.py --chapter agent-policy-import --ru
   `support_ticket.ail` high-level Application profile package, including
   package-local accepted and rejected fixtures. Prose:
   `12-application-baseline.md`.
+- `stateful-runtime`: deterministic conformance and runtime evidence for the
+  `stateful_counter.ail` package, including persistence, idempotent retry,
+  shared-state serialization, replay-recovery fixtures, and counter VM trace
+  output. Prose: `13-stateful-runtime.md`.
 - `repair-promotion`: deterministic review of rejected-example repair evidence
   before proposing a repaired artifact for accepted-corpus promotion. Prose:
   `07-repair-promotion.md`.
@@ -245,7 +249,7 @@ python3 scripts/run_ail_interactive_manual.py --chapter agent-policy-import --ru
 - `v03-authoring-gate`: the deterministic v0.3 audit that runs User Story
   mode, examples replay, roadmap printing, prompt interaction,
   agent-entrypoint, bootstrap self-hosting, Systems profile,
-  Application baseline,
+  stateful runtime, Application baseline,
   repair-promotion, UI patch import, and AgentTool policy import checks from
   one manual chapter.
   Prose: `06-v03-authoring-gate.md`.

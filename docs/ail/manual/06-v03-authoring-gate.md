@@ -5,9 +5,9 @@
 The v0.3 authoring gate chapter runs the deterministic audit that ties the
 manual together. It proves the current story-first workflow, examples replay,
 roadmap printing, prompt interaction checks, agent entrypoint checks, bootstrap
-self-hosting, Systems profile, Application baseline, repair promotion, UI
-patch import, and AgentTool policy import checks can be executed from one
-command.
+self-hosting, Systems profile, stateful runtime, Application baseline, repair
+promotion, UI patch import, and AgentTool policy import checks can be executed
+from one command.
 
 Run the gate:
 
@@ -27,6 +27,7 @@ run-prompt-interaction-checks
 run-agent-entrypoint-checks
 run-bootstrap-self-hosting-checks
 run-systems-profile-checks
+run-stateful-runtime-checks
 run-application-baseline-checks
 run-repair-promotion-checks
 run-ui-patch-import-checks
@@ -43,6 +44,7 @@ python3 scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run
 python3 scripts/run_ail_interactive_manual.py --chapter agent-entrypoint --run-checks
 python3 scripts/run_ail_interactive_manual.py --chapter bootstrap-self-hosting --run-checks
 python3 scripts/run_ail_interactive_manual.py --chapter systems-profile --run-checks
+python3 scripts/run_ail_interactive_manual.py --chapter stateful-runtime --run-checks
 python3 scripts/run_ail_interactive_manual.py --chapter application-baseline --run-checks
 python3 scripts/run_ail_interactive_manual.py --chapter repair-promotion --run-checks
 python3 scripts/run_ail_interactive_manual.py --chapter ui-patch-import --run-checks
@@ -172,6 +174,16 @@ manifest.ail-compile.txt
 machine-bytecode-contract linux-x86_64-elf
 system effect read network device
 trace PacketReceived
+accepted: persistent-increment-minimal.ail-spec.md
+accepted: idempotent-increment-request-minimal.ail-spec.md
+accepted: locked-counter-increment-minimal.ail-spec.md
+accepted: replay-after-failure-minimal.ail-spec.md
+rejected: increment-without-persistence-guarantee.ail-spec.md AIL-STATE-001
+rejected: retryable-increment-without-idempotency-key.ail-spec.md AIL-STATE-002
+rejected: shared-counter-without-lock.ail-spec.md AIL-STATE-003
+rejected: failure-after-write-without-replay-policy.ail-spec.md AIL-STATE-004
+counter.value=42
+add counter.value by 1 -> 42
 repair-promotion-review.txt
 repair-promotion-review.fingerprint.txt
 repair-promotion-review-fingerprint-observed-count

@@ -351,6 +351,7 @@ cargo test cli_ail_e2e_corpus_replays_checked_live_release_corpus
 cargo test --test ail_toolchain cli_ail_story_native_target_executes_story_runtime_trace
 cargo test --test ail_toolchain script_ail_interactive_manual_v03_authoring_gate_run_checks_succeeds
 cargo test --test ail_toolchain script_ail_interactive_manual_systems_profile_run_checks_succeeds
+cargo test --test ail_toolchain script_ail_interactive_manual_stateful_runtime_run_checks_succeeds
 cargo run -- ail-conformance examples/support_ticket.ail --artifact-dir /tmp/ail-v03-application-baseline
 cargo run -- ail-conformance examples/secret_access.ail --artifact-dir /tmp/ail-v03-secret-access
 cargo run -- ail-conformance examples/stateful_counter.ail --artifact-dir /tmp/ail-v03-stateful-counter

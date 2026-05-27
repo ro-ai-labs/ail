@@ -654,6 +654,62 @@ BASE_CHAPTERS: tuple[ManualChapter, ...] = (
         ),
     ),
     ManualChapter(
+        chapter_id="stateful-runtime",
+        title="Stateful Runtime",
+        doc="docs/ail/manual/13-stateful-runtime.md",
+        purpose=(
+            "Check stateful Application runtime policies for persistence, "
+            "idempotent retries, shared-state serialization, replay recovery, "
+            "and counter VM execution."
+        ),
+        commands=(
+            ManualCommand(
+                label="check-stateful-counter-conformance",
+                command=(
+                    "cargo",
+                    "run",
+                    "--",
+                    "ail-conformance",
+                    "examples/stateful_counter.ail",
+                    "--artifact-dir",
+                    "/tmp/ail-manual-stateful-runtime-conformance",
+                ),
+                evidence=(
+                    "conformance-report.txt",
+                    "manifest.ail-conformance.txt",
+                    "accepted: persistent-increment-minimal.ail-spec.md",
+                    "accepted: idempotent-increment-request-minimal.ail-spec.md",
+                    "accepted: locked-counter-increment-minimal.ail-spec.md",
+                    "accepted: replay-after-failure-minimal.ail-spec.md",
+                    "rejected: increment-without-persistence-guarantee.ail-spec.md AIL-STATE-001",
+                    "rejected: retryable-increment-without-idempotency-key.ail-spec.md AIL-STATE-002",
+                    "rejected: shared-counter-without-lock.ail-spec.md AIL-STATE-003",
+                    "rejected: failure-after-write-without-replay-policy.ail-spec.md AIL-STATE-004",
+                    "ail conformance: ok",
+                ),
+            ),
+            ManualCommand(
+                label="verify-stateful-counter-bytecode-runtime",
+                command=(
+                    "cargo",
+                    "run",
+                    "--",
+                    "ail-run",
+                    "examples/stateful_counter.ail",
+                    "--action",
+                    "IncrementCounter",
+                    "counter.value=41",
+                ),
+                evidence=(
+                    "ail-run succeeded",
+                    "counter.value=42",
+                    "add counter.value by 1 -> 42",
+                    "trace CounterIncremented",
+                ),
+            ),
+        ),
+    ),
+    ManualChapter(
         chapter_id="repair-promotion",
         title="Repair Promotion Review",
         doc="docs/ail/manual/07-repair-promotion.md",
@@ -1043,8 +1099,8 @@ V03_AUTHORING_GATE = ManualChapter(
     doc="docs/ail/manual/06-v03-authoring-gate.md",
     purpose=(
         "Run the deterministic story, examples, roadmap, prompt, agent, "
-        "self-hosting, Systems, Application baseline, and promotion checks "
-        "as one v0.3 audit."
+        "self-hosting, Systems, stateful runtime, Application baseline, "
+        "and promotion checks as one v0.3 audit."
     ),
     commands=(
         ManualCommand(
@@ -1184,6 +1240,30 @@ V03_AUTHORING_GATE = ManualChapter(
                 "machine-bytecode-contract linux-x86_64-elf",
                 "system effect read network device",
                 "trace PacketReceived",
+            ),
+        ),
+        ManualCommand(
+            label="run-stateful-runtime-checks",
+            command=(
+                "python3",
+                "scripts/run_ail_interactive_manual.py",
+                "--chapter",
+                "stateful-runtime",
+                "--run-checks",
+            ),
+            evidence=(
+                "conformance-report.txt",
+                "manifest.ail-conformance.txt",
+                "accepted: persistent-increment-minimal.ail-spec.md",
+                "accepted: idempotent-increment-request-minimal.ail-spec.md",
+                "accepted: locked-counter-increment-minimal.ail-spec.md",
+                "accepted: replay-after-failure-minimal.ail-spec.md",
+                "rejected: increment-without-persistence-guarantee.ail-spec.md AIL-STATE-001",
+                "rejected: retryable-increment-without-idempotency-key.ail-spec.md AIL-STATE-002",
+                "rejected: shared-counter-without-lock.ail-spec.md AIL-STATE-003",
+                "rejected: failure-after-write-without-replay-policy.ail-spec.md AIL-STATE-004",
+                "counter.value=42",
+                "add counter.value by 1 -> 42",
             ),
         ),
         ManualCommand(

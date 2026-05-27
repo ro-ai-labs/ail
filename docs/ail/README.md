@@ -119,8 +119,8 @@ one of these version surfaces or add a versioned surface through
   examples-derived learning signals.
 - `manual/06-v03-authoring-gate.md`: one deterministic audit over User Story
   mode, examples replay, roadmap, prompt, agent, bootstrap self-hosting,
-  Systems profile, Application baseline, repair-promotion, UI patch import,
-  and AgentTool policy import checks.
+  Systems profile, stateful runtime, Application baseline, repair-promotion,
+  UI patch import, and AgentTool policy import checks.
 - `manual/07-repair-promotion.md`: deterministic review of rejected-example
   repair evidence before proposing a repaired artifact for accepted-corpus
   promotion.
@@ -143,6 +143,10 @@ one of these version surfaces or add a versioned surface through
 - `manual/12-application-baseline.md`: deterministic Application baseline
   evidence for `support_ticket.ail`, including package-local accepted and
   rejected conformance fixtures for support-ticket authoring boundaries.
+- `manual/13-stateful-runtime.md`: deterministic stateful Application runtime
+  evidence for `stateful_counter.ail`, including persistence, idempotency,
+  shared-state serialization, replay-recovery fixtures, and counter VM trace
+  output.
 
 ## Versioned Assets
 

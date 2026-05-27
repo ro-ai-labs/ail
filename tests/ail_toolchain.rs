@@ -1143,6 +1143,7 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         "manual/10-bootstrap-self-hosting.md",
         "manual/11-systems-profile.md",
         "manual/12-application-baseline.md",
+        "manual/13-stateful-runtime.md",
     ] {
         assert!(
             docs_index.contains(manual_chapter),
@@ -1177,6 +1178,7 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         "bootstrap-self-hosting",
         "systems-profile",
         "application-baseline",
+        "stateful-runtime",
         "v03-authoring-gate",
         "02-examples-release.md",
         "03-prompt-interaction.md",
@@ -1189,6 +1191,7 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         "10-bootstrap-self-hosting.md",
         "11-systems-profile.md",
         "12-application-baseline.md",
+        "13-stateful-runtime.md",
     ] {
         assert!(
             manual_index.contains(required),
@@ -1360,6 +1363,24 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
             ],
         ),
         (
+            "13-stateful-runtime.md",
+            &[
+                "scripts/run_ail_interactive_manual.py --chapter stateful-runtime --run-checks",
+                "cargo run -- ail-conformance examples/stateful_counter.ail",
+                "cargo run -- ail-run examples/stateful_counter.ail --action IncrementCounter counter.value=41",
+                "accepted: persistent-increment-minimal.ail-spec.md",
+                "accepted: idempotent-increment-request-minimal.ail-spec.md",
+                "accepted: locked-counter-increment-minimal.ail-spec.md",
+                "accepted: replay-after-failure-minimal.ail-spec.md",
+                "rejected: increment-without-persistence-guarantee.ail-spec.md AIL-STATE-001",
+                "rejected: retryable-increment-without-idempotency-key.ail-spec.md AIL-STATE-002",
+                "rejected: shared-counter-without-lock.ail-spec.md AIL-STATE-003",
+                "rejected: failure-after-write-without-replay-policy.ail-spec.md AIL-STATE-004",
+                "counter.value=42",
+                "add counter.value by 1 -> 42",
+            ],
+        ),
+        (
             "08-ui-patch-import.md",
             &[
                 "scripts/run_ail_interactive_manual.py --chapter ui-patch-import --run-checks",
@@ -1456,6 +1477,7 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "chapter agent-policy-import",
         "chapter bootstrap-self-hosting",
         "chapter systems-profile",
+        "chapter stateful-runtime",
         "chapter v03-authoring-gate",
     ] {
         assert!(list_stdout.contains(required), "{required}\n{list_stdout}");
@@ -1863,6 +1885,7 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "python3 scripts/run_ail_interactive_manual.py --chapter agent-entrypoint --run-checks",
         "python3 scripts/run_ail_interactive_manual.py --chapter bootstrap-self-hosting --run-checks",
         "python3 scripts/run_ail_interactive_manual.py --chapter systems-profile --run-checks",
+        "python3 scripts/run_ail_interactive_manual.py --chapter stateful-runtime --run-checks",
         "python3 scripts/run_ail_interactive_manual.py --chapter application-baseline --run-checks",
         "python3 scripts/run_ail_interactive_manual.py --chapter repair-promotion --run-checks",
         "python3 scripts/run_ail_interactive_manual.py --chapter ui-patch-import --run-checks",
@@ -1886,6 +1909,16 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "evidence machine-bytecode-contract linux-x86_64-elf",
         "evidence system effect read network device",
         "evidence trace PacketReceived",
+        "evidence accepted: persistent-increment-minimal.ail-spec.md",
+        "evidence accepted: idempotent-increment-request-minimal.ail-spec.md",
+        "evidence accepted: locked-counter-increment-minimal.ail-spec.md",
+        "evidence accepted: replay-after-failure-minimal.ail-spec.md",
+        "evidence rejected: increment-without-persistence-guarantee.ail-spec.md AIL-STATE-001",
+        "evidence rejected: retryable-increment-without-idempotency-key.ail-spec.md AIL-STATE-002",
+        "evidence rejected: shared-counter-without-lock.ail-spec.md AIL-STATE-003",
+        "evidence rejected: failure-after-write-without-replay-policy.ail-spec.md AIL-STATE-004",
+        "evidence counter.value=42",
+        "evidence add counter.value by 1 -> 42",
         "evidence accepted: close-ticket-minimal.ail-spec.md",
         "evidence rejected: secret-leak.ail-spec.md AIL002",
         "evidence rejected: action-without-trace.ail-spec.md AIL-TRACE-001",
@@ -2077,6 +2110,7 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "chapter agent-entrypoint",
         "chapter v03-roadmap",
         "chapter systems-profile",
+        "chapter stateful-runtime",
         "chapter application-baseline",
         "chapter v03-authoring-gate",
     ] {
@@ -2160,6 +2194,7 @@ fn script_ail_interactive_manual_v03_authoring_gate_run_checks_succeeds() {
         "running run-agent-entrypoint-checks",
         "running run-bootstrap-self-hosting-checks",
         "running run-systems-profile-checks",
+        "running run-stateful-runtime-checks",
         "running run-application-baseline-checks",
         "running run-ui-patch-import-checks",
         "running run-agent-policy-import-checks",
@@ -2168,6 +2203,16 @@ fn script_ail_interactive_manual_v03_authoring_gate_run_checks_succeeds() {
         "ail conformance: package network-driver",
         "accepted: scheduler-task-minimal.ail-spec.md",
         "accepted: interrupt-context-minimal.ail-spec.md",
+        "accepted: persistent-increment-minimal.ail-spec.md",
+        "accepted: idempotent-increment-request-minimal.ail-spec.md",
+        "accepted: locked-counter-increment-minimal.ail-spec.md",
+        "accepted: replay-after-failure-minimal.ail-spec.md",
+        "rejected: increment-without-persistence-guarantee.ail-spec.md AIL-STATE-001",
+        "rejected: retryable-increment-without-idempotency-key.ail-spec.md AIL-STATE-002",
+        "rejected: shared-counter-without-lock.ail-spec.md AIL-STATE-003",
+        "rejected: failure-after-write-without-replay-policy.ail-spec.md AIL-STATE-004",
+        "counter.value=42",
+        "add counter.value by 1 -> 42",
         "accepted: close-ticket-minimal.ail-spec.md",
         "rejected: secret-leak.ail-spec.md AIL002",
         "rejected: action-without-trace.ail-spec.md AIL-TRACE-001",
@@ -2261,6 +2306,54 @@ fn script_ail_interactive_manual_systems_profile_run_checks_succeeds() {
         "trace PacketReceived",
     ] {
         assert!(stderr.contains(required), "{required}\n{stderr}");
+    }
+}
+
+#[test]
+fn script_ail_interactive_manual_stateful_runtime_run_checks_succeeds() {
+    let manual = fs::read_to_string(format!(
+        "{}/docs/ail/manual/13-stateful-runtime.md",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .unwrap();
+    assert!(
+        manual.contains(
+            "python3 scripts/run_ail_interactive_manual.py --chapter stateful-runtime --run-checks"
+        ),
+        "{manual}"
+    );
+
+    let script = format!(
+        "{}/scripts/run_ail_interactive_manual.py",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let output = Command::new("python3")
+        .args([&script, "--chapter", "stateful-runtime", "--run-checks"])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    for required in [
+        "running check-stateful-counter-conformance",
+        "evidence conformance-report.txt",
+        "accepted: persistent-increment-minimal.ail-spec.md",
+        "accepted: idempotent-increment-request-minimal.ail-spec.md",
+        "accepted: locked-counter-increment-minimal.ail-spec.md",
+        "accepted: replay-after-failure-minimal.ail-spec.md",
+        "rejected: increment-without-persistence-guarantee.ail-spec.md AIL-STATE-001",
+        "rejected: retryable-increment-without-idempotency-key.ail-spec.md AIL-STATE-002",
+        "rejected: shared-counter-without-lock.ail-spec.md AIL-STATE-003",
+        "rejected: failure-after-write-without-replay-policy.ail-spec.md AIL-STATE-004",
+        "running verify-stateful-counter-bytecode-runtime",
+        "evidence counter.value=42",
+        "evidence add counter.value by 1 -> 42",
+    ] {
+        assert!(stdout.contains(required), "{required}\n{stdout}");
     }
 }
 
