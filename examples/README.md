@@ -385,6 +385,12 @@ live LLM access. The current corpus stores:
   before any human-approved policy trace amendment is proposed for corpus-copy
   promotion.
 
+Catalog paths are closed over this tree. The `request-file`, `response-file`,
+and `story-file` values must stay inside the catalog directory, and `package`
+values must stay inside repository `./examples`. Absolute paths and `..` path
+escapes are rejected before replay so example evidence remains portable and
+human-reviewable.
+
 This is checked release evidence with four replay-clean live LLM
 captures and one hundred thirteen replay-clean live Codex skill-agent captures. The
 current corpus marks zero entries `capture-origin: deterministic-seed`, four

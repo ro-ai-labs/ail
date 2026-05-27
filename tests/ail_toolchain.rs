@@ -29507,6 +29507,64 @@ fn cli_ail_e2e_corpus_requires_stored_request_and_response_files() {
 }
 
 #[test]
+fn cli_ail_e2e_corpus_rejects_transcript_paths_outside_catalog_dir() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let corpus_dir = std::env::temp_dir().join(format!(
+        "ail-examples-transcript-path-escape-{}",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-examples-transcript-path-escape-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&corpus_dir);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&corpus_dir).unwrap();
+    write_e2e_transcript_files(&corpus_dir, 100);
+    fs::write(
+        corpus_dir.join("examples.md"),
+        e2e_corpus_text_with_override(0, &[("request-file", "../outside-request.json")]),
+    )
+    .unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-examples",
+            corpus_dir.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains(
+            "examples catalog entry example-0 request-file ../outside-request.json must stay inside the examples catalog directory"
+        ),
+        "{stderr}"
+    );
+
+    let _ = fs::remove_dir_all(corpus_dir);
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
+fn cli_ail_e2e_corpus_rejects_package_paths_outside_examples_tree() {
+    assert_e2e_corpus_override_failure(
+        "package-path-outside-examples",
+        0,
+        &[("package", "../support_ticket.ail")],
+        "examples catalog entry example-0 package ../support_ticket.ail must stay inside ./examples",
+    );
+}
+
+#[test]
 fn cli_ail_e2e_corpus_replays_rejected_prompt_failures() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let corpus_dir = std::env::temp_dir().join(format!(

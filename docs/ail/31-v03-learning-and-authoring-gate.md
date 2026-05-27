@@ -81,6 +81,11 @@ Each entry in `examples/examples.md` must include:
 - `v0.3-signal`: the language, prompt, checker, runtime, target, or docs gap
   revealed by the example.
 
+Catalog path closure is part of the gate. `request-file`, `response-file`, and
+`story-file` must stay inside the catalog directory, while `package` must stay
+inside repository `./examples`; absolute paths and `..` path escapes are
+rejected before replay.
+
 Prompt-surface matrices are allowed, but they are not automatically useful.
 They count only when the distinctness claim identifies the prompt behavior,
 checker assertion, target artifact, diagnostic, user-story journey, or

@@ -97,6 +97,11 @@ The examples directory has four layers:
 - stored transcripts and inputs: `examples/requests/`, `examples/responses/`,
   and `examples/inputs/`
 
+Replay rejects catalog path escapes. `request-file`, `response-file`, and
+`story-file` paths must remain under the catalog directory, and `package`
+paths must remain under repository `./examples`; absolute paths and `..`
+components are not allowed.
+
 Codex-style executor contracts live under `examples/agents/`. Every package directory has a local README.md guide, including support-only packages and rejected diagnostic packages. This keeps imported modules teachable instead of leaving them visible only through the packages that consume them.
 
 ## Required Verification

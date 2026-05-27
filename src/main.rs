@@ -1669,6 +1669,13 @@ fn ail_e2e_corpus_entry_from_fields(
             return Err(format!("examples catalog entry {id} is missing {field}"));
         }
     }
+    ail_e2e_validate_package_path_inside_examples(
+        &id,
+        fields
+            .get("package")
+            .map(String::as_str)
+            .unwrap_or_default(),
+    )?;
     ail_e2e_validate_usefulness_metadata(&id, fields)?;
     let checker_result = fields
         .get("checker-result")
@@ -1863,6 +1870,56 @@ fn ail_e2e_corpus_entry_from_fields(
     })
 }
 
+fn ail_e2e_validate_catalog_relative_path(id: &str, field: &str, path: &str) -> Result<(), String> {
+    let parsed = std::path::Path::new(path);
+    if parsed.is_absolute()
+        || !parsed
+            .components()
+            .any(|component| matches!(component, std::path::Component::Normal(_)))
+        || parsed.components().any(|component| {
+            matches!(
+                component,
+                std::path::Component::ParentDir
+                    | std::path::Component::RootDir
+                    | std::path::Component::Prefix(_)
+            )
+        })
+    {
+        return Err(format!(
+            "examples catalog entry {id} {field} {path} must stay inside the examples catalog directory"
+        ));
+    }
+    Ok(())
+}
+
+fn ail_e2e_validate_package_path_inside_examples(id: &str, path: &str) -> Result<(), String> {
+    let parsed = std::path::Path::new(path);
+    let normal_components = parsed
+        .components()
+        .filter_map(|component| match component {
+            std::path::Component::Normal(value) => value.to_str(),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    if parsed.is_absolute()
+        || normal_components.first().copied() != Some("examples")
+        || normal_components.len() < 2
+        || parsed.components().any(|component| {
+            matches!(
+                component,
+                std::path::Component::ParentDir
+                    | std::path::Component::RootDir
+                    | std::path::Component::Prefix(_)
+            )
+        })
+    {
+        return Err(format!(
+            "examples catalog entry {id} package {path} must stay inside ./examples"
+        ));
+    }
+    Ok(())
+}
+
 fn ail_e2e_validate_usefulness_metadata(
     id: &str,
     fields: &BTreeMap<String, String>,
@@ -1967,10 +2024,9 @@ fn validate_ail_e2e_corpus_transcript_files(entries: &[AilE2eCorpusEntry]) -> Re
             .parent()
             .unwrap_or_else(|| std::path::Path::new("."));
         for field in ["request-file", "response-file", "story-file"] {
-            let Some(path) = entry.fields.get(field) else {
-                continue;
-            };
-            let resolved_path = source_dir.join(path);
+            let path = ail_e2e_entry_relative_path(entry, field)?;
+            ail_e2e_validate_catalog_relative_path(&entry.id, field, &path)?;
+            let resolved_path = source_dir.join(&path);
             if !resolved_path.is_file() {
                 return Err(format!(
                     "examples catalog entry {} {field} {path} is missing",
@@ -2221,7 +2277,9 @@ fn ail_e2e_entry_resolved_path(
     entry: &AilE2eCorpusEntry,
     field: &str,
 ) -> Result<std::path::PathBuf, String> {
-    Ok(ail_e2e_entry_source_dir(entry).join(ail_e2e_entry_relative_path(entry, field)?))
+    let path = ail_e2e_entry_relative_path(entry, field)?;
+    ail_e2e_validate_catalog_relative_path(&entry.id, field, &path)?;
+    Ok(ail_e2e_entry_source_dir(entry).join(path))
 }
 
 fn extract_ail_e2e_response_artifact_text(response_text: &str) -> String {
