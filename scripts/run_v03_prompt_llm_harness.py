@@ -567,6 +567,22 @@ def review_artifacts(args: argparse.Namespace, paths: list[Path]) -> int:
         errors.append("report missing AIL-Prompt-LLM-Harness header")
     if f"prompt-count {len(paths)}" not in report_text:
         errors.append(f"report missing prompt-count {len(paths)}")
+    default_max_tokens = report_field(report_lines, "default-max-tokens")
+    max_tokens = report_field(report_lines, "max-tokens")
+    token_budget_default = report_field(report_lines, "token-budget-default")
+    token_budget_warnings = [
+        line for line in report_lines if line.startswith("token-budget-warning ")
+    ]
+    expected_default = str(DEFAULT_MAX_TOKENS)
+    if default_max_tokens != expected_default:
+        errors.append(
+            "report default-max-tokens mismatch: "
+            f"expected {expected_default} got {default_max_tokens or '<missing>'}"
+        )
+    if max_tokens is None:
+        errors.append("report missing max-tokens")
+    if token_budget_default is None:
+        errors.append("report missing token-budget-default")
 
     for prompt_path in paths:
         rel = relative(prompt_path)
@@ -650,6 +666,10 @@ def review_artifacts(args: argparse.Namespace, paths: list[Path]) -> int:
         "AIL-Prompt-LLM-Harness-Review:",
         f"artifact-dir {artifact_root}",
         f"prompt-count {len(paths)}",
+        f"default-max-tokens {default_max_tokens or '<missing>'}",
+        f"max-tokens {max_tokens or '<missing>'}",
+        f"token-budget-default {token_budget_default or '<missing>'}",
+        *token_budget_warnings,
         f"content-nonempty-count {content_nonempty}",
         f"prompt-envelope-valid-count {valid_count}",
         "prompt-envelope-artifact-count "
@@ -684,6 +704,14 @@ def review_artifacts(args: argparse.Namespace, paths: list[Path]) -> int:
         return 1
     print(review_text, end="")
     return 1 if errors else 0
+
+
+def report_field(report_lines: list[str], key: str) -> str | None:
+    prefix = f"{key} "
+    for line in report_lines:
+        if line.startswith(prefix):
+            return line[len(prefix) :].strip()
+    return None
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
@@ -741,7 +769,10 @@ def print_dry_run(args: argparse.Namespace, paths: list[Path]) -> None:
     print(f"endpoint {args.endpoint}")
     print(f"prompt-dir {args.prompt_dir}")
     print(f"artifact-dir {args.artifact_dir}")
+    print(f"default-max-tokens {DEFAULT_MAX_TOKENS}")
     print(f"max-tokens {args.max_tokens}")
+    for line in token_budget_lines(args.max_tokens):
+        print(line)
     for path in paths:
         probe_label, probe_text = prompt_probe(path.name, args.probe)
         user_probe = render_user_probe(path.name, args.probe)
@@ -759,6 +790,9 @@ def run_live(args: argparse.Namespace, paths: list[Path]) -> int:
         "AIL-Prompt-LLM-Harness:",
         f"endpoint {args.endpoint}",
         f"models-url {models_url_for_endpoint(args.endpoint)}",
+        f"default-max-tokens {DEFAULT_MAX_TOKENS}",
+        f"max-tokens {args.max_tokens}",
+        *token_budget_lines(args.max_tokens),
         f"prompt-count {len(paths)}",
     ]
     manifest_lines = ["AIL-Prompt-LLM-Harness-Manifest:"]
@@ -857,6 +891,20 @@ def run_live(args: argparse.Namespace, paths: list[Path]) -> int:
     print(report_text, end="")
     print(f"artifacts {artifact_root}")
     return 0
+
+
+def token_budget_lines(max_tokens: int) -> list[str]:
+    if max_tokens < DEFAULT_MAX_TOKENS:
+        return [
+            "token-budget-default false",
+            "token-budget-warning max-tokens-below-default",
+        ]
+    if max_tokens == DEFAULT_MAX_TOKENS:
+        return ["token-budget-default true"]
+    return [
+        "token-budget-default false",
+        "token-budget-warning max-tokens-above-default",
+    ]
 
 
 def main(argv: list[str]) -> int:

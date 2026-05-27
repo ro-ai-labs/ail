@@ -44,7 +44,10 @@ requests include an OpenAI-compatible JSON mode hint,
 `response_format: {"type":"json_object"}`, when the endpoint is
 `/v1/chat/completions`. The default live budget is `--max-tokens 768`, which
 is large enough for the current task-specific probes to complete compact
-envelopes on the hosted llama.cpp server. The harness writes request,
+envelopes on the hosted llama.cpp server. The harness writes `default-max-tokens`,
+the actual `max-tokens`, `token-budget-default`, and a `token-budget-warning`
+line when the live run uses a non-default budget, so reviewers can distinguish
+prompt failures from truncated low-budget smoke runs. The harness writes request,
 response, extracted content, report, manifest, and fingerprint artifacts under
 `/tmp/ail-v03-prompt-llm`. It also fingerprints `models.json`; with
 `--skip-model-check`, that artifact records the skipped check and endpoint so
@@ -76,8 +79,10 @@ review prints `prompt-envelope-valid-count`, `prompt-envelope-artifact-count`,
 `prompt-envelope-questions-count`,
 `prompt-envelope-artifact-required-count`,
 `prompt-envelope-questions-expected-count`, `prompt-outcome-match-count`, and
-`prompt-envelope-invalid-count`, persists the accepted/rejected review text as
-a fingerprinted review artifact, and rejects empty output, raw non-envelope
+`prompt-envelope-invalid-count`. It also repeats `default-max-tokens`,
+`max-tokens`, `token-budget-default`, and any `token-budget-warning` line from
+the live run, persists the accepted/rejected review text as a fingerprinted
+review artifact, and rejects empty output, raw non-envelope
 output, generic artifact kinds, unexpected question-only answers for
 artifact-required probes, or artifacts captured with the wrong task-specific
 probe.

@@ -2737,6 +2737,9 @@ fn script_v03_prompt_llm_harness_help_lists_all_prompts_and_dry_run() {
             && prompt_docs.contains("probe-label")
             && prompt_docs.contains("task-specific probes")
             && prompt_docs.contains("envelope contract")
+            && prompt_docs.contains("default-max-tokens")
+            && prompt_docs.contains("token-budget-default")
+            && prompt_docs.contains("token-budget-warning")
             && prompt_docs.contains("JSON mode")
             && prompt_docs.contains("models.json")
             && prompt_docs.contains("--skip-model-check")
@@ -2759,6 +2762,9 @@ fn script_v03_prompt_llm_harness_help_lists_all_prompts_and_dry_run() {
             && prompt_manual.contains("probe-label")
             && prompt_manual.contains("task-specific probes")
             && prompt_manual.contains("envelope contract")
+            && prompt_manual.contains("default-max-tokens")
+            && prompt_manual.contains("token-budget-default")
+            && prompt_manual.contains("token-budget-warning")
             && prompt_manual.contains("JSON mode")
             && prompt_manual.contains("models.json")
             && prompt_manual.contains("--skip-model-check")
@@ -2870,6 +2876,15 @@ fn script_v03_prompt_llm_harness_review_writes_fingerprinted_report() {
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
+    let run_stdout = String::from_utf8_lossy(&output.stdout);
+    for required in [
+        "default-max-tokens 768",
+        "max-tokens 64",
+        "token-budget-default false",
+        "token-budget-warning max-tokens-below-default",
+    ] {
+        assert!(run_stdout.contains(required), "{required}\n{run_stdout}");
+    }
     let models_text = fs::read_to_string(artifact_dir.join("models.json")).unwrap();
     assert!(models_text.contains("\"skipped\": true"), "{models_text}");
     assert!(
@@ -2926,6 +2941,17 @@ fn script_v03_prompt_llm_harness_review_writes_fingerprinted_report() {
         review_stdout.contains("prompt-outcome-match-count 11"),
         "{review_stdout}"
     );
+    for required in [
+        "default-max-tokens 768",
+        "max-tokens 64",
+        "token-budget-default false",
+        "token-budget-warning max-tokens-below-default",
+    ] {
+        assert!(
+            review_stdout.contains(required),
+            "{required}\n{review_stdout}"
+        );
+    }
     assert!(
         review_stdout.contains("fingerprint-check-count 36"),
         "{review_stdout}"

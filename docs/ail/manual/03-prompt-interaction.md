@@ -61,7 +61,10 @@ contract to each user probe and asks the endpoint for JSON mode with
 fingerprinted probe text, so review can detect stale or generic prompt
 requests. The default live budget is `--max-tokens 768`; lower budgets are
 useful for failure probes, but may cut off verbose valid envelopes before
-`checker_handoff` is emitted.
+`checker_handoff` is emitted. The run report records `default-max-tokens`, the
+actual `max-tokens`, `token-budget-default`, and a `token-budget-warning` line
+for non-default budgets so live evidence can explain whether a failure may be
+budget-induced.
 
 The Rust authoring entrypoints use the same chat shape for
 `/v1/chat/completions`: the prompt-pack asset is sent as a `system message`,
@@ -107,8 +110,10 @@ probes must produce `prompt-envelope-questions`. It prints
 `prompt-envelope-questions-count`,
 `prompt-envelope-artifact-required-count`,
 `prompt-envelope-questions-expected-count`, `prompt-outcome-match-count`, and
-`prompt-envelope-invalid-count`, then persists the accepted/rejected review
-text as a fingerprinted harness review artifact. A non-empty raw model
+`prompt-envelope-invalid-count`. It also repeats `default-max-tokens`,
+`max-tokens`, `token-budget-default`, and any `token-budget-warning`, then
+persists the accepted/rejected review text as a fingerprinted harness review
+artifact. A non-empty raw model
 response is still rejected when it is not a valid prompt-pack envelope or when
 an artifact-required prompt returns only blocking questions. A generic artifact
 kind is rejected, and a generic probe is rejected when its `probe-label` or
