@@ -118,3 +118,30 @@ The importer validates the capture-plan fingerprint and required promotion
 fields, keeps `example-99` rejected, appends `example-99-repaired`, writes new
 request, response, and story files, and leaves final acceptance to
 `cargo run -- ail-examples <corpus-copy> --artifact-dir <artifacts>`.
+
+The manual can run a deterministic import demo after replay and capture-plan
+generation:
+
+```sh
+python3 scripts/run_v03_repair_promotion_import_demo.py \
+  --base-corpus examples \
+  --examples-artifacts /tmp/ail-manual-repair-promotion \
+  --capture-plan-dir /tmp/ail-manual-repair-promotion-capture-plan \
+  --source-entry-id example-99 \
+  --work-dir /tmp/ail-manual-repair-promotion-import-work \
+  --output-corpus /tmp/ail-manual-repair-promotion-import-corpus \
+  --output-artifacts /tmp/ail-manual-repair-promotion-import-artifacts
+```
+
+The demo uses the replayed repair candidate as deterministic human-approved
+input, appends the proposed entry in a corpus copy, replays that copy, and
+writes:
+
+```text
+/tmp/ail-manual-repair-promotion-import-work/repair-promotion-import-demo-report.txt
+/tmp/ail-manual-repair-promotion-import-work/repair-promotion-import-demo-report.fingerprint.txt
+```
+
+The report must include `source-preserved true`, `proposed-accepted true`,
+`entry-count 117`, `checker-result-count accepted 109`, and
+`checker-result-count rejected 8`.

@@ -1222,6 +1222,110 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             shutil.rmtree(artifact_dir, ignore_errors=True)
             shutil.rmtree(transcript_dir, ignore_errors=True)
 
+    def test_repair_promotion_import_demo_replays_promoted_entry(self):
+        work_dir = Path(tempfile.mkdtemp(prefix="ail-repair-promotion-demo-work-"))
+        examples_artifacts = Path(
+            tempfile.mkdtemp(prefix="ail-repair-promotion-demo-artifacts-")
+        )
+        capture_plan_dir = Path(
+            tempfile.mkdtemp(prefix="ail-repair-promotion-demo-plan-")
+        )
+        output_corpus = Path(tempfile.mkdtemp(prefix="ail-repair-promotion-demo-corpus-"))
+        output_artifacts = Path(
+            tempfile.mkdtemp(prefix="ail-repair-promotion-demo-output-artifacts-")
+        )
+        shutil.rmtree(output_corpus)
+        shutil.rmtree(output_artifacts)
+        try:
+            replay = subprocess.run(
+                [
+                    "cargo",
+                    "run",
+                    "--quiet",
+                    "--",
+                    "ail-examples",
+                    "examples",
+                    "--artifact-dir",
+                    str(examples_artifacts),
+                    "--release-evidence",
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(replay.returncode, 0, replay.stderr)
+            plan = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_repair_promotion_capture_plan.py",
+                    "--examples-artifacts",
+                    str(examples_artifacts),
+                    "--entry-id",
+                    "example-99",
+                    "--output-dir",
+                    str(capture_plan_dir),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(plan.returncode, 0, plan.stderr)
+            demo = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_repair_promotion_import_demo.py",
+                    "--base-corpus",
+                    "examples",
+                    "--examples-artifacts",
+                    str(examples_artifacts),
+                    "--capture-plan-dir",
+                    str(capture_plan_dir),
+                    "--source-entry-id",
+                    "example-99",
+                    "--work-dir",
+                    str(work_dir),
+                    "--output-corpus",
+                    str(output_corpus),
+                    "--output-artifacts",
+                    str(output_artifacts),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(demo.returncode, 0, demo.stderr)
+            report = (work_dir / "repair-promotion-import-demo-report.txt").read_text()
+            report_fingerprint = (
+                work_dir / "repair-promotion-import-demo-report.fingerprint.txt"
+            ).read_text()
+            self.assertIn("AIL-Repair-Promotion-Import-Demo:", report)
+            self.assertIn("source-entry-id example-99", report)
+            self.assertIn("proposed-entry-id example-99-repaired", report)
+            self.assertIn("source-preserved true", report)
+            self.assertIn("proposed-accepted true", report)
+            self.assertIn("entry-count 117", report)
+            self.assertIn("checker-result-count accepted 109", report)
+            self.assertIn("checker-result-count rejected 8", report)
+            self.assertEqual(report_fingerprint.strip(), fnv64(report))
+
+            examples = (output_corpus / "examples.md").read_text()
+            source_section = examples.split("## Example: example-99", 1)[1].split(
+                "## Example:", 1
+            )[0]
+            promoted_section = examples.split("## Example: example-99-repaired", 1)[1]
+            self.assertIn("checker-result: rejected", source_section)
+            self.assertIn("checker-result: accepted", promoted_section)
+            self.assertTrue(
+                (output_artifacts / "examples" / "example-99-repaired" / "checked.ail-core.txt")
+                .exists()
+            )
+        finally:
+            shutil.rmtree(work_dir, ignore_errors=True)
+            shutil.rmtree(examples_artifacts, ignore_errors=True)
+            shutil.rmtree(capture_plan_dir, ignore_errors=True)
+            shutil.rmtree(output_corpus, ignore_errors=True)
+            shutil.rmtree(output_artifacts, ignore_errors=True)
+
 
 if __name__ == "__main__":
     unittest.main()

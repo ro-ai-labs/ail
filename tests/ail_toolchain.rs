@@ -1326,6 +1326,10 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "repair-promotion-review-fingerprint-observed-count",
         "scripts/run_v03_repair_promotion_capture_plan.py",
         "repair-promotion-capture-plan.json",
+        "scripts/run_v03_repair_promotion_import_demo.py",
+        "repair-promotion-import-demo-report.txt",
+        "source-preserved true",
+        "proposed-accepted true",
     ] {
         assert!(
             repair_promotion_stdout.contains(required),
@@ -1358,6 +1362,7 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "evidence agent-trace.txt",
         "evidence repair-promotion-review.txt",
         "evidence repair-promotion-capture-plan.json",
+        "evidence repair-promotion-import-demo-report.txt",
     ] {
         assert!(gate_stdout.contains(required), "{required}\n{gate_stdout}");
     }
