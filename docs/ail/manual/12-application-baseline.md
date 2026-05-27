@@ -2,14 +2,15 @@
 
 ## Purpose
 
-The Application Baseline chapter checks `examples/support_ticket.ail` as the
-high-level workflow package used by User Story mode, prompt matrices, package
-composition, native target evidence, and diagnostic repair examples.
+The Application Baseline chapter checks `examples/support_ticket.ail` and
+`examples/incident_response.ail` as high-level workflow packages used by User
+Story mode, prompt matrices, package composition, native target evidence, and
+diagnostic repair examples.
 
 This chapter is intentionally focused. It does not replay the whole corpus.
-Instead, it proves the support-ticket package carries package-local conformance
-fixtures that accept the minimal closing workflow and reject representative
-application mistakes with stable diagnostics.
+Instead, it proves the support-ticket and incident-response packages carry
+package-local conformance fixtures that accept minimal workflows and reject
+representative application mistakes with stable diagnostics.
 
 Run the chapter:
 
@@ -21,6 +22,7 @@ The direct command is:
 
 ```sh
 cargo run -- ail-conformance examples/support_ticket.ail --artifact-dir /tmp/ail-manual-application-baseline-conformance
+cargo run -- ail-conformance examples/incident_response.ail --artifact-dir /tmp/ail-manual-incident-response-conformance
 ```
 
 ## What It Proves
@@ -31,6 +33,11 @@ cargo run -- ail-conformance examples/support_ticket.ail --artifact-dir /tmp/ail
   validates the minimal `CloseTicket` workflow.
 - `examples/support_ticket.ail/examples/rejected/*.ail-spec.md` rejects local
   application failures instead of relying only on corpus-level diagnostics.
+- `examples/incident_response.ail/examples/accepted/incident-escalation-minimal.ail-spec.md`
+  validates escalation, notification audit, and lifecycle predecessor checks.
+- `examples/incident_response.ail/examples/rejected/*.ail-spec.md` rejects
+  notification and lifecycle mistakes directly in the high-level
+  multi-module package.
 - The report and manifest are fingerprinted in the same way as other
   conformance chapters.
 
@@ -42,6 +49,7 @@ The chapter should surface:
 conformance-report.txt
 manifest.ail-conformance.txt
 accepted: close-ticket-minimal.ail-spec.md
+accepted: incident-escalation-minimal.ail-spec.md
 rejected: secret-leak.ail-spec.md AIL002
 rejected: action-without-trace.ail-spec.md AIL-TRACE-001
 rejected: failure-without-trace.ail-spec.md AIL-TRACE-002
@@ -49,6 +57,9 @@ rejected: unknown-field-type.ail-spec.md AIL-TYPE-001
 rejected: assignment-without-role-requirement.ail-spec.md AIL-APP-001
 rejected: overdue-without-time-requirement.ail-spec.md AIL-APP-002
 rejected: status-change-without-public-update.ail-spec.md AIL-APP-003
+rejected: notification-without-responder-pager.ail-spec.md AIL-APP-004
+rejected: resolve-without-mitigating-status.ail-spec.md AIL-APP-005
+rejected: postmortem-without-resolved-status.ail-spec.md AIL-APP-005
 ail conformance: ok
 ```
 
@@ -57,6 +68,10 @@ failure handlers, unknown fields, unknown requirement fields, secret reads
 without protection, unhandled failure paths, assignee role requirements,
 overdue scheduler time requirements, and public-update preservation for ticket
 status changes.
+
+Incident-response rejected fixtures cover responder notification without a
+pager requirement, resolving before the incident is Mitigating, and starting
+postmortem before the incident is Resolved.
 
 ## Relationship To User Story Mode
 

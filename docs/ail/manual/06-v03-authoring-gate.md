@@ -149,6 +149,7 @@ accepted: interrupt-context-minimal.ail-spec.md
 rejected: interrupt-context-blocking-effect.ail-spec.md AIL033
 rejected: scheduler-task-unknown-context.ail-spec.md AIL035
 accepted: close-ticket-minimal.ail-spec.md
+accepted: incident-escalation-minimal.ail-spec.md
 rejected: secret-leak.ail-spec.md AIL002
 rejected: action-without-trace.ail-spec.md AIL-TRACE-001
 rejected: failure-without-trace.ail-spec.md AIL-TRACE-002
@@ -156,6 +157,9 @@ rejected: unknown-field-type.ail-spec.md AIL-TYPE-001
 rejected: assignment-without-role-requirement.ail-spec.md AIL-APP-001
 rejected: overdue-without-time-requirement.ail-spec.md AIL-APP-002
 rejected: status-change-without-public-update.ail-spec.md AIL-APP-003
+rejected: notification-without-responder-pager.ail-spec.md AIL-APP-004
+rejected: resolve-without-mitigating-status.ail-spec.md AIL-APP-005
+rejected: postmortem-without-resolved-status.ail-spec.md AIL-APP-005
 checked.ail-core.txt
 artifact.ailbc.json
 native-bytecode-report.txt

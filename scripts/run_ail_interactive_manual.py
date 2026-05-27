@@ -595,8 +595,8 @@ BASE_CHAPTERS: tuple[ManualChapter, ...] = (
         title="Application Baseline",
         doc="docs/ail/manual/12-application-baseline.md",
         purpose=(
-            "Check the high-level Support Ticket Application baseline with "
-            "package-local accepted and rejected conformance fixtures."
+            "Check the high-level Application baselines with package-local "
+            "accepted and rejected conformance fixtures."
         ),
         commands=(
             ManualCommand(
@@ -621,6 +621,27 @@ BASE_CHAPTERS: tuple[ManualChapter, ...] = (
                     "rejected: assignment-without-role-requirement.ail-spec.md AIL-APP-001",
                     "rejected: overdue-without-time-requirement.ail-spec.md AIL-APP-002",
                     "rejected: status-change-without-public-update.ail-spec.md AIL-APP-003",
+                    "ail conformance: ok",
+                ),
+            ),
+            ManualCommand(
+                label="check-incident-response-conformance",
+                command=(
+                    "cargo",
+                    "run",
+                    "--",
+                    "ail-conformance",
+                    "examples/incident_response.ail",
+                    "--artifact-dir",
+                    "/tmp/ail-manual-incident-response-conformance",
+                ),
+                evidence=(
+                    "conformance-report.txt",
+                    "manifest.ail-conformance.txt",
+                    "accepted: incident-escalation-minimal.ail-spec.md",
+                    "rejected: notification-without-responder-pager.ail-spec.md AIL-APP-004",
+                    "rejected: resolve-without-mitigating-status.ail-spec.md AIL-APP-005",
+                    "rejected: postmortem-without-resolved-status.ail-spec.md AIL-APP-005",
                     "ail conformance: ok",
                 ),
             ),
@@ -1172,12 +1193,16 @@ V03_AUTHORING_GATE = ManualChapter(
                 "conformance-report.txt",
                 "manifest.ail-conformance.txt",
                 "accepted: close-ticket-minimal.ail-spec.md",
+                "accepted: incident-escalation-minimal.ail-spec.md",
                 "rejected: secret-leak.ail-spec.md AIL002",
                 "rejected: action-without-trace.ail-spec.md AIL-TRACE-001",
                 "rejected: unknown-field-type.ail-spec.md AIL-TYPE-001",
                 "rejected: assignment-without-role-requirement.ail-spec.md AIL-APP-001",
                 "rejected: overdue-without-time-requirement.ail-spec.md AIL-APP-002",
                 "rejected: status-change-without-public-update.ail-spec.md AIL-APP-003",
+                "rejected: notification-without-responder-pager.ail-spec.md AIL-APP-004",
+                "rejected: resolve-without-mitigating-status.ail-spec.md AIL-APP-005",
+                "rejected: postmortem-without-resolved-status.ail-spec.md AIL-APP-005",
                 "ail conformance: ok",
             ),
         ),

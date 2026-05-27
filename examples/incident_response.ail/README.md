@@ -73,17 +73,21 @@ cargo run -- ail-conformance examples/incident_response.ail --artifact-dir /tmp/
 
 ## Rejected Fixtures
 
-This package does not yet include package-local rejected fixtures. That is a
-v0.3 gap. High-value rejected fixtures should cover:
+This package includes package-local conformance fixtures:
 
-- leaking `private notes` into the public timeline;
-- notification without responder pager or approved channel;
-- escalation without commander review where policy requires it;
-- resolving before mitigation;
-- starting postmortem before resolution;
-- route or dashboard access without the matching role permission.
+- `examples/accepted/incident-escalation-minimal.ail-spec.md` accepts the
+  minimal escalation, notification audit, resolution, and postmortem path.
+- `examples/rejected/notification-without-responder-pager.ail-spec.md` rejects
+  notification audit behavior that omits the responder pager requirement.
+- `examples/rejected/resolve-without-mitigating-status.ail-spec.md` rejects
+  resolution that skips the `Mitigating` predecessor state.
+- `examples/rejected/postmortem-without-resolved-status.ail-spec.md` rejects
+  postmortem start that skips the `Resolved` predecessor state.
 
-Those fixtures should become repair tutorials, not only negative checks.
+The next rejected fixtures should cover private-note leakage into the public
+timeline, escalation without commander review where policy requires it, and
+route or dashboard access without the matching role permission. Those fixtures
+should become repair tutorials, not only negative checks.
 
 ## Next Example To Read
 
@@ -98,5 +102,5 @@ Incident Response is the current high-level benchmark for AIL examples. It
 shows that complex systems need richer story graphs across imported modules,
 UI surfaces, workflow transitions, target contracts, and regenerated story
 views. v0.3 should promote this from a passing corpus family into a guided
-walkthrough with rejected fixtures, repair paths, and story-diff artifacts that
-show exactly how a user story amends the checked spec.
+walkthrough with additional repair paths and story-diff artifacts that show
+exactly how a user story amends the checked spec.

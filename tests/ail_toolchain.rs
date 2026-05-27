@@ -770,6 +770,10 @@ fn example_learning_readmes_cover_repeated_family_gaps() {
         "workflow transitions",
         "example-111",
         "example-115",
+        "incident-escalation-minimal.ail-spec.md",
+        "notification-without-responder-pager.ail-spec.md",
+        "resolve-without-mitigating-status.ail-spec.md",
+        "postmortem-without-resolved-status.ail-spec.md",
     ] {
         assert!(
             incident_readme.contains(required),
@@ -1324,6 +1328,17 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
             ],
         ),
         (
+            "12-application-baseline.md",
+            &[
+                "cargo run -- ail-conformance examples/support_ticket.ail",
+                "cargo run -- ail-conformance examples/incident_response.ail",
+                "accepted: incident-escalation-minimal.ail-spec.md",
+                "rejected: notification-without-responder-pager.ail-spec.md AIL-APP-004",
+                "rejected: resolve-without-mitigating-status.ail-spec.md AIL-APP-005",
+                "rejected: postmortem-without-resolved-status.ail-spec.md AIL-APP-005",
+            ],
+        ),
+        (
             "08-ui-patch-import.md",
             &[
                 "scripts/run_ail_interactive_manual.py --chapter ui-patch-import --run-checks",
@@ -1669,9 +1684,12 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "doc docs/ail/manual/12-application-baseline.md",
         "cargo run -- ail-conformance examples/support_ticket.ail",
         "--artifact-dir /tmp/ail-manual-application-baseline-conformance",
+        "cargo run -- ail-conformance examples/incident_response.ail",
+        "--artifact-dir /tmp/ail-manual-incident-response-conformance",
         "evidence conformance-report.txt",
         "evidence manifest.ail-conformance.txt",
         "evidence accepted: close-ticket-minimal.ail-spec.md",
+        "evidence accepted: incident-escalation-minimal.ail-spec.md",
         "evidence rejected: secret-leak.ail-spec.md AIL002",
         "evidence rejected: action-without-trace.ail-spec.md AIL-TRACE-001",
         "evidence rejected: failure-without-trace.ail-spec.md AIL-TRACE-002",
@@ -1679,6 +1697,9 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "evidence rejected: assignment-without-role-requirement.ail-spec.md AIL-APP-001",
         "evidence rejected: overdue-without-time-requirement.ail-spec.md AIL-APP-002",
         "evidence rejected: status-change-without-public-update.ail-spec.md AIL-APP-003",
+        "evidence rejected: notification-without-responder-pager.ail-spec.md AIL-APP-004",
+        "evidence rejected: resolve-without-mitigating-status.ail-spec.md AIL-APP-005",
+        "evidence rejected: postmortem-without-resolved-status.ail-spec.md AIL-APP-005",
         "evidence ail conformance: ok",
     ] {
         assert!(
@@ -2126,6 +2147,9 @@ fn script_ail_interactive_manual_v03_authoring_gate_run_checks_succeeds() {
         "rejected: assignment-without-role-requirement.ail-spec.md AIL-APP-001",
         "rejected: overdue-without-time-requirement.ail-spec.md AIL-APP-002",
         "rejected: status-change-without-public-update.ail-spec.md AIL-APP-003",
+        "rejected: notification-without-responder-pager.ail-spec.md AIL-APP-004",
+        "rejected: resolve-without-mitigating-status.ail-spec.md AIL-APP-005",
+        "rejected: postmortem-without-resolved-status.ail-spec.md AIL-APP-005",
         "ail-compile wrote linux-x86_64-elf executable",
         "native-bytecode-report.txt",
         "running check-ui-patch-runtime-state",
@@ -19372,6 +19396,55 @@ fn ail_core_reports_stable_invalid_fixture_diagnostics() {
 }
 
 #[test]
+fn ail_core_reports_incident_response_lifecycle_and_notification_diagnostics() {
+    let package = load_ail_package_dir(fixture("incident_response.ail")).unwrap();
+    let rejected_dir = format!("{}/examples/rejected", fixture("incident_response.ail"));
+
+    let notification_without_pager = fs::read_to_string(format!(
+        "{rejected_dir}/notification-without-responder-pager.ail-spec.md"
+    ))
+    .unwrap();
+    let notification_without_pager_doc = parse_ail_spec_text(&notification_without_pager).unwrap();
+    let notification_without_pager_core =
+        elaborate_ail_core(&package, &notification_without_pager_doc);
+    assert!(
+        check_ail_core(&notification_without_pager_core).contains(
+            &"AIL-APP-004 action NotifyIncidentResponder records a notification audit entry without requiring responder pager"
+                .to_string()
+        )
+    );
+
+    let resolve_without_mitigating = fs::read_to_string(format!(
+        "{rejected_dir}/resolve-without-mitigating-status.ail-spec.md"
+    ))
+    .unwrap();
+    let resolve_without_mitigating_doc = parse_ail_spec_text(&resolve_without_mitigating).unwrap();
+    let resolve_without_mitigating_core =
+        elaborate_ail_core(&package, &resolve_without_mitigating_doc);
+    assert!(
+        check_ail_core(&resolve_without_mitigating_core).contains(
+            &"AIL-APP-005 action ResolveIncident writes incident status to Resolved without requiring incident status Mitigating"
+                .to_string()
+        )
+    );
+
+    let postmortem_without_resolved = fs::read_to_string(format!(
+        "{rejected_dir}/postmortem-without-resolved-status.ail-spec.md"
+    ))
+    .unwrap();
+    let postmortem_without_resolved_doc =
+        parse_ail_spec_text(&postmortem_without_resolved).unwrap();
+    let postmortem_without_resolved_core =
+        elaborate_ail_core(&package, &postmortem_without_resolved_doc);
+    assert!(
+        check_ail_core(&postmortem_without_resolved_core).contains(
+            &"AIL-APP-005 action StartPostmortem writes incident status to Postmortem without requiring incident status Resolved"
+                .to_string()
+        )
+    );
+}
+
+#[test]
 fn ail_core_reports_unknown_profile_value_types() {
     let tool_package = load_ail_package_dir(fixture("refund_tool.ail")).unwrap();
     let tool_spec = fs::read_to_string(format!("{}/spec.ail-spec.md", fixture("refund_tool.ail")))
@@ -20550,6 +20623,17 @@ fn cli_ail_conformance_checks_v02_package_host_boundary_fixtures() {
                 "accepted: ui-minimal.ail-spec.md",
                 "rejected: form-missing-action.ail-spec.md AIL-UI-FORM-001",
                 "rejected: inaccessible-error-text.ail-spec.md AIL-UI-A11Y-001",
+                "ail conformance: ok",
+            ]
+            .as_slice(),
+        ),
+        (
+            "incident_response.ail",
+            [
+                "accepted: incident-escalation-minimal.ail-spec.md",
+                "rejected: notification-without-responder-pager.ail-spec.md AIL-APP-004",
+                "rejected: resolve-without-mitigating-status.ail-spec.md AIL-APP-005",
+                "rejected: postmortem-without-resolved-status.ail-spec.md AIL-APP-005",
                 "ail conformance: ok",
             ]
             .as_slice(),

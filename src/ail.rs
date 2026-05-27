@@ -4095,6 +4095,10 @@ pub fn check_ail_core_diagnostics(core: &AilCore) -> Vec<AilDiagnostic> {
     diagnostics.extend(check_application_assignment_role_requirements(core));
     diagnostics.extend(check_application_overdue_time_requirements(core));
     diagnostics.extend(check_application_status_public_update(core));
+    diagnostics.extend(check_application_notification_audit_requirements(core));
+    diagnostics.extend(check_application_incident_lifecycle_status_requirements(
+        core,
+    ));
     diagnostics.extend(check_toolchain_agent_artifact_fingerprint_reads(core));
     diagnostics.extend(check_tool_secret_output_disclosure(core));
     diagnostics.extend(check_unknown_field_references(core));
@@ -14918,6 +14922,158 @@ fn action_writes_public_update(
                 let lower = text.to_ascii_lowercase();
                 lower.contains("public update") || lower.contains("public_updates")
             })
+        })
+}
+
+fn check_application_notification_audit_requirements(core: &AilCore) -> Vec<AilDiagnostic> {
+    if core.package.profile != "Application" {
+        return Vec::new();
+    }
+    let node_by_id = graph_node_by_id(core);
+    let mut reported_actions = BTreeSet::new();
+    let mut diagnostics = Vec::new();
+    for edge in core.graph.edges.iter().filter(|edge| edge.kind == "writes") {
+        let Some(action) = node_by_id.get(&edge.source) else {
+            continue;
+        };
+        if action.kind != "Action" || !action.name.to_ascii_lowercase().contains("notify") {
+            continue;
+        }
+        if !edge_mentions_notification_audit(edge, &node_by_id) {
+            continue;
+        }
+        if !reported_actions.insert(action.id.clone()) {
+            continue;
+        }
+        if action_has_responder_pager_requirement(core, &node_by_id, action) {
+            continue;
+        }
+        diagnostics.push(
+            AilDiagnostic::error(
+                "AIL-APP-004",
+                format!(
+                    "action {} records a notification audit entry without requiring responder pager",
+                    action.name
+                ),
+            )
+            .with_source_provenance(
+                edge.attributes
+                    .get("provenance")
+                    .cloned()
+                    .or_else(|| node_provenance(core, &action.id)),
+            )
+            .with_affected_graph_item(format!("edge:{}", edge.id))
+            .with_repair_suggestion(format!(
+                "Add a requirement such as 'the system requires responder pager' to action {}.",
+                action.name
+            )),
+        );
+    }
+    diagnostics
+}
+
+fn edge_mentions_notification_audit(edge: &Edge, node_by_id: &BTreeMap<String, Node>) -> bool {
+    let target_text = node_by_id
+        .get(&edge.target)
+        .map(|target| target.name.as_str())
+        .unwrap_or("");
+    [
+        target_text,
+        edge.attributes.get("provenance").map_or("", String::as_str),
+    ]
+    .iter()
+    .any(|text| {
+        let compact = compact_semantic_text(text);
+        compact.contains("notificationauditentry")
+    })
+}
+
+fn action_has_responder_pager_requirement(
+    core: &AilCore,
+    node_by_id: &BTreeMap<String, Node>,
+    action: &Node,
+) -> bool {
+    outgoing_nodes(core, node_by_id, action, "requires")
+        .into_iter()
+        .filter(|node| node.kind == "Rule")
+        .any(|rule| compact_semantic_text(&rule.name).contains("responderpager"))
+}
+
+fn check_application_incident_lifecycle_status_requirements(core: &AilCore) -> Vec<AilDiagnostic> {
+    if core.package.profile != "Application" {
+        return Vec::new();
+    }
+    let node_by_id = graph_node_by_id(core);
+    let mut reported_actions = BTreeSet::new();
+    let mut diagnostics = Vec::new();
+    for edge in core.graph.edges.iter().filter(|edge| edge.kind == "writes") {
+        let Some(action) = node_by_id.get(&edge.source) else {
+            continue;
+        };
+        if action.kind != "Action" {
+            continue;
+        }
+        for (written_status, required_status) in
+            [("Resolved", "Mitigating"), ("Postmortem", "Resolved")]
+        {
+            if !edge_writes_incident_status_to(edge, written_status) {
+                continue;
+            }
+            let report_key = format!("{}:{written_status}", action.id);
+            if !reported_actions.insert(report_key) {
+                continue;
+            }
+            if action_requires_incident_status(core, &node_by_id, action, required_status) {
+                continue;
+            }
+            diagnostics.push(
+                AilDiagnostic::error(
+                    "AIL-APP-005",
+                    format!(
+                        "action {} writes incident status to {written_status} without requiring incident status {required_status}",
+                        action.name
+                    ),
+                )
+                .with_source_provenance(
+                    edge.attributes
+                        .get("provenance")
+                        .cloned()
+                        .or_else(|| node_provenance(core, &action.id)),
+                )
+                .with_affected_graph_item(format!("edge:{}", edge.id))
+                .with_repair_suggestion(format!(
+                    "Add a requirement such as 'the incident status to be {required_status}' to action {}.",
+                    action.name
+                )),
+            );
+        }
+    }
+    diagnostics
+}
+
+fn edge_writes_incident_status_to(edge: &Edge, value: &str) -> bool {
+    let Some(provenance) = edge.attributes.get("provenance") else {
+        return false;
+    };
+    let compact = compact_semantic_text(provenance);
+    let value = compact_semantic_text(value);
+    compact.contains(&format!("incidentstatusto{value}"))
+        || compact.contains(&format!("incidentstatus{value}"))
+}
+
+fn action_requires_incident_status(
+    core: &AilCore,
+    node_by_id: &BTreeMap<String, Node>,
+    action: &Node,
+    status: &str,
+) -> bool {
+    let status = compact_semantic_text(status);
+    outgoing_nodes(core, node_by_id, action, "requires")
+        .into_iter()
+        .filter(|node| node.kind == "Rule")
+        .any(|rule| {
+            let compact = compact_semantic_text(&rule.name);
+            compact.contains("incidentstatus") && compact.contains(&status)
         })
 }
 
