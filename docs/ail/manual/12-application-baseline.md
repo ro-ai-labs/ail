@@ -38,8 +38,11 @@ cargo run -- ail-conformance examples/incident_response.ail --artifact-dir /tmp/
 - `examples/incident_response.ail/examples/rejected/*.ail-spec.md` rejects
   notification and lifecycle mistakes directly in the high-level
   multi-module package.
-- The report and manifest are fingerprinted in the same way as other
-  conformance chapters.
+- Rejected package-local fixtures write `repair-tutorial.txt` plus a
+  fingerprint under the conformance artifact directory, so local diagnostics
+  become reviewer-readable repair guidance instead of report-only failures.
+- The report, manifest, and repair tutorials are fingerprinted in the same way
+  as other conformance chapters.
 
 ## Expected Evidence
 
@@ -64,6 +67,8 @@ rejected: private-notes-public-timeline-leak.ail-spec.md AIL-APP-006
 rejected: escalation-without-commander-review.ail-spec.md AIL-APP-007
 rejected: route-missing-permission.ail-spec.md AIL-UI-PERMISSION-002
 rejected: dashboard-missing-permission.ail-spec.md AIL-UI-PERMISSION-001
+rejected-repair-tutorial-count 7
+rejected/private-notes-public-timeline-leak.ail-spec.md/repair-tutorial.txt
 ail conformance: ok
 ```
 
@@ -78,7 +83,9 @@ pager requirement, resolving before the incident is Mitigating, and starting
 postmortem before the incident is Resolved. They also cover private-note
 leakage into the public timeline, escalation without commander review, command
 routes without read permission, and service-owner dashboards without read
-permission.
+permission. Each incident rejection now has a package-local conformance repair
+tutorial that preserves the diagnostic, source provenance, graph item, and
+repair suggestion before a corrected fixture is drafted.
 
 ## Relationship To User Story Mode
 

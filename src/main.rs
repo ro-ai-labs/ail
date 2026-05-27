@@ -7928,6 +7928,16 @@ fn render_ail_conformance_report(result: &ail::ail::AilConformanceResult) -> Str
             }
         }
     }
+    let repair_tutorial_count = result
+        .rejected
+        .iter()
+        .filter(|fixture| !fixture.diagnostics.is_empty())
+        .count();
+    if repair_tutorial_count > 0 {
+        lines.push(format!(
+            "rejected-repair-tutorial-count {repair_tutorial_count}"
+        ));
+    }
     if result.success() {
         lines.push("ail conformance: ok".to_string());
     } else {
@@ -7954,6 +7964,17 @@ fn render_ail_conformance_manifest(
     }
     for fixture in &result.rejected {
         lines.push(format!("rejected {}", fixture.fixture));
+        if !fixture.diagnostics.is_empty() {
+            let repair_tutorial_text = render_ail_conformance_repair_tutorial(result, fixture);
+            let repair_tutorial_path =
+                ail_conformance_repair_tutorial_artifact_path(&fixture.fixture);
+            lines.push(format!(
+                "rejected-repair-tutorial {} {} {}",
+                fixture.fixture,
+                repair_tutorial_path,
+                ail_artifact_fingerprint(&repair_tutorial_text)
+            ));
+        }
     }
     if let Some(agent_bytecode_text) = artifacts.agent_bytecode_text {
         lines.push(format!(
@@ -7992,6 +8013,42 @@ fn render_ail_conformance_manifest(
     format!("{}\n", lines.join("\n"))
 }
 
+fn ail_conformance_repair_tutorial_artifact_path(fixture: &str) -> String {
+    format!("rejected/{fixture}/repair-tutorial.txt")
+}
+
+fn render_ail_conformance_repair_tutorial(
+    result: &ail::ail::AilConformanceResult,
+    fixture: &ail::ail::AilRejectedConformanceResult,
+) -> String {
+    let expected_diagnostic = fixture
+        .diagnostics
+        .first()
+        .map(|diagnostic| diagnostic.code.as_str())
+        .unwrap_or("unknown");
+    let mut lines = vec![
+        "AIL-Conformance-Repair-Tutorial:".to_string(),
+        format!("package {}", result.package_name),
+        format!("fixture {}", fixture.fixture),
+        "checker-result rejected".to_string(),
+        format!("expected-diagnostic {expected_diagnostic}"),
+        "diagnostic-summary:".to_string(),
+    ];
+    for diagnostic in &fixture.diagnostics {
+        lines.push(format!("diagnostic {}", diagnostic.detailed_message()));
+    }
+    lines.extend([
+        "repair-plan:".to_string(),
+        "repair-step 1 Preserve the rejected fixture, diagnostic, source provenance, affected graph item, and repair suggestion as review evidence."
+            .to_string(),
+        "repair-step 2 Draft a corrected package-local fixture that removes the expected diagnostic while preserving the example's semantic intent."
+            .to_string(),
+        "repair-step 3 Re-run ail-conformance with --artifact-dir and promote only after the corrected fixture is accepted and the rejected evidence remains available."
+            .to_string(),
+    ]);
+    format!("{}\n", lines.join("\n"))
+}
+
 fn write_ail_conformance_artifacts(
     artifact_dir: &str,
     result: &ail::ail::AilConformanceResult,
@@ -8010,6 +8067,39 @@ fn write_ail_conformance_artifacts(
     .map_err(|error| {
         format!("failed to write ail-conformance report fingerprint artifact: {error}")
     })?;
+    for fixture in &result.rejected {
+        if fixture.diagnostics.is_empty() {
+            continue;
+        }
+        let repair_tutorial_text = render_ail_conformance_repair_tutorial(result, fixture);
+        let repair_tutorial_dir = root.join("rejected").join(&fixture.fixture);
+        fs::create_dir_all(&repair_tutorial_dir).map_err(|error| {
+            format!(
+                "failed to create ail-conformance repair tutorial dir {}: {error}",
+                repair_tutorial_dir.display()
+            )
+        })?;
+        fs::write(
+            repair_tutorial_dir.join("repair-tutorial.txt"),
+            &repair_tutorial_text,
+        )
+        .map_err(|error| {
+            format!(
+                "failed to write ail-conformance repair tutorial for {}: {error}",
+                fixture.fixture
+            )
+        })?;
+        fs::write(
+            repair_tutorial_dir.join("repair-tutorial.fingerprint.txt"),
+            format!("{}\n", ail_artifact_fingerprint(&repair_tutorial_text)),
+        )
+        .map_err(|error| {
+            format!(
+                "failed to write ail-conformance repair tutorial fingerprint for {}: {error}",
+                fixture.fixture
+            )
+        })?;
+    }
     if let Some(agent_bytecode_text) = artifacts.agent_bytecode_text {
         fs::write(root.join("agent.ailbc.json"), agent_bytecode_text).map_err(|error| {
             format!("failed to write ail-conformance agent bytecode artifact: {error}")

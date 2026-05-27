@@ -1344,6 +1344,8 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
                 "rejected: escalation-without-commander-review.ail-spec.md AIL-APP-007",
                 "rejected: route-missing-permission.ail-spec.md AIL-UI-PERMISSION-002",
                 "rejected: dashboard-missing-permission.ail-spec.md AIL-UI-PERMISSION-001",
+                "rejected-repair-tutorial-count 7",
+                "rejected/private-notes-public-timeline-leak.ail-spec.md/repair-tutorial.txt",
             ],
         ),
         (
@@ -1712,6 +1714,8 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "evidence rejected: escalation-without-commander-review.ail-spec.md AIL-APP-007",
         "evidence rejected: route-missing-permission.ail-spec.md AIL-UI-PERMISSION-002",
         "evidence rejected: dashboard-missing-permission.ail-spec.md AIL-UI-PERMISSION-001",
+        "evidence rejected-repair-tutorial-count 7",
+        "evidence rejected/private-notes-public-timeline-leak.ail-spec.md/repair-tutorial.txt",
         "evidence ail conformance: ok",
     ] {
         assert!(
@@ -2166,6 +2170,8 @@ fn script_ail_interactive_manual_v03_authoring_gate_run_checks_succeeds() {
         "rejected: escalation-without-commander-review.ail-spec.md AIL-APP-007",
         "rejected: route-missing-permission.ail-spec.md AIL-UI-PERMISSION-002",
         "rejected: dashboard-missing-permission.ail-spec.md AIL-UI-PERMISSION-001",
+        "rejected-repair-tutorial-count 7",
+        "rejected/private-notes-public-timeline-leak.ail-spec.md/repair-tutorial.txt",
         "ail-compile wrote linux-x86_64-elf executable",
         "native-bytecode-report.txt",
         "running check-ui-patch-runtime-state",
@@ -20795,6 +20801,107 @@ fn cli_ail_conformance_writes_auditable_artifacts() {
     let manifest_fingerprint =
         fs::read_to_string(artifact_dir.join("manifest.fingerprint.txt")).unwrap();
     assert_eq!(manifest_fingerprint.trim(), fnv64_fingerprint(&manifest));
+
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
+fn cli_ail_conformance_writes_rejected_fixture_repair_tutorials() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("incident_response.ail");
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-conformance-incident-repair-tutorials-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-conformance",
+            &package,
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let expected_fixtures = [
+        (
+            "notification-without-responder-pager.ail-spec.md",
+            "AIL-APP-004",
+        ),
+        (
+            "resolve-without-mitigating-status.ail-spec.md",
+            "AIL-APP-005",
+        ),
+        (
+            "postmortem-without-resolved-status.ail-spec.md",
+            "AIL-APP-005",
+        ),
+        (
+            "private-notes-public-timeline-leak.ail-spec.md",
+            "AIL-APP-006",
+        ),
+        (
+            "escalation-without-commander-review.ail-spec.md",
+            "AIL-APP-007",
+        ),
+        (
+            "route-missing-permission.ail-spec.md",
+            "AIL-UI-PERMISSION-002",
+        ),
+        (
+            "dashboard-missing-permission.ail-spec.md",
+            "AIL-UI-PERMISSION-001",
+        ),
+    ];
+
+    let report = fs::read_to_string(artifact_dir.join("conformance-report.txt")).unwrap();
+    assert!(
+        report.contains("rejected-repair-tutorial-count 7"),
+        "{report}"
+    );
+
+    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-conformance.txt")).unwrap();
+    for (fixture_name, expected_diagnostic) in expected_fixtures {
+        let tutorial_path = artifact_dir
+            .join("rejected")
+            .join(fixture_name)
+            .join("repair-tutorial.txt");
+        let tutorial = fs::read_to_string(&tutorial_path)
+            .unwrap_or_else(|error| panic!("{}: {error}", tutorial_path.display()));
+        assert!(
+            tutorial.contains("AIL-Conformance-Repair-Tutorial:")
+                && tutorial.contains("package incident-response")
+                && tutorial.contains(&format!("fixture {fixture_name}"))
+                && tutorial.contains("checker-result rejected")
+                && tutorial.contains(&format!("expected-diagnostic {expected_diagnostic}"))
+                && tutorial.contains("repair-step 1 Preserve the rejected fixture")
+                && tutorial.contains("repair-step 2 Draft a corrected package-local fixture")
+                && tutorial.contains("repair-step 3 Re-run ail-conformance"),
+            "{tutorial}"
+        );
+        let tutorial_fingerprint_path = artifact_dir
+            .join("rejected")
+            .join(fixture_name)
+            .join("repair-tutorial.fingerprint.txt");
+        let tutorial_fingerprint = fs::read_to_string(&tutorial_fingerprint_path)
+            .unwrap_or_else(|error| panic!("{}: {error}", tutorial_fingerprint_path.display()));
+        assert_eq!(tutorial_fingerprint.trim(), fnv64_fingerprint(&tutorial));
+        assert!(
+            manifest.contains(&format!(
+                "rejected-repair-tutorial {fixture_name} rejected/{fixture_name}/repair-tutorial.txt {}",
+                tutorial_fingerprint.trim()
+            )),
+            "{manifest}"
+        );
+    }
 
     fs::remove_dir_all(artifact_dir).unwrap();
 }

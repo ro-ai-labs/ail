@@ -646,6 +646,8 @@ BASE_CHAPTERS: tuple[ManualChapter, ...] = (
                     "rejected: escalation-without-commander-review.ail-spec.md AIL-APP-007",
                     "rejected: route-missing-permission.ail-spec.md AIL-UI-PERMISSION-002",
                     "rejected: dashboard-missing-permission.ail-spec.md AIL-UI-PERMISSION-001",
+                    "rejected-repair-tutorial-count 7",
+                    "rejected/private-notes-public-timeline-leak.ail-spec.md/repair-tutorial.txt",
                     "ail conformance: ok",
                 ),
             ),

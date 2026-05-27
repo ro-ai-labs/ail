@@ -93,15 +93,19 @@ This package includes package-local conformance fixtures:
   service-owner dashboards that read incident data without a dashboard
   permission.
 
-The next step is to turn these rejected fixtures into repair tutorials, not
-only negative checks.
+Running conformance with `--artifact-dir` now writes fingerprinted
+package-local repair tutorials for each rejected fixture under
+`rejected/<fixture>/repair-tutorial.txt`. Those tutorials preserve the
+diagnostic, source provenance, affected graph item, and repair suggestion before
+any corrected fixture is drafted.
 
 ## Next Example To Read
 
 Read `../refund_tool.ail/README.md` before this package if you want the smaller
 AgentTool safety surface first. After this package, the next useful examples
-should be a hardware-facing system package and a richer stateful application
-that teaches persistence, idempotency, locks, and replay after failure.
+should show checked repair proof chains for the incident failures, plus a
+richer stateful application that teaches persistence, idempotency, locks, and
+replay after failure.
 
 ## v0.3 Learning Signal
 
