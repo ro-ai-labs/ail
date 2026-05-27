@@ -4554,3 +4554,40 @@ target: aarch64-apple-darwin-libsystem-macho
 vm-action: CloseTicket
 runtime-state: ticket.id=T-1;ticket.status=Open
 story-artifacts: story-artifacts/example-90-story
+## Example: example-80-story
+semantic-task: repeated-task-story-promoted-80
+profile: System
+surface-tags: user-story-mode
+package: examples/repeated_task.ail
+use-case: Human-approved User Story mode promotion for a reviewed story artifact bundle that already produced requirements, spec, Core, bytecode, and trace evidence.
+capability-level: high-level
+capability-under-test: user-story-mode-promotion
+program-scale: multi-module-system
+program-domain: application
+module-count: 3
+spec-count: 3
+story-count: 3
+interacts-with: scheduler,task.store,audit.log
+user-story-id: repeated-task-story
+user-story: As a reviewer I can inspect repeated-task behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: vm-trace
+story-file: stories/example-80-story.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
+distinctness-claim: repeated-task-story-promoted-80 validates user-story-mode-promotion with stored transcript replay and promoted executor evidence.
+v0.3-signal: User Story mode needs reviewer-produced promotion decisions and multi-story promotion variants after deterministic promotion imports are replayed.
+prompt-file: docs/ail/prompts/spec-draft.system.md
+prompt-version: ail-prompts.v0.2
+prompt-fingerprint: fnv64:b23778093326102c
+executor-family: codex-skill-agent
+executor-label: codex-ail-story-promotion-reviewer-demo
+capture-origin: live-codex
+request-file: requests/example-80-story.json
+response-file: responses/example-80-story.json
+artifact-kind: ail-spec
+checker-result: accepted
+target: linux-x86_64-elf
+vm-action: RunMaintenanceCycle
+runtime-state: counter.value=0
+story-artifacts: story-artifacts/example-80-story

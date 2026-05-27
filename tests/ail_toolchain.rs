@@ -836,7 +836,7 @@ fn docs_example_inventory_names_every_package_directory() {
     );
     assert!(inventory.contains("Package directories: 26"), "{inventory}");
     assert!(
-        inventory.contains("Counted catalog examples: 126"),
+        inventory.contains("Counted catalog examples: 127"),
         "{inventory}"
     );
     let story_count = fs::read_dir(format!("{examples_dir}/stories"))
@@ -870,16 +870,16 @@ fn docs_example_inventory_names_every_package_directory() {
                 .is_some_and(|extension| extension == "json")
         })
         .count();
-    assert_eq!(story_count, 126, "story file count drifted");
-    assert_eq!(request_count, 126, "request transcript count drifted");
-    assert_eq!(response_count, 126, "response artifact count drifted");
-    assert!(inventory.contains("Story files: 126"), "{inventory}");
+    assert_eq!(story_count, 127, "story file count drifted");
+    assert_eq!(request_count, 127, "request transcript count drifted");
+    assert_eq!(response_count, 127, "response artifact count drifted");
+    assert!(inventory.contains("Story files: 127"), "{inventory}");
     assert!(
-        inventory.contains("Stored request transcripts: 126"),
+        inventory.contains("Stored request transcripts: 127"),
         "{inventory}"
     );
     assert!(
-        inventory.contains("Stored response artifacts: 126"),
+        inventory.contains("Stored response artifacts: 127"),
         "{inventory}"
     );
     assert!(
@@ -1531,8 +1531,8 @@ fn docs_define_v03_release_completion_audit() {
         fs::read_to_string(format!("{}/README.md", env!("CARGO_MANIFEST_DIR"))).unwrap();
 
     for required in [
-        "126-entry replay catalog",
-        "checker-result-count accepted 117",
+        "127-entry replay catalog",
+        "checker-result-count accepted 118",
         "checker-result-count rejected 9",
     ] {
         assert!(top_readme.contains(required), "{required}\n{top_readme}");
@@ -1540,8 +1540,8 @@ fn docs_define_v03_release_completion_audit() {
     for required in [
         "scripts/run_v03_release_audit.py",
         "AIL v0.3 release completion",
-        "126-entry",
-        "117 accepted",
+        "127-entry",
+        "118 accepted",
         "9 rejected",
         "python3 scripts/run_ail_interactive_manual.py --all --run-checks",
         "cargo run -- ail-examples examples --artifact-dir",
@@ -24153,6 +24153,23 @@ fn cli_ail_story_builds_checked_artifacts_from_story_file() {
         request_bodies[0]
     );
     assert!(
+        request_bodies[0].contains("The prompt envelope must contain exactly one mode"),
+        "{}",
+        request_bodies[0]
+    );
+    assert!(
+        request_bodies[0].contains(
+            "Do not invent secrets, permissions, failures, or runtime inputs that are absent from the package source"
+        ),
+        "{}",
+        request_bodies[0]
+    );
+    assert!(
+        request_bodies[0].contains("If the package source does not declare Secret<"),
+        "{}",
+        request_bodies[0]
+    );
+    assert!(
         !request_bodies[0].contains("Output only an AIL-Requirements artifact"),
         "{}",
         request_bodies[0]
@@ -24180,6 +24197,19 @@ fn cli_ail_story_builds_checked_artifacts_from_story_file() {
     );
     assert!(
         request_bodies[1].contains("Preserve these story semantic anchors"),
+        "{}",
+        request_bodies[1]
+    );
+    assert!(
+        request_bodies[1].contains(
+            "Do not emit a secret-redaction line unless the checked requirements or package source define Secret<"
+        ),
+        "{}",
+        request_bodies[1]
+    );
+    assert!(
+        request_bodies[1]
+            .contains("If the source AIL-Spec contains Route:, Form:, Dashboard:, or Workflow:"),
         "{}",
         request_bodies[1]
     );
@@ -28914,9 +28944,9 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         String::from_utf8_lossy(&output.stderr)
     );
     let report = fs::read_to_string(artifact_dir.join("examples-report.txt")).unwrap();
-    assert!(report.contains("entry-count 126"), "{report}");
+    assert!(report.contains("entry-count 127"), "{report}");
     assert!(
-        report.contains("checker-result-count accepted 117"),
+        report.contains("checker-result-count accepted 118"),
         "{report}"
     );
     assert!(
@@ -28932,7 +28962,7 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("capability-level-count high-level 52"),
+        report.contains("capability-level-count high-level 53"),
         "{report}"
     );
     assert!(
@@ -28980,7 +29010,7 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("capture-origin-count live-codex 122"),
+        report.contains("capture-origin-count live-codex 123"),
         "{report}"
     );
     assert!(
@@ -29703,15 +29733,15 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("program-domain-count application 12")
+        report.contains("program-domain-count application 13")
             && report.contains("program-domain-count diagnostic 9")
             && report.contains("program-domain-count runtime 21")
-            && report.contains("program-scale-count multi-module-system 57")
-            && report.contains("story-roundtrip-count semantic-similar 117"),
+            && report.contains("program-scale-count multi-module-system 58")
+            && report.contains("story-roundtrip-count semantic-similar 118"),
         "{report}"
     );
     assert!(
-        report.contains("semantic-anchor-story-count 126")
+        report.contains("semantic-anchor-story-count 127")
             && report.contains(
                 "entry-semantic-anchors example-0 Option<T>; Result<T; E>; Map<K; V>; Option.map; OptionMapEvaluated; interview.system.md"
             )
@@ -29841,7 +29871,7 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("workflow-scheduler-review-fingerprint-observed-count 5"),
+        report.contains("workflow-scheduler-review-fingerprint-observed-count 6"),
         "{report}"
     );
     assert!(
@@ -29873,7 +29903,7 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("story-promotion-review-fingerprint-observed-count 2"),
+        report.contains("story-promotion-review-fingerprint-observed-count 3"),
         "{report}"
     );
     assert!(
@@ -30540,6 +30570,48 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         report.contains(&format!(
             "entry-artifact example-90-story story-promotion-review examples/example-90-story/story-promotion-review.txt {}",
             story_promotion_review_90_fingerprint.trim()
+        )),
+        "{report}"
+    );
+    let story_promotion_review_80 = fs::read_to_string(
+        artifact_dir.join("examples/example-80-story/story-promotion-review.txt"),
+    )
+    .unwrap();
+    assert!(
+        story_promotion_review_80.contains("AIL-Story-Promotion-Review:")
+            && story_promotion_review_80.contains("entry example-80-story")
+            && story_promotion_review_80.contains("semantic-task repeated-task-story-promoted-80")
+            && story_promotion_review_80.contains("package examples/repeated_task.ail")
+            && story_promotion_review_80.contains("profile System")
+            && story_promotion_review_80.contains("source-entry example-80")
+            && story_promotion_review_80
+                .contains("story-artifacts story-artifacts/example-80-story")
+            && story_promotion_review_80.contains("user-story-id repeated-task-story")
+            && story_promotion_review_80.contains("story-prompt-envelope-valid-count 2")
+            && story_promotion_review_80.contains("story-prompt-envelope-invalid-count 0")
+            && story_promotion_review_80.contains("runtime-evidence target-report")
+            && story_promotion_review_80.contains("target-contract linux-x86_64-elf")
+            && story_promotion_review_80.contains("story-anchor Maintenance Runner")
+            && story_promotion_review_80.contains("story-anchor Run maintenance cycle")
+            && story_promotion_review_80.contains("story-anchor MaintenanceCycleCompleted")
+            && story_promotion_review_80.contains("checked-core-fingerprint ")
+            && story_promotion_review_80.contains("bytecode-fingerprint ")
+            && story_promotion_review_80.contains("vm-trace-fingerprint ")
+            && story_promotion_review_80.contains("target-report-fingerprint "),
+        "{story_promotion_review_80}"
+    );
+    let story_promotion_review_80_fingerprint = fs::read_to_string(
+        artifact_dir.join("examples/example-80-story/story-promotion-review.fingerprint.txt"),
+    )
+    .unwrap();
+    assert_eq!(
+        story_promotion_review_80_fingerprint.trim(),
+        fnv64_fingerprint(&story_promotion_review_80)
+    );
+    assert!(
+        report.contains(&format!(
+            "entry-artifact example-80-story story-promotion-review examples/example-80-story/story-promotion-review.txt {}",
+            story_promotion_review_80_fingerprint.trim()
         )),
         "{report}"
     );
@@ -31233,9 +31305,9 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
     let model_executor_manifest =
         fs::read_to_string(artifact_dir.join("model-executor-manifest.txt")).unwrap();
     assert!(
-        model_executor_manifest.contains("entry-count 126")
-            && model_executor_manifest.contains("executor-family codex-skill-agent count 122")
-            && model_executor_manifest.contains("capture-origin live-codex count 122")
+        model_executor_manifest.contains("entry-count 127")
+            && model_executor_manifest.contains("executor-family codex-skill-agent count 123")
+            && model_executor_manifest.contains("capture-origin live-codex count 123")
             && model_executor_manifest.contains(
                 "entry example-100 semantic-task stateful-counter-live-codex-accepted-100"
             )
@@ -31284,6 +31356,9 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
             )
             && model_executor_manifest.contains(
                 "entry example-123 semantic-task incident-response-commander-review-repair-promoted-123"
+            )
+            && model_executor_manifest.contains(
+                "entry example-80-story semantic-task repeated-task-story-promoted-80"
             ),
         "{model_executor_manifest}"
     );
@@ -31329,24 +31404,24 @@ fn cli_ail_e2e_corpus_promotes_second_incident_repair_variant() {
             ),
         "{report}"
     );
-    assert!(report.contains("entry-count 126"), "{report}");
+    assert!(report.contains("entry-count 127"), "{report}");
     assert!(
-        report.contains("checker-result-count accepted 117"),
+        report.contains("checker-result-count accepted 118"),
         "{report}"
     );
     assert!(
-        report.contains("program-domain-count application 12"),
+        report.contains("program-domain-count application 13"),
         "{report}"
     );
     assert!(
-        report.contains("story-roundtrip-count semantic-similar 117"),
+        report.contains("story-roundtrip-count semantic-similar 118"),
         "{report}"
     );
 
     let model_executor_manifest =
         fs::read_to_string(artifact_dir.join("model-executor-manifest.txt")).unwrap();
     assert!(
-        model_executor_manifest.contains("entry-count 126")
+        model_executor_manifest.contains("entry-count 127")
             && model_executor_manifest.contains(
                 "entry example-123 semantic-task incident-response-commander-review-repair-promoted-123"
             ),
@@ -34994,7 +35069,7 @@ fn cli_ail_v03_roadmap_advances_completed_story_promotion_signal() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(
         stdout.contains(
-            "signal User Story mode needs reviewer-produced promotion decisions and multi-story promotion variants after deterministic promotion imports are replayed. count 2"
+            "signal User Story mode needs reviewer-produced promotion decisions and multi-story promotion variants after deterministic promotion imports are replayed. count 3"
         ),
         "{stdout}"
     );

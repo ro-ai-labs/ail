@@ -1,0 +1,10 @@
+{
+  "agent_contract": "examples/agents/codex-ail-story-promotion-reviewer.md",
+  "agent_contract_version": "0.1.0",
+  "approval_mode": "deterministic-demo",
+  "executor_label": "codex-ail-story-promotion-reviewer-demo",
+  "source_entry_id": "example-80",
+  "story_id": "repeated-task-story",
+  "story_promotion_capture_plan_fingerprint": "fnv64:3bea370a556c2b68",
+  "task": "Approve the reviewed User Story mode artifact for corpus promotion."
+}

@@ -1,0 +1,78 @@
+package: repeated-task
+version: 0.1.0
+profile: Application
+entry: spec.ail-spec.md
+features: things, actions, repeated-tasks, integer-state, traces
+imports:
+capability-grants:
+conformance: first-slice
+base_llm_endpoint: http://inteligentia-pro-1:8080/v1/chat/completions
+
+nodes:
+node Action IncrementCounter [label=Increment counter,trigger=increment counter happens]
+node Action RunMaintenanceCycle [label=Run maintenance cycle,trigger=run maintenance cycle happens]
+node Application Maintenance Runner [purpose=repeated stateful tasks]
+node Effect the system does not change the Counter value
+node Effect the system does not record MaintenanceCycleCompleted
+node Failure IncrementCounterFailure [condition=the Counter value cannot be incremented,declared=true,provenance=failure:IncrementCounterFailure]
+node Failure RunMaintenanceCycleFailure [condition=one or more Increment counter actions fail,declared=true,provenance=failure:RunMaintenanceCycleFailure]
+node Field Counter.value : Int [secret=false]
+node Guarantee atomic increment of the Counter value
+node Provenance action:IncrementCounter
+node Provenance action:IncrementCounter.guarantee:atomic increment of the Counter value
+node Provenance action:IncrementCounter.requirement:the Counter to exist
+node Provenance action:IncrementCounter.trace:CounterIncremented
+node Provenance action:IncrementCounter.trace:MaintenanceCycleCompleted
+node Provenance action:RunMaintenanceCycle
+node Provenance action:RunMaintenanceCycle.requirement:the Counter to exist
+node Provenance action:RunMaintenanceCycle.trace:MaintenanceCycleCompleted
+node Provenance application
+node Provenance failure:IncrementCounterFailure
+node Provenance failure:IncrementCounterFailure.handling:the system does not change the Counter value
+node Provenance failure:IncrementCounterFailure.trace:IncrementCounterFailure
+node Provenance failure:RunMaintenanceCycleFailure
+node Provenance failure:RunMaintenanceCycleFailure.handling:the system does not record MaintenanceCycleCompleted
+node Provenance failure:RunMaintenanceCycleFailure.trace:RunMaintenanceCycleFailure
+node Provenance field:Counter.value
+node Provenance thing:Counter
+node Rule the Counter to exist
+node Thing Counter
+node Trace CounterIncremented
+node Trace IncrementCounterFailure
+node Trace MaintenanceCycleCompleted
+node Trace RunMaintenanceCycleFailure
+
+edges:
+edge has_provenance Application:Maintenance Runner -> Provenance:application
+edge contains Application:Maintenance Runner -> Thing:Counter
+edge has_provenance Thing:Counter -> Provenance:thing:Counter
+edge has_field Thing:Counter -> Field:Counter.value
+edge has_provenance Field:Counter.value -> Provenance:field:Counter.value
+edge contains Application:Maintenance Runner -> Action:IncrementCounter
+edge has_provenance Action:IncrementCounter -> Provenance:action:IncrementCounter
+edge requires Action:IncrementCounter -> Rule:the Counter to exist
+edge has_provenance Rule:the Counter to exist -> Provenance:action:IncrementCounter.requirement:the Counter to exist
+edge writes Action:IncrementCounter -> Field:Counter.value [provenance=action:IncrementCounter.write:the Counter value by incrementing it by 1]
+edge reads Action:IncrementCounter -> Field:Counter.value [provenance=action:IncrementCounter.read:the Counter value]
+edge guarantees Action:IncrementCounter -> Guarantee:atomic increment of the Counter value
+edge has_provenance Guarantee:atomic increment of the Counter value -> Provenance:action:IncrementCounter.guarantee:atomic increment of the Counter value
+edge records_trace Action:IncrementCounter -> Trace:CounterIncremented
+edge has_provenance Trace:CounterIncremented -> Provenance:action:IncrementCounter.trace:CounterIncremented
+edge records_trace Action:IncrementCounter -> Trace:MaintenanceCycleCompleted
+edge has_provenance Trace:MaintenanceCycleCompleted -> Provenance:action:IncrementCounter.trace:MaintenanceCycleCompleted
+edge contains Application:Maintenance Runner -> Action:RunMaintenanceCycle
+edge has_provenance Action:RunMaintenanceCycle -> Provenance:action:RunMaintenanceCycle
+edge requires Action:RunMaintenanceCycle -> Rule:the Counter to exist
+edge has_provenance Rule:the Counter to exist -> Provenance:action:RunMaintenanceCycle.requirement:the Counter to exist
+edge records_trace Action:RunMaintenanceCycle -> Trace:MaintenanceCycleCompleted
+edge has_provenance Trace:MaintenanceCycleCompleted -> Provenance:action:RunMaintenanceCycle.trace:MaintenanceCycleCompleted
+edge has_provenance Failure:IncrementCounterFailure -> Provenance:failure:IncrementCounterFailure
+edge handles_failure Failure:IncrementCounterFailure -> Effect:the system does not change the Counter value
+edge has_provenance Effect:the system does not change the Counter value -> Provenance:failure:IncrementCounterFailure.handling:the system does not change the Counter value
+edge records_trace Failure:IncrementCounterFailure -> Trace:IncrementCounterFailure
+edge has_provenance Trace:IncrementCounterFailure -> Provenance:failure:IncrementCounterFailure.trace:IncrementCounterFailure
+edge has_provenance Failure:RunMaintenanceCycleFailure -> Provenance:failure:RunMaintenanceCycleFailure
+edge handles_failure Failure:RunMaintenanceCycleFailure -> Effect:the system does not record MaintenanceCycleCompleted
+edge has_provenance Effect:the system does not record MaintenanceCycleCompleted -> Provenance:failure:RunMaintenanceCycleFailure.handling:the system does not record MaintenanceCycleCompleted
+edge records_trace Failure:RunMaintenanceCycleFailure -> Trace:RunMaintenanceCycleFailure
+edge has_provenance Trace:RunMaintenanceCycleFailure -> Provenance:failure:RunMaintenanceCycleFailure.trace:RunMaintenanceCycleFailure

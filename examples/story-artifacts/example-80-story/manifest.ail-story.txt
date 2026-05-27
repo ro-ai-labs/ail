@@ -1,0 +1,19 @@
+AIL-Story-Manifest:
+entrypoint ail-story
+story-source story.source.md fnv64:adff21ae2940ae1c
+story-normalized story.normalized.md fnv64:6f1ced694deb11f0
+story-report story-mode-report.txt fnv64:20c448d2cad6ea77
+requirements requirements.ail-requirements.md fnv64:e4e1b49d3e8cf26b
+spec accepted.ail-spec.md fnv64:274e460962f20541
+core checked.ail-core.txt fnv64:47e17be9aa38c3ab
+bytecode artifact.ailbc.json fnv64:8567bb244efed75a
+agent agent.ailbc.json fnv64:abcbfa93b16fff79
+agent-trace agent-trace.txt fnv64:83b7810625e9d7a0
+llm-requirements-request llm/requirements.request.json fnv64:ea493e32fe2509cf
+llm-requirements-response llm/requirements.response.json fnv64:7b229b521ffd53b8
+llm-requirements-content llm/requirements.content.txt fnv64:c8acedfed65e88fa
+llm-spec-request llm/spec.request.json fnv64:a338c3b2617c3cf1
+llm-spec-response llm/spec.response.json fnv64:ceb77da2f1e842ad
+llm-spec-content llm/spec.content.txt fnv64:50243a6f83445480
+build-manifest manifest.ail-build.txt fnv64:49cc0161e3a63622
+model-check model-check.json fnv64:5a70471cff918aba

@@ -512,8 +512,8 @@ already covers parts of this gate:
   model/executor manifest covering executor families, endpoint labels,
   executor labels, capture origins, executor/origin pairs, executor/endpoint
   pairs, and per-entry semantic task provenance
-- checked 126-entry live release examples under `examples`,
-  including 117 accepted prompt-to-artifact examples plus one rejected
+- checked 127-entry live release examples under `examples`,
+  including 118 accepted prompt-to-artifact examples plus one rejected
   semantic-drift diagnostic example and one rejected profile-mismatch
   diagnostic example, one rejected missing-trace diagnostic example, and one
   rejected hallucinated-capability diagnostic example, plus one rejected

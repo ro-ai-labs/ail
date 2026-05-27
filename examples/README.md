@@ -216,7 +216,7 @@ bundle under `story-artifacts/<entry-id>/`, writes fresh `requests/`,
 `batch-plan-fingerprint` in the
 import report. The report records replay counts from the generated corpus copy,
 so the same deterministic wrapper can be run against a corpus copy that already
-contains one promoted story entry to prove a second reviewed variant. It still
+contains promoted story entries to prove additional reviewed variants. It still
 requires offline `ail-examples` replay before any generated corpus copy is
 committed.
 The default corpus replay promotes that decision into
@@ -332,11 +332,11 @@ be replayed with `ail-examples` before promotion.
 The generated files are committed so release verification does not depend on
 live LLM access. The current corpus stores:
 
-- `examples.md`: 126 manifest entries with prompt, executor, profile, surface,
+- `examples.md`: 127 manifest entries with prompt, executor, profile, surface,
   use-case, capability-level, capability-under-test, program scale, program
   domain, module/spec/story counts, interaction metadata, user-story metadata,
   story journey, distinctness, capture-origin, checker-result, target, and
-  v0.3 learning metadata. One hundred seventeen entries are accepted
+  v0.3 learning metadata. One hundred eighteen entries are accepted
   prompt-to-artifact examples that replay through checked Core, bytecode, VM
   trace, and binary or target-contract evidence; nine entries are rejected
   diagnostic examples.
@@ -546,7 +546,7 @@ emit `application-walkthrough.txt` artifacts that bind user story,
 requirements, spec, checked Core, bytecode, runtime or target proof, stateful
 boundary, trace event, repair provenance, semantic anchors, and replay
 fingerprints into reviewer-facing application evidence.
-Promoted support-ticket User Story mode entries emit
+Promoted support-ticket and repeated-task User Story mode entries emit
 `story-promotion-review.txt` artifacts that bind the preserved
 `story-artifacts/<entry-id>/` bundle, reviewer decision, source entry, hosted
 model-check identity, story prompt-envelope counts, agent trace, checked Core,

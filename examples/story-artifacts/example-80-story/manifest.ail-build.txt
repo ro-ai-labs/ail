@@ -1,0 +1,31 @@
+AIL-Build-Manifest:
+source-package source.ail-package.md source.ail-spec.md fnv64:ded52042a79ffe37
+requirements requirements.ail-requirements.md fnv64:e4e1b49d3e8cf26b
+spec accepted.ail-spec.md fnv64:274e460962f20541
+core checked.ail-core.txt fnv64:47e17be9aa38c3ab
+flow-review review.ail-flow.json fnv64:46ab41ad278be368
+bytecode artifact.ailbc.json fnv64:8567bb244efed75a
+target linux-x86_64-elf target.elf fnv64:f9aef8c64fd38b01
+machine-bytecode-contract linux-x86_64-elf bytecode-level machine bytecode-container linux-elf-executable bytecode-format elf64-little-x86_64-executable
+native-bytecode native-bytecode-report.txt fnv64:96be36a1b8ed11d2
+dependencies dependency-report.txt fnv64:1e70cd3ce4b2edee
+agent agent.ailbc.json fnv64:abcbfa93b16fff79
+trace agent-trace.txt
+agent-target linux-x86_64-elf agent-AcceptCompilerPassOutput.elf fnv64:17f2b962467a67ce
+agent-target linux-x86_64-elf agent-AcceptCoreIR.elf fnv64:a27e2463d0558008
+agent-target linux-x86_64-elf agent-AcceptFlowReview.elf fnv64:5752dfbffb43c7d6
+agent-target linux-x86_64-elf agent-AcceptSpecDraft.elf fnv64:fb3dc5671fa9fb2e
+agent-target linux-x86_64-elf agent-CaptureRequirements.elf fnv64:22a838ea8b6ffc84
+agent-target linux-x86_64-elf agent-CompareAgentPromptPortability.elf fnv64:ee057c3cb4bafe41
+agent-target linux-x86_64-elf agent-CompileApplication.elf fnv64:70fe0425e35a37ae
+agent-target linux-x86_64-elf agent-CompileNativeTarget.elf fnv64:f1dedc4533657847
+agent-target linux-x86_64-elf agent-PrepareSpecDraft.elf fnv64:01f7e7542f69482d
+agent-target linux-x86_64-elf agent-VerifyBootstrapManifest.elf fnv64:b856c08aefc1c14b
+agent-target linux-x86_64-elf agent-VerifyBuildManifest.elf fnv64:fb2d29b9309aafdb
+agent-target linux-x86_64-elf agent-VerifyBytecodeArtifact.elf fnv64:6e4c5f4460b9495f
+agent-target linux-x86_64-elf agent-VerifyCompileBundleManifest.elf fnv64:cd94366aefb4a66c
+agent-target linux-x86_64-elf agent-VerifyCompileManifest.elf fnv64:eca0082e4e8664d6
+agent-target linux-x86_64-elf agent-VerifyConformanceManifest.elf fnv64:204f78606dbc1964
+agent-target linux-x86_64-elf agent-VerifyLowerManifest.elf fnv64:b3f930b8173518c9
+agent-target linux-x86_64-elf agent-VerifyPassManifest.elf fnv64:0578d90c20ca5d62
+agent-target linux-x86_64-elf agent-VerifyTargetArtifact.elf fnv64:23fc5bf84ddc5252

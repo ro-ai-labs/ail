@@ -1,0 +1,26 @@
+{
+  "artifact_kind": "AIL-Requirements",
+  "artifact_text": "AIL-Requirements:\n- Domain object Counter exists with a required field value of type Int, as defined in the package source AIL-Spec for the Maintenance Runner application.\n- Action IncrementCounter is a required domain action that increments the Counter value by 1 and records a trace event named CounterIncremented, per the package source AIL-Spec.\n- Action RunMaintenanceCycle is a required domain action that repeats IncrementCounter exactly 3 times and records a trace event named MaintenanceCycleCompleted, per the package source AIL-Spec and the native build constraint.\n- The system must guarantee that the Counter value is incremented atomically during IncrementCounter to prevent race conditions in the repeated-task context.\n- The system must guarantee that RunMaintenanceCycle executes exactly three IncrementCounter actions sequentially before recording MaintenanceCycleCompleted.\n- Trace event CounterIncremented must be recorded with sufficient metadata to identify the associated Counter instance and the new value, as required by the package source AIL-Spec.\n- Trace event MaintenanceCycleCompleted must be recorded upon the successful completion of the RunMaintenanceCycle action, including the final Counter value, as required by the package source AIL-Spec.\n- The application interacts with scheduler, task.store, and audit.log; requirements must preserve the ability to interface with these external systems for task scheduling and audit logging.\n- No Secret<...> fields are declared in the package source AIL-Spec or user story; therefore, no secret-handling requirements are imposed beyond standard application security practices.\n- No specific permissions are declared in the package source AIL-Spec or user story; therefore, no role-based access control requirements are imposed beyond default application security.\n- Failure cases for IncrementCounter and RunMaintenanceCycle are not explicitly defined in the package source AIL-Spec; the system must handle runtime errors gracefully without violating the trace guarantees.\n- Runtime inputs for IncrementCounter and RunMaintenanceCycle are not explicitly defined in the package source AIL-Spec; the system must accept implicit inputs required for action execution.",
+  "questions": [],
+  "assumptions": [
+    "The package source AIL-Spec is the authoritative source for domain objects, actions, and traces.",
+    "The native build constraint requiring RunMaintenanceCycle is a hard requirement.",
+    "Interactions with scheduler, task.store, and audit.log are external dependencies that must be supported but do not define internal secrets or permissions."
+  ],
+  "provenance": [
+    "Package source AIL-Spec: Counter definition, IncrementCounter action, RunMaintenanceCycle action, trace events.",
+    "User Story: repeated-task-story, acceptance criteria, semantic anchors.",
+    "Native Build Constraint: RunMaintenanceCycle action requirement."
+  ],
+  "checker_handoff": {
+    "must_check": true,
+    "expected_profile": "Application",
+    "expected_features": [
+      "things",
+      "actions",
+      "repeated-tasks",
+      "integer-state",
+      "traces"
+    ]
+  }
+}

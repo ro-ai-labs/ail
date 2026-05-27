@@ -1,0 +1,27 @@
+AIL-Build-Dependency-Report:
+target linux-x86_64-elf
+host-language-runtime none
+dynamic-linker none
+shared-libraries none
+library-dependencies none
+linker-invocation none
+runtime-abi linux-syscall-argv-key-value
+machine-bytecode-dependency target.elf standalone-linux-syscall-elf
+machine-bytecode-dependency agent-AcceptCompilerPassOutput.elf standalone-linux-syscall-elf
+machine-bytecode-dependency agent-AcceptCoreIR.elf standalone-linux-syscall-elf
+machine-bytecode-dependency agent-AcceptFlowReview.elf standalone-linux-syscall-elf
+machine-bytecode-dependency agent-AcceptSpecDraft.elf standalone-linux-syscall-elf
+machine-bytecode-dependency agent-CaptureRequirements.elf standalone-linux-syscall-elf
+machine-bytecode-dependency agent-CompareAgentPromptPortability.elf standalone-linux-syscall-elf
+machine-bytecode-dependency agent-CompileApplication.elf standalone-linux-syscall-elf
+machine-bytecode-dependency agent-CompileNativeTarget.elf standalone-linux-syscall-elf
+machine-bytecode-dependency agent-PrepareSpecDraft.elf standalone-linux-syscall-elf
+machine-bytecode-dependency agent-VerifyBootstrapManifest.elf standalone-linux-syscall-elf
+machine-bytecode-dependency agent-VerifyBuildManifest.elf standalone-linux-syscall-elf
+machine-bytecode-dependency agent-VerifyBytecodeArtifact.elf standalone-linux-syscall-elf
+machine-bytecode-dependency agent-VerifyCompileBundleManifest.elf standalone-linux-syscall-elf
+machine-bytecode-dependency agent-VerifyCompileManifest.elf standalone-linux-syscall-elf
+machine-bytecode-dependency agent-VerifyConformanceManifest.elf standalone-linux-syscall-elf
+machine-bytecode-dependency agent-VerifyLowerManifest.elf standalone-linux-syscall-elf
+machine-bytecode-dependency agent-VerifyPassManifest.elf standalone-linux-syscall-elf
+machine-bytecode-dependency agent-VerifyTargetArtifact.elf standalone-linux-syscall-elf

@@ -741,7 +741,7 @@ def story_promotion_live_evidence_probe_text():
     artifact_text = {
         "story-promotion-review.txt": (
             "story-promotion-review-artifact deterministic-text\n"
-            "story-promotion-review-fingerprint-observed-count 2\n"
+            "story-promotion-review-fingerprint-observed-count 3\n"
             "promotion-decision accepted-for-promotion\n"
             "story-artifacts-preserved true"
         ),
@@ -902,7 +902,7 @@ def write_story_promotion_live_evidence_fixture(
     write_text(review_path.with_suffix(".fingerprint.txt"), fnv64(review_text) + "\n")
     examples_report = (
         "AIL-Examples-Report:\n"
-        "story-promotion-review-fingerprint-observed-count 2\n"
+        "story-promotion-review-fingerprint-observed-count 3\n"
         "entry-artifact example-30-story story-promotion-review "
         "examples/example-30-story/story-promotion-review.txt fnv64:abc\n"
     )
@@ -2334,7 +2334,7 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             ]:
                 self.assertIn(f"artifact {artifact_name}", user_probe)
                 self.assertIn(f"----- begin {artifact_name} -----", user_probe)
-            self.assertIn("story-promotion-review-fingerprint-observed-count 2", user_probe)
+            self.assertIn("story-promotion-review-fingerprint-observed-count 3", user_probe)
             self.assertIn("story-prompt-envelope-artifact-count 2", user_probe)
             self.assertIn("promotion-source human-approved-story-promotion-batch", user_probe)
             self.assertIn("evidence-bundle-fingerprint fnv64:", user_probe)
@@ -2906,7 +2906,7 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             report = (artifact_dir / "examples-report.txt").read_text()
             self.assertNotIn("capture-origin-count deterministic-seed", report)
             self.assertIn("capture-origin-count live-llm 5", report)
-            self.assertIn("capture-origin-count live-codex 121", report)
+            self.assertIn("capture-origin-count live-codex 122", report)
             self.assertIn(
                 "entry example-30 source "
                 + str(output_dir / "examples.md")
@@ -2993,7 +2993,7 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             self.assertEqual(replay.returncode, 0, replay.stderr)
             report = (artifact_dir / "examples-report.txt").read_text()
             self.assertIn("capture-origin-count live-llm 4", report)
-            self.assertIn("capture-origin-count live-codex 122", report)
+            self.assertIn("capture-origin-count live-codex 123", report)
             self.assertIn("entry example-32", report)
         finally:
             _CompletionHandler.response_payload = None
@@ -3197,8 +3197,8 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             report = (artifact_dir / "examples-report.txt").read_text()
             self.assertNotIn("capture-origin-count deterministic-seed", report)
             self.assertIn("capture-origin-count live-llm 4", report)
-            self.assertIn("capture-origin-count live-codex 122", report)
-            self.assertIn("checker-result-count accepted 118", report)
+            self.assertIn("capture-origin-count live-codex 123", report)
+            self.assertIn("checker-result-count accepted 119", report)
             self.assertIn("entry example-99", report)
             self.assertIn("capture-origin live-codex", report)
         finally:
@@ -3326,7 +3326,7 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             report = (artifact_dir / "examples-report.txt").read_text()
             self.assertNotIn("capture-origin-count deterministic-seed", report)
             self.assertIn("capture-origin-count live-llm 5", report)
-            self.assertIn("capture-origin-count live-codex 121", report)
+            self.assertIn("capture-origin-count live-codex 122", report)
             self.assertIn("entry example-30", report)
             self.assertIn("entry example-32", report)
             self.assertIn("entry example-99", report)
@@ -3479,8 +3479,8 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             )
             self.assertEqual(replay.returncode, 0, replay.stderr)
             report = (artifact_dir / "examples-report.txt").read_text()
-            self.assertIn("entry-count 127", report)
-            self.assertIn("checker-result-count accepted 118", report)
+            self.assertIn("entry-count 128", report)
+            self.assertIn("checker-result-count accepted 119", report)
             self.assertIn("checker-result-count rejected 9", report)
             self.assertIn("entry example-99 ", report)
             self.assertIn("entry example-99-repaired ", report)
@@ -3644,8 +3644,8 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             )
             self.assertEqual(replay.returncode, 0, replay.stderr)
             report = (artifact_dir / "examples-report.txt").read_text()
-            self.assertIn("entry-count 127", report)
-            self.assertIn("checker-result-count accepted 118", report)
+            self.assertIn("entry-count 128", report)
+            self.assertIn("checker-result-count accepted 119", report)
             self.assertIn("checker-result-count rejected 9", report)
             self.assertIn("entry example-30 ", report)
             self.assertIn("entry example-30-story-capture ", report)
@@ -3737,8 +3737,8 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             self.assertIn("proposed-entry-id example-99-repaired", report)
             self.assertIn("source-preserved true", report)
             self.assertIn("proposed-accepted true", report)
-            self.assertIn("entry-count 127", report)
-            self.assertIn("checker-result-count accepted 118", report)
+            self.assertIn("entry-count 128", report)
+            self.assertIn("checker-result-count accepted 119", report)
             self.assertIn("checker-result-count rejected 9", report)
             self.assertEqual(report_fingerprint.strip(), fnv64(report))
 
@@ -3862,8 +3862,8 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             self.assertIn("max-tokens 64", report)
             self.assertIn("token-budget-default false", report)
             self.assertIn("token-budget-warning max-tokens-below-default", report)
-            self.assertIn("entry-count 127", report)
-            self.assertIn("checker-result-count accepted 118", report)
+            self.assertIn("entry-count 128", report)
+            self.assertIn("checker-result-count accepted 119", report)
             self.assertIn("checker-result-count rejected 9", report)
             self.assertEqual(report_fingerprint.strip(), fnv64(report))
 
@@ -4010,8 +4010,8 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
                 f"stdout:\n{second.stdout}\nstderr:\n{second.stderr}",
             )
             report = (second_work_dir / "story-promotion-import-demo-report.txt").read_text()
-            self.assertIn("entry-count 128", report)
-            self.assertIn("checker-result-count accepted 119", report)
+            self.assertIn("entry-count 129", report)
+            self.assertIn("checker-result-count accepted 120", report)
             self.assertIn("checker-result-count rejected 9", report)
             self.assertIn("proposed-entry-id example-30-story-second", report)
             examples = (second_corpus / "examples.md").read_text()
@@ -4107,8 +4107,8 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             self.assertIn("ui-review-patch-fingerprint-preserved true", report)
             self.assertIn("checked-core-fingerprint-preserved true", report)
             self.assertIn("flow-edit-applied true", report)
-            self.assertIn("entry-count 127", report)
-            self.assertIn("checker-result-count accepted 118", report)
+            self.assertIn("entry-count 128", report)
+            self.assertIn("checker-result-count accepted 119", report)
             self.assertIn("checker-result-count rejected 9", report)
             self.assertEqual(report_fingerprint.strip(), fnv64(report))
 
@@ -4259,8 +4259,8 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             self.assertIn("agent-policy-review-fingerprint-preserved true", report)
             self.assertIn("checked-core-fingerprint-preserved true", report)
             self.assertIn("policy-handoff-imported true", report)
-            self.assertIn("entry-count 127", report)
-            self.assertIn("checker-result-count accepted 118", report)
+            self.assertIn("entry-count 128", report)
+            self.assertIn("checker-result-count accepted 119", report)
             self.assertIn("checker-result-count rejected 9", report)
             self.assertEqual(report_fingerprint.strip(), fnv64(report))
 

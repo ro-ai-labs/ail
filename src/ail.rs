@@ -13554,7 +13554,9 @@ fn prompt_envelope_instruction(artifact_kind: &str, expected_profile: &str) -> S
             "\"artifact_kind\":\"{}\", \"artifact_text\":\"<artifact>\", ",
             "\"questions\":[], \"assumptions\":[], \"provenance\":[], and ",
             "\"checker_handoff\":{{\"must_check\":true,\"expected_profile\":\"{}\",\"expected_features\":[]}}. ",
-            "If required semantics are missing, return an empty artifact_text and focused blocking questions instead of guessing."
+            "If required semantics are missing, return an empty artifact_text and focused blocking questions instead of guessing. ",
+            "The prompt envelope must contain exactly one mode: either non-empty artifact_text with questions set to [], or empty artifact_text with non-empty questions. ",
+            "Never return artifact_text and blocking questions together."
         ),
         artifact_kind, expected_profile
     )
@@ -13675,7 +13677,7 @@ fn ail_requirements_prompt_coverage(profile: &str) -> &'static str {
             "Requirements must name system components, resources, capabilities, effects, ownership or borrowing rules, scheduler/interrupt/lock constraints, guarantees, traces, and runtime inputs that the final checked AIL system component must preserve."
         }
         _ => {
-            "Requirements must name application domain objects, required fields, actions, failure cases, guarantees, traces, secrets, permissions, and runtime inputs that the final checked AIL application must preserve."
+            "Requirements must name application domain objects, required fields, actions, failure cases, guarantees, traces, source-declared secrets, source-declared permissions, and runtime inputs that the final checked AIL application must preserve. Do not invent secrets, permissions, failures, or runtime inputs that are absent from the package source; when a category is not present, state the absence explicitly instead of adding new semantics. If the package source does not declare Secret<...>, do not introduce secret fields or redaction guarantees."
         }
     }
 }
@@ -14030,7 +14032,7 @@ fn build_ail_draft_prompt(package: &AilPackage, user_prompt: &str) -> String {
             "- the system requires <rule>\n",
             "- the system reads <field or effect>\n",
             "- the system changes <field or effect>\n",
-            "- the system does not reveal <secret field> to <audience>\n",
+            "- the system does not reveal <secret field> to <audience> (only when the source or requirements define Secret<...>)\n",
             "- the system guarantees <guarantee>\n",
             "- the system records a trace event named <TraceName>\n\n",
             "Failure <Name> happens when <condition>:\n\n",
@@ -14048,6 +14050,7 @@ fn build_ail_draft_prompt(package: &AilPackage, user_prompt: &str) -> String {
             "{}\n",
             "The checker will decide whether the candidate is accepted, so preserve explicit things, fields, tools, actions, system components, capabilities, failures, guarantees, traces, and secret handling.\n\n",
             "Use canonical AIL type spellings: Text, State<Open, Closed>, List<Text>, Option<Text>, and Secret<List<Text>> for a secret list of text values.\n\n",
+            "Do not emit a secret-redaction line unless the checked requirements or package source define Secret<...>. If no source secret exists, omit that line entirely; do not invent internal tokens, credentials, notes, or private data.\n\n",
             "{}\n\n",
             "HUMAN REQUEST:\n",
             "{}\n"

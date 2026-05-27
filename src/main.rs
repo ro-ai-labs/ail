@@ -14634,7 +14634,8 @@ fn prompt_with_source_spec_context(prompt: &str, source_spec_text: &str) -> Stri
             "{}\n\n",
             "PACKAGE SOURCE AIL-SPEC CONTEXT:\n",
             "{}\n\n",
-            "Use the package source AIL-Spec as authoritative context. Preserve its named actions, failures, guarantees, traces, secret-handling rules, and runtime requirements unless the human request explicitly changes them."
+            "Use the package source AIL-Spec as authoritative context. Preserve its named actions, failures, guarantees, traces, secret-handling rules, and runtime requirements unless the human request explicitly changes them. ",
+            "If the source AIL-Spec contains Route:, Form:, Dashboard:, or Workflow: preserve their reads, permissions, filters, blocks, and trace records unless the human request explicitly changes them."
         ),
         prompt, source_spec_text
     )
