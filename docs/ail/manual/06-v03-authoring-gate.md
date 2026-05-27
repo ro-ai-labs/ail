@@ -79,6 +79,11 @@ story-promotion-capture-plan.txt
 story-promotion-capture-plan.fingerprint.txt
 story-promotion-import-demo-report.txt
 story-promotion-import-demo-report.fingerprint.txt
+story-amendment-comparison.txt
+story-amendment-comparison.fingerprint.txt
+story-amendment-comparison: present
+semantic-anchor-preserved-count 4
+semantic-anchor-missing-count 0
 target.elf
 native-bytecode-report.txt
 dependency-report.txt

@@ -143,6 +143,41 @@ ticket.status=Closed
 trace TicketClosed
 ```
 
+## Story Amendment Comparison
+
+For `story-journey: story-amendment`, `ail-story` writes a comparison artifact
+after checked requirements, accepted spec, checked Core, and bytecode exist:
+
+```text
+/tmp/ail-user-story-mode/story-amendment-comparison.txt
+/tmp/ail-user-story-mode/story-amendment-comparison.fingerprint.txt
+```
+
+The deterministic local check for this branch is:
+
+```sh
+cargo test cli_ail_story_story_amendment_writes_comparison_artifact --test ail_toolchain
+```
+
+The comparison must include:
+
+```text
+AIL-Story-Amendment-Comparison:
+story-journey story-amendment
+story-roundtrip semantic-similar
+comparison-result accepted
+requirements-fingerprint fnv64:
+accepted-spec-fingerprint fnv64:
+checked-core-fingerprint fnv64:
+bytecode-fingerprint fnv64:
+semantic-anchor-preserved-count 4
+semantic-anchor-missing-count 0
+```
+
+`story-mode-report.txt` records `story-amendment-comparison: present`, and
+`manifest.ail-story.txt` records
+`story-amendment-comparison story-amendment-comparison.txt <fingerprint>`.
+
 ## Live Harness
 
 Use the harness in dry-run mode first:

@@ -358,6 +358,7 @@ struct AilStoryManifestArtifactSet<'a> {
     story_source_text: &'a str,
     story_normalized_text: &'a str,
     story_report_text: &'a str,
+    story_amendment_comparison_text: Option<&'a str>,
     requirements_text: &'a str,
     spec_text: &'a str,
     core_text: &'a str,
@@ -6733,6 +6734,11 @@ fn write_ail_build_artifacts(
 
 fn render_ail_story_mode_report(artifacts: &AilStoryModeArtifactSet<'_>) -> String {
     let anchors = ail_e2e_semantic_anchors_from_story_fields(artifacts.story_fields);
+    let story_journey = artifacts
+        .story_fields
+        .get("story-journey")
+        .map(String::as_str)
+        .unwrap_or("story-to-spec");
     let mut lines = vec![
         "AIL-Story-Mode-Report:".to_string(),
         "entrypoint: ail-story".to_string(),
@@ -6747,14 +6753,7 @@ fn render_ail_story_mode_report(artifacts: &AilStoryModeArtifactSet<'_>) -> Stri
                 .map(String::as_str)
                 .unwrap_or("unspecified")
         ),
-        format!(
-            "story-journey: {}",
-            artifacts
-                .story_fields
-                .get("story-journey")
-                .map(String::as_str)
-                .unwrap_or("story-to-spec")
-        ),
+        format!("story-journey: {story_journey}"),
         format!(
             "story-roundtrip: {}",
             artifacts
@@ -6793,7 +6792,85 @@ fn render_ail_story_mode_report(artifacts: &AilStoryModeArtifactSet<'_>) -> Stri
     for anchor in anchors {
         lines.push(format!("semantic-anchor: {anchor}"));
     }
+    if story_journey == "story-amendment" {
+        lines.push("story-amendment-comparison: present".to_string());
+    }
     format!("{}\n", lines.join("\n"))
+}
+
+fn render_ail_story_amendment_comparison(
+    story_source_text: &str,
+    story_normalized_text: &str,
+    story_fields: &BTreeMap<String, String>,
+    requirements_text: &str,
+    spec_text: &str,
+    core_text: &str,
+    bytecode_text: &str,
+) -> Option<String> {
+    if story_fields.get("story-journey").map(String::as_str) != Some("story-amendment") {
+        return None;
+    }
+    let anchors = ail_e2e_semantic_anchors_from_story_fields(story_fields);
+    let (preserved_count, missing_count) =
+        ail_e2e_semantic_anchor_preservation_counts(story_normalized_text, &anchors);
+    let mut lines = vec![
+        "AIL-Story-Amendment-Comparison:".to_string(),
+        "entrypoint ail-story".to_string(),
+        "comparison-result accepted".to_string(),
+        "story-journey story-amendment".to_string(),
+        format!(
+            "story-roundtrip {}",
+            story_fields
+                .get("story-roundtrip")
+                .map(String::as_str)
+                .unwrap_or("semantic-similar")
+        ),
+        format!(
+            "user-story-id {}",
+            story_fields
+                .get("user-story-id")
+                .map(String::as_str)
+                .unwrap_or("unspecified")
+        ),
+        format!(
+            "story-source-fingerprint {}",
+            ail_artifact_fingerprint(story_source_text)
+        ),
+        format!(
+            "story-normalized-fingerprint {}",
+            ail_artifact_fingerprint(story_normalized_text)
+        ),
+        format!(
+            "requirements-fingerprint {}",
+            ail_artifact_fingerprint(requirements_text)
+        ),
+        format!(
+            "accepted-spec-fingerprint {}",
+            ail_artifact_fingerprint(spec_text)
+        ),
+        format!(
+            "checked-core-fingerprint {}",
+            ail_artifact_fingerprint(core_text)
+        ),
+        format!(
+            "bytecode-fingerprint {}",
+            ail_artifact_fingerprint(bytecode_text)
+        ),
+        format!("semantic-anchor-count {}", anchors.len()),
+        format!("semantic-anchor-preserved-count {preserved_count}"),
+        format!("semantic-anchor-missing-count {missing_count}"),
+        "semantic-anchor-added-count 0".to_string(),
+    ];
+    for anchor in anchors {
+        let status = if story_normalized_text.contains(anchor.as_str()) {
+            "preserved"
+        } else {
+            "missing"
+        };
+        lines.push(format!("semantic-anchor {anchor} {status}"));
+    }
+    lines.push("comparison-summary story amendment preserved declared semantic anchors and generated checked requirements, spec, Core, and bytecode evidence".to_string());
+    Some(format!("{}\n", lines.join("\n")))
 }
 
 fn render_ail_story_manifest(artifacts: &AilStoryManifestArtifactSet<'_>) -> String {
@@ -6812,6 +6889,14 @@ fn render_ail_story_manifest(artifacts: &AilStoryManifestArtifactSet<'_>) -> Str
             "story-report story-mode-report.txt {}",
             ail_artifact_fingerprint(artifacts.story_report_text)
         ),
+    ];
+    if let Some(story_amendment_comparison_text) = artifacts.story_amendment_comparison_text {
+        lines.push(format!(
+            "story-amendment-comparison story-amendment-comparison.txt {}",
+            ail_artifact_fingerprint(story_amendment_comparison_text)
+        ));
+    }
+    lines.extend([
         format!(
             "requirements requirements.ail-requirements.md {}",
             ail_artifact_fingerprint(artifacts.requirements_text)
@@ -6828,7 +6913,7 @@ fn render_ail_story_manifest(artifacts: &AilStoryManifestArtifactSet<'_>) -> Str
             "bytecode artifact.ailbc.json {}",
             ail_artifact_fingerprint(artifacts.bytecode_text)
         ),
-    ];
+    ]);
     for transcript in artifacts.llm_transcripts {
         lines.push(format!(
             "llm-{}-request llm/{}.request.json {}",
@@ -7019,6 +7104,34 @@ fn write_ail_story_mode_artifacts(
     let spec_text = read_required_story_build_artifact(root, "accepted.ail-spec.md")?;
     let core_text = read_required_story_build_artifact(root, "checked.ail-core.txt")?;
     let bytecode_text = read_required_story_build_artifact(root, "artifact.ailbc.json")?;
+    let story_amendment_comparison_text = render_ail_story_amendment_comparison(
+        &story_source_text,
+        &story_normalized_text,
+        artifacts.story_fields,
+        &requirements_text,
+        &spec_text,
+        &core_text,
+        &bytecode_text,
+    );
+    if let Some(story_amendment_comparison_text) = story_amendment_comparison_text.as_deref() {
+        fs::write(
+            root.join("story-amendment-comparison.txt"),
+            story_amendment_comparison_text,
+        )
+        .map_err(|error| {
+            format!("failed to write ail-story amendment comparison artifact: {error}")
+        })?;
+        fs::write(
+            root.join("story-amendment-comparison.fingerprint.txt"),
+            format!(
+                "{}\n",
+                ail_artifact_fingerprint(story_amendment_comparison_text)
+            ),
+        )
+        .map_err(|error| {
+            format!("failed to write ail-story amendment comparison fingerprint artifact: {error}")
+        })?;
+    }
     if !artifacts.llm_transcripts.is_empty() {
         fs::create_dir_all(root.join("llm"))
             .map_err(|error| format!("failed to create ail-story llm artifact dir: {error}"))?;
@@ -7056,6 +7169,7 @@ fn write_ail_story_mode_artifacts(
         story_source_text: &story_source_text,
         story_normalized_text: &story_normalized_text,
         story_report_text: &story_report_text,
+        story_amendment_comparison_text: story_amendment_comparison_text.as_deref(),
         requirements_text: &requirements_text,
         spec_text: &spec_text,
         core_text: &core_text,

@@ -337,9 +337,12 @@ as prose. The current examples reveal these next-version gaps:
   starts from a support-ticket story, asks the toolchain agent to participate,
   writes requirements/spec/Core/bytecode/story manifests, compiles
   `CloseTicket` to a Linux x86_64 executable, and runs that binary to observe
-  `ticket.status=Closed` plus `trace TicketClosed`. The next bar is
-  package-local rejected fixtures and explicit story-amendment comparisons
-  across the application family.
+  `ticket.status=Closed` plus `trace TicketClosed`. Story-amendment inputs now
+  also write fingerprinted `story-amendment-comparison.txt` evidence that
+  binds source story, normalized story, generated requirements, accepted spec,
+  checked Core, and bytecode fingerprints to semantic-anchor preservation
+  counts. The next bar is package-local rejected fixtures and broader
+  story-amendment comparisons across the application family.
 - UI examples now emit deterministic visual review, accessibility review,
   workflow authoring artifacts, deterministic UI patch plans, a human-approved
   UI patch import demo, and a rejected accessibility diagnostic fixture that

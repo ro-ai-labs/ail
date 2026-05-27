@@ -1124,6 +1124,13 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         "story-llm-transcript-count",
         "story-prompt-envelope-valid-count",
         "story-prompt-envelope-invalid-count",
+        "cli_ail_story_story_amendment_writes_comparison_artifact",
+        "story-amendment-comparison.txt",
+        "story-amendment-comparison.fingerprint.txt",
+        "story-amendment-comparison: present",
+        "comparison-result accepted",
+        "semantic-anchor-preserved-count 4",
+        "semantic-anchor-missing-count 0",
         "scripts/run_v03_story_promotion_capture_plan.py",
         "scripts/run_v03_story_promotion_import_demo.py",
         "story-promotion-capture-plan.json",
@@ -1865,6 +1872,7 @@ fn script_ail_interactive_manual_v03_authoring_gate_run_checks_succeeds() {
         "running run-user-story-mode-checks",
         "running run-examples-release-checks",
         "running verify-story-runtime-trace-local",
+        "running verify-story-amendment-comparison-local",
         "running run-prompt-interaction-checks",
         "running run-agent-entrypoint-checks",
         "running run-bootstrap-self-hosting-checks",
@@ -1886,6 +1894,10 @@ fn script_ail_interactive_manual_v03_authoring_gate_run_checks_succeeds() {
         "agent-trace.txt",
         "target.elf",
         "native-bytecode-report.txt",
+        "story-amendment-comparison.txt",
+        "story-amendment-comparison.fingerprint.txt",
+        "semantic-anchor-preserved-count 4",
+        "semantic-anchor-missing-count 0",
         "ticket.status=Closed",
         "trace TicketClosed",
     ] {
@@ -21170,6 +21182,163 @@ fn cli_ail_story_builds_checked_artifacts_from_story_file() {
     assert!(
         spec_content.contains(r#""artifact_kind":"AIL-Spec Canonical""#),
         "{spec_content}"
+    );
+
+    fs::remove_file(story_file).unwrap();
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
+fn cli_ail_story_story_amendment_writes_comparison_artifact() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("support_ticket.ail");
+    let unique_suffix = format!(
+        "{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
+    let story_file = std::env::temp_dir().join(format!("ail-story-amendment-{unique_suffix}.md"));
+    let artifact_dir =
+        std::env::temp_dir().join(format!("ail-story-amendment-artifacts-{unique_suffix}"));
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::write(
+        &story_file,
+        concat!(
+            "# Support Ticket Amendment Story\n\n",
+            "user-story-id: support-ticket-amendment-story\n",
+            "user-story: As a support lead I can amend the support-ticket story so internal notes stay auditable while CloseTicket still emits TicketClosed.\n",
+            "acceptance-criteria: checked requirements exist; checked spec exists; bytecode exists; amendment comparison preserves semantic anchors\n",
+            "story-journey: story-amendment\n",
+            "story-roundtrip: semantic-similar\n",
+            "semantic-anchors: Support Tickets; Close ticket; TicketClosed; internal notes\n"
+        ),
+    )
+    .unwrap();
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let requirements = concat!(
+        "AIL-Requirements:\n",
+        "- The application manages support tickets.\n",
+        "- Ticket fields include id, title, status, and secret internal notes.\n",
+        "- The CloseTicket action requires ticket id input and ticket status not to be Closed.\n",
+        "- Failure NotFound happens when ticket id is missing and records TicketNotFound.\n",
+        "- The action guarantees closed tickets do not appear in the open queue.\n",
+        "- The action records trace event TicketClosed.\n"
+    );
+    let requirements_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(&format!(
+            r#"{{"artifact_kind":"AIL-Requirements","artifact_text":{},"questions":[],"checker_handoff":{{"must_check":true,"expected_profile":"Application","expected_features":[]}}}}"#,
+            json_string(requirements)
+        ))
+    );
+    let response_spec = fs::read_to_string(format!("{package}/spec.ail-spec.md")).unwrap();
+    let spec_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(&format!(
+            r#"{{"artifact_kind":"AIL-Spec Canonical","artifact_text":{},"questions":[],"checker_handoff":{{"must_check":true,"expected_profile":"Application","expected_features":[]}}}}"#,
+            json_string(&response_spec)
+        ))
+    );
+    let server = serve_chat_responses(listener, vec![requirements_body, spec_body]);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-story",
+            &package,
+            "--story-file",
+            story_file.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+            "--llm-endpoint",
+            &format!("http://127.0.0.1:{}/v1/chat/completions", addr.port()),
+        ])
+        .output()
+        .unwrap();
+
+    let request_bodies = server.join().unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(request_bodies.len(), 2);
+    let comparison_path = artifact_dir.join("story-amendment-comparison.txt");
+    let comparison_fingerprint_path =
+        artifact_dir.join("story-amendment-comparison.fingerprint.txt");
+    assert!(comparison_path.is_file(), "{}", comparison_path.display());
+    assert!(
+        comparison_fingerprint_path.is_file(),
+        "{}",
+        comparison_fingerprint_path.display()
+    );
+    let comparison = fs::read_to_string(&comparison_path).unwrap();
+    assert!(
+        comparison.contains("AIL-Story-Amendment-Comparison:"),
+        "{comparison}"
+    );
+    assert!(
+        comparison.contains("story-journey story-amendment"),
+        "{comparison}"
+    );
+    assert!(
+        comparison.contains("story-roundtrip semantic-similar"),
+        "{comparison}"
+    );
+    assert!(
+        comparison.contains("comparison-result accepted"),
+        "{comparison}"
+    );
+    assert!(
+        comparison.contains("semantic-anchor-count 4"),
+        "{comparison}"
+    );
+    assert!(
+        comparison.contains("semantic-anchor-preserved-count 4"),
+        "{comparison}"
+    );
+    assert!(
+        comparison.contains("semantic-anchor-missing-count 0"),
+        "{comparison}"
+    );
+    assert!(
+        comparison.contains("semantic-anchor TicketClosed preserved"),
+        "{comparison}"
+    );
+    assert!(
+        comparison.contains("requirements-fingerprint fnv64:"),
+        "{comparison}"
+    );
+    assert!(
+        comparison.contains("accepted-spec-fingerprint fnv64:"),
+        "{comparison}"
+    );
+    assert!(
+        comparison.contains("checked-core-fingerprint fnv64:"),
+        "{comparison}"
+    );
+    assert!(
+        comparison.contains("bytecode-fingerprint fnv64:"),
+        "{comparison}"
+    );
+    let comparison_fingerprint = fs::read_to_string(comparison_fingerprint_path).unwrap();
+    assert_eq!(
+        comparison_fingerprint.trim(),
+        fnv64_fingerprint(&comparison)
+    );
+    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-story.txt")).unwrap();
+    assert!(
+        manifest.contains("story-amendment-comparison story-amendment-comparison.txt"),
+        "{manifest}"
+    );
+    let report = fs::read_to_string(artifact_dir.join("story-mode-report.txt")).unwrap();
+    assert!(
+        report.contains("story-amendment-comparison: present"),
+        "{report}"
     );
 
     fs::remove_file(story_file).unwrap();
