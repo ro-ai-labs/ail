@@ -45,6 +45,11 @@ The current ladder is:
 The catalog is the authoritative replay manifest, but package-local READMEs are
 the teaching path through repeated example families and support modules.
 All 26 package directories include a README.md guide.
+`support-packages.md` is the support-only manifest: any top-level
+`examples/*.ail` package that is not counted in `examples.md` must be declared
+there with `role: support-only`, a `used-by` relationship to counted examples
+or executable toolchain evidence, and a concrete reason. This keeps helper
+packages visible without making a separate non-end-to-end example category.
 
 - `ail_toolchain_agent.ail/README.md`: AIL-authored agent participation in
   requirements, spec, Core, bytecode, target, manifest, and prompt-portability

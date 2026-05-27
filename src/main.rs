@@ -471,6 +471,12 @@ struct AilE2eCorpusEntry {
 }
 
 #[derive(Debug, Clone)]
+struct AilE2eSupportPackageEntry {
+    path: String,
+    used_by: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
 struct AilE2eCorpusEvaluation {
     entry: AilE2eCorpusEntry,
     semantic_anchors: Vec<String>,
@@ -2034,6 +2040,282 @@ fn validate_ail_e2e_corpus_transcript_files(entries: &[AilE2eCorpusEntry]) -> Re
                 ));
             }
         }
+    }
+    Ok(())
+}
+
+fn ail_e2e_catalog_root(path: &std::path::Path) -> std::path::PathBuf {
+    if path.is_file() {
+        return path
+            .parent()
+            .unwrap_or_else(|| std::path::Path::new("."))
+            .to_path_buf();
+    }
+    path.to_path_buf()
+}
+
+fn ail_e2e_top_level_package_dirs(
+    package_root: &std::path::Path,
+) -> Result<BTreeSet<String>, String> {
+    let mut packages = BTreeSet::new();
+    if !package_root.is_dir() {
+        return Ok(packages);
+    }
+    for entry in fs::read_dir(package_root).map_err(|error| {
+        format!(
+            "failed to read examples package root {}: {error}",
+            package_root.display()
+        )
+    })? {
+        let entry = entry
+            .map_err(|error| format!("failed to read examples package root entry: {error}"))?;
+        if !entry
+            .file_type()
+            .map_err(|error| format!("failed to read examples package file type: {error}"))?
+            .is_dir()
+        {
+            continue;
+        }
+        let name = entry.file_name().to_string_lossy().into_owned();
+        if name.ends_with(".ail") {
+            packages.insert(format!("examples/{name}"));
+        }
+    }
+    Ok(packages)
+}
+
+fn ail_e2e_package_root_for_catalog(
+    catalog_root: &std::path::Path,
+) -> Result<Option<std::path::PathBuf>, String> {
+    if !ail_e2e_top_level_package_dirs(catalog_root)?.is_empty() {
+        return Ok(Some(catalog_root.to_path_buf()));
+    }
+    let nested_examples = catalog_root.join("examples");
+    if !ail_e2e_top_level_package_dirs(&nested_examples)?.is_empty() {
+        return Ok(Some(nested_examples));
+    }
+    Ok(None)
+}
+
+fn parse_ail_e2e_support_packages(
+    source_file: &str,
+    text: &str,
+) -> Result<Vec<AilE2eSupportPackageEntry>, String> {
+    let mut entries = Vec::new();
+    let mut current_path: Option<String> = None;
+    let mut current_fields = BTreeMap::<String, String>::new();
+    for line in text.lines() {
+        if let Some(path) = line.strip_prefix("## Support Package: ") {
+            if let Some(package_path) = current_path.take() {
+                entries.push(ail_e2e_support_package_entry_from_fields(
+                    source_file,
+                    package_path,
+                    &current_fields,
+                )?);
+                current_fields.clear();
+            }
+            current_path = Some(path.trim().to_string());
+            continue;
+        }
+        if current_path.is_some()
+            && let Some((key, value)) = line.split_once(':')
+        {
+            let key = key.trim();
+            if !key.is_empty()
+                && key.chars().all(|ch| {
+                    ch.is_ascii_lowercase() || ch.is_ascii_digit() || ch == '-' || ch == '.'
+                })
+            {
+                current_fields.insert(key.to_string(), value.trim().to_string());
+            }
+        }
+    }
+    if let Some(package_path) = current_path.take() {
+        entries.push(ail_e2e_support_package_entry_from_fields(
+            source_file,
+            package_path,
+            &current_fields,
+        )?);
+    }
+    Ok(entries)
+}
+
+fn ail_e2e_support_package_entry_from_fields(
+    source_file: &str,
+    path: String,
+    fields: &BTreeMap<String, String>,
+) -> Result<AilE2eSupportPackageEntry, String> {
+    ail_e2e_validate_support_package_path(&path)?;
+    let role = fields
+        .get("role")
+        .cloned()
+        .ok_or_else(|| format!("examples support package {path} is missing role"))?;
+    if role != "support-only" {
+        return Err(format!(
+            "examples support package {path} role {role} must be support-only"
+        ));
+    }
+    let used_by_text = fields
+        .get("used-by")
+        .cloned()
+        .ok_or_else(|| format!("examples support package {path} is missing used-by"))?;
+    let used_by = used_by_text
+        .split([',', ';'])
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+        .collect::<Vec<_>>();
+    if used_by.is_empty() {
+        return Err(format!(
+            "examples support package {path} used-by must not be empty"
+        ));
+    }
+    let reason = fields
+        .get("reason")
+        .cloned()
+        .ok_or_else(|| format!("examples support package {path} is missing reason"))?;
+    if reason.chars().count() < 30 {
+        return Err(format!(
+            "examples support package {path} reason must explain why it is support-only"
+        ));
+    }
+    if source_file.is_empty() {
+        return Err(format!(
+            "examples support package {path} has an empty source file"
+        ));
+    }
+    Ok(AilE2eSupportPackageEntry { path, used_by })
+}
+
+fn ail_e2e_validate_support_package_path(path: &str) -> Result<(), String> {
+    let parsed = std::path::Path::new(path);
+    let normal_components = parsed
+        .components()
+        .filter_map(|component| match component {
+            std::path::Component::Normal(value) => value.to_str(),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    if parsed.is_absolute()
+        || normal_components.first().copied() != Some("examples")
+        || normal_components.len() != 2
+        || !normal_components
+            .get(1)
+            .is_some_and(|component| component.ends_with(".ail"))
+        || parsed.components().any(|component| {
+            matches!(
+                component,
+                std::path::Component::ParentDir
+                    | std::path::Component::RootDir
+                    | std::path::Component::Prefix(_)
+            )
+        })
+    {
+        return Err(format!(
+            "examples support package {path} must be a top-level ./examples/*.ail package"
+        ));
+    }
+    Ok(())
+}
+
+fn validate_ail_e2e_support_package_closure(
+    catalog_path: &std::path::Path,
+    entries: &[AilE2eCorpusEntry],
+) -> Result<(), String> {
+    let catalog_root = ail_e2e_catalog_root(catalog_path);
+    let Some(package_root) = ail_e2e_package_root_for_catalog(&catalog_root)? else {
+        return Ok(());
+    };
+    let package_dirs = ail_e2e_top_level_package_dirs(&package_root)?;
+    if package_dirs.is_empty() {
+        return Ok(());
+    }
+    let counted_packages = entries
+        .iter()
+        .filter_map(|entry| entry.fields.get("package").cloned())
+        .collect::<BTreeSet<_>>();
+    for package in &counted_packages {
+        if !package_dirs.contains(package) {
+            return Err(format!(
+                "examples catalog package {package} has no top-level package directory under ./examples"
+            ));
+        }
+    }
+
+    let support_manifest_path = package_root.join("support-packages.md");
+    let support_entries = if support_manifest_path.is_file() {
+        let support_text = fs::read_to_string(&support_manifest_path).map_err(|error| {
+            format!(
+                "failed to read examples support package manifest {}: {error}",
+                support_manifest_path.display()
+            )
+        })?;
+        parse_ail_e2e_support_packages(&support_manifest_path.to_string_lossy(), &support_text)?
+    } else {
+        Vec::new()
+    };
+
+    let mut declared_support = BTreeMap::<String, AilE2eSupportPackageEntry>::new();
+    for support_entry in support_entries {
+        if declared_support.contains_key(&support_entry.path) {
+            return Err(format!(
+                "examples support package {} is declared more than once in examples/support-packages.md",
+                support_entry.path
+            ));
+        }
+        if !package_dirs.contains(&support_entry.path) {
+            return Err(format!(
+                "examples support package {} is declared in examples/support-packages.md but no top-level package directory exists",
+                support_entry.path
+            ));
+        }
+        if counted_packages.contains(&support_entry.path) {
+            return Err(format!(
+                "examples support package {} is counted in examples.md and must not be declared support-only",
+                support_entry.path
+            ));
+        }
+        let mut has_concrete_user = false;
+        for used_by in &support_entry.used_by {
+            if used_by.starts_with("examples/") {
+                ail_e2e_validate_support_package_path(used_by)?;
+                if !package_dirs.contains(used_by) {
+                    return Err(format!(
+                        "examples support package {} used-by {} has no top-level package directory under ./examples",
+                        support_entry.path, used_by
+                    ));
+                }
+                if counted_packages.contains(used_by) {
+                    has_concrete_user = true;
+                }
+            } else if ["toolchain:", "test:", "manual:", "docs:"]
+                .iter()
+                .any(|prefix| used_by.starts_with(prefix))
+            {
+                has_concrete_user = true;
+            } else {
+                return Err(format!(
+                    "examples support package {} used-by {} must be an examples package or toolchain:/test:/manual:/docs: reference",
+                    support_entry.path, used_by
+                ));
+            }
+        }
+        if !has_concrete_user {
+            return Err(format!(
+                "examples support package {} used-by must include a counted examples package or toolchain:/test:/manual:/docs: reference",
+                support_entry.path
+            ));
+        }
+        declared_support.insert(support_entry.path.clone(), support_entry);
+    }
+
+    for package in package_dirs {
+        if counted_packages.contains(&package) || declared_support.contains_key(&package) {
+            continue;
+        }
+        return Err(format!(
+            "examples support package {package} is neither counted in examples.md nor declared in examples/support-packages.md"
+        ));
     }
     Ok(())
 }
@@ -5274,6 +5556,7 @@ fn run_ail_e2e_corpus_command(path: &str, cli_options: &CliOptions) -> Result<u8
             "ail-examples requires at least 100 examples; found {example_count}"
         ));
     }
+    validate_ail_e2e_support_package_closure(std::path::Path::new(path), &entries)?;
     validate_ail_e2e_corpus_release_coverage(&entries)?;
     if cli_options.release_evidence {
         validate_ail_e2e_corpus_live_release_evidence(&entries)?;
@@ -5305,6 +5588,7 @@ fn run_ail_v03_roadmap_command(path: &str, cli_options: &CliOptions) -> Result<u
             "ail-v03-roadmap requires at least 100 examples; found {example_count}"
         ));
     }
+    validate_ail_e2e_support_package_closure(std::path::Path::new(path), &entries)?;
     validate_ail_e2e_corpus_release_coverage(&entries)?;
     if cli_options.release_evidence {
         validate_ail_e2e_corpus_live_release_evidence(&entries)?;

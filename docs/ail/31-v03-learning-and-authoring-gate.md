@@ -84,7 +84,12 @@ Each entry in `examples/examples.md` must include:
 Catalog path closure is part of the gate. `request-file`, `response-file`, and
 `story-file` must stay inside the catalog directory, while `package` must stay
 inside repository `./examples`; absolute paths and `..` path escapes are
-rejected before replay.
+rejected before replay. Package closure is also part of the gate: every
+top-level `examples/*.ail` directory must either be counted as a `package:` in
+`examples/examples.md` or be declared in `examples/support-packages.md` with
+`role: support-only`, a concrete `used-by` relationship, and an explanation of
+why its evidence flows through counted examples, toolchain commands, manual
+chapters, docs, or regression tests.
 
 Prompt-surface matrices are allowed, but they are not automatically useful.
 They count only when the distinctness claim identifies the prompt behavior,
@@ -174,7 +179,8 @@ Every `examples/*.ail/` package directory must include a package-local README
 guide. These guides are part of the authoring surface, not optional prose:
 support-only packages explain imported semantics, rejected diagnostic packages
 explain useful failure paths, and counted catalog packages explain replay
-artifacts.
+artifacts. Support-only package status is machine-checked in
+`examples/support-packages.md`; it does not create a separate example category.
 
 The current required guide set is:
 

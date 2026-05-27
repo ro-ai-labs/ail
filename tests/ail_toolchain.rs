@@ -802,6 +802,9 @@ fn docs_example_inventory_names_every_package_directory() {
         env!("CARGO_MANIFEST_DIR")
     ))
     .unwrap();
+    let catalog = fs::read_to_string(format!("{examples_dir}/examples.md")).unwrap();
+    let support_manifest =
+        fs::read_to_string(format!("{examples_dir}/support-packages.md")).unwrap();
 
     assert!(
         root_readme.contains("26 package directories"),
@@ -810,6 +813,10 @@ fn docs_example_inventory_names_every_package_directory() {
     assert!(inventory.contains("Package directories: 26"), "{inventory}");
     assert!(
         inventory.contains("Counted catalog examples: 117"),
+        "{inventory}"
+    );
+    assert!(
+        inventory.contains("Support-only package manifest: `examples/support-packages.md`"),
         "{inventory}"
     );
 
@@ -826,6 +833,20 @@ fn docs_example_inventory_names_every_package_directory() {
             inventory.contains(&format!("`examples/{package}/`")),
             "{package}\n{inventory}"
         );
+        let catalog_count = catalog
+            .lines()
+            .filter(|line| line.trim() == format!("package: examples/{package}"))
+            .count();
+        if catalog_count == 0 {
+            assert!(
+                support_manifest.contains(&format!("## Support Package: examples/{package}")),
+                "{package}\n{support_manifest}"
+            );
+            assert!(
+                support_manifest.contains("role: support-only"),
+                "{package}\n{support_manifest}"
+            );
+        }
     }
 }
 
@@ -29643,6 +29664,108 @@ fn cli_ail_e2e_corpus_rejects_package_paths_outside_examples_tree() {
         &[("package", "../support_ticket.ail")],
         "examples catalog entry example-0 package ../support_ticket.ail must stay inside ./examples",
     );
+}
+
+#[test]
+fn cli_ail_e2e_corpus_requires_uncounted_packages_to_be_declared_support_only() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let corpus_dir = std::env::temp_dir().join(format!(
+        "ail-examples-support-closure-{}",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-examples-support-closure-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&corpus_dir);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(corpus_dir.join("examples/support_ticket.ail")).unwrap();
+    fs::create_dir_all(corpus_dir.join("examples/support_shared.ail")).unwrap();
+    write_e2e_transcript_files(&corpus_dir, 100);
+    fs::write(
+        corpus_dir.join("examples.md"),
+        e2e_corpus_text_with_override(0, &[]),
+    )
+    .unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-examples",
+            corpus_dir.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains(
+            "examples support package examples/support_shared.ail is neither counted in examples.md nor declared in examples/support-packages.md"
+        ),
+        "{stderr}"
+    );
+
+    let _ = fs::remove_dir_all(corpus_dir);
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
+fn cli_ail_e2e_corpus_accepts_declared_support_only_package_directory() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let corpus_dir = std::env::temp_dir().join(format!(
+        "ail-examples-support-closure-accepted-{}",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-examples-support-closure-accepted-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&corpus_dir);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(corpus_dir.join("examples/support_ticket.ail")).unwrap();
+    fs::create_dir_all(corpus_dir.join("examples/support_shared.ail")).unwrap();
+    write_e2e_transcript_files(&corpus_dir, 100);
+    fs::write(
+        corpus_dir.join("examples.md"),
+        e2e_corpus_text_with_override(0, &[]),
+    )
+    .unwrap();
+    fs::write(
+        corpus_dir.join("examples/support-packages.md"),
+        concat!(
+            "# AIL Support Packages\n\n",
+            "## Support Package: examples/support_shared.ail\n",
+            "role: support-only\n",
+            "used-by: examples/support_ticket.ail\n",
+            "reason: Shared support-domain user declarations imported by counted support-ticket examples.\n"
+        ),
+    )
+    .unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-examples",
+            corpus_dir.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let _ = fs::remove_dir_all(corpus_dir);
+    let _ = fs::remove_dir_all(artifact_dir);
 }
 
 #[test]
