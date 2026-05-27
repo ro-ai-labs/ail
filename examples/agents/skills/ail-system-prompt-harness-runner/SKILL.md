@@ -74,6 +74,7 @@ The run is ready for reviewer handoff only when the artifacts include:
 - `model-check present`
 - `model-check-model-count`
 - `model-check-model-id`
+- no `model-check skipped`; skipped model checks are local fake-server evidence only
 - `models.json` and `models.fingerprint.txt` for prompt-pack live runs
 - `model-check.json` and `model-check.fingerprint.txt` for story live runs
 - `prompt-llm-harness-report.txt`
@@ -102,6 +103,7 @@ Stop and preserve artifacts for review when:
 
 - the hosted endpoint is unreachable
 - `model-check missing`
+- `model-check skipped` appears in hosted llama.cpp prompt-pack evidence
 - any response omits `model` or names a model absent from the model list
 - prompt envelopes are invalid
 - story artifacts omit `agent-trace.txt`

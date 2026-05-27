@@ -838,6 +838,49 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
         finally:
             shutil.rmtree(artifact_dir, ignore_errors=True)
 
+    def test_prompt_llm_harness_review_rejects_skipped_model_check_by_default(self):
+        artifact_dir = Path(
+            tempfile.mkdtemp(prefix="ail-prompt-llm-review-skipped-model-")
+        )
+        try:
+            write_prompt_llm_review_fixture(artifact_dir)
+
+            models_text = (
+                json.dumps(
+                    {
+                        "skipped": True,
+                        "endpoint": "http://127.0.0.1:8080/v1/chat/completions",
+                    },
+                    indent=2,
+                    sort_keys=True,
+                )
+                + "\n"
+            )
+            write_text(artifact_dir / "models.json", models_text)
+            write_text(artifact_dir / "models.fingerprint.txt", fnv64(models_text) + "\n")
+
+            review = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_prompt_llm_harness.py",
+                    "--review-artifacts",
+                    str(artifact_dir),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+
+            self.assertNotEqual(review.returncode, 0)
+            self.assertIn("review-result rejected", review.stdout)
+            self.assertIn("model-check skipped", review.stdout)
+            self.assertIn(
+                "model-check skipped; hosted evidence requires models.json from /v1/models",
+                review.stdout,
+            )
+        finally:
+            shutil.rmtree(artifact_dir, ignore_errors=True)
+
     def test_prompt_llm_harness_review_rejects_empty_content(self):
         artifact_dir = Path(tempfile.mkdtemp(prefix="ail-prompt-llm-review-empty-"))
         try:
@@ -1115,6 +1158,7 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
                     "scripts/run_v03_prompt_llm_harness.py",
                     "--review-artifacts",
                     str(artifact_dir),
+                    "--allow-skipped-model-check",
                 ],
                 cwd=ROOT,
                 text=True,
@@ -1129,6 +1173,7 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             self.assertIn("prompt-envelope-artifact-count 8", review.stdout)
             self.assertIn("prompt-envelope-questions-count 3", review.stdout)
             self.assertIn("prompt-outcome-match-count 11", review.stdout)
+            self.assertIn("model-check skipped", review.stdout)
             self.assertIn("fingerprint-check-count 36", review.stdout)
             self.assertIn("review-result accepted", review.stdout)
         finally:

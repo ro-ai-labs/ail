@@ -3323,6 +3323,7 @@ fn script_v03_prompt_llm_harness_review_writes_fingerprinted_report() {
             &script,
             "--review-artifacts",
             artifact_dir.to_str().unwrap(),
+            "--allow-skipped-model-check",
         ])
         .output()
         .unwrap();
@@ -3359,6 +3360,10 @@ fn script_v03_prompt_llm_harness_review_writes_fingerprinted_report() {
     );
     assert!(
         review_stdout.contains("prompt-outcome-match-count 11"),
+        "{review_stdout}"
+    );
+    assert!(
+        review_stdout.contains("model-check skipped"),
         "{review_stdout}"
     );
     for required in [

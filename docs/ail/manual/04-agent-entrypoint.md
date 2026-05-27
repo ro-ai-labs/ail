@@ -69,6 +69,9 @@ llama.cpp prompt artifacts, User Story mode artifacts, examples replay,
 `v03-roadmap.txt`, and repair promotion and AgentTool policy evidence,
 including deterministic import demos, before generated content is promoted
 into `./examples`.
+Hosted llama.cpp prompt-pack evidence must not accept artifacts whose
+model-check was skipped; `model-check skipped` is only valid for local
+fake-server harness tests.
 
 ## Toolchain Agent Package
 
