@@ -1781,11 +1781,13 @@ fn script_v03_signal_status_audit_marks_agent_policy_import_promoted() {
         "signal-status-evidence Package graphs need clearer authoring guidance and dependency review views. cargo run -- ail-examples examples --release-evidence",
         "signal-status Generics need reusable conformance fixtures and teachable stdlib walkthroughs. count 10 status promoted",
         "signal-status-evidence Generics need reusable conformance fixtures and teachable stdlib walkthroughs. cargo run -- ail-examples examples --release-evidence",
+        "signal-status Interop needs deeper unsafe-boundary tutorials and more ABI fixture diversity. count 10 status promoted",
+        "signal-status-evidence Interop needs deeper unsafe-boundary tutorials and more ABI fixture diversity. cargo run -- ail-examples examples --release-evidence",
         "signal-status Turing Core examples need richer termination proofs beyond base-case, decreasing-argument, and numeric stack-bound patterns. count 5 status promoted",
         "signal-status-evidence Turing Core examples need richer termination proofs beyond base-case, decreasing-argument, and numeric stack-bound patterns. docs/ail/manual/14-turing-core.md",
         "signal-status Workflow examples need retry/backoff semantics and richer scheduler policies beyond temporal-policy diagnostics. count 5 status promoted",
         "signal-status-evidence Workflow examples need retry/backoff semantics and richer scheduler policies beyond temporal-policy diagnostics. cargo run -- ail-examples examples --release-evidence",
-        "promoted-count 8",
+        "promoted-count 9",
         "missing-status-count 0",
         "audit-result accepted",
     ] {
@@ -29573,6 +29575,14 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
+        report.contains("unsafe-boundary-review-fingerprint-observed-count 10"),
+        "{report}"
+    );
+    assert!(
+        report.contains("unsafe-boundary-review-fingerprint-duplicate-entry-count 0"),
+        "{report}"
+    );
+    assert!(
         report.contains("dependency-review-fingerprint-observed-count 10"),
         "{report}"
     );
@@ -29876,6 +29886,70 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         report.contains(&format!(
             "entry-artifact example-80 workflow-scheduler-review examples/example-80/workflow-scheduler-review.txt {}",
             workflow_scheduler_review_80_fingerprint.trim()
+        )),
+        "{report}"
+    );
+    let unsafe_boundary_review_85 =
+        fs::read_to_string(artifact_dir.join("examples/example-85/unsafe-boundary-review.txt"))
+            .unwrap();
+    assert!(
+        unsafe_boundary_review_85.contains("AIL-Unsafe-Boundary-Review:")
+            && unsafe_boundary_review_85.contains("entry example-85")
+            && unsafe_boundary_review_85
+                .contains("semantic-task c-interop-live-codex-core-to-spec-85")
+            && unsafe_boundary_review_85.contains("interop-surface c-host-interop")
+            && unsafe_boundary_review_85.contains("foreign-library zlib")
+            && unsafe_boundary_review_85.contains("foreign-function zlib.compress2")
+            && unsafe_boundary_review_85.contains("foreign-library libc")
+            && unsafe_boundary_review_85.contains("foreign-function libc.qsort")
+            && unsafe_boundary_review_85
+                .contains("ownership-boundary owned pointer requires release semantics")
+            && unsafe_boundary_review_85
+                .contains("borrow-boundary borrowed mutable pointer must not escape call")
+            && unsafe_boundary_review_85.contains("callback-boundary qsort comparator is noescape")
+            && unsafe_boundary_review_85
+                .contains("layout-boundary repr(C) packet header size alignment offsets")
+            && unsafe_boundary_review_85
+                .contains("status-map-boundary C return values map to AIL failures")
+            && unsafe_boundary_review_85
+                .contains("nullable-boundary NonNull pointer contracts reject nullable values")
+            && unsafe_boundary_review_85.contains(
+                "accepted-fixture examples/accepted/owned-pointer-release-minimal.ail-spec.md"
+            )
+            && unsafe_boundary_review_85
+                .contains("accepted-fixture examples/accepted/struct-layout-minimal.ail-spec.md")
+            && unsafe_boundary_review_85
+                .contains("rejected-fixture examples/rejected/borrowed-pointer-escape.ail-spec.md")
+            && unsafe_boundary_review_85
+                .contains("rejected-fixture examples/rejected/missing-status-map.ail-spec.md")
+            && unsafe_boundary_review_85.contains(
+                "rejected-fixture examples/rejected/mutable-pointer-aliasing.ail-spec.md"
+            )
+            && unsafe_boundary_review_85
+                .contains("rejected-fixture examples/rejected/nullable-to-non-null.ail-spec.md")
+            && unsafe_boundary_review_85.contains(
+                "rejected-fixture examples/rejected/owned-pointer-without-release.ail-spec.md"
+            )
+            && unsafe_boundary_review_85.contains("diagnostic-link AIL-FFI-NULL-001")
+            && unsafe_boundary_review_85.contains("runtime-evidence target-report")
+            && unsafe_boundary_review_85.contains("checked-core-fingerprint ")
+            && unsafe_boundary_review_85.contains("bytecode-fingerprint ")
+            && unsafe_boundary_review_85.contains("target-report-fingerprint ")
+            && unsafe_boundary_review_85.contains("unsafe-boundary-summary "),
+        "{unsafe_boundary_review_85}"
+    );
+    let unsafe_boundary_review_85_fingerprint = fs::read_to_string(
+        artifact_dir.join("examples/example-85/unsafe-boundary-review.fingerprint.txt"),
+    )
+    .unwrap();
+    assert_eq!(
+        unsafe_boundary_review_85_fingerprint.trim(),
+        fnv64_fingerprint(&unsafe_boundary_review_85)
+    );
+    assert!(
+        report.contains(&format!(
+            "entry-artifact example-85 unsafe-boundary-review examples/example-85/unsafe-boundary-review.txt {}",
+            unsafe_boundary_review_85_fingerprint.trim()
         )),
         "{report}"
     );
@@ -30428,6 +30502,13 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         manifest.contains(&format!(
             "entry-artifact example-95 state-boundary-review examples/example-95/state-boundary-review.txt {}",
             state_boundary_review_95_fingerprint.trim()
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "entry-artifact example-85 unsafe-boundary-review examples/example-85/unsafe-boundary-review.txt {}",
+            unsafe_boundary_review_85_fingerprint.trim()
         )),
         "{manifest}"
     );

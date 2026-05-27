@@ -71,7 +71,8 @@ packages visible without making a separate non-end-to-end example category.
   ownership, borrowing, device effects, scheduler and interrupt fixtures,
   native target evidence, runtime traces, and rejected contract diagnostics.
 - `c_interop.ail/README.md`: C ABI, pointer ownership, callbacks, layout,
-  status-map failures, host imports, and invalid interop repair gaps.
+  status-map failures, host imports, unsafe-boundary review artifacts, and
+  invalid interop repair evidence.
 - `darwin_linux_effect.ail/README.md`: target portability, Linux syscall
   effects, Darwin target contract evidence, and unsupported-target
   diagnostics.

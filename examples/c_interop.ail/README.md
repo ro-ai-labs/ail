@@ -52,6 +52,7 @@ Useful artifacts to inspect after replay:
 - `examples/example-85/artifact.ailbc.json`
 - `examples/example-85/vm-trace.txt`
 - `examples/example-89/target-report.txt`
+- `examples/example-85/unsafe-boundary-review.txt`
 - `examples/example-105/diagnostics.txt`
 
 The direct conformance check is:
@@ -64,15 +65,14 @@ cargo run -- ail-conformance examples/c_interop.ail --artifact-dir /tmp/ail-c-in
 
 `example-105` is the current corpus-level invalid interop fixture. It verifies
 that AIL rejects a nullable pointer where the imported C boundary requires a
-non-null contract.
-
-The package should grow package-local rejected fixtures for:
+non-null contract. Package-local conformance now also rejects:
 
 - owned pointer parameters without release semantics;
 - borrowed pointer escape past the call boundary;
 - mutable pointer aliasing across arguments;
-- callback storage when the callback is declared `noescape`;
-- missing or incomplete status-map entries.
+- nullable values crossing a `NonNull` contract;
+- missing or incomplete status-map entries;
+- foreign-boundary secret leakage.
 
 ## Next Example To Read
 
@@ -82,7 +82,11 @@ behavior must be represented differently for Darwin target contracts.
 
 ## v0.3 Learning Signal
 
-C Interop proves that AIL can describe host bindings, but v0.3 needs richer
-repair tutorials around status-map coverage, pointer lifetimes, callback
-escape, and layout drift. Those examples should teach the agent how to amend a
-spec safely rather than simply report that interop is invalid.
+C Interop now emits deterministic `unsafe-boundary-review.txt` artifacts for
+the accepted C interop replay entries. Those artifacts bind zlib/libc host
+calls, owned pointer release, borrowed mutable pointers, noescape callbacks,
+`repr(C)` layout, status maps, nullable pointer contracts, FFI diagnostics,
+accepted/rejected fixtures, trace coverage, and replay fingerprints into one
+reviewer-facing tutorial. The next bar is executable foreign-symbol linking
+and additional platform ABI variants beyond the current target-contract
+evidence.

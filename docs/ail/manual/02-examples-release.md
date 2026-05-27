@@ -46,7 +46,11 @@ with upstream fingerprints. Repeated Task entries also include
 `workflow-scheduler-review.txt`, a deterministic scheduler/retry/backoff
 review artifact that links the repeated action, temporal policy, retry policy,
 backoff policy, `AIL-WORKFLOW-*` diagnostics, package-local fixtures, and
-runtime fingerprints.
+runtime fingerprints. C interop entries include
+`unsafe-boundary-review.txt`, a deterministic ABI/unsafe-boundary tutorial
+that links zlib/libc host calls, pointer ownership, borrowed mutable buffers,
+noescape callbacks, `repr(C)` layout, status maps, nullable contracts,
+package-local FFI fixtures, diagnostics, and replay fingerprints.
 
 ## Review Rule
 
@@ -62,3 +66,6 @@ For scheduled-workflow entries, check
 `workflow-scheduler-review-fingerprint-*` report lines and the corresponding
 `entry-artifact ... workflow-scheduler-review ...` manifest entries before
 claiming retry/backoff scheduler evidence is covered.
+For C interop entries, check `unsafe-boundary-review-fingerprint-*` report
+lines and the corresponding `entry-artifact ... unsafe-boundary-review ...`
+manifest entries before claiming unsafe-boundary tutorial evidence is covered.

@@ -34,9 +34,9 @@ rationale: Standard Collections examples now emit deterministic stdlib walkthrou
 evidence: cargo run -- ail-examples examples --release-evidence
 
 signal: Interop needs deeper unsafe-boundary tutorials and more ABI fixture diversity.
-status: deferred
-rationale: Current interop fixtures cover layouts, callbacks, ownership, nullability, aliasing, status maps, and secret leakage, but deeper unsafe-boundary tutorials and ABI diversity remain open.
-evidence: docs/ail/31-v03-learning-and-authoring-gate.md
+status: promoted
+rationale: C interop examples now emit deterministic unsafe-boundary review artifacts for the ten accepted C interop entries, tying zlib/libc host calls, owned pointer release, borrowed mutable pointers, noescape callbacks, repr(C) layout, C status maps, nullable pointer rejection, accepted and rejected ABI fixtures, stable FFI diagnostics, trace coverage, and replay fingerprints into reviewer-facing evidence.
+evidence: cargo run -- ail-examples examples --release-evidence
 
 signal: Package graphs need clearer authoring guidance and dependency review views.
 status: promoted

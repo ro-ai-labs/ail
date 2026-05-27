@@ -239,6 +239,8 @@ The `ail-examples` replay bundle must also write deterministic story artifacts:
 - `examples/<entry-id>/ui-review-patch.fingerprint.txt` for accepted UI workflow or UI-surface entries
 - `examples/<entry-id>/agent-policy-review.txt` for accepted AgentTool entries
 - `examples/<entry-id>/agent-policy-review.fingerprint.txt` for accepted AgentTool entries
+- `examples/<entry-id>/unsafe-boundary-review.txt` for accepted C interop entries
+- `examples/<entry-id>/unsafe-boundary-review.fingerprint.txt` for accepted C interop entries
 - `examples/<entry-id>/dependency-review.txt` for accepted package-import entries
 - `examples/<entry-id>/dependency-review.fingerprint.txt` for accepted package-import entries
 - `examples/<entry-id>/stdlib-walkthrough.txt` for accepted stdlib-generic entries
@@ -336,6 +338,13 @@ permission and approval review, external-call review, secret-redaction review,
 audit-trace review, human approval requirement, runtime evidence, and upstream
 fingerprints. The report must summarize these files with
 `agent-policy-review-fingerprint-*` lines and list each review in
+`manifest.ail-examples.txt`. Accepted C interop entries must emit
+`unsafe-boundary-review.txt`, which records zlib/libc host calls, owned pointer
+release, borrowed mutable pointer boundaries, noescape callback constraints,
+`repr(C)` layout, C status maps, nullable pointer contracts, accepted and
+rejected ABI fixtures, FFI diagnostics, trace coverage, runtime evidence, and
+replay fingerprints. The report must summarize these files with
+`unsafe-boundary-review-fingerprint-*` lines and list each review in
 `manifest.ail-examples.txt`. Accepted package-import entries must emit
 `dependency-review.txt`, which records the local package, imported package,
 import alias, imported type owner, capability grant, story anchors, runtime
@@ -521,6 +530,14 @@ as prose. The current examples reveal these next-version gaps:
   replay fingerprints into reviewer-facing evidence. The next bar is broader
   map/filter/fold coverage and story diffs for user requests that change
   collection behavior while preserving typed variant structure.
+- C interop examples now emit deterministic `unsafe-boundary-review.txt` and
+  fingerprint artifacts for the ten accepted C interop entries, tying zlib and
+  libc host calls, owned pointer release, borrowed mutable pointer boundaries,
+  noescape callbacks, `repr(C)` layout, C status maps, nullable pointer
+  rejection, package-local accepted and rejected ABI fixtures, FFI diagnostics,
+  trace coverage, and replay fingerprints into reviewer-facing evidence. The
+  next bar is executable foreign-symbol linking and additional platform ABI
+  variants beyond the current target-contract evidence.
 - Prompt matrices need explicit separation between semantic use-case diversity
   and prompt-surface coverage.
 - Application examples now have deterministic User Story mode evidence that

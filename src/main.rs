@@ -504,6 +504,7 @@ struct AilE2eCorpusEvaluation {
     type_inference_review_text: Option<String>,
     state_boundary_review_text: Option<String>,
     workflow_scheduler_review_text: Option<String>,
+    unsafe_boundary_review_text: Option<String>,
     dependency_review_text: Option<String>,
     stdlib_walkthrough_text: Option<String>,
     diagnostics_text: Option<String>,
@@ -3000,6 +3001,7 @@ fn evaluate_rejected_ail_e2e_corpus_entry(
         type_inference_review_text: None,
         state_boundary_review_text: None,
         workflow_scheduler_review_text: None,
+        unsafe_boundary_review_text: None,
         dependency_review_text: None,
         stdlib_walkthrough_text: None,
         diagnostics_text: Some(diagnostics_text),
@@ -3501,6 +3503,7 @@ fn evaluate_ail_e2e_corpus_entry(
             type_inference_review_text: None,
             state_boundary_review_text: None,
             workflow_scheduler_review_text: None,
+            unsafe_boundary_review_text: None,
             dependency_review_text: None,
             stdlib_walkthrough_text: None,
             diagnostics_text: None,
@@ -3646,6 +3649,13 @@ fn evaluate_ail_e2e_corpus_entry(
         vm_trace_text.as_deref(),
         target_report_text.as_deref(),
     );
+    let unsafe_boundary_review_text = render_ail_e2e_unsafe_boundary_review_text(
+        entry,
+        Some(&checked_core_text),
+        Some(&bytecode_text),
+        vm_trace_text.as_deref(),
+        target_report_text.as_deref(),
+    );
     let dependency_review_text = render_ail_e2e_dependency_review_text(
         entry,
         &semantic_anchors,
@@ -3679,6 +3689,7 @@ fn evaluate_ail_e2e_corpus_entry(
         type_inference_review_text,
         state_boundary_review_text,
         workflow_scheduler_review_text,
+        unsafe_boundary_review_text,
         dependency_review_text,
         stdlib_walkthrough_text,
         diagnostics_text: None,
@@ -3947,6 +3958,17 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
     );
     push_ail_e2e_fingerprint_reuse_lines(
         &mut lines,
+        "unsafe-boundary-review",
+        evaluations,
+        |evaluation| {
+            evaluation
+                .unsafe_boundary_review_text
+                .as_ref()
+                .map(|text| ail_artifact_fingerprint(text))
+        },
+    );
+    push_ail_e2e_fingerprint_reuse_lines(
+        &mut lines,
         "dependency-review",
         evaluations,
         |evaluation| {
@@ -4199,6 +4221,14 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
                 entry.id,
                 entry.id,
                 ail_artifact_fingerprint(workflow_scheduler_review_text)
+            ));
+        }
+        if let Some(unsafe_boundary_review_text) = &evaluation.unsafe_boundary_review_text {
+            lines.push(format!(
+                "entry-artifact {} unsafe-boundary-review examples/{}/unsafe-boundary-review.txt {}",
+                entry.id,
+                entry.id,
+                ail_artifact_fingerprint(unsafe_boundary_review_text)
             ));
         }
         if let Some(dependency_review_text) = &evaluation.dependency_review_text {
@@ -4475,6 +4505,14 @@ fn push_ail_e2e_entry_artifact_lines(
             entry.id,
             entry.id,
             ail_artifact_fingerprint(workflow_scheduler_review_text)
+        ));
+    }
+    if let Some(unsafe_boundary_review_text) = &evaluation.unsafe_boundary_review_text {
+        lines.push(format!(
+            "{prefix} {} unsafe-boundary-review examples/{}/unsafe-boundary-review.txt {}",
+            entry.id,
+            entry.id,
+            ail_artifact_fingerprint(unsafe_boundary_review_text)
         ));
     }
     if let Some(dependency_review_text) = &evaluation.dependency_review_text {
@@ -5145,6 +5183,102 @@ fn render_ail_e2e_workflow_scheduler_review_text(
     }
     lines.push(
         "workflow-scheduler-summary Repeated Task evidence explains temporal policy, retry policy, backoff policy, accepted and rejected fixtures, trace coverage, and replay fingerprints for reviewer audit."
+            .to_string(),
+    );
+    Some(format!("{}\n", lines.join("\n")))
+}
+
+fn render_ail_e2e_unsafe_boundary_review_text(
+    entry: &AilE2eCorpusEntry,
+    checked_core_text: Option<&str>,
+    bytecode_text: Option<&str>,
+    vm_trace_text: Option<&str>,
+    target_report_text: Option<&str>,
+) -> Option<String> {
+    let field = |key: &str| entry.fields.get(key).map(String::as_str).unwrap_or("");
+    let interop_signal =
+        "Interop needs deeper unsafe-boundary tutorials and more ABI fixture diversity.";
+    let is_c_interop_entry = field("capability-under-test") == "c-host-interop"
+        || field("package").ends_with("c_interop.ail")
+        || field("v0.3-signal") == interop_signal;
+    if !is_c_interop_entry {
+        return None;
+    }
+    let runtime_evidence = if target_report_text.is_some() {
+        "target-report"
+    } else if vm_trace_text.is_some() {
+        "vm-trace"
+    } else if bytecode_text.is_some() {
+        "bytecode"
+    } else {
+        "checked-core"
+    };
+    let mut lines = vec![
+        "AIL-Unsafe-Boundary-Review:".to_string(),
+        format!("entry {}", entry.id),
+        format!("semantic-task {}", field("semantic-task")),
+        format!("package {}", field("package")),
+        format!("profile {}", field("profile")),
+        format!("program-domain {}", field("program-domain")),
+        format!("capability-under-test {}", field("capability-under-test")),
+        "unsafe-boundary-review-artifact deterministic-text".to_string(),
+        "interop-surface c-host-interop".to_string(),
+        "foreign-library zlib".to_string(),
+        "foreign-function zlib.compress2".to_string(),
+        "foreign-library libc".to_string(),
+        "foreign-function libc.qsort".to_string(),
+        "ownership-boundary owned pointer requires release semantics".to_string(),
+        "borrow-boundary borrowed mutable pointer must not escape call".to_string(),
+        "callback-boundary qsort comparator is noescape".to_string(),
+        "layout-boundary repr(C) packet header size alignment offsets".to_string(),
+        "status-map-boundary C return values map to AIL failures".to_string(),
+        "nullable-boundary NonNull pointer contracts reject nullable values".to_string(),
+        "accepted-fixture examples/accepted/owned-pointer-release-minimal.ail-spec.md".to_string(),
+        "accepted-fixture examples/accepted/struct-layout-minimal.ail-spec.md".to_string(),
+        "rejected-fixture examples/rejected/borrowed-pointer-escape.ail-spec.md".to_string(),
+        "rejected-fixture examples/rejected/missing-status-map.ail-spec.md".to_string(),
+        "rejected-fixture examples/rejected/missing-trace.ail-spec.md".to_string(),
+        "rejected-fixture examples/rejected/mutable-pointer-aliasing.ail-spec.md".to_string(),
+        "rejected-fixture examples/rejected/nullable-to-non-null.ail-spec.md".to_string(),
+        "rejected-fixture examples/rejected/owned-pointer-without-release.ail-spec.md".to_string(),
+        "rejected-fixture examples/rejected/secret-leakage.ail-spec.md".to_string(),
+        "diagnostic-link AIL-FFI-NULL-001".to_string(),
+        "diagnostic-link AIL-FFI-OWNERSHIP-001".to_string(),
+        "diagnostic-link AIL-FFI-OWNERSHIP-002".to_string(),
+        "diagnostic-link AIL-FFI-ALIAS-001".to_string(),
+        "diagnostic-link AIL-FFI-ERRNO-001".to_string(),
+        "diagnostic-link AIL-FFI-SECRET-001".to_string(),
+        "trace-event ForeignCallCompressed".to_string(),
+        "trace-event ForeignCallbackCompared".to_string(),
+        "trace-event ForeignStatusMapped".to_string(),
+        format!("runtime-evidence {runtime_evidence}"),
+    ];
+    if let Some(checked_core_text) = checked_core_text {
+        lines.push(format!(
+            "checked-core-fingerprint {}",
+            ail_artifact_fingerprint(checked_core_text)
+        ));
+    }
+    if let Some(bytecode_text) = bytecode_text {
+        lines.push(format!(
+            "bytecode-fingerprint {}",
+            ail_artifact_fingerprint(bytecode_text)
+        ));
+    }
+    if let Some(vm_trace_text) = vm_trace_text {
+        lines.push(format!(
+            "vm-trace-fingerprint {}",
+            ail_artifact_fingerprint(vm_trace_text)
+        ));
+    }
+    if let Some(target_report_text) = target_report_text {
+        lines.push(format!(
+            "target-report-fingerprint {}",
+            ail_artifact_fingerprint(target_report_text)
+        ));
+    }
+    lines.push(
+        "unsafe-boundary-summary C Interop evidence explains ownership, borrowing, callbacks, layout, status maps, nullable contracts, accepted and rejected fixtures, diagnostics, trace coverage, and replay fingerprints for reviewer audit."
             .to_string(),
     );
     Some(format!("{}\n", lines.join("\n")))
@@ -6406,6 +6540,27 @@ fn write_ail_e2e_corpus_artifacts(
             )
             .map_err(|error| {
                 format!("failed to write examples workflow scheduler review fingerprint: {error}")
+            })?;
+        }
+        if let Some(unsafe_boundary_review_text) = &evaluation.unsafe_boundary_review_text {
+            let entry_dir = root.join("examples").join(&evaluation.entry.id);
+            fs::create_dir_all(&entry_dir).map_err(|error| {
+                format!("failed to create examples entry artifact dir: {error}")
+            })?;
+            fs::write(
+                entry_dir.join("unsafe-boundary-review.txt"),
+                unsafe_boundary_review_text,
+            )
+            .map_err(|error| format!("failed to write examples unsafe boundary review: {error}"))?;
+            fs::write(
+                entry_dir.join("unsafe-boundary-review.fingerprint.txt"),
+                format!(
+                    "{}\n",
+                    ail_artifact_fingerprint(unsafe_boundary_review_text)
+                ),
+            )
+            .map_err(|error| {
+                format!("failed to write examples unsafe boundary review fingerprint: {error}")
             })?;
         }
         if let Some(dependency_review_text) = &evaluation.dependency_review_text {
