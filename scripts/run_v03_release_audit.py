@@ -98,6 +98,20 @@ def build_v03_audit_plan(
             "manifest.ail-conformance.txt",
         ),
         AuditStep(
+            "conformance-recursive-factorial",
+            [
+                "cargo",
+                "run",
+                "--",
+                "ail-conformance",
+                "examples/recursive_factorial.ail",
+                "--artifact-dir",
+                str(artifacts / "v03-conformance-recursive-factorial"),
+            ],
+            artifacts / "v03-conformance-recursive-factorial",
+            "manifest.ail-conformance.txt",
+        ),
+        AuditStep(
             "bootstrap",
             [
                 "cargo",

@@ -5,9 +5,9 @@
 The v0.3 authoring gate chapter runs the deterministic audit that ties the
 manual together. It proves the current story-first workflow, examples replay,
 roadmap printing, prompt interaction checks, agent entrypoint checks, bootstrap
-self-hosting, Systems profile, stateful runtime, Application baseline, repair
-promotion, UI patch import, and AgentTool policy import checks can be executed
-from one command.
+self-hosting, Turing Core recursion checks, Systems profile, stateful runtime,
+Application baseline, repair promotion, UI patch import, and AgentTool policy
+import checks can be executed from one command.
 
 Run the gate:
 
@@ -26,6 +26,7 @@ run-v03-roadmap-checks
 run-prompt-interaction-checks
 run-agent-entrypoint-checks
 run-bootstrap-self-hosting-checks
+run-turing-core-checks
 run-systems-profile-checks
 run-stateful-runtime-checks
 run-application-baseline-checks
@@ -43,6 +44,7 @@ python3 scripts/run_ail_interactive_manual.py --chapter v03-roadmap --run-checks
 python3 scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run-checks
 python3 scripts/run_ail_interactive_manual.py --chapter agent-entrypoint --run-checks
 python3 scripts/run_ail_interactive_manual.py --chapter bootstrap-self-hosting --run-checks
+python3 scripts/run_ail_interactive_manual.py --chapter turing-core --run-checks
 python3 scripts/run_ail_interactive_manual.py --chapter systems-profile --run-checks
 python3 scripts/run_ail_interactive_manual.py --chapter stateful-runtime --run-checks
 python3 scripts/run_ail_interactive_manual.py --chapter application-baseline --run-checks
@@ -155,6 +157,10 @@ no-host-backend-source true
 bootstrap-dependency-report.txt
 bootstrap-handoff-report.txt
 manifest.ail-bootstrap.txt
+accepted: recursive-with-stack-bound.ail-spec.md
+accepted: recursive-with-well-founded-measure.ail-spec.md
+rejected: recursive-without-base-case.ail-spec.md AIL-CONTROL-003
+rejected: recursive-without-decreasing-argument.ail-spec.md AIL-CONTROL-003
 conformance-report.txt
 manifest.ail-conformance.txt
 accepted: scheduler-task-minimal.ail-spec.md

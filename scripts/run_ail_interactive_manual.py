@@ -560,6 +560,40 @@ BASE_CHAPTERS: tuple[ManualChapter, ...] = (
         ),
     ),
     ManualChapter(
+        chapter_id="turing-core",
+        title="Turing Core",
+        doc="docs/ail/manual/14-turing-core.md",
+        purpose=(
+            "Check recursive Turing Core fixtures, including base-case, "
+            "stack-bound, and well-founded termination-measure evidence."
+        ),
+        commands=(
+            ManualCommand(
+                label="check-recursive-factorial-conformance",
+                command=(
+                    "cargo",
+                    "run",
+                    "--",
+                    "ail-conformance",
+                    "examples/recursive_factorial.ail",
+                    "--artifact-dir",
+                    "/tmp/ail-manual-turing-core-conformance",
+                ),
+                evidence=(
+                    "conformance-report.txt",
+                    "manifest.ail-conformance.txt",
+                    "valid: spec.ail-spec.md",
+                    "accepted: recursive-with-stack-bound.ail-spec.md",
+                    "accepted: recursive-with-well-founded-measure.ail-spec.md",
+                    "rejected: recursive-without-base-case.ail-spec.md AIL-CONTROL-003",
+                    "rejected: recursive-without-decreasing-argument.ail-spec.md AIL-CONTROL-003",
+                    "source=function:countdown",
+                    "ail conformance: ok",
+                ),
+            ),
+        ),
+    ),
+    ManualChapter(
         chapter_id="systems-profile",
         title="Systems Profile",
         doc="docs/ail/manual/11-systems-profile.md",
@@ -1151,8 +1185,8 @@ V03_AUTHORING_GATE = ManualChapter(
     doc="docs/ail/manual/06-v03-authoring-gate.md",
     purpose=(
         "Run the deterministic story, examples, roadmap, prompt, agent, "
-        "self-hosting, Systems, stateful runtime, Application baseline, "
-        "and promotion checks as one v0.3 audit."
+        "self-hosting, Turing Core, Systems, stateful runtime, "
+        "Application baseline, and promotion checks as one v0.3 audit."
     ),
     commands=(
         ManualCommand(
@@ -1275,6 +1309,24 @@ V03_AUTHORING_GATE = ManualChapter(
                 "bootstrap-dependency-report.txt",
                 "bootstrap-handoff-report.txt",
                 "manifest.ail-bootstrap.txt",
+            ),
+        ),
+        ManualCommand(
+            label="run-turing-core-checks",
+            command=(
+                "python3",
+                "scripts/run_ail_interactive_manual.py",
+                "--chapter",
+                "turing-core",
+                "--run-checks",
+            ),
+            evidence=(
+                "conformance-report.txt",
+                "manifest.ail-conformance.txt",
+                "accepted: recursive-with-stack-bound.ail-spec.md",
+                "accepted: recursive-with-well-founded-measure.ail-spec.md",
+                "rejected: recursive-without-base-case.ail-spec.md AIL-CONTROL-003",
+                "rejected: recursive-without-decreasing-argument.ail-spec.md AIL-CONTROL-003",
             ),
         ),
         ManualCommand(

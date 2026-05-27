@@ -81,7 +81,7 @@ section must name the changed version surface.
 | `examples/missing_registry_import.ail/` | `missing-registry-import` | Application | 1 | Rejected package-resolution diagnostic for unresolved registry imports. |
 | `examples/network_driver.ail/` | `network-driver` | System | 10 | System profile resources, ownership, borrowing, device effects, scheduler/interrupt fixtures, and missing-capability diagnostics. |
 | `examples/option_map.ail/` | `ail-std-option-map` | Application | 5 | Focused `Option.map` application surface, UI-tagged prompt entries, checked Core, bytecode, and VM evidence. |
-| `examples/recursive_factorial.ail/` | `recursive-factorial` | Application | 5 | Turing Core recursive function examples with base-case, self-call, explicit stack-bound, arithmetic return, bytecode, and VM trace evidence. |
+| `examples/recursive_factorial.ail/` | `recursive-factorial` | Application | 5 | Turing Core recursive function examples with base-case, self-call, explicit stack-bound, well-founded measure, arithmetic return, bytecode, and VM trace evidence. |
 | `examples/refund_tool.ail/` | `refund-tool` | AgentTool | 16 | AgentTool policy, approval, permission, provider-call, UI, repair, and hallucinated-capability diagnostic examples. |
 | `examples/repeated_task.ail/` | `repeated-task` | Application | 5 | Scheduled maintenance workflow, repeated action lowering, VM trace, temporal-policy fixtures, and `AIL-WORKFLOW-001` diagnostics. |
 | `examples/runtime_generic.ail/` | `runtime-generic` | Application | 5 | Generic runtime priority flow, typed state, trace evidence, and target reports. |

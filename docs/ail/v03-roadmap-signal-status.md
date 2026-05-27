@@ -69,9 +69,9 @@ rationale: Systems manual evidence covers scheduler, interrupt, native receive, 
 evidence: docs/ail/31-v03-learning-and-authoring-gate.md
 
 signal: Turing Core examples need richer termination proofs beyond base-case, decreasing-argument, and numeric stack-bound patterns.
-status: deferred
-rationale: Recursive factorial and stack-depth fixtures prove the first termination checks, but richer proof patterns remain an explicit v0.3 follow-up.
-evidence: docs/ail/31-v03-learning-and-authoring-gate.md
+status: promoted
+rationale: Recursive factorial conformance now includes an accepted well-founded termination-measure fixture in addition to base-case, decreasing-argument, numeric stack-bound, and rejected AIL-CONTROL-003 fixtures; the v0.3 manual and release audit preserve that conformance evidence.
+evidence: docs/ail/manual/14-turing-core.md
 
 signal: UI examples need richer package-local walkthroughs and stricter semantic tagging.
 status: deferred

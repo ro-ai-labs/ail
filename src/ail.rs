@@ -165,6 +165,7 @@ pub struct AilFunction {
     pub branches: Vec<String>,
     pub calls: Vec<AilFunctionCall>,
     pub termination_bounds: Vec<String>,
+    pub termination_measures: Vec<String>,
     pub returns: Vec<String>,
     pub traces: Vec<String>,
     pub provenance: String,
@@ -3151,6 +3152,25 @@ pub fn elaborate_ail_core(package: &AilPackage, document: &AilDocument) -> AilCo
                 format!("function:{}.termination_bound:{bound}", function.name),
             );
         }
+        for measure in &function.termination_measures {
+            let measure_node = graph.add_node(
+                "TerminationMeasure",
+                format!("{}.{}", function.name, measure),
+                None,
+                attr(&[("value", measure)]),
+            );
+            graph.add_edge(
+                "has_termination_measure",
+                &function_node,
+                &measure_node,
+                BTreeMap::new(),
+            );
+            attach_provenance(
+                &mut graph,
+                &measure_node,
+                format!("function:{}.termination_measure:{measure}", function.name),
+            );
+        }
         for return_value in &function.returns {
             let return_node = graph.add_node(
                 "Return",
@@ -4348,6 +4368,7 @@ fn is_known_core_node_kind(kind: &str) -> bool {
             | "Step"
             | "SystemComponent"
             | "TerminationBound"
+            | "TerminationMeasure"
             | "Thing"
             | "Tool"
             | "Trace"
@@ -4381,6 +4402,7 @@ fn is_known_core_edge_kind(kind: &str) -> bool {
             | "has_output"
             | "has_provenance"
             | "has_termination_bound"
+            | "has_termination_measure"
             | "in_region"
             | "layouts_resource"
             | "lowers_to"
@@ -5687,6 +5709,7 @@ pub fn render_ail_spec(document: &AilDocument) -> String {
         if !(function.branches.is_empty()
             && function.calls.is_empty()
             && function.termination_bounds.is_empty()
+            && function.termination_measures.is_empty()
             && function.returns.is_empty()
             && function.traces.is_empty())
         {
@@ -5700,6 +5723,9 @@ pub fn render_ail_spec(document: &AilDocument) -> String {
             }
             for bound in &function.termination_bounds {
                 lines.push(format!("- the function has {bound}"));
+            }
+            for measure in &function.termination_measures {
+                lines.push(format!("- the function has {measure}"));
             }
             for return_value in &function.returns {
                 lines.push(format!("- the function returns {return_value}"));
@@ -8590,6 +8616,17 @@ pub fn ail_document_from_core(core: &AilCore) -> AilDocument {
             outgoing_nodes(core, &node_by_id, function_node, "has_termination_bound")
                 .into_iter()
                 .filter(|node| node.kind == "TerminationBound")
+                .map(|node| {
+                    node.attributes
+                        .get("value")
+                        .cloned()
+                        .unwrap_or_else(|| local_core_name(&node.name, &function.name))
+                })
+                .collect();
+        function.termination_measures =
+            outgoing_nodes(core, &node_by_id, function_node, "has_termination_measure")
+                .into_iter()
+                .filter(|node| node.kind == "TerminationMeasure")
                 .map(|node| {
                     node.attributes
                         .get("value")
@@ -12880,6 +12917,7 @@ fn namespace_ail_document(document: &AilDocument, alias: &str) -> AilDocument {
                     })
                     .collect(),
                 termination_bounds: function.termination_bounds.clone(),
+                termination_measures: function.termination_measures.clone(),
                 returns: function.returns.clone(),
                 traces: function
                     .traces
@@ -15882,8 +15920,23 @@ fn check_recursive_function_termination(core: &AilCore) -> Vec<AilDiagnostic> {
                         .get("value")
                         .is_some_and(|value| termination_bound_looks_explicit(value))
             });
+        let has_well_founded_measure = core
+            .graph
+            .edges
+            .iter()
+            .filter(|edge| edge.kind == "has_termination_measure" && edge.source == function.id)
+            .filter_map(|edge| node_by_id.get(&edge.target))
+            .any(|node| {
+                node.kind == "TerminationMeasure"
+                    && node
+                        .attributes
+                        .get("value")
+                        .is_some_and(|value| termination_measure_looks_well_founded(value))
+            });
         if has_return
-            && ((has_base_case_branch && has_decreasing_call) || has_explicit_termination_bound)
+            && ((has_base_case_branch && has_decreasing_call)
+                || has_explicit_termination_bound
+                || has_well_founded_measure)
         {
             continue;
         }
@@ -15898,7 +15951,7 @@ fn check_recursive_function_termination(core: &AilCore) -> Vec<AilDiagnostic> {
             .with_source_provenance(node_provenance(core, &function.id))
             .with_affected_graph_item(format!("node:{}", function.id))
             .with_repair_suggestion(format!(
-                "Add a base-case branch return, a decreasing recursive argument, or an explicit stack/termination bound for function {}.",
+                "Add a base-case branch return, a decreasing recursive argument, an explicit stack/termination bound, or a well-founded termination measure for function {}.",
                 function.name
             )),
         );
@@ -15939,6 +15992,17 @@ fn termination_bound_looks_explicit(bound_text: &str) -> bool {
         || bound_text.contains("stack")
         || bound_text.contains("termination"))
         && bound_text.chars().any(|ch| ch.is_ascii_digit())
+}
+
+fn termination_measure_looks_well_founded(measure_text: &str) -> bool {
+    let measure_text = measure_text.to_ascii_lowercase();
+    (measure_text.contains("termination measure") || measure_text.contains("well-founded measure"))
+        && measure_text.contains("decreas")
+        && (measure_text.contains(" to 0")
+            || measure_text.contains(" toward 0")
+            || measure_text.contains("lower bound")
+            || measure_text.contains("bounded below")
+            || measure_text.contains("well-founded"))
 }
 
 fn check_semantic_node_provenance(core: &AilCore) -> Vec<AilDiagnostic> {
@@ -19389,6 +19453,8 @@ fn parse_function_body_bullet(function: &mut AilFunction, bullet: &str) {
         let text = trim_sentence(text);
         if function_termination_bound_text(&text) {
             function.termination_bounds.push(text);
+        } else if function_termination_measure_text(&text) {
+            function.termination_measures.push(text);
         }
     } else if let Some(text) = bullet.strip_prefix("the function returns ") {
         function.returns.push(trim_sentence(text));
@@ -19403,6 +19469,12 @@ fn function_termination_bound_text(text: &str) -> bool {
         || text.contains("stack bound")
         || text.contains("stack depth")
         || text.contains("termination bound")
+}
+
+fn function_termination_measure_text(text: &str) -> bool {
+    let text = text.to_ascii_lowercase();
+    (text.contains("termination measure") || text.contains("well-founded measure"))
+        && text.contains("decreas")
 }
 
 fn parse_external_binding_bullet(

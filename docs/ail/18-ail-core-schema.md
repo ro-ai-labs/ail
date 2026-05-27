@@ -102,6 +102,7 @@ Optional attributes for all nodes:
 | `Branch` | `condition`, `ordering` | `Step`, `Action`, `Function` | must have exhaustive outcomes |
 | `Loop` | `loop_kind`, `termination_policy` | `Step`, `Action`, `Function` | policy checked by profile |
 | `TerminationBound` | `value` | `Function`, `Loop` | explicit stack or termination bound must be numeric |
+| `TerminationMeasure` | `value` | `Function`, `Loop` | well-founded measure must decrease toward a lower bound |
 | `Match` | `value` | `Step`, `Action`, `Function` | finite variants must be exhaustive |
 | `Call` | `target` | `Step`, `Action`, `Function` | target must resolve |
 | `Return` | `value` | `Step`, `Function`, `Action` | value type must match output |
@@ -218,6 +219,7 @@ Required attributes for all edges:
 | `grants_permission` | action, approval, package | permission | many | scope declared |
 | `records_trace` | action, tool, failure, loop, call, route, form, dashboard, workflow | trace | many | trace name stable |
 | `has_termination_bound` | function, loop | termination bound | one or more | bound is numeric and profile-compatible |
+| `has_termination_measure` | function, loop | termination measure | one or more | measure is decreasing and well-founded |
 | `has_provenance` | any node or edge | provenance | one or more | human vs agent source tagged |
 | `projects_to` | core node or edge | flow/spec item | many | projection reversible or lossy |
 | `lowers_to` | core node or edge | bytecode/backend item | many | backend report required |

@@ -141,6 +141,16 @@ Lowering records this as a `TerminationBound` node connected by
 `has_termination_bound`. The value must include a numeric bound and mention a
 recursion, stack, or termination limit.
 
+A well-founded measure is written in the function body as:
+
+```ail
+- the function has a well-founded termination measure n that decreases to 0 on every recursive call
+```
+
+Lowering records this as a `TerminationMeasure` node connected by
+`has_termination_measure`. The value must state that the measure decreases and
+must name a visible lower bound or well-founded ordering.
+
 Profiles that require termination reject unproven recursion with
 `AIL-CONTROL-003`.
 
@@ -328,6 +338,7 @@ the profile to may_diverge
 The conformance suite includes these executable patterns:
 
 - recursive factorial
+- recursive countdown with an explicit well-founded termination measure
 - `List.map`, `List.filter`, and `List.reduce`
 - stateful counter with `Read`, `Assign`, and `Write`
 - event loop with `Loop`, `Await`, `Branch`, `Emit`, and cancellation

@@ -136,6 +136,9 @@ one of these version surfaces or add a versioned surface through
   the AIL-authored toolchain agent and AIL-Meta compiler pass, including
   fixed-point, native-bytecode, host-boundary, dependency, handoff, and manifest
   evidence.
+- `manual/14-turing-core.md`: deterministic recursive Turing Core conformance
+  evidence for base-case recursion, explicit stack bounds, well-founded
+  termination measures, and `AIL-CONTROL-003` rejected fixtures.
 - `manual/11-systems-profile.md`: deterministic Systems profile evidence for
   `network_driver.ail`, including scheduler and interrupt conformance fixtures,
   Linux x86_64 native target artifacts, and runtime resource/effect trace

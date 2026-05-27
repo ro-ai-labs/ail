@@ -1151,6 +1151,7 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         "manual/11-systems-profile.md",
         "manual/12-application-baseline.md",
         "manual/13-stateful-runtime.md",
+        "manual/14-turing-core.md",
     ] {
         assert!(
             docs_index.contains(manual_chapter),
@@ -1183,6 +1184,7 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         "ui-patch-import",
         "agent-policy-import",
         "bootstrap-self-hosting",
+        "turing-core",
         "systems-profile",
         "application-baseline",
         "stateful-runtime",
@@ -1199,6 +1201,7 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         "11-systems-profile.md",
         "12-application-baseline.md",
         "13-stateful-runtime.md",
+        "14-turing-core.md",
     ] {
         assert!(
             manual_index.contains(required),
@@ -1577,6 +1580,7 @@ fn script_v03_release_audit_dry_run_lists_completion_gates() {
         "step examples command cargo run -- ail-examples examples --artifact-dir",
         "step agent-policy-import command python3 scripts/run_v03_agent_policy_import_audit.py --examples-artifacts",
         "step roadmap command cargo run -- ail-v03-roadmap examples --artifact-dir",
+        "step conformance-recursive-factorial command cargo run -- ail-conformance examples/recursive_factorial.ail --artifact-dir",
         "step roadmap-signal-status command python3 scripts/run_v03_signal_status_audit.py --roadmap-file",
         "step prompt-llm-review command python3 scripts/run_v03_prompt_llm_harness.py --review-artifacts",
         "step story-llm-review command python3 scripts/run_v03_story_llm_harness.py --review-artifacts",
@@ -1777,7 +1781,9 @@ fn script_v03_signal_status_audit_marks_agent_policy_import_promoted() {
         "signal-status-evidence Package graphs need clearer authoring guidance and dependency review views. cargo run -- ail-examples examples --release-evidence",
         "signal-status Generics need reusable conformance fixtures and teachable stdlib walkthroughs. count 10 status promoted",
         "signal-status-evidence Generics need reusable conformance fixtures and teachable stdlib walkthroughs. cargo run -- ail-examples examples --release-evidence",
-        "promoted-count 6",
+        "signal-status Turing Core examples need richer termination proofs beyond base-case, decreasing-argument, and numeric stack-bound patterns. count 5 status promoted",
+        "signal-status-evidence Turing Core examples need richer termination proofs beyond base-case, decreasing-argument, and numeric stack-bound patterns. docs/ail/manual/14-turing-core.md",
+        "promoted-count 7",
         "missing-status-count 0",
         "audit-result accepted",
     ] {
@@ -1815,6 +1821,7 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "chapter ui-patch-import",
         "chapter agent-policy-import",
         "chapter bootstrap-self-hosting",
+        "chapter turing-core",
         "chapter systems-profile",
         "chapter stateful-runtime",
         "chapter v03-authoring-gate",
@@ -2250,6 +2257,7 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "python3 scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run-checks",
         "python3 scripts/run_ail_interactive_manual.py --chapter agent-entrypoint --run-checks",
         "python3 scripts/run_ail_interactive_manual.py --chapter bootstrap-self-hosting --run-checks",
+        "python3 scripts/run_ail_interactive_manual.py --chapter turing-core --run-checks",
         "python3 scripts/run_ail_interactive_manual.py --chapter systems-profile --run-checks",
         "python3 scripts/run_ail_interactive_manual.py --chapter stateful-runtime --run-checks",
         "python3 scripts/run_ail_interactive_manual.py --chapter application-baseline --run-checks",
@@ -2271,6 +2279,10 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "evidence pass-order-status ok",
         "evidence bootstrap-handoff-report.txt",
         "evidence manifest.ail-bootstrap.txt",
+        "evidence accepted: recursive-with-stack-bound.ail-spec.md",
+        "evidence accepted: recursive-with-well-founded-measure.ail-spec.md",
+        "evidence rejected: recursive-without-base-case.ail-spec.md AIL-CONTROL-003",
+        "evidence rejected: recursive-without-decreasing-argument.ail-spec.md AIL-CONTROL-003",
         "evidence no-host-backend-source true",
         "evidence conformance-report.txt",
         "evidence accepted: scheduler-task-minimal.ail-spec.md",
@@ -7166,7 +7178,7 @@ When countdown runs:
     assert_eq!(
         diagnostic.repair_suggestion.as_deref(),
         Some(
-            "Add a base-case branch return, a decreasing recursive argument, or an explicit stack/termination bound for function countdown."
+            "Add a base-case branch return, a decreasing recursive argument, an explicit stack/termination bound, or a well-founded termination measure for function countdown."
         )
     );
 }
@@ -7218,6 +7230,56 @@ When bounded retry runs:
 }
 
 #[test]
+fn ail_core_accepts_recursive_function_with_well_founded_measure() {
+    let package = load_ail_package_dir(fixture("recursive_factorial.ail")).unwrap();
+    let spec = r#"Function: measured countdown.
+
+The function needs:
+
+- n: Int
+
+The function produces:
+
+- result: Int
+
+When measured countdown runs:
+
+- if n is 0, the function returns 0
+- otherwise the function calls measured countdown with n
+- the function has a well-founded termination measure n that decreases to 0 on every recursive call
+- the function returns the recursive result
+- the function records a trace event named MeasuredCountdownCalled
+"#;
+
+    let document = parse_ail_spec_text(spec).unwrap();
+    let core = elaborate_ail_core(&package, &document);
+    let diagnostics = check_ail_core_diagnostics(&core);
+
+    assert!(
+        diagnostics
+            .iter()
+            .all(|diagnostic| diagnostic.code != "AIL-CONTROL-003"),
+        "{diagnostics:?}"
+    );
+    let rendered_core = render_ail_core(&core);
+    assert!(
+        rendered_core.contains(
+            "node TerminationMeasure measured countdown.a well-founded termination measure n that decreases to 0 on every recursive call"
+        ) && rendered_core.contains(
+            "edge has_termination_measure Function:measured countdown -> TerminationMeasure:measured countdown.a well-founded termination measure n that decreases to 0 on every recursive call"
+        ),
+        "{rendered_core}"
+    );
+    let rendered_spec = render_ail_spec_from_core(&core);
+    assert!(
+        rendered_spec.contains(
+            "- the function has a well-founded termination measure n that decreases to 0 on every recursive call"
+        ),
+        "{rendered_spec}"
+    );
+}
+
+#[test]
 fn cli_ail_conformance_checks_recursive_termination_fixture() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("recursive_factorial.ail");
@@ -7239,6 +7301,10 @@ fn cli_ail_conformance_checks_recursive_termination_fixture() {
         "{stdout}"
     );
     assert!(
+        stdout.contains("accepted: recursive-with-well-founded-measure.ail-spec.md"),
+        "{stdout}"
+    );
+    assert!(
         stdout.contains("rejected: recursive-without-base-case.ail-spec.md AIL-CONTROL-003"),
         "{stdout}"
     );
@@ -7250,7 +7316,7 @@ fn cli_ail_conformance_checks_recursive_termination_fixture() {
     );
     assert!(stdout.contains("source=function:countdown"), "{stdout}");
     assert!(
-        stdout.contains("repair=Add a base-case branch return, a decreasing recursive argument, or an explicit stack/termination bound for function countdown."),
+        stdout.contains("repair=Add a base-case branch return, a decreasing recursive argument, an explicit stack/termination bound, or a well-founded termination measure for function countdown."),
         "{stdout}"
     );
     assert!(stdout.contains("ail conformance: ok"), "{stdout}");

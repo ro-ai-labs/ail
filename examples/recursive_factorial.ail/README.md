@@ -35,6 +35,10 @@ surfaces against the same compact recursion fixture.
 This package includes `examples/accepted/recursive-with-stack-bound.ail-spec.md`
 to prove that an explicit numeric recursion-depth bound is checker-visible
 termination evidence. It also includes
+`examples/accepted/recursive-with-well-founded-measure.ail-spec.md` to prove
+that a decreasing, well-founded termination measure is checker-visible
+termination evidence without relying on a numeric stack-depth budget. It also
+includes
 `examples/rejected/recursive-without-base-case.ail-spec.md` and
 `examples/rejected/recursive-without-decreasing-argument.ail-spec.md` to prove
 that recursive functions without a checker-visible base-case branch or
@@ -49,5 +53,5 @@ Core.
 ## v0.3 Learning Signal
 
 Recursive examples now have checker-visible base-case, decreasing-argument,
-and explicit stack-depth evidence. AIL still needs richer recursion proof
-forms before it can claim a stronger Turing-core teaching path.
+explicit stack-depth, and well-founded termination-measure evidence. The next
+Turing-core teaching bar is mutual recursion and richer proof diagnostics.

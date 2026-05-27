@@ -392,6 +392,7 @@ cargo run -- ail-conformance examples/support_ticket.ail --artifact-dir /tmp/ail
 cargo run -- ail-conformance examples/secret_access.ail --artifact-dir /tmp/ail-v03-secret-access
 cargo run -- ail-conformance examples/stateful_counter.ail --artifact-dir /tmp/ail-v03-stateful-counter
 cargo run -- ail-conformance examples/incident_notifications.ail --artifact-dir /tmp/ail-v03-incident-notifications
+cargo run -- ail-conformance examples/recursive_factorial.ail --artifact-dir /tmp/ail-v03-recursive-factorial
 cargo run -- ail-examples examples --artifact-dir /tmp/ail-v03-learning-examples --release-evidence
 cargo run -- ail-v03-roadmap examples --artifact-dir /tmp/ail-v03-roadmap --release-evidence
 test -f /tmp/ail-v03-learning-examples/v03-roadmap.txt
@@ -424,6 +425,7 @@ cargo run -- ail-conformance examples/support_ticket.ail --artifact-dir /tmp/ail
 cargo run -- ail-conformance examples/secret_access.ail --artifact-dir /tmp/ail-v03-release-evidence/artifacts/v03-conformance-secret-access
 cargo run -- ail-conformance examples/stateful_counter.ail --artifact-dir /tmp/ail-v03-release-evidence/artifacts/v03-conformance-stateful-counter
 cargo run -- ail-conformance examples/incident_notifications.ail --artifact-dir /tmp/ail-v03-release-evidence/artifacts/v03-conformance-incident-notifications
+cargo run -- ail-conformance examples/recursive_factorial.ail --artifact-dir /tmp/ail-v03-release-evidence/artifacts/v03-conformance-recursive-factorial
 cargo run -- ail-bootstrap examples/ail_toolchain_agent.ail --pass examples/compiler_pass.ail --agent examples/ail_toolchain_agent.ail --target linux-x86_64-elf --artifact-dir /tmp/ail-v03-release-evidence/artifacts/v03-bootstrap
 cargo run -- ail-examples examples --artifact-dir /tmp/ail-v03-release-evidence/artifacts/v03-examples --release-evidence
 python3 scripts/run_v03_agent_policy_import_audit.py --examples-artifacts /tmp/ail-v03-release-evidence/artifacts/v03-examples --base-corpus examples --source-entry-id example-40 --output-dir /tmp/ail-v03-release-evidence/artifacts/v03-agent-policy-import
@@ -625,8 +627,10 @@ as prose. The current examples reveal these next-version gaps:
   graphs across imported modules, UI surfaces, workflow transitions, target
   contracts, and regenerated story views.
 - Recursive Turing Core examples now include checked recursive factorial
-  replay, an accepted explicit stack-depth fixture, and package-local rejected
-  fixtures for `AIL-CONTROL-003` when a self-recursive function has no
-  checker-visible base-case branch or calls itself without a decreasing
-  argument. The next bar is richer termination proofs beyond these first
-  base-case, decreasing-argument, and numeric stack-bound patterns.
+  replay, an accepted explicit stack-depth fixture, an accepted well-founded
+  termination-measure fixture, and package-local rejected fixtures for
+  `AIL-CONTROL-003` when a self-recursive function has no checker-visible
+  base-case branch or calls itself without a decreasing argument. The next bar
+  is mutual recursion and richer proof diagnostics beyond these first
+  base-case, decreasing-argument, numeric stack-bound, and well-founded
+  measure patterns.

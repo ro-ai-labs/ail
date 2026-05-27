@@ -211,16 +211,18 @@ severity, blocking behavior, and at least one invalid fixture.
 
 - condition: a self-recursive function has no checker-visible base-case branch
   plus decreasing recursive argument, and no explicit numeric stack or
-  termination bound
+  termination bound, and no well-founded decreasing termination measure
 - affected graph item: `Function`
 - message template: `function {name} has unproven recursive termination`
 - non-engineer explanation: the checker cannot prove that the function will
   stop calling itself
-- agent follow-up question: `What base case or bound proves that {name}
+- agent follow-up question: `What base case, bound, or measure proves that {name}
   terminates?`
 - repair suggestion: add a base-case branch return, a decreasing recursive
-  argument, or an explicit stack/termination bound such as
-  `the function has a maximum recursion depth of 64`
+  argument, an explicit stack/termination bound such as
+  `the function has a maximum recursion depth of 64`, or a well-founded
+  measure such as `the function has a well-founded termination measure n that
+  decreases to 0 on every recursive call`
 - AIL-Flow highlight: Function recursion section
 - severity: error
 - blocking behavior: blocks acceptance
