@@ -1776,18 +1776,21 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             )
             _CompletionHandler.requests = []
             _CompletionHandler.response_text = ""
-            _CompletionHandler.response_payload = {
-                "choices": [
-                    {
-                        "message": {
-                            "content": agent_policy_live_reviewer_envelope(
-                                "requirements-writer"
-                            )
+            def response_for_payload(request_payload):
+                user_probe = request_payload["messages"][1]["content"]
+                role = user_probe.split("Reviewer role: ", 1)[1].splitlines()[0]
+                return {
+                    "choices": [
+                        {
+                            "message": {
+                                "content": agent_policy_live_reviewer_envelope(role)
+                            }
                         }
-                    }
-                ],
-                "model": "test-chat-model",
-            }
+                    ],
+                    "model": "test-chat-model",
+                }
+
+            _CompletionHandler.response_for_payload = response_for_payload
             server = HTTPServer(("127.0.0.1", 0), _CompletionHandler)
             thread = threading.Thread(target=server.serve_forever, daemon=True)
             thread.start()
@@ -1847,6 +1850,334 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             self.assertIn(request["evidence_bundle_fingerprint"], user_probe)
         finally:
             _CompletionHandler.response_payload = None
+            _CompletionHandler.response_for_payload = None
+            if server is not None:
+                server.shutdown()
+                server.server_close()
+            shutil.rmtree(artifact_dir, ignore_errors=True)
+            shutil.rmtree(examples_artifacts, ignore_errors=True)
+            shutil.rmtree(capture_plan_dir, ignore_errors=True)
+            shutil.rmtree(import_work_dir, ignore_errors=True)
+
+    def test_agent_policy_live_reviewer_requests_preserve_required_summary_when_evidence_is_long(
+        self,
+    ):
+        artifact_dir = Path(tempfile.mkdtemp(prefix="ail-agent-policy-live-long-"))
+        examples_artifacts = Path(tempfile.mkdtemp(prefix="ail-agent-policy-evidence-long-"))
+        capture_plan_dir = Path(tempfile.mkdtemp(prefix="ail-agent-policy-plan-long-"))
+        import_work_dir = Path(tempfile.mkdtemp(prefix="ail-agent-policy-import-long-"))
+        server = None
+        try:
+            write_agent_policy_live_evidence_fixture(
+                examples_artifacts, capture_plan_dir, import_work_dir
+            )
+            long_review = (
+                "AIL-Agent-Policy-Review:\n"
+                + ("context-line before summary\n" * 120)
+                + "agent-policy-review-fingerprint-observed-count 1\n"
+                + "multi-agent-handoff-review required\n"
+            )
+            review_path = (
+                examples_artifacts
+                / "examples"
+                / "example-40"
+                / "agent-policy-review.txt"
+            )
+            write_text(review_path, long_review)
+            write_text(review_path.with_suffix(".fingerprint.txt"), fnv64(long_review) + "\n")
+
+            _CompletionHandler.requests = []
+            _CompletionHandler.response_text = ""
+            def response_for_payload(request_payload):
+                user_probe = request_payload["messages"][1]["content"]
+                role = user_probe.split("Reviewer role: ", 1)[1].splitlines()[0]
+                return {
+                    "choices": [
+                        {
+                            "message": {
+                                "content": agent_policy_live_reviewer_envelope(role)
+                            }
+                        }
+                    ],
+                    "model": "test-chat-model",
+                }
+
+            _CompletionHandler.response_for_payload = response_for_payload
+            server = HTTPServer(("127.0.0.1", 0), _CompletionHandler)
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+
+            run = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_agent_policy_live_reviewer_harness.py",
+                    "--endpoint",
+                    f"http://127.0.0.1:{server.server_port}/v1/chat/completions",
+                    "--skip-model-check",
+                    "--artifact-dir",
+                    str(artifact_dir),
+                    "--examples-artifacts",
+                    str(examples_artifacts),
+                    "--capture-plan-dir",
+                    str(capture_plan_dir),
+                    "--import-work-dir",
+                    str(import_work_dir),
+                    "--max-tokens",
+                    "64",
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(run.returncode, 0, f"stdout:\n{run.stdout}\nstderr:\n{run.stderr}")
+            request = json.loads(
+                (artifact_dir / "requests" / "requirements-writer.json").read_text()
+            )
+            user_probe = request["body"]["messages"][1]["content"]
+            self.assertIn("agent-policy-review-fingerprint-observed-count 1", user_probe)
+            review = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_agent_policy_live_reviewer_harness.py",
+                    "--review-artifacts",
+                    str(artifact_dir),
+                    "--allow-skipped-model-check",
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(
+                review.returncode,
+                0,
+                f"stdout:\n{review.stdout}\nstderr:\n{review.stderr}",
+            )
+            self.assertIn("review-result accepted", review.stdout)
+        finally:
+            _CompletionHandler.response_payload = None
+            _CompletionHandler.response_for_payload = None
+            if server is not None:
+                server.shutdown()
+                server.server_close()
+            shutil.rmtree(artifact_dir, ignore_errors=True)
+            shutil.rmtree(examples_artifacts, ignore_errors=True)
+            shutil.rmtree(capture_plan_dir, ignore_errors=True)
+            shutil.rmtree(import_work_dir, ignore_errors=True)
+
+    def test_agent_policy_live_reviewer_requests_include_release_summary_from_examples_report(
+        self,
+    ):
+        artifact_dir = Path(tempfile.mkdtemp(prefix="ail-agent-policy-live-summary-"))
+        examples_artifacts = Path(tempfile.mkdtemp(prefix="ail-agent-policy-summary-evidence-"))
+        capture_plan_dir = Path(tempfile.mkdtemp(prefix="ail-agent-policy-summary-plan-"))
+        import_work_dir = Path(tempfile.mkdtemp(prefix="ail-agent-policy-summary-import-"))
+        server = None
+        try:
+            write_agent_policy_live_evidence_fixture(
+                examples_artifacts, capture_plan_dir, import_work_dir
+            )
+            review_text = (
+                "AIL-Agent-Policy-Review:\n"
+                "entry-id example-40\n"
+                "multi-agent-handoff-review required\n"
+            )
+            review_path = (
+                examples_artifacts
+                / "examples"
+                / "example-40"
+                / "agent-policy-review.txt"
+            )
+            write_text(review_path, review_text)
+            write_text(review_path.with_suffix(".fingerprint.txt"), fnv64(review_text) + "\n")
+            examples_report = (
+                "AIL-Examples-Report:\n"
+                "agent-policy-review-fingerprint-observed-count 1\n"
+                "entry-artifact example-40 agent-policy-review "
+                "examples/example-40/agent-policy-review.txt fnv64:abc\n"
+            )
+            write_text(examples_artifacts / "examples-report.txt", examples_report)
+            write_text(
+                examples_artifacts / "examples-report.fingerprint.txt",
+                fnv64(examples_report) + "\n",
+            )
+
+            _CompletionHandler.requests = []
+            _CompletionHandler.response_text = ""
+
+            def response_for_payload(request_payload):
+                user_probe = request_payload["messages"][1]["content"]
+                role = user_probe.split("Reviewer role: ", 1)[1].splitlines()[0]
+                return {
+                    "choices": [
+                        {
+                            "message": {
+                                "content": agent_policy_live_reviewer_envelope(role)
+                            }
+                        }
+                    ],
+                    "model": "test-chat-model",
+                }
+
+            _CompletionHandler.response_for_payload = response_for_payload
+            server = HTTPServer(("127.0.0.1", 0), _CompletionHandler)
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+
+            run = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_agent_policy_live_reviewer_harness.py",
+                    "--endpoint",
+                    f"http://127.0.0.1:{server.server_port}/v1/chat/completions",
+                    "--skip-model-check",
+                    "--artifact-dir",
+                    str(artifact_dir),
+                    "--examples-artifacts",
+                    str(examples_artifacts),
+                    "--capture-plan-dir",
+                    str(capture_plan_dir),
+                    "--import-work-dir",
+                    str(import_work_dir),
+                    "--max-tokens",
+                    "64",
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(run.returncode, 0, f"stdout:\n{run.stdout}\nstderr:\n{run.stderr}")
+            request = json.loads(
+                (artifact_dir / "requests" / "requirements-writer.json").read_text()
+            )
+            user_probe = request["body"]["messages"][1]["content"]
+            self.assertIn("release-summary examples-report.txt", user_probe)
+            self.assertIn("agent-policy-review-fingerprint-observed-count 1", user_probe)
+            review = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_agent_policy_live_reviewer_harness.py",
+                    "--review-artifacts",
+                    str(artifact_dir),
+                    "--allow-skipped-model-check",
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(
+                review.returncode,
+                0,
+                f"stdout:\n{review.stdout}\nstderr:\n{review.stderr}",
+            )
+            self.assertIn("review-result accepted", review.stdout)
+        finally:
+            _CompletionHandler.response_payload = None
+            _CompletionHandler.response_for_payload = None
+            if server is not None:
+                server.shutdown()
+                server.server_close()
+            shutil.rmtree(artifact_dir, ignore_errors=True)
+            shutil.rmtree(examples_artifacts, ignore_errors=True)
+            shutil.rmtree(capture_plan_dir, ignore_errors=True)
+            shutil.rmtree(import_work_dir, ignore_errors=True)
+
+    def test_agent_policy_live_reviewer_rejects_unfingerprinted_release_summary(
+        self,
+    ):
+        artifact_dir = Path(
+            tempfile.mkdtemp(prefix="ail-agent-policy-live-summary-unfingerprinted-")
+        )
+        examples_artifacts = Path(
+            tempfile.mkdtemp(prefix="ail-agent-policy-summary-unfingerprinted-evidence-")
+        )
+        capture_plan_dir = Path(
+            tempfile.mkdtemp(prefix="ail-agent-policy-summary-unfingerprinted-plan-")
+        )
+        import_work_dir = Path(
+            tempfile.mkdtemp(prefix="ail-agent-policy-summary-unfingerprinted-import-")
+        )
+        server = None
+        try:
+            write_agent_policy_live_evidence_fixture(
+                examples_artifacts, capture_plan_dir, import_work_dir
+            )
+            review_text = (
+                "AIL-Agent-Policy-Review:\n"
+                "entry-id example-40\n"
+                "multi-agent-handoff-review required\n"
+            )
+            review_path = (
+                examples_artifacts
+                / "examples"
+                / "example-40"
+                / "agent-policy-review.txt"
+            )
+            write_text(review_path, review_text)
+            write_text(review_path.with_suffix(".fingerprint.txt"), fnv64(review_text) + "\n")
+            examples_report = (
+                "AIL-Examples-Report:\n"
+                "agent-policy-review-fingerprint-observed-count 1\n"
+            )
+            write_text(examples_artifacts / "examples-report.txt", examples_report)
+
+            _CompletionHandler.requests = []
+            _CompletionHandler.response_text = ""
+
+            def response_for_payload(request_payload):
+                user_probe = request_payload["messages"][1]["content"]
+                role = user_probe.split("Reviewer role: ", 1)[1].splitlines()[0]
+                return {
+                    "choices": [
+                        {
+                            "message": {
+                                "content": agent_policy_live_reviewer_envelope(role)
+                            }
+                        }
+                    ],
+                    "model": "test-chat-model",
+                }
+
+            _CompletionHandler.response_for_payload = response_for_payload
+            server = HTTPServer(("127.0.0.1", 0), _CompletionHandler)
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+
+            run = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_agent_policy_live_reviewer_harness.py",
+                    "--endpoint",
+                    f"http://127.0.0.1:{server.server_port}/v1/chat/completions",
+                    "--skip-model-check",
+                    "--artifact-dir",
+                    str(artifact_dir),
+                    "--examples-artifacts",
+                    str(examples_artifacts),
+                    "--capture-plan-dir",
+                    str(capture_plan_dir),
+                    "--import-work-dir",
+                    str(import_work_dir),
+                    "--max-tokens",
+                    "64",
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertNotEqual(
+                run.returncode,
+                0,
+                f"stdout:\n{run.stdout}\nstderr:\n{run.stderr}",
+            )
+            self.assertIn("evidence-result rejected", run.stdout)
+            self.assertIn(
+                "release summary examples-report.txt is missing fingerprint",
+                run.stdout,
+            )
+            self.assertEqual(_CompletionHandler.requests, [])
+        finally:
+            _CompletionHandler.response_payload = None
+            _CompletionHandler.response_for_payload = None
             if server is not None:
                 server.shutdown()
                 server.server_close()

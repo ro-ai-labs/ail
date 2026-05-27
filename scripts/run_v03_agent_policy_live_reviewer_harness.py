@@ -32,6 +32,12 @@ REQUIRED_EVIDENCE = (
     "agent-policy-import-demo-report.txt",
     "agent-policy-multi-agent-handoff-report.txt",
 )
+REQUIRED_EVIDENCE_SNIPPETS = (
+    "agent-policy-review-fingerprint-observed-count",
+    "policy-handoff-imported true",
+    "policy-handoff-replayed true",
+    "multi-agent-execution-evidence deterministic-role-handoff",
+)
 ROLE_CONTRACTS = (
     ("requirements-writer", "examples/agents/codex-ail-requirements-writer.md"),
     ("spec-writer", "examples/agents/codex-ail-spec-writer.md"),
@@ -107,6 +113,23 @@ def fingerprint_path_for(path: Path) -> Path:
     return path.with_suffix(".fingerprint.txt")
 
 
+def matched_required_snippet_lines(text: str) -> list[str]:
+    lines: list[str] = []
+    for snippet in REQUIRED_EVIDENCE_SNIPPETS:
+        for line in text.splitlines():
+            stripped = line.strip()
+            if snippet in stripped:
+                lines.append(stripped)
+                break
+    return lines
+
+
+def optional_release_summary_paths(args: argparse.Namespace) -> list[tuple[str, Path]]:
+    return [
+        ("examples-report.txt", Path(args.examples_artifacts) / "examples-report.txt"),
+    ]
+
+
 def evidence_paths(args: argparse.Namespace) -> list[tuple[str, Path]]:
     return [
         (
@@ -134,7 +157,52 @@ def evidence_paths(args: argparse.Namespace) -> list[tuple[str, Path]]:
 
 def build_evidence_bundle(args: argparse.Namespace) -> tuple[str, list[str]]:
     errors: list[str] = []
+    summary_sections: list[str] = []
     artifact_sections: list[str] = []
+    for summary_name, path in optional_release_summary_paths(args):
+        if not path.exists():
+            continue
+        text = path.read_text()
+        fingerprint_path = fingerprint_path_for(path)
+        expected = fingerprint_path.read_text().strip() if fingerprint_path.exists() else ""
+        actual = fnv64(text) if text else ""
+        if text and not expected:
+            errors.append(
+                f"release summary {summary_name} is missing fingerprint {fingerprint_path}"
+            )
+        elif text and expected != actual:
+            errors.append(
+                f"fingerprint mismatch {path}: expected {expected} got {actual}"
+            )
+        if text and expected == actual:
+            fingerprint_status = "matched"
+        elif text and expected:
+            fingerprint_status = "mismatch"
+        else:
+            fingerprint_status = "missing"
+        required_snippet_lines = (
+            matched_required_snippet_lines(text) if text and expected == actual else []
+        )
+        summary_sections.append(
+            "\n".join(
+                [
+                    f"release-summary {summary_name}",
+                    f"path {path}",
+                    f"fingerprint {actual or '<missing>'}",
+                    f"fingerprint-file {fingerprint_path}",
+                    f"fingerprint-file-value {expected or '<missing>'}",
+                    f"fingerprint-status {fingerprint_status}",
+                    *(
+                        f"required-snippet {line}"
+                        for line in required_snippet_lines
+                    ),
+                    "content-excerpt:",
+                    f"----- begin {summary_name} -----",
+                    bounded_excerpt(text) if text else "<missing>",
+                    f"----- end {summary_name} -----",
+                ]
+            )
+        )
     for artifact_name, path in evidence_paths(args):
         text = read_required_text(path, errors)
         fingerprint_path = fingerprint_path_for(path)
@@ -147,6 +215,7 @@ def build_evidence_bundle(args: argparse.Namespace) -> tuple[str, list[str]]:
         fingerprint_status = "matched" if text and expected == actual else "missing"
         if text and expected and expected != actual:
             fingerprint_status = "mismatch"
+        required_snippet_lines = matched_required_snippet_lines(text)
         artifact_sections.append(
             "\n".join(
                 [
@@ -156,6 +225,10 @@ def build_evidence_bundle(args: argparse.Namespace) -> tuple[str, list[str]]:
                     f"fingerprint-file {fingerprint_path}",
                     f"fingerprint-file-value {expected or '<missing>'}",
                     f"fingerprint-status {fingerprint_status}",
+                    *(
+                        f"required-snippet {line}"
+                        for line in required_snippet_lines
+                    ),
                     "content-excerpt:",
                     f"----- begin {artifact_name} -----",
                     bounded_excerpt(text) if text else "<missing>",
@@ -164,7 +237,7 @@ def build_evidence_bundle(args: argparse.Namespace) -> tuple[str, list[str]]:
             )
         )
     status = "complete" if not errors else "incomplete"
-    bundle_body = "\n\n".join(artifact_sections)
+    bundle_body = "\n\n".join([*summary_sections, *artifact_sections])
     bundle_fingerprint = fnv64(bundle_body)
     lines = [
         f"Evidence bundle status: {status}",
@@ -197,12 +270,7 @@ def request_has_evidence_bundle(user_probe: str) -> tuple[bool, str]:
             return False, f"request missing evidence artifact {artifact_name}"
         if f"----- begin {artifact_name} -----" not in user_probe:
             return False, f"request missing evidence content for {artifact_name}"
-    for required_snippet in [
-        "agent-policy-review-fingerprint-observed-count",
-        "policy-handoff-imported true",
-        "policy-handoff-replayed true",
-        "multi-agent-execution-evidence deterministic-role-handoff",
-    ]:
+    for required_snippet in REQUIRED_EVIDENCE_SNIPPETS:
         if required_snippet not in user_probe:
             return False, f"request missing evidence snippet {required_snippet}"
     return True, ""
