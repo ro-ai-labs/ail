@@ -1308,6 +1308,50 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             shutil.rmtree(artifact_dir, ignore_errors=True)
             shutil.rmtree(plan_dir, ignore_errors=True)
 
+    def test_story_promotion_capture_plan_rejects_missing_story_fingerprint(self):
+        artifact_dir = Path(tempfile.mkdtemp(prefix="ail-story-promotion-missing-fp-"))
+        plan_dir = Path(tempfile.mkdtemp(prefix="ail-story-promotion-missing-fp-plan-"))
+        try:
+            write_story_llm_review_fixture(artifact_dir)
+            review = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_story_llm_harness.py",
+                    "--review-artifacts",
+                    str(artifact_dir),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(review.returncode, 0, review.stderr)
+            (artifact_dir / "agent-trace.fingerprint.txt").unlink()
+
+            plan = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_story_promotion_capture_plan.py",
+                    "--story-artifacts",
+                    str(artifact_dir),
+                    "--output-dir",
+                    str(plan_dir),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertNotEqual(
+                plan.returncode,
+                0,
+                f"stdout:\n{plan.stdout}\nstderr:\n{plan.stderr}",
+            )
+            self.assertIn("missing file", plan.stderr)
+            self.assertIn("agent-trace.fingerprint.txt", plan.stderr)
+            self.assertFalse((plan_dir / "story-promotion-capture-plan.json").exists())
+        finally:
+            shutil.rmtree(artifact_dir, ignore_errors=True)
+            shutil.rmtree(plan_dir, ignore_errors=True)
+
     def test_capture_replaces_seed_entry_with_live_llm_transcript(self):
         output_dir = Path(tempfile.mkdtemp(prefix="ail-examples-live-capture-"))
         artifact_dir = Path(tempfile.mkdtemp(prefix="ail-examples-live-capture-artifacts-"))

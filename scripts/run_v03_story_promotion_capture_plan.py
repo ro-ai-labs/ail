@@ -124,24 +124,27 @@ def validate_story_artifacts(
         errors,
     )
 
-    for relative_path in [
-        "story.source.md",
-        "story.normalized.md",
-        "requirements.ail-requirements.md",
-        "accepted.ail-spec.md",
-        "checked.ail-core.txt",
-        "review.ail-flow.json",
-        "artifact.ailbc.json",
-        "agent-trace.txt",
-        "llm/requirements.request.json",
-        "llm/requirements.response.json",
-        "llm/requirements.content.txt",
-        "llm/spec.request.json",
-        "llm/spec.response.json",
-        "llm/spec.content.txt",
+    for relative_path, fingerprint_path in [
+        ("story.source.md", "story.source.fingerprint.txt"),
+        ("story.normalized.md", "story.normalized.fingerprint.txt"),
+        ("requirements.ail-requirements.md", "requirements.fingerprint.txt"),
+        ("accepted.ail-spec.md", "accepted.ail-spec.fingerprint.txt"),
+        ("checked.ail-core.txt", "checked.ail-core.fingerprint.txt"),
+        ("review.ail-flow.json", "review.ail-flow.fingerprint.txt"),
+        ("artifact.ailbc.json", "artifact.fingerprint.txt"),
+        ("agent-trace.txt", "agent-trace.fingerprint.txt"),
+        ("llm/requirements.request.json", "llm/requirements.request.fingerprint.txt"),
+        ("llm/requirements.response.json", "llm/requirements.response.fingerprint.txt"),
+        ("llm/requirements.content.txt", "llm/requirements.content.fingerprint.txt"),
+        ("llm/spec.request.json", "llm/spec.request.fingerprint.txt"),
+        ("llm/spec.response.json", "llm/spec.response.fingerprint.txt"),
+        ("llm/spec.content.txt", "llm/spec.content.fingerprint.txt"),
     ]:
-        if not (story_artifacts / relative_path).exists():
-            errors.append(f"story artifacts missing {relative_path}")
+        require_fingerprint(
+            story_artifacts / relative_path,
+            story_artifacts / fingerprint_path,
+            errors,
+        )
 
     if errors:
         raise SystemExit("\n".join(errors))
