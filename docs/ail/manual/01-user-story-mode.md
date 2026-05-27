@@ -66,6 +66,7 @@ After a successful compile run, inspect these files:
 /tmp/ail-user-story-mode/agent.ailbc.json
 /tmp/ail-user-story-mode/manifest.ail-story.txt
 /tmp/ail-user-story-mode/agent-trace.txt
+/tmp/ail-user-story-mode/agent-trace.fingerprint.txt
 /tmp/ail-user-story-mode/llm/requirements.request.json
 /tmp/ail-user-story-mode/llm/requirements.response.json
 /tmp/ail-user-story-mode/llm/requirements.content.txt
@@ -215,6 +216,10 @@ That review writes:
 /tmp/ail-v03-story-llm/story-llm-harness-report.txt
 /tmp/ail-v03-story-llm/story-llm-harness-report.fingerprint.txt
 ```
+
+The review also rejects the bundle if `agent-trace.fingerprint.txt` is
+missing or does not match `agent-trace.txt`; this keeps promotion import from
+accepting a trace that cannot be independently checked.
 
 After the review is accepted, create a plan-only promotion capture artifact:
 

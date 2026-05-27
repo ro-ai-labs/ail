@@ -68,7 +68,8 @@ python3 scripts/run_v03_story_llm_harness.py --review-artifacts /tmp/ail-v03-sto
 
 The review writes `story-llm-harness-report.txt` and
 `story-llm-harness-report.fingerprint.txt` in the reviewed artifact directory.
-The report also records `story-llm-transcript-check-count`,
+The report also verifies `agent-trace.fingerprint.txt` before promotion, and
+records `story-llm-transcript-check-count`,
 `story-prompt-envelope-valid-count`, and
 `story-prompt-envelope-invalid-count` so prompt-pack conformance is reviewable
 without re-contacting the hosted model.
@@ -181,7 +182,7 @@ python3 scripts/run_ail_interactive_manual.py --chapter agent-policy-import --ru
 - `user-story-mode`: story-first authoring with `ail-story`, checked
   requirements, blocking-question evidence, accepted spec, checked Core,
   bytecode, stored LLM request/response/content transcripts, prompt-envelope
-  counts, agent trace, native target runtime-trace evidence, a
+  counts, agent trace and fingerprint evidence, native target runtime-trace evidence, a
   story promotion capture artifact, and a corpus-copy import demo with
   `story-promotion-import-demo-report.txt`,
   `story-artifacts-preserved true`, and `proposed-accepted true`. Prose:

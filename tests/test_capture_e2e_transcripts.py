@@ -969,6 +969,7 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             self.assertIn("AIL-Story-LLM-Harness-Review:", review.stdout)
             self.assertIn("story-id support-ticket-agent-story", review.stdout)
             self.assertIn("semantic-anchor-count 4", review.stdout)
+            self.assertIn("fingerprint-check-count 11", review.stdout)
             self.assertIn("story-llm-transcript-check-count 6", review.stdout)
             self.assertIn("story-prompt-envelope-valid-count 2", review.stdout)
             self.assertIn("story-prompt-envelope-invalid-count 0", review.stdout)
@@ -1000,6 +1001,35 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             self.assertIn("review-result rejected", review.stdout)
             self.assertIn("missing file", review.stdout)
             self.assertIn("agent-trace.txt", review.stdout)
+        finally:
+            shutil.rmtree(artifact_dir, ignore_errors=True)
+
+    def test_story_llm_harness_review_rejects_missing_agent_trace_fingerprint(self):
+        artifact_dir = Path(
+            tempfile.mkdtemp(prefix="ail-story-llm-review-missing-agent-fingerprint-")
+        )
+        try:
+            write_story_llm_review_fixture(artifact_dir)
+            (artifact_dir / "agent-trace.fingerprint.txt").unlink()
+            review = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_story_llm_harness.py",
+                    "--review-artifacts",
+                    str(artifact_dir),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertNotEqual(
+                review.returncode,
+                0,
+                f"stdout:\n{review.stdout}\nstderr:\n{review.stderr}",
+            )
+            self.assertIn("review-result rejected", review.stdout)
+            self.assertIn("missing file", review.stdout)
+            self.assertIn("agent-trace.fingerprint.txt", review.stdout)
         finally:
             shutil.rmtree(artifact_dir, ignore_errors=True)
 

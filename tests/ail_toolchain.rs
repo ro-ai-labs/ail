@@ -2875,6 +2875,10 @@ fn script_v03_story_llm_harness_review_writes_fingerprinted_report() {
         "{review_stdout}"
     );
     assert!(
+        review_stdout.contains("fingerprint-check-count 11"),
+        "{review_stdout}"
+    );
+    assert!(
         review_stdout.contains("story-llm-transcript-check-count 6"),
         "{review_stdout}"
     );

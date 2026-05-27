@@ -96,6 +96,7 @@ trace TicketClosed
 manifest.ail-story.txt
 story-questions.ail-interview.md
 agent-trace.txt
+agent-trace.fingerprint.txt
 examples-report.txt
 v03-roadmap.txt
 manifest.ail-examples.txt

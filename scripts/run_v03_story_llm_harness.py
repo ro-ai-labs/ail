@@ -243,6 +243,10 @@ def review_artifacts(artifact_dir: str) -> int:
             artifact_root / "manifest.ail-story.txt",
             artifact_root / "manifest.ail-story.fingerprint.txt",
         ),
+        (
+            artifact_root / "agent-trace.txt",
+            artifact_root / "agent-trace.fingerprint.txt",
+        ),
     ]:
         if check_fingerprint(path, errors, fingerprint_path):
             fingerprint_checks += 1
