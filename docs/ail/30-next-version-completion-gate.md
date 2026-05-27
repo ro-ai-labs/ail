@@ -512,8 +512,8 @@ already covers parts of this gate:
   model/executor manifest covering executor families, endpoint labels,
   executor labels, capture origins, executor/origin pairs, executor/endpoint
   pairs, and per-entry semantic task provenance
-- checked 124-entry live release examples under `examples`,
-  including 115 accepted prompt-to-artifact examples plus one rejected
+- checked 125-entry live release examples under `examples`,
+  including 116 accepted prompt-to-artifact examples plus one rejected
   semantic-drift diagnostic example and one rejected profile-mismatch
   diagnostic example, one rejected missing-trace diagnostic example, and one
   rejected hallucinated-capability diagnostic example, plus one rejected
@@ -541,7 +541,8 @@ already covers parts of this gate:
   Ticket, and Refund Tool packages, using schema-shaped prompt input or
   constrained prose prompting with an OpenAI-compatible chat-completions
   endpoint with thinking disabled
-- one hundred eighteen replay-clean live Codex `codex-ail-spec-writer` captures for the
+- one hundred twenty-one replay-clean live Codex skill-agent captures,
+  including one hundred eighteen `codex-ail-spec-writer` captures for the
   Standard Collections, Composed Support, Refund Tool, Support Ticket,
   Stateful Counter, UI Workflow, C Interop, Network Driver, Compiler Pass,
   Secret Access, Repeated Task, Runtime Generic, and Incident Response

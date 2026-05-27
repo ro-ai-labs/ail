@@ -1,0 +1,28 @@
+{
+  "agent_contract": "examples/agents/codex-ail-repair-promotion-reviewer.md",
+  "agent_contract_version": "0.1.0",
+  "codex_model": "codex-subagent-default",
+  "conformance_evidence": {
+    "accepted_candidate": "examples/incident_response.ail/examples/accepted/incident-escalation-minimal.ail-spec.md",
+    "package": "examples/incident_response.ail",
+    "rejected_fixture": "escalation-without-commander-review.ail-spec.md",
+    "required_artifacts": [
+      "repair-proof.txt",
+      "repair-candidate.ail-spec.md",
+      "repair-checked.ail-core.txt",
+      "repair-artifact.ailbc.json"
+    ]
+  },
+  "executor_label": "codex-ail-repair-promotion-reviewer",
+  "input": {
+    "expected_diagnostic": "AIL-APP-007",
+    "promotion_decision": "accepted-for-promotion",
+    "source": "package-local conformance repair proof",
+    "target_entry_id": "example-123"
+  },
+  "package": "examples/incident_response.ail",
+  "profile": "Application",
+  "prompt_file": "docs/ail/prompts/diagnostic-repair.system.md",
+  "prompt_version": "ail-prompts.v0.2",
+  "task": "Promote the checked incident-response repair candidate for the escalation commander-review diagnostic into a replayable accepted examples entry while preserving the package-local repair proof evidence."
+}

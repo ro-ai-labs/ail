@@ -436,7 +436,7 @@ python3 scripts/run_v03_signal_status_audit.py --roadmap-file /tmp/ail-v03-relea
 The runner writes `release-audit-manifest.txt`,
 `release-audit-manifest.fingerprint.txt`, per-command logs, and all
 artifact-producing command output under the bundle root. The `ail-examples`
-step must emit the 124-entry corpus with 115 accepted and 9 rejected entries,
+step must emit the 125-entry corpus with 116 accepted and 9 rejected entries,
 plus `examples-report.txt`, `v03-roadmap.txt`,
 `model-executor-manifest.txt`, their fingerprints, and
 `manifest.ail-examples.txt`. The AgentTool import step must preserve
@@ -479,7 +479,7 @@ AIL v0.3 may be called complete only when:
 - `scripts/run_v03_release_audit.py` passes from a clean checkout.
 - The release audit bundle preserves manifests, fingerprints, and logs for
   every artifact-producing command.
-- The `ail-examples` evidence still reports a 124-entry corpus with 115
+- The `ail-examples` evidence still reports a 125-entry corpus with 116
   accepted and 9 rejected entries, all stored under `./examples`.
 - The interactive manual `--all --run-checks` path passes without relying on
   a live endpoint.
@@ -548,9 +548,10 @@ as prose. The current examples reveal these next-version gaps:
   for those incident failures so the Application baseline teaches diagnostics
   with source provenance, affected graph items, repair suggestions, corrected
   fixture candidates, checked Core, and verified bytecode. The corpus now
-  includes `example-122`, an accepted private-notes repair promotion replay
-  sourced from that package-local proof chain. The next bar is more repaired
-  incident promotion variants and a richer stateful application walkthrough.
+  includes `example-122` and `example-123`, accepted private-notes and
+  commander-review repair promotion replays sourced from that package-local
+  proof chain. The next bar is a richer stateful application walkthrough and
+  broader repaired incident promotion coverage.
 - UI examples now emit deterministic visual review, accessibility review,
   workflow authoring artifacts, deterministic UI patch plans, a human-approved
   UI patch import demo, and a rejected accessibility diagnostic fixture that

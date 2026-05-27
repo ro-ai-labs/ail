@@ -102,10 +102,10 @@ diagnostic, source provenance, affected graph item, repair suggestion,
 corrected fixture candidate, checked Core, and verified bytecode before any
 repaired variant is promoted.
 
-The top-level replay catalog includes `example-122`, which promotes the
-private-notes public timeline repair candidate into an accepted end-to-end
-example with stored request, response, story, checked Core, bytecode, and VM
-trace evidence.
+The top-level replay catalog includes `example-122` and `example-123`, which
+promote the private-notes public timeline and commander-review repair
+candidates into accepted end-to-end examples with stored request, response,
+story, checked Core, bytecode, and VM trace evidence.
 
 ## Next Example To Read
 

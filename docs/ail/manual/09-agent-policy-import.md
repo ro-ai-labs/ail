@@ -76,8 +76,8 @@ agent-policy-review-fingerprint-preserved true
 checked-core-fingerprint-preserved true
 policy-handoff-imported true
 policy-handoff-replayed true
-entry-count 125
-checker-result-count accepted 116
+entry-count 126
+checker-result-count accepted 117
 checker-result-count rejected 9
 ```
 

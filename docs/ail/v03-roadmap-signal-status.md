@@ -15,7 +15,7 @@ evidence: scripts/run_v03_agent_policy_import_audit.py
 
 signal: Application examples need more repaired incident promotion variants and richer stateful application walkthroughs after the first package-local repair proof is promoted.
 status: deferred
-rationale: The first incident private-notes repair proof is promoted as example-122, but additional repaired incident variants and richer stateful application walkthroughs remain intentionally open.
+rationale: The private-notes and commander-review incident repair proofs are promoted as example-122 and example-123, but richer stateful application walkthroughs and broader repaired incident coverage remain intentionally open.
 evidence: docs/ail/31-v03-learning-and-authoring-gate.md
 
 signal: Complex systems need richer story graphs that span imported modules, UI surfaces, workflows, target contracts, and regenerated story views.

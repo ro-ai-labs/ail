@@ -97,7 +97,7 @@ provenance, graph item, repair suggestion, corrected fixture candidate, checked
 Core, and verified bytecode before a repaired variant is considered for
 promotion. `examples/examples.md` now includes `example-122` as the first
 accepted incident repair-promotion replay for the private-notes public timeline
-fixture.
+fixture and `example-123` as the commander-review policy promotion replay.
 
 ## Relationship To User Story Mode
 

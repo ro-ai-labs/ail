@@ -238,8 +238,8 @@ def main(argv: list[str]) -> int:
     )
     report_text = (args.output_artifacts / "examples-report.txt").read_text()
     for line in [
-        "entry-count 125",
-        "checker-result-count accepted 116",
+        "entry-count 126",
+        "checker-result-count accepted 117",
         "checker-result-count rejected 9",
         f"entry {args.source_entry_id} ",
         f"entry {args.proposed_entry_id} ",
@@ -263,8 +263,8 @@ def main(argv: list[str]) -> int:
         f"max-tokens {max_tokens}",
         f"token-budget-default {str(token_budget_default).lower()}",
         f"token-budget-warning {token_budget_warning}",
-        "entry-count 125",
-        "checker-result-count accepted 116",
+        "entry-count 126",
+        "checker-result-count accepted 117",
         "checker-result-count rejected 9",
         f"batch-plan {batch_plan_path}",
         f"output-corpus {args.output_corpus}",

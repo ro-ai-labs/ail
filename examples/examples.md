@@ -4443,6 +4443,43 @@ checker-result: accepted
 target: vm
 vm-action: EscalateIncident
 runtime-state: incident.id=INC-1;incident.status=Declared;incident.severity=Sev1
+
+## Example: example-123
+semantic-task: incident-response-commander-review-repair-promoted-123
+profile: Application
+surface-tags: application-workflow,repair-promotion,package-import,multi-module
+package: examples/incident_response.ail
+use-case: Accepted repair promotion for the escalation commander-review rejected incident fixture, proving the conformance repair candidate can be replayed through checked Core, bytecode, and VM trace with escalation policy review preserved.
+capability-level: high-level
+capability-under-test: conformance-repair-promotion
+program-scale: multi-module-system
+program-domain: application
+module-count: 4
+spec-count: 4
+story-count: 6
+interacts-with: incident_identity,incident_policy,incident_notifications,incident_response
+user-story-id: incident-response-commander-review-repair-promotion-story
+user-story: As a reviewer I can promote the incident commander-review repair candidate so escalation policy evidence is accepted only after checked repair proof evidence.
+acceptance-criteria: checked incident repair candidate exists; checked core exists; bytecode exists; VM trace evidence exists; commander review policy is required
+story-evidence: vm-trace
+story-file: stories/example-123.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
+distinctness-claim: incident-response-commander-review-repair-promoted-123 validates conformance-repair-promotion with stored transcript replay, package-local commander-review repair-proof evidence, and VM evidence.
+v0.3-signal: Application examples need more repaired incident promotion variants and richer stateful application walkthroughs after the first package-local repair proof is promoted.
+prompt-file: docs/ail/prompts/diagnostic-repair.system.md
+prompt-version: ail-prompts.v0.2
+prompt-fingerprint: fnv64:c9700f2c2e57e49e
+executor-family: codex-skill-agent
+executor-label: codex-ail-repair-promotion-reviewer
+capture-origin: live-codex
+request-file: requests/example-123.json
+response-file: responses/example-123.json
+artifact-kind: ail-spec
+checker-result: accepted
+target: vm
+vm-action: EscalateIncident
+runtime-state: incident.id=INC-1;incident.status=Declared;incident.severity=Sev1
 ## Example: example-30-story
 semantic-task: support-ticket-story-promoted-30
 profile: Application

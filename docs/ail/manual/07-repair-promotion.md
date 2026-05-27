@@ -143,5 +143,5 @@ writes:
 ```
 
 The report must include `source-preserved true`, `proposed-accepted true`,
-`entry-count 125`, `checker-result-count accepted 116`, and
+`entry-count 126`, `checker-result-count accepted 117`, and
 `checker-result-count rejected 9`.

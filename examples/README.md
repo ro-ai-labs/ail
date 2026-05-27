@@ -317,11 +317,11 @@ be replayed with `ail-examples` before promotion.
 The generated files are committed so release verification does not depend on
 live LLM access. The current corpus stores:
 
-- `examples.md`: 124 manifest entries with prompt, executor, profile, surface,
+- `examples.md`: 125 manifest entries with prompt, executor, profile, surface,
   use-case, capability-level, capability-under-test, program scale, program
   domain, module/spec/story counts, interaction metadata, user-story metadata,
   story journey, distinctness, capture-origin, checker-result, target, and
-  v0.3 learning metadata. One hundred fifteen entries are accepted
+  v0.3 learning metadata. One hundred sixteen entries are accepted
   prompt-to-artifact examples that replay through checked Core, bytecode, VM
   trace, and binary or target-contract evidence; nine entries are rejected
   diagnostic examples.
@@ -409,18 +409,21 @@ escapes are rejected before replay so example evidence remains portable and
 human-reviewable.
 
 This is checked release evidence with four replay-clean live LLM
-captures and one hundred eighteen replay-clean live Codex skill-agent captures. The
-current corpus marks zero entries `capture-origin: deterministic-seed`, four
-entries `capture-origin: live-llm`, and one hundred eighteen `codex-ail-spec-writer`
-entries `capture-origin: live-codex`. The replay report exposes
+captures and one hundred twenty-one replay-clean live Codex skill-agent
+captures. The current corpus marks zero entries `capture-origin:
+deterministic-seed`, four entries `capture-origin: live-llm`, one hundred
+twenty-one entries `capture-origin: live-codex`, and one hundred eighteen
+`codex-ail-spec-writer` executor-label entries. The replay report exposes
 capability-level counts, program-scale counts, story-journey counts,
 program-domain counts, story-evidence counts, capture-origin counts, response,
 extracted-artifact, checked Core, bytecode, VM trace, native, target-report,
 UI review, UI review patch, agent policy review, diagnostics, repair-tutorial,
 repair-candidate, repair-checked-core, repair-bytecode, repair-vm-trace,
 repair-target-report, repair-diff, and repair-promotion-review fingerprint
-reuse. Response, extracted-artifact, and target-report duplicate counts must
-remain zero before claiming the v0.2 prompt-to-artifact release gate. Accepted UI workflow and
+reuse. Response and extracted-artifact duplicate counts are intentionally
+nonzero for the paired `example-122` and `example-123` incident repair
+promotions, while target-report duplicate counts must remain zero before
+claiming the v0.2 prompt-to-artifact release gate. Accepted UI workflow and
 UI-surface replay must emit `ui-review-fingerprint-*` and
 `ui-review-patch-fingerprint-*` report lines plus `ui-review` and
 `ui-review-patch` manifest entries before claiming the visual/accessibility
