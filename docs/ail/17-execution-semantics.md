@@ -131,6 +131,16 @@ function declares:
 - stack or continuation strategy
 - trace event name for recursive entry
 
+An explicit stack bound is written in the function body as:
+
+```ail
+- the function has a maximum recursion depth of 64
+```
+
+Lowering records this as a `TerminationBound` node connected by
+`has_termination_bound`. The value must include a numeric bound and mention a
+recursion, stack, or termination limit.
+
 Profiles that require termination reject unproven recursion with
 `AIL-CONTROL-003`.
 

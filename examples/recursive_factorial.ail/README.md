@@ -32,11 +32,13 @@ surfaces against the same compact recursion fixture.
 
 ## Rejected Fixtures
 
-This package includes `examples/rejected/recursive-without-base-case.ail-spec.md`
-to prove that recursive functions without a checker-visible base-case branch
-fail with `AIL-CONTROL-003`. v0.3 should still add rejected function fixtures
-for non-integer recursion input and unbounded recursion without a decreasing
-argument.
+This package includes `examples/accepted/recursive-with-stack-bound.ail-spec.md`
+to prove that an explicit numeric recursion-depth bound is checker-visible
+termination evidence. It also includes
+`examples/rejected/recursive-without-base-case.ail-spec.md` and
+`examples/rejected/recursive-without-decreasing-argument.ail-spec.md` to prove
+that recursive functions without a checker-visible base-case branch or
+decreasing argument fail with `AIL-CONTROL-003`.
 
 ## Next Example To Read
 
@@ -46,6 +48,6 @@ Core.
 
 ## v0.3 Learning Signal
 
-Recursive examples now have a first checker-visible termination diagnostic.
-AIL still needs explicit stack-depth policy and richer recursion proofs before
-it can claim a stronger Turing-core teaching path.
+Recursive examples now have checker-visible base-case, decreasing-argument,
+and explicit stack-depth evidence. AIL still needs richer recursion proof
+forms before it can claim a stronger Turing-core teaching path.

@@ -208,8 +208,9 @@ severity, blocking behavior, and at least one invalid fixture.
 
 ### AIL-CONTROL-003
 
-- condition: a self-recursive function has no checker-visible base-case branch,
-  return, or decreasing recursive argument
+- condition: a self-recursive function has no checker-visible base-case branch
+  plus decreasing recursive argument, and no explicit numeric stack or
+  termination bound
 - affected graph item: `Function`
 - message template: `function {name} has unproven recursive termination`
 - non-engineer explanation: the checker cannot prove that the function will
@@ -217,12 +218,14 @@ severity, blocking behavior, and at least one invalid fixture.
 - agent follow-up question: `What base case or bound proves that {name}
   terminates?`
 - repair suggestion: add a base-case branch return, a decreasing recursive
-  argument, or an explicit stack/termination bound
+  argument, or an explicit stack/termination bound such as
+  `the function has a maximum recursion depth of 64`
 - AIL-Flow highlight: Function recursion section
 - severity: error
 - blocking behavior: blocks acceptance
-- invalid fixture:
-  `examples/recursive_factorial.ail/examples/rejected/recursive-without-base-case.ail-spec.md`
+- invalid fixtures:
+  `examples/recursive_factorial.ail/examples/rejected/recursive-without-base-case.ail-spec.md`,
+  `examples/recursive_factorial.ail/examples/rejected/recursive-without-decreasing-argument.ail-spec.md`
 
 ### AIL-APP-001
 

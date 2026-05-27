@@ -457,10 +457,11 @@ as prose. The current examples reveal these next-version gaps:
   graphs across imported modules, UI surfaces, workflow transitions, target
   contracts, and regenerated story views.
 - Recursive Turing Core examples now include checked recursive factorial
-  replay and a package-local rejected fixture for `AIL-CONTROL-003` when a
-  self-recursive function has no checker-visible base-case branch. The next
-  bar is explicit stack-depth policy, non-decreasing recursive argument
-  diagnostics, and richer termination proofs beyond simple base-case patterns.
+  replay, an accepted explicit stack-depth fixture, and package-local rejected
+  fixtures for `AIL-CONTROL-003` when a self-recursive function has no
+  checker-visible base-case branch or calls itself without a decreasing
+  argument. The next bar is richer termination proofs beyond these first
+  base-case, decreasing-argument, and numeric stack-bound patterns.
 - Stateful examples now include package-local accepted/rejected conformance
   fixtures for persistence guarantees, retry idempotency keys, shared-state
   locking or serialization, and replay recovery after failure. The next bar is

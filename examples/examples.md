@@ -4244,7 +4244,7 @@ story-file: stories/example-117.md
 story-journey: story-to-spec
 story-roundtrip: semantic-similar
 distinctness-claim: recursive-factorial-live-codex-interview-117 validates turing-core-recursion through docs/ail/prompts/interview.system.md and VM trace evidence.
-v0.3-signal: Turing Core examples need termination and stack-safety diagnostics for recursive functions.
+v0.3-signal: Turing Core examples need richer termination proofs beyond base-case, decreasing-argument, and numeric stack-bound patterns.
 prompt-file: docs/ail/prompts/interview.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
@@ -4281,7 +4281,7 @@ story-file: stories/example-118.md
 story-journey: story-to-spec
 story-roundtrip: semantic-similar
 distinctness-claim: recursive-factorial-live-codex-spec-draft-118 validates turing-core-recursion through docs/ail/prompts/spec-draft.system.md and VM trace evidence.
-v0.3-signal: Turing Core examples need termination and stack-safety diagnostics for recursive functions.
+v0.3-signal: Turing Core examples need richer termination proofs beyond base-case, decreasing-argument, and numeric stack-bound patterns.
 prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
@@ -4318,7 +4318,7 @@ story-file: stories/example-119.md
 story-journey: story-to-spec
 story-roundtrip: semantic-similar
 distinctness-claim: recursive-factorial-live-codex-core-draft-119 validates turing-core-recursion through docs/ail/prompts/core-draft.system.md and VM trace evidence.
-v0.3-signal: Turing Core examples need termination and stack-safety diagnostics for recursive functions.
+v0.3-signal: Turing Core examples need richer termination proofs beyond base-case, decreasing-argument, and numeric stack-bound patterns.
 prompt-file: docs/ail/prompts/core-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:0175222e4a84bec4
@@ -4355,7 +4355,7 @@ story-file: stories/example-120.md
 story-journey: spec-to-story
 story-roundtrip: semantic-similar
 distinctness-claim: recursive-factorial-live-codex-core-to-spec-120 validates turing-core-recursion through docs/ail/prompts/core-to-spec.system.md and VM trace evidence.
-v0.3-signal: Turing Core examples need termination and stack-safety diagnostics for recursive functions.
+v0.3-signal: Turing Core examples need richer termination proofs beyond base-case, decreasing-argument, and numeric stack-bound patterns.
 prompt-file: docs/ail/prompts/core-to-spec.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:9f447e07620792b2
@@ -4392,7 +4392,7 @@ story-file: stories/example-121.md
 story-journey: story-amendment
 story-roundtrip: semantic-similar
 distinctness-claim: recursive-factorial-live-codex-trace-debug-121 validates turing-core-recursion through docs/ail/prompts/trace-debug.system.md and VM trace evidence.
-v0.3-signal: Turing Core examples need termination and stack-safety diagnostics for recursive functions.
+v0.3-signal: Turing Core examples need richer termination proofs beyond base-case, decreasing-argument, and numeric stack-bound patterns.
 prompt-file: docs/ail/prompts/trace-debug.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:f5fffd069da83242

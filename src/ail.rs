@@ -164,6 +164,7 @@ pub struct AilFunction {
     pub outputs: BTreeMap<String, AilFunctionValue>,
     pub branches: Vec<String>,
     pub calls: Vec<AilFunctionCall>,
+    pub termination_bounds: Vec<String>,
     pub returns: Vec<String>,
     pub traces: Vec<String>,
     pub provenance: String,
@@ -3131,6 +3132,25 @@ pub fn elaborate_ail_core(package: &AilPackage, document: &AilDocument) -> AilCo
             graph.add_edge("calls", &function_node, &call_node, BTreeMap::new());
             attach_provenance(&mut graph, &call_node, &call.provenance);
         }
+        for bound in &function.termination_bounds {
+            let bound_node = graph.add_node(
+                "TerminationBound",
+                format!("{}.{}", function.name, bound),
+                None,
+                attr(&[("value", bound)]),
+            );
+            graph.add_edge(
+                "has_termination_bound",
+                &function_node,
+                &bound_node,
+                BTreeMap::new(),
+            );
+            attach_provenance(
+                &mut graph,
+                &bound_node,
+                format!("function:{}.termination_bound:{bound}", function.name),
+            );
+        }
         for return_value in &function.returns {
             let return_node = graph.add_node(
                 "Return",
@@ -4326,6 +4346,7 @@ fn is_known_core_node_kind(kind: &str) -> bool {
             | "StatusMap"
             | "Step"
             | "SystemComponent"
+            | "TerminationBound"
             | "Thing"
             | "Tool"
             | "Trace"
@@ -4358,6 +4379,7 @@ fn is_known_core_edge_kind(kind: &str) -> bool {
             | "has_input"
             | "has_output"
             | "has_provenance"
+            | "has_termination_bound"
             | "in_region"
             | "layouts_resource"
             | "lowers_to"
@@ -5663,6 +5685,7 @@ pub fn render_ail_spec(document: &AilDocument) -> String {
         }
         if !(function.branches.is_empty()
             && function.calls.is_empty()
+            && function.termination_bounds.is_empty()
             && function.returns.is_empty()
             && function.traces.is_empty())
         {
@@ -5673,6 +5696,9 @@ pub fn render_ail_spec(document: &AilDocument) -> String {
             }
             for call in &function.calls {
                 lines.push(format!("- otherwise the function calls {}", call.text));
+            }
+            for bound in &function.termination_bounds {
+                lines.push(format!("- the function has {bound}"));
             }
             for return_value in &function.returns {
                 lines.push(format!("- the function returns {return_value}"));
@@ -8559,6 +8585,17 @@ pub fn ail_document_from_core(core: &AilCore) -> AilDocument {
                 provenance: node_provenance(core, &node.id).unwrap_or_default(),
             })
             .collect();
+        function.termination_bounds =
+            outgoing_nodes(core, &node_by_id, function_node, "has_termination_bound")
+                .into_iter()
+                .filter(|node| node.kind == "TerminationBound")
+                .map(|node| {
+                    node.attributes
+                        .get("value")
+                        .cloned()
+                        .unwrap_or_else(|| local_core_name(&node.name, &function.name))
+                })
+                .collect();
         function.returns = outgoing_nodes(core, &node_by_id, function_node, "contains")
             .into_iter()
             .filter(|node| node.kind == "Return")
@@ -12841,6 +12878,7 @@ fn namespace_ail_document(document: &AilDocument, alias: &str) -> AilDocument {
                         provenance: format!("function:{function_name}.call:{}", call.text),
                     })
                     .collect(),
+                termination_bounds: function.termination_bounds.clone(),
                 returns: function.returns.clone(),
                 traces: function
                     .traces
@@ -15774,7 +15812,22 @@ fn check_recursive_function_termination(core: &AilCore) -> Vec<AilDiagnostic> {
         let has_decreasing_call = recursive_calls
             .iter()
             .any(|call| recursive_call_looks_decreasing(&call.name));
-        if has_base_case_branch && has_return && has_decreasing_call {
+        let has_explicit_termination_bound = core
+            .graph
+            .edges
+            .iter()
+            .filter(|edge| edge.kind == "has_termination_bound" && edge.source == function.id)
+            .filter_map(|edge| node_by_id.get(&edge.target))
+            .any(|node| {
+                node.kind == "TerminationBound"
+                    && node
+                        .attributes
+                        .get("value")
+                        .is_some_and(|value| termination_bound_looks_explicit(value))
+            });
+        if has_return
+            && ((has_base_case_branch && has_decreasing_call) || has_explicit_termination_bound)
+        {
             continue;
         }
         diagnostics.push(
@@ -15821,6 +15874,14 @@ fn recursive_call_looks_decreasing(call_text: &str) -> bool {
         || call_text.contains("predecessor")
         || call_text.contains("smaller")
         || call_text.contains("less")
+}
+
+fn termination_bound_looks_explicit(bound_text: &str) -> bool {
+    let bound_text = bound_text.to_ascii_lowercase();
+    (bound_text.contains("recursion")
+        || bound_text.contains("stack")
+        || bound_text.contains("termination"))
+        && bound_text.chars().any(|ch| ch.is_ascii_digit())
 }
 
 fn check_semantic_node_provenance(core: &AilCore) -> Vec<AilDiagnostic> {
@@ -19267,11 +19328,24 @@ fn parse_function_body_bullet(function: &mut AilFunction, bullet: &str) {
             provenance: format!("function:{}.call:{text}", function.name),
             text,
         });
+    } else if let Some(text) = bullet.strip_prefix("the function has ") {
+        let text = trim_sentence(text);
+        if function_termination_bound_text(&text) {
+            function.termination_bounds.push(text);
+        }
     } else if let Some(text) = bullet.strip_prefix("the function returns ") {
         function.returns.push(trim_sentence(text));
     } else if let Some(text) = bullet.strip_prefix("the function records a trace event named ") {
         function.traces.push(trim_sentence(text));
     }
+}
+
+fn function_termination_bound_text(text: &str) -> bool {
+    let text = text.to_ascii_lowercase();
+    text.contains("recursion depth")
+        || text.contains("stack bound")
+        || text.contains("stack depth")
+        || text.contains("termination bound")
 }
 
 fn parse_external_binding_bullet(

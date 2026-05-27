@@ -6103,6 +6103,52 @@ When countdown runs:
 }
 
 #[test]
+fn ail_core_accepts_recursive_function_with_explicit_stack_bound() {
+    let package = load_ail_package_dir(fixture("recursive_factorial.ail")).unwrap();
+    let spec = r#"Function: bounded retry.
+
+The function needs:
+
+- n: Int
+
+The function produces:
+
+- result: Int
+
+When bounded retry runs:
+
+- the function calls bounded retry with n
+- the function has a maximum recursion depth of 64
+- the function returns the recursive result
+- the function records a trace event named BoundedRetryCalled
+"#;
+
+    let document = parse_ail_spec_text(spec).unwrap();
+    let core = elaborate_ail_core(&package, &document);
+    let diagnostics = check_ail_core_diagnostics(&core);
+
+    assert!(
+        diagnostics
+            .iter()
+            .all(|diagnostic| diagnostic.code != "AIL-CONTROL-003"),
+        "{diagnostics:?}"
+    );
+    let rendered_core = render_ail_core(&core);
+    assert!(
+        rendered_core.contains("node TerminationBound bounded retry.a maximum recursion depth of 64")
+            && rendered_core.contains(
+                "edge has_termination_bound Function:bounded retry -> TerminationBound:bounded retry.a maximum recursion depth of 64"
+            ),
+        "{rendered_core}"
+    );
+    let rendered_spec = render_ail_spec_from_core(&core);
+    assert!(
+        rendered_spec.contains("- the function has a maximum recursion depth of 64"),
+        "{rendered_spec}"
+    );
+}
+
+#[test]
 fn cli_ail_conformance_checks_recursive_termination_fixture() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("recursive_factorial.ail");
@@ -6120,7 +6166,17 @@ fn cli_ail_conformance_checks_recursive_termination_fixture() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("valid: spec.ail-spec.md"), "{stdout}");
     assert!(
+        stdout.contains("accepted: recursive-with-stack-bound.ail-spec.md"),
+        "{stdout}"
+    );
+    assert!(
         stdout.contains("rejected: recursive-without-base-case.ail-spec.md AIL-CONTROL-003"),
+        "{stdout}"
+    );
+    assert!(
+        stdout.contains(
+            "rejected: recursive-without-decreasing-argument.ail-spec.md AIL-CONTROL-003"
+        ),
         "{stdout}"
     );
     assert!(stdout.contains("source=function:countdown"), "{stdout}");
