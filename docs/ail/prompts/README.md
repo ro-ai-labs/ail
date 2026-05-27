@@ -36,7 +36,10 @@ with task-specific probes. Each request records `probe-label` and
 `probe-fingerprint` metadata so review can distinguish useful prompt-surface
 coverage from a generic smoke prompt. The user probe also includes an inline
 envelope contract with the exact `artifact_kind`, `artifact_text`, `questions`,
-and `checker_handoff` shape expected by the offline reviewer. Chat-completion
+and `checker_handoff` shape expected by the offline reviewer. The contract also
+states the `expected-content-kind` for the task-specific probes: eight prompts
+must return non-empty `artifact_text`, while `interview`, `diagnostic-repair`,
+and `interop` probes must return blocking `questions`. Chat-completion
 requests include an OpenAI-compatible JSON mode hint,
 `response_format: {"type":"json_object"}`, when the endpoint is
 `/v1/chat/completions`. The default live budget is `--max-tokens 768`, which
@@ -64,10 +67,14 @@ The review mode is offline. It checks the required prompt set, manifest,
 report, request/response/content files, prompt fingerprints, probe labels,
 probe fingerprints, expected `artifact_kind` values, artifact fingerprints, and
 prompt-pack envelope shape. A hosted probe is not accepted only because it is
-non-empty: extracted content must classify as either `prompt-envelope-artifact`
-or `prompt-envelope-questions`. The review prints
-`prompt-envelope-valid-count`, `prompt-envelope-questions-count`, and
+non-empty: extracted content must classify as the expected outcome for that
+prompt, either `prompt-envelope-artifact` or `prompt-envelope-questions`. The
+review prints `prompt-envelope-valid-count`, `prompt-envelope-artifact-count`,
+`prompt-envelope-questions-count`,
+`prompt-envelope-artifact-required-count`,
+`prompt-envelope-questions-expected-count`, `prompt-outcome-match-count`, and
 `prompt-envelope-invalid-count`, persists the accepted/rejected review text as
 a fingerprinted review artifact, and rejects empty output, raw non-envelope
-output, generic artifact kinds, or artifacts captured with the wrong
-task-specific probe.
+output, generic artifact kinds, unexpected question-only answers for
+artifact-required probes, or artifacts captured with the wrong task-specific
+probe.

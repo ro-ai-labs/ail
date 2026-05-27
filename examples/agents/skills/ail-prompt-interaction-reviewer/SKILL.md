@@ -83,6 +83,9 @@ python3 scripts/run_ail_interactive_manual.py --chapter repair-promotion --run-c
 The review report must include:
 
 - `prompt-envelope-valid-count`
+- `prompt-envelope-artifact-required-count`
+- `prompt-envelope-questions-expected-count`
+- `prompt-outcome-match-count`
 - `prompt-envelope-invalid-count`
 - `manifest.v03-prompt-llm.txt`
 - `prompt-llm-harness-report.txt`
@@ -108,6 +111,7 @@ The review report must include:
 Return `needs-repair` or `rejected-for-promotion` when:
 
 - any prompt envelope is invalid
+- an artifact-required prompt returns only blocking questions
 - probe metadata is missing, stale, or generic
 - hosted output is non-empty but fails offline review
 - story artifacts lose semantic anchors or agent trace evidence

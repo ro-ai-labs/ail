@@ -40,6 +40,19 @@ EXPECTED_ARTIFACT_KINDS = {
     "trace-debug.system.md": "Trace Explanation",
     "interop.system.md": "Interop Questions",
 }
+EXPECTED_PROMPT_CONTENT_KINDS = {
+    "interview.system.md": "prompt-envelope-questions",
+    "requirements.system.md": "prompt-envelope-artifact",
+    "spec-draft.system.md": "prompt-envelope-artifact",
+    "core-draft.system.md": "prompt-envelope-artifact",
+    "repair.system.md": "prompt-envelope-artifact",
+    "diagnostic-repair.system.md": "prompt-envelope-questions",
+    "core-to-spec.system.md": "prompt-envelope-artifact",
+    "core-to-summary.system.md": "prompt-envelope-artifact",
+    "flow-patch.system.md": "prompt-envelope-artifact",
+    "trace-debug.system.md": "prompt-envelope-artifact",
+    "interop.system.md": "prompt-envelope-questions",
+}
 
 _PROMPT_HARNESS_SPEC = importlib.util.spec_from_file_location(
     "run_v03_prompt_llm_harness",
@@ -86,12 +99,36 @@ def prompt_probe_envelope(prompt_name, artifact_kind_override=None):
     )
 
 
+def prompt_artifact_envelope(prompt_name, artifact_kind_override=None):
+    stem = prompt_name.removesuffix(".system.md")
+    return (
+        json.dumps(
+            {
+                "artifact_kind": artifact_kind_override
+                or EXPECTED_ARTIFACT_KINDS[prompt_name],
+                "artifact_text": f"Checked artifact output for {stem}.",
+                "questions": [],
+                "assumptions": [],
+                "provenance": [f"test:{stem}"],
+                "checker_handoff": {
+                    "must_check": True,
+                    "expected_profile": "Application",
+                    "expected_features": [],
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n"
+    )
+
+
 def write_prompt_llm_review_fixture(
     artifact_dir,
     empty_content_for=None,
     invalid_content_for=None,
     mismatched_probe_for=None,
     mismatched_artifact_kind_for=None,
+    question_content_for=None,
 ):
     artifact_dir.mkdir(parents=True, exist_ok=True)
     models_text = (
@@ -129,8 +166,24 @@ def write_prompt_llm_review_fixture(
             content = f"Raw non-envelope output for {stem}.\n"
             content_kind = "invalid"
         elif mismatched_artifact_kind_for == prompt_name:
-            content = prompt_probe_envelope(prompt_name, "AIL-Prompt-Probe")
+            if (
+                EXPECTED_PROMPT_CONTENT_KINDS[prompt_name]
+                == "prompt-envelope-artifact"
+            ):
+                content = prompt_artifact_envelope(prompt_name, "AIL-Prompt-Probe")
+                content_kind = "prompt-envelope-artifact"
+            else:
+                content = prompt_probe_envelope(prompt_name, "AIL-Prompt-Probe")
+                content_kind = "prompt-envelope-questions"
+        elif question_content_for == prompt_name:
+            content = prompt_probe_envelope(prompt_name)
             content_kind = "prompt-envelope-questions"
+        elif (
+            EXPECTED_PROMPT_CONTENT_KINDS[prompt_name]
+            == "prompt-envelope-artifact"
+        ):
+            content = prompt_artifact_envelope(prompt_name)
+            content_kind = "prompt-envelope-artifact"
         else:
             content = prompt_probe_envelope(prompt_name)
             content_kind = "prompt-envelope-questions"
@@ -177,7 +230,9 @@ def write_prompt_llm_review_fixture(
             f"prompt {prompt_rel} prompt-fingerprint {fnv64(prompt_text)} "
             f"probe-label {probe_label} probe-fingerprint {probe_fingerprint} "
             f"response-fingerprint {fnv64(response_text)} "
-            f"content-kind {content_kind} content-bytes {len(content_text.encode())}"
+            f"content-kind {content_kind} "
+            f"expected-content-kind {EXPECTED_PROMPT_CONTENT_KINDS[prompt_name]} "
+            f"content-bytes {len(content_text.encode())}"
         )
         manifest_lines.append(
             f"artifact {prompt_rel} "
@@ -450,7 +505,11 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             self.assertIn("prompt-count 11", review.stdout)
             self.assertIn("content-nonempty-count 11", review.stdout)
             self.assertIn("prompt-envelope-valid-count 11", review.stdout)
-            self.assertIn("prompt-envelope-questions-count 11", review.stdout)
+            self.assertIn("prompt-envelope-artifact-count 8", review.stdout)
+            self.assertIn("prompt-envelope-questions-count 3", review.stdout)
+            self.assertIn("prompt-envelope-artifact-required-count 8", review.stdout)
+            self.assertIn("prompt-envelope-questions-expected-count 3", review.stdout)
+            self.assertIn("prompt-outcome-match-count 11", review.stdout)
             self.assertIn("review-result accepted", review.stdout)
         finally:
             shutil.rmtree(artifact_dir, ignore_errors=True)
@@ -513,6 +572,40 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
                 review.stdout,
             )
             self.assertIn("prompt-envelope-invalid-count 1", review.stdout)
+        finally:
+            shutil.rmtree(artifact_dir, ignore_errors=True)
+
+    def test_prompt_llm_harness_review_rejects_artifact_required_prompt_returning_questions(self):
+        artifact_dir = Path(tempfile.mkdtemp(prefix="ail-prompt-llm-review-question-"))
+        try:
+            write_prompt_llm_review_fixture(
+                artifact_dir, question_content_for="requirements.system.md"
+            )
+            review = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_prompt_llm_harness.py",
+                    "--review-artifacts",
+                    str(artifact_dir),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertNotEqual(
+                review.returncode,
+                0,
+                f"stdout:\n{review.stdout}\nstderr:\n{review.stderr}",
+            )
+            self.assertIn("review-result rejected", review.stdout)
+            self.assertIn(
+                "prompt outcome mismatch docs/ail/prompts/requirements.system.md",
+                review.stdout,
+            )
+            self.assertIn(
+                "expected prompt-envelope-artifact got prompt-envelope-questions",
+                review.stdout,
+            )
         finally:
             shutil.rmtree(artifact_dir, ignore_errors=True)
 

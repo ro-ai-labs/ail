@@ -49,10 +49,11 @@ python3 scripts/run_v03_prompt_llm_harness.py --dry-run
 ```
 
 The dry run lists every required prompt with its task-specific `probe-label`
-and `probe-fingerprint`. Those probes cover concrete interactions such as
-interview clarification, requirements drafting, canonical spec drafting,
-AIL-Core lowering, repair, diagnostic repair, round-trip rendering, human
-summary, flow patching, trace debugging, and C interop questions.
+and `probe-fingerprint`, plus the `expected-content-kind` that review will
+enforce. Those probes cover concrete interactions such as interview
+clarification, requirements drafting, canonical spec drafting, AIL-Core
+lowering, repair, diagnostic repair, round-trip rendering, human summary, flow
+patching, trace debugging, and C interop questions.
 
 For live chat-completion requests, the harness appends an inline envelope
 contract to each user probe and asks the endpoint for JSON mode with
@@ -85,11 +86,17 @@ python3 scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run
 
 Review mode checks request, response, content, report, manifest, fingerprint
 artifacts, prompt-specific probe metadata, expected `artifact_kind` values, and
-prompt-pack envelope shape for each required system prompt. It prints
-`prompt-envelope-valid-count`, `prompt-envelope-questions-count`, and
+prompt-pack envelope shape for each required system prompt. It also enforces
+the expected outcome for each prompt: eight probes must produce
+`prompt-envelope-artifact`, while the interview, diagnostic-repair, and interop
+probes must produce `prompt-envelope-questions`. It prints
+`prompt-envelope-valid-count`, `prompt-envelope-artifact-count`,
+`prompt-envelope-questions-count`,
+`prompt-envelope-artifact-required-count`,
+`prompt-envelope-questions-expected-count`, `prompt-outcome-match-count`, and
 `prompt-envelope-invalid-count`, then persists the accepted/rejected review
 text as a fingerprinted harness review artifact. A non-empty raw model
-response is still rejected when it is not a valid prompt-pack envelope or
-blocking-question envelope, a generic artifact kind is rejected, and a generic
-probe is rejected when its `probe-label` or `probe-fingerprint` does not match
-the expected task-specific probes.
+response is still rejected when it is not a valid prompt-pack envelope or when
+an artifact-required prompt returns only blocking questions. A generic artifact
+kind is rejected, and a generic probe is rejected when its `probe-label` or
+`probe-fingerprint` does not match the expected task-specific probes.

@@ -1292,6 +1292,9 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "step 7 review-prompt-pack-live-artifacts",
         "python3 scripts/run_v03_prompt_llm_harness.py --review-artifacts /tmp/ail-v03-prompt-llm",
         "evidence prompt-envelope-valid-count",
+        "evidence prompt-envelope-artifact-required-count",
+        "evidence prompt-envelope-questions-expected-count",
+        "evidence prompt-outcome-match-count",
         "evidence prompt-envelope-invalid-count",
         "evidence manifest.v03-prompt-llm.txt",
     ] {
@@ -1426,6 +1429,9 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "evidence prompt-llm-harness-review.fingerprint.txt",
         "evidence manifest.v03-prompt-llm.txt",
         "evidence prompt-envelope-valid-count",
+        "evidence prompt-envelope-artifact-required-count",
+        "evidence prompt-envelope-questions-expected-count",
+        "evidence prompt-outcome-match-count",
         "evidence prompt-envelope-invalid-count",
     ] {
         assert!(
@@ -1577,6 +1583,9 @@ fn examples_agents_include_prompt_review_contract() {
         "target artifact: AIL-Prompt-Interaction-Review",
         "Do not promote generated content into ./examples",
         "prompt-envelope-valid-count",
+        "prompt-envelope-artifact-required-count",
+        "prompt-envelope-questions-expected-count",
+        "prompt-outcome-match-count",
         "prompt-envelope-invalid-count",
         "ail-examples examples --artifact-dir",
         "cargo run -- ail-v03-roadmap examples",
@@ -1630,6 +1639,9 @@ fn codex_skill_documents_prompt_interaction_review_gate() {
         "cargo run -- ail-examples examples --artifact-dir",
         "cargo run -- ail-v03-roadmap examples --artifact-dir",
         "prompt-envelope-valid-count",
+        "prompt-envelope-artifact-required-count",
+        "prompt-envelope-questions-expected-count",
+        "prompt-outcome-match-count",
         "prompt-envelope-invalid-count",
         "manifest.v03-prompt-llm.txt",
         "prompt-llm-harness-review.txt",
@@ -1752,6 +1764,7 @@ fn script_v03_prompt_llm_harness_help_lists_all_prompts_and_dry_run() {
         "probe-fingerprint fnv64:",
         "prompt docs/ail/prompts/requirements.system.md",
         "probe-label requirements-support-ticket-coverage",
+        "expected-content-kind prompt-envelope-artifact",
         "prompt docs/ail/prompts/spec-draft.system.md",
         "probe-label spec-draft-canonical-close-ticket",
         "prompt docs/ail/prompts/core-draft.system.md",
@@ -1770,6 +1783,7 @@ fn script_v03_prompt_llm_harness_help_lists_all_prompts_and_dry_run() {
         "probe-label trace-debug-ticket-closed",
         "prompt docs/ail/prompts/interop.system.md",
         "probe-label interop-pointer-ownership-questions",
+        "expected-content-kind prompt-envelope-questions",
         "artifact-dir /tmp/ail-v03-prompt-llm",
     ] {
         assert!(
@@ -1792,6 +1806,10 @@ fn script_v03_prompt_llm_harness_help_lists_all_prompts_and_dry_run() {
     assert!(
         prompt_docs.contains("prompt-envelope-valid-count")
             && prompt_docs.contains("prompt-envelope-invalid-count")
+            && prompt_docs.contains("prompt-envelope-artifact-required-count")
+            && prompt_docs.contains("prompt-envelope-questions-expected-count")
+            && prompt_docs.contains("prompt-outcome-match-count")
+            && prompt_docs.contains("expected-content-kind")
             && prompt_docs.contains("probe-label")
             && prompt_docs.contains("task-specific probes")
             && prompt_docs.contains("envelope contract")
@@ -1808,6 +1826,10 @@ fn script_v03_prompt_llm_harness_help_lists_all_prompts_and_dry_run() {
     assert!(
         prompt_manual.contains("prompt-envelope-valid-count")
             && prompt_manual.contains("prompt-envelope-invalid-count")
+            && prompt_manual.contains("prompt-envelope-artifact-required-count")
+            && prompt_manual.contains("prompt-envelope-questions-expected-count")
+            && prompt_manual.contains("prompt-outcome-match-count")
+            && prompt_manual.contains("expected-content-kind")
             && prompt_manual.contains("probe-label")
             && prompt_manual.contains("task-specific probes")
             && prompt_manual.contains("envelope contract")
@@ -1838,28 +1860,28 @@ fn script_v03_prompt_llm_harness_review_writes_fingerprinted_report() {
     let _ = fs::remove_dir_all(&artifact_dir);
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = listener.local_addr().unwrap();
-    let artifact_kinds = [
-        "AIL-Interview",
-        "AIL-Requirements",
-        "AIL-Spec Canonical",
-        "AIL-Core Candidate",
-        "AIL-Spec Canonical",
-        "AIL-Repair",
-        "AIL-Spec Canonical",
-        "AIL-Spec Friendly",
-        "AIL-Core Patch",
-        "Trace Explanation",
-        "Interop Questions",
+    let prompt_responses = [
+        ("AIL-Interview", false),
+        ("AIL-Requirements", true),
+        ("AIL-Spec Canonical", true),
+        ("AIL-Core Candidate", true),
+        ("AIL-Spec Canonical", true),
+        ("AIL-Repair", false),
+        ("AIL-Spec Canonical", true),
+        ("AIL-Spec Friendly", true),
+        ("AIL-Core Patch", true),
+        ("Trace Explanation", true),
+        ("Interop Questions", false),
     ];
-    let response_bodies = artifact_kinds
+    let response_bodies = prompt_responses
         .into_iter()
-        .map(|artifact_kind| {
+        .map(|(artifact_kind, returns_artifact)| {
             let envelope = format!(
                 concat!(
                     "{{",
                     "\"artifact_kind\":{},",
                     "\"artifact_text\":{},",
-                    "\"questions\":[],",
+                    "\"questions\":{},",
                     "\"assumptions\":[],",
                     "\"provenance\":[\"mock:prompt-harness\"],",
                     "\"checker_handoff\":{{",
@@ -1870,7 +1892,16 @@ fn script_v03_prompt_llm_harness_review_writes_fingerprinted_report() {
                     "}}"
                 ),
                 json_string(artifact_kind),
-                json_string("deterministic prompt harness artifact")
+                json_string(if returns_artifact {
+                    "deterministic prompt harness artifact"
+                } else {
+                    ""
+                }),
+                if returns_artifact {
+                    "[]".to_string()
+                } else {
+                    format!("[{}]", json_string("Which semantics are still blocking?"))
+                }
             );
             format!(
                 r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
@@ -1923,6 +1954,26 @@ fn script_v03_prompt_llm_harness_review_writes_fingerprinted_report() {
     );
     assert!(
         review_stdout.contains("prompt-envelope-valid-count 11"),
+        "{review_stdout}"
+    );
+    assert!(
+        review_stdout.contains("prompt-envelope-artifact-count 8"),
+        "{review_stdout}"
+    );
+    assert!(
+        review_stdout.contains("prompt-envelope-questions-count 3"),
+        "{review_stdout}"
+    );
+    assert!(
+        review_stdout.contains("prompt-envelope-artifact-required-count 8"),
+        "{review_stdout}"
+    );
+    assert!(
+        review_stdout.contains("prompt-envelope-questions-expected-count 3"),
+        "{review_stdout}"
+    );
+    assert!(
+        review_stdout.contains("prompt-outcome-match-count 11"),
         "{review_stdout}"
     );
     assert!(

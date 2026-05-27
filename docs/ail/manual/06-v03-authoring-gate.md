@@ -77,6 +77,9 @@ prompt-llm-harness-review.txt
 prompt-llm-harness-review.fingerprint.txt
 manifest.v03-prompt-llm.txt
 prompt-envelope-valid-count
+prompt-envelope-artifact-required-count
+prompt-envelope-questions-expected-count
+prompt-outcome-match-count
 prompt-envelope-invalid-count
 agent.ailbc.json
 repair-promotion-review.txt

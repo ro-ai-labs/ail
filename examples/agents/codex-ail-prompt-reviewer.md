@@ -34,10 +34,15 @@ Return an `AIL-Prompt-Interaction-Review` report that records:
 - prompt files reviewed and their fingerprints when available
 - prompt-specific probe labels/fingerprints and expected `artifact_kind`
   validation status
+- expected prompt outcome validation status, including
+  `prompt-outcome-match-count`
 - whether hosted requests include the inline envelope contract, JSON mode
   request hint, and adequate token budget for complete envelopes
 - prompt-envelope validation counts from the prompt harness review, including
-  `prompt-envelope-valid-count` and `prompt-envelope-invalid-count`
+  `prompt-envelope-valid-count`,
+  `prompt-envelope-artifact-required-count`,
+  `prompt-envelope-questions-expected-count`, and
+  `prompt-envelope-invalid-count`
 - story id, semantic-anchor count, manifest checks, and agent trace status when
   story artifacts are reviewed
 - release replay command used before promotion:
@@ -61,6 +66,8 @@ Return an `AIL-Prompt-Interaction-Review` report that records:
   review reports prompt-pack envelope validity for every required prompt.
 - Do not accept generic prompt smoke-test output when the review reports
   mismatched probe metadata or an unexpected `artifact_kind`.
+- Do not accept question-only prompt output for prompts whose task-specific
+  probe requires a generated artifact.
 - Do not hide missing fingerprints, empty prompt content, missing agent trace
   entries, missing `v03-roadmap.txt`, or semantic-anchor loss.
 

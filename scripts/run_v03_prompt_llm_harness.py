@@ -48,6 +48,19 @@ EXPECTED_ARTIFACT_KINDS: dict[str, str] = {
     "trace-debug.system.md": "Trace Explanation",
     "interop.system.md": "Interop Questions",
 }
+EXPECTED_CONTENT_KINDS: dict[str, str] = {
+    "interview.system.md": "prompt-envelope-questions",
+    "requirements.system.md": "prompt-envelope-artifact",
+    "spec-draft.system.md": "prompt-envelope-artifact",
+    "core-draft.system.md": "prompt-envelope-artifact",
+    "repair.system.md": "prompt-envelope-artifact",
+    "diagnostic-repair.system.md": "prompt-envelope-questions",
+    "core-to-spec.system.md": "prompt-envelope-artifact",
+    "core-to-summary.system.md": "prompt-envelope-artifact",
+    "flow-patch.system.md": "prompt-envelope-artifact",
+    "trace-debug.system.md": "prompt-envelope-artifact",
+    "interop.system.md": "prompt-envelope-questions",
+}
 PROMPT_PROBES: dict[str, tuple[str, str]] = {
     "interview.system.md": (
         "interview-clarify-refund-tool",
@@ -258,8 +271,29 @@ def expected_artifact_kind(prompt_name: str) -> str:
         raise SystemExit(f"missing expected artifact kind for prompt {prompt_name}") from None
 
 
+def expected_content_kind(prompt_name: str) -> str:
+    try:
+        return EXPECTED_CONTENT_KINDS[prompt_name]
+    except KeyError:
+        raise SystemExit(f"missing expected content kind for prompt {prompt_name}") from None
+
+
+def prompt_outcome_contract(prompt_name: str) -> str:
+    expected_kind = expected_content_kind(prompt_name)
+    if expected_kind == "prompt-envelope-artifact":
+        return (
+            "Outcome expectation for this probe: artifact_text must be non-empty. "
+            "Do not return blocking questions for this probe."
+        )
+    return (
+        "Outcome expectation for this probe: questions must be non-empty. "
+        "Do not draft an artifact until the blocking semantics are answered."
+    )
+
+
 def prompt_envelope_contract(prompt_name: str) -> str:
     artifact_kind = expected_artifact_kind(prompt_name)
+    outcome_contract = prompt_outcome_contract(prompt_name)
     return f"""Envelope contract:
 Return JSON only. Do not wrap the JSON in Markdown. Use exactly this top-level
 shape:
@@ -284,6 +318,8 @@ Rules:
 - checker_handoff.must_check must be true.
 - Do not include any keys outside this envelope unless the checker can ignore
   them without changing semantics.
+
+{outcome_contract}
 """
 
 
@@ -500,6 +536,11 @@ def review_artifacts(args: argparse.Namespace, paths: list[Path]) -> int:
         "invalid": 0,
         "empty": 0,
     }
+    expected_content_kind_counts = {
+        "prompt-envelope-artifact": 0,
+        "prompt-envelope-questions": 0,
+    }
+    outcome_match_count = 0
     manifest_text = read_required_text(artifact_root / "manifest.v03-prompt-llm.txt", errors)
     report_text = read_required_text(artifact_root / "prompt-llm-harness-report.txt", errors)
     report_lines = report_text.splitlines()
@@ -534,6 +575,8 @@ def review_artifacts(args: argparse.Namespace, paths: list[Path]) -> int:
         expected_probe_label, _expected_probe = prompt_probe(prompt_path.name, args.probe)
         expected_probe = render_user_probe(prompt_path.name, args.probe)
         expected_probe_fingerprint = fnv64(expected_probe)
+        expected_content = expected_content_kind(prompt_path.name)
+        expected_content_kind_counts[expected_content] += 1
         request_path = artifact_root / "requests" / f"{stem}.json"
         response_path = artifact_root / "responses" / f"{stem}.json"
         content_path = artifact_root / "content" / f"{stem}.txt"
@@ -568,6 +611,12 @@ def review_artifacts(args: argparse.Namespace, paths: list[Path]) -> int:
             errors.append(f"empty content {rel}")
         if content_kind in {"invalid", "empty"}:
             errors.append(f"invalid prompt envelope {rel}: {content_error}")
+        elif content_kind == expected_content:
+            outcome_match_count += 1
+        else:
+            errors.append(
+                f"prompt outcome mismatch {rel}: expected {expected_content} got {content_kind}"
+            )
         if rel not in report_text:
             errors.append(f"report missing prompt {rel}")
         if fnv64(prompt_text) not in report_text:
@@ -578,6 +627,11 @@ def review_artifacts(args: argparse.Namespace, paths: list[Path]) -> int:
         )
         if prompt_report_line and f"content-kind {content_kind}" not in prompt_report_line:
             errors.append(f"report content-kind mismatch {rel}: expected {content_kind}")
+        if (
+            prompt_report_line
+            and f"expected-content-kind {expected_content}" not in prompt_report_line
+        ):
+            errors.append(f"report expected-content-kind mismatch {rel}")
         if prompt_report_line and f"probe-label {expected_probe_label}" not in prompt_report_line:
             errors.append(f"report probe-label mismatch {rel}")
         if (
@@ -602,6 +656,11 @@ def review_artifacts(args: argparse.Namespace, paths: list[Path]) -> int:
         f"{content_kind_counts['prompt-envelope-artifact']}",
         "prompt-envelope-questions-count "
         f"{content_kind_counts['prompt-envelope-questions']}",
+        "prompt-envelope-artifact-required-count "
+        f"{expected_content_kind_counts['prompt-envelope-artifact']}",
+        "prompt-envelope-questions-expected-count "
+        f"{expected_content_kind_counts['prompt-envelope-questions']}",
+        f"prompt-outcome-match-count {outcome_match_count}",
         "prompt-envelope-invalid-count "
         f"{content_kind_counts['invalid'] + content_kind_counts['empty']}",
         f"fingerprint-check-count {fingerprint_checks}",
@@ -688,7 +747,8 @@ def print_dry_run(args: argparse.Namespace, paths: list[Path]) -> None:
         user_probe = render_user_probe(path.name, args.probe)
         print(
             f"prompt {relative(path)} "
-            f"probe-label {probe_label} probe-fingerprint {fnv64(user_probe)}"
+            f"probe-label {probe_label} probe-fingerprint {fnv64(user_probe)} "
+            f"expected-content-kind {expected_content_kind(path.name)}"
         )
 
 
@@ -756,6 +816,7 @@ def run_live(args: argparse.Namespace, paths: list[Path]) -> int:
             f"probe-label {probe_label} probe-fingerprint {probe_fingerprint} "
             f"response-fingerprint {fnv64(response_text)} "
             f"content-kind {content_kind} "
+            f"expected-content-kind {expected_content_kind(path.name)} "
             f"content-bytes {len(content_text.encode())}"
         )
         manifest_lines.append(
