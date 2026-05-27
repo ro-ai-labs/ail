@@ -1,20 +1,17 @@
 #!/usr/bin/env python3
-"""Generate the checked v0.2 examples catalog for `ail-examples`.
+"""Generate the legacy deterministic examples catalog for `ail-examples`.
 
-The generated corpus is intentionally deterministic: it stores request and
-response transcripts so the release verifier can replay without live model
-access.
+The generated corpus is intentionally deterministic and is not release
+evidence. It exists as a local bootstrap baseline that release promotion should
+replace with stored live LLM or live Codex captures.
 """
 
 from pathlib import Path
+import argparse
 import json
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CORPUS = ROOT / "examples"
-REQUESTS = CORPUS / "requests"
-RESPONSES = CORPUS / "responses"
-STORIES = CORPUS / "stories"
 
 TRACE_NAMES = [
     "OptionMapEvaluated",
@@ -414,10 +411,49 @@ def specialize_response_text(text: str, index: int) -> str:
     return text
 
 
+def story_anchors_for(
+    semantic_task: str,
+    prompt_file: str,
+    checker_result: str,
+    fixture: dict[str, str] | None,
+    target: str,
+) -> str:
+    if fixture is None or checker_result == "rejected":
+        return f"{semantic_task}; AIL001; diagnostic-story; {prompt_file}"
+    anchors = [
+        semantic_task,
+        fixture["capability"],
+        fixture["program_domain"],
+        prompt_file,
+    ]
+    if "vm_action" in fixture:
+        anchors.append(fixture["vm_action"])
+    if target != "vm":
+        anchors.append(target)
+    return "; ".join(anchors)
+
+
 def main() -> None:
-    REQUESTS.mkdir(parents=True, exist_ok=True)
-    RESPONSES.mkdir(parents=True, exist_ok=True)
-    STORIES.mkdir(parents=True, exist_ok=True)
+    parser = argparse.ArgumentParser(
+        description=(
+            "Generate the legacy deterministic AIL examples seed corpus. "
+            "The output is not release evidence."
+        )
+    )
+    parser.add_argument(
+        "--output-dir",
+        default=str(ROOT / "examples"),
+        help="Directory where examples.md, requests, responses, and stories are written.",
+    )
+    args = parser.parse_args()
+
+    corpus = Path(args.output_dir)
+    requests = corpus / "requests"
+    responses = corpus / "responses"
+    stories = corpus / "stories"
+    requests.mkdir(parents=True, exist_ok=True)
+    responses.mkdir(parents=True, exist_ok=True)
+    stories.mkdir(parents=True, exist_ok=True)
     rejected_spec = (
         ROOT
         / "examples"
@@ -427,11 +463,15 @@ def main() -> None:
         / "missing-reference.ail-spec.md"
     ).read_text()
     entries = [
-        "# AIL v0.2 Example Validation Catalog",
+        "# AIL Legacy Deterministic Seed Corpus",
         "",
-        "This checked catalog stores prompt and response transcripts for the",
-        "`ail-examples` release verifier. Every counted example is replayed through the",
-        "prompt-to-artifact path and produces deterministic verification evidence.",
+        "corpus-kind: legacy-deterministic-seed",
+        "release-evidence: false",
+        "",
+        "This legacy deterministic seed corpus is not release evidence. It stores",
+        "request and response transcripts so local replay can bootstrap examples",
+        "without live model access, but release promotion must replace these",
+        "deterministic-seed entries with stored live LLM or live Codex captures.",
         "",
     ]
     for index in range(100):
@@ -470,9 +510,9 @@ def main() -> None:
             if fixture is None
             else specialize_response_text((ROOT / fixture["spec"]).read_text(), index)
         )
-        (REQUESTS / f"example-{index}.json").write_text(json.dumps(request, sort_keys=True) + "\n")
-        (RESPONSES / f"example-{index}.ail-spec.md").write_text(response_text)
-        (CORPUS / story_file).write_text(
+        (requests / f"example-{index}.json").write_text(json.dumps(request, sort_keys=True) + "\n")
+        (responses / f"example-{index}.ail-spec.md").write_text(response_text)
+        (corpus / story_file).write_text(
             f"# {semantic_task} User Story\n\n"
             f"user-story-id: {story_id}\n"
             f"user-story: {user_story}\n"
@@ -485,6 +525,7 @@ def main() -> None:
             f"spec-count: {'1' if fixture is None else fixture['spec_count']}\n"
             f"story-count: {'1' if fixture is None else fixture['story_count']}\n"
             f"interacts-with: {'none' if fixture is None else fixture['interacts_with']}\n"
+            f"semantic-anchors: {story_anchors_for(semantic_task, prompt_file, checker_result, fixture, target)}\n"
         )
         fields = {
             "semantic-task": semantic_task,
@@ -543,7 +584,7 @@ def main() -> None:
         entries.append(f"## Example: example-{index}")
         entries.extend(f"{key}: {value}" for key, value in fields.items())
         entries.append("")
-    (CORPUS / "examples.md").write_text("\n".join(entries))
+    (corpus / "examples.md").write_text("\n".join(entries))
 
 
 if __name__ == "__main__":
