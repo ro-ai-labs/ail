@@ -107,6 +107,14 @@ def require_report_line(report_text: str, line: str) -> None:
         raise SystemExit(f"replay report missing {line}")
 
 
+def report_count(report_text: str, key: str) -> str:
+    prefix = key + " "
+    for line in report_text.splitlines():
+        if line.startswith(prefix):
+            return line.removeprefix(prefix)
+    raise SystemExit(f"replay report missing {key}")
+
+
 def require_plan_value(plan: dict[str, object], field: str, expected: object) -> None:
     actual = plan.get(field)
     if actual != expected:
@@ -336,13 +344,10 @@ def main(argv: list[str]) -> int:
         and "node Field Ticket.reviewStatus" in patched_core_replayed_path.read_text()
     )
     report_text = (args.output_artifacts / "examples-report.txt").read_text()
-    for line in [
-        "entry-count 126",
-        "checker-result-count accepted 117",
-        "checker-result-count rejected 9",
-        f"entry {source_entry_id} ",
-        f"entry {proposed_entry_id} ",
-    ]:
+    entry_count = report_count(report_text, "entry-count")
+    accepted_count = report_count(report_text, "checker-result-count accepted")
+    rejected_count = report_count(report_text, "checker-result-count rejected")
+    for line in [f"entry {source_entry_id} ", f"entry {proposed_entry_id} "]:
         require_report_line(report_text, line)
     output_lines = [
         "AIL-UI-Patch-Import-Demo:",
@@ -356,9 +361,9 @@ def main(argv: list[str]) -> int:
         f"{str(source_core_fingerprint_preserved).lower()}",
         f"flow-edit-applied {str(flow_edit_applied).lower()}",
         f"patched-core-replayed {str(patched_core_replayed).lower()}",
-        "entry-count 126",
-        "checker-result-count accepted 117",
-        "checker-result-count rejected 9",
+        f"entry-count {entry_count}",
+        f"checker-result-count accepted {accepted_count}",
+        f"checker-result-count rejected {rejected_count}",
         f"flow-edit {flow_edit_path}",
         f"batch-plan {batch_plan_path}",
         f"output-corpus {args.output_corpus}",

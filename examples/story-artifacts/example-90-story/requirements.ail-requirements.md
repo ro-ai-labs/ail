@@ -1,0 +1,22 @@
+AIL-Requirements:
+- Domain Object Ticket must contain fields id: Text, title: Text, status: State<New, Open, Assigned, Closed, Overdue>, customer: User, assignee: Option<User>, created_at: Time, due_at: Time, public_updates: List<Text>, and internal notes: Secret<List<Text>>.
+- Domain Object User must contain fields id: Text, role: State<Customer, SupportAgent, SupportManager>, and email: Text.
+- Action CreateTicket requires inputs customer id: Text and title: Text; preconditions include the caller having role Customer; effects include creating a Ticket with status New, setting the customer, recording an initial public update, and guaranteeing internal notes are empty and secret; trace event TicketCreated is recorded.
+- Action AssignTicket requires inputs ticket id: Text and assignee id: Text; preconditions include the ticket existing, status being New or Open, and the assignee having role SupportAgent or SupportManager; effects include updating the assignee, changing status to Assigned, recording a public update, and guaranteeing the assignee can read internal notes; trace event TicketAssigned is recorded.
+- Action CloseTicket requires inputs ticket id: Text; preconditions include the ticket existing and status not being Closed; effects include changing status to Closed, recording a public update, guaranteeing closed tickets do not appear in the open ticket queue, and ensuring internal notes are not revealed to the customer; trace event TicketClosed is recorded.
+- Failure NotFound occurs when a ticket id does not match a stored ticket; effects include no ticket data changes, returning error "Ticket not found", and recording trace event TicketNotFound.
+- Failure PermissionDenied occurs when a user without support staff permission attempts to read internal notes; effects include revealing no secret value, returning error "Permission Denied", and recording trace event InternalNotesDenied.
+- Guarantee: Internal notes are Secret<List<Text>> and are readable only by SupportAgent or SupportManager.
+- Guarantee: The customer-visible ticket history includes public updates and never includes internal notes.
+- Guarantee: Closed tickets do not appear in the open ticket queue for support agents.
+- Trace Event TicketCreated is recorded upon successful ticket creation.
+- Trace Event TicketAssigned is recorded upon successful ticket assignment.
+- Trace Event TicketClosed is recorded upon successful ticket closure.
+- Trace Event TicketOverdue is recorded when the scheduler marks a ticket as Overdue.
+- Trace Event TicketNotFound is recorded when a lookup fails.
+- Trace Event InternalNotesDenied is recorded when secret access is denied.
+- Permission: SupportAgent and SupportManager roles are permitted to read internal notes.
+- Permission: Customer role is denied access to internal notes.
+- Runtime Input: Current time is required for the scheduler to evaluate due_at for overdue status.
+- Runtime Input: Ticket id is required for lookup operations.
+- Runtime Input: User id and role are required for authentication and authorization checks.

@@ -85,6 +85,14 @@ def require_report_line(report_text: str, line: str) -> None:
         raise SystemExit(f"replay report missing {line}")
 
 
+def report_count(report_text: str, key: str) -> str:
+    prefix = key + " "
+    for line in report_text.splitlines():
+        if line.startswith(prefix):
+            return line[len(prefix) :].strip()
+    raise SystemExit(f"replay report missing {key}")
+
+
 def build_batch_plan(
     args: argparse.Namespace,
     request_path: Path,
@@ -239,10 +247,10 @@ def main(argv: list[str]) -> int:
         and story_artifacts_copy.joinpath("story-llm-harness-report.txt").exists()
     )
     report_text = (args.output_artifacts / "examples-report.txt").read_text()
+    entry_count = report_count(report_text, "entry-count")
+    accepted_count = report_count(report_text, "checker-result-count accepted")
+    rejected_count = report_count(report_text, "checker-result-count rejected")
     for line in [
-        "entry-count 126",
-        "checker-result-count accepted 117",
-        "checker-result-count rejected 9",
         f"entry {args.source_entry_id} ",
         f"entry {args.proposed_entry_id} ",
     ]:
@@ -265,9 +273,9 @@ def main(argv: list[str]) -> int:
         f"max-tokens {max_tokens}",
         f"token-budget-default {str(token_budget_default).lower()}",
         f"token-budget-warning {token_budget_warning}",
-        "entry-count 126",
-        "checker-result-count accepted 117",
-        "checker-result-count rejected 9",
+        f"entry-count {entry_count}",
+        f"checker-result-count accepted {accepted_count}",
+        f"checker-result-count rejected {rejected_count}",
         f"batch-plan {batch_plan_path}",
         f"output-corpus {args.output_corpus}",
         f"output-artifacts {args.output_artifacts}",

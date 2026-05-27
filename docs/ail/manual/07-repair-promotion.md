@@ -143,5 +143,5 @@ writes:
 ```
 
 The report must include `source-preserved true`, `proposed-accepted true`,
-`entry-count 126`, `checker-result-count accepted 117`, and
-`checker-result-count rejected 9`.
+`entry-count`, `checker-result-count accepted`, and
+`checker-result-count rejected` lines copied from the replayed corpus report.

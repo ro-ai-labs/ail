@@ -81,6 +81,9 @@ The review report must include:
 - `max-tokens`
 - `token-budget-default`
 - `token-budget-warning` when present in the accepted story review
+- `entry-count` from the corpus-copy replay
+- `checker-result-count accepted` from the corpus-copy replay
+- `checker-result-count rejected` from the corpus-copy replay
 - `examples-report.txt`
 - `v03-roadmap.txt`
 - one decision: `accepted-for-promotion`, `needs-repair`, or
@@ -101,6 +104,8 @@ Return `needs-repair` or `rejected-for-promotion` when:
   `human-approval-required true`, or
   `promotion-source human-approved-story-promotion-batch`
 - the human-approved batch fingerprint is missing
+- replay counts are hardcoded instead of copied from the generated corpus
+  replay report
 - the visible hosted generation budget is missing
 - `examples-report.txt` or `v03-roadmap.txt` is missing
 - generated content was modified silently instead of preserving the original

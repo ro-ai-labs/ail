@@ -76,9 +76,9 @@ agent-policy-review-fingerprint-preserved true
 checked-core-fingerprint-preserved true
 policy-handoff-imported true
 policy-handoff-replayed true
-entry-count 126
-checker-result-count accepted 117
-checker-result-count rejected 9
+entry-count
+checker-result-count accepted
+checker-result-count rejected
 ```
 
 The import appends `PolicyHandoffApprovedScenario40` to the human-approved

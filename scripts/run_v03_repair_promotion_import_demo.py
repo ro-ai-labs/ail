@@ -71,6 +71,14 @@ def require_report_line(report_text: str, line: str) -> None:
         raise SystemExit(f"replay report missing {line}")
 
 
+def report_count(report_text: str, key: str) -> str:
+    prefix = key + " "
+    for line in report_text.splitlines():
+        if line.startswith(prefix):
+            return line.removeprefix(prefix)
+    raise SystemExit(f"replay report missing {key}")
+
+
 def build_batch_plan(
     args: argparse.Namespace,
     plan: dict[str, object],
@@ -206,13 +214,10 @@ def main(argv: list[str]) -> int:
     source_preserved = line_present(source_section, "checker-result: rejected")
     proposed_accepted = line_present(proposed_section, "checker-result: accepted")
     report_text = (args.output_artifacts / "examples-report.txt").read_text()
-    for line in [
-        "entry-count 126",
-        "checker-result-count accepted 117",
-        "checker-result-count rejected 9",
-        f"entry {source_entry_id} ",
-        f"entry {proposed_entry_id} ",
-    ]:
+    entry_count = report_count(report_text, "entry-count")
+    accepted_count = report_count(report_text, "checker-result-count accepted")
+    rejected_count = report_count(report_text, "checker-result-count rejected")
+    for line in [f"entry {source_entry_id} ", f"entry {proposed_entry_id} "]:
         require_report_line(report_text, line)
     output_lines = [
         "AIL-Repair-Promotion-Import-Demo:",
@@ -220,9 +225,9 @@ def main(argv: list[str]) -> int:
         f"proposed-entry-id {proposed_entry_id}",
         f"source-preserved {str(source_preserved).lower()}",
         f"proposed-accepted {str(proposed_accepted).lower()}",
-        "entry-count 126",
-        "checker-result-count accepted 117",
-        "checker-result-count rejected 9",
+        f"entry-count {entry_count}",
+        f"checker-result-count accepted {accepted_count}",
+        f"checker-result-count rejected {rejected_count}",
         f"batch-plan {batch_plan_path}",
         f"output-corpus {args.output_corpus}",
         f"output-artifacts {args.output_artifacts}",

@@ -212,8 +212,11 @@ bundle under `story-artifacts/<entry-id>/`, writes fresh `requests/`,
 `promotion-decision accepted-for-promotion`,
 `promotion-source human-approved-story-promotion-batch`, and
 `batch-plan-fingerprint` in the
-import report, and still requires offline `ail-examples` replay before any
-generated corpus copy is committed.
+import report. The report records replay counts from the generated corpus copy,
+so the same deterministic wrapper can be run against a corpus copy that already
+contains one promoted story entry to prove a second reviewed variant. It still
+requires offline `ail-examples` replay before any generated corpus copy is
+committed.
 Release story files must include `semantic-anchors` for the terms, actions,
 modules, targets, or diagnostics that must survive story/spec/Core
 round-trips. In `--release-evidence` mode, `ail-examples` rejects any catalog
@@ -321,11 +324,11 @@ be replayed with `ail-examples` before promotion.
 The generated files are committed so release verification does not depend on
 live LLM access. The current corpus stores:
 
-- `examples.md`: 125 manifest entries with prompt, executor, profile, surface,
+- `examples.md`: 126 manifest entries with prompt, executor, profile, surface,
   use-case, capability-level, capability-under-test, program scale, program
   domain, module/spec/story counts, interaction metadata, user-story metadata,
   story journey, distinctness, capture-origin, checker-result, target, and
-  v0.3 learning metadata. One hundred sixteen entries are accepted
+  v0.3 learning metadata. One hundred seventeen entries are accepted
   prompt-to-artifact examples that replay through checked Core, bytecode, VM
   trace, and binary or target-contract evidence; nine entries are rejected
   diagnostic examples.

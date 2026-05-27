@@ -1,0 +1,24 @@
+AIL-Build-Native-Bytecode:
+target linux-x86_64-elf
+bytecode-level machine
+bytecode-container linux-elf-executable
+bytecode-format elf64-little-x86_64-executable
+machine-bytecode target linux-x86_64-elf target.elf elf64-little-x86_64-executable fnv64:b8350ae48209092a bytes 1366
+machine-bytecode agent-target linux-x86_64-elf agent-AcceptCompilerPassOutput.elf elf64-little-x86_64-executable fnv64:17f2b962467a67ce bytes 1973
+machine-bytecode agent-target linux-x86_64-elf agent-AcceptCoreIR.elf elf64-little-x86_64-executable fnv64:a27e2463d0558008 bytes 1851
+machine-bytecode agent-target linux-x86_64-elf agent-AcceptFlowReview.elf elf64-little-x86_64-executable fnv64:5752dfbffb43c7d6 bytes 1815
+machine-bytecode agent-target linux-x86_64-elf agent-AcceptSpecDraft.elf elf64-little-x86_64-executable fnv64:fb3dc5671fa9fb2e bytes 1862
+machine-bytecode agent-target linux-x86_64-elf agent-CaptureRequirements.elf elf64-little-x86_64-executable fnv64:22a838ea8b6ffc84 bytes 1453
+machine-bytecode agent-target linux-x86_64-elf agent-CompareAgentPromptPortability.elf elf64-little-x86_64-executable fnv64:ee057c3cb4bafe41 bytes 1448
+machine-bytecode agent-target linux-x86_64-elf agent-CompileApplication.elf elf64-little-x86_64-executable fnv64:70fe0425e35a37ae bytes 1888
+machine-bytecode agent-target linux-x86_64-elf agent-CompileNativeTarget.elf elf64-little-x86_64-executable fnv64:f1dedc4533657847 bytes 1831
+machine-bytecode agent-target linux-x86_64-elf agent-PrepareSpecDraft.elf elf64-little-x86_64-executable fnv64:01f7e7542f69482d bytes 1640
+machine-bytecode agent-target linux-x86_64-elf agent-VerifyBootstrapManifest.elf elf64-little-x86_64-executable fnv64:30ab22a18ac71fe0 bytes 4242
+machine-bytecode agent-target linux-x86_64-elf agent-VerifyBuildManifest.elf elf64-little-x86_64-executable fnv64:fb2d29b9309aafdb bytes 3571
+machine-bytecode agent-target linux-x86_64-elf agent-VerifyBytecodeArtifact.elf elf64-little-x86_64-executable fnv64:6e4c5f4460b9495f bytes 1581
+machine-bytecode agent-target linux-x86_64-elf agent-VerifyCompileBundleManifest.elf elf64-little-x86_64-executable fnv64:cd94366aefb4a66c bytes 3576
+machine-bytecode agent-target linux-x86_64-elf agent-VerifyCompileManifest.elf elf64-little-x86_64-executable fnv64:eca0082e4e8664d6 bytes 3538
+machine-bytecode agent-target linux-x86_64-elf agent-VerifyConformanceManifest.elf elf64-little-x86_64-executable fnv64:204f78606dbc1964 bytes 2932
+machine-bytecode agent-target linux-x86_64-elf agent-VerifyLowerManifest.elf elf64-little-x86_64-executable fnv64:b3f930b8173518c9 bytes 3127
+machine-bytecode agent-target linux-x86_64-elf agent-VerifyPassManifest.elf elf64-little-x86_64-executable fnv64:0578d90c20ca5d62 bytes 3151
+machine-bytecode agent-target linux-x86_64-elf agent-VerifyTargetArtifact.elf elf64-little-x86_64-executable fnv64:23fc5bf84ddc5252 bytes 1625

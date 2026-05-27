@@ -1,0 +1,30 @@
+{
+  "artifact_kind": "AIL-Requirements",
+  "artifact_text": "AIL-Requirements:\n- Domain Object Ticket must contain fields id: Text, title: Text, status: State<New, Open, Assigned, Closed, Overdue>, customer: User, assignee: Option<User>, created_at: Time, due_at: Time, public_updates: List<Text>, and internal notes: Secret<List<Text>>.\n- Domain Object User must contain fields id: Text, role: State<Customer, SupportAgent, SupportManager>, and email: Text.\n- Action CreateTicket requires inputs customer id: Text and title: Text; preconditions include the caller having role Customer; effects include creating a Ticket with status New, setting the customer, recording an initial public update, and guaranteeing internal notes are empty and secret; trace event TicketCreated is recorded.\n- Action AssignTicket requires inputs ticket id: Text and assignee id: Text; preconditions include the ticket existing, status being New or Open, and the assignee having role SupportAgent or SupportManager; effects include updating the assignee, changing status to Assigned, recording a public update, and guaranteeing the assignee can read internal notes; trace event TicketAssigned is recorded.\n- Action CloseTicket requires inputs ticket id: Text; preconditions include the ticket existing and status not being Closed; effects include changing status to Closed, recording a public update, guaranteeing closed tickets do not appear in the open ticket queue, and ensuring internal notes are not revealed to the customer; trace event TicketClosed is recorded.\n- Failure NotFound occurs when a ticket id does not match a stored ticket; effects include no ticket data changes, returning error \"Ticket not found\", and recording trace event TicketNotFound.\n- Failure PermissionDenied occurs when a user without support staff permission attempts to read internal notes; effects include revealing no secret value, returning error \"Permission Denied\", and recording trace event InternalNotesDenied.\n- Guarantee: Internal notes are Secret<List<Text>> and are readable only by SupportAgent or SupportManager.\n- Guarantee: The customer-visible ticket history includes public updates and never includes internal notes.\n- Guarantee: Closed tickets do not appear in the open ticket queue for support agents.\n- Trace Event TicketCreated is recorded upon successful ticket creation.\n- Trace Event TicketAssigned is recorded upon successful ticket assignment.\n- Trace Event TicketClosed is recorded upon successful ticket closure.\n- Trace Event TicketOverdue is recorded when the scheduler marks a ticket as Overdue.\n- Trace Event TicketNotFound is recorded when a lookup fails.\n- Trace Event InternalNotesDenied is recorded when secret access is denied.\n- Permission: SupportAgent and SupportManager roles are permitted to read internal notes.\n- Permission: Customer role is denied access to internal notes.\n- Runtime Input: Current time is required for the scheduler to evaluate due_at for overdue status.\n- Runtime Input: Ticket id is required for lookup operations.\n- Runtime Input: User id and role are required for authentication and authorization checks.",
+  "questions": [],
+  "assumptions": [
+    "The User and Ticket domain models are fixed as defined in the AIL-Spec context.",
+    "The roles Customer, SupportAgent, and SupportManager are the only valid roles for User.",
+    "The status states New, Open, Assigned, Closed, and Overdue are the only valid states for Ticket.",
+    "The native target requires the action CloseTicket to be explicitly defined."
+  ],
+  "provenance": [
+    "Package Source AIL-Spec Context: Support Ticket AIL-Spec Example",
+    "User Story Mode Input: support-ticket-story",
+    "Native Build Constraint: CloseTicket action requirement"
+  ],
+  "checker_handoff": {
+    "must_check": true,
+    "expected_profile": "Application",
+    "expected_features": [
+      "domain objects",
+      "actions",
+      "failures",
+      "guarantees",
+      "traces",
+      "secrets",
+      "permissions",
+      "runtime inputs"
+    ]
+  }
+}

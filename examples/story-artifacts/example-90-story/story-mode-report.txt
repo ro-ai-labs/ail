@@ -1,0 +1,24 @@
+AIL-Story-Mode-Report:
+entrypoint: ail-story
+package: support-ticket
+version: 0.1.0
+story-file: examples/stories/example-90.md
+user-story-id: support-ticket-story
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
+semantic-anchor-count: 6
+llm-endpoint: http://inteligentia-pro-1:8080/v1/chat/completions
+default-max-tokens: 4096
+max-tokens: 4096
+token-budget-default: true
+story-llm-transcript-count: 2
+story-prompt-envelope-valid-count: 2
+story-prompt-envelope-invalid-count: 0
+story-llm-transcript: requirements artifact-kind AIL-Requirements content-kind prompt-envelope-artifact
+story-llm-transcript: spec artifact-kind AIL-Spec Canonical content-kind prompt-envelope-artifact
+semantic-anchor: Support Tickets
+semantic-anchor: Close ticket
+semantic-anchor: TicketClosed
+semantic-anchor: internal notes
+semantic-anchor: aarch64-apple-darwin-libsystem-macho
+semantic-anchor: interview.system.md

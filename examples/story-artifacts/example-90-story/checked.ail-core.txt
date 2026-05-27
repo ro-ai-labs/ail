@@ -1,0 +1,203 @@
+package: support-ticket
+version: 0.1.0
+profile: Application
+entry: spec.ail-spec.md
+features: things, actions, failures, guarantees, traces, secrets
+imports: 
+capability-grants: 
+conformance: first-slice
+target-support: aarch64-apple-darwin-libsystem-macho=planned-contract, linux-x86_64-elf=supported, wasm32-unknown-sandbox-wasm=supported-with-host-imports
+base_llm_endpoint: http://inteligentia-pro-1:8080/v1/chat/completions
+
+nodes:
+node Action AssignTicket [label=Assign ticket,trigger=a support agent assigns a ticket]
+node Action CloseTicket [label=Close ticket,trigger=a support agent closes a ticket]
+node Action CreateTicket [label=Create ticket,trigger=a customer creates a ticket]
+node Action MarksOverdueTickets [label=Marks Overdue Tickets,trigger=the scheduler marks overdue tickets]
+node Application Support Tickets [purpose=customer support tickets, assignments, updates, internal notes, and overdue-ticket review]
+node Effect a public update
+node Effect an initial public update
+node Effect the caller sees "Permission denied"
+node Effect the caller sees "Ticket not found"
+node Effect the system changes no ticket data
+node Effect the system reveals no secret value
+node Failure NotFound [condition=a ticket id does not match a stored ticket,declared=true,provenance=failure:NotFound]
+node Failure PermissionDenied [condition=a user tries to see internal notes without support staff permission,declared=true,provenance=failure:PermissionDenied]
+node Field Ticket.assignee : Option<User> [secret=false]
+node Field Ticket.created_at : Time [secret=false]
+node Field Ticket.customer : User [secret=false]
+node Field Ticket.due_at : Time [secret=false]
+node Field Ticket.id : Text [secret=false]
+node Field Ticket.internal notes : Secret<List<Text>> [secret=true]
+node Field Ticket.public_updates : List<Text> [secret=false]
+node Field Ticket.status : State<New, Open, Assigned, Closed, Overdue> [secret=false]
+node Field Ticket.title : Text [secret=false]
+node Field User.email : Text [secret=false]
+node Field User.id : Text [secret=false]
+node Field User.role : State<Customer, SupportAgent, SupportManager> [secret=false]
+node Guarantee closed tickets do not appear in the open ticket queue
+node Guarantee internal notes are empty and secret
+node Guarantee the assignee can see internal notes
+node Provenance action:AssignTicket
+node Provenance action:AssignTicket.guarantee:the assignee can see internal notes
+node Provenance action:AssignTicket.requirement:the assignee role to be SupportAgent or SupportManager
+node Provenance action:AssignTicket.requirement:the ticket status to be New or Open
+node Provenance action:AssignTicket.requirement:the ticket to exist
+node Provenance action:AssignTicket.trace:TicketAssigned
+node Provenance action:AssignTicket.write:a public update
+node Provenance action:CloseTicket
+node Provenance action:CloseTicket.guarantee:closed tickets do not appear in the open ticket queue
+node Provenance action:CloseTicket.requirement:the ticket status not to be Closed
+node Provenance action:CloseTicket.requirement:the ticket to exist
+node Provenance action:CloseTicket.trace:TicketClosed
+node Provenance action:CloseTicket.write:a public update
+node Provenance action:CreateTicket
+node Provenance action:CreateTicket.guarantee:internal notes are empty and secret
+node Provenance action:CreateTicket.requirement:the caller role to be Customer
+node Provenance action:CreateTicket.requirement:the customer id and title
+node Provenance action:CreateTicket.trace:TicketCreated
+node Provenance action:CreateTicket.write:an initial public update
+node Provenance action:MarksOverdueTickets
+node Provenance action:MarksOverdueTickets.requirement:the current time to be later than due_at
+node Provenance action:MarksOverdueTickets.trace:TicketOverdue
+node Provenance action:MarksOverdueTickets.write:a public update
+node Provenance application
+node Provenance failure:NotFound
+node Provenance failure:NotFound.handling:the caller sees "Ticket not found"
+node Provenance failure:NotFound.handling:the system changes no ticket data
+node Provenance failure:NotFound.trace:TicketNotFound
+node Provenance failure:PermissionDenied
+node Provenance failure:PermissionDenied.handling:the caller sees "Permission denied"
+node Provenance failure:PermissionDenied.handling:the system reveals no secret value
+node Provenance failure:PermissionDenied.trace:InternalNotesDenied
+node Provenance field:Ticket.assignee
+node Provenance field:Ticket.created_at
+node Provenance field:Ticket.customer
+node Provenance field:Ticket.due_at
+node Provenance field:Ticket.id
+node Provenance field:Ticket.internal notes
+node Provenance field:Ticket.public_updates
+node Provenance field:Ticket.status
+node Provenance field:Ticket.title
+node Provenance field:User.email
+node Provenance field:User.id
+node Provenance field:User.role
+node Provenance thing:Ticket
+node Provenance thing:User
+node Rule the assignee role to be SupportAgent or SupportManager
+node Rule the caller role to be Customer
+node Rule the current time to be later than due_at
+node Rule the customer id and title
+node Rule the ticket status not to be Closed
+node Rule the ticket status to be New or Open
+node Rule the ticket to exist
+node Secret Ticket.internal notes
+node Thing Ticket
+node Thing User
+node Trace InternalNotesDenied
+node Trace TicketAssigned
+node Trace TicketClosed
+node Trace TicketCreated
+node Trace TicketNotFound
+node Trace TicketOverdue
+
+edges:
+edge has_provenance Application:Support Tickets -> Provenance:application
+edge contains Application:Support Tickets -> Thing:Ticket
+edge has_provenance Thing:Ticket -> Provenance:thing:Ticket
+edge has_field Thing:Ticket -> Field:Ticket.assignee
+edge has_provenance Field:Ticket.assignee -> Provenance:field:Ticket.assignee
+edge has_field Thing:Ticket -> Field:Ticket.created_at
+edge has_provenance Field:Ticket.created_at -> Provenance:field:Ticket.created_at
+edge has_field Thing:Ticket -> Field:Ticket.customer
+edge has_provenance Field:Ticket.customer -> Provenance:field:Ticket.customer
+edge has_field Thing:Ticket -> Field:Ticket.due_at
+edge has_provenance Field:Ticket.due_at -> Provenance:field:Ticket.due_at
+edge has_field Thing:Ticket -> Field:Ticket.id
+edge has_provenance Field:Ticket.id -> Provenance:field:Ticket.id
+edge has_field Thing:Ticket -> Field:Ticket.internal notes
+edge has_provenance Field:Ticket.internal notes -> Provenance:field:Ticket.internal notes
+edge protects_secret Secret:Ticket.internal notes -> Field:Ticket.internal notes
+edge has_provenance Secret:Ticket.internal notes -> Provenance:field:Ticket.internal notes
+edge has_field Thing:Ticket -> Field:Ticket.public_updates
+edge has_provenance Field:Ticket.public_updates -> Provenance:field:Ticket.public_updates
+edge has_field Thing:Ticket -> Field:Ticket.status
+edge has_provenance Field:Ticket.status -> Provenance:field:Ticket.status
+edge has_field Thing:Ticket -> Field:Ticket.title
+edge has_provenance Field:Ticket.title -> Provenance:field:Ticket.title
+edge contains Application:Support Tickets -> Thing:User
+edge has_provenance Thing:User -> Provenance:thing:User
+edge has_field Thing:User -> Field:User.email
+edge has_provenance Field:User.email -> Provenance:field:User.email
+edge has_field Thing:User -> Field:User.id
+edge has_provenance Field:User.id -> Provenance:field:User.id
+edge has_field Thing:User -> Field:User.role
+edge has_provenance Field:User.role -> Provenance:field:User.role
+edge contains Application:Support Tickets -> Action:AssignTicket
+edge has_provenance Action:AssignTicket -> Provenance:action:AssignTicket
+edge requires Action:AssignTicket -> Rule:the ticket to exist
+edge has_provenance Rule:the ticket to exist -> Provenance:action:AssignTicket.requirement:the ticket to exist
+edge requires Action:AssignTicket -> Rule:the ticket status to be New or Open
+edge has_provenance Rule:the ticket status to be New or Open -> Provenance:action:AssignTicket.requirement:the ticket status to be New or Open
+edge requires Action:AssignTicket -> Rule:the assignee role to be SupportAgent or SupportManager
+edge has_provenance Rule:the assignee role to be SupportAgent or SupportManager -> Provenance:action:AssignTicket.requirement:the assignee role to be SupportAgent or SupportManager
+edge writes Action:AssignTicket -> Field:Ticket.assignee [provenance=action:AssignTicket.write:the ticket assignee]
+edge writes Action:AssignTicket -> Field:Ticket.status [provenance=action:AssignTicket.write:the status to Assigned]
+edge writes Action:AssignTicket -> Effect:a public update [provenance=action:AssignTicket.write:a public update]
+edge has_provenance Effect:a public update -> Provenance:action:AssignTicket.write:a public update
+edge guarantees Action:AssignTicket -> Guarantee:the assignee can see internal notes
+edge has_provenance Guarantee:the assignee can see internal notes -> Provenance:action:AssignTicket.guarantee:the assignee can see internal notes
+edge records_trace Action:AssignTicket -> Trace:TicketAssigned
+edge has_provenance Trace:TicketAssigned -> Provenance:action:AssignTicket.trace:TicketAssigned
+edge contains Application:Support Tickets -> Action:CloseTicket
+edge has_provenance Action:CloseTicket -> Provenance:action:CloseTicket
+edge requires Action:CloseTicket -> Rule:the ticket to exist
+edge has_provenance Rule:the ticket to exist -> Provenance:action:CloseTicket.requirement:the ticket to exist
+edge requires Action:CloseTicket -> Rule:the ticket status not to be Closed
+edge has_provenance Rule:the ticket status not to be Closed -> Provenance:action:CloseTicket.requirement:the ticket status not to be Closed
+edge writes Action:CloseTicket -> Field:Ticket.status [provenance=action:CloseTicket.write:the ticket status to Closed]
+edge writes Action:CloseTicket -> Effect:a public update [provenance=action:CloseTicket.write:a public update]
+edge has_provenance Effect:a public update -> Provenance:action:CloseTicket.write:a public update
+edge protects_secret Action:CloseTicket -> Field:Ticket.internal notes
+edge guarantees Action:CloseTicket -> Guarantee:closed tickets do not appear in the open ticket queue
+edge has_provenance Guarantee:closed tickets do not appear in the open ticket queue -> Provenance:action:CloseTicket.guarantee:closed tickets do not appear in the open ticket queue
+edge records_trace Action:CloseTicket -> Trace:TicketClosed
+edge has_provenance Trace:TicketClosed -> Provenance:action:CloseTicket.trace:TicketClosed
+edge contains Application:Support Tickets -> Action:CreateTicket
+edge has_provenance Action:CreateTicket -> Provenance:action:CreateTicket
+edge requires Action:CreateTicket -> Rule:the caller role to be Customer
+edge has_provenance Rule:the caller role to be Customer -> Provenance:action:CreateTicket.requirement:the caller role to be Customer
+edge requires Action:CreateTicket -> Rule:the customer id and title
+edge has_provenance Rule:the customer id and title -> Provenance:action:CreateTicket.requirement:the customer id and title
+edge writes Action:CreateTicket -> Field:Ticket.status [provenance=action:CreateTicket.write:a Ticket with status New]
+edge writes Action:CreateTicket -> Field:Ticket.customer [provenance=action:CreateTicket.write:the customer as the ticket customer]
+edge writes Action:CreateTicket -> Effect:an initial public update [provenance=action:CreateTicket.write:an initial public update]
+edge has_provenance Effect:an initial public update -> Provenance:action:CreateTicket.write:an initial public update
+edge guarantees Action:CreateTicket -> Guarantee:internal notes are empty and secret
+edge has_provenance Guarantee:internal notes are empty and secret -> Provenance:action:CreateTicket.guarantee:internal notes are empty and secret
+edge records_trace Action:CreateTicket -> Trace:TicketCreated
+edge has_provenance Trace:TicketCreated -> Provenance:action:CreateTicket.trace:TicketCreated
+edge contains Application:Support Tickets -> Action:MarksOverdueTickets
+edge has_provenance Action:MarksOverdueTickets -> Provenance:action:MarksOverdueTickets
+edge requires Action:MarksOverdueTickets -> Rule:the current time to be later than due_at
+edge has_provenance Rule:the current time to be later than due_at -> Provenance:action:MarksOverdueTickets.requirement:the current time to be later than due_at
+edge writes Action:MarksOverdueTickets -> Field:Ticket.status [provenance=action:MarksOverdueTickets.write:the ticket status to Overdue]
+edge writes Action:MarksOverdueTickets -> Effect:a public update [provenance=action:MarksOverdueTickets.write:a public update]
+edge has_provenance Effect:a public update -> Provenance:action:MarksOverdueTickets.write:a public update
+edge reads Action:MarksOverdueTickets -> Field:Ticket.status [provenance=action:MarksOverdueTickets.read:tickets whose status is New, Open, or Assigned]
+edge records_trace Action:MarksOverdueTickets -> Trace:TicketOverdue
+edge has_provenance Trace:TicketOverdue -> Provenance:action:MarksOverdueTickets.trace:TicketOverdue
+edge has_provenance Failure:NotFound -> Provenance:failure:NotFound
+edge handles_failure Failure:NotFound -> Effect:the system changes no ticket data
+edge has_provenance Effect:the system changes no ticket data -> Provenance:failure:NotFound.handling:the system changes no ticket data
+edge handles_failure Failure:NotFound -> Effect:the caller sees "Ticket not found"
+edge has_provenance Effect:the caller sees "Ticket not found" -> Provenance:failure:NotFound.handling:the caller sees "Ticket not found"
+edge records_trace Failure:NotFound -> Trace:TicketNotFound
+edge has_provenance Trace:TicketNotFound -> Provenance:failure:NotFound.trace:TicketNotFound
+edge has_provenance Failure:PermissionDenied -> Provenance:failure:PermissionDenied
+edge handles_failure Failure:PermissionDenied -> Effect:the system reveals no secret value
+edge has_provenance Effect:the system reveals no secret value -> Provenance:failure:PermissionDenied.handling:the system reveals no secret value
+edge handles_failure Failure:PermissionDenied -> Effect:the caller sees "Permission denied"
+edge has_provenance Effect:the caller sees "Permission denied" -> Provenance:failure:PermissionDenied.handling:the caller sees "Permission denied"
+edge records_trace Failure:PermissionDenied -> Trace:InternalNotesDenied
+edge has_provenance Trace:InternalNotesDenied -> Provenance:failure:PermissionDenied.trace:InternalNotesDenied

@@ -108,8 +108,11 @@ The import report must include `story-promotion-import-demo-report.txt`,
 `story-promotion-import-demo-report.fingerprint.txt`,
 `story-artifacts-preserved true`, `proposed-accepted true`,
 `promotion-decision accepted-for-promotion`, and
-`human-approved-story-promotion-batch.fingerprint.txt`. The reviewer may then
-prepare a batch entry with `source_entry_id`, `entry_id`,
+`human-approved-story-promotion-batch.fingerprint.txt`. It must report the
+actual `entry-count`, `checker-result-count accepted`, and
+`checker-result-count rejected` from replay, including when the base corpus is
+already a previous story-promotion output. The reviewer may then prepare a
+batch entry with `source_entry_id`, `entry_id`,
 `request_json_file`, `response_json_file`, and
 `story_promotion_capture_plan_json`. The batch importer must append the
 proposed accepted story entry in a corpus copy and must not rewrite the source

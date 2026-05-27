@@ -76,9 +76,9 @@ ui-review-patch-fingerprint-preserved true
 checked-core-fingerprint-preserved true
 flow-edit-applied true
 patched-core-replayed true
-entry-count 126
-checker-result-count accepted 117
-checker-result-count rejected 9
+entry-count
+checker-result-count accepted
+checker-result-count rejected
 ```
 
 After the import demo, write the deterministic runtime UI-state witness:

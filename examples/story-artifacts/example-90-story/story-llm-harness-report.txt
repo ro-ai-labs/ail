@@ -1,0 +1,22 @@
+AIL-Story-LLM-Harness-Review:
+artifact-dir /tmp/ail-v03-story-support90-llm
+story-id support-ticket-story
+semantic-anchor-count 6
+default-max-tokens 4096
+max-tokens 4096
+token-budget-default true
+manifest-entry-check-count 17
+fingerprint-check-count 12
+story-llm-transcript-check-count 6
+story-prompt-envelope-valid-count 2
+story-prompt-envelope-artifact-count 2
+story-prompt-envelope-questions-count 0
+story-prompt-envelope-invalid-count 0
+agent-story-id-match true
+agent-semantic-anchor-match-count 6
+agent-semantic-anchor-missing-count 0
+agent-trace present
+model-check present
+model-check-model-count 1
+model-check-model-id unsloth/Qwen3.6-35B-A3B-GGUF:UD-Q4_K_XL
+review-result accepted

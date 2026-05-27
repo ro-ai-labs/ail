@@ -351,12 +351,15 @@ The report must include `story-artifacts-preserved true`,
 `promotion-decision accepted-for-promotion`, `human-approval-required true`,
 `promotion-source human-approved-story-promotion-batch`,
 `batch-plan-fingerprint`, the preserved
-`default-max-tokens`, `max-tokens`, `token-budget-default`, and any
-`token-budget-warning`. The output corpus copy stores the reviewed story
+`default-max-tokens`, `max-tokens`, `token-budget-default`, any
+`token-budget-warning`, and the actual `entry-count` plus accepted/rejected
+checker counts from replay. The output corpus copy stores the reviewed story
 artifact bundle under `story-artifacts/<entry-id>/`, appends a promoted
 accepted example, writes
 `human-approved-story-promotion-batch.fingerprint.txt`, and replays it with
-`--release-evidence`. It still does not mutate `./examples`.
+`--release-evidence`. It can be pointed at an already-promoted corpus copy to
+prove a second story-promotion variant without relying on hardcoded corpus
+counts. It still does not mutate `./examples`.
 
 The harness is intentionally outside the default test suite because it depends
 on the hosted llama.cpp server and model behavior. Promote a live run into the

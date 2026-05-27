@@ -836,7 +836,7 @@ fn docs_example_inventory_names_every_package_directory() {
     );
     assert!(inventory.contains("Package directories: 26"), "{inventory}");
     assert!(
-        inventory.contains("Counted catalog examples: 125"),
+        inventory.contains("Counted catalog examples: 126"),
         "{inventory}"
     );
     let story_count = fs::read_dir(format!("{examples_dir}/stories"))
@@ -870,16 +870,16 @@ fn docs_example_inventory_names_every_package_directory() {
                 .is_some_and(|extension| extension == "json")
         })
         .count();
-    assert_eq!(story_count, 125, "story file count drifted");
-    assert_eq!(request_count, 125, "request transcript count drifted");
-    assert_eq!(response_count, 125, "response artifact count drifted");
-    assert!(inventory.contains("Story files: 125"), "{inventory}");
+    assert_eq!(story_count, 126, "story file count drifted");
+    assert_eq!(request_count, 126, "request transcript count drifted");
+    assert_eq!(response_count, 126, "response artifact count drifted");
+    assert!(inventory.contains("Story files: 126"), "{inventory}");
     assert!(
-        inventory.contains("Stored request transcripts: 125"),
+        inventory.contains("Stored request transcripts: 126"),
         "{inventory}"
     );
     assert!(
-        inventory.contains("Stored response artifacts: 125"),
+        inventory.contains("Stored response artifacts: 126"),
         "{inventory}"
     );
     assert!(
@@ -1504,8 +1504,8 @@ fn docs_define_v03_release_completion_audit() {
         fs::read_to_string(format!("{}/README.md", env!("CARGO_MANIFEST_DIR"))).unwrap();
 
     for required in [
-        "125-entry replay catalog",
-        "checker-result-count accepted 116",
+        "126-entry replay catalog",
+        "checker-result-count accepted 117",
         "checker-result-count rejected 9",
     ] {
         assert!(top_readme.contains(required), "{required}\n{top_readme}");
@@ -1513,8 +1513,8 @@ fn docs_define_v03_release_completion_audit() {
     for required in [
         "scripts/run_v03_release_audit.py",
         "AIL v0.3 release completion",
-        "125-entry",
-        "116 accepted",
+        "126-entry",
+        "117 accepted",
         "9 rejected",
         "python3 scripts/run_ail_interactive_manual.py --all --run-checks",
         "cargo run -- ail-examples examples --artifact-dir",
@@ -2893,6 +2893,9 @@ fn examples_agents_include_story_promotion_review_contract() {
         "human-approval-required true",
         "promotion-source human-approved-story-promotion-batch",
         "human-approved-story-promotion-batch.fingerprint.txt",
+        "entry-count",
+        "checker-result-count accepted",
+        "checker-result-count rejected",
         "default-max-tokens",
         "max-tokens",
         "token-budget-default",
@@ -2927,6 +2930,9 @@ fn examples_agents_include_story_promotion_review_contract() {
         "human-approval-required true",
         "promotion-source human-approved-story-promotion-batch",
         "human-approved-story-promotion-batch.fingerprint.txt",
+        "entry-count",
+        "checker-result-count accepted",
+        "checker-result-count rejected",
         "semantic-anchor-missing-count 0",
         "accepted-for-promotion",
         "needs-repair",
@@ -28564,9 +28570,9 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         String::from_utf8_lossy(&output.stderr)
     );
     let report = fs::read_to_string(artifact_dir.join("examples-report.txt")).unwrap();
-    assert!(report.contains("entry-count 125"), "{report}");
+    assert!(report.contains("entry-count 126"), "{report}");
     assert!(
-        report.contains("checker-result-count accepted 116"),
+        report.contains("checker-result-count accepted 117"),
         "{report}"
     );
     assert!(
@@ -28582,7 +28588,7 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("capability-level-count high-level 51"),
+        report.contains("capability-level-count high-level 52"),
         "{report}"
     );
     assert!(
@@ -28630,7 +28636,7 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("capture-origin-count live-codex 121"),
+        report.contains("capture-origin-count live-codex 122"),
         "{report}"
     );
     assert!(
@@ -29356,12 +29362,12 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         report.contains("program-domain-count application 12")
             && report.contains("program-domain-count diagnostic 9")
             && report.contains("program-domain-count runtime 21")
-            && report.contains("program-scale-count multi-module-system 56")
-            && report.contains("story-roundtrip-count semantic-similar 116"),
+            && report.contains("program-scale-count multi-module-system 57")
+            && report.contains("story-roundtrip-count semantic-similar 117"),
         "{report}"
     );
     assert!(
-        report.contains("semantic-anchor-story-count 125")
+        report.contains("semantic-anchor-story-count 126")
             && report.contains(
                 "entry-semantic-anchors example-0 Option<T>; Result<T; E>; Map<K; V>; Option.map; OptionMapEvaluated; interview.system.md"
             )
@@ -29423,16 +29429,22 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("response-fingerprint-duplicate-entry-count 1")
+        report.contains("response-fingerprint-duplicate-entry-count 2")
             && report.contains(
                 "response-fingerprint-reuse fnv64:ebd656bf2468fa54 2 example-122,example-123"
+            )
+            && report.contains(
+                "response-fingerprint-reuse fnv64:19e0da1f8e83dd61 2 example-30-story,example-90-story"
             ),
         "{report}"
     );
     assert!(
-        report.contains("extracted-artifact-fingerprint-duplicate-entry-count 1")
+        report.contains("extracted-artifact-fingerprint-duplicate-entry-count 2")
             && report.contains(
                 "extracted-artifact-fingerprint-reuse fnv64:c85aa95379758ac2 2 example-122,example-123"
+            )
+            && report.contains(
+                "extracted-artifact-fingerprint-reuse fnv64:ed5b46bbcc19c5fd 2 example-30-story,example-90-story"
             ),
         "{report}"
     );
@@ -30384,9 +30396,9 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
     let model_executor_manifest =
         fs::read_to_string(artifact_dir.join("model-executor-manifest.txt")).unwrap();
     assert!(
-        model_executor_manifest.contains("entry-count 125")
-            && model_executor_manifest.contains("executor-family codex-skill-agent count 121")
-            && model_executor_manifest.contains("capture-origin live-codex count 121")
+        model_executor_manifest.contains("entry-count 126")
+            && model_executor_manifest.contains("executor-family codex-skill-agent count 122")
+            && model_executor_manifest.contains("capture-origin live-codex count 122")
             && model_executor_manifest.contains(
                 "entry example-100 semantic-task stateful-counter-live-codex-accepted-100"
             )
@@ -30480,9 +30492,9 @@ fn cli_ail_e2e_corpus_promotes_second_incident_repair_variant() {
             ),
         "{report}"
     );
-    assert!(report.contains("entry-count 125"), "{report}");
+    assert!(report.contains("entry-count 126"), "{report}");
     assert!(
-        report.contains("checker-result-count accepted 116"),
+        report.contains("checker-result-count accepted 117"),
         "{report}"
     );
     assert!(
@@ -30490,14 +30502,14 @@ fn cli_ail_e2e_corpus_promotes_second_incident_repair_variant() {
         "{report}"
     );
     assert!(
-        report.contains("story-roundtrip-count semantic-similar 116"),
+        report.contains("story-roundtrip-count semantic-similar 117"),
         "{report}"
     );
 
     let model_executor_manifest =
         fs::read_to_string(artifact_dir.join("model-executor-manifest.txt")).unwrap();
     assert!(
-        model_executor_manifest.contains("entry-count 125")
+        model_executor_manifest.contains("entry-count 126")
             && model_executor_manifest.contains(
                 "entry example-123 semantic-task incident-response-commander-review-repair-promoted-123"
             ),
@@ -34145,7 +34157,7 @@ fn cli_ail_v03_roadmap_advances_completed_story_promotion_signal() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(
         stdout.contains(
-            "signal User Story mode needs reviewer-produced promotion decisions and multi-story promotion variants after deterministic promotion imports are replayed. count 1"
+            "signal User Story mode needs reviewer-produced promotion decisions and multi-story promotion variants after deterministic promotion imports are replayed. count 2"
         ),
         "{stdout}"
     );
