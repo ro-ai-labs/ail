@@ -206,6 +206,22 @@ semantic-anchor-missing-count 0
 `manifest.ail-story.txt` records
 `story-amendment-comparison story-amendment-comparison.txt <fingerprint>`.
 
+The application-family variant uses `examples/incident_response.ail` to check
+that amendment comparison is not support-ticket specific:
+
+```sh
+cargo test cli_ail_story_incident_response_story_amendment_preserves_application_anchors --test ail_toolchain
+```
+
+That check preserves five incident-response anchors, including
+`IncidentEscalated`, `notification audit entry`, and
+`public timeline subscribers`, and expects:
+
+```text
+semantic-anchor-preserved-count 5
+semantic-anchor-missing-count 0
+```
+
 ## Live Harness
 
 Use the harness in dry-run mode first:

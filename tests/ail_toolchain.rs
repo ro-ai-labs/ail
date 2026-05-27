@@ -1208,12 +1208,18 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         "story-prompt-envelope-valid-count",
         "story-prompt-envelope-invalid-count",
         "cli_ail_story_story_amendment_writes_comparison_artifact",
+        "cli_ail_story_incident_response_story_amendment_preserves_application_anchors",
+        "examples/incident_response.ail",
         "story-amendment-comparison.txt",
         "story-amendment-comparison.fingerprint.txt",
         "story-amendment-comparison: present",
         "comparison-result accepted",
         "semantic-anchor-preserved-count 4",
+        "semantic-anchor-preserved-count 5",
         "semantic-anchor-missing-count 0",
+        "IncidentEscalated",
+        "notification audit entry",
+        "public timeline subscribers",
         "scripts/run_v03_story_promotion_capture_plan.py",
         "scripts/run_v03_story_promotion_import_demo.py",
         "story-promotion-capture-plan.json",
@@ -1439,6 +1445,7 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "cargo test cli_ail_story_uses_default_toolchain_agent_entrypoint --test ail_toolchain",
         "cargo test cli_ail_story_surfaces_blocking_questions_as_story_artifact --test ail_toolchain",
         "cargo test cli_ail_story_native_target_executes_story_runtime_trace --test ail_toolchain",
+        "cargo test cli_ail_story_incident_response_story_amendment_preserves_application_anchors --test ail_toolchain",
         "evidence manifest.ail-story.txt",
         "evidence agent.ailbc.json",
         "evidence agent-trace.txt",
@@ -1449,6 +1456,11 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "evidence native-bytecode-report.txt",
         "evidence ticket.status=Closed",
         "evidence trace TicketClosed",
+        "evidence examples/incident_response.ail",
+        "evidence IncidentEscalated",
+        "evidence notification audit entry",
+        "evidence public timeline subscribers",
+        "evidence semantic-anchor-preserved-count 5",
         "evidence llm/requirements.request.json",
         "evidence llm/spec.content.txt",
         "evidence story-prompt-envelope-valid-count",
@@ -2095,6 +2107,7 @@ fn script_ail_interactive_manual_v03_authoring_gate_run_checks_succeeds() {
         "running run-examples-release-checks",
         "running verify-story-runtime-trace-local",
         "running verify-story-amendment-comparison-local",
+        "running verify-incident-story-amendment-local",
         "running run-prompt-interaction-checks",
         "running run-agent-entrypoint-checks",
         "running run-bootstrap-self-hosting-checks",
@@ -2126,7 +2139,11 @@ fn script_ail_interactive_manual_v03_authoring_gate_run_checks_succeeds() {
         "story-amendment-comparison.txt",
         "story-amendment-comparison.fingerprint.txt",
         "semantic-anchor-preserved-count 4",
+        "semantic-anchor-preserved-count 5",
         "semantic-anchor-missing-count 0",
+        "IncidentEscalated",
+        "notification audit entry",
+        "public timeline subscribers",
         "ticket.status=Closed",
         "trace TicketClosed",
     ] {
@@ -21942,6 +21959,148 @@ fn cli_ail_story_story_amendment_writes_comparison_artifact() {
         "{manifest}"
     );
     let report = fs::read_to_string(artifact_dir.join("story-mode-report.txt")).unwrap();
+    assert!(
+        report.contains("story-amendment-comparison: present"),
+        "{report}"
+    );
+
+    fs::remove_file(story_file).unwrap();
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
+fn cli_ail_story_incident_response_story_amendment_preserves_application_anchors() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("incident_response.ail");
+    let unique_suffix = format!(
+        "{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
+    let story_file =
+        std::env::temp_dir().join(format!("ail-incident-story-amendment-{unique_suffix}.md"));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-incident-story-amendment-artifacts-{unique_suffix}"
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::write(
+        &story_file,
+        concat!(
+            "# Incident Response Amendment Story\n\n",
+            "user-story-id: incident-response-amendment-story\n",
+            "user-story: As an incident commander I can amend the incident-response story so escalation notifications and public timelines stay reviewable across imported modules.\n",
+            "acceptance-criteria: checked requirements exist; checked spec exists; bytecode exists; amendment comparison preserves lifecycle and notification semantic anchors\n",
+            "story-journey: story-amendment\n",
+            "story-roundtrip: semantic-similar\n",
+            "semantic-anchors: Incident; Escalate incident; IncidentEscalated; notification audit entry; public timeline subscribers\n"
+        ),
+    )
+    .unwrap();
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let requirements = concat!(
+        "AIL-Requirements:\n",
+        "- The application manages Incident records across incident response.\n",
+        "- Escalate incident requires incident severity Sev1 or Sev2.\n",
+        "- If severity is missing or not Sev1 or Sev2, escalation fails and records IncidentEscalationValidationFailed.\n",
+        "- Escalate incident records a notification audit entry.\n",
+        "- Escalate incident guarantees public timeline subscribers can see the escalation.\n",
+        "- The action records trace event IncidentEscalated.\n"
+    );
+    let requirements_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(&format!(
+            r#"{{"artifact_kind":"AIL-Requirements","artifact_text":{},"questions":[],"checker_handoff":{{"must_check":true,"expected_profile":"Application","expected_features":[]}}}}"#,
+            json_string(requirements)
+        ))
+    );
+    let response_spec = fs::read_to_string(format!("{package}/spec.ail-spec.md")).unwrap();
+    let spec_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(&format!(
+            r#"{{"artifact_kind":"AIL-Spec Canonical","artifact_text":{},"questions":[],"checker_handoff":{{"must_check":true,"expected_profile":"Application","expected_features":[]}}}}"#,
+            json_string(&response_spec)
+        ))
+    );
+    let server = serve_chat_responses(listener, vec![requirements_body, spec_body]);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-story",
+            &package,
+            "--story-file",
+            story_file.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+            "--llm-endpoint",
+            &format!("http://127.0.0.1:{}/v1/chat/completions", addr.port()),
+        ])
+        .output()
+        .unwrap();
+
+    let request_bodies = server.join().unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(request_bodies.len(), 2);
+    assert!(
+        request_bodies[0].contains("buildrequest.story-id=incident-response-amendment-story"),
+        "{}",
+        request_bodies[0]
+    );
+    assert!(
+        request_bodies[0].contains(
+            "buildrequest.semantic-anchors=Incident; Escalate incident; IncidentEscalated; notification audit entry; public timeline subscribers"
+        ),
+        "{}",
+        request_bodies[0]
+    );
+    let comparison_path = artifact_dir.join("story-amendment-comparison.txt");
+    let comparison_fingerprint_path =
+        artifact_dir.join("story-amendment-comparison.fingerprint.txt");
+    assert!(comparison_path.is_file(), "{}", comparison_path.display());
+    assert!(
+        comparison_fingerprint_path.is_file(),
+        "{}",
+        comparison_fingerprint_path.display()
+    );
+    let comparison = fs::read_to_string(&comparison_path).unwrap();
+    for required in [
+        "AIL-Story-Amendment-Comparison:",
+        "story-journey story-amendment",
+        "story-roundtrip semantic-similar",
+        "comparison-result accepted",
+        "semantic-anchor-count 5",
+        "semantic-anchor-preserved-count 5",
+        "semantic-anchor-missing-count 0",
+        "semantic-anchor IncidentEscalated preserved",
+        "semantic-anchor notification audit entry preserved",
+        "semantic-anchor public timeline subscribers preserved",
+        "requirements-fingerprint fnv64:",
+        "accepted-spec-fingerprint fnv64:",
+        "checked-core-fingerprint fnv64:",
+        "bytecode-fingerprint fnv64:",
+    ] {
+        assert!(comparison.contains(required), "{required}\n{comparison}");
+    }
+    let comparison_fingerprint = fs::read_to_string(comparison_fingerprint_path).unwrap();
+    assert_eq!(
+        comparison_fingerprint.trim(),
+        fnv64_fingerprint(&comparison)
+    );
+    let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-story.txt")).unwrap();
+    assert!(
+        manifest.contains("story-amendment-comparison story-amendment-comparison.txt"),
+        "{manifest}"
+    );
+    let report = fs::read_to_string(artifact_dir.join("story-mode-report.txt")).unwrap();
+    assert!(report.contains("package: incident-response"), "{report}");
     assert!(
         report.contains("story-amendment-comparison: present"),
         "{report}"

@@ -22,9 +22,11 @@ Run deterministic User Story mode checks:
 python3 scripts/run_ail_interactive_manual.py --chapter user-story-mode --run-checks
 ```
 
-Those checks now include the story-amendment comparison branch, which writes
-and fingerprints `story-amendment-comparison.txt` for
-`story-journey: story-amendment` inputs.
+Those checks now include support-ticket and incident-response
+story-amendment comparison branches, which write and fingerprint
+`story-amendment-comparison.txt` for `story-journey: story-amendment` inputs
+and preserve incident escalation, notification-audit, and public-timeline
+semantic anchors.
 
 Run every deterministic authoring chapter as one local audit:
 
