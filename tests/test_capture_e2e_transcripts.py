@@ -1072,6 +1072,156 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             shutil.rmtree(artifact_dir, ignore_errors=True)
             shutil.rmtree(transcript_dir, ignore_errors=True)
 
+    def test_batch_capture_appends_repair_promotion_entry(self):
+        output_dir = Path(tempfile.mkdtemp(prefix="ail-examples-repair-promotion-import-"))
+        artifact_dir = Path(
+            tempfile.mkdtemp(prefix="ail-examples-repair-promotion-import-artifacts-")
+        )
+        transcript_dir = Path(
+            tempfile.mkdtemp(prefix="ail-examples-repair-promotion-import-transcript-")
+        )
+        try:
+            spec_text = (
+                ROOT / "examples" / "support_ticket.ail" / "spec.ail-spec.md"
+            ).read_text()
+            codex_request = transcript_dir / "repair-request.json"
+            codex_response = transcript_dir / "repair-response.json"
+            capture_plan = transcript_dir / "repair-promotion-capture-plan.json"
+            batch_plan = transcript_dir / "batch-plan.json"
+            codex_request.write_text(
+                json.dumps(
+                    {
+                        "agent_contract": (
+                            "examples/agents/codex-ail-repair-promotion-reviewer.md"
+                        ),
+                        "executor_label": "codex-ail-repair-promotion-reviewer-test",
+                        "source_entry_id": "example-99",
+                        "task": "Approve the repaired Support Ticket spec.",
+                    },
+                    indent=2,
+                    sort_keys=True,
+                )
+                + "\n"
+            )
+            codex_response.write_text(
+                json.dumps({"artifact_text": spec_text, "model": "codex-test-model"})
+                + "\n"
+            )
+            capture_plan_text = (
+                json.dumps(
+                    {
+                        "artifact_kind": "AIL-Repair-Promotion-Capture-Plan",
+                        "batch_capture_script": "scripts/capture_example_batch.py",
+                        "checker_result": "rejected-to-repaired",
+                        "expected_diagnostic_removed": True,
+                        "human_approval_required": True,
+                        "must_supply_request_response_json": True,
+                        "preserve_rejected_entry": True,
+                        "promotion_decision": "accepted-for-promotion",
+                        "proposed_entry_id": "example-99-repaired",
+                        "semantic_anchor_missing_count": 0,
+                        "source_entry_id": "example-99",
+                        "status": "plan-only",
+                    },
+                    indent=2,
+                    sort_keys=True,
+                )
+                + "\n"
+            )
+            capture_plan.write_text(capture_plan_text)
+            capture_plan.with_name("repair-promotion-capture-plan.fingerprint.txt").write_text(
+                fnv64(capture_plan_text) + "\n"
+            )
+            batch_plan.write_text(
+                json.dumps(
+                    {
+                        "entries": [
+                            {
+                                "entry_id": "example-99-repaired",
+                                "source_entry_id": "example-99",
+                                "executor_family": "codex-skill-agent",
+                                "executor_label": (
+                                    "codex-ail-repair-promotion-reviewer-test"
+                                ),
+                                "semantic_task": "support-ticket-repair-promoted-99",
+                                "request_json_file": str(codex_request),
+                                "response_json_file": str(codex_response),
+                                "checker_result": "accepted",
+                                "repair_promotion_capture_plan_json": str(capture_plan),
+                            }
+                        ]
+                    },
+                    indent=2,
+                    sort_keys=True,
+                )
+                + "\n"
+            )
+
+            capture = subprocess.run(
+                [
+                    "python3",
+                    "scripts/capture_example_batch.py",
+                    "--base-corpus",
+                    "examples",
+                    "--output-dir",
+                    str(output_dir),
+                    "--plan-json",
+                    str(batch_plan),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(capture.returncode, 0, capture.stderr)
+
+            examples = (output_dir / "examples.md").read_text()
+            source_section = examples.split("## Example: example-99", 1)[1].split(
+                "## Example:", 1
+            )[0]
+            promoted_section = examples.split("## Example: example-99-repaired", 1)[1]
+            self.assertIn("checker-result: rejected", source_section)
+            self.assertIn("expected-diagnostic: AIL001", source_section)
+            self.assertIn("semantic-task: support-ticket-repair-promoted-99", promoted_section)
+            self.assertIn("checker-result: accepted", promoted_section)
+            self.assertIn("capture-origin: live-codex", promoted_section)
+            self.assertIn(
+                "executor-label: codex-ail-repair-promotion-reviewer-test",
+                promoted_section,
+            )
+            self.assertIn("story-file: stories/example-99-repaired.md", promoted_section)
+            self.assertNotIn("expected-diagnostic:", promoted_section)
+            self.assertNotIn("failure-taxonomy:", promoted_section)
+            self.assertTrue((output_dir / "stories" / "example-99-repaired.md").exists())
+            self.assertTrue((output_dir / "requests" / "example-99-repaired.json").exists())
+            self.assertTrue((output_dir / "responses" / "example-99-repaired.json").exists())
+
+            replay = subprocess.run(
+                [
+                    "cargo",
+                    "run",
+                    "--quiet",
+                    "--",
+                    "ail-examples",
+                    str(output_dir),
+                    "--artifact-dir",
+                    str(artifact_dir),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(replay.returncode, 0, replay.stderr)
+            report = (artifact_dir / "examples-report.txt").read_text()
+            self.assertIn("entry-count 117", report)
+            self.assertIn("checker-result-count accepted 109", report)
+            self.assertIn("checker-result-count rejected 8", report)
+            self.assertIn("entry example-99 ", report)
+            self.assertIn("entry example-99-repaired ", report)
+        finally:
+            shutil.rmtree(output_dir, ignore_errors=True)
+            shutil.rmtree(artifact_dir, ignore_errors=True)
+            shutil.rmtree(transcript_dir, ignore_errors=True)
+
 
 if __name__ == "__main__":
     unittest.main()

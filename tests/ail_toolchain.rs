@@ -2219,8 +2219,9 @@ fn script_v03_repair_promotion_capture_plan_writes_fingerprinted_plan() {
         plan_text.contains("AIL-Repair-Promotion-Capture-Plan:")
             && plan_text.contains("source-entry-id example-99")
             && plan_text.contains("proposed-entry-id example-99-repaired")
-            && plan_text
-                .contains("capture-command-template python3 scripts/capture_example_batch.py")
+            && plan_text.contains(
+                "capture-command-template python3 scripts/capture_example_batch.py --plan-json"
+            )
             && plan_text.contains("must-supply-request-response-json true")
             && plan_text.contains("preserve-rejected-entry true"),
         "{plan_text}"

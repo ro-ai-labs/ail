@@ -76,3 +76,7 @@ Return `needs-repair` or `rejected-for-promotion` when:
 
 Do not promote generated content into `./examples` unless deterministic replay,
 repair promotion review, and human approval all pass.
+When human approval is available, use `scripts/capture_example_batch.py` with
+`repair_promotion_capture_plan_json`, `source_entry_id`, and the proposed
+`entry_id` so the repaired accepted entry is appended to a corpus copy while
+the rejected source entry remains intact.

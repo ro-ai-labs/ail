@@ -79,3 +79,9 @@ python3 scripts/run_v03_repair_promotion_capture_plan.py \
 The capture plan must include `preserve_rejected_entry: true`,
 `must_supply_request_response_json: true`, and
 `batch_capture_script: scripts/capture_example_batch.py`.
+
+After human approval, the reviewer may prepare a batch entry with
+`source_entry_id`, `entry_id`, `request_json_file`, `response_json_file`, and
+`repair_promotion_capture_plan_json`. The batch importer must append the
+proposed accepted entry in a corpus copy and must not rewrite or delete the
+rejected source entry.

@@ -166,3 +166,9 @@ while keeping replay offline and reproducible.
 Multi-entry promotion uses `scripts/capture_example_batch.py` so a live LLM capture
 batch and recorded Codex transcript imports can be applied to one corpus copy
 before replay.
+Repair-promotion batches may also append a proposed accepted entry by supplying
+`source_entry_id`, `entry_id`, approved request/response JSON, and
+`repair_promotion_capture_plan_json`. That mode validates the plan fingerprint,
+keeps the rejected source entry in place, writes fresh transcript and story
+files for the proposed accepted entry, and still relies on offline replay for
+spec -> Core -> bytecode -> runtime or target evidence.

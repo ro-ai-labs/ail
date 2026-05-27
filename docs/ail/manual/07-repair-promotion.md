@@ -81,3 +81,40 @@ The capture plan is deliberately not a corpus edit. It verifies the promotion
 review fingerprint, checks that report and manifest entries still point at the
 rejected example evidence, records `preserve_rejected_entry: true`, and names
 `scripts/capture_example_batch.py` as the human-approved batch capture path.
+
+## Human-Approved Import
+
+After a human reviewer supplies approved request and response JSON, append the
+repaired entry into a corpus copy with the batch importer:
+
+```sh
+python3 scripts/capture_example_batch.py \
+  --base-corpus examples \
+  --output-dir /tmp/ail-repair-promotion-import-corpus \
+  --plan-json /tmp/human-approved-repair-promotion-batch.json
+```
+
+The batch entry must name the rejected source and the proposed accepted entry:
+
+```json
+{
+  "entries": [
+    {
+      "entry_id": "example-99-repaired",
+      "source_entry_id": "example-99",
+      "executor_family": "codex-skill-agent",
+      "executor_label": "codex-ail-repair-promotion-reviewer",
+      "semantic_task": "support-ticket-repair-promoted-99",
+      "request_json_file": "/tmp/approved-request.json",
+      "response_json_file": "/tmp/approved-response.json",
+      "checker_result": "accepted",
+      "repair_promotion_capture_plan_json": "/tmp/ail-manual-repair-promotion-capture-plan/repair-promotion-capture-plan.json"
+    }
+  ]
+}
+```
+
+The importer validates the capture-plan fingerprint and required promotion
+fields, keeps `example-99` rejected, appends `example-99-repaired`, writes new
+request, response, and story files, and leaves final acceptance to
+`cargo run -- ail-examples <corpus-copy> --artifact-dir <artifacts>`.

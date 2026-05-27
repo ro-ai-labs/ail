@@ -173,6 +173,13 @@ to write `repair-promotion-capture-plan.json`, `.txt`, and `.fingerprint.txt`.
 The plan requires human-approved request/response JSON for
 `scripts/capture_example_batch.py` and records `preserve_rejected_entry: true`
 so the rejected learning evidence remains in the corpus.
+Batch import can then append `proposed_entry_id` from the plan by supplying a
+batch entry with `source_entry_id`, `entry_id`, approved request/response JSON,
+and `repair_promotion_capture_plan_json`. The importer validates the plan
+fingerprint, keeps the rejected source entry unchanged, writes new
+`requests/`, `responses/`, and `stories/` files for the repaired accepted entry,
+and still requires offline `ail-examples` replay before any generated corpus
+copy is committed.
 Release story files must include `semantic-anchors` for the terms, actions,
 modules, targets, or diagnostics that must survive story/spec/Core
 round-trips. In `--release-evidence` mode, `ail-examples` rejects any catalog

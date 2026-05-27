@@ -125,7 +125,7 @@ def build_plan(
         "capture_command_template": [
             "python3",
             BATCH_CAPTURE_SCRIPT,
-            "--batch-file",
+            "--plan-json",
             "<human-approved-repair-promotion-batch.json>",
         ],
         "checker_result": values["checker-result"],
