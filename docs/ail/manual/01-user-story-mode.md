@@ -168,10 +168,35 @@ fingerprints, transcript check count, and prompt-envelope counts. It does not
 mutate `./examples`; it is the durable handoff for a later human-approved
 batch capture.
 
+After human approval, run the deterministic import demo against a corpus copy:
+
+```sh
+python3 scripts/run_v03_story_promotion_import_demo.py \
+  --story-artifacts /tmp/ail-v03-story-llm \
+  --capture-plan-dir /tmp/ail-v03-story-promotion-capture-plan \
+  --work-dir /tmp/ail-v03-story-promotion-import-work \
+  --output-corpus /tmp/ail-v03-story-promotion-import-corpus \
+  --output-artifacts /tmp/ail-v03-story-promotion-import-artifacts
+```
+
+That writes:
+
+```text
+/tmp/ail-v03-story-promotion-import-work/story-promotion-import-demo-report.txt
+/tmp/ail-v03-story-promotion-import-work/story-promotion-import-demo-report.fingerprint.txt
+```
+
+The report must include `story-artifacts-preserved true` and
+`proposed-accepted true`. The output corpus copy stores the reviewed story
+artifact bundle under `story-artifacts/<entry-id>/`, appends a promoted
+accepted example, and replays it with `--release-evidence`. It still does not
+mutate `./examples`.
+
 The harness is intentionally outside the default test suite because it depends
 on the hosted llama.cpp server and model behavior. Promote a live run into the
 examples corpus only after the generated requirements, spec, Core, bytecode,
-agent trace, manifest, and story-promotion capture plan have been reviewed.
+agent trace, manifest, story-promotion capture plan, and story-promotion import
+demo report have been reviewed.
 
 The review mode is offline. It checks story source and normalized story
 fingerprints, story-mode report metadata, generated requirements, accepted

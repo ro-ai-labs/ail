@@ -277,11 +277,7 @@ def write_story_llm_review_fixture(artifact_dir, omit_agent_trace=False):
         "- The application manages support tickets.\n"
         "- The Close ticket action records TicketClosed.\n"
     )
-    spec = (
-        "# Support Ticket\n\n"
-        "AIL-Spec: support-ticket\n\n"
-        "Action: Close ticket.\n"
-    )
+    spec = (ROOT / "examples" / "support_ticket.ail" / "spec.ail-spec.md").read_text()
     core = "AIL-Core:\nnode action CloseTicket\n"
     flow_review = json.dumps({"profile": "Application", "actions": ["Close ticket"]}) + "\n"
     bytecode = json.dumps({"version": "ail-bytecode-0", "package": "support-ticket"}) + "\n"
@@ -1485,6 +1481,173 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             shutil.rmtree(artifact_dir, ignore_errors=True)
             shutil.rmtree(transcript_dir, ignore_errors=True)
 
+    def test_batch_capture_appends_story_promotion_entry(self):
+        output_dir = Path(tempfile.mkdtemp(prefix="ail-examples-story-promotion-import-"))
+        artifact_dir = Path(
+            tempfile.mkdtemp(prefix="ail-examples-story-promotion-import-artifacts-")
+        )
+        story_artifacts = Path(
+            tempfile.mkdtemp(prefix="ail-examples-story-promotion-artifacts-")
+        )
+        capture_plan_dir = Path(
+            tempfile.mkdtemp(prefix="ail-examples-story-promotion-plan-")
+        )
+        transcript_dir = Path(
+            tempfile.mkdtemp(prefix="ail-examples-story-promotion-transcript-")
+        )
+        try:
+            write_story_llm_review_fixture(story_artifacts)
+            review = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_story_llm_harness.py",
+                    "--review-artifacts",
+                    str(story_artifacts),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(review.returncode, 0, review.stderr)
+            plan = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_story_promotion_capture_plan.py",
+                    "--story-artifacts",
+                    str(story_artifacts),
+                    "--output-dir",
+                    str(capture_plan_dir),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(plan.returncode, 0, plan.stderr)
+
+            codex_request = transcript_dir / "story-request.json"
+            codex_response = transcript_dir / "story-response.json"
+            batch_plan = transcript_dir / "batch-plan.json"
+            codex_request.write_text(
+                json.dumps(
+                    {
+                        "agent_contract": "examples/agents/codex-ail-prompt-reviewer.md",
+                        "executor_label": "codex-ail-prompt-reviewer-story-test",
+                        "source_entry_id": "example-30",
+                        "task": "Approve the reviewed User Story mode artifact for corpus promotion.",
+                    },
+                    indent=2,
+                    sort_keys=True,
+                )
+                + "\n"
+            )
+            codex_response.write_text(
+                json.dumps(
+                    {
+                        "artifact_text": (
+                            story_artifacts / "accepted.ail-spec.md"
+                        ).read_text(),
+                        "model": "codex-story-promotion-test-model",
+                    },
+                    indent=2,
+                    sort_keys=True,
+                )
+                + "\n"
+            )
+            batch_plan.write_text(
+                json.dumps(
+                    {
+                        "entries": [
+                            {
+                                "entry_id": "example-30-story",
+                                "source_entry_id": "example-30",
+                                "executor_family": "codex-skill-agent",
+                                "executor_label": "codex-ail-prompt-reviewer-story-test",
+                                "semantic_task": "support-ticket-story-promoted-30",
+                                "request_json_file": str(codex_request),
+                                "response_json_file": str(codex_response),
+                                "checker_result": "accepted",
+                                "story_promotion_capture_plan_json": str(
+                                    capture_plan_dir / "story-promotion-capture-plan.json"
+                                ),
+                            }
+                        ]
+                    },
+                    indent=2,
+                    sort_keys=True,
+                )
+                + "\n"
+            )
+
+            capture = subprocess.run(
+                [
+                    "python3",
+                    "scripts/capture_example_batch.py",
+                    "--base-corpus",
+                    "examples",
+                    "--output-dir",
+                    str(output_dir),
+                    "--plan-json",
+                    str(batch_plan),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(capture.returncode, 0, capture.stderr)
+
+            examples = (output_dir / "examples.md").read_text()
+            source_section = examples.split("## Example: example-30", 1)[1].split(
+                "## Example:", 1
+            )[0]
+            promoted_section = examples.split("## Example: example-30-story", 1)[1]
+            self.assertIn("checker-result: accepted", source_section)
+            self.assertIn("semantic-task: support-ticket-story-promoted-30", promoted_section)
+            self.assertIn("user-story-id: support-ticket-agent-story", promoted_section)
+            self.assertIn("story-file: stories/example-30-story.md", promoted_section)
+            self.assertIn("story-evidence: vm-trace", promoted_section)
+            self.assertIn("capture-origin: live-codex", promoted_section)
+            self.assertIn(
+                "executor-label: codex-ail-prompt-reviewer-story-test",
+                promoted_section,
+            )
+            story_file = output_dir / "stories" / "example-30-story.md"
+            self.assertTrue(story_file.exists())
+            self.assertIn(
+                "semantic-anchors: Support Tickets; Close ticket; TicketClosed; toolchain agent",
+                story_file.read_text(),
+            )
+            self.assertTrue((output_dir / "requests" / "example-30-story.json").exists())
+            self.assertTrue((output_dir / "responses" / "example-30-story.json").exists())
+
+            replay = subprocess.run(
+                [
+                    "cargo",
+                    "run",
+                    "--quiet",
+                    "--",
+                    "ail-examples",
+                    str(output_dir),
+                    "--artifact-dir",
+                    str(artifact_dir),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(replay.returncode, 0, replay.stderr)
+            report = (artifact_dir / "examples-report.txt").read_text()
+            self.assertIn("entry-count 117", report)
+            self.assertIn("checker-result-count accepted 109", report)
+            self.assertIn("checker-result-count rejected 8", report)
+            self.assertIn("entry example-30 ", report)
+            self.assertIn("entry example-30-story ", report)
+        finally:
+            shutil.rmtree(output_dir, ignore_errors=True)
+            shutil.rmtree(artifact_dir, ignore_errors=True)
+            shutil.rmtree(story_artifacts, ignore_errors=True)
+            shutil.rmtree(capture_plan_dir, ignore_errors=True)
+            shutil.rmtree(transcript_dir, ignore_errors=True)
+
     def test_repair_promotion_import_demo_replays_promoted_entry(self):
         work_dir = Path(tempfile.mkdtemp(prefix="ail-repair-promotion-demo-work-"))
         examples_artifacts = Path(
@@ -1585,6 +1748,108 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
         finally:
             shutil.rmtree(work_dir, ignore_errors=True)
             shutil.rmtree(examples_artifacts, ignore_errors=True)
+            shutil.rmtree(capture_plan_dir, ignore_errors=True)
+            shutil.rmtree(output_corpus, ignore_errors=True)
+            shutil.rmtree(output_artifacts, ignore_errors=True)
+
+    def test_story_promotion_import_demo_replays_promoted_entry(self):
+        work_dir = Path(tempfile.mkdtemp(prefix="ail-story-promotion-demo-work-"))
+        story_artifacts = Path(
+            tempfile.mkdtemp(prefix="ail-story-promotion-demo-artifacts-")
+        )
+        capture_plan_dir = Path(
+            tempfile.mkdtemp(prefix="ail-story-promotion-demo-plan-")
+        )
+        output_corpus = Path(tempfile.mkdtemp(prefix="ail-story-promotion-demo-corpus-"))
+        output_artifacts = Path(
+            tempfile.mkdtemp(prefix="ail-story-promotion-demo-output-artifacts-")
+        )
+        shutil.rmtree(output_corpus)
+        shutil.rmtree(output_artifacts)
+        try:
+            write_story_llm_review_fixture(story_artifacts)
+            review = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_story_llm_harness.py",
+                    "--review-artifacts",
+                    str(story_artifacts),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(review.returncode, 0, review.stderr)
+            plan = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_story_promotion_capture_plan.py",
+                    "--story-artifacts",
+                    str(story_artifacts),
+                    "--output-dir",
+                    str(capture_plan_dir),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(plan.returncode, 0, plan.stderr)
+            demo = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_story_promotion_import_demo.py",
+                    "--base-corpus",
+                    "examples",
+                    "--story-artifacts",
+                    str(story_artifacts),
+                    "--capture-plan-dir",
+                    str(capture_plan_dir),
+                    "--source-entry-id",
+                    "example-30",
+                    "--proposed-entry-id",
+                    "example-30-story",
+                    "--work-dir",
+                    str(work_dir),
+                    "--output-corpus",
+                    str(output_corpus),
+                    "--output-artifacts",
+                    str(output_artifacts),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(demo.returncode, 0, demo.stderr)
+            report = (work_dir / "story-promotion-import-demo-report.txt").read_text()
+            report_fingerprint = (
+                work_dir / "story-promotion-import-demo-report.fingerprint.txt"
+            ).read_text()
+            self.assertIn("AIL-Story-Promotion-Import-Demo:", report)
+            self.assertIn("story-id support-ticket-agent-story", report)
+            self.assertIn("source-entry-id example-30", report)
+            self.assertIn("proposed-entry-id example-30-story", report)
+            self.assertIn("source-preserved true", report)
+            self.assertIn("proposed-accepted true", report)
+            self.assertIn("story-artifacts-preserved true", report)
+            self.assertIn("entry-count 117", report)
+            self.assertIn("checker-result-count accepted 109", report)
+            self.assertIn("checker-result-count rejected 8", report)
+            self.assertEqual(report_fingerprint.strip(), fnv64(report))
+
+            examples = (output_corpus / "examples.md").read_text()
+            source_section = examples.split("## Example: example-30", 1)[1].split(
+                "## Example:", 1
+            )[0]
+            promoted_section = examples.split("## Example: example-30-story", 1)[1]
+            self.assertIn("checker-result: accepted", source_section)
+            self.assertIn("checker-result: accepted", promoted_section)
+            self.assertTrue(
+                (output_artifacts / "examples" / "example-30-story" / "checked.ail-core.txt")
+                .exists()
+            )
+        finally:
+            shutil.rmtree(work_dir, ignore_errors=True)
+            shutil.rmtree(story_artifacts, ignore_errors=True)
             shutil.rmtree(capture_plan_dir, ignore_errors=True)
             shutil.rmtree(output_corpus, ignore_errors=True)
             shutil.rmtree(output_artifacts, ignore_errors=True)

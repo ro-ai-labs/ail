@@ -1298,6 +1298,11 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
         "scripts/run_v03_story_promotion_capture_plan.py --story-artifacts",
         "story-promotion-capture-plan.json",
         "story-promotion-capture-plan.fingerprint.txt",
+        "scripts/run_v03_story_promotion_import_demo.py",
+        "story-promotion-import-demo-report.txt",
+        "story-promotion-import-demo-report.fingerprint.txt",
+        "story-artifacts-preserved true",
+        "proposed-accepted true",
         "ail-examples examples --artifact-dir",
         "cargo run -- ail-v03-roadmap examples",
         "v03-roadmap.txt",
@@ -1346,6 +1351,7 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
         "python3 scripts/run_v03_prompt_llm_harness.py --review-artifacts /tmp/ail-v03-prompt-llm",
         "python3 scripts/run_v03_story_llm_harness.py --review-artifacts /tmp/ail-v03-story-llm",
         "python3 scripts/run_v03_story_promotion_capture_plan.py --story-artifacts /tmp/ail-v03-story-llm",
+        "python3 scripts/run_v03_story_promotion_import_demo.py",
         "python3 scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run-checks --include-live",
         "cargo run -- ail-agent-contracts examples/agents",
         "cargo run -- ail-examples examples --artifact-dir",
@@ -1360,6 +1366,9 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
         "prompt-llm-harness-review.fingerprint.txt",
         "story-promotion-capture-plan.json",
         "story-promotion-capture-plan.fingerprint.txt",
+        "story-promotion-import-demo-report.txt",
+        "story-promotion-import-demo-report.fingerprint.txt",
+        "story-artifacts-preserved true",
         "v03-roadmap.txt",
         "repair-promotion-review.txt",
         "repair-promotion-review.fingerprint.txt",
@@ -1420,6 +1429,7 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
     }
     println!("review-command scripts/run_v03_prompt_llm_harness.py --review-artifacts");
     println!("review-command scripts/run_v03_story_llm_harness.py --review-artifacts");
+    println!("story-promotion-import-artifact story-promotion-import-demo-report.txt");
     println!("repair-promotion-artifact repair-promotion-review.txt");
     println!("repair-promotion-import-artifact repair-promotion-import-demo-report.txt");
     println!("roadmap-artifact v03-roadmap.txt");

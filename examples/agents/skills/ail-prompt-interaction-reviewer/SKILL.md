@@ -63,6 +63,12 @@ Create the plan-only story promotion handoff:
 python3 scripts/run_v03_story_promotion_capture_plan.py --story-artifacts /tmp/ail-v03-story-llm --output-dir /tmp/ail-v03-story-promotion-capture-plan
 ```
 
+Run the deterministic story promotion import demo after human approval:
+
+```sh
+python3 scripts/run_v03_story_promotion_import_demo.py --story-artifacts /tmp/ail-v03-story-llm --capture-plan-dir /tmp/ail-v03-story-promotion-capture-plan
+```
+
 Run the interactive manual live gate when prompt interaction evidence must be
 reproduced end to end:
 
@@ -101,6 +107,10 @@ The review report must include:
 - `story-promotion-capture-plan.json`
 - `story-promotion-capture-plan.txt`
 - `story-promotion-capture-plan.fingerprint.txt`
+- `story-promotion-import-demo-report.txt`
+- `story-promotion-import-demo-report.fingerprint.txt`
+- `story-artifacts-preserved true`
+- `proposed-accepted true`
 - `examples-report.txt`
 - `v03-roadmap.txt`
 - `repair-promotion-review.txt`
@@ -125,6 +135,7 @@ Return `needs-repair` or `rejected-for-promotion` when:
 - hosted output is non-empty but fails offline review
 - story artifacts lose semantic anchors or agent trace evidence
 - story promotion capture-plan artifacts are missing
+- story promotion import-demo evidence is missing
 - `examples-report.txt` or `v03-roadmap.txt` is missing
 - generated content was modified silently instead of preserving the original
   hosted output as evidence

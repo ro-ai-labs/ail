@@ -137,6 +137,41 @@ def repair_plan_fingerprint_path(plan_path: Path) -> Path:
     return plan_path.with_suffix(".fingerprint.txt")
 
 
+def story_plan_fingerprint_path(plan_path: Path) -> Path:
+    canonical = plan_path.with_name("story-promotion-capture-plan.fingerprint.txt")
+    if canonical.exists():
+        return canonical
+    return plan_path.with_suffix(".fingerprint.txt")
+
+
+def require_story_artifact_fingerprint(
+    artifact_dir: Path,
+    relative_path: str,
+    fingerprint_relative_path: str,
+    expected: str | None = None,
+) -> str:
+    artifact_path = artifact_dir / relative_path
+    fingerprint_path = artifact_dir / fingerprint_relative_path
+    if not artifact_path.exists():
+        raise SystemExit(f"story promotion artifacts missing {relative_path}")
+    if not fingerprint_path.exists():
+        raise SystemExit(f"story promotion artifacts missing {fingerprint_relative_path}")
+    text = artifact_path.read_text()
+    fingerprint = fingerprint_path.read_text().strip()
+    actual = fnv64(text)
+    if fingerprint != actual:
+        raise SystemExit(
+            "story promotion artifact fingerprint mismatch: "
+            f"{relative_path} expected {fingerprint} got {actual}"
+        )
+    if expected is not None and actual != expected:
+        raise SystemExit(
+            "story promotion capture plan fingerprint mismatch: "
+            f"{relative_path} expected {expected} got {actual}"
+        )
+    return actual
+
+
 def load_repair_promotion_capture_plan(
     entry: dict[str, object],
 ) -> dict[str, object] | None:
@@ -191,6 +226,104 @@ def load_repair_promotion_capture_plan(
     return plan
 
 
+def load_story_promotion_capture_plan(
+    entry: dict[str, object],
+) -> dict[str, object] | None:
+    plan_json = optional_string(entry, "story_promotion_capture_plan_json")
+    if plan_json is None:
+        return None
+    plan_path = Path(plan_json)
+    plan_text = plan_path.read_text()
+    expected_fingerprint = story_plan_fingerprint_path(plan_path).read_text().strip()
+    actual_fingerprint = fnv64(plan_text)
+    if expected_fingerprint != actual_fingerprint:
+        raise SystemExit(
+            "story promotion capture plan fingerprint mismatch: "
+            f"expected {expected_fingerprint} got {actual_fingerprint}"
+        )
+    plan = json.loads(plan_text)
+    if not isinstance(plan, dict):
+        raise SystemExit("story promotion capture plan must be an object")
+    if plan_string(plan, "artifact_kind") != "AIL-Story-Promotion-Capture-Plan":
+        raise SystemExit("story promotion capture plan has invalid artifact_kind")
+    for field, expected in [
+        ("status", "plan-only"),
+        ("promotion_decision", "accepted-for-promotion"),
+        ("batch_capture_script", "scripts/capture_example_batch.py"),
+    ]:
+        actual = plan_string(plan, field)
+        if actual != expected:
+            raise SystemExit(
+                f"story promotion capture plan {field} expected {expected}, got {actual}"
+            )
+    for field in [
+        "human_approval_required",
+        "must_supply_request_response_json",
+        "preserve_story_artifacts",
+    ]:
+        if not plan_bool(plan, field):
+            raise SystemExit(f"story promotion capture plan requires {field}")
+    for field, expected in [
+        ("story_llm_transcript_check_count", 6),
+        ("story_prompt_envelope_valid_count", 2),
+        ("story_prompt_envelope_invalid_count", 0),
+    ]:
+        actual = plan_int(plan, field)
+        if actual != expected:
+            raise SystemExit(
+                f"story promotion capture plan {field} expected {expected}, got {actual}"
+            )
+
+    artifact_dir = Path(plan_string(plan, "story_artifact_dir"))
+    if not artifact_dir.is_dir():
+        raise SystemExit(f"story promotion artifact dir is missing: {artifact_dir}")
+    require_story_artifact_fingerprint(
+        artifact_dir,
+        "story-llm-harness-report.txt",
+        "story-llm-harness-report.fingerprint.txt",
+        plan_string(plan, "story_llm_harness_review_fingerprint"),
+    )
+    require_story_artifact_fingerprint(
+        artifact_dir,
+        "story-mode-report.txt",
+        "story-mode-report.fingerprint.txt",
+        plan_string(plan, "story_mode_report_fingerprint"),
+    )
+    require_story_artifact_fingerprint(
+        artifact_dir,
+        "manifest.ail-story.txt",
+        "manifest.ail-story.fingerprint.txt",
+        plan_string(plan, "story_manifest_fingerprint"),
+    )
+    for relative_path, fingerprint_path in [
+        ("story.source.md", "story.source.fingerprint.txt"),
+        ("story.normalized.md", "story.normalized.fingerprint.txt"),
+        ("requirements.ail-requirements.md", "requirements.fingerprint.txt"),
+        ("accepted.ail-spec.md", "accepted.ail-spec.fingerprint.txt"),
+        ("checked.ail-core.txt", "checked.ail-core.fingerprint.txt"),
+        ("review.ail-flow.json", "review.ail-flow.fingerprint.txt"),
+        ("artifact.ailbc.json", "artifact.fingerprint.txt"),
+        ("agent-trace.txt", "agent-trace.fingerprint.txt"),
+        ("llm/requirements.request.json", "llm/requirements.request.fingerprint.txt"),
+        ("llm/requirements.response.json", "llm/requirements.response.fingerprint.txt"),
+        ("llm/requirements.content.txt", "llm/requirements.content.fingerprint.txt"),
+        ("llm/spec.request.json", "llm/spec.request.fingerprint.txt"),
+        ("llm/spec.response.json", "llm/spec.response.fingerprint.txt"),
+        ("llm/spec.content.txt", "llm/spec.content.fingerprint.txt"),
+    ]:
+        require_story_artifact_fingerprint(artifact_dir, relative_path, fingerprint_path)
+    report_fields = story_fields_from_file(artifact_dir / "story-mode-report.txt")
+    normalized_story_fields = story_fields_from_file(artifact_dir / "story.normalized.md")
+    if report_fields.get("entrypoint") != "ail-story":
+        raise SystemExit("story promotion report missing entrypoint ail-story")
+    story_id = plan_string(plan, "story_id")
+    if report_fields.get("user-story-id") != story_id:
+        raise SystemExit("story promotion report story id does not match capture plan")
+    if normalized_story_fields.get("user-story-id") != story_id:
+        raise SystemExit("story promotion normalized story id does not match capture plan")
+    return plan
+
+
 def apply_llm_entry(
     output_dir: Path,
     entries: list[tuple[str | None, list[str]]],
@@ -242,18 +375,24 @@ def apply_codex_entry(
 ) -> None:
     entry_id = required_string(entry, "entry_id")
     repair_plan = load_repair_promotion_capture_plan(entry)
-    append_entry = repair_plan is not None
+    story_plan = load_story_promotion_capture_plan(entry)
+    if repair_plan is not None and story_plan is not None:
+        raise SystemExit("batch entry cannot use both repair and story promotion plans")
+    append_entry = repair_plan is not None or story_plan is not None
     source_entry_id = (
         plan_string(repair_plan, "source_entry_id")
         if repair_plan is not None
-        else entry_id
+        else required_string(entry, "source_entry_id") if story_plan is not None else entry_id
     )
     if append_entry and any(candidate_id == entry_id for candidate_id, _lines in entries):
-        raise SystemExit(f"proposed repair promotion entry {entry_id} already exists")
+        raise SystemExit(f"proposed promotion entry {entry_id} already exists")
     index = entry_index(entries, source_entry_id)
     _entry_id, entry_lines = entries[index]
     fields = fields_from_entry(entry_lines)
-    prompt_file = fields["prompt-file"]
+    prompt_file = optional_string(entry, "prompt_file") or fields["prompt-file"]
+    if story_plan is not None and optional_string(entry, "prompt_file") is None:
+        prompt_file = "docs/ail/prompts/spec-draft.system.md"
+    fields["prompt-file"] = prompt_file
     system_prompt = (ROOT / prompt_file).read_text()
 
     request_file = f"requests/{entry_id}.json"
@@ -286,10 +425,57 @@ def apply_codex_entry(
         fields.pop("expected-diagnostic", None)
         fields.pop("failure-taxonomy", None)
     if append_entry:
-        source_story_file = output_dir / fields["story-file"]
-        source_story_fields = story_fields_from_file(source_story_file)
-        semantic_anchors = source_story_fields.get("semantic-anchors", "")
-        if fields.get("program-domain") == "diagnostic":
+        if story_plan is not None:
+            story_artifact_dir = Path(plan_string(story_plan, "story_artifact_dir"))
+            story_fields = story_fields_from_file(story_artifact_dir / "story.normalized.md")
+            semantic_anchors = story_fields.get("semantic-anchors", "")
+            for key in ["user-story-id", "user-story", "acceptance-criteria"]:
+                fields[key] = story_fields[key]
+            fields["story-file"] = f"stories/{entry_id}.md"
+            fields["story-journey"] = optional_string(entry, "story_journey") or story_fields.get(
+                "story-journey", "story-to-spec"
+            )
+            fields["story-roundtrip"] = optional_string(
+                entry, "story_roundtrip"
+            ) or story_fields.get("story-roundtrip", "semantic-similar")
+            fields["story-evidence"] = optional_string(entry, "story_evidence") or "vm-trace"
+            fields["program-domain"] = optional_string(entry, "program_domain") or story_fields.get(
+                "program-domain", fields["program-domain"]
+            )
+            fields["module-count"] = optional_string(entry, "module_count") or story_fields.get(
+                "module-count", fields["module-count"]
+            )
+            fields["spec-count"] = optional_string(entry, "spec_count") or story_fields.get(
+                "spec-count", fields["spec-count"]
+            )
+            fields["story-count"] = optional_string(entry, "story_count") or story_fields.get(
+                "story-count", fields["story-count"]
+            )
+            fields["interacts-with"] = optional_string(entry, "interacts_with") or story_fields.get(
+                "interacts-with", fields["interacts-with"]
+            )
+            fields["surface-tags"] = optional_string(entry, "surface_tags") or "user-story-mode"
+            fields["capability-under-test"] = (
+                optional_string(entry, "capability_under_test") or "user-story-mode-promotion"
+            )
+            fields["use-case"] = optional_string(entry, "use_case") or (
+                "Human-approved User Story mode promotion for a reviewed story artifact "
+                "bundle that already produced requirements, spec, Core, bytecode, and trace evidence."
+            )
+            fields["v0.3-signal"] = optional_string(entry, "v03_signal") or (
+                "User Story mode needs replayable promotion evidence that preserves the "
+                "story artifact bundle while appending an accepted corpus candidate."
+            )
+            fields["story-artifacts"] = f"story-artifacts/{entry_id}"
+            artifact_output = output_dir / fields["story-artifacts"]
+            if artifact_output.exists():
+                shutil.rmtree(artifact_output)
+            shutil.copytree(story_artifact_dir, artifact_output)
+        else:
+            source_story_file = output_dir / fields["story-file"]
+            source_story_fields = story_fields_from_file(source_story_file)
+            semantic_anchors = source_story_fields.get("semantic-anchors", "")
+        if repair_plan is not None and fields.get("program-domain") == "diagnostic":
             fields["program-domain"] = optional_string(entry, "program_domain") or "application"
             fields["capability-under-test"] = (
                 optional_string(entry, "capability_under_test") or "repair-promotion-import"
@@ -302,12 +488,13 @@ def apply_codex_entry(
                 "Repair promotion imports need batch capture evidence that creates accepted "
                 "entries while preserving rejected diagnostics for learning."
             )
-        fields["story-file"] = f"stories/{entry_id}.md"
-        fields["story-journey"] = optional_string(entry, "story_journey") or "story-to-spec"
-        fields["story-roundtrip"] = (
-            optional_string(entry, "story_roundtrip") or "semantic-similar"
-        )
-        fields["story-evidence"] = optional_string(entry, "story_evidence") or "vm-trace"
+        if repair_plan is not None:
+            fields["story-file"] = f"stories/{entry_id}.md"
+            fields["story-journey"] = optional_string(entry, "story_journey") or "story-to-spec"
+            fields["story-roundtrip"] = (
+                optional_string(entry, "story_roundtrip") or "semantic-similar"
+            )
+            fields["story-evidence"] = optional_string(entry, "story_evidence") or "vm-trace"
         story_path = output_dir / fields["story-file"]
         story_path.parent.mkdir(parents=True, exist_ok=True)
         story_path.write_text(render_story_file(fields, semantic_anchors))

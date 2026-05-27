@@ -180,6 +180,14 @@ fingerprint, keeps the rejected source entry unchanged, writes new
 `requests/`, `responses/`, and `stories/` files for the repaired accepted entry,
 and still requires offline `ail-examples` replay before any generated corpus
 copy is committed.
+User Story mode promotion follows the same corpus-copy rule. After
+`scripts/run_v03_story_promotion_capture_plan.py` writes
+`story-promotion-capture-plan.json`, a batch entry may supply
+`story_promotion_capture_plan_json` with human-approved request/response JSON.
+The importer validates the plan fingerprint, copies the reviewed story artifact
+bundle under `story-artifacts/<entry-id>/`, writes fresh `requests/`,
+`responses/`, and `stories/` files, and still requires offline `ail-examples`
+replay before any generated corpus copy is committed.
 Release story files must include `semantic-anchors` for the terms, actions,
 modules, targets, or diagnostics that must survive story/spec/Core
 round-trips. In `--release-evidence` mode, `ail-examples` rejects any catalog
@@ -265,8 +273,10 @@ python3 scripts/capture_example_batch.py \
 
 Each plan entry uses `executor_family: llm-http` with endpoint, prompt, and
 model labels, or `executor_family: codex-skill-agent` with recorded request and
-response JSON files. The batch output still must be replayed with
-`ail-examples` before promotion.
+response JSON files. Codex entries may also provide
+`repair_promotion_capture_plan_json` or `story_promotion_capture_plan_json`
+when the batch appends a human-approved promotion candidate. The batch output
+still must be replayed with `ail-examples` before promotion.
 
 The generated files are committed so release verification does not depend on
 live LLM access. The current corpus stores:
@@ -282,6 +292,8 @@ live LLM access. The current corpus stores:
 - `stories/`: one deterministic user-story view per catalog entry. The
   verifier rejects story files whose story, journey, evidence, domain,
   interaction, or count metadata drifts from the catalog.
+- `story-artifacts/`: optional reviewed User Story mode artifact bundles copied
+  into corpus promotion working trees by story-promotion import demos.
 - `requests/`: stored prompt request transcripts.
 - `responses/`: stored model/agent response artifacts.
 - `inputs/`: schema-shaped prompt inputs used for live capture attempts.

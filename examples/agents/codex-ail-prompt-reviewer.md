@@ -33,6 +33,8 @@ Return an `AIL-Prompt-Interaction-Review` report that records:
   `scripts/run_v03_story_llm_harness.py --review-artifacts`
 - story promotion capture-plan command:
   `scripts/run_v03_story_promotion_capture_plan.py --story-artifacts`
+- story promotion import-demo command:
+  `scripts/run_v03_story_promotion_import_demo.py`
 - prompt files reviewed and their fingerprints when available
 - prompt-specific probe labels/fingerprints and expected `artifact_kind`
   validation status
@@ -51,6 +53,11 @@ Return an `AIL-Prompt-Interaction-Review` report that records:
   `story-promotion-capture-plan.json`,
   `story-promotion-capture-plan.txt`, and
   `story-promotion-capture-plan.fingerprint.txt`
+- story promotion import-demo artifacts:
+  `story-promotion-import-demo-report.txt` and
+  `story-promotion-import-demo-report.fingerprint.txt`
+- story promotion import-demo checks:
+  `story-artifacts-preserved true` and `proposed-accepted true`
 - release replay command used before promotion:
   `ail-examples examples --artifact-dir`
 - v0.3 roadmap command used before promotion:
@@ -75,7 +82,8 @@ Return an `AIL-Prompt-Interaction-Review` report that records:
 - Do not accept question-only prompt output for prompts whose task-specific
   probe requires a generated artifact.
 - Do not promote User Story mode hosted output without a fingerprinted
-  story-promotion capture plan.
+  story-promotion capture plan and a fingerprinted story-promotion import demo
+  report.
 - Do not hide missing fingerprints, empty prompt content, missing agent trace
   entries, missing `v03-roadmap.txt`, or semantic-anchor loss.
 
@@ -83,8 +91,11 @@ Return an `AIL-Prompt-Interaction-Review` report that records:
 
 The review is accepted only when both relevant offline review commands pass,
 the story-promotion capture plan exists for reviewed User Story mode artifacts,
-and the promoted corpus copy passes `ail-examples examples --artifact-dir ...`
-with `--release-evidence`, `cargo run -- ail-v03-roadmap examples ...` writes
-`v03-roadmap.txt`, and the roadmap signals are reviewed. If either harness
-review is missing or rejected, or story promotion evidence is missing, the
-review must return `needs-repair` or `rejected-for-promotion`.
+`scripts/run_v03_story_promotion_import_demo.py` writes
+`story-promotion-import-demo-report.txt` with `story-artifacts-preserved true`
+and `proposed-accepted true`, and the promoted corpus copy passes
+`ail-examples examples --artifact-dir ...` with `--release-evidence`,
+`cargo run -- ail-v03-roadmap examples ...` writes `v03-roadmap.txt`, and the
+roadmap signals are reviewed. If either harness review is missing or rejected,
+or story promotion evidence is missing, the review must return `needs-repair`
+or `rejected-for-promotion`.

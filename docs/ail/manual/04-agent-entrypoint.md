@@ -36,6 +36,14 @@ and `proposed-accepted true`. This keeps the agent from treating a repaired
 candidate as promotable unless the rejected source entry remains intact and the
 proposed accepted entry replays in a corpus copy.
 
+For User Story mode promotion, the prompt reviewer contract must also require
+`story-promotion-import-demo-report.txt`,
+`story-promotion-import-demo-report.fingerprint.txt`,
+`story-artifacts-preserved true`, and `proposed-accepted true`. This keeps
+reviewed story-mode output as corpus-copy evidence until a human-approved
+promotion imports the full story artifact bundle and proves the proposed
+accepted entry replays.
+
 The same gate also validates the repo-local Codex skills:
 
 ```text

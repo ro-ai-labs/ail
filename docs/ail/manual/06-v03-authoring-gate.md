@@ -67,6 +67,8 @@ story-prompt-envelope-invalid-count
 story-promotion-capture-plan.json
 story-promotion-capture-plan.txt
 story-promotion-capture-plan.fingerprint.txt
+story-promotion-import-demo-report.txt
+story-promotion-import-demo-report.fingerprint.txt
 manifest.ail-story.txt
 story-questions.ail-interview.md
 agent-trace.txt
