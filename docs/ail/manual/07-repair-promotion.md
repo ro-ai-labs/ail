@@ -56,3 +56,28 @@ rg -n "repair-promotion-review-fingerprint-observed-count|entry-artifact example
   /tmp/ail-manual-repair-promotion/examples-report.txt \
   /tmp/ail-manual-repair-promotion/manifest.ail-examples.txt
 ```
+
+## Capture Plan
+
+After a review records `promotion-decision accepted-for-promotion`, generate a
+plan-only capture artifact before creating any accepted corpus entry:
+
+```sh
+python3 scripts/run_v03_repair_promotion_capture_plan.py \
+  --examples-artifacts /tmp/ail-manual-repair-promotion \
+  --entry-id example-99 \
+  --output-dir /tmp/ail-manual-repair-promotion-capture-plan
+```
+
+The script writes:
+
+```text
+/tmp/ail-manual-repair-promotion-capture-plan/repair-promotion-capture-plan.json
+/tmp/ail-manual-repair-promotion-capture-plan/repair-promotion-capture-plan.txt
+/tmp/ail-manual-repair-promotion-capture-plan/repair-promotion-capture-plan.fingerprint.txt
+```
+
+The capture plan is deliberately not a corpus edit. It verifies the promotion
+review fingerprint, checks that report and manifest entries still point at the
+rejected example evidence, records `preserve_rejected_entry: true`, and names
+`scripts/capture_example_batch.py` as the human-approved batch capture path.

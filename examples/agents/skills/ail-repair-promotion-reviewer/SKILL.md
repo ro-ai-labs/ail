@@ -49,12 +49,17 @@ The review report must include:
 - `repair-promotion-review.txt`
 - `repair-promotion-review.fingerprint.txt`
 - `repair-promotion-review-fingerprint-observed-count`
+- `repair-promotion-capture-plan.json`
+- `repair-promotion-capture-plan.fingerprint.txt`
 - `accepted-for-promotion`, `needs-repair`, or `rejected-for-promotion`
 - `human-approval-required true`
 - `expected-diagnostic-removed true`
 - `semantic-anchor-missing-count 0`
 - diagnostics, repair tutorial, repair candidate, checked Core, bytecode,
   repair evidence, and repair diff fingerprints
+- `preserve_rejected_entry: true`
+- `must_supply_request_response_json: true`
+- `batch_capture_script: scripts/capture_example_batch.py`
 
 ## Rejection Rules
 

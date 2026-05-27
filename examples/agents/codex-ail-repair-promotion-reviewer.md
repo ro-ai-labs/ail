@@ -21,6 +21,8 @@ verified bytecode, VM or target evidence, and repair diff.
 - rejected entry id
 - `repair-promotion-review.txt`
 - `repair-promotion-review.fingerprint.txt`
+- `repair-promotion-capture-plan.json`
+- `repair-promotion-capture-plan.fingerprint.txt`
 - reviewer notes about intended accepted-corpus promotion
 
 ## Required Output
@@ -64,4 +66,16 @@ python3 scripts/run_ail_interactive_manual.py --chapter repair-promotion --run-c
 
 The resulting report must include `repair-promotion-review.txt`,
 `repair-promotion-review.fingerprint.txt`, and
-`repair-promotion-review-fingerprint-observed-count`.
+`repair-promotion-review-fingerprint-observed-count`. The plan-only promotion
+bridge must also be generated with:
+
+```sh
+python3 scripts/run_v03_repair_promotion_capture_plan.py \
+  --examples-artifacts /tmp/ail-repair-promotion-review \
+  --entry-id <rejected-entry-id> \
+  --output-dir /tmp/ail-repair-promotion-capture-plan
+```
+
+The capture plan must include `preserve_rejected_entry: true`,
+`must_supply_request_response_json: true`, and
+`batch_capture_script: scripts/capture_example_batch.py`.

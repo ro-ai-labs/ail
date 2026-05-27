@@ -266,10 +266,10 @@ as prose. The current examples reveal these next-version gaps:
 - Systems examples need hardware-facing contracts, scheduler or interrupt
   semantics, and clearer unsupported-target migration guidance.
 - Rejected examples now emit repair tutorials, corrected repair proof chains,
-  semantic repair diffs, and deterministic promotion review artifacts; the next
-  bar is to turn reviewer-approved repair promotion into a guided capture flow
-  that can create a proposed accepted corpus entry without losing the rejected
-  evidence.
+  semantic repair diffs, deterministic promotion review artifacts, and
+  plan-only repair promotion capture plans; the next bar is a human-approved
+  batch capture/import flow that can create the proposed accepted corpus entry
+  while preserving the rejected evidence.
 - Incident-response examples show that complex systems need richer story
   graphs across imported modules, UI surfaces, workflow transitions, target
   contracts, and regenerated story views.

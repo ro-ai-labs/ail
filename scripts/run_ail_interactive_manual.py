@@ -345,6 +345,24 @@ BASE_CHAPTERS: tuple[ManualChapter, ...] = (
                     "entry-artifact example-107 repair-promotion-review",
                 ),
             ),
+            ManualCommand(
+                label="plan-repair-promotion-capture",
+                command=(
+                    "python3",
+                    "scripts/run_v03_repair_promotion_capture_plan.py",
+                    "--examples-artifacts",
+                    "/tmp/ail-manual-repair-promotion",
+                    "--entry-id",
+                    "example-99",
+                    "--output-dir",
+                    "/tmp/ail-manual-repair-promotion-capture-plan",
+                ),
+                evidence=(
+                    "repair-promotion-capture-plan.json",
+                    "repair-promotion-capture-plan.txt",
+                    "repair-promotion-capture-plan.fingerprint.txt",
+                ),
+            ),
         ),
     ),
 )
@@ -443,6 +461,7 @@ V03_AUTHORING_GATE = ManualChapter(
                 "repair-promotion-review.txt",
                 "repair-promotion-review.fingerprint.txt",
                 "repair-promotion-review-fingerprint-observed-count",
+                "repair-promotion-capture-plan.json",
             ),
         ),
         ManualCommand(

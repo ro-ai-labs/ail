@@ -167,6 +167,12 @@ binds the rejected diagnostic, repair proof, repair diff, semantic anchors, and
 human-approval requirement before any repaired artifact is proposed as a new
 accepted corpus entry. That makes diagnostic examples end-to-end authoring
 loops instead of prose-only negative cases.
+The next promotion step is still plan-only: run
+`scripts/run_v03_repair_promotion_capture_plan.py` against the replay artifacts
+to write `repair-promotion-capture-plan.json`, `.txt`, and `.fingerprint.txt`.
+The plan requires human-approved request/response JSON for
+`scripts/capture_example_batch.py` and records `preserve_rejected_entry: true`
+so the rejected learning evidence remains in the corpus.
 Release story files must include `semantic-anchors` for the terms, actions,
 modules, targets, or diagnostics that must survive story/spec/Core
 round-trips. In `--release-evidence` mode, `ail-examples` rejects any catalog

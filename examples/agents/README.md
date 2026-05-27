@@ -39,7 +39,7 @@ lowers to bytecode, and verifies that `ail-build` writes `agent.ailbc.json` and
 | `codex-ail-spec-writer` | `codex-ail-spec-writer.md` | canonical AIL-Spec | parser, checker, Core lowering, bytecode, VM trace, and target evidence pass |
 | `codex-ail-diagnostic-repairer` | `codex-ail-diagnostic-repairer.md` | repaired AIL-Spec or rejected diagnostic explanation | repaired artifact passes or the expected diagnostic is reproduced |
 | `codex-ail-prompt-reviewer` | `codex-ail-prompt-reviewer.md` | Prompt and story harness review report | `scripts/run_v03_prompt_llm_harness.py --review-artifacts`, `scripts/run_v03_story_llm_harness.py --review-artifacts`, then `ail-examples examples --artifact-dir ... --release-evidence` and `cargo run -- ail-v03-roadmap examples ...` write `v03-roadmap.txt` and pass before promotion |
-| `codex-ail-repair-promotion-reviewer` | `codex-ail-repair-promotion-reviewer.md` | Repair promotion review report | `ail-examples examples --artifact-dir ... --release-evidence` writes `repair-promotion-review.txt`, `repair-promotion-review.fingerprint.txt`, and `repair-promotion-review-fingerprint-observed-count` before any repaired artifact is proposed for human-approved corpus promotion |
+| `codex-ail-repair-promotion-reviewer` | `codex-ail-repair-promotion-reviewer.md` | Repair promotion review report and capture plan | `ail-examples examples --artifact-dir ... --release-evidence` writes `repair-promotion-review.txt`, then `scripts/run_v03_repair_promotion_capture_plan.py` writes `repair-promotion-capture-plan.json` before any repaired artifact is proposed for human-approved corpus promotion |
 
 ## Codex Skills
 
@@ -52,8 +52,9 @@ before promoting generated prompt or User Story mode artifacts.
 The reusable repair-promotion review skill is stored at
 `examples/agents/skills/ail-repair-promotion-reviewer/SKILL.md`. It mirrors
 `codex-ail-repair-promotion-reviewer.md` and lists the deterministic
-`repair-promotion` manual chapter evidence required before a repaired rejected
-example can be proposed as an accepted corpus entry.
+`repair-promotion` manual chapter evidence plus the plan-only capture artifact
+required before a repaired rejected example can be proposed as an accepted
+corpus entry.
 
 ## Request JSON Shape
 

@@ -1324,6 +1324,8 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "cargo run -- ail-examples examples",
         "repair-promotion-review.txt",
         "repair-promotion-review-fingerprint-observed-count",
+        "scripts/run_v03_repair_promotion_capture_plan.py",
+        "repair-promotion-capture-plan.json",
     ] {
         assert!(
             repair_promotion_stdout.contains(required),
@@ -1355,6 +1357,7 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "evidence v03-roadmap.txt",
         "evidence agent-trace.txt",
         "evidence repair-promotion-review.txt",
+        "evidence repair-promotion-capture-plan.json",
     ] {
         assert!(gate_stdout.contains(required), "{required}\n{gate_stdout}");
     }
@@ -2063,6 +2066,170 @@ fn script_v03_story_llm_harness_review_writes_fingerprinted_report() {
 
     fs::remove_file(story_file).unwrap();
     fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
+fn script_v03_repair_promotion_capture_plan_writes_fingerprinted_plan() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let script = format!(
+        "{}/scripts/run_v03_repair_promotion_capture_plan.py",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let corpus_dir = std::env::temp_dir().join(format!(
+        "ail-repair-promotion-capture-plan-corpus-{}",
+        std::process::id()
+    ));
+    let artifacts_dir = std::env::temp_dir().join(format!(
+        "ail-repair-promotion-capture-plan-artifacts-{}",
+        std::process::id()
+    ));
+    let output_dir = std::env::temp_dir().join(format!(
+        "ail-repair-promotion-capture-plan-output-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&corpus_dir);
+    let _ = fs::remove_dir_all(&artifacts_dir);
+    let _ = fs::remove_dir_all(&output_dir);
+    fs::create_dir_all(&corpus_dir).unwrap();
+    write_e2e_transcript_files(&corpus_dir, 101);
+    let mut corpus_text = String::new();
+    for index in 0..101 {
+        if index == 99 {
+            corpus_text.push_str(&e2e_corpus_entry_text(
+                index,
+                &[
+                    (
+                        "response-file",
+                        "responses/rejected-repair-capture-plan.json",
+                    ),
+                    ("checker-result", "rejected"),
+                    ("expected-diagnostic", "AIL001"),
+                    ("failure-taxonomy", "semantic-drift"),
+                ],
+            ));
+        } else {
+            corpus_text.push_str(&e2e_corpus_entry_text(index, &[]));
+        }
+    }
+    fs::write(corpus_dir.join("examples.md"), corpus_text).unwrap();
+    fs::write(
+        corpus_dir
+            .join("responses")
+            .join("rejected-repair-capture-plan.json"),
+        fs::read_to_string(format!(
+            "{}/examples/support_ticket.ail/examples/rejected/missing-reference.ail-spec.md",
+            env!("CARGO_MANIFEST_DIR")
+        ))
+        .unwrap(),
+    )
+    .unwrap();
+
+    let replay = Command::new(binary)
+        .args([
+            "ail-examples",
+            corpus_dir.to_str().unwrap(),
+            "--artifact-dir",
+            artifacts_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        replay.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&replay.stdout),
+        String::from_utf8_lossy(&replay.stderr)
+    );
+
+    let output = Command::new("python3")
+        .args([
+            &script,
+            "--examples-artifacts",
+            artifacts_dir.to_str().unwrap(),
+            "--entry-id",
+            "example-99",
+            "--output-dir",
+            output_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("AIL-Repair-Promotion-Capture-Plan:")
+            && stdout.contains("source-entry-id example-99")
+            && stdout.contains("proposed-entry-id example-99-repaired")
+            && stdout.contains("status plan-only")
+            && stdout.contains("repair-promotion-capture-plan.json"),
+        "{stdout}"
+    );
+
+    let plan_json =
+        fs::read_to_string(output_dir.join("repair-promotion-capture-plan.json")).unwrap();
+    let plan_text =
+        fs::read_to_string(output_dir.join("repair-promotion-capture-plan.txt")).unwrap();
+    let plan_fingerprint =
+        fs::read_to_string(output_dir.join("repair-promotion-capture-plan.fingerprint.txt"))
+            .unwrap();
+    let review_text =
+        fs::read_to_string(artifacts_dir.join("examples/example-99/repair-promotion-review.txt"))
+            .unwrap();
+    let review_fingerprint = fnv64_fingerprint(&review_text);
+    let repair_candidate =
+        fs::read_to_string(artifacts_dir.join("examples/example-99/repair-candidate.ail-spec.md"))
+            .unwrap();
+    let repair_candidate_fingerprint = fnv64_fingerprint(&repair_candidate);
+    let repair_diff =
+        fs::read_to_string(artifacts_dir.join("examples/example-99/repair-diff.txt")).unwrap();
+    let repair_diff_fingerprint = fnv64_fingerprint(&repair_diff);
+
+    for required in [
+        "\"artifact_kind\": \"AIL-Repair-Promotion-Capture-Plan\"",
+        "\"status\": \"plan-only\"",
+        "\"source_entry_id\": \"example-99\"",
+        "\"proposed_entry_id\": \"example-99-repaired\"",
+        "\"promotion_decision\": \"accepted-for-promotion\"",
+        "\"human_approval_required\": true",
+        "\"preserve_rejected_entry\": true",
+        "\"must_supply_request_response_json\": true",
+        "\"batch_capture_script\": \"scripts/capture_example_batch.py\"",
+        "\"checker_result\": \"rejected-to-repaired\"",
+        "\"expected_diagnostic_removed\": true",
+        "\"semantic_anchor_missing_count\": 0",
+        &format!(
+            "\"repair_promotion_review_fingerprint\": \"{}\"",
+            review_fingerprint
+        ),
+        &format!(
+            "\"repair_candidate_fingerprint\": \"{}\"",
+            repair_candidate_fingerprint
+        ),
+        &format!(
+            "\"repair_diff_fingerprint\": \"{}\"",
+            repair_diff_fingerprint
+        ),
+    ] {
+        assert!(plan_json.contains(required), "{required}\n{plan_json}");
+    }
+    assert!(
+        plan_text.contains("AIL-Repair-Promotion-Capture-Plan:")
+            && plan_text.contains("source-entry-id example-99")
+            && plan_text.contains("proposed-entry-id example-99-repaired")
+            && plan_text
+                .contains("capture-command-template python3 scripts/capture_example_batch.py")
+            && plan_text.contains("must-supply-request-response-json true")
+            && plan_text.contains("preserve-rejected-entry true"),
+        "{plan_text}"
+    );
+    assert_eq!(plan_fingerprint.trim(), fnv64_fingerprint(&plan_json));
+
+    let _ = fs::remove_dir_all(&corpus_dir);
+    let _ = fs::remove_dir_all(&artifacts_dir);
+    let _ = fs::remove_dir_all(&output_dir);
 }
 
 #[test]

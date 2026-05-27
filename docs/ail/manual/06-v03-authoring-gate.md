@@ -79,6 +79,9 @@ agent.ailbc.json
 repair-promotion-review.txt
 repair-promotion-review.fingerprint.txt
 repair-promotion-review-fingerprint-observed-count
+repair-promotion-capture-plan.json
+repair-promotion-capture-plan.txt
+repair-promotion-capture-plan.fingerprint.txt
 ```
 
 Passing this chapter is not the same as declaring AIL v0.3 complete. It is the
