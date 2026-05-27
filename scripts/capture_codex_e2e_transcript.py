@@ -43,6 +43,71 @@ def write_json_file(path: Path, payload: object) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
 
 
+def story_fields_from_file(path: Path) -> dict[str, str]:
+    fields: dict[str, str] = {}
+    for line in path.read_text().splitlines():
+        if ":" not in line:
+            continue
+        key, value = line.split(":", 1)
+        key = key.strip()
+        if key:
+            fields[key] = value.strip()
+    return fields
+
+
+def render_story_file(fields: dict[str, str], semantic_anchors: str) -> str:
+    return (
+        f"# {fields['user-story-id']} User Story\n\n"
+        f"user-story-id: {fields['user-story-id']}\n"
+        f"user-story: {fields['user-story']}\n"
+        f"acceptance-criteria: {fields['acceptance-criteria']}\n"
+        f"story-journey: {fields['story-journey']}\n"
+        f"story-roundtrip: {fields['story-roundtrip']}\n"
+        f"story-evidence: {fields['story-evidence']}\n"
+        f"program-domain: {fields['program-domain']}\n"
+        f"module-count: {fields['module-count']}\n"
+        f"spec-count: {fields['spec-count']}\n"
+        f"story-count: {fields['story-count']}\n"
+        f"interacts-with: {fields['interacts-with']}\n"
+        f"semantic-anchors: {semantic_anchors}\n"
+    )
+
+
+def normalize_accepted_capture_fields(output_dir: Path, fields: dict[str, str]) -> None:
+    was_diagnostic_seed = (
+        fields.get("program-domain") == "diagnostic"
+        or fields.get("story-evidence") == "diagnostics"
+        or fields.get("story-journey") == "diagnostic-story"
+        or fields.get("story-roundtrip") == "diagnostic-preserving"
+    )
+    fields.pop("expected-diagnostic", None)
+    fields.pop("failure-taxonomy", None)
+    if not was_diagnostic_seed:
+        return
+    fields["program-domain"] = "application"
+    fields["capability-under-test"] = "application-workflow"
+    fields["story-evidence"] = "checked-core"
+    fields["story-journey"] = "story-to-spec"
+    fields["story-roundtrip"] = "semantic-similar"
+    fields["acceptance-criteria"] = (
+        "checked spec exists; checked core exists; bytecode exists; "
+        "user-story metadata matches catalog"
+    )
+    fields["use-case"] = (
+        "Accepted live Codex transcript replacing a rejected diagnostic seed "
+        "with replayable checked application evidence."
+    )
+    story_file = fields.get("story-file")
+    if not story_file:
+        return
+    story_path = output_dir / story_file
+    if not story_path.exists():
+        return
+    story_fields = story_fields_from_file(story_path)
+    semantic_anchors = story_fields.get("semantic-anchors", "")
+    story_path.write_text(render_story_file(fields, semantic_anchors))
+
+
 def main() -> int:
     args = parse_args()
     base_corpus = (ROOT / args.base_corpus).resolve()
@@ -85,8 +150,7 @@ def main() -> int:
         fields["checker-result"] = args.checker_result
     fields.pop("endpoint-label", None)
     if fields.get("checker-result") == "accepted":
-        fields.pop("expected-diagnostic", None)
-        fields.pop("failure-taxonomy", None)
+        normalize_accepted_capture_fields(output_dir, fields)
     refresh_distinctness_claim(fields)
 
     entries[replacement_index] = (args.entry_id, render_entry(args.entry_id, fields))

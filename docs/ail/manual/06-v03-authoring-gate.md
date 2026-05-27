@@ -58,6 +58,20 @@ python3 scripts/run_ail_interactive_manual.py --chapter v03-authoring-gate --dry
 python3 scripts/run_ail_interactive_manual.py --chapter v03-authoring-gate --run-checks --include-live
 ```
 
+For a local fake LLM endpoint or a non-default hosted server, keep the same
+chapter shape and override the live transport at the manual-runner boundary:
+
+```sh
+python3 scripts/run_ail_interactive_manual.py --chapter v03-authoring-gate --dry-run --include-live \
+  --live-endpoint http://127.0.0.1:8081/v1/chat/completions \
+  --skip-model-check \
+  --live-artifact-root /tmp/ail-manual-live-local
+```
+
+The gate forwards those flags to its live User Story mode, prompt interaction,
+and AgentTool policy chapters, and those chapters forward them to the concrete
+story, prompt-pack, reviewer, and direct `ail-story` commands.
+
 The live gate delegates to:
 
 ```sh

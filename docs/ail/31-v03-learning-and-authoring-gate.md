@@ -121,6 +121,21 @@ the corpus. The direct command is:
 cargo run -- ail-v03-roadmap examples --artifact-dir /tmp/ail-v03-roadmap --release-evidence
 ```
 
+The interactive manual is also part of the v0.3 gate. Live rehearsals must be
+reproducible against either the hosted llama.cpp server or a local fake
+endpoint by using the manual runner transport overrides:
+
+```bash
+python3 scripts/run_ail_interactive_manual.py --chapter v03-authoring-gate --dry-run --include-live \
+  --live-endpoint http://127.0.0.1:8081/v1/chat/completions \
+  --skip-model-check \
+  --live-artifact-root /tmp/ail-manual-live-local
+```
+
+Those flags must propagate to the live User Story mode, prompt interaction,
+AgentTool policy, and direct `ail-story --llm-endpoint` commands so the manual
+can validate prompt interactions without depending on one network endpoint.
+
 Repeated story families are checked across entries. Any `user-story-id` family
 with at least five entries must cover at least three prompt files and at least
 two story journeys, and the report must emit `story-family-count` plus

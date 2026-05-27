@@ -109,6 +109,41 @@ def render_story_file(fields: dict[str, str], semantic_anchors: str) -> str:
     )
 
 
+def normalize_accepted_capture_fields(output_dir: Path, fields: dict[str, str]) -> None:
+    was_diagnostic_seed = (
+        fields.get("program-domain") == "diagnostic"
+        or fields.get("story-evidence") == "diagnostics"
+        or fields.get("story-journey") == "diagnostic-story"
+        or fields.get("story-roundtrip") == "diagnostic-preserving"
+    )
+    fields.pop("expected-diagnostic", None)
+    fields.pop("failure-taxonomy", None)
+    if not was_diagnostic_seed:
+        return
+    fields["program-domain"] = "application"
+    fields["capability-under-test"] = "application-workflow"
+    fields["story-evidence"] = "checked-core"
+    fields["story-journey"] = "story-to-spec"
+    fields["story-roundtrip"] = "semantic-similar"
+    fields["acceptance-criteria"] = (
+        "checked spec exists; checked core exists; bytecode exists; "
+        "user-story metadata matches catalog"
+    )
+    fields["use-case"] = (
+        "Accepted live Codex transcript replacing a rejected diagnostic seed "
+        "with replayable checked application evidence."
+    )
+    story_file = fields.get("story-file")
+    if not story_file:
+        return
+    story_path = output_dir / story_file
+    if not story_path.exists():
+        return
+    story_fields = story_fields_from_file(story_path)
+    semantic_anchors = story_fields.get("semantic-anchors", "")
+    story_path.write_text(render_story_file(fields, semantic_anchors))
+
+
 def plan_string(plan: dict[str, object], field: str) -> str:
     value = plan.get(field)
     if not isinstance(value, str) or not value:
@@ -549,8 +584,11 @@ def apply_codex_entry(
         fields["checker-result"] = checker_result
     fields.pop("endpoint-label", None)
     if fields.get("checker-result") == "accepted":
-        fields.pop("expected-diagnostic", None)
-        fields.pop("failure-taxonomy", None)
+        if append_entry:
+            fields.pop("expected-diagnostic", None)
+            fields.pop("failure-taxonomy", None)
+        else:
+            normalize_accepted_capture_fields(output_dir, fields)
     if append_entry:
         if story_plan is not None:
             story_artifact_dir = Path(plan_string(story_plan, "story_artifact_dir"))

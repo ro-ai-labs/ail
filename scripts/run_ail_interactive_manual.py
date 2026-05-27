@@ -13,6 +13,7 @@ import argparse
 import subprocess
 import sys
 from dataclasses import dataclass
+from pathlib import Path
 
 
 @dataclass(frozen=True)
@@ -33,6 +34,13 @@ class ManualChapter:
     doc: str
     purpose: str
     commands: tuple[ManualCommand, ...]
+
+
+@dataclass(frozen=True)
+class LiveOverrides:
+    endpoint: str | None = None
+    skip_model_check: bool = False
+    artifact_root: str | None = None
 
 
 BASE_CHAPTERS: tuple[ManualChapter, ...] = (
@@ -1314,6 +1322,25 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         action="store_true",
         help="Include live LLM/network commands when printing or running a chapter",
     )
+    parser.add_argument(
+        "--live-endpoint",
+        help=(
+            "Override the live LLM endpoint for manual live commands. "
+            "Useful with a local fake endpoint in tests."
+        ),
+    )
+    parser.add_argument(
+        "--skip-model-check",
+        action="store_true",
+        help="Pass --skip-model-check to live LLM harnesses",
+    )
+    parser.add_argument(
+        "--live-artifact-root",
+        help=(
+            "Rewrite known /tmp live/manual artifact paths under this root "
+            "before printing or running commands."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -1339,7 +1366,116 @@ def chapter_commands(chapter: ManualChapter, include_live: bool) -> list[ManualC
     ]
 
 
-def print_chapter(chapter: ManualChapter, include_live: bool) -> None:
+LIVE_ARTIFACT_PREFIXES: tuple[tuple[str, str], ...] = (
+    ("/tmp/ail-v03-story-promotion-import-artifacts", "story-promotion-import-artifacts"),
+    ("/tmp/ail-v03-story-promotion-import-corpus", "story-promotion-import-corpus"),
+    ("/tmp/ail-v03-story-promotion-capture-plan", "story-promotion-capture-plan"),
+    ("/tmp/ail-v03-story-promotion-import-work", "story-promotion-import-work"),
+    ("/tmp/ail-v03-agent-policy-live-review", "agent-policy-live-review"),
+    ("/tmp/ail-v03-story-llm", "story-llm"),
+    ("/tmp/ail-v03-prompt-llm", "prompt-llm"),
+    ("/tmp/ail-user-story-mode", "user-story-direct"),
+    ("/tmp/ail-manual-agent-policy-import-artifacts", "agent-policy-import-artifacts"),
+    ("/tmp/ail-manual-agent-policy-import-corpus", "agent-policy-import-corpus"),
+    ("/tmp/ail-manual-agent-policy-capture-plan", "agent-policy-capture-plan"),
+    ("/tmp/ail-manual-agent-policy-import-work", "agent-policy-import-work"),
+    ("/tmp/ail-manual-agent-policy", "agent-policy"),
+)
+
+
+def replace_artifact_path(value: str, artifact_root: str | None) -> str:
+    if not artifact_root:
+        return value
+    for prefix, relative in sorted(
+        LIVE_ARTIFACT_PREFIXES, key=lambda item: len(item[0]), reverse=True
+    ):
+        if value == prefix or value.startswith(prefix + "/"):
+            suffix = value[len(prefix):].lstrip("/")
+            rewritten = Path(artifact_root) / relative
+            if suffix:
+                rewritten = rewritten / suffix
+            return str(rewritten)
+    if value.startswith("/tmp/ail-manual-"):
+        return str(Path(artifact_root) / value.removeprefix("/tmp/ail-manual-"))
+    return value
+
+
+def set_option(args: list[str], option: str, value: str) -> None:
+    if option in args:
+        index = args.index(option)
+        if index + 1 >= len(args):
+            raise SystemExit(f"{option} requires a value")
+        args[index + 1] = value
+    else:
+        args.extend([option, value])
+
+
+def set_flag(args: list[str], flag: str) -> None:
+    if flag not in args:
+        args.append(flag)
+
+
+def add_live_harness_options(args: list[str], overrides: LiveOverrides) -> None:
+    if overrides.endpoint:
+        set_option(args, "--endpoint", overrides.endpoint)
+    if overrides.skip_model_check:
+        set_flag(args, "--skip-model-check")
+
+
+def materialize_command(command: ManualCommand, overrides: LiveOverrides) -> tuple[str, ...]:
+    args = [
+        replace_artifact_path(part, overrides.artifact_root)
+        for part in command.command
+    ]
+    if len(args) >= 2 and args[0] == "python3":
+        script = args[1]
+        if script == "scripts/run_ail_interactive_manual.py" and "--include-live" in args:
+            if overrides.endpoint:
+                set_option(args, "--live-endpoint", overrides.endpoint)
+            if overrides.skip_model_check:
+                set_flag(args, "--skip-model-check")
+            if overrides.artifact_root:
+                set_option(args, "--live-artifact-root", overrides.artifact_root)
+        elif script == "scripts/run_v03_story_llm_harness.py":
+            if "--review-artifacts" not in args:
+                add_live_harness_options(args, overrides)
+                if overrides.artifact_root:
+                    set_option(
+                        args,
+                        "--artifact-dir",
+                        str(Path(overrides.artifact_root) / "story-llm"),
+                    )
+        elif script == "scripts/run_v03_prompt_llm_harness.py":
+            if "--review-artifacts" not in args:
+                add_live_harness_options(args, overrides)
+                if overrides.artifact_root:
+                    set_option(
+                        args,
+                        "--artifact-dir",
+                        str(Path(overrides.artifact_root) / "prompt-llm"),
+                    )
+        elif script == "scripts/run_v03_agent_policy_live_reviewer_harness.py":
+            if "--review-artifacts" not in args:
+                add_live_harness_options(args, overrides)
+                if overrides.artifact_root:
+                    root = Path(overrides.artifact_root)
+                    set_option(args, "--artifact-dir", str(root / "agent-policy-live-review"))
+                    set_option(args, "--examples-artifacts", str(root / "agent-policy"))
+                    set_option(args, "--capture-plan-dir", str(root / "agent-policy-capture-plan"))
+                    set_option(args, "--import-work-dir", str(root / "agent-policy-import-work"))
+    elif command.live and len(args) >= 4 and args[:3] == ["cargo", "run", "--"]:
+        if "ail-story" in args and overrides.endpoint:
+            set_option(args, "--llm-endpoint", overrides.endpoint)
+    return tuple(args)
+
+
+def shell_line(command: ManualCommand, overrides: LiveOverrides) -> str:
+    return " ".join(materialize_command(command, overrides))
+
+
+def print_chapter(
+    chapter: ManualChapter, include_live: bool, overrides: LiveOverrides
+) -> None:
     print("AIL-Interactive-Manual-Chapter:")
     print(f"id {chapter.chapter_id}")
     print(f"title {chapter.title}")
@@ -1348,12 +1484,12 @@ def print_chapter(chapter: ManualChapter, include_live: bool) -> None:
     for index, command in enumerate(chapter_commands(chapter, include_live), start=1):
         print(f"step {index} {command.label}")
         print(f"live {str(command.live).lower()}")
-        print(command.shell_line())
+        print(shell_line(command, overrides))
         for evidence in command.evidence:
             print(f"evidence {evidence}")
 
 
-def print_runbook(include_live: bool) -> None:
+def print_runbook(include_live: bool, overrides: LiveOverrides) -> None:
     print("AIL-Interactive-Manual-Runbook:")
     for chapter in CHAPTERS:
         print(f"chapter {chapter.chapter_id} {chapter.title}")
@@ -1362,30 +1498,33 @@ def print_runbook(include_live: bool) -> None:
         for index, command in enumerate(chapter_commands(chapter, include_live), start=1):
             print(f"step {chapter.chapter_id}.{index} {command.label}")
             print(f"live {str(command.live).lower()}")
-            print(command.shell_line())
+            print(shell_line(command, overrides))
             for evidence in command.evidence:
                 print(f"evidence {evidence}")
 
 
-def run_chapter_checks(chapter: ManualChapter, include_live: bool) -> int:
+def run_chapter_checks(
+    chapter: ManualChapter, include_live: bool, overrides: LiveOverrides
+) -> int:
     commands = chapter_commands(chapter, include_live)
     if not commands:
         print(f"chapter {chapter.chapter_id} has no runnable commands")
         return 0
     for command in commands:
-        print(f"running {command.label}: {command.shell_line()}")
+        materialized = materialize_command(command, overrides)
+        print(f"running {command.label}: {' '.join(materialized)}")
         for evidence in command.evidence:
             print(f"evidence {evidence}")
-        completed = subprocess.run(command.command, check=False)
+        completed = subprocess.run(materialized, check=False)
         if completed.returncode != 0:
             return completed.returncode
     return 0
 
 
-def run_all_chapter_checks(include_live: bool) -> int:
+def run_all_chapter_checks(include_live: bool, overrides: LiveOverrides) -> int:
     for chapter in BASE_CHAPTERS:
         print(f"chapter {chapter.chapter_id}")
-        status = run_chapter_checks(chapter, include_live)
+        status = run_chapter_checks(chapter, include_live, overrides)
         if status != 0:
             return status
     return 0
@@ -1393,6 +1532,11 @@ def run_all_chapter_checks(include_live: bool) -> int:
 
 def main(argv: list[str]) -> int:
     args = parse_args(argv)
+    overrides = LiveOverrides(
+        endpoint=args.live_endpoint,
+        skip_model_check=args.skip_model_check,
+        artifact_root=args.live_artifact_root,
+    )
     if args.all and args.chapter:
         raise SystemExit("--all cannot be used with --chapter")
     if args.list or (not args.chapter and not args.all):
@@ -1403,13 +1547,13 @@ def main(argv: list[str]) -> int:
             return 0
     if args.all:
         if args.run_checks:
-            return run_all_chapter_checks(args.include_live)
-        print_runbook(args.include_live or args.dry_run)
+            return run_all_chapter_checks(args.include_live, overrides)
+        print_runbook(args.include_live or args.dry_run, overrides)
         return 0
     chapter = chapter_by_id(args.chapter)
     if args.run_checks:
-        return run_chapter_checks(chapter, args.include_live)
-    print_chapter(chapter, args.include_live or args.dry_run)
+        return run_chapter_checks(chapter, args.include_live, overrides)
+    print_chapter(chapter, args.include_live or args.dry_run, overrides)
     return 0
 
 

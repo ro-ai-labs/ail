@@ -22,6 +22,20 @@ requirements can be trusted, explicit agent compatibility, and the native target
 branch where a story-authored `CloseTicket` executable is run to produce a
 runtime trace.
 
+Run the same chapter with live-compatible fake or alternate endpoint evidence
+by passing the endpoint through the manual runner:
+
+```sh
+python3 scripts/run_ail_interactive_manual.py --chapter user-story-mode --run-checks --include-live \
+  --live-endpoint http://127.0.0.1:8081/v1/chat/completions \
+  --skip-model-check \
+  --live-artifact-root /tmp/ail-manual-live-local
+```
+
+The runner forwards that endpoint to the story LLM harness and the direct
+`ail-story --llm-endpoint` command, then rewrites the story promotion artifact
+paths under `/tmp/ail-manual-live-local`.
+
 ## Story-First Run
 
 Start with an existing support-ticket story and write all generated evidence to

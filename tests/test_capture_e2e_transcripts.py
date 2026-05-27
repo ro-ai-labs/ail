@@ -676,12 +676,18 @@ def agent_policy_live_evidence_probe_text():
 class _CompletionHandler(BaseHTTPRequestHandler):
     response_text = ""
     response_payload = None
+    response_for_payload = None
     requests = []
 
     def do_POST(self):
         body = self.rfile.read(int(self.headers["Content-Length"])).decode()
-        self.__class__.requests.append({"path": self.path, "body": json.loads(body)})
-        payload = self.__class__.response_payload or {"content": self.__class__.response_text}
+        request_payload = json.loads(body)
+        self.__class__.requests.append({"path": self.path, "body": request_payload})
+        response_for_payload = self.__class__.response_for_payload
+        if response_for_payload is not None:
+            payload = response_for_payload(request_payload)
+        else:
+            payload = self.__class__.response_payload or {"content": self.__class__.response_text}
         encoded = json.dumps(payload).encode()
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
@@ -1129,6 +1135,199 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
         )
         self.assertIn("artifact-kind AIL-AgentTool-Live-Reviewer-Handoff", dry_run.stdout)
         self.assertIn("model-check curl -sS http://inteligentia-pro-1:8080/v1/models", dry_run.stdout)
+
+    def test_interactive_manual_v03_authoring_gate_dry_run_threads_fake_live_endpoint(self):
+        artifact_root = Path(tempfile.mkdtemp(prefix="ail-manual-live-root-"))
+        server = None
+        try:
+            _CompletionHandler.requests = []
+            _CompletionHandler.response_payload = {"choices": [{"message": {"content": "{}"}}]}
+            server = HTTPServer(("127.0.0.1", 0), _CompletionHandler)
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            endpoint = f"http://127.0.0.1:{server.server_port}/v1/chat/completions"
+
+            def run_manual(chapter):
+                return subprocess.run(
+                    [
+                        "python3",
+                        "scripts/run_ail_interactive_manual.py",
+                        "--chapter",
+                        chapter,
+                        "--dry-run",
+                        "--include-live",
+                        "--live-endpoint",
+                        endpoint,
+                        "--skip-model-check",
+                        "--live-artifact-root",
+                        str(artifact_root),
+                    ],
+                    cwd=ROOT,
+                    text=True,
+                    capture_output=True,
+                )
+
+            gate_dry_run = run_manual("v03-authoring-gate")
+            self.assertEqual(
+                gate_dry_run.returncode,
+                0,
+                f"stdout:\n{gate_dry_run.stdout}\nstderr:\n{gate_dry_run.stderr}",
+            )
+            self.assertIn(
+                "python3 scripts/run_ail_interactive_manual.py --chapter user-story-mode "
+                f"--run-checks --include-live --live-endpoint {endpoint} "
+                f"--skip-model-check --live-artifact-root {artifact_root}",
+                gate_dry_run.stdout,
+            )
+
+            story_dry_run = run_manual("user-story-mode")
+            prompt_dry_run = run_manual("prompt-interaction")
+            agent_policy_dry_run = run_manual("agent-policy-import")
+            for dry_run in [story_dry_run, prompt_dry_run, agent_policy_dry_run]:
+                self.assertEqual(
+                    dry_run.returncode,
+                    0,
+                    f"stdout:\n{dry_run.stdout}\nstderr:\n{dry_run.stderr}",
+                )
+
+            combined_stdout = "\n".join(
+                [
+                    gate_dry_run.stdout,
+                    story_dry_run.stdout,
+                    prompt_dry_run.stdout,
+                    agent_policy_dry_run.stdout,
+                ]
+            )
+            self.assertIn(
+                "python3 scripts/run_v03_story_llm_harness.py "
+                f"--endpoint {endpoint} --skip-model-check --artifact-dir {artifact_root / 'story-llm'}",
+                combined_stdout,
+            )
+            self.assertIn(
+                f"python3 scripts/run_v03_story_llm_harness.py --review-artifacts {artifact_root / 'story-llm'}",
+                combined_stdout,
+            )
+            self.assertIn(
+                "python3 scripts/run_v03_prompt_llm_harness.py "
+                f"--endpoint {endpoint} --skip-model-check --artifact-dir {artifact_root / 'prompt-llm'}",
+                combined_stdout,
+            )
+            self.assertIn(
+                "python3 scripts/run_v03_agent_policy_live_reviewer_harness.py "
+                f"--endpoint {endpoint} --skip-model-check --artifact-dir {artifact_root / 'agent-policy-live-review'}",
+                combined_stdout,
+            )
+            self.assertIn(f"--llm-endpoint {endpoint}", combined_stdout)
+            self.assertNotIn("http://inteligentia-pro-1:8080", combined_stdout)
+            self.assertEqual(_CompletionHandler.requests, [])
+        finally:
+            _CompletionHandler.response_payload = None
+            _CompletionHandler.response_for_payload = None
+            if server is not None:
+                server.shutdown()
+                server.server_close()
+            shutil.rmtree(artifact_root, ignore_errors=True)
+
+    def test_interactive_manual_user_story_mode_run_checks_uses_fake_live_endpoint(self):
+        artifact_root = Path(tempfile.mkdtemp(prefix="ail-manual-live-run-"))
+        server = None
+        try:
+            spec_text = (ROOT / "examples" / "support_ticket.ail" / "spec.ail-spec.md").read_text()
+            requirements_text = (
+                "AIL-Requirements:\n"
+                "- The application manages support tickets.\n"
+                "- Ticket fields include id, title, status, and secret internal notes.\n"
+                "- The CloseTicket action requires ticket id input and ticket status not to be Closed.\n"
+                "- Failure NotFound happens when ticket id is missing and records TicketNotFound.\n"
+                "- The action guarantees closed tickets do not appear in the open queue.\n"
+                "- The action records trace event TicketClosed.\n"
+            )
+
+            def story_response_for(payload):
+                request_text = json.dumps(payload)
+                if "spec-draft.system" in request_text or "AIL-Spec Canonical" in request_text:
+                    content = json.dumps(
+                        {
+                            "artifact_kind": "AIL-Spec Canonical",
+                            "artifact_text": spec_text,
+                            "questions": [],
+                            "checker_handoff": {
+                                "must_check": True,
+                                "expected_profile": "Application",
+                                "expected_features": [],
+                            },
+                        },
+                        sort_keys=True,
+                    )
+                else:
+                    content = json.dumps(
+                        {
+                            "artifact_kind": "AIL-Requirements",
+                            "artifact_text": requirements_text,
+                            "questions": [],
+                            "checker_handoff": {
+                                "must_check": True,
+                                "expected_profile": "Application",
+                                "expected_features": [],
+                            },
+                        },
+                        sort_keys=True,
+                    )
+                return {"choices": [{"message": {"content": content}}], "model": "test-chat-model"}
+
+            _CompletionHandler.requests = []
+            _CompletionHandler.response_payload = None
+            _CompletionHandler.response_for_payload = story_response_for
+            server = HTTPServer(("127.0.0.1", 0), _CompletionHandler)
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            endpoint = f"http://127.0.0.1:{server.server_port}/v1/chat/completions"
+
+            run = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_ail_interactive_manual.py",
+                    "--chapter",
+                    "user-story-mode",
+                    "--run-checks",
+                    "--include-live",
+                    "--live-endpoint",
+                    endpoint,
+                    "--skip-model-check",
+                    "--live-artifact-root",
+                    str(artifact_root),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(
+                run.returncode,
+                0,
+                f"stdout:\n{run.stdout}\nstderr:\n{run.stderr}",
+            )
+            self.assertIn("running run-story-mode-live", run.stdout)
+            self.assertIn("running review-story-mode-live-artifacts", run.stdout)
+            self.assertIn("story-llm-transcript-check-count 6", run.stdout)
+            self.assertIn("story-prompt-envelope-artifact-count 2", run.stdout)
+            self.assertIn("story-prompt-envelope-questions-count 0", run.stdout)
+            self.assertIn("story-artifacts-preserved true", run.stdout)
+            self.assertGreaterEqual(len(_CompletionHandler.requests), 4)
+            self.assertTrue((artifact_root / "story-llm" / "story-llm-harness-report.txt").exists())
+            self.assertTrue(
+                (
+                    artifact_root
+                    / "story-promotion-capture-plan"
+                    / "story-promotion-capture-plan.json"
+                ).exists()
+            )
+        finally:
+            _CompletionHandler.response_payload = None
+            _CompletionHandler.response_for_payload = None
+            if server is not None:
+                server.shutdown()
+                server.server_close()
+            shutil.rmtree(artifact_root, ignore_errors=True)
 
     def test_agent_policy_live_reviewer_harness_review_accepts_complete_bundle(self):
         artifact_dir = Path(tempfile.mkdtemp(prefix="ail-agent-policy-live-review-"))

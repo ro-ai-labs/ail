@@ -1839,6 +1839,87 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         );
     }
 
+    let fake_endpoint = "http://127.0.0.1:12345/v1/chat/completions";
+    let fake_artifact_root = "/tmp/ail-manual-test-live-root";
+    let overridden_gate_live_dry_run = Command::new("python3")
+        .args([
+            &script,
+            "--chapter",
+            "v03-authoring-gate",
+            "--dry-run",
+            "--include-live",
+            "--live-endpoint",
+            fake_endpoint,
+            "--skip-model-check",
+            "--live-artifact-root",
+            fake_artifact_root,
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        overridden_gate_live_dry_run.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&overridden_gate_live_dry_run.stdout),
+        String::from_utf8_lossy(&overridden_gate_live_dry_run.stderr)
+    );
+    let overridden_gate_stdout = String::from_utf8_lossy(&overridden_gate_live_dry_run.stdout);
+    for required in [
+        "python3 scripts/run_ail_interactive_manual.py --chapter user-story-mode --run-checks --include-live",
+        "--live-endpoint http://127.0.0.1:12345/v1/chat/completions",
+        "--skip-model-check",
+        "--live-artifact-root /tmp/ail-manual-test-live-root",
+    ] {
+        assert!(
+            overridden_gate_stdout.contains(required),
+            "{required}\n{overridden_gate_stdout}"
+        );
+    }
+    assert!(
+        !overridden_gate_stdout.contains("http://inteligentia-pro-1:8080"),
+        "{overridden_gate_stdout}"
+    );
+
+    let overridden_story_live_dry_run = Command::new("python3")
+        .args([
+            &script,
+            "--chapter",
+            "user-story-mode",
+            "--dry-run",
+            "--include-live",
+            "--live-endpoint",
+            fake_endpoint,
+            "--skip-model-check",
+            "--live-artifact-root",
+            fake_artifact_root,
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        overridden_story_live_dry_run.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&overridden_story_live_dry_run.stdout),
+        String::from_utf8_lossy(&overridden_story_live_dry_run.stderr)
+    );
+    let overridden_story_stdout = String::from_utf8_lossy(&overridden_story_live_dry_run.stdout);
+    for required in [
+        "python3 scripts/run_v03_story_llm_harness.py --dry-run --endpoint http://127.0.0.1:12345/v1/chat/completions --skip-model-check --artifact-dir /tmp/ail-manual-test-live-root/story-llm",
+        "python3 scripts/run_v03_story_llm_harness.py --endpoint http://127.0.0.1:12345/v1/chat/completions --skip-model-check --artifact-dir /tmp/ail-manual-test-live-root/story-llm",
+        "python3 scripts/run_v03_story_llm_harness.py --review-artifacts /tmp/ail-manual-test-live-root/story-llm",
+        "--story-artifacts /tmp/ail-manual-test-live-root/story-llm",
+        "--output-dir /tmp/ail-manual-test-live-root/story-promotion-capture-plan",
+        "--llm-endpoint http://127.0.0.1:12345/v1/chat/completions",
+        "--artifact-dir /tmp/ail-manual-test-live-root/user-story-direct",
+    ] {
+        assert!(
+            overridden_story_stdout.contains(required),
+            "{required}\n{overridden_story_stdout}"
+        );
+    }
+    assert!(
+        !overridden_story_stdout.contains("http://inteligentia-pro-1:8080"),
+        "{overridden_story_stdout}"
+    );
+
     let all_dry_run = Command::new("python3")
         .args([&script, "--all", "--dry-run"])
         .output()

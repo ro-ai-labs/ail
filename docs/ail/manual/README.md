@@ -165,6 +165,23 @@ Live LLM chapters are opt-in. Add `--include-live` only when
 `http://inteligentia-pro-1:8080/` is reachable and the generated artifacts will
 be reviewed before promotion into `./examples`.
 
+Use the same manual commands against a local fake or alternate hosted endpoint
+by threading the endpoint through the manual runner:
+
+```sh
+python3 scripts/run_ail_interactive_manual.py --chapter v03-authoring-gate --dry-run --include-live \
+  --live-endpoint http://127.0.0.1:8081/v1/chat/completions \
+  --skip-model-check \
+  --live-artifact-root /tmp/ail-manual-live-local
+```
+
+`--live-endpoint` is forwarded to nested live manual chapters, the story LLM
+harness, prompt-pack harness, AgentTool policy reviewer harness, and the direct
+`ail-story --llm-endpoint` command. `--skip-model-check` forwards the matching
+harness option for fake endpoints without `/v1/models`. `--live-artifact-root`
+rewrites the known manual `/tmp/ail-*` artifact paths under one root so local
+live rehearsals do not overwrite hosted-run evidence.
+
 For prompt-pack evidence, `--include-live` runs both the hosted harness and the
 offline artifact review:
 
