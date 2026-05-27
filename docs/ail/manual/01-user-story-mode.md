@@ -119,9 +119,19 @@ agent-trace agent-trace.txt <fingerprint>
 
 When the requirements prompt returns blocking questions instead of an
 `AIL-Requirements` artifact, `ail-story` prints `ail-story blocking questions:`,
-writes `story-questions.ail-interview.md`, fingerprints it, records it in
+writes `story-questions.ail-interview.md`, fingerprints it, preserves the
+requirements prompt request/response/content transcript under `llm/`, records
+the transcript count and prompt-envelope validation counts in
+`story-mode-report.txt`, records the question and transcript fingerprints in
 `manifest.ail-story.txt`, and exits before `checked.ail-core.txt` or
-`artifact.ailbc.json` can be emitted.
+`artifact.ailbc.json` can be emitted. The blocking-question manifest includes:
+
+```text
+story-questions story-questions.ail-interview.md <fingerprint>
+llm-requirements-request llm/requirements.request.json <fingerprint>
+llm-requirements-response llm/requirements.response.json <fingerprint>
+llm-requirements-content llm/requirements.content.txt <fingerprint>
+```
 
 `agent-trace.txt` should include:
 

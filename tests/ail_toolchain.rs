@@ -1837,6 +1837,9 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "evidence agent agent.ailbc.json",
         "evidence agent-trace agent-trace.txt",
         "evidence story-questions.ail-interview.md",
+        "evidence llm-requirements-request",
+        "evidence llm-requirements-response",
+        "evidence llm-requirements-content",
         "evidence target.elf",
         "evidence native-bytecode-report.txt",
         "evidence ticket.status=Closed",
@@ -24421,6 +24424,73 @@ fn cli_ail_story_surfaces_blocking_questions_as_story_artifact() {
         )),
         "{manifest}"
     );
+    let report = fs::read_to_string(artifact_dir.join("story-mode-report.txt")).unwrap();
+    assert!(report.contains("story-llm-transcript-count: 1"), "{report}");
+    assert!(
+        report.contains("story-prompt-envelope-valid-count: 1"),
+        "{report}"
+    );
+    assert!(
+        report.contains("story-prompt-envelope-invalid-count: 0"),
+        "{report}"
+    );
+    assert!(
+        report.contains(
+            "story-llm-transcript: requirements artifact-kind AIL-Requirements content-kind prompt-envelope-questions"
+        ),
+        "{report}"
+    );
+    for artifact in [
+        "llm/requirements.request.json",
+        "llm/requirements.request.fingerprint.txt",
+        "llm/requirements.response.json",
+        "llm/requirements.response.fingerprint.txt",
+        "llm/requirements.content.txt",
+        "llm/requirements.content.fingerprint.txt",
+    ] {
+        assert!(artifact_dir.join(artifact).is_file(), "{artifact}");
+    }
+    let requirements_request =
+        fs::read_to_string(artifact_dir.join("llm/requirements.request.json")).unwrap();
+    assert!(
+        requirements_request.contains("USER STORY MODE INPUT")
+            && requirements_request.contains("support-ticket-questions-story"),
+        "{requirements_request}"
+    );
+    let requirements_request_fingerprint =
+        fs::read_to_string(artifact_dir.join("llm/requirements.request.fingerprint.txt")).unwrap();
+    assert_eq!(
+        requirements_request_fingerprint.trim(),
+        fnv64_fingerprint(&requirements_request)
+    );
+    let requirements_response =
+        fs::read_to_string(artifact_dir.join("llm/requirements.response.json")).unwrap();
+    let requirements_response_fingerprint =
+        fs::read_to_string(artifact_dir.join("llm/requirements.response.fingerprint.txt")).unwrap();
+    assert_eq!(
+        requirements_response_fingerprint.trim(),
+        fnv64_fingerprint(&requirements_response)
+    );
+    let requirements_content =
+        fs::read_to_string(artifact_dir.join("llm/requirements.content.txt")).unwrap();
+    assert!(
+        requirements_content.contains("\"artifact_kind\":\"AIL-Requirements\"")
+            && requirements_content.contains("\"questions\""),
+        "{requirements_content}"
+    );
+    let requirements_content_fingerprint =
+        fs::read_to_string(artifact_dir.join("llm/requirements.content.fingerprint.txt")).unwrap();
+    assert_eq!(
+        requirements_content_fingerprint.trim(),
+        fnv64_fingerprint(&requirements_content)
+    );
+    for required in [
+        "llm-requirements-request llm/requirements.request.json",
+        "llm-requirements-response llm/requirements.response.json",
+        "llm-requirements-content llm/requirements.content.txt",
+    ] {
+        assert!(manifest.contains(required), "{required}\n{manifest}");
+    }
     let agent_trace = fs::read_to_string(artifact_dir.join("agent-trace.txt")).unwrap();
     let agent_trace_fingerprint =
         fs::read_to_string(artifact_dir.join("agent-trace.fingerprint.txt")).unwrap();

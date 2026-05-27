@@ -385,6 +385,7 @@ struct AilStoryQuestionsManifestArtifactSet<'a> {
     story_report_text: &'a str,
     story_questions_text: &'a str,
     agent_trace_text: Option<&'a str>,
+    llm_transcripts: &'a [AilStoryLlmTranscript],
 }
 
 struct AilCompileArtifactSet<'a> {
@@ -8242,6 +8243,26 @@ fn render_ail_story_questions_manifest(
             ail_artifact_fingerprint(agent_trace_text)
         ));
     }
+    for transcript in artifacts.llm_transcripts {
+        lines.push(format!(
+            "llm-{}-request llm/{}.request.json {}",
+            transcript.stage,
+            transcript.stage,
+            ail_artifact_fingerprint(&ensure_trailing_newline(transcript.request_body.clone()))
+        ));
+        lines.push(format!(
+            "llm-{}-response llm/{}.response.json {}",
+            transcript.stage,
+            transcript.stage,
+            ail_artifact_fingerprint(&ensure_trailing_newline(transcript.response_body.clone()))
+        ));
+        lines.push(format!(
+            "llm-{}-content llm/{}.content.txt {}",
+            transcript.stage,
+            transcript.stage,
+            ail_artifact_fingerprint(&ensure_trailing_newline(transcript.content_text.clone()))
+        ));
+    }
     format!("{}\n", lines.join("\n"))
 }
 
@@ -8319,6 +8340,7 @@ fn write_ail_story_question_artifacts(
             format!("failed to write ail-story agent trace fingerprint artifact: {error}")
         })?;
     }
+    write_ail_story_llm_transcript_artifacts(root, artifacts.llm_transcripts)?;
     let manifest_text =
         render_ail_story_questions_manifest(&AilStoryQuestionsManifestArtifactSet {
             story_source_text: &story_source_text,
@@ -8326,6 +8348,7 @@ fn write_ail_story_question_artifacts(
             story_report_text: &story_report_text,
             story_questions_text: &story_questions_text,
             agent_trace_text: agent_trace_text.as_deref(),
+            llm_transcripts: artifacts.llm_transcripts,
         });
     fs::write(root.join("manifest.ail-story.txt"), &manifest_text)
         .map_err(|error| format!("failed to write ail-story manifest artifact: {error}"))?;
@@ -8334,6 +8357,45 @@ fn write_ail_story_question_artifacts(
         format!("{}\n", ail_artifact_fingerprint(&manifest_text)),
     )
     .map_err(|error| format!("failed to write ail-story manifest fingerprint artifact: {error}"))?;
+    Ok(())
+}
+
+fn write_ail_story_llm_transcript_artifacts(
+    root: &std::path::Path,
+    llm_transcripts: &[AilStoryLlmTranscript],
+) -> Result<(), String> {
+    if !llm_transcripts.is_empty() {
+        fs::create_dir_all(root.join("llm"))
+            .map_err(|error| format!("failed to create ail-story llm artifact dir: {error}"))?;
+    }
+    for transcript in llm_transcripts {
+        for (suffix, text) in [
+            ("request.json", transcript.request_body.as_str()),
+            ("response.json", transcript.response_body.as_str()),
+            ("content.txt", transcript.content_text.as_str()),
+        ] {
+            let artifact_text = ensure_trailing_newline(text.to_string());
+            let path = root
+                .join("llm")
+                .join(format!("{}.{}", transcript.stage, suffix));
+            fs::write(&path, &artifact_text).map_err(|error| {
+                format!(
+                    "failed to write ail-story llm transcript artifact {}: {error}",
+                    path.display()
+                )
+            })?;
+            fs::write(
+                path.with_extension("fingerprint.txt"),
+                format!("{}\n", ail_artifact_fingerprint(&artifact_text)),
+            )
+            .map_err(|error| {
+                format!(
+                    "failed to write ail-story llm transcript fingerprint {}: {error}",
+                    path.display()
+                )
+            })?;
+        }
+    }
     Ok(())
 }
 
@@ -8409,38 +8471,7 @@ fn write_ail_story_mode_artifacts(
             format!("failed to write ail-story amendment comparison fingerprint artifact: {error}")
         })?;
     }
-    if !artifacts.llm_transcripts.is_empty() {
-        fs::create_dir_all(root.join("llm"))
-            .map_err(|error| format!("failed to create ail-story llm artifact dir: {error}"))?;
-    }
-    for transcript in artifacts.llm_transcripts {
-        for (suffix, text) in [
-            ("request.json", transcript.request_body.as_str()),
-            ("response.json", transcript.response_body.as_str()),
-            ("content.txt", transcript.content_text.as_str()),
-        ] {
-            let artifact_text = ensure_trailing_newline(text.to_string());
-            let path = root
-                .join("llm")
-                .join(format!("{}.{}", transcript.stage, suffix));
-            fs::write(&path, &artifact_text).map_err(|error| {
-                format!(
-                    "failed to write ail-story llm transcript artifact {}: {error}",
-                    path.display()
-                )
-            })?;
-            fs::write(
-                path.with_extension("fingerprint.txt"),
-                format!("{}\n", ail_artifact_fingerprint(&artifact_text)),
-            )
-            .map_err(|error| {
-                format!(
-                    "failed to write ail-story llm transcript fingerprint {}: {error}",
-                    path.display()
-                )
-            })?;
-        }
-    }
+    write_ail_story_llm_transcript_artifacts(root, artifacts.llm_transcripts)?;
     let build_manifest_text = fs::read_to_string(root.join("manifest.ail-build.txt")).ok();
     let agent_bytecode_text = fs::read_to_string(root.join("agent.ailbc.json")).ok();
     let agent_trace_text = fs::read_to_string(root.join("agent-trace.txt")).ok();
@@ -15130,7 +15161,7 @@ fn run_ail_story_command(
                         story_fields: &normalized_story_fields,
                         llm_endpoint: Some(endpoint),
                         llm_max_tokens: cli_options.llm_max_tokens,
-                        llm_transcripts: &[],
+                        llm_transcripts: &story_llm_transcripts,
                     },
                     &questions_text,
                     agent_start.as_ref().map(|agent| agent.trace.as_slice()),
