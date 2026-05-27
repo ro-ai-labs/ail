@@ -272,6 +272,22 @@ def write_story_llm_review_fixture(artifact_dir, omit_agent_trace=False):
         "story-prompt-envelope-valid-count: 2\n"
         "story-prompt-envelope-invalid-count: 0\n"
     )
+    model_check = (
+        json.dumps(
+            {
+                "object": "list",
+                "data": [
+                    {
+                        "id": "test-story-model",
+                        "object": "model",
+                        "owned_by": "llamacpp",
+                    }
+                ],
+            },
+            sort_keys=True,
+        )
+        + "\n"
+    )
     requirements = (
         "AIL-Requirements:\n"
         "- The application manages support tickets.\n"
@@ -379,6 +395,7 @@ def write_story_llm_review_fixture(artifact_dir, omit_agent_trace=False):
         ("artifact.ailbc.json", "artifact.fingerprint.txt", bytecode),
         ("agent.ailbc.json", "agent.fingerprint.txt", agent_bytecode),
         ("manifest.ail-build.txt", "manifest.fingerprint.txt", build_manifest),
+        ("model-check.json", "model-check.fingerprint.txt", model_check),
         (
             "llm/requirements.request.json",
             "llm/requirements.request.fingerprint.txt",
@@ -415,6 +432,7 @@ def write_story_llm_review_fixture(artifact_dir, omit_agent_trace=False):
         f"core checked.ail-core.txt {fnv64(core)}\n"
         f"bytecode artifact.ailbc.json {fnv64(bytecode)}\n"
         f"agent agent.ailbc.json {fnv64(agent_bytecode)}\n"
+        f"model-check model-check.json {fnv64(model_check)}\n"
         "llm-requirements-request "
         f"llm/requirements.request.json {fnv64(requirements_request)}\n"
         "llm-requirements-response "
@@ -975,7 +993,10 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             self.assertIn("AIL-Story-LLM-Harness-Review:", review.stdout)
             self.assertIn("story-id support-ticket-agent-story", review.stdout)
             self.assertIn("semantic-anchor-count 4", review.stdout)
-            self.assertIn("fingerprint-check-count 11", review.stdout)
+            self.assertIn("model-check present", review.stdout)
+            self.assertIn("model-check-model-count 1", review.stdout)
+            self.assertIn("model-check-model-id test-story-model", review.stdout)
+            self.assertIn("fingerprint-check-count 12", review.stdout)
             self.assertIn("story-llm-transcript-check-count 6", review.stdout)
             self.assertIn("story-prompt-envelope-valid-count 2", review.stdout)
             self.assertIn("story-prompt-envelope-artifact-count 2", review.stdout)
@@ -1552,6 +1573,7 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             self.assertIn("story-prompt-envelope-valid-count 2", plan.stdout)
             self.assertIn("story-prompt-envelope-artifact-count 2", plan.stdout)
             self.assertIn("story-prompt-envelope-questions-count 0", plan.stdout)
+            self.assertIn("story-model-check-model-id test-story-model", plan.stdout)
             self.assertIn("plan-json story-promotion-capture-plan.json", plan.stdout)
 
             plan_json_path = plan_dir / "story-promotion-capture-plan.json"
@@ -1571,6 +1593,11 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             self.assertEqual(plan_payload["story_llm_transcript_check_count"], 6)
             self.assertEqual(plan_payload["story_prompt_envelope_artifact_count"], 2)
             self.assertEqual(plan_payload["story_prompt_envelope_questions_count"], 0)
+            self.assertEqual(plan_payload["story_model_check_model_id"], "test-story-model")
+            self.assertEqual(
+                plan_payload["story_model_check_fingerprint"],
+                fnv64((artifact_dir / "model-check.json").read_text()),
+            )
             self.assertEqual(
                 plan_fingerprint_path.read_text().strip(),
                 fnv64(plan_json_path.read_text()),

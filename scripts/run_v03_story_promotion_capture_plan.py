@@ -70,7 +70,7 @@ def require_fingerprint(path: Path, fingerprint_path: Path, errors: list[str]) -
 
 def validate_story_artifacts(
     story_artifacts: Path,
-) -> tuple[dict[str, str], dict[str, str], str, str, str]:
+) -> tuple[dict[str, str], dict[str, str], str, str, str, str]:
     errors: list[str] = []
     review_path = story_artifacts / STORY_REVIEW_REPORT
     review_fingerprint_path = story_artifacts / STORY_REVIEW_FINGERPRINT
@@ -81,6 +81,7 @@ def validate_story_artifacts(
     )
     require_value(review_values, "review-result", "accepted", "story review", errors)
     require_value(review_values, "agent-trace", "present", "story review", errors)
+    require_value(review_values, "model-check", "present", "story review", errors)
     require_value(
         review_values, "story-llm-transcript-check-count", "6", "story review", errors
     )
@@ -129,6 +130,11 @@ def validate_story_artifacts(
         story_artifacts / "manifest.ail-story.fingerprint.txt",
         errors,
     )
+    model_check_fingerprint = require_fingerprint(
+        story_artifacts / "model-check.json",
+        story_artifacts / "model-check.fingerprint.txt",
+        errors,
+    )
 
     for relative_path, fingerprint_path in [
         ("story.source.md", "story.source.fingerprint.txt"),
@@ -160,6 +166,7 @@ def validate_story_artifacts(
         review_fingerprint,
         story_report_fingerprint,
         story_manifest_fingerprint,
+        model_check_fingerprint,
     )
 
 
@@ -170,6 +177,7 @@ def build_plan(
     review_fingerprint: str,
     story_report_fingerprint: str,
     story_manifest_fingerprint: str,
+    model_check_fingerprint: str,
 ) -> dict[str, object]:
     story_id = story_values["user-story-id"]
     return {
@@ -193,6 +201,8 @@ def build_plan(
             review_values["story-llm-transcript-check-count"]
         ),
         "story_manifest_fingerprint": story_manifest_fingerprint,
+        "story_model_check_fingerprint": model_check_fingerprint,
+        "story_model_check_model_id": review_values["model-check-model-id"],
         "story_mode_report_fingerprint": story_report_fingerprint,
         "story_prompt_envelope_invalid_count": int(
             review_values["story-prompt-envelope-invalid-count"]
@@ -228,6 +238,9 @@ def render_plan_text(plan: dict[str, object]) -> str:
             f"{plan['story_llm_harness_review_fingerprint']}",
             f"story-mode-report-fingerprint {plan['story_mode_report_fingerprint']}",
             f"story-manifest-fingerprint {plan['story_manifest_fingerprint']}",
+            "story-model-check-fingerprint "
+            f"{plan['story_model_check_fingerprint']}",
+            f"story-model-check-model-id {plan['story_model_check_model_id']}",
             "story-llm-transcript-check-count "
             f"{plan['story_llm_transcript_check_count']}",
             "story-prompt-envelope-valid-count "
@@ -274,6 +287,7 @@ def main(argv: list[str]) -> int:
         review_fingerprint,
         story_report_fingerprint,
         story_manifest_fingerprint,
+        model_check_fingerprint,
     ) = validate_story_artifacts(args.story_artifacts)
     plan = build_plan(
         args,
@@ -282,6 +296,7 @@ def main(argv: list[str]) -> int:
         review_fingerprint,
         story_report_fingerprint,
         story_manifest_fingerprint,
+        model_check_fingerprint,
     )
     sys.stdout.write(write_plan(args.output_dir, plan))
     return 0

@@ -81,6 +81,8 @@ After a successful compile run, inspect these files:
 /tmp/ail-user-story-mode/manifest.ail-story.txt
 /tmp/ail-user-story-mode/agent-trace.txt
 /tmp/ail-user-story-mode/agent-trace.fingerprint.txt
+/tmp/ail-user-story-mode/model-check.json
+/tmp/ail-user-story-mode/model-check.fingerprint.txt
 /tmp/ail-user-story-mode/llm/requirements.request.json
 /tmp/ail-user-story-mode/llm/requirements.response.json
 /tmp/ail-user-story-mode/llm/requirements.content.txt
@@ -97,8 +99,8 @@ semantic-anchor count. It also records `story-llm-transcript-count`,
 `story-prompt-envelope-invalid-count` when LLM transcripts are present.
 `manifest.ail-story.txt` fingerprints story, generated requirements, accepted
 spec, checked Core, bytecode, each stored LLM request/response/content
-transcript, the default agent bytecode and trace, and the underlying
-`ail-build` manifest.
+transcript, the default agent bytecode and trace, the live model-check
+response, and the underlying `ail-build` manifest.
 
 Default-agent story manifests include these direct evidence entries:
 
@@ -218,6 +220,12 @@ Then run it live when `http://inteligentia-pro-1:8080/` is reachable:
 python3 scripts/run_v03_story_llm_harness.py
 ```
 
+The live harness writes and fingerprints `model-check.json` from the
+`/v1/models` response before invoking `ail-story`, then appends that artifact
+to `manifest.ail-story.txt`. When `--skip-model-check` is used for a local fake
+endpoint, the harness writes a skipped model-check artifact so the review report
+records that live model discovery was intentionally bypassed.
+
 Review the completed live artifact directory before promotion:
 
 ```sh
@@ -234,6 +242,8 @@ That review writes:
 The review also rejects the bundle if `agent-trace.fingerprint.txt` is
 missing or does not match `agent-trace.txt`; this keeps promotion import from
 accepting a trace that cannot be independently checked.
+It validates `model-check.json` and records `model-check-model-id` so promotion
+evidence can prove which live model discovery response was reviewed.
 It also rejects question-only `llm/requirements.content.txt` or
 `llm/spec.content.txt` envelopes during promotion review. Promotion evidence
 must contain generated `artifact_text` for both the requirements and spec
@@ -258,9 +268,9 @@ That writes:
 
 The plan records `promotion-decision accepted-for-promotion`,
 `human-approval-required true`, the story review/report/manifest
-fingerprints, transcript check count, and prompt-envelope counts. It does not
-mutate `./examples`; it is the durable handoff for a later human-approved
-batch capture.
+fingerprints, model-check fingerprint and model id, transcript check count, and
+prompt-envelope counts. It does not mutate `./examples`; it is the durable
+handoff for a later human-approved batch capture.
 
 After human approval, run the deterministic import demo against a corpus copy:
 
@@ -295,10 +305,10 @@ demo report have been reviewed.
 The review mode is offline. It checks story source and normalized story
 fingerprints, story-mode report metadata, generated requirements, accepted
 spec, checked Core, flow review, bytecode, story manifest fingerprints,
-stored LLM request/response/content transcripts, prompt-envelope validity
-counts, and toolchain-agent trace order. It then persists the same
-accepted/rejected review text as a fingerprinted harness report before a live
-run can be treated as promotion candidate evidence.
+stored LLM request/response/content transcripts, model-check identity,
+prompt-envelope validity counts, and toolchain-agent trace order. It then
+persists the same accepted/rejected review text as a fingerprinted harness
+report before a live run can be treated as promotion candidate evidence.
 
 The harness probes `http://inteligentia-pro-1:8080/v1/models` and runs
 `ail-story` against `http://inteligentia-pro-1:8080/v1/chat/completions` by

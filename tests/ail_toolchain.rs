@@ -3002,6 +3002,25 @@ fn script_v03_story_llm_harness_review_writes_fingerprinted_report() {
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
+    let model_check_text = "{\"data\":[{\"id\":\"test-story-rust-model\",\"object\":\"model\"}],\"object\":\"list\"}\n";
+    fs::write(artifact_dir.join("model-check.json"), model_check_text).unwrap();
+    fs::write(
+        artifact_dir.join("model-check.fingerprint.txt"),
+        format!("{}\n", fnv64_fingerprint(model_check_text)),
+    )
+    .unwrap();
+    let manifest_path = artifact_dir.join("manifest.ail-story.txt");
+    let mut manifest_text = fs::read_to_string(&manifest_path).unwrap();
+    manifest_text.push_str(&format!(
+        "model-check model-check.json {}\n",
+        fnv64_fingerprint(model_check_text)
+    ));
+    fs::write(&manifest_path, &manifest_text).unwrap();
+    fs::write(
+        artifact_dir.join("manifest.ail-story.fingerprint.txt"),
+        format!("{}\n", fnv64_fingerprint(&manifest_text)),
+    )
+    .unwrap();
 
     let review = Command::new("python3")
         .args([
@@ -3043,7 +3062,11 @@ fn script_v03_story_llm_harness_review_writes_fingerprinted_report() {
         "{review_stdout}"
     );
     assert!(
-        review_stdout.contains("fingerprint-check-count 11"),
+        review_stdout.contains("model-check-model-id test-story-rust-model"),
+        "{review_stdout}"
+    );
+    assert!(
+        review_stdout.contains("fingerprint-check-count 12"),
         "{review_stdout}"
     );
     assert!(

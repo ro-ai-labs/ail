@@ -71,12 +71,18 @@ def build_ail_story_command(args: argparse.Namespace) -> list[str]:
     return command
 
 
-def check_models(endpoint: str) -> None:
+def fetch_models(endpoint: str) -> tuple[str, str]:
     models_url = models_url_for_endpoint(endpoint)
     with urllib.request.urlopen(models_url, timeout=10) as response:
         body = response.read().decode("utf-8", errors="replace")
+    return models_url, body
+
+
+def check_models(endpoint: str) -> str:
+    models_url, body = fetch_models(endpoint)
     print(f"models endpoint: {models_url}")
     print(body)
+    return body
 
 
 def read_required_text(path: Path, errors: list[str]) -> str:
@@ -200,6 +206,79 @@ def write_text(path: Path, text: str) -> None:
     path.write_text(text)
 
 
+def write_model_check_artifacts(
+    artifact_root: Path, endpoint: str, body: str | None, skipped: bool = False
+) -> str:
+    if skipped:
+        model_check_text = (
+            json.dumps(
+                {
+                    "endpoint": endpoint,
+                    "object": "ail-model-check",
+                    "skipped": True,
+                },
+                sort_keys=True,
+            )
+            + "\n"
+        )
+    else:
+        model_check_text = body or ""
+        if model_check_text and not model_check_text.endswith("\n"):
+            model_check_text += "\n"
+    write_text(artifact_root / "model-check.json", model_check_text)
+    write_text(
+        artifact_root / "model-check.fingerprint.txt",
+        fnv64(model_check_text) + "\n",
+    )
+    return model_check_text
+
+
+def append_model_check_to_story_manifest(
+    artifact_root: Path, model_check_text: str
+) -> None:
+    manifest_path = artifact_root / "manifest.ail-story.txt"
+    if not manifest_path.exists():
+        return
+    manifest_text = manifest_path.read_text()
+    if "model-check model-check.json" not in manifest_text:
+        if not manifest_text.endswith("\n"):
+            manifest_text += "\n"
+        manifest_text += f"model-check model-check.json {fnv64(model_check_text)}\n"
+        manifest_path.write_text(manifest_text)
+        write_text(
+            artifact_root / "manifest.ail-story.fingerprint.txt",
+            fnv64(manifest_text) + "\n",
+        )
+
+
+def model_entries(model_check_text: str) -> tuple[bool, list[str], str]:
+    if not model_check_text.strip():
+        return False, [], "model-check.json is empty"
+    try:
+        payload = json.loads(model_check_text)
+    except json.JSONDecodeError as error:
+        return False, [], f"invalid json model-check.json: {error}"
+    if not isinstance(payload, dict):
+        return False, [], "model-check.json must be a JSON object"
+    if payload.get("skipped") is True:
+        return True, ["<skipped>"], ""
+    raw_entries = payload.get("data")
+    if not isinstance(raw_entries, list):
+        raw_entries = payload.get("models")
+    if not isinstance(raw_entries, list):
+        return False, [], "model-check.json must include data or models list"
+    ids: list[str] = []
+    for entry in raw_entries:
+        if not isinstance(entry, dict):
+            continue
+        model_id = entry.get("id") or entry.get("name") or entry.get("model")
+        if isinstance(model_id, str) and model_id.strip():
+            ids.append(model_id.strip())
+    if not ids:
+        return False, [], "model-check.json did not name any models"
+    return True, ids, ""
+
+
 def review_artifacts(artifact_dir: str) -> int:
     artifact_root = Path(artifact_dir)
     errors: list[str] = []
@@ -208,6 +287,10 @@ def review_artifacts(artifact_dir: str) -> int:
     report_text = read_required_text(artifact_root / "story-mode-report.txt", errors)
     normalized_story = read_required_text(artifact_root / "story.normalized.md", errors)
     agent_trace = read_required_text(artifact_root / "agent-trace.txt", errors)
+    model_check_text = read_required_text(artifact_root / "model-check.json", errors)
+    model_check_ok, model_ids, model_check_error = model_entries(model_check_text)
+    if model_check_error:
+        errors.append(model_check_error)
     transcript_checks = 0
     transcript_valid_count = 0
     transcript_invalid_count = 0
@@ -248,6 +331,10 @@ def review_artifacts(artifact_dir: str) -> int:
         (
             artifact_root / "agent-trace.txt",
             artifact_root / "agent-trace.fingerprint.txt",
+        ),
+        (
+            artifact_root / "model-check.json",
+            artifact_root / "model-check.fingerprint.txt",
         ),
     ]:
         if check_fingerprint(path, errors, fingerprint_path):
@@ -363,6 +450,9 @@ def review_artifacts(artifact_dir: str) -> int:
         f"story-prompt-envelope-questions-count {transcript_questions_count}",
         f"story-prompt-envelope-invalid-count {transcript_invalid_count}",
         f"agent-trace {'present' if agent_trace else 'missing'}",
+        f"model-check {'present' if model_check_ok else 'missing'}",
+        f"model-check-model-count {len(model_ids)}",
+        f"model-check-model-id {','.join(model_ids) if model_ids else '<missing>'}",
     ]
     if errors:
         review_lines.append("review-result rejected")
@@ -462,9 +552,19 @@ def main(argv: list[str]) -> int:
         print("artifacts:")
         print(args.artifact_dir)
         return 0
+    artifact_root = Path(args.artifact_dir)
     if not args.skip_model_check:
-        check_models(args.endpoint)
+        model_check_text = write_model_check_artifacts(
+            artifact_root,
+            args.endpoint,
+            check_models(args.endpoint),
+        )
+    else:
+        model_check_text = write_model_check_artifacts(
+            artifact_root, args.endpoint, None, skipped=True
+        )
     completed = subprocess.run(command, check=False)
+    append_model_check_to_story_manifest(artifact_root, model_check_text)
     return completed.returncode
 
 
