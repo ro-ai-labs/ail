@@ -2215,6 +2215,49 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             )
             self.assertTrue(patched_core.exists())
             self.assertIn("node Field Ticket.reviewStatus", patched_core.read_text())
+
+            runtime_state = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_ui_patch_runtime_state_check.py",
+                    "--examples-artifacts",
+                    str(examples_artifacts),
+                    "--capture-plan-dir",
+                    str(capture_plan_dir),
+                    "--import-work-dir",
+                    str(work_dir),
+                    "--output-artifacts",
+                    str(output_artifacts),
+                    "--source-entry-id",
+                    "example-108",
+                    "--output-dir",
+                    str(work_dir),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(runtime_state.returncode, 0, runtime_state.stderr)
+            runtime_report = (
+                work_dir / "ui-patch-runtime-state-check-report.txt"
+            ).read_text()
+            runtime_report_fingerprint = (
+                work_dir / "ui-patch-runtime-state-check-report.fingerprint.txt"
+            ).read_text()
+            self.assertIn("AIL-UI-Patch-Runtime-State-Check:", runtime_report)
+            self.assertIn("source-entry-id example-108", runtime_report)
+            self.assertIn("proposed-entry-id example-108-ui-patch", runtime_report)
+            self.assertIn("visual-regression-baseline ui-review.txt", runtime_report)
+            self.assertIn("visual-regression-patch ui-review-patch.txt", runtime_report)
+            self.assertIn(
+                "visual-regression-fingerprint-preserved true",
+                runtime_report,
+            )
+            self.assertIn("runtime-ui-state-check target-report", runtime_report)
+            self.assertIn("runtime-ui-state-anchor Ticket.reviewStatus", runtime_report)
+            self.assertIn("flow-edit-applied true", runtime_report)
+            self.assertIn("patched-core-replayed true", runtime_report)
+            self.assertEqual(runtime_report_fingerprint.strip(), fnv64(runtime_report))
         finally:
             shutil.rmtree(work_dir, ignore_errors=True)
             shutil.rmtree(examples_artifacts, ignore_errors=True)

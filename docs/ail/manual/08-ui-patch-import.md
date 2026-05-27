@@ -81,7 +81,35 @@ checker-result-count accepted 109
 checker-result-count rejected 9
 ```
 
+After the import demo, write the deterministic runtime UI-state witness:
+
+```sh
+python3 scripts/run_v03_ui_patch_runtime_state_check.py \
+  --examples-artifacts /tmp/ail-manual-ui-patch \
+  --capture-plan-dir /tmp/ail-manual-ui-patch-capture-plan \
+  --import-work-dir /tmp/ail-manual-ui-patch-import-work \
+  --output-artifacts /tmp/ail-manual-ui-patch-import-artifacts \
+  --source-entry-id example-108 \
+  --output-dir /tmp/ail-manual-ui-patch-import-work
+```
+
+The witness report must include:
+
+```text
+ui-patch-runtime-state-check-report.txt
+ui-patch-runtime-state-check-report.fingerprint.txt
+visual-regression-baseline ui-review.txt
+visual-regression-patch ui-review-patch.txt
+visual-regression-fingerprint-preserved true
+runtime-ui-state-check target-report
+runtime-ui-state-anchor Ticket.reviewStatus
+flow-edit-applied true
+patched-core-replayed true
+```
+
 The import uses `ail-flow-edit` to prove the reviewed patch can add
 `Ticket.reviewStatus` to the checked UI Core. The promoted response is the
 human-approved source spec with that reviewed field added, so existing action
-trace wording remains parseable during corpus replay.
+trace wording remains parseable during corpus replay. The runtime state witness
+then binds the visual review and patch fingerprints to the promoted target
+report and the replayed Core anchor added by the patch.

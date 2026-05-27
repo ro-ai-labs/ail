@@ -332,12 +332,15 @@ live LLM access. The current corpus stores:
 - `examples/<entry-id>/ui-review-patch.txt`: generated beside each UI review
   to record a proposed-only `ail-flow-edit` patch plan, human approval
   requirement, patch scope, and upstream UI review fingerprint.
-- `ui-patch-capture-plan.json` and `ui-patch-import-demo-report.txt`: generated
-  in scratch artifact directories by `scripts/run_v03_ui_patch_capture_plan.py`
-  and `scripts/run_v03_ui_patch_import_demo.py` to validate a human-approved
-  `ail-flow-edit`, append `example-108-ui-patch` to a corpus copy, and replay
-  that copy through checked Core, bytecode, VM trace, and target-contract
-  evidence.
+- `ui-patch-capture-plan.json`, `ui-patch-import-demo-report.txt`, and
+  `ui-patch-runtime-state-check-report.txt`: generated in scratch artifact
+  directories by `scripts/run_v03_ui_patch_capture_plan.py`,
+  `scripts/run_v03_ui_patch_import_demo.py`, and
+  `scripts/run_v03_ui_patch_runtime_state_check.py` to validate a
+  human-approved `ail-flow-edit`, append `example-108-ui-patch` to a corpus
+  copy, replay that copy through checked Core, bytecode, VM trace, and
+  target-contract evidence, then bind visual review fingerprints to runtime
+  UI-state anchors for the imported patch.
 - `examples/<entry-id>/agent-policy-review.txt`: generated for each accepted
   AgentTool entry to record deterministic multi-agent handoff review, the
   `ail-agent-contracts examples/agents` check, permission and approval review,
@@ -384,10 +387,13 @@ UI-surface replay must emit `ui-review-fingerprint-*` and
 `ui-review-patch-fingerprint-*` report lines plus `ui-review` and
 `ui-review-patch` manifest entries before claiming the visual/accessibility
 patch-planning path. The human-approved import path is checked by
-`scripts/run_v03_ui_patch_capture_plan.py` followed by
-`scripts/run_v03_ui_patch_import_demo.py`; the import report must include
-`source-preserved true`, `proposed-accepted true`, `flow-edit-applied true`, and
-`patched-core-replayed true`. Accepted AgentTool replay must emit
+`scripts/run_v03_ui_patch_capture_plan.py`,
+`scripts/run_v03_ui_patch_import_demo.py`, and
+`scripts/run_v03_ui_patch_runtime_state_check.py`; the reports must include
+`source-preserved true`, `proposed-accepted true`, `flow-edit-applied true`,
+`patched-core-replayed true`, `visual-regression-fingerprint-preserved true`,
+`runtime-ui-state-check target-report`, and the `Ticket.reviewStatus` runtime
+UI-state anchor. Accepted AgentTool replay must emit
 `agent-policy-review-fingerprint-*` report lines plus `agent-policy-review`
 manifest entries before claiming the multi-agent policy handoff review path.
 The human-approved AgentTool import path is checked by

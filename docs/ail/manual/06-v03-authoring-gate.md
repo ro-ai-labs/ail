@@ -106,6 +106,11 @@ ui-patch-capture-plan.txt
 ui-patch-capture-plan.fingerprint.txt
 ui-patch-import-demo-report.txt
 ui-patch-import-demo-report.fingerprint.txt
+ui-patch-runtime-state-check-report.txt
+ui-patch-runtime-state-check-report.fingerprint.txt
+visual-regression-fingerprint-preserved true
+runtime-ui-state-check target-report
+runtime-ui-state-anchor Ticket.reviewStatus
 flow-edit-applied true
 patched-core-replayed true
 agent-policy-capture-plan.json

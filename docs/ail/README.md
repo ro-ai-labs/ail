@@ -125,7 +125,8 @@ one of these version surfaces or add a versioned surface through
   promotion.
 - `manual/08-ui-patch-import.md`: deterministic review of UI patch plans before
   importing a human-approved `ail-flow-edit` candidate into a replayed corpus
-  copy.
+  copy, then writing visual-regression and runtime UI-state evidence for the
+  imported patch.
 - `manual/09-agent-policy-import.md`: deterministic review of AgentTool policy
   handoff artifacts before importing a human-approved policy trace amendment
   into a replayed corpus copy, writing a role-separated handoff witness, and

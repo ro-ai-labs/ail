@@ -223,6 +223,10 @@ The `ail-examples` replay bundle must also write deterministic story artifacts:
   `ui-patch-import-demo-report.fingerprint.txt` in a scratch import work
   directory when the approved UI patch is appended to a corpus copy and
   replayed.
+- `ui-patch-runtime-state-check-report.txt` and
+  `ui-patch-runtime-state-check-report.fingerprint.txt` in the import work
+  directory when the imported UI patch has visual-review fingerprint evidence
+  and runtime UI-state anchors checked against the promoted target report.
 - `agent-policy-capture-plan.json`, `agent-policy-capture-plan.txt`, and
   `agent-policy-capture-plan.fingerprint.txt` in a scratch capture-plan
   directory when an AgentTool policy handoff is proposed for human-approved
@@ -260,7 +264,12 @@ patch can then be captured with `scripts/run_v03_ui_patch_capture_plan.py` and
 imported with `scripts/run_v03_ui_patch_import_demo.py`; that demo must
 preserve the source entry, apply `ail-flow-edit`, append an accepted
 `example-108-ui-patch` candidate to a corpus copy, and replay the copy until
-`flow-edit-applied true` and `patched-core-replayed true` are recorded. Accepted
+`flow-edit-applied true` and `patched-core-replayed true` are recorded. The
+imported patch must then pass
+`scripts/run_v03_ui_patch_runtime_state_check.py`, which records
+`visual-regression-fingerprint-preserved true`,
+`runtime-ui-state-check target-report`, and the replayed
+`Ticket.reviewStatus` UI-state anchor. Accepted
 `AgentTool` entries must also emit `agent-policy-review.txt`, which records the
 multi-agent handoff roles, `ail-agent-contracts examples/agents` check, tool
 permission and approval review, external-call review, secret-redaction review,
@@ -321,8 +330,10 @@ as prose. The current examples reveal these next-version gaps:
   workflow authoring artifacts, deterministic UI patch plans, a human-approved
   UI patch import demo, and a rejected accessibility diagnostic fixture that
   repairs to checked Core, verified bytecode, and Wasm target-contract
-  evidence. The next bar is visual regression evidence and runtime UI-state
-  checks for imported patches.
+  evidence. Imported UI patches now also emit deterministic visual-regression
+  fingerprint evidence and runtime UI-state checks that bind the patch to a
+  promoted target report. The next bar is browser-backed visual regression
+  evidence for UI surfaces and additional imported patch variants.
 - AgentTool examples now emit deterministic policy review artifacts with
   multi-agent handoff roles, contract checks, permission and approval review,
   external-call review, secret-redaction review, audit-trace review, runtime

@@ -174,8 +174,9 @@ python3 scripts/run_ail_interactive_manual.py --chapter agent-policy-import --ru
   before proposing a repaired artifact for accepted-corpus promotion. Prose:
   `07-repair-promotion.md`.
 - `ui-patch-import`: deterministic review of UI patch plans before importing a
-  human-approved `ail-flow-edit` candidate into a replayed corpus copy. Prose:
-  `08-ui-patch-import.md`.
+  human-approved `ail-flow-edit` candidate into a replayed corpus copy, then
+  writing visual-regression and runtime UI-state evidence for the imported
+  patch. Prose: `08-ui-patch-import.md`.
 - `agent-policy-import`: deterministic review of AgentTool policy handoff
   artifacts before importing a human-approved policy trace amendment into a
   replayed corpus copy, then writing a role-separated deterministic
