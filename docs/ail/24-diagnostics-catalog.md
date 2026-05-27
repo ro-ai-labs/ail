@@ -54,6 +54,7 @@ severity, blocking behavior, and at least one invalid fixture.
 | `AIL-SECRET-OUTPUT-001` | `ail.tool.output.secret-requires-approval` | tool output exposes a secret without reveal permission | error | yes | remove secret output or add reveal approval |
 | `AIL-PERMISSION-001` | `ail.tool.permission.requires-rule` | permission reference has no rule or scope | error | yes | attach rule and scope |
 | `AIL-APPROVAL-001` | `ail.tool.approval.requires-rule` | approval has no triggering rule | error | yes | attach rule and trace |
+| `AIL-AGENT-AUDIT-001` | `ail.agent-tool.provider-call.audit-evidence` | AgentTool external provider call lacks audit evidence | error | yes | add an audit write or audit-trace guarantee |
 | `AIL-CONTROL-001` | `ail.runtime.branch.exhaustive` | branch has no matching outcome or else | error | yes | add exhaustive outcome |
 | `AIL-CONTROL-002` | `ail.runtime.match.exhaustive` | match over finite variants is non-exhaustive | error | yes | cover every variant |
 | `AIL-CONTROL-003` | `ail.runtime.termination.proven` | termination-required profile has unproven recursion or loop | error | yes | add proof, bound, or profile policy |
@@ -141,6 +142,26 @@ severity, blocking behavior, and at least one invalid fixture.
 - blocking behavior: blocks acceptance
 - invalid fixture:
   `examples/support_ticket.ail/examples/rejected/failure-without-handling.ail-spec.md`
+
+### AIL-AGENT-AUDIT-001
+
+- condition: an `AgentTool` tool calls an external provider but has no checker
+  visible audit write or audit-trace guarantee
+- affected graph item: `calls` edge from the tool to the external provider
+  call
+- message template: `tool {tool} calls {provider_call} without audit evidence`
+- non-engineer explanation: the agent can ask an external service to notify or
+  act, but reviewers would not have a durable audit record for that provider
+  call
+- agent follow-up question: `Which audit entry or trace guarantee proves that
+  {provider_call} happened?`
+- repair suggestion: add an audit write or audit-trace guarantee for the
+  provider call
+- AIL-Flow highlight: Tool Card effects and audit trace sections
+- severity: error
+- blocking behavior: blocks acceptance
+- invalid fixture:
+  `examples/incident_notifications.ail/examples/rejected/provider-call-without-audit-entry.ail-spec.md`
 
 ### AIL-CONTROL-003
 

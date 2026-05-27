@@ -16,6 +16,10 @@ the incident-response workflow.
 
 - `ail-package.md`: AgentTool support-module metadata.
 - `spec.ail-spec.md`: `Notify incident responder` tool contract.
+- `examples/accepted/notify-responder-minimal.ail-spec.md`: minimal accepted
+  notification contract for package-local conformance.
+- `examples/rejected/*.ail-spec.md`: rejected notification contracts that teach
+  approval, permission, secret-output, and provider-audit repairs.
 - `../incident_response.ail/spec.ail-spec.md`: the application action that
   records notification audit evidence.
 
@@ -27,9 +31,24 @@ into checked artifacts and target reports.
 
 ## Rejected Fixtures
 
-This package has no package-local rejected fixtures. v0.3 should add rejected
-notification fixtures for missing pager approval, leaked pager token, and
-provider-call audit omissions.
+Run the package-local repair set with:
+
+```sh
+cargo run -- ail-conformance examples/incident_notifications.ail --artifact-dir /tmp/ail-incident-notifications-conformance
+```
+
+The accepted fixture is `notify-responder-minimal.ail-spec.md`.
+Rejected fixtures are:
+
+- `approval-without-rule.ail-spec.md`: teaches `AIL018` when a tool mentions
+  approval without an explicit approval rule.
+- `permission-without-rule.ail-spec.md`: teaches `AIL019` when a tool mentions
+  permission without an explicit permission rule.
+- `pager-token-secret-output.ail-spec.md`: teaches `AIL020` when an
+  agent-visible output exposes `Secret<Text>` without reveal permission.
+- `provider-call-without-audit-entry.ail-spec.md`: teaches
+  `AIL-AGENT-AUDIT-001` when an external provider call lacks an audit write or
+  audit-trace guarantee.
 
 ## Next Example To Read
 
@@ -38,5 +57,7 @@ a complete incident lifecycle.
 
 ## v0.3 Learning Signal
 
-Incident notification examples need AgentTool-specific repair tutorials for
-approval, secret redaction, and audit-trace failures.
+Incident notification examples now teach AgentTool-specific repair tutorials
+for approval, permission, secret redaction, and provider-call audit evidence.
+The next bar is provider failure and retry-policy fixtures that connect
+notification delivery failures to incident workflow recovery.

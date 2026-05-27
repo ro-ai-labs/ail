@@ -19841,6 +19841,44 @@ fn ail_core_reports_agent_tool_secret_outputs_without_reveal_permission() {
 }
 
 #[test]
+fn ail_core_reports_agent_tool_provider_calls_without_audit_policy() {
+    let package = load_ail_package_dir(fixture("incident_notifications.ail")).unwrap();
+    let spec = fs::read_to_string(format!(
+        "{}/examples/rejected/provider-call-without-audit-entry.ail-spec.md",
+        fixture("incident_notifications.ail")
+    ))
+    .unwrap();
+    let document = parse_ail_spec_text(&spec).unwrap();
+    let diagnostics = check_ail_core_diagnostics(&elaborate_ail_core(&package, &document));
+    let diagnostic = diagnostics
+        .iter()
+        .find(|diagnostic| {
+            diagnostic.code == "AIL-AGENT-AUDIT-001"
+                && diagnostic.message
+                    == "tool NotifyIncidentResponder calls PagerProvider.notify without audit evidence"
+        })
+        .unwrap_or_else(|| panic!("missing AIL-AGENT-AUDIT-001 diagnostic: {diagnostics:?}"));
+
+    assert_eq!(
+        diagnostic.source_provenance.as_deref(),
+        Some("tool:NotifyIncidentResponder.call:PagerProvider.notify")
+    );
+    assert!(
+        diagnostic
+            .affected_graph_item
+            .as_deref()
+            .is_some_and(|item| item.starts_with("edge:edge:calls:")),
+        "{diagnostic:?}"
+    );
+    assert_eq!(
+        diagnostic.repair_suggestion.as_deref(),
+        Some(
+            "Add an audit write or audit-trace guarantee for provider call PagerProvider.notify in tool NotifyIncidentResponder."
+        )
+    );
+}
+
+#[test]
 fn ail_core_reports_system_effects_without_capabilities() {
     let package = load_ail_package_dir(fixture("network_driver.ail")).unwrap();
     let spec = fs::read_to_string(format!(
@@ -20808,6 +20846,18 @@ fn cli_ail_conformance_checks_v02_package_host_boundary_fixtures() {
                 "rejected: internal-notes-without-redaction.ail-spec.md AIL005",
                 "rejected: permission-denied-without-trace.ail-spec.md AIL-TRACE-002",
                 "rejected: permission-denied-without-failure-section.ail-spec.md AIL003",
+                "ail conformance: ok",
+            ]
+            .as_slice(),
+        ),
+        (
+            "incident_notifications.ail",
+            [
+                "accepted: notify-responder-minimal.ail-spec.md",
+                "rejected: approval-without-rule.ail-spec.md AIL018",
+                "rejected: permission-without-rule.ail-spec.md AIL019",
+                "rejected: pager-token-secret-output.ail-spec.md AIL020",
+                "rejected: provider-call-without-audit-entry.ail-spec.md AIL-AGENT-AUDIT-001",
                 "ail conformance: ok",
             ]
             .as_slice(),

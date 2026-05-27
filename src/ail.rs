@@ -4119,6 +4119,7 @@ pub fn check_ail_core_diagnostics(core: &AilCore) -> Vec<AilDiagnostic> {
     diagnostics.extend(check_tool_trace_coverage(core));
     diagnostics.extend(check_tool_approval_mentions(core));
     diagnostics.extend(check_tool_permission_mentions(core));
+    diagnostics.extend(check_tool_provider_call_audit_evidence(core));
     diagnostics.extend(check_system_effect_capabilities(core));
     diagnostics.extend(check_system_effect_resources(core));
     diagnostics.extend(check_system_device_effect_capabilities(core));
@@ -16769,6 +16770,72 @@ fn check_tool_permission_mentions(core: &AilCore) -> Vec<AilDiagnostic> {
 fn mentions_permission(text: &str) -> bool {
     let normalized = text.to_ascii_lowercase();
     normalized.contains("permission") || normalized.contains("may ")
+}
+
+fn check_tool_provider_call_audit_evidence(core: &AilCore) -> Vec<AilDiagnostic> {
+    if core.package.profile != "AgentTool" {
+        return Vec::new();
+    }
+    let node_by_id = graph_node_by_id(core);
+    let mut diagnostics = Vec::new();
+    for edge in core.graph.edges.iter().filter(|edge| edge.kind == "calls") {
+        let Some(tool) = node_by_id.get(&edge.source) else {
+            continue;
+        };
+        if tool.kind != "Tool" || tool_has_audit_evidence(core, &node_by_id, tool) {
+            continue;
+        }
+        let Some(call) = node_by_id.get(&edge.target) else {
+            continue;
+        };
+        if !is_external_provider_call(&call.name) {
+            continue;
+        }
+        diagnostics.push(
+            AilDiagnostic::error(
+                "AIL-AGENT-AUDIT-001",
+                format!(
+                    "tool {} calls {} without audit evidence",
+                    tool.name, call.name
+                ),
+            )
+            .with_source_provenance(node_provenance(core, &call.id).or_else(|| {
+                edge.attributes
+                    .get("provenance")
+                    .cloned()
+                    .or_else(|| node_provenance(core, &tool.id))
+            }))
+            .with_affected_graph_item(format!("edge:{}", edge.id))
+            .with_repair_suggestion(format!(
+                "Add an audit write or audit-trace guarantee for provider call {} in tool {}.",
+                call.name, tool.name
+            )),
+        );
+    }
+    diagnostics
+}
+
+fn is_external_provider_call(call: &str) -> bool {
+    let normalized = call.to_ascii_lowercase();
+    normalized.contains("provider.") || normalized.contains("provider ")
+}
+
+fn tool_has_audit_evidence(
+    core: &AilCore,
+    node_by_id: &BTreeMap<String, Node>,
+    tool: &Node,
+) -> bool {
+    core.graph
+        .edges
+        .iter()
+        .filter(|edge| {
+            edge.source == tool.id && matches!(edge.kind.as_str(), "writes" | "guarantees")
+        })
+        .filter_map(|edge| node_by_id.get(&edge.target))
+        .any(|target| {
+            let compact = compact_semantic_text(&target.name);
+            compact.contains("audit") || compact.contains("ledger")
+        })
 }
 
 fn check_system_effect_capabilities(core: &AilCore) -> Vec<AilDiagnostic> {

@@ -354,6 +354,7 @@ cargo test --test ail_toolchain script_ail_interactive_manual_systems_profile_ru
 cargo run -- ail-conformance examples/support_ticket.ail --artifact-dir /tmp/ail-v03-application-baseline
 cargo run -- ail-conformance examples/secret_access.ail --artifact-dir /tmp/ail-v03-secret-access
 cargo run -- ail-conformance examples/stateful_counter.ail --artifact-dir /tmp/ail-v03-stateful-counter
+cargo run -- ail-conformance examples/incident_notifications.ail --artifact-dir /tmp/ail-v03-incident-notifications
 cargo run -- ail-examples examples --artifact-dir /tmp/ail-v03-learning-examples --release-evidence
 cargo run -- ail-v03-roadmap examples --artifact-dir /tmp/ail-v03-roadmap --release-evidence
 test -f /tmp/ail-v03-learning-examples/v03-roadmap.txt
@@ -418,9 +419,14 @@ as prose. The current examples reveal these next-version gaps:
   `reviewer-decision-reject-count`. The review is accepted only when every
   recorded request contains the deterministic evidence bundle and all reviewer
   roles return `decision: accept`; valid non-accept decisions become
-  `review-result needs-repair` evidence. The next bar is broader live reviewer
-  coverage where accepted and rejected AgentTool policy handoffs are both
-  produced by separate reviewer roles and promoted only after human approval.
+  `review-result needs-repair` evidence. Incident notification support now has
+  package-local accepted/rejected AgentTool conformance fixtures for approval
+  rules, permission rules, secret output redaction, and
+  `AIL-AGENT-AUDIT-001` provider-call audit evidence. The next bar is broader
+  live reviewer coverage where accepted and rejected AgentTool policy handoffs
+  are both produced by separate reviewer roles and promoted only after human
+  approval, plus provider failure and retry-policy fixtures for notification
+  delivery.
 - Compiler/self-hosting examples now include a deterministic `ail-bootstrap`
   manual check that composes the AIL-authored toolchain agent with the
   AIL-Meta `InferReadPermissions` compiler pass, verifies fixed-point pass
