@@ -46,9 +46,11 @@ requests include an OpenAI-compatible JSON mode hint,
 is large enough for the current task-specific probes to complete compact
 envelopes on the hosted llama.cpp server. The harness writes request,
 response, extracted content, report, manifest, and fingerprint artifacts under
-`/tmp/ail-v03-prompt-llm`. The output is evidence for prompt interaction review
-only; generated text still has to pass the deterministic checker before it can
-be promoted into `./examples`.
+`/tmp/ail-v03-prompt-llm`. It also fingerprints `models.json`; with
+`--skip-model-check`, that artifact records the skipped check and endpoint so
+local fake-server runs remain auditable. The output is evidence for prompt
+interaction review only; generated text still has to pass the deterministic
+checker before it can be promoted into `./examples`.
 
 Review a completed hosted run before promotion:
 
@@ -64,11 +66,12 @@ That review writes:
 ```
 
 The review mode is offline. It checks the required prompt set, manifest,
-report, request/response/content files, prompt fingerprints, probe labels,
-probe fingerprints, expected `artifact_kind` values, artifact fingerprints, and
-prompt-pack envelope shape. A hosted probe is not accepted only because it is
-non-empty: extracted content must classify as the expected outcome for that
-prompt, either `prompt-envelope-artifact` or `prompt-envelope-questions`. The
+report, model-check artifact, request/response/content files, prompt
+fingerprints, probe labels, probe fingerprints, expected `artifact_kind`
+values, artifact fingerprints, and prompt-pack envelope shape. A hosted probe
+is not accepted only because it is non-empty: extracted content must classify
+as the expected outcome for that prompt, either `prompt-envelope-artifact` or
+`prompt-envelope-questions`. The
 review prints `prompt-envelope-valid-count`, `prompt-envelope-artifact-count`,
 `prompt-envelope-questions-count`,
 `prompt-envelope-artifact-required-count`,

@@ -2664,6 +2664,8 @@ fn script_v03_prompt_llm_harness_help_lists_all_prompts_and_dry_run() {
             && prompt_docs.contains("task-specific probes")
             && prompt_docs.contains("envelope contract")
             && prompt_docs.contains("JSON mode")
+            && prompt_docs.contains("models.json")
+            && prompt_docs.contains("--skip-model-check")
             && prompt_docs.contains("prompt-llm-harness-review.txt")
             && prompt_docs.contains("prompt-llm-harness-review.fingerprint.txt"),
         "{prompt_docs}"
@@ -2684,6 +2686,8 @@ fn script_v03_prompt_llm_harness_help_lists_all_prompts_and_dry_run() {
             && prompt_manual.contains("task-specific probes")
             && prompt_manual.contains("envelope contract")
             && prompt_manual.contains("JSON mode")
+            && prompt_manual.contains("models.json")
+            && prompt_manual.contains("--skip-model-check")
             && prompt_manual.contains("prompt-llm-harness-review.txt")
             && prompt_manual.contains("prompt-llm-harness-review.fingerprint.txt"),
         "{prompt_manual}"
@@ -2776,12 +2780,34 @@ fn script_v03_prompt_llm_harness_review_writes_fingerprinted_report() {
         .unwrap();
     let request_bodies = server.join().unwrap();
     assert_eq!(request_bodies.len(), 11);
+    for request_body in &request_bodies {
+        assert!(
+            request_body.contains(r#""chat_template_kwargs": {"enable_thinking": false}"#),
+            "{request_body}"
+        );
+        assert!(
+            request_body.contains(r#""response_format": {"type": "json_object"}"#),
+            "{request_body}"
+        );
+    }
     assert!(
         output.status.success(),
         "stdout:\n{}\nstderr:\n{}",
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
+    let models_text = fs::read_to_string(artifact_dir.join("models.json")).unwrap();
+    assert!(models_text.contains("\"skipped\": true"), "{models_text}");
+    assert!(
+        models_text.contains(&format!(
+            "http://127.0.0.1:{}/v1/chat/completions",
+            addr.port()
+        )),
+        "{models_text}"
+    );
+    let models_fingerprint =
+        fs::read_to_string(artifact_dir.join("models.fingerprint.txt")).unwrap();
+    assert_eq!(models_fingerprint.trim(), fnv64_fingerprint(&models_text));
 
     let review = Command::new("python3")
         .args([
@@ -2824,6 +2850,10 @@ fn script_v03_prompt_llm_harness_review_writes_fingerprinted_report() {
     );
     assert!(
         review_stdout.contains("prompt-outcome-match-count 11"),
+        "{review_stdout}"
+    );
+    assert!(
+        review_stdout.contains("fingerprint-check-count 36"),
         "{review_stdout}"
     );
     assert!(

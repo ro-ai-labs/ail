@@ -768,6 +768,22 @@ def run_live(args: argparse.Namespace, paths: list[Path]) -> int:
         write_text(artifact_root / "models.json", models_text)
         write_text(artifact_root / "models.fingerprint.txt", fnv64(models_text) + "\n")
         manifest_lines.append("artifact models models.json models.fingerprint.txt")
+    else:
+        models_text = (
+            json.dumps(
+                {
+                    "endpoint": args.endpoint,
+                    "object": "ail-model-check",
+                    "skipped": True,
+                },
+                indent=2,
+                sort_keys=True,
+            )
+            + "\n"
+        )
+        write_text(artifact_root / "models.json", models_text)
+        write_text(artifact_root / "models.fingerprint.txt", fnv64(models_text) + "\n")
+        manifest_lines.append("artifact models models.json models.fingerprint.txt")
 
     for path in paths:
         prompt_text = path.read_text()

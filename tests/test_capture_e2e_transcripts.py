@@ -970,6 +970,120 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
         self.assertEqual(body["response_format"], {"type": "json_object"})
         self.assertEqual(body["messages"][1]["content"], probe_text)
 
+    def test_prompt_llm_harness_live_fake_server_round_trips_all_prompts(self):
+        artifact_dir = Path(tempfile.mkdtemp(prefix="ail-prompt-llm-live-"))
+        server = None
+        try:
+            _CompletionHandler.requests = []
+
+            def prompt_response_for(payload):
+                messages = payload.get("messages", [])
+                request_text = ""
+                if len(messages) > 1 and isinstance(messages[1], dict):
+                    request_text = str(messages[1].get("content", ""))
+                artifact_kind = "AIL-Spec Canonical"
+                for expected_kind in EXPECTED_ARTIFACT_KINDS.values():
+                    if f'"artifact_kind": "{expected_kind}"' in request_text:
+                        artifact_kind = expected_kind
+                        break
+                wants_questions = (
+                    "questions must be non-empty" in request_text
+                    or "Do not draft an artifact" in request_text
+                )
+                envelope = {
+                    "artifact_kind": artifact_kind,
+                    "artifact_text": "" if wants_questions else f"Checked output for {artifact_kind}.",
+                    "questions": (
+                        [f"What semantics should {artifact_kind} preserve?"]
+                        if wants_questions
+                        else []
+                    ),
+                    "assumptions": [],
+                    "provenance": ["test:prompt-live-fake-server"],
+                    "checker_handoff": {
+                        "must_check": True,
+                        "expected_profile": "Application",
+                        "expected_features": [],
+                    },
+                }
+                return {"choices": [{"message": {"content": json.dumps(envelope)}}]}
+
+            _CompletionHandler.response_for_payload = prompt_response_for
+            server = HTTPServer(("127.0.0.1", 0), _CompletionHandler)
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            endpoint = f"http://127.0.0.1:{server.server_port}/v1/chat/completions"
+
+            run = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_prompt_llm_harness.py",
+                    "--endpoint",
+                    endpoint,
+                    "--skip-model-check",
+                    "--artifact-dir",
+                    str(artifact_dir),
+                    "--max-tokens",
+                    "64",
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(
+                run.returncode,
+                0,
+                f"stdout:\n{run.stdout}\nstderr:\n{run.stderr}",
+            )
+            self.assertEqual(len(_CompletionHandler.requests), len(REQUIRED_PROMPTS))
+            for request in _CompletionHandler.requests:
+                self.assertEqual(request["path"], "/v1/chat/completions")
+                body = request["body"]
+                self.assertEqual(body["response_format"], {"type": "json_object"})
+                self.assertFalse(body["chat_template_kwargs"]["enable_thinking"])
+                self.assertEqual(body["max_tokens"], 64)
+                self.assertEqual(body["messages"][0]["role"], "system")
+                self.assertEqual(body["messages"][1]["role"], "user")
+                self.assertIn("Envelope contract:", body["messages"][1]["content"])
+
+            models = json.loads((artifact_dir / "models.json").read_text())
+            self.assertEqual(models["skipped"], True)
+            self.assertEqual(models["endpoint"], endpoint)
+            self.assertEqual(
+                (artifact_dir / "models.fingerprint.txt").read_text().strip(),
+                fnv64((artifact_dir / "models.json").read_text()),
+            )
+
+            review = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_prompt_llm_harness.py",
+                    "--review-artifacts",
+                    str(artifact_dir),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(
+                review.returncode,
+                0,
+                f"stdout:\n{review.stdout}\nstderr:\n{review.stderr}",
+            )
+            self.assertIn("prompt-envelope-valid-count 11", review.stdout)
+            self.assertIn("prompt-envelope-artifact-count 8", review.stdout)
+            self.assertIn("prompt-envelope-questions-count 3", review.stdout)
+            self.assertIn("prompt-outcome-match-count 11", review.stdout)
+            self.assertIn("fingerprint-check-count 36", review.stdout)
+            self.assertIn("review-result accepted", review.stdout)
+        finally:
+            _CompletionHandler.response_for_payload = None
+            _CompletionHandler.response_payload = None
+            if server is not None:
+                server.shutdown()
+                server.server_close()
+            shutil.rmtree(artifact_dir, ignore_errors=True)
+
     def test_story_llm_harness_review_accepts_complete_artifact_bundle(self):
         artifact_dir = Path(tempfile.mkdtemp(prefix="ail-story-llm-review-"))
         try:

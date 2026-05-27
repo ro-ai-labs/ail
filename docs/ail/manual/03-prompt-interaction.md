@@ -63,6 +63,11 @@ requests. The default live budget is `--max-tokens 768`; lower budgets are
 useful for failure probes, but may cut off verbose valid envelopes before
 `checker_handoff` is emitted.
 
+The harness writes and fingerprints `models.json` for the `/v1/models`
+response before probing prompts. When `--skip-model-check` is used for a local
+fake endpoint, `models.json` records the skipped check and endpoint so review
+still proves the bypass was explicit.
+
 Run it only when `http://inteligentia-pro-1:8080/` is reachable and the output
 will be reviewed:
 
@@ -85,9 +90,9 @@ python3 scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run
 ```
 
 Review mode checks request, response, content, report, manifest, fingerprint
-artifacts, prompt-specific probe metadata, expected `artifact_kind` values, and
-prompt-pack envelope shape for each required system prompt. It also enforces
-the expected outcome for each prompt: eight probes must produce
+artifacts, model-check evidence, prompt-specific probe metadata, expected
+`artifact_kind` values, and prompt-pack envelope shape for each required system
+prompt. It also enforces the expected outcome for each prompt: eight probes must produce
 `prompt-envelope-artifact`, while the interview, diagnostic-repair, and interop
 probes must produce `prompt-envelope-questions`. It prints
 `prompt-envelope-valid-count`, `prompt-envelope-artifact-count`,
