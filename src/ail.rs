@@ -11642,6 +11642,22 @@ pub fn draft_ail_requirements_response_recorded(
     )
 }
 
+pub fn draft_ail_requirements_response_recorded_with_max_tokens(
+    package: &AilPackage,
+    user_prompt: &str,
+    endpoint: &str,
+    max_tokens: usize,
+) -> Result<crate::llm::LlmRecordedArtifactResponse, String> {
+    let prompt = build_ail_requirements_prompt(package, user_prompt);
+    crate::llm::invoke_llm_artifact_response_recorded_with_max_tokens(
+        endpoint,
+        &prompt,
+        "AIL-Requirements",
+        package.metadata.profile.as_str(),
+        max_tokens,
+    )
+}
+
 pub fn draft_ail_interview(
     package: &AilPackage,
     user_prompt: &str,
@@ -11761,6 +11777,31 @@ pub fn draft_ail_spec_from_requirements_recorded(
         &prompt,
         "AIL-Spec Canonical",
         package.metadata.profile.as_str(),
+    )?;
+    let crate::llm::LlmArtifactResponse::Artifact(spec_text) = &recorded.outcome else {
+        return Err("model returned blocking questions for AIL-Spec Canonical".to_string());
+    };
+    Ok((
+        check_ail_draft_spec_with_requirements(package, spec_text.clone(), Some(requirements_text)),
+        recorded,
+    ))
+}
+
+pub fn draft_ail_spec_from_requirements_recorded_with_max_tokens(
+    package: &AilPackage,
+    user_prompt: &str,
+    requirements_text: &str,
+    endpoint: &str,
+    max_tokens: usize,
+) -> Result<(AilDraftResult, crate::llm::LlmRecordedArtifactResponse), String> {
+    let grounded_prompt = format!("{user_prompt}\n\nDRAFT REQUIREMENTS:\n{requirements_text}");
+    let prompt = build_ail_draft_prompt(package, &grounded_prompt);
+    let recorded = crate::llm::invoke_llm_artifact_response_recorded_with_max_tokens(
+        endpoint,
+        &prompt,
+        "AIL-Spec Canonical",
+        package.metadata.profile.as_str(),
+        max_tokens,
     )?;
     let crate::llm::LlmArtifactResponse::Artifact(spec_text) = &recorded.outcome else {
         return Err("model returned blocking questions for AIL-Spec Canonical".to_string());

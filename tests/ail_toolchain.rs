@@ -3238,6 +3238,7 @@ fn script_v03_story_llm_harness_help_names_endpoint_and_dry_run() {
         "--dry-run",
         "--review-artifacts",
         "--endpoint",
+        "--max-tokens",
         "http://inteligentia-pro-1:8080",
         "/v1/chat/completions",
         "examples/stories/example-30.md",
@@ -3266,6 +3267,10 @@ fn script_v03_story_llm_harness_help_names_endpoint_and_dry_run() {
         "{dry_run_stdout}"
     );
     assert!(
+        dry_run_stdout.contains("--max-tokens 4096"),
+        "{dry_run_stdout}"
+    );
+    assert!(
         !dry_run_stdout.contains("--agent examples/ail_toolchain_agent.ail"),
         "{dry_run_stdout}"
     );
@@ -3283,6 +3288,13 @@ fn script_v03_story_llm_harness_help_names_endpoint_and_dry_run() {
     assert!(
         manual.contains("story-llm-harness-report.txt")
             && manual.contains("story-llm-harness-report.fingerprint.txt"),
+        "{manual}"
+    );
+    assert!(
+        manual.contains("default-max-tokens")
+            && manual.contains("max-tokens")
+            && manual.contains("token-budget-default")
+            && manual.contains("token-budget-warning"),
         "{manual}"
     );
 }
@@ -3363,12 +3375,20 @@ fn script_v03_story_llm_harness_review_writes_fingerprinted_report() {
             artifact_dir.to_str().unwrap(),
             "--llm-endpoint",
             &format!("http://127.0.0.1:{}/v1/chat/completions", addr.port()),
+            "--max-tokens",
+            "64",
         ])
         .output()
         .unwrap();
 
     let request_bodies = server.join().unwrap();
     assert_eq!(request_bodies.len(), 2);
+    for request_body in &request_bodies {
+        assert!(
+            request_body.contains(r#""max_tokens":64"#),
+            "{request_body}"
+        );
+    }
     assert!(
         output.status.success(),
         "stdout:\n{}\nstderr:\n{}",
@@ -3434,6 +3454,17 @@ fn script_v03_story_llm_harness_review_writes_fingerprinted_report() {
         review_stdout.contains("story-prompt-envelope-invalid-count 0"),
         "{review_stdout}"
     );
+    for required in [
+        "default-max-tokens 4096",
+        "max-tokens 64",
+        "token-budget-default false",
+        "token-budget-warning max-tokens-below-default",
+    ] {
+        assert!(
+            review_stdout.contains(required),
+            "{required}\n{review_stdout}"
+        );
+    }
     assert!(
         review_stdout.contains("model-check-model-id test-story-rust-model"),
         "{review_stdout}"

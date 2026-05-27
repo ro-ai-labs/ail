@@ -8,16 +8,16 @@ use ail::ail::{
     ail_document_from_core, apply_ail_core_patch_text, apply_ail_flow_edit_text, apply_ail_patch,
     check_ail_core, check_ail_requirements, compile_ail_bytecode_native_elf,
     compile_ail_core_bytecode, compile_ail_core_native_elf, draft_ail_interview,
-    draft_ail_requirements_response, draft_ail_requirements_response_recorded, draft_ail_spec,
-    draft_ail_spec_from_requirements, draft_ail_spec_from_requirements_recorded,
-    elaborate_ail_core, load_ail_package_dir, parse_ail_bytecode, parse_ail_core_text,
-    parse_ail_package_document, parse_ail_package_spec_text, parse_ail_patch_text,
-    parse_ail_spec_text, render_ail_bytecode, render_ail_core, render_ail_flow_view,
-    render_ail_interview_questions_artifact, render_ail_package_dependency_report,
-    render_ail_runtime_state_lines, render_ail_spec, render_ail_spec_from_core,
-    repair_ail_requirements_from_diagnostics, repair_ail_spec_from_diagnostics,
-    run_ail_bytecode_action, run_ail_compiler_pass_on_core, run_ail_conformance,
-    verify_ail_bytecode,
+    draft_ail_requirements_response, draft_ail_requirements_response_recorded_with_max_tokens,
+    draft_ail_spec, draft_ail_spec_from_requirements,
+    draft_ail_spec_from_requirements_recorded_with_max_tokens, elaborate_ail_core,
+    load_ail_package_dir, parse_ail_bytecode, parse_ail_core_text, parse_ail_package_document,
+    parse_ail_package_spec_text, parse_ail_patch_text, parse_ail_spec_text, render_ail_bytecode,
+    render_ail_core, render_ail_flow_view, render_ail_interview_questions_artifact,
+    render_ail_package_dependency_report, render_ail_runtime_state_lines, render_ail_spec,
+    render_ail_spec_from_core, repair_ail_requirements_from_diagnostics,
+    repair_ail_spec_from_diagnostics, run_ail_bytecode_action, run_ail_compiler_pass_on_core,
+    run_ail_conformance, verify_ail_bytecode,
 };
 use ail::core_model::json_string;
 
@@ -25,6 +25,7 @@ use ail::core_model::json_string;
 struct CliOptions {
     runtime_state: BTreeMap<String, String>,
     llm_endpoint: Option<String>,
+    llm_max_tokens: Option<usize>,
     artifact_dir: Option<String>,
     patch_path: Option<String>,
     ail_action: Option<String>,
@@ -149,7 +150,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
 }
 
 fn usage() -> String {
-    "usage: ail <ail-check|ail-core|ail-flow|ail-flow-edit|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-interview|ail-requirements|ail-spec|ail-draft|ail-build|ail-story|ail-pass|ail-bootstrap|ail-agent-contracts|ail-v03-roadmap|ail-prompt-corpus|ail-examples|ail-patch> <path> [patch|target-package] [--action name] [--prompt text] [--story-file path] [--interview-file path] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--base-model name] [--target-model name] [--out path] [--all-actions] [--diagnostics-json] [--artifact-dir path] [--llm-endpoint url] [--release-evidence] [key=value ...]\nsaved-core usage: ail <ail-spec|ail-lower|ail-compile|ail-run|ail-build> --core-file <checked-core> [--action name] [--target target] [--out path] [--artifact-dir path] [key=value ...]\nwasm-contract usage: ail ail-compile <package-or-artifact.ailbc.json> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir> OR ail ail-compile --core-file <checked-core> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir>\ncore-patch usage: ail ail-patch --core-file <checked-core> <ail-core.patch.json>\nflow-edit usage: ail ail-flow-edit --core-file <checked-core> <ail-flow.edit.json>\nail-pass usage: ail ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR ail ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]\nail-bootstrap usage: ail ail-bootstrap <toolchain-agent-package> --pass <compiler-pass-package> --agent <toolchain-agent-package> --target linux-x86_64-elf --artifact-dir <dir>\nail-story usage: ail ail-story <package> --story-file <story.md> [--artifact-dir <dir>] [--llm-endpoint <url>] [--agent <agent-package-or-bytecode>] [--target <target> --action <ActionName> --out <path>]\nail-agent-contracts usage: ail ail-agent-contracts examples/agents\nail-v03-roadmap usage: ail ail-v03-roadmap examples --artifact-dir <dir> [--release-evidence]\nail-prompt-corpus usage: ail ail-prompt-corpus <corpus-file-or-dir> --artifact-dir <dir>\nail-examples usage: ail ail-examples examples --artifact-dir <dir> [--release-evidence]\ncompatibility alias: ail ail-e2e-corpus <examples-dir> --artifact-dir <dir> [--release-evidence]"
+    "usage: ail <ail-check|ail-core|ail-flow|ail-flow-edit|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-interview|ail-requirements|ail-spec|ail-draft|ail-build|ail-story|ail-pass|ail-bootstrap|ail-agent-contracts|ail-v03-roadmap|ail-prompt-corpus|ail-examples|ail-patch> <path> [patch|target-package] [--action name] [--prompt text] [--story-file path] [--interview-file path] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--base-model name] [--target-model name] [--out path] [--all-actions] [--diagnostics-json] [--artifact-dir path] [--llm-endpoint url] [--max-tokens count] [--release-evidence] [key=value ...]\nsaved-core usage: ail <ail-spec|ail-lower|ail-compile|ail-run|ail-build> --core-file <checked-core> [--action name] [--target target] [--out path] [--artifact-dir path] [key=value ...]\nwasm-contract usage: ail ail-compile <package-or-artifact.ailbc.json> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir> OR ail ail-compile --core-file <checked-core> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir>\ncore-patch usage: ail ail-patch --core-file <checked-core> <ail-core.patch.json>\nflow-edit usage: ail ail-flow-edit --core-file <checked-core> <ail-flow.edit.json>\nail-pass usage: ail ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR ail ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]\nail-bootstrap usage: ail ail-bootstrap <toolchain-agent-package> --pass <compiler-pass-package> --agent <toolchain-agent-package> --target linux-x86_64-elf --artifact-dir <dir>\nail-story usage: ail ail-story <package> --story-file <story.md> [--artifact-dir <dir>] [--llm-endpoint <url>] [--max-tokens count] [--agent <agent-package-or-bytecode>] [--target <target> --action <ActionName> --out <path>]\nail-agent-contracts usage: ail ail-agent-contracts examples/agents\nail-v03-roadmap usage: ail ail-v03-roadmap examples --artifact-dir <dir> [--release-evidence]\nail-prompt-corpus usage: ail ail-prompt-corpus <corpus-file-or-dir> --artifact-dir <dir>\nail-examples usage: ail ail-examples examples --artifact-dir <dir> [--release-evidence]\ncompatibility alias: ail ail-e2e-corpus <examples-dir> --artifact-dir <dir> [--release-evidence]"
         .to_string()
 }
 
@@ -343,6 +344,7 @@ struct AilStoryModeArtifactSet<'a> {
     story_normalized_text: &'a str,
     story_fields: &'a BTreeMap<String, String>,
     llm_endpoint: Option<&'a str>,
+    llm_max_tokens: Option<usize>,
     llm_transcripts: &'a [AilStoryLlmTranscript],
 }
 
@@ -353,6 +355,13 @@ struct AilStoryLlmTranscript {
     response_body: String,
     content_text: String,
     content_kind: String,
+}
+
+#[derive(Clone, Copy)]
+struct AilStoryLlmOptions<'a> {
+    endpoint: &'a str,
+    max_tokens: usize,
+    retry_prompt_envelope_errors: bool,
 }
 
 struct AilStoryManifestArtifactSet<'a> {
@@ -7225,6 +7234,25 @@ fn render_ail_story_mode_report(artifacts: &AilStoryModeArtifactSet<'_>) -> Stri
     ];
     if let Some(endpoint) = artifacts.llm_endpoint {
         lines.push(format!("llm-endpoint: {endpoint}"));
+        let max_tokens = artifacts
+            .llm_max_tokens
+            .unwrap_or(ail::llm::DEFAULT_CHAT_MAX_TOKENS);
+        lines.push(format!(
+            "default-max-tokens: {}",
+            ail::llm::DEFAULT_CHAT_MAX_TOKENS
+        ));
+        lines.push(format!("max-tokens: {max_tokens}"));
+        if max_tokens == ail::llm::DEFAULT_CHAT_MAX_TOKENS {
+            lines.push("token-budget-default: true".to_string());
+        } else {
+            lines.push("token-budget-default: false".to_string());
+            let warning = if max_tokens < ail::llm::DEFAULT_CHAT_MAX_TOKENS {
+                "max-tokens-below-default"
+            } else {
+                "max-tokens-above-default"
+            };
+            lines.push(format!("token-budget-warning: {warning}"));
+        }
     }
     if !artifacts.llm_transcripts.is_empty() {
         let valid_count = artifacts
@@ -12185,50 +12213,48 @@ fn push_story_llm_transcript(
 fn draft_checked_ail_requirements_for_story_or_questions(
     package: &ail::ail::AilPackage,
     prompt: &str,
-    endpoint: &str,
     agent_requirements_context: Option<&str>,
-    retry_prompt_envelope_errors: bool,
+    llm_options: AilStoryLlmOptions<'_>,
     transcripts: &mut Vec<AilStoryLlmTranscript>,
 ) -> Result<AilRequirementsDraftOutcome, String> {
     let grounded_prompt = grounded_ail_requirements_prompt(prompt, agent_requirements_context);
-    let mut requirements =
-        match draft_ail_requirements_response_recorded(package, &grounded_prompt, endpoint) {
-            Ok(recorded) => {
-                push_story_llm_transcript(
-                    transcripts,
-                    "requirements",
-                    "AIL-Requirements",
-                    &recorded,
-                );
-                match recorded.outcome {
-                    ail::llm::LlmArtifactResponse::Artifact(requirements) => requirements,
-                    ail::llm::LlmArtifactResponse::Questions(questions) => {
-                        return Ok(AilRequirementsDraftOutcome::Questions(questions));
-                    }
+    let mut requirements = match draft_ail_requirements_response_recorded_with_max_tokens(
+        package,
+        &grounded_prompt,
+        llm_options.endpoint,
+        llm_options.max_tokens,
+    ) {
+        Ok(recorded) => {
+            push_story_llm_transcript(transcripts, "requirements", "AIL-Requirements", &recorded);
+            match recorded.outcome {
+                ail::llm::LlmArtifactResponse::Artifact(requirements) => requirements,
+                ail::llm::LlmArtifactResponse::Questions(questions) => {
+                    return Ok(AilRequirementsDraftOutcome::Questions(questions));
                 }
             }
-            Err(error)
-                if retry_prompt_envelope_errors && is_prompt_envelope_protocol_error(&error) =>
-            {
-                let retry_prompt =
-                    prompt_envelope_retry_prompt(&grounded_prompt, &error, "AIL-Requirements");
-                let recorded =
-                    draft_ail_requirements_response_recorded(package, &retry_prompt, endpoint)?;
-                push_story_llm_transcript(
-                    transcripts,
-                    "requirements",
-                    "AIL-Requirements",
-                    &recorded,
-                );
-                match recorded.outcome {
-                    ail::llm::LlmArtifactResponse::Artifact(requirements) => requirements,
-                    ail::llm::LlmArtifactResponse::Questions(questions) => {
-                        return Ok(AilRequirementsDraftOutcome::Questions(questions));
-                    }
+        }
+        Err(error)
+            if llm_options.retry_prompt_envelope_errors
+                && is_prompt_envelope_protocol_error(&error) =>
+        {
+            let retry_prompt =
+                prompt_envelope_retry_prompt(&grounded_prompt, &error, "AIL-Requirements");
+            let recorded = draft_ail_requirements_response_recorded_with_max_tokens(
+                package,
+                &retry_prompt,
+                llm_options.endpoint,
+                llm_options.max_tokens,
+            )?;
+            push_story_llm_transcript(transcripts, "requirements", "AIL-Requirements", &recorded);
+            match recorded.outcome {
+                ail::llm::LlmArtifactResponse::Artifact(requirements) => requirements,
+                ail::llm::LlmArtifactResponse::Questions(questions) => {
+                    return Ok(AilRequirementsDraftOutcome::Questions(questions));
                 }
             }
-            Err(error) => return Err(error),
-        };
+        }
+        Err(error) => return Err(error),
+    };
     let mut diagnostics = check_ail_requirements(package, &requirements);
     if !diagnostics.is_empty() {
         requirements = repair_ail_requirements_from_diagnostics(
@@ -12236,7 +12262,7 @@ fn draft_checked_ail_requirements_for_story_or_questions(
             &grounded_prompt,
             &requirements,
             &diagnostics,
-            endpoint,
+            llm_options.endpoint,
         )?;
         diagnostics = check_ail_requirements(package, &requirements);
     }
@@ -12348,9 +12374,8 @@ fn draft_checked_ail_spec_for_story_requirements(
     package: &ail::ail::AilPackage,
     prompt: &str,
     requirements: &str,
-    endpoint: &str,
     agent_spec_context: Option<&str>,
-    retry_prompt_envelope_errors: bool,
+    llm_options: AilStoryLlmOptions<'_>,
     transcripts: &mut Vec<AilStoryLlmTranscript>,
 ) -> Result<ail::ail::AilDraftResult, String> {
     let grounded_prompt = if let Some(agent_spec_context) =
@@ -12369,24 +12394,29 @@ fn draft_checked_ail_spec_for_story_requirements(
     } else {
         prompt.to_string()
     };
-    let mut draft = match draft_ail_spec_from_requirements_recorded(
+    let mut draft = match draft_ail_spec_from_requirements_recorded_with_max_tokens(
         package,
         &grounded_prompt,
         requirements,
-        endpoint,
+        llm_options.endpoint,
+        llm_options.max_tokens,
     ) {
         Ok((draft, recorded)) => {
             push_story_llm_transcript(transcripts, "spec", "AIL-Spec Canonical", &recorded);
             draft
         }
-        Err(error) if retry_prompt_envelope_errors && is_prompt_envelope_protocol_error(&error) => {
+        Err(error)
+            if llm_options.retry_prompt_envelope_errors
+                && is_prompt_envelope_protocol_error(&error) =>
+        {
             let retry_prompt =
                 prompt_envelope_retry_prompt(&grounded_prompt, &error, "AIL-Spec Canonical");
-            let (draft, recorded) = draft_ail_spec_from_requirements_recorded(
+            let (draft, recorded) = draft_ail_spec_from_requirements_recorded_with_max_tokens(
                 package,
                 &retry_prompt,
                 requirements,
-                endpoint,
+                llm_options.endpoint,
+                llm_options.max_tokens,
             )?;
             push_story_llm_transcript(transcripts, "spec", "AIL-Spec Canonical", &recorded);
             draft
@@ -12400,7 +12430,7 @@ fn draft_checked_ail_spec_for_story_requirements(
             requirements,
             &draft.spec_text,
             &draft.diagnostics,
-            endpoint,
+            llm_options.endpoint,
         )?;
     }
     Ok(draft)
@@ -13935,6 +13965,14 @@ fn run_ail_story_command(
         .llm_endpoint
         .as_deref()
         .unwrap_or(&package.metadata.base_llm_endpoint);
+    let story_max_tokens = cli_options
+        .llm_max_tokens
+        .unwrap_or(ail::llm::DEFAULT_CHAT_MAX_TOKENS);
+    let story_llm_options = AilStoryLlmOptions {
+        endpoint,
+        max_tokens: story_max_tokens,
+        retry_prompt_envelope_errors: true,
+    };
     let effective_agent_path = cli_options
         .ail_build_agent
         .clone()
@@ -13999,9 +14037,8 @@ fn run_ail_story_command(
     let requirements_outcome = draft_checked_ail_requirements_for_story_or_questions(
         package,
         &requirements_prompt,
-        endpoint,
         agent_requirements_context.as_deref(),
-        true,
+        story_llm_options,
         &mut story_llm_transcripts,
     )?;
     let (requirements, requirements_diagnostics) = match requirements_outcome {
@@ -14020,7 +14057,8 @@ fn run_ail_story_command(
                         story_source_text: &story_source_text,
                         story_normalized_text: &normalized_story_text,
                         story_fields: &normalized_story_fields,
-                        llm_endpoint: cli_options.llm_endpoint.as_deref(),
+                        llm_endpoint: Some(endpoint),
+                        llm_max_tokens: cli_options.llm_max_tokens,
                         llm_transcripts: &[],
                     },
                     &questions_text,
@@ -14064,9 +14102,8 @@ fn run_ail_story_command(
         package,
         &spec_prompt,
         &requirements,
-        endpoint,
         agent_spec_context.as_deref(),
-        true,
+        story_llm_options,
         &mut story_llm_transcripts,
     )?;
     if !draft.success() {
@@ -14109,7 +14146,8 @@ fn run_ail_story_command(
                 story_source_text: &story_source_text,
                 story_normalized_text: &normalized_story_text,
                 story_fields: &normalized_story_fields,
-                llm_endpoint: cli_options.llm_endpoint.as_deref(),
+                llm_endpoint: Some(endpoint),
+                llm_max_tokens: cli_options.llm_max_tokens,
                 llm_transcripts: &story_llm_transcripts,
             },
         )?;
@@ -14835,6 +14873,7 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
 fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, String> {
     let mut runtime_state = BTreeMap::new();
     let mut llm_endpoint = None;
+    let mut llm_max_tokens = None;
     let mut artifact_dir = None;
     let mut patch_path = None;
     let mut ail_action = None;
@@ -15094,6 +15133,23 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
             index += 2;
             continue;
         }
+        if arg == "--max-tokens" {
+            if command != "ail-story" {
+                return Err(usage());
+            }
+            let Some(value) = args.get(index + 1) else {
+                return Err("missing value for --max-tokens".to_string());
+            };
+            let parsed = value
+                .parse::<usize>()
+                .map_err(|_| "--max-tokens must be a positive integer".to_string())?;
+            if parsed == 0 {
+                return Err("--max-tokens must be a positive integer".to_string());
+            }
+            llm_max_tokens = Some(parsed);
+            index += 2;
+            continue;
+        }
         if arg == "--diagnostics-json" {
             if command != "ail-draft" {
                 return Err(usage());
@@ -15260,6 +15316,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
     Ok(CliOptions {
         runtime_state,
         llm_endpoint,
+        llm_max_tokens,
         artifact_dir,
         patch_path,
         ail_action,

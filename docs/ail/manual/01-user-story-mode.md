@@ -244,6 +244,12 @@ Then run it live when `http://inteligentia-pro-1:8080/` is reachable:
 python3 scripts/run_v03_story_llm_harness.py
 ```
 
+The default story-generation budget is `--max-tokens 4096`. The harness passes
+that budget through to `ail-story`, and `story-mode-report.txt` records
+`default-max-tokens`, the actual `max-tokens`, `token-budget-default`, and any
+`token-budget-warning` so live transcripts expose truncated or over-budget
+story-to-spec evidence before promotion.
+
 The live harness writes and fingerprints `model-check.json` from the
 `/v1/models` response before invoking `ail-story`, then appends that artifact
 to `manifest.ail-story.txt`. When `--skip-model-check` is used for a local fake
@@ -268,6 +274,8 @@ missing or does not match `agent-trace.txt`; this keeps promotion import from
 accepting a trace that cannot be independently checked.
 It validates `model-check.json` and records `model-check-model-id` so promotion
 evidence can prove which live model discovery response was reviewed.
+It repeats `default-max-tokens`, `max-tokens`, `token-budget-default`, and any
+`token-budget-warning` from `story-mode-report.txt`.
 It also rejects question-only `llm/requirements.content.txt` or
 `llm/spec.content.txt` envelopes during promotion review. Promotion evidence
 must contain generated `artifact_text` for both the requirements and spec

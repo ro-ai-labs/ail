@@ -21,6 +21,7 @@ DEFAULT_ENDPOINT = "http://inteligentia-pro-1:8080/v1/chat/completions"
 DEFAULT_PACKAGE = "examples/support_ticket.ail"
 DEFAULT_STORY_FILE = "examples/stories/example-30.md"
 DEFAULT_ARTIFACT_DIR = "/tmp/ail-v03-story-llm"
+DEFAULT_MAX_TOKENS = 4096
 
 
 def fnv64(text: str) -> str:
@@ -61,6 +62,8 @@ def build_ail_story_command(args: argparse.Namespace) -> list[str]:
         args.artifact_dir,
         "--llm-endpoint",
         args.endpoint,
+        "--max-tokens",
+        str(args.max_tokens),
     ]
     if args.agent:
         command.extend(["--agent", args.agent])
@@ -405,10 +408,25 @@ def review_artifacts(artifact_dir: str) -> int:
     report_values = parse_story_report(report_text)
     story_id = report_values.get("user-story-id", "")
     anchor_count = report_values.get("semantic-anchor-count", "")
+    default_max_tokens = report_values.get("default-max-tokens", "")
+    max_tokens = report_values.get("max-tokens", "")
+    token_budget_default = report_values.get("token-budget-default", "")
+    token_budget_warning = report_values.get("token-budget-warning", "")
     if not story_id:
         errors.append("story report missing user-story-id")
     if not anchor_count:
         errors.append("story report missing semantic-anchor-count")
+    if default_max_tokens != str(DEFAULT_MAX_TOKENS):
+        errors.append(
+            "story report default-max-tokens mismatch: "
+            f"expected {DEFAULT_MAX_TOKENS} got {default_max_tokens or '<missing>'}"
+        )
+    if not max_tokens:
+        errors.append("story report missing max-tokens")
+    if not token_budget_default:
+        errors.append("story report missing token-budget-default")
+    elif token_budget_default == "false" and not token_budget_warning:
+        errors.append("story report missing token-budget-warning")
     for required in [
         "user-story:",
         "acceptance-criteria:",
@@ -442,6 +460,9 @@ def review_artifacts(artifact_dir: str) -> int:
         f"artifact-dir {artifact_root}",
         f"story-id {story_id or '<missing>'}",
         f"semantic-anchor-count {anchor_count or '<missing>'}",
+        f"default-max-tokens {default_max_tokens or '<missing>'}",
+        f"max-tokens {max_tokens or '<missing>'}",
+        f"token-budget-default {token_budget_default or '<missing>'}",
         f"manifest-entry-check-count {manifest_match_count}",
         f"fingerprint-check-count {fingerprint_checks}",
         f"story-llm-transcript-check-count {transcript_checks}",
@@ -454,6 +475,8 @@ def review_artifacts(artifact_dir: str) -> int:
         f"model-check-model-count {len(model_ids)}",
         f"model-check-model-id {','.join(model_ids) if model_ids else '<missing>'}",
     ]
+    if token_budget_warning:
+        review_lines.insert(7, f"token-budget-warning {token_budget_warning}")
     if errors:
         review_lines.append("review-result rejected")
         for error in errors:
@@ -512,6 +535,12 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         help=f"Artifact directory (default: {DEFAULT_ARTIFACT_DIR})",
     )
     parser.add_argument(
+        "--max-tokens",
+        type=int,
+        default=DEFAULT_MAX_TOKENS,
+        help=f"Maximum tokens requested from ail-story LLM calls (default: {DEFAULT_MAX_TOKENS})",
+    )
+    parser.add_argument(
         "--target",
         default=None,
         help="Optional native target, such as linux-x86_64-elf",
@@ -541,6 +570,8 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 
 def main(argv: list[str]) -> int:
     args = parse_args(argv)
+    if args.max_tokens <= 0:
+        raise SystemExit("--max-tokens must be a positive integer")
     if args.review_artifacts:
         return review_artifacts(args.review_artifacts)
     command = build_ail_story_command(args)

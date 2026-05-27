@@ -3,6 +3,9 @@ use std::net::TcpStream;
 
 use crate::core_model::json_string;
 
+pub const DEFAULT_CHAT_MAX_TOKENS: usize = 4096;
+const DEFAULT_COMPLETION_MAX_TOKENS: usize = 2048;
+
 pub fn invoke_llm_text(endpoint: &str, prompt: &str) -> Result<String, String> {
     invoke_llm_text_with_expectation(endpoint, prompt, None)
 }
@@ -62,6 +65,25 @@ pub fn invoke_llm_artifact_response_recorded(
     invoke_llm_artifact_response_recorded_with_expectation(endpoint, prompt, &expectation)
 }
 
+pub fn invoke_llm_artifact_response_recorded_with_max_tokens(
+    endpoint: &str,
+    prompt: &str,
+    expected_artifact_kind: &str,
+    expected_profile: &str,
+    max_tokens: usize,
+) -> Result<LlmRecordedArtifactResponse, String> {
+    let expectation = PromptEnvelopeExpectation {
+        artifact_kind: expected_artifact_kind,
+        expected_profile,
+    };
+    invoke_llm_artifact_response_recorded_with_expectation_and_max_tokens(
+        endpoint,
+        prompt,
+        &expectation,
+        Some(max_tokens),
+    )
+}
+
 fn invoke_llm_text_with_expectation(
     endpoint: &str,
     prompt: &str,
@@ -98,7 +120,21 @@ fn invoke_llm_artifact_response_recorded_with_expectation(
     prompt: &str,
     expectation: &PromptEnvelopeExpectation<'_>,
 ) -> Result<LlmRecordedArtifactResponse, String> {
-    let completion = invoke_completion(endpoint, prompt)?;
+    invoke_llm_artifact_response_recorded_with_expectation_and_max_tokens(
+        endpoint,
+        prompt,
+        expectation,
+        None,
+    )
+}
+
+fn invoke_llm_artifact_response_recorded_with_expectation_and_max_tokens(
+    endpoint: &str,
+    prompt: &str,
+    expectation: &PromptEnvelopeExpectation<'_>,
+    max_tokens: Option<usize>,
+) -> Result<LlmRecordedArtifactResponse, String> {
+    let completion = invoke_completion_with_max_tokens(endpoint, prompt, max_tokens)?;
     let text = sanitize_model_text(&completion.content);
     let (outcome, content_kind) = artifact_response_from_text(&text, Some(expectation))?;
     Ok(LlmRecordedArtifactResponse {
@@ -147,13 +183,22 @@ struct LlmHttpCompletion {
 }
 
 fn invoke_completion(endpoint: &str, prompt: &str) -> Result<LlmHttpCompletion, String> {
+    invoke_completion_with_max_tokens(endpoint, prompt, None)
+}
+
+fn invoke_completion_with_max_tokens(
+    endpoint: &str,
+    prompt: &str,
+    max_tokens: Option<usize>,
+) -> Result<LlmHttpCompletion, String> {
     let parsed = parse_http_endpoint(endpoint)?;
     let body = if is_chat_completion_path(&parsed.path) {
-        chat_completion_body(prompt)
+        chat_completion_body(prompt, max_tokens.unwrap_or(DEFAULT_CHAT_MAX_TOKENS))
     } else {
         format!(
-            "{{\"prompt\":{},\"n_predict\":2048,\"temperature\":0.0}}",
-            json_string(prompt)
+            "{{\"prompt\":{},\"n_predict\":{},\"temperature\":0.0}}",
+            json_string(prompt),
+            max_tokens.unwrap_or(DEFAULT_COMPLETION_MAX_TOKENS)
         )
     };
     let mut stream = TcpStream::connect((parsed.host.as_str(), parsed.port)).map_err(|error| {
@@ -195,7 +240,7 @@ fn invoke_completion(endpoint: &str, prompt: &str) -> Result<LlmHttpCompletion, 
     })
 }
 
-fn chat_completion_body(prompt: &str) -> String {
+fn chat_completion_body(prompt: &str, max_tokens: usize) -> String {
     let (system_prompt, user_prompt) = split_prompt_pack_chat_messages(prompt);
     format!(
         concat!(
@@ -204,7 +249,7 @@ fn chat_completion_body(prompt: &str) -> String {
             "{{\"role\":\"system\",\"content\":{}}},",
             "{{\"role\":\"user\",\"content\":{}}}",
             "],",
-            "\"max_tokens\":4096,",
+            "\"max_tokens\":{},",
             "\"temperature\":0.0,",
             "\"stream\":false,",
             "\"chat_template_kwargs\":{{\"enable_thinking\":false}},",
@@ -212,7 +257,8 @@ fn chat_completion_body(prompt: &str) -> String {
             "}}"
         ),
         json_string(&system_prompt),
-        json_string(&user_prompt)
+        json_string(&user_prompt),
+        max_tokens
     )
 }
 
