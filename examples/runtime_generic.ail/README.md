@@ -25,6 +25,8 @@ application workflow.
 
 - `ail-package.md`: Application profile metadata and first-slice conformance.
 - `spec.ail-spec.md`: the Runtime Tickets specification.
+- `examples/rejected/missing-ticket-prioritized-trace.ail-spec.md`: rejected
+  fixture for dropping the `TicketPrioritized` trace from the runtime action.
 - `../examples.md`: entries `example-35` through `example-39` exercise
   runtime-generics over core-to-spec, core-to-summary, flow-patch,
   trace-debug, and interop prompt surfaces.
@@ -56,10 +58,14 @@ cargo run -- ail-conformance examples/runtime_generic.ail --artifact-dir /tmp/ai
 
 ## Rejected Fixtures
 
-This package does not yet include package-local rejected fixtures. v0.3 should
-add rejected specs for dropping `TicketPrioritized`, prioritizing a missing
-ticket, allowing an already-high-priority ticket through the action, and
-changing the priority state type without a story amendment.
+The package includes
+`examples/rejected/missing-ticket-prioritized-trace.ail-spec.md`, which
+verifies that `Prioritize ticket` must preserve the `TicketPrioritized` trace
+before conformance accepts the fixture.
+
+v0.3 should add more rejected specs for prioritizing a missing ticket, allowing
+an already-high-priority ticket through the action, and changing the priority
+state type without a story amendment.
 
 ## Next Example To Read
 

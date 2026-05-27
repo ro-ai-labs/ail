@@ -87,7 +87,8 @@ packages visible without making a separate non-end-to-end example category.
   lowering, maintenance-cycle trace evidence, temporal-policy fixtures, and
   scheduler-policy diagnostics.
 - `runtime_generic.ail/README.md`: typed runtime priority flow,
-  `TicketPrioritized` trace evidence, target reports, and type-inference gaps.
+  `TicketPrioritized` trace evidence, a rejected missing-trace fixture, target
+  reports, and type-inference gaps.
 - `secret_access.ail/README.md`: secret internal notes, support-role checks,
   redaction behavior, denied-access traces, package-local rejected fixtures,
   and audit-trail gaps.

@@ -511,6 +511,7 @@ fn example_learning_readmes_cover_repeated_family_gaps() {
         "## v0.3 Learning Signal",
         "Prioritize ticket",
         "TicketPrioritized",
+        "missing-ticket-prioritized-trace.ail-spec.md",
         "runtime-generics",
         "example-35",
         "example-39",
@@ -6935,6 +6936,26 @@ fn cli_ail_std_rejects_secret_reveal_without_redaction() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(
         stdout.contains("rejected: secret-reveal-without-redaction.ail-spec.md AIL005"),
+        "{stdout}"
+    );
+}
+
+#[test]
+fn cli_ail_runtime_generic_rejects_missing_ticket_prioritized_trace() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let output = Command::new(binary)
+        .args(["ail-conformance", &fixture("runtime_generic.ail")])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("rejected: missing-ticket-prioritized-trace.ail-spec.md AIL-TRACE-001"),
         "{stdout}"
     );
 }
