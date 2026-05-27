@@ -675,6 +675,11 @@ fn example_learning_readmes_cover_repeated_family_gaps() {
         "idempotency",
         "locking",
         "replay after failure",
+        "persistent-increment-minimal.ail-spec.md",
+        "increment-without-persistence-guarantee.ail-spec.md",
+        "retryable-increment-without-idempotency-key.ail-spec.md",
+        "shared-counter-without-lock.ail-spec.md",
+        "failure-after-write-without-replay-policy.ail-spec.md",
         "target-IncrementCounter.elf",
     ] {
         assert!(
@@ -10639,6 +10644,47 @@ fn ail_spec_lowers_stateful_counter_increment_to_integer_bytecode() {
         "{:?}",
         run.trace
     );
+}
+
+#[test]
+fn ail_core_reports_stateful_runtime_diagnostics() {
+    let package = load_ail_package_dir(fixture("stateful_counter.ail")).unwrap();
+    for (fixture_name, expected_code, expected_message) in [
+        (
+            "increment-without-persistence-guarantee.ail-spec.md",
+            "AIL-STATE-001",
+            "action PersistCounterIncrement mutates persistent counter state without a persistence guarantee",
+        ),
+        (
+            "retryable-increment-without-idempotency-key.ail-spec.md",
+            "AIL-STATE-002",
+            "action RetryableIncrementCounter is retryable but mutates counter state without an idempotency key",
+        ),
+        (
+            "shared-counter-without-lock.ail-spec.md",
+            "AIL-STATE-003",
+            "action IncrementSharedCounter mutates shared counter state without a lock or serialization rule",
+        ),
+        (
+            "failure-after-write-without-replay-policy.ail-spec.md",
+            "AIL-STATE-004",
+            "action ReplayableIncrementCounter can fail after a counter write without a replay recovery policy",
+        ),
+    ] {
+        let spec = fs::read_to_string(format!(
+            "{}/examples/rejected/{fixture_name}",
+            fixture("stateful_counter.ail")
+        ))
+        .unwrap();
+        let document = parse_ail_package_spec_text(&package, &spec).unwrap();
+        let diagnostics = check_ail_core_diagnostics(&elaborate_ail_core(&package, &document));
+        assert!(
+            diagnostics.iter().any(|diagnostic| {
+                diagnostic.code == expected_code && diagnostic.message == expected_message
+            }),
+            "missing {expected_code} for {fixture_name}: {diagnostics:?}"
+        );
+    }
 }
 
 #[test]
@@ -20720,6 +20766,21 @@ fn cli_ail_conformance_checks_v02_package_host_boundary_fixtures() {
                 "rejected: escalation-without-commander-review.ail-spec.md AIL-APP-007",
                 "rejected: route-missing-permission.ail-spec.md AIL-UI-PERMISSION-002",
                 "rejected: dashboard-missing-permission.ail-spec.md AIL-UI-PERMISSION-001",
+                "ail conformance: ok",
+            ]
+            .as_slice(),
+        ),
+        (
+            "stateful_counter.ail",
+            [
+                "accepted: persistent-increment-minimal.ail-spec.md",
+                "accepted: idempotent-increment-request-minimal.ail-spec.md",
+                "accepted: locked-counter-increment-minimal.ail-spec.md",
+                "accepted: replay-after-failure-minimal.ail-spec.md",
+                "rejected: increment-without-persistence-guarantee.ail-spec.md AIL-STATE-001",
+                "rejected: retryable-increment-without-idempotency-key.ail-spec.md AIL-STATE-002",
+                "rejected: shared-counter-without-lock.ail-spec.md AIL-STATE-003",
+                "rejected: failure-after-write-without-replay-policy.ail-spec.md AIL-STATE-004",
                 "ail conformance: ok",
             ]
             .as_slice(),

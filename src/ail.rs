@@ -4101,6 +4101,7 @@ pub fn check_ail_core_diagnostics(core: &AilCore) -> Vec<AilDiagnostic> {
     ));
     diagnostics.extend(check_application_private_notes_public_timeline(core));
     diagnostics.extend(check_application_incident_escalation_policy_review(core));
+    diagnostics.extend(check_application_stateful_counter_runtime_policy(core));
     diagnostics.extend(check_toolchain_agent_artifact_fingerprint_reads(core));
     diagnostics.extend(check_tool_secret_output_disclosure(core));
     diagnostics.extend(check_unknown_field_references(core));
@@ -15202,6 +15203,264 @@ fn action_requires_commander_review(
             let compact = compact_semantic_text(&rule.name);
             compact.contains("commanderreview") || compact.contains("commanderapproval")
         })
+}
+
+fn check_application_stateful_counter_runtime_policy(core: &AilCore) -> Vec<AilDiagnostic> {
+    if core.package.profile != "Application" {
+        return Vec::new();
+    }
+    let node_by_id = graph_node_by_id(core);
+    let mut diagnostics = Vec::new();
+    for action in core.graph.nodes.iter().filter(|node| node.kind == "Action") {
+        let Some(write_edge) = action_counter_state_write_edge(core, &node_by_id, action) else {
+            continue;
+        };
+        let action_text = compact_action_runtime_policy_text(core, &node_by_id, action);
+        let guarantee_text = compact_action_guarantee_text(core, &node_by_id, action);
+        if stateful_text_contains_any(&action_text, &["persist", "durable"])
+            && !stateful_text_contains_any(
+                &guarantee_text,
+                &[
+                    "persist",
+                    "durable",
+                    "journal",
+                    "writeaheadlog",
+                    "snapshot",
+                    "nextreplay",
+                ],
+            )
+        {
+            diagnostics.push(
+                AilDiagnostic::error(
+                    "AIL-STATE-001",
+                    format!(
+                        "action {} mutates persistent counter state without a persistence guarantee",
+                        action.name
+                    ),
+                )
+                .with_source_provenance(
+                    write_edge
+                        .attributes
+                        .get("provenance")
+                        .cloned()
+                        .or_else(|| node_provenance(core, &action.id)),
+                )
+                .with_affected_graph_item(format!("edge:{}", write_edge.id))
+                .with_repair_suggestion(format!(
+                    "Add a guarantee that action {} persists counter state before replay, or remove the persistent-state claim.",
+                    action.name
+                )),
+            );
+        }
+        if stateful_text_contains_any(&action_text, &["retry", "retryable"])
+            && !stateful_text_contains_any(
+                &action_text,
+                &[
+                    "idempotencykey",
+                    "requestid",
+                    "dedupe",
+                    "deduplication",
+                    "processedrequest",
+                    "duplicate",
+                ],
+            )
+        {
+            diagnostics.push(
+                AilDiagnostic::error(
+                    "AIL-STATE-002",
+                    format!(
+                        "action {} is retryable but mutates counter state without an idempotency key",
+                        action.name
+                    ),
+                )
+                .with_source_provenance(
+                    write_edge
+                        .attributes
+                        .get("provenance")
+                        .cloned()
+                        .or_else(|| node_provenance(core, &action.id)),
+                )
+                .with_affected_graph_item(format!("edge:{}", write_edge.id))
+                .with_repair_suggestion(format!(
+                    "Add a request id or idempotency key requirement and a processed-request write to action {}.",
+                    action.name
+                )),
+            );
+        }
+        if stateful_text_contains_any(&action_text, &["shared", "concurrent", "parallel"])
+            && !action_has_stateful_lock_or_serialization(core, &node_by_id, action)
+        {
+            diagnostics.push(
+                AilDiagnostic::error(
+                    "AIL-STATE-003",
+                    format!(
+                        "action {} mutates shared counter state without a lock or serialization rule",
+                        action.name
+                    ),
+                )
+                .with_source_provenance(
+                    write_edge
+                        .attributes
+                        .get("provenance")
+                        .cloned()
+                        .or_else(|| node_provenance(core, &action.id)),
+                )
+                .with_affected_graph_item(format!("edge:{}", write_edge.id))
+                .with_repair_suggestion(format!(
+                    "Add a counter lock requirement, serialization guarantee, or System lock guard for action {}.",
+                    action.name
+                )),
+            );
+        }
+        if action_has_failure_after_counter_write(core, &node_by_id, action)
+            && !stateful_text_contains_any(
+                &guarantee_text,
+                &[
+                    "rollback",
+                    "resume",
+                    "preserveprior",
+                    "preservesprior",
+                    "idempotencykey",
+                    "requestid",
+                ],
+            )
+        {
+            diagnostics.push(
+                AilDiagnostic::error(
+                    "AIL-STATE-004",
+                    format!(
+                        "action {} can fail after a counter write without a replay recovery policy",
+                        action.name
+                    ),
+                )
+                .with_source_provenance(
+                    write_edge
+                        .attributes
+                        .get("provenance")
+                        .cloned()
+                        .or_else(|| node_provenance(core, &action.id)),
+                )
+                .with_affected_graph_item(format!("edge:{}", write_edge.id))
+                .with_repair_suggestion(format!(
+                    "Add a rollback, resume, or idempotent replay guarantee to action {}.",
+                    action.name
+                )),
+            );
+        }
+    }
+    diagnostics
+}
+
+fn action_counter_state_write_edge(
+    core: &AilCore,
+    node_by_id: &BTreeMap<String, Node>,
+    action: &Node,
+) -> Option<Edge> {
+    outgoing_edges(core, action, "writes")
+        .into_iter()
+        .find(|edge| {
+            let Some(target) = node_by_id.get(&edge.target) else {
+                return false;
+            };
+            if target.kind != "Field"
+                || !target.name.eq_ignore_ascii_case("Counter.value")
+                || target.type_name.as_deref() != Some("Int")
+            {
+                return false;
+            }
+            edge.attributes.get("provenance").is_some_and(|provenance| {
+                let compact = compact_semantic_text(provenance);
+                stateful_text_contains_any(&compact, &["increments", "decrements"])
+            })
+        })
+}
+
+fn compact_action_runtime_policy_text(
+    core: &AilCore,
+    node_by_id: &BTreeMap<String, Node>,
+    action: &Node,
+) -> String {
+    let mut text = String::new();
+    text.push_str(&compact_semantic_text(&action.name));
+    for key in ["label", "trigger"] {
+        if let Some(value) = action.attributes.get(key) {
+            text.push_str(&compact_semantic_text(value));
+        }
+    }
+    for edge in outgoing_edges(core, action, "writes") {
+        if let Some(provenance) = edge.attributes.get("provenance") {
+            text.push_str(&compact_semantic_text(provenance));
+        }
+        if let Some(target) = node_by_id.get(&edge.target) {
+            text.push_str(&compact_semantic_text(&target.name));
+        }
+    }
+    for edge_kind in ["requires", "reads", "guarantees", "may_fail_with"] {
+        for node in outgoing_nodes(core, node_by_id, action, edge_kind) {
+            text.push_str(&compact_semantic_text(&node.name));
+            if let Some(condition) = node.attributes.get("condition") {
+                text.push_str(&compact_semantic_text(condition));
+            }
+        }
+    }
+    text
+}
+
+fn compact_action_guarantee_text(
+    core: &AilCore,
+    node_by_id: &BTreeMap<String, Node>,
+    action: &Node,
+) -> String {
+    outgoing_nodes(core, node_by_id, action, "guarantees")
+        .into_iter()
+        .map(|guarantee| compact_semantic_text(&guarantee.name))
+        .collect::<Vec<_>>()
+        .join("")
+}
+
+fn action_has_stateful_lock_or_serialization(
+    core: &AilCore,
+    node_by_id: &BTreeMap<String, Node>,
+    action: &Node,
+) -> bool {
+    let action_text = compact_action_runtime_policy_text(core, node_by_id, action);
+    if stateful_text_contains_any(
+        &action_text,
+        &["lock", "serialized", "serialised", "exclusive"],
+    ) {
+        return true;
+    }
+    core.graph
+        .nodes
+        .iter()
+        .filter(|node| node.kind == "LockGuard")
+        .any(|guard| {
+            let mut text = compact_semantic_text(&guard.name);
+            for value in guard.attributes.values() {
+                text.push_str(&compact_semantic_text(value));
+            }
+            text.contains("counter") && (text.contains("value") || text.contains("state"))
+        })
+}
+
+fn action_has_failure_after_counter_write(
+    core: &AilCore,
+    node_by_id: &BTreeMap<String, Node>,
+    action: &Node,
+) -> bool {
+    outgoing_nodes(core, node_by_id, action, "may_fail_with")
+        .into_iter()
+        .any(|failure| {
+            let mut text = compact_semantic_text(&failure.name);
+            if let Some(condition) = failure.attributes.get("condition") {
+                text.push_str(&compact_semantic_text(condition));
+            }
+            text.contains("after") && text.contains("countervalue") && text.contains("written")
+        })
+}
+
+fn stateful_text_contains_any(text: &str, terms: &[&str]) -> bool {
+    terms.iter().any(|term| text.contains(term))
 }
 
 fn check_toolchain_agent_artifact_fingerprint_reads(core: &AilCore) -> Vec<AilDiagnostic> {

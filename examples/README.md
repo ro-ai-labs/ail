@@ -80,8 +80,9 @@ packages visible without making a separate non-end-to-end example category.
   fixture gaps.
 - `refund_tool.ail/README.md`: AgentTool safety, approvals, policy review,
   secret handling, and repair-tutorial gaps.
-- `stateful_counter.ail/README.md`: deterministic state, persistence,
-  idempotency, locking, replay after failure, and native artifact evidence.
+- `stateful_counter.ail/README.md`: deterministic state, package-local
+  persistence, idempotency, locking, replay-after-failure diagnostics, and
+  native artifact evidence.
 - `repeated_task.ail/README.md`: scheduled-workflow behavior, repeated action
   lowering, maintenance-cycle trace evidence, and temporal-policy gaps.
 - `runtime_generic.ail/README.md`: typed runtime priority flow,

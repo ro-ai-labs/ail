@@ -44,6 +44,10 @@ severity, blocking behavior, and at least one invalid fixture.
 | `AIL-APP-001` | `ail.application.assignment.requires-support-role` | assignment changes assignee without support-role validation | error | yes | add assignee support-role requirement |
 | `AIL-APP-002` | `ail.application.overdue.requires-current-time` | overdue status transition lacks due-time comparison | error | yes | add current-time requirement |
 | `AIL-APP-003` | `ail.application.status.requires-public-update` | ticket status transition omits public update | error | yes | record a customer-visible public update |
+| `AIL-STATE-001` | `ail.application.state.persistence-guaranteed` | persistent counter mutation lacks persistence guarantee | error | yes | add durable persistence guarantee |
+| `AIL-STATE-002` | `ail.application.state.retry-idempotent` | retryable counter mutation lacks idempotency key | error | yes | add request id or dedupe state |
+| `AIL-STATE-003` | `ail.application.state.shared-serialized` | shared counter mutation lacks lock or serialization rule | error | yes | add lock guard or serialization guarantee |
+| `AIL-STATE-004` | `ail.application.state.replay-policy` | failure after counter write lacks replay recovery policy | error | yes | add rollback, resume, or idempotent replay guarantee |
 | `AIL-SECRET-READ-001` | `ail.core.secret-read.requires-protection` | secret read lacks explicit protection | error | yes | add permission and secret protection |
 | `AIL-SECRET-WRITE-001` | `ail.core.secret-write.requires-redaction` | secret write lacks redaction or protection | error | yes | add redaction policy |
 | `AIL-SECRET-OUTPUT-001` | `ail.tool.output.secret-requires-approval` | tool output exposes a secret without reveal permission | error | yes | remove secret output or add reveal approval |
@@ -210,6 +214,81 @@ severity, blocking behavior, and at least one invalid fixture.
 - blocking behavior: blocks acceptance
 - invalid fixture:
   `examples/support_ticket.ail/examples/rejected/status-change-without-public-update.ail-spec.md`
+
+### AIL-STATE-001
+
+- condition: an Application action mutates `Counter.value` while claiming
+  persistent or durable state, but has no persistence guarantee
+- affected graph item: `writes` edge from the action to `Counter.value`
+- message template: `action {name} mutates persistent counter state without a
+  persistence guarantee`
+- non-engineer explanation: replay could lose the counter update because the
+  spec does not say when the new value becomes durable
+- agent follow-up question: `What durable store, journal, snapshot, or replay
+  boundary preserves the counter update?`
+- repair suggestion: add a guarantee that the counter value is persisted before
+  replay, or remove the persistent-state claim
+- AIL-Flow highlight: Action Card guarantee section
+- severity: error
+- blocking behavior: blocks acceptance
+- invalid fixture:
+  `examples/stateful_counter.ail/examples/rejected/increment-without-persistence-guarantee.ail-spec.md`
+
+### AIL-STATE-002
+
+- condition: an Application action is retryable and mutates `Counter.value`, but
+  has no request id, idempotency key, dedupe rule, or processed-request state
+- affected graph item: `writes` edge from the action to `Counter.value`
+- message template: `action {name} is retryable but mutates counter state
+  without an idempotency key`
+- non-engineer explanation: a retry could increment the counter more than once
+  for the same user request
+- agent follow-up question: `Which request id or idempotency key identifies one
+  logical increment?`
+- repair suggestion: add a request id or idempotency key requirement and a
+  processed-request write
+- AIL-Flow highlight: Action Card requirements and writes sections
+- severity: error
+- blocking behavior: blocks acceptance
+- invalid fixture:
+  `examples/stateful_counter.ail/examples/rejected/retryable-increment-without-idempotency-key.ail-spec.md`
+
+### AIL-STATE-003
+
+- condition: an Application action mutates shared or concurrent
+  `Counter.value`, but has no lock, serialization rule, or System lock guard
+- affected graph item: `writes` edge from the action to `Counter.value`
+- message template: `action {name} mutates shared counter state without a lock
+  or serialization rule`
+- non-engineer explanation: two actors could update the same counter at the
+  same time and lose one increment
+- agent follow-up question: `Which lock or serialization policy protects this
+  shared counter?`
+- repair suggestion: add a counter lock requirement, serialization guarantee,
+  or System lock guard
+- AIL-Flow highlight: Action Card guarantee section and System lock guard
+- severity: error
+- blocking behavior: blocks acceptance
+- invalid fixture:
+  `examples/stateful_counter.ail/examples/rejected/shared-counter-without-lock.ail-spec.md`
+
+### AIL-STATE-004
+
+- condition: an Application action can fail after writing `Counter.value`, but
+  has no rollback, resume, or idempotent replay guarantee
+- affected graph item: `writes` edge from the action to `Counter.value`
+- message template: `action {name} can fail after a counter write without a
+  replay recovery policy`
+- non-engineer explanation: a failed operation could be retried without knowing
+  whether the prior counter write already happened
+- agent follow-up question: `Should replay roll back the write, resume from a
+  request id, or dedupe the retry?`
+- repair suggestion: add a rollback, resume, or idempotent replay guarantee
+- AIL-Flow highlight: Action Card failures and guarantees sections
+- severity: error
+- blocking behavior: blocks acceptance
+- invalid fixture:
+  `examples/stateful_counter.ail/examples/rejected/failure-after-write-without-replay-policy.ail-spec.md`
 
 ### AIL-SECRET-READ-001
 

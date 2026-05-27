@@ -352,6 +352,7 @@ cargo test --test ail_toolchain cli_ail_story_native_target_executes_story_runti
 cargo test --test ail_toolchain script_ail_interactive_manual_v03_authoring_gate_run_checks_succeeds
 cargo test --test ail_toolchain script_ail_interactive_manual_systems_profile_run_checks_succeeds
 cargo run -- ail-conformance examples/support_ticket.ail --artifact-dir /tmp/ail-v03-application-baseline
+cargo run -- ail-conformance examples/stateful_counter.ail --artifact-dir /tmp/ail-v03-stateful-counter
 cargo run -- ail-examples examples --artifact-dir /tmp/ail-v03-learning-examples --release-evidence
 cargo run -- ail-v03-roadmap examples --artifact-dir /tmp/ail-v03-roadmap --release-evidence
 test -f /tmp/ail-v03-learning-examples/v03-roadmap.txt
@@ -447,5 +448,8 @@ as prose. The current examples reveal these next-version gaps:
   self-recursive function has no checker-visible base-case branch. The next
   bar is explicit stack-depth policy, non-decreasing recursive argument
   diagnostics, and richer termination proofs beyond simple base-case patterns.
-- Stateful examples should move beyond single-action counters into persistence,
-  idempotency, retries, migrations, locking, and replay after failure.
+- Stateful examples now include package-local accepted/rejected conformance
+  fixtures for persistence guarantees, retry idempotency keys, shared-state
+  locking or serialization, and replay recovery after failure. The next bar is
+  migration fixtures, stale-state conflict detection, multi-action
+  transactions, and durable runtime evidence beyond text-level policy checks.
