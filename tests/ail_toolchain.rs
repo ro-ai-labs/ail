@@ -1564,10 +1564,12 @@ fn script_v03_release_audit_dry_run_lists_completion_gates() {
         "step agent-contracts command cargo run -- ail-agent-contracts examples/agents",
         "step examples command cargo run -- ail-examples examples --artifact-dir",
         "step roadmap command cargo run -- ail-v03-roadmap examples --artifact-dir",
+        "step roadmap-signal-status command python3 scripts/run_v03_signal_status_audit.py --roadmap-file",
         "step prompt-llm-review command python3 scripts/run_v03_prompt_llm_harness.py --review-artifacts",
         "step story-llm-review command python3 scripts/run_v03_story_llm_harness.py --review-artifacts",
         "step agent-policy-live-review command python3 scripts/run_v03_agent_policy_live_reviewer_harness.py --review-artifacts",
         "artifact-required-file v03-roadmap.txt",
+        "artifact-required-file v03-roadmap-signal-status.txt",
         "artifact-required-file model-executor-manifest.txt",
     ] {
         assert!(manifest.contains(required), "{required}\n{manifest}");
@@ -1577,6 +1579,118 @@ fn script_v03_release_audit_dry_run_lists_completion_gates() {
     assert_eq!(fingerprint.trim(), fnv64_fingerprint(&manifest));
     fs::remove_dir_all(bundle_root).unwrap();
     let _ = fs::remove_dir_all(live_root);
+}
+
+#[test]
+fn script_v03_signal_status_audit_classifies_high_count_roadmap_signals() {
+    let script = format!(
+        "{}/scripts/run_v03_signal_status_audit.py",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let root = std::env::temp_dir().join(format!(
+        "ail-v03-signal-status-audit-{}",
+        std::process::id()
+    ));
+    let output_dir = root.join("accepted");
+    let _ = fs::remove_dir_all(&root);
+    fs::create_dir_all(&root).unwrap();
+    let roadmap_file = root.join("v03-roadmap.txt");
+    fs::write(
+        &roadmap_file,
+        "AIL-v0.3-Roadmap:\n\
+entry-count 3\n\
+signal-count 2\n\
+signal Alpha examples need documented migration guidance. count 7 capability-levels high-level program-domains application story-journeys story-to-spec prompt-files docs/ail/prompts/interview.system.md checker-results accepted entries example-0\n\
+signal Beta examples need one more target variant. count 4 capability-levels low-level program-domains system-driver story-journeys story-amendment prompt-files docs/ail/prompts/trace-debug.system.md checker-results accepted entries example-1\n",
+    )
+    .unwrap();
+    let status_file = root.join("signal-status.md");
+    fs::write(
+        &status_file,
+        "# Signal Status\n\n\
+signal: Alpha examples need documented migration guidance.\n\
+status: deferred\n\
+rationale: Kept as a v0.3 follow-up because the current corpus only proves the first migration path.\n\
+evidence: docs/ail/31-v03-learning-and-authoring-gate.md\n",
+    )
+    .unwrap();
+
+    let output = Command::new("python3")
+        .args([
+            &script,
+            "--roadmap-file",
+            roadmap_file.to_str().unwrap(),
+            "--status-file",
+            status_file.to_str().unwrap(),
+            "--output-dir",
+            output_dir.to_str().unwrap(),
+            "--min-count",
+            "5",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    for required in [
+        "AIL-v0.3-Roadmap-Signal-Status-Audit:",
+        "high-count-signal-count 1",
+        "low-count-signal-count 1",
+        "status-entry-count 1",
+        "signal-status Alpha examples need documented migration guidance. count 7 status deferred",
+        "missing-status-count 0",
+        "audit-result accepted",
+    ] {
+        assert!(stdout.contains(required), "{required}\n{stdout}");
+    }
+    let report = fs::read_to_string(output_dir.join("v03-roadmap-signal-status.txt")).unwrap();
+    assert_eq!(stdout, report);
+    let fingerprint =
+        fs::read_to_string(output_dir.join("v03-roadmap-signal-status.fingerprint.txt")).unwrap();
+    assert_eq!(fingerprint.trim(), fnv64_fingerprint(&report));
+    let manifest =
+        fs::read_to_string(output_dir.join("manifest.v03-roadmap-signal-status.txt")).unwrap();
+    assert!(
+        manifest.contains("report v03-roadmap-signal-status.txt")
+            && manifest.contains("audit-result accepted"),
+        "{manifest}"
+    );
+
+    fs::write(&status_file, "# Signal Status\n").unwrap();
+    let rejected_dir = root.join("rejected");
+    let rejected = Command::new("python3")
+        .args([
+            &script,
+            "--roadmap-file",
+            roadmap_file.to_str().unwrap(),
+            "--status-file",
+            status_file.to_str().unwrap(),
+            "--output-dir",
+            rejected_dir.to_str().unwrap(),
+            "--min-count",
+            "5",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !rejected.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&rejected.stdout),
+        String::from_utf8_lossy(&rejected.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&rejected.stderr).contains(
+            "missing classification for high-count roadmap signal: Alpha examples need documented migration guidance."
+        ),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&rejected.stdout),
+        String::from_utf8_lossy(&rejected.stderr)
+    );
+    fs::remove_dir_all(root).unwrap();
 }
 
 #[test]

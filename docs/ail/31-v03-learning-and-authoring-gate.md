@@ -250,6 +250,10 @@ The `ail-examples` replay bundle must also write deterministic story artifacts:
 - `examples/<entry-id>/repair-promotion-review.txt` for rejected entries
 - `v03-roadmap.txt`
 - `v03-roadmap.fingerprint.txt`
+- `v03-roadmap-signal-status.txt` and
+  `v03-roadmap-signal-status.fingerprint.txt` in the release audit bundle when
+  high-count roadmap signals are classified against
+  `docs/ail/v03-roadmap-signal-status.md`.
 - `bootstrap-fixed-point-report.txt`,
   `bootstrap-pass-composition-report.txt`,
   `bootstrap-native-bytecode-report.txt`, `bootstrap-host-boundary-report.txt`,
@@ -399,6 +403,7 @@ cargo run -- ail-conformance examples/incident_notifications.ail --artifact-dir 
 cargo run -- ail-bootstrap examples/ail_toolchain_agent.ail --pass examples/compiler_pass.ail --agent examples/ail_toolchain_agent.ail --target linux-x86_64-elf --artifact-dir /tmp/ail-v03-release-evidence/artifacts/v03-bootstrap
 cargo run -- ail-examples examples --artifact-dir /tmp/ail-v03-release-evidence/artifacts/v03-examples --release-evidence
 cargo run -- ail-v03-roadmap examples --artifact-dir /tmp/ail-v03-release-evidence/artifacts/v03-roadmap --release-evidence
+python3 scripts/run_v03_signal_status_audit.py --roadmap-file /tmp/ail-v03-release-evidence/artifacts/v03-roadmap/v03-roadmap.txt --status-file docs/ail/v03-roadmap-signal-status.md --output-dir /tmp/ail-v03-release-evidence/artifacts/v03-roadmap-signal-status --min-count 5
 ```
 
 The runner writes `release-audit-manifest.txt`,
@@ -407,7 +412,11 @@ artifact-producing command output under the bundle root. The `ail-examples`
 step must emit the 124-entry corpus with 115 accepted and 9 rejected entries,
 plus `examples-report.txt`, `v03-roadmap.txt`,
 `model-executor-manifest.txt`, their fingerprints, and
-`manifest.ail-examples.txt`.
+`manifest.ail-examples.txt`. The roadmap signal-status step must then
+classify every roadmap signal with count `5` or higher as `promoted` or
+`deferred` in `docs/ail/v03-roadmap-signal-status.md` and write
+`v03-roadmap-signal-status.txt`, its fingerprint, and
+`manifest.v03-roadmap-signal-status.txt`.
 
 Hosted model evidence remains explicit rather than hidden inside the default
 deterministic audit. After live prompt, User Story mode, and AgentTool policy
@@ -443,9 +452,11 @@ AIL v0.3 may be called complete only when:
 - The interactive manual `--all --run-checks` path passes without relying on
   a live endpoint.
 - The v0.3 roadmap is generated from the same examples corpus and every
-  high-count signal is either intentionally deferred in this file or promoted
-  into a checked language, prompt, checker, runtime, target, documentation, or
-  agent-contract capability.
+  high-count signal is either intentionally deferred in
+  `docs/ail/v03-roadmap-signal-status.md` or promoted into a checked language,
+  prompt, checker, runtime, target, documentation, or agent-contract
+  capability, with `v03-roadmap-signal-status.txt` preserved in the audit
+  bundle.
 - Hosted LLM evidence, when claimed for the release, is accepted through the
   offline `--include-live` review path rather than by trusting a live response
   directly.

@@ -165,6 +165,27 @@ def build_v03_audit_plan(
                 "v03-roadmap.fingerprint.txt",
             ),
         ),
+        AuditStep(
+            "roadmap-signal-status",
+            [
+                "python3",
+                "scripts/run_v03_signal_status_audit.py",
+                "--roadmap-file",
+                str(artifacts / "v03-roadmap" / "v03-roadmap.txt"),
+                "--status-file",
+                "docs/ail/v03-roadmap-signal-status.md",
+                "--output-dir",
+                str(artifacts / "v03-roadmap-signal-status"),
+                "--min-count",
+                "5",
+            ],
+            artifacts / "v03-roadmap-signal-status",
+            "manifest.v03-roadmap-signal-status.txt",
+            (
+                "v03-roadmap-signal-status.txt",
+                "v03-roadmap-signal-status.fingerprint.txt",
+            ),
+        ),
     ]
     if include_live:
         steps.extend(

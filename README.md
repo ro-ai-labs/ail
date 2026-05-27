@@ -194,3 +194,9 @@ cargo test
 cargo clippy --all-targets -- -D warnings
 git diff --check
 ```
+
+Before calling AIL v0.3 complete, run the bundled release audit:
+
+```bash
+python3 scripts/run_v03_release_audit.py --bundle-root /tmp/ail-v03-release-evidence
+```

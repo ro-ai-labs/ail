@@ -166,6 +166,8 @@ one of these version surfaces or add a versioned surface through
   authoring, interactive manual, example-usefulness, and
   `scripts/run_v03_release_audit.py` audit bar that builds on the v0.2 release
   evidence
+- `v03-roadmap-signal-status.md`: machine-checkable promoted/deferred status
+  registry for high-count v0.3 roadmap signals
 
 ## Implementation Start
 
