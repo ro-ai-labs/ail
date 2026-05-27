@@ -281,7 +281,7 @@ still must be replayed with `ail-examples` before promotion.
 The generated files are committed so release verification does not depend on
 live LLM access. The current corpus stores:
 
-- `examples.md`: 116 manifest entries with prompt, executor, profile, surface,
+- `examples.md`: 117 manifest entries with prompt, executor, profile, surface,
   use-case, capability-level, capability-under-test, program scale, program
   domain, module/spec/story counts, interaction metadata, user-story metadata,
   story journey, distinctness, capture-origin, checker-result, target, and
@@ -322,9 +322,9 @@ live LLM access. The current corpus stores:
   semantic-anchor preservation, and upstream fingerprints.
 
 This is checked release evidence with four replay-clean live LLM
-captures and one hundred twelve replay-clean live Codex skill-agent captures. The
+captures and one hundred thirteen replay-clean live Codex skill-agent captures. The
 current corpus marks zero entries `capture-origin: deterministic-seed`, four
-entries `capture-origin: live-llm`, and one hundred twelve `codex-ail-spec-writer`
+entries `capture-origin: live-llm`, and one hundred thirteen `codex-ail-spec-writer`
 entries `capture-origin: live-codex`. The replay report exposes
 capability-level counts, program-scale counts, story-journey counts,
 program-domain counts, story-evidence counts, capture-origin counts, response,
@@ -344,7 +344,9 @@ unsupported target diagnostics from the Darwin contract path; invalid interop
 replay records nullable-to-non-null FFI diagnostics from the C interop checker;
 permission/capability replay records missing system capability diagnostics from
 the System profile checker; package resolution replay records unresolved
-registry-import diagnostics from the package loader. Each rejected replay now
+registry-import diagnostics from the package loader; UI accessibility replay
+records inaccessible form-validation diagnostics from the UI checker. Each
+rejected replay now
 also writes a repair tutorial and a checked repair proof chain that turns those
 diagnostics into a corrected spec, checked Core, verified bytecode, and runtime
 or target evidence. The repair diff ties those artifacts together and records
@@ -358,10 +360,11 @@ taxonomy coverage is still tracked by the v0.2 completion gate. The artifact bun
 executor labels, endpoint labels, capture origins, executor/origin pairs,
 executor/endpoint pairs, and per-entry semantic task provenance.
 
-The seed includes three real `UI` profile replays through `ui_workflow.ail`,
+The seed includes four real `UI` profile replays through `ui_workflow.ail`,
 which lower UI route, form, dashboard, and workflow semantics into checked Core,
 bytecode, VM trace, and Wasm target-contract artifacts across the core-to-spec,
-spec-draft, and requirements prompt surfaces. All accepted UI workflow entries
+spec-draft, and requirements prompt surfaces, plus a rejected accessibility
+diagnostic that repairs to the same checked target path. All accepted UI workflow entries
 and complex application entries tagged with the `ui` surface also produce
 `ui-review.txt` so visual review, accessibility review, workflow authoring, and
 runtime handoff are fingerprinted in the replay bundle. Other UI-tagged seed

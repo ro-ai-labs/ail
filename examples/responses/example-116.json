@@ -1,0 +1,5 @@
+{
+  "agent": "codex-ail-spec-writer",
+  "content": "# UI Inaccessible Error Text Rejected Fixture\n\nThe application Support UI manages ticket intake.\n\nAction: Create ticket.\n\nWhen a requester submits a ticket:\n\n- the system requires title\n- the system records a trace event named TicketCreated\n\nForm: Create ticket.\n\nThe form calls action:\n\n- CreateTicket\n\nThe form fields are:\n\n- title: Text\n\nThe form validates:\n\n- title is not empty\n\nIf form validation fails:\n\n- FormValidationFailed",
+  "model": "codex-subagent-default"
+}

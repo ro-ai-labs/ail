@@ -512,14 +512,15 @@ already covers parts of this gate:
   model/executor manifest covering executor families, endpoint labels,
   executor labels, capture origins, executor/origin pairs, executor/endpoint
   pairs, and per-entry semantic task provenance
-- checked 116-entry live release examples under `examples`,
+- checked 117-entry live release examples under `examples`,
   including 108 accepted prompt-to-artifact examples plus one rejected
   semantic-drift diagnostic example and one rejected profile-mismatch
   diagnostic example, one rejected missing-trace diagnostic example, and one
   rejected hallucinated-capability diagnostic example, plus one rejected
   unsupported-target backend diagnostic example and one rejected invalid
   interop diagnostic example and one rejected permission/capability diagnostic
-  example, plus one rejected package-resolution diagnostic example
+  example, plus one rejected package-resolution diagnostic example and one
+  rejected UI accessibility diagnostic example
 - example catalog entries now carry `use-case`, `capability-level`,
   `capability-under-test`, `program-scale`, `program-domain`,
   `module-count`, `spec-count`, `story-count`, `interacts-with`,
@@ -540,7 +541,7 @@ already covers parts of this gate:
   Ticket, and Refund Tool packages, using schema-shaped prompt input or
   constrained prose prompting with an OpenAI-compatible chat-completions
   endpoint with thinking disabled
-- one hundred twelve replay-clean live Codex `codex-ail-spec-writer` captures for the
+- one hundred thirteen replay-clean live Codex `codex-ail-spec-writer` captures for the
   Standard Collections, Composed Support, Refund Tool, Support Ticket,
   Stateful Counter, UI Workflow, C Interop, Network Driver, Compiler Pass,
   Secret Access, Repeated Task, Runtime Generic, and Incident Response
@@ -566,10 +567,11 @@ already covers parts of this gate:
 - package-import release entries replay through package-aware import
   resolution and compile the composed support package through checked Core,
   bytecode, and VM trace artifacts
-- three real UI-profile release entries replay `ui_workflow.ail` through
+- four real UI-profile release entries replay `ui_workflow.ail` through
   checked Core, semantic-contract bytecode, VM trace, and Wasm target-contract
   artifacts across the core-to-spec, spec-draft, and requirements prompt
-  surfaces
+  surfaces, including one rejected accessibility diagnostic that repairs to
+  checked Core, verified bytecode, and Wasm target-contract evidence
 - five Incident Response release entries replay a multi-module application
   with identity, policy, and notification imports through checked Core,
   bytecode, VM trace, Wasm target-contract, Darwin target-contract, workflow,
@@ -580,8 +582,9 @@ already covers parts of this gate:
   checked AIL-Spec diagnostics for missing trace coverage and hallucinated
   capability or permission references, plus Darwin backend diagnostics for
   unsupported target effects and C interop diagnostics for invalid nullable
-  pointer contracts, plus System profile diagnostics for missing capabilities
-  and package-loader diagnostics for unresolved registry imports
+  pointer contracts, plus System profile diagnostics for missing capabilities,
+  package-loader diagnostics for unresolved registry imports, and UI
+  accessibility diagnostics for inaccessible form validation errors
 - clean-worktree v0.2 release audit run at commit `ea37eeb`, generated with
   `python3 scripts/run_v02_release_audit.py --bundle-root
   /tmp/ail-semantic-anchor-report-clean-ea37eeb`; its

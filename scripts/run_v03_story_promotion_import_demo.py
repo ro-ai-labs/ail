@@ -203,9 +203,9 @@ def main(argv: list[str]) -> int:
     )
     report_text = (args.output_artifacts / "examples-report.txt").read_text()
     for line in [
-        "entry-count 117",
+        "entry-count 118",
         "checker-result-count accepted 109",
-        "checker-result-count rejected 8",
+        "checker-result-count rejected 9",
         f"entry {args.source_entry_id} ",
         f"entry {args.proposed_entry_id} ",
     ]:
@@ -218,9 +218,9 @@ def main(argv: list[str]) -> int:
         f"source-preserved {str(source_preserved).lower()}",
         f"proposed-accepted {str(proposed_accepted).lower()}",
         f"story-artifacts-preserved {str(story_artifacts_preserved).lower()}",
-        "entry-count 117",
+        "entry-count 118",
         "checker-result-count accepted 109",
-        "checker-result-count rejected 8",
+        "checker-result-count rejected 9",
         f"batch-plan {batch_plan_path}",
         f"output-corpus {args.output_corpus}",
         f"output-artifacts {args.output_artifacts}",

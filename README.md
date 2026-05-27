@@ -137,7 +137,7 @@ enabled.
 ## Examples
 
 AIL packages live under [examples](examples). The current tree contains 26 package directories,
-plus the 116-entry replay catalog in
+plus the 117-entry replay catalog in
 [`examples/examples.md`](examples/examples.md). Each counted catalog entry is
 end-to-end: stored request/response or package source, checked artifact,
 checked AIL-Core, bytecode, VM trace, and binary or target-contract evidence.

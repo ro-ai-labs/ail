@@ -2371,7 +2371,7 @@ story-file: stories/example-65.md
 story-journey: spec-to-story
 story-roundtrip: semantic-similar
 distinctness-claim: ui-workflow-live-codex-core-to-spec-65 exercises docs/ail/prompts/core-to-spec.system.md over ui-workflow.
-v0.3-signal: UI authoring needs accessibility failure fixtures and patchable visual review workflows.
+v0.3-signal: UI authoring needs patchable visual review workflows after accessibility diagnostics are replayed.
 prompt-file: docs/ail/prompts/core-to-spec.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:9f447e07620792b2
@@ -3912,7 +3912,7 @@ story-file: stories/example-108.md
 story-journey: story-to-spec
 story-roundtrip: semantic-similar
 distinctness-claim: ui-workflow-live-codex-spec-draft-108 exercises docs/ail/prompts/spec-draft.system.md over ui-workflow.
-v0.3-signal: UI authoring needs accessibility failure fixtures and patchable visual review workflows.
+v0.3-signal: UI authoring needs patchable visual review workflows after accessibility diagnostics are replayed.
 prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
@@ -3948,7 +3948,7 @@ story-file: stories/example-109.md
 story-journey: story-to-spec
 story-roundtrip: semantic-similar
 distinctness-claim: ui-workflow-live-codex-requirements-109 exercises docs/ail/prompts/requirements.system.md over ui-workflow.
-v0.3-signal: UI authoring needs accessibility failure fixtures and patchable visual review workflows.
+v0.3-signal: UI authoring needs patchable visual review workflows after accessibility diagnostics are replayed.
 prompt-file: docs/ail/prompts/requirements.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
@@ -4182,3 +4182,42 @@ checker-result: accepted
 target: wasm32-unknown-sandbox-wasm
 vm-action: StartPostmortem
 runtime-state: incident.id=INC-1;incident.status=Declared;incident.severity=Sev1
+
+## Example: example-116
+semantic-task: ui-workflow-inaccessible-error-rejected-116
+profile: UI
+surface-tags: ui,diagnostic
+package: examples/ui_workflow.ail
+use-case: Rejected UI accessibility failure that verifies inaccessible form errors are diagnosed before promotion.
+capability-level: high-level
+capability-under-test: diagnostic-ui-accessibility
+program-scale: module
+program-domain: diagnostic
+module-count: 1
+spec-count: 1
+story-count: 1
+interacts-with: ui.form,ui.accessibility
+user-story-id: ui-accessibility-diagnostic-story
+user-story: As a reviewer I can inspect the UI accessibility diagnostic so that missing error announcements are repaired before promotion.
+acceptance-criteria: expected diagnostic exists; diagnostic artifact exists; repair target remains reviewable
+story-evidence: diagnostics
+story-file: stories/example-116.md
+story-journey: diagnostic-story
+story-roundtrip: diagnostic-preserving
+distinctness-claim: ui-workflow-inaccessible-error-rejected-116 exercises docs/ail/prompts/spec-draft.system.md over diagnostic-ui-accessibility using the inaccessible-error-text rejected fixture.
+v0.3-signal: UI authoring needs patchable visual review workflows after accessibility diagnostics are replayed.
+prompt-file: docs/ail/prompts/spec-draft.system.md
+prompt-version: ail-prompts.v0.2
+prompt-fingerprint: fnv64:b23778093326102c
+executor-family: codex-skill-agent
+executor-label: codex-ail-spec-writer
+capture-origin: live-codex
+request-file: requests/example-116.json
+response-file: responses/example-116.json
+artifact-kind: ail-spec
+checker-result: rejected
+target: wasm32-unknown-sandbox-wasm
+vm-action: CreateTicketForm
+runtime-state: ticket.title=Incident 116
+expected-diagnostic: AIL-UI-A11Y-001
+failure-taxonomy: ui-accessibility

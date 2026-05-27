@@ -267,9 +267,10 @@ as prose. The current examples reveal these next-version gaps:
   files.
 - Prompt matrices need explicit separation between semantic use-case diversity
   and prompt-surface coverage.
-- UI examples now emit deterministic visual review, accessibility review, and
-  workflow authoring artifacts. The next bar is accessibility failure fixtures
-  and patchable visual review workflows.
+- UI examples now emit deterministic visual review, accessibility review,
+  workflow authoring artifacts, and a rejected accessibility diagnostic fixture
+  that repairs to checked Core, verified bytecode, and Wasm target-contract
+  evidence. The next bar is patchable visual review workflows.
 - AgentTool examples need multi-agent handoff and policy-review scenarios.
 - Compiler/self-hosting examples need pass composition and fixed-point checks.
 - Systems examples need hardware-facing contracts, scheduler or interrupt

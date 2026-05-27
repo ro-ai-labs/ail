@@ -809,7 +809,7 @@ fn docs_example_inventory_names_every_package_directory() {
     );
     assert!(inventory.contains("Package directories: 26"), "{inventory}");
     assert!(
-        inventory.contains("Counted catalog examples: 116"),
+        inventory.contains("Counted catalog examples: 117"),
         "{inventory}"
     );
 
@@ -1000,6 +1000,17 @@ fn example_ui_workflow_stories_record_semantic_anchors() {
                 "ui.route",
                 "ui.form",
                 "ui.dashboard",
+            ],
+        ),
+        (
+            "stories/example-116.md",
+            [
+                "inaccessible-error-text",
+                "AIL-UI-A11Y-001",
+                "FormValidationFailed",
+                "title error is announced",
+                "diagnostic-story",
+                "diagnostics",
             ],
         ),
     ] {
@@ -24487,13 +24498,13 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         String::from_utf8_lossy(&output.stderr)
     );
     let report = fs::read_to_string(artifact_dir.join("examples-report.txt")).unwrap();
-    assert!(report.contains("entry-count 116"), "{report}");
+    assert!(report.contains("entry-count 117"), "{report}");
     assert!(
         report.contains("checker-result-count accepted 108"),
         "{report}"
     );
     assert!(
-        report.contains("checker-result-count rejected 8"),
+        report.contains("checker-result-count rejected 9"),
         "{report}"
     );
     assert!(
@@ -24505,7 +24516,7 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("capability-level-count high-level 47"),
+        report.contains("capability-level-count high-level 48"),
         "{report}"
     );
     assert!(
@@ -24541,6 +24552,10 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
+        report.contains("failure-taxonomy-count ui-accessibility 1"),
+        "{report}"
+    );
+    assert!(
         !report.contains("capture-origin-count deterministic-seed"),
         "{report}"
     );
@@ -24549,7 +24564,7 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("capture-origin-count live-codex 112"),
+        report.contains("capture-origin-count live-codex 113"),
         "{report}"
     );
     assert!(
@@ -25209,6 +25224,13 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
+        report.contains("entry example-116")
+            && report.contains("semantic-task ui-workflow-inaccessible-error-rejected-116")
+            && report.contains("entry-artifact example-116 diagnostics")
+            && report.contains("entry-artifact example-116 repair-target-report"),
+        "{report}"
+    );
+    assert!(
         report.contains("entry example-110")
             && report.contains("semantic-task stateful-counter-live-codex-repair-110")
             && report.contains("prompt-count docs/ail/prompts/repair.system.md 1")
@@ -25239,12 +25261,13 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
     );
     assert!(
         report.contains("program-domain-count application 10")
+            && report.contains("program-domain-count diagnostic 9")
             && report.contains("program-scale-count multi-module-system 53")
             && report.contains("story-roundtrip-count semantic-similar 108"),
         "{report}"
     );
     assert!(
-        report.contains("semantic-anchor-story-count 116")
+        report.contains("semantic-anchor-story-count 117")
             && report.contains(
                 "entry-semantic-anchors example-0 Option<T>; Result<T; E>; Map<K; V>; Option.map; OptionMapEvaluated; interview.system.md"
             )
@@ -25265,6 +25288,9 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
             )
             && report.contains(
                 "entry-semantic-anchors example-107 missing-registry-import; shared-lib; registry index; SharedImportResolved; package-resolution; diagnostic-story; diagnostics"
+            )
+            && report.contains(
+                "entry-semantic-anchors example-116 inaccessible-error-text; AIL-UI-A11Y-001; FormValidationFailed; title error is announced; diagnostic-story; diagnostics"
             )
             && report.contains(
                 "entry-semantic-anchors example-35 Runtime Tickets; Prioritize ticket; TicketPrioritized; ticket.priority=Low; runtime-generics; core-to-spec.system.md"
@@ -25291,9 +25317,9 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         ),
         "{incident_user_story}"
     );
-    assert!(report.contains("profile-count UI 3"), "{report}");
+    assert!(report.contains("profile-count UI 4"), "{report}");
     assert!(
-        report.contains("target-count wasm32-unknown-sandbox-wasm 16"),
+        report.contains("target-count wasm32-unknown-sandbox-wasm 17"),
         "{report}"
     );
     assert!(
@@ -25314,8 +25340,12 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
     );
     assert!(
         report.contains(
-            "v03-signal-count UI authoring needs accessibility failure fixtures and patchable visual review workflows. 3"
+            "v03-signal-count UI authoring needs patchable visual review workflows after accessibility diagnostics are replayed. 4"
         ),
+        "{report}"
+    );
+    assert!(
+        !report.contains("UI authoring needs accessibility failure fixtures and patchable visual review workflows."),
         "{report}"
     );
     assert!(
@@ -25415,6 +25445,12 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
             .contains("AIL registry import shared-lib as Shared was not found in registry index"),
         "{package_resolution_diagnostics}"
     );
+    let ui_accessibility_diagnostics =
+        fs::read_to_string(artifact_dir.join("examples/example-116/diagnostics.txt")).unwrap();
+    assert!(
+        ui_accessibility_diagnostics.contains("AIL-UI-A11Y-001"),
+        "{ui_accessibility_diagnostics}"
+    );
     let rejected_entries = [
         ("example-99", "semantic-drift", "repair-vm-trace"),
         ("example-101", "profile-mismatch", "repair-vm-trace"),
@@ -25424,21 +25460,22 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         ("example-105", "invalid-interop", "repair-target-report"),
         ("example-106", "permission-capability", "repair-vm-trace"),
         ("example-107", "package-resolution", "repair-vm-trace"),
+        ("example-116", "ui-accessibility", "repair-target-report"),
     ];
     assert!(
-        report.contains("repair-tutorial-fingerprint-observed-count 8"),
+        report.contains("repair-tutorial-fingerprint-observed-count 9"),
         "{report}"
     );
     assert!(
-        report.contains("repair-candidate-fingerprint-observed-count 8"),
+        report.contains("repair-candidate-fingerprint-observed-count 9"),
         "{report}"
     );
     assert!(
-        report.contains("repair-checked-core-fingerprint-observed-count 8"),
+        report.contains("repair-checked-core-fingerprint-observed-count 9"),
         "{report}"
     );
     assert!(
-        report.contains("repair-bytecode-fingerprint-observed-count 8"),
+        report.contains("repair-bytecode-fingerprint-observed-count 9"),
         "{report}"
     );
     assert!(
@@ -25446,15 +25483,15 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("repair-target-report-fingerprint-observed-count 2"),
+        report.contains("repair-target-report-fingerprint-observed-count 3"),
         "{report}"
     );
     assert!(
-        report.contains("repair-diff-fingerprint-observed-count 8"),
+        report.contains("repair-diff-fingerprint-observed-count 9"),
         "{report}"
     );
     assert!(
-        report.contains("repair-promotion-review-fingerprint-observed-count 8"),
+        report.contains("repair-promotion-review-fingerprint-observed-count 9"),
         "{report}"
     );
     for (entry_id, failure_taxonomy, repair_evidence_kind) in rejected_entries {
@@ -25724,6 +25761,12 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{manifest}"
     );
     assert!(
+        manifest.contains(
+            "entry example-116 checker-result rejected target wasm32-unknown-sandbox-wasm"
+        ),
+        "{manifest}"
+    );
+    assert!(
         manifest.contains(&format!(
             "entry-artifact example-108 ui-review examples/example-108/ui-review.txt {}",
             ui_review_108_fingerprint.trim()
@@ -25805,9 +25848,9 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
     let model_executor_manifest =
         fs::read_to_string(artifact_dir.join("model-executor-manifest.txt")).unwrap();
     assert!(
-        model_executor_manifest.contains("entry-count 116")
-            && model_executor_manifest.contains("executor-family codex-skill-agent count 112")
-            && model_executor_manifest.contains("capture-origin live-codex count 112")
+        model_executor_manifest.contains("entry-count 117")
+            && model_executor_manifest.contains("executor-family codex-skill-agent count 113")
+            && model_executor_manifest.contains("capture-origin live-codex count 113")
             && model_executor_manifest.contains(
                 "entry example-100 semantic-task stateful-counter-live-codex-accepted-100"
             )
@@ -25841,7 +25884,10 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
             && model_executor_manifest
                 .contains("entry example-111 semantic-task incident-response-live-codex-111")
             && model_executor_manifest
-                .contains("entry example-115 semantic-task incident-response-live-codex-115"),
+                .contains("entry example-115 semantic-task incident-response-live-codex-115")
+            && model_executor_manifest.contains(
+                "entry example-116 semantic-task ui-workflow-inaccessible-error-rejected-116"
+            ),
         "{model_executor_manifest}"
     );
 
@@ -28876,12 +28922,13 @@ fn cli_ail_v03_roadmap_advances_completed_ui_authoring_signal() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(
         stdout.contains(
-            "signal UI authoring needs accessibility failure fixtures and patchable visual review workflows. count 3"
+            "signal UI authoring needs patchable visual review workflows after accessibility diagnostics are replayed. count 4"
         ),
         "{stdout}"
     );
     assert!(
-        !stdout.contains("UI authoring needs stronger visual review artifacts"),
+        !stdout.contains("UI authoring needs accessibility failure fixtures and patchable visual review workflows.")
+            && !stdout.contains("UI authoring needs stronger visual review artifacts"),
         "{stdout}"
     );
 
