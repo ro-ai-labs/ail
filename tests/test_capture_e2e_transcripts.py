@@ -434,13 +434,13 @@ AGENT_POLICY_LIVE_ROLES = (
 )
 
 
-def agent_policy_live_reviewer_envelope(role):
+def agent_policy_live_reviewer_envelope(role, decision="accept"):
     return (
         json.dumps(
             {
                 "artifact_kind": "AIL-AgentTool-Live-Reviewer-Handoff",
                 "role": role,
-                "decision": "accept",
+                "decision": decision,
                 "evidence": [
                     "agent-policy-review.txt",
                     "agent-policy-capture-plan.json",
@@ -462,7 +462,10 @@ def agent_policy_live_reviewer_envelope(role):
     )
 
 
-def write_agent_policy_live_reviewer_fixture(artifact_dir, empty_content_for=None):
+def write_agent_policy_live_reviewer_fixture(
+    artifact_dir, empty_content_for=None, decision_for=None
+):
+    decision_for = decision_for or {}
     artifact_dir.mkdir(parents=True, exist_ok=True)
     models_text = (
         json.dumps({"object": "list", "data": [{"id": "test-model"}]}, sort_keys=True)
@@ -494,9 +497,9 @@ def write_agent_policy_live_reviewer_fixture(artifact_dir, empty_content_for=Non
             content_kind = "empty"
             decision = "missing"
         else:
-            content = agent_policy_live_reviewer_envelope(role)
+            decision = decision_for.get(role, "accept")
+            content = agent_policy_live_reviewer_envelope(role, decision=decision)
             content_kind = "reviewer-envelope"
-            decision = "accept"
         response = {"choices": [{"message": {"content": content.strip()}}], "model": "test-model"}
         request_text = (
             json.dumps(
@@ -947,7 +950,41 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             self.assertIn("reviewer-envelope-valid-count 5", review.stdout)
             self.assertIn("reviewer-envelope-invalid-count 0", review.stdout)
             self.assertIn("reviewer-decision-accept-count 5", review.stdout)
+            self.assertIn("reviewer-decision-needs-repair-count 0", review.stdout)
+            self.assertIn("reviewer-decision-reject-count 0", review.stdout)
             self.assertIn("review-result accepted", review.stdout)
+        finally:
+            shutil.rmtree(artifact_dir, ignore_errors=True)
+
+    def test_agent_policy_live_reviewer_harness_review_blocks_needs_repair_decision(self):
+        artifact_dir = Path(tempfile.mkdtemp(prefix="ail-agent-policy-live-needs-repair-"))
+        try:
+            write_agent_policy_live_reviewer_fixture(
+                artifact_dir, decision_for={"prompt-reviewer": "needs-repair"}
+            )
+            review = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_agent_policy_live_reviewer_harness.py",
+                    "--review-artifacts",
+                    str(artifact_dir),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertNotEqual(
+                review.returncode,
+                0,
+                f"stdout:\n{review.stdout}\nstderr:\n{review.stderr}",
+            )
+            self.assertIn("reviewer-envelope-valid-count 5", review.stdout)
+            self.assertIn("reviewer-envelope-invalid-count 0", review.stdout)
+            self.assertIn("reviewer-decision-accept-count 4", review.stdout)
+            self.assertIn("reviewer-decision-needs-repair-count 1", review.stdout)
+            self.assertIn("reviewer-decision-reject-count 0", review.stdout)
+            self.assertIn("review-result needs-repair", review.stdout)
+            self.assertIn("reviewer decisions require repair before promotion", review.stdout)
         finally:
             shutil.rmtree(artifact_dir, ignore_errors=True)
 

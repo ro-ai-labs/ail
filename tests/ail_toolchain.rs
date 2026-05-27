@@ -1607,6 +1607,8 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "evidence reviewer-envelope-valid-count",
         "evidence reviewer-envelope-invalid-count",
         "evidence reviewer-decision-accept-count",
+        "evidence reviewer-decision-needs-repair-count",
+        "evidence reviewer-decision-reject-count",
     ] {
         assert!(
             gate_live_stdout.contains(required),
@@ -1862,6 +1864,8 @@ fn examples_agents_include_agent_policy_review_contract() {
         "reviewer-envelope-valid-count",
         "reviewer-envelope-invalid-count",
         "reviewer-decision-accept-count",
+        "reviewer-decision-needs-repair-count",
+        "reviewer-decision-reject-count",
         "source-preserved true",
         "proposed-accepted true",
         "policy-handoff-imported true",
@@ -1901,6 +1905,8 @@ fn examples_agents_include_agent_policy_review_contract() {
         "reviewer-envelope-valid-count",
         "reviewer-envelope-invalid-count",
         "reviewer-decision-accept-count",
+        "reviewer-decision-needs-repair-count",
+        "reviewer-decision-reject-count",
         "source-preserved true",
         "proposed-accepted true",
         "policy-handoff-imported true",

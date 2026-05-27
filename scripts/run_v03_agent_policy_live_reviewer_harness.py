@@ -380,6 +380,8 @@ def review_artifacts(args: argparse.Namespace, contracts: list[tuple[str, str, s
     envelope_valid = 0
     envelope_invalid = 0
     decision_accept = 0
+    decision_needs_repair = 0
+    decision_reject = 0
     manifest_text = read_required_text(
         artifact_root / "manifest.v03-agent-policy-live-review.txt", errors
     )
@@ -430,6 +432,10 @@ def review_artifacts(args: argparse.Namespace, contracts: list[tuple[str, str, s
             errors.append(f"invalid reviewer envelope {role}: {content_error}")
         if decision == "accept":
             decision_accept += 1
+        elif decision == "needs-repair":
+            decision_needs_repair += 1
+        elif decision == "reject":
+            decision_reject += 1
         for artifact_path in [request_path, response_path, content_path]:
             if check_fingerprint(artifact_path, errors):
                 fingerprint_checks += 1
@@ -465,12 +471,17 @@ def review_artifacts(args: argparse.Namespace, contracts: list[tuple[str, str, s
         f"reviewer-envelope-valid-count {envelope_valid}",
         f"reviewer-envelope-invalid-count {envelope_invalid}",
         f"reviewer-decision-accept-count {decision_accept}",
+        f"reviewer-decision-needs-repair-count {decision_needs_repair}",
+        f"reviewer-decision-reject-count {decision_reject}",
         f"fingerprint-check-count {fingerprint_checks}",
     ]
     if errors:
         review_lines.append("review-result rejected")
         for error in errors:
             review_lines.append(f"error {error}")
+    elif decision_accept != len(contracts):
+        review_lines.append("review-result needs-repair")
+        review_lines.append("error reviewer decisions require repair before promotion")
     else:
         review_lines.append("review-result accepted")
     review_text = "\n".join(review_lines) + "\n"
@@ -485,7 +496,7 @@ def review_artifacts(args: argparse.Namespace, contracts: list[tuple[str, str, s
         print(f"error failed to write AgentTool live reviewer review report: {error}")
         return 1
     print(review_text, end="")
-    return 1 if errors else 0
+    return 1 if errors or decision_accept != len(contracts) else 0
 
 
 def run_live(args: argparse.Namespace, contracts: list[tuple[str, str, str]]) -> int:

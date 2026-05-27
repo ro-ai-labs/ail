@@ -151,9 +151,13 @@ agent-policy-live-review-review.fingerprint.txt
 reviewer-envelope-valid-count
 reviewer-envelope-invalid-count
 reviewer-decision-accept-count
+reviewer-decision-needs-repair-count
+reviewer-decision-reject-count
 ```
 
-The live reviewer report is evidence that separate reviewer roles executed
-against the AgentTool handoff contract. It still does not edit `./examples`;
-promotion remains gated by deterministic replay, human approval, and
-corpus-copy import evidence.
+The live reviewer report is accepted only when every reviewer envelope is
+valid and every role returns `decision: accept`. Valid `needs-repair` or
+`reject` decisions produce `review-result needs-repair` and a nonzero exit so
+the hosted output becomes repair backlog instead of promotion evidence. It
+still does not edit `./examples`; promotion remains gated by deterministic
+replay, human approval, and corpus-copy import evidence.

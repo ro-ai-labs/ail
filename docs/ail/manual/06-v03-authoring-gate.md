@@ -123,6 +123,8 @@ agent-policy-live-review-review.fingerprint.txt
 reviewer-envelope-valid-count
 reviewer-envelope-invalid-count
 reviewer-decision-accept-count
+reviewer-decision-needs-repair-count
+reviewer-decision-reject-count
 policy-handoff-imported true
 policy-handoff-replayed true
 multi-agent-execution-evidence deterministic-role-handoff

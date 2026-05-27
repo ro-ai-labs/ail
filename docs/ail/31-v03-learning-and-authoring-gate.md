@@ -331,10 +331,13 @@ as prose. The current examples reveal these next-version gaps:
   role-separated multi-agent handoff witness. An opt-in live reviewer harness
   now records hosted request/response/content bundles for five reviewer roles
   and writes an offline review with `reviewer-envelope-valid-count`,
-  `reviewer-envelope-invalid-count`, and `reviewer-decision-accept-count`. The
-  next bar is broader live reviewer coverage where accepted and rejected
-  AgentTool policy handoffs are both produced by separate reviewer roles and
-  promoted only after human approval.
+  `reviewer-envelope-invalid-count`, `reviewer-decision-accept-count`,
+  `reviewer-decision-needs-repair-count`, and
+  `reviewer-decision-reject-count`. The review is accepted only when all
+  reviewer roles return `decision: accept`; valid non-accept decisions become
+  `review-result needs-repair` evidence. The next bar is broader live reviewer
+  coverage where accepted and rejected AgentTool policy handoffs are both
+  produced by separate reviewer roles and promoted only after human approval.
 - Compiler/self-hosting examples need pass composition and fixed-point checks.
 - Systems examples need hardware-facing contracts, scheduler or interrupt
   semantics, and clearer unsupported-target migration guidance.

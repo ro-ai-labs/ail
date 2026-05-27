@@ -96,8 +96,12 @@ The review writes `agent-policy-live-review-review.txt` and
 `agent-policy-live-review-review.fingerprint.txt` in the reviewed artifact
 directory, and checks `agent-policy-live-review-report.txt`,
 `manifest.v03-agent-policy-live-review.txt`,
-`reviewer-envelope-valid-count`, `reviewer-envelope-invalid-count`, and
-`reviewer-decision-accept-count`.
+`reviewer-envelope-valid-count`, `reviewer-envelope-invalid-count`,
+`reviewer-decision-accept-count`,
+`reviewer-decision-needs-repair-count`, and
+`reviewer-decision-reject-count`. A live reviewer run is accepted only when
+all five reviewer roles return `decision: accept`; valid non-accept decisions
+produce `review-result needs-repair`.
 
 Run deterministic local checks for a chapter:
 

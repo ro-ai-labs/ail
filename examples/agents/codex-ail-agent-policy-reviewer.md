@@ -70,6 +70,8 @@ Return an `AIL-Agent-Policy-Review` report that records:
 - `reviewer-envelope-valid-count`
 - `reviewer-envelope-invalid-count`
 - `reviewer-decision-accept-count`
+- `reviewer-decision-needs-repair-count`
+- `reviewer-decision-reject-count`
 - `source-preserved true`
 - `proposed-accepted true`
 - `policy-handoff-imported true`
@@ -88,6 +90,8 @@ Return an `AIL-Agent-Policy-Review` report that records:
 - Do not treat hosted reviewer output as accepted unless
   `scripts/run_v03_agent_policy_live_reviewer_harness.py --review-artifacts`
   reports `review-result accepted`.
+- Do not treat valid hosted reviewer `needs-repair` or `reject` decisions as
+  promotion evidence; they must be recorded as `review-result needs-repair`.
 - Do not rewrite the reviewed source entry during promotion; the source
   AgentTool entry remains part of the learning corpus.
 - Do not treat `accepted-for-import` as an automatic corpus edit.
@@ -154,8 +158,10 @@ The offline review must include `agent-policy-live-review-report.txt`,
 `agent-policy-live-review-review.txt`,
 `agent-policy-live-review-review.fingerprint.txt`,
 `manifest.v03-agent-policy-live-review.txt`,
-`reviewer-envelope-valid-count`, `reviewer-envelope-invalid-count`, and
-`reviewer-decision-accept-count`. Manual `--include-live` runs this path
+`reviewer-envelope-valid-count`, `reviewer-envelope-invalid-count`,
+`reviewer-decision-accept-count`,
+`reviewer-decision-needs-repair-count`, and
+`reviewer-decision-reject-count`. Manual `--include-live` runs this path
 through:
 
 ```sh

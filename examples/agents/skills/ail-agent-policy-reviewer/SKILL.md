@@ -82,6 +82,8 @@ The review report must include:
 - `reviewer-envelope-valid-count`
 - `reviewer-envelope-invalid-count`
 - `reviewer-decision-accept-count`
+- `reviewer-decision-needs-repair-count`
+- `reviewer-decision-reject-count`
 - `accepted-for-import`, `needs-repair`, or `rejected-for-import`
 - `human-approval-required true`
 - `agent-contract-check ail-agent-contracts examples/agents`
@@ -115,6 +117,9 @@ Return `needs-repair` or `rejected-for-import` when:
 - hosted reviewer evidence is claimed but
   `scripts/run_v03_agent_policy_live_reviewer_harness.py --review-artifacts`
   is missing or reports `review-result rejected`
+- hosted reviewer evidence is claimed but one or more valid reviewer envelopes
+  return `needs-repair` or `reject`; preserve the bundle as
+  `review-result needs-repair` evidence instead of promotion evidence
 - the artifact implies automatic promotion without human approval
 
 Do not promote generated content into `./examples` unless deterministic replay,
