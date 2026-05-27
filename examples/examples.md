@@ -2371,7 +2371,7 @@ story-file: stories/example-65.md
 story-journey: spec-to-story
 story-roundtrip: semantic-similar
 distinctness-claim: ui-workflow-live-codex-core-to-spec-65 exercises docs/ail/prompts/core-to-spec.system.md over ui-workflow.
-v0.3-signal: UI authoring needs stronger visual review artifacts and accessibility exercises.
+v0.3-signal: UI authoring needs accessibility failure fixtures and patchable visual review workflows.
 prompt-file: docs/ail/prompts/core-to-spec.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:9f447e07620792b2
@@ -3912,7 +3912,7 @@ story-file: stories/example-108.md
 story-journey: story-to-spec
 story-roundtrip: semantic-similar
 distinctness-claim: ui-workflow-live-codex-spec-draft-108 exercises docs/ail/prompts/spec-draft.system.md over ui-workflow.
-v0.3-signal: UI authoring needs stronger visual review artifacts and accessibility exercises.
+v0.3-signal: UI authoring needs accessibility failure fixtures and patchable visual review workflows.
 prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
@@ -3948,7 +3948,7 @@ story-file: stories/example-109.md
 story-journey: story-to-spec
 story-roundtrip: semantic-similar
 distinctness-claim: ui-workflow-live-codex-requirements-109 exercises docs/ail/prompts/requirements.system.md over ui-workflow.
-v0.3-signal: UI authoring needs stronger visual review artifacts and accessibility exercises.
+v0.3-signal: UI authoring needs accessibility failure fixtures and patchable visual review workflows.
 prompt-file: docs/ail/prompts/requirements.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12

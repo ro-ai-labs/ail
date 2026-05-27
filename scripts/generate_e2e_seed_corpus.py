@@ -113,7 +113,7 @@ ACCEPTED_FIXTURES = {
         "spec_count": "3",
         "story_count": "3",
         "interacts_with": "ui.route,ui.form,ui.dashboard",
-        "v03_signal": "UI authoring needs stronger visual review artifacts and accessibility exercises.",
+        "v03_signal": "UI authoring needs accessibility failure fixtures and patchable visual review workflows.",
         "vm_action": "CreateTicketForm",
         "runtime_state": "ticket.title=Bug",
     },

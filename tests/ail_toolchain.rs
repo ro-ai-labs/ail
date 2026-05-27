@@ -25312,6 +25312,16 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         report.contains("ui-review-fingerprint-observed-count 13"),
         "{report}"
     );
+    assert!(
+        report.contains(
+            "v03-signal-count UI authoring needs accessibility failure fixtures and patchable visual review workflows. 3"
+        ),
+        "{report}"
+    );
+    assert!(
+        !report.contains("UI authoring needs stronger visual review artifacts"),
+        "{report}"
+    );
     let ui_review_108 =
         fs::read_to_string(artifact_dir.join("examples/example-108/ui-review.txt")).unwrap();
     assert!(
@@ -28835,6 +28845,49 @@ fn cli_ail_v03_roadmap_prints_backlog_without_full_examples_report() {
     );
 
     let _ = fs::remove_dir_all(corpus_dir);
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
+fn cli_ail_v03_roadmap_advances_completed_ui_authoring_signal() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-v03-roadmap-release-ui-signal-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-v03-roadmap",
+            "examples",
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+            "--release-evidence",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains(
+            "signal UI authoring needs accessibility failure fixtures and patchable visual review workflows. count 3"
+        ),
+        "{stdout}"
+    );
+    assert!(
+        !stdout.contains("UI authoring needs stronger visual review artifacts"),
+        "{stdout}"
+    );
+
+    let roadmap = fs::read_to_string(artifact_dir.join("v03-roadmap.txt")).unwrap();
+    assert_eq!(stdout, roadmap);
+
     let _ = fs::remove_dir_all(artifact_dir);
 }
 
