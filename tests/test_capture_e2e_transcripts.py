@@ -791,7 +791,50 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             self.assertIn("prompt-envelope-artifact-required-count 8", review.stdout)
             self.assertIn("prompt-envelope-questions-expected-count 3", review.stdout)
             self.assertIn("prompt-outcome-match-count 11", review.stdout)
+            self.assertIn("model-check present", review.stdout)
+            self.assertIn("model-check-model-count 1", review.stdout)
+            self.assertIn("model-check-model-id test-model", review.stdout)
             self.assertIn("review-result accepted", review.stdout)
+        finally:
+            shutil.rmtree(artifact_dir, ignore_errors=True)
+
+    def test_prompt_llm_harness_review_rejects_response_model_not_in_model_check(self):
+        artifact_dir = Path(
+            tempfile.mkdtemp(prefix="ail-prompt-llm-review-model-mismatch-")
+        )
+        try:
+            write_prompt_llm_review_fixture(artifact_dir)
+
+            response_path = artifact_dir / "responses" / "requirements.json"
+            response = json.loads(response_path.read_text())
+            response["model"] = "unlisted-model"
+            response_text = json.dumps(response, indent=2, sort_keys=True) + "\n"
+            write_text(response_path, response_text)
+            write_text(
+                response_path.with_suffix(".fingerprint.txt"), fnv64(response_text) + "\n"
+            )
+
+            review = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_prompt_llm_harness.py",
+                    "--review-artifacts",
+                    str(artifact_dir),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+
+            self.assertNotEqual(review.returncode, 0)
+            self.assertIn("review-result rejected", review.stdout)
+            self.assertIn("model-check present", review.stdout)
+            self.assertIn("model-check-model-count 1", review.stdout)
+            self.assertIn("model-check-model-id test-model", review.stdout)
+            self.assertIn(
+                "response model unlisted-model not present in models.json for docs/ail/prompts/requirements.system.md",
+                review.stdout,
+            )
         finally:
             shutil.rmtree(artifact_dir, ignore_errors=True)
 

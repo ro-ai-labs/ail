@@ -525,6 +525,34 @@ def load_json(path: Path, errors: list[str]) -> dict[str, object]:
     return value
 
 
+def model_entries(models_text: str) -> tuple[bool, list[str], str]:
+    if not models_text.strip():
+        return False, [], "models.json is empty"
+    try:
+        payload = json.loads(models_text)
+    except json.JSONDecodeError as error:
+        return False, [], f"invalid json models.json: {error}"
+    if not isinstance(payload, dict):
+        return False, [], "models.json must be a JSON object"
+    if payload.get("skipped") is True:
+        return True, ["<skipped>"], ""
+    raw_entries = payload.get("data")
+    if not isinstance(raw_entries, list):
+        raw_entries = payload.get("models")
+    if not isinstance(raw_entries, list):
+        return False, [], "models.json must include data or models list"
+    ids: list[str] = []
+    for entry in raw_entries:
+        if not isinstance(entry, dict):
+            continue
+        model_id = entry.get("id") or entry.get("name") or entry.get("model")
+        if isinstance(model_id, str) and model_id.strip():
+            ids.append(model_id.strip())
+    if not ids:
+        return False, [], "models.json did not name any models"
+    return True, ids, ""
+
+
 def review_artifacts(args: argparse.Namespace, paths: list[Path]) -> int:
     artifact_root = Path(args.review_artifacts)
     errors: list[str] = []
@@ -543,6 +571,11 @@ def review_artifacts(args: argparse.Namespace, paths: list[Path]) -> int:
     outcome_match_count = 0
     manifest_text = read_required_text(artifact_root / "manifest.v03-prompt-llm.txt", errors)
     report_text = read_required_text(artifact_root / "prompt-llm-harness-report.txt", errors)
+    models_text = read_required_text(artifact_root / "models.json", errors)
+    model_check_ok, model_ids, model_check_error = model_entries(models_text)
+    if model_check_error:
+        errors.append(model_check_error)
+    model_id_set = set(model_ids)
     report_lines = report_text.splitlines()
 
     for path, fingerprint_path in [
@@ -557,9 +590,8 @@ def review_artifacts(args: argparse.Namespace, paths: list[Path]) -> int:
     ]:
         if check_fingerprint(path, errors, fingerprint_path):
             fingerprint_checks += 1
-    if (artifact_root / "models.json").exists():
-        if check_fingerprint(artifact_root / "models.json", errors):
-            fingerprint_checks += 1
+    if check_fingerprint(artifact_root / "models.json", errors):
+        fingerprint_checks += 1
 
     if "AIL-Prompt-LLM-Harness-Manifest:" not in manifest_text:
         errors.append("manifest missing AIL-Prompt-LLM-Harness-Manifest header")
@@ -621,6 +653,14 @@ def review_artifacts(args: argparse.Namespace, paths: list[Path]) -> int:
                 errors.append(f"request user probe mismatch {rel}")
         if not response:
             errors.append(f"missing response json {rel}")
+        elif model_check_ok and model_ids != ["<skipped>"]:
+            response_model = response.get("model")
+            if not isinstance(response_model, str) or not response_model.strip():
+                errors.append(f"response model missing for {rel}")
+            elif response_model.strip() not in model_id_set:
+                errors.append(
+                    f"response model {response_model.strip()} not present in models.json for {rel}"
+                )
         if content.strip():
             content_nonempty += 1
         else:
@@ -683,6 +723,9 @@ def review_artifacts(args: argparse.Namespace, paths: list[Path]) -> int:
         f"prompt-outcome-match-count {outcome_match_count}",
         "prompt-envelope-invalid-count "
         f"{content_kind_counts['invalid'] + content_kind_counts['empty']}",
+        f"model-check {'present' if model_check_ok else 'missing'}",
+        f"model-check-model-count {len(model_ids)}",
+        f"model-check-model-id {','.join(model_ids) if model_ids else '<missing>'}",
         f"fingerprint-check-count {fingerprint_checks}",
     ]
     if errors:

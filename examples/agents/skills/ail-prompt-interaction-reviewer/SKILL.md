@@ -103,6 +103,9 @@ The review report must include:
 - `prompt-llm-harness-report.txt`
 - `prompt-llm-harness-review.txt`
 - `prompt-llm-harness-review.fingerprint.txt`
+- `model-check present`
+- `model-check-model-count`
+- `model-check-model-id`
 - `story-llm-harness-report.txt`
 - `story-promotion-capture-plan.json`
 - `story-promotion-capture-plan.txt`
@@ -135,6 +138,9 @@ Return `needs-repair` or `rejected-for-promotion` when:
 
 - any prompt envelope is invalid
 - an artifact-required prompt returns only blocking questions
+- prompt review reports `model-check missing`
+- any hosted prompt response omits `model` or names a model absent from
+  `models.json`
 - probe metadata is missing, stale, or generic
 - hosted output is non-empty but fails offline review
 - story artifacts lose semantic anchors or agent trace evidence

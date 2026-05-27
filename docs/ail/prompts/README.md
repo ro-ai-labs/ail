@@ -51,9 +51,12 @@ prompt failures from truncated low-budget smoke runs. The harness writes request
 response, extracted content, report, manifest, and fingerprint artifacts under
 `/tmp/ail-v03-prompt-llm`. It also fingerprints `models.json`; with
 `--skip-model-check`, that artifact records the skipped check and endpoint so
-local fake-server runs remain auditable. The output is evidence for prompt
-interaction review only; generated text still has to pass the deterministic
-checker before it can be promoted into `./examples`.
+local fake-server runs remain auditable. Offline review parses `models.json`,
+reports the discovered `model-check-model-id` values, and rejects any response
+whose `model` field is missing or names a model absent from the recorded list.
+The output is evidence for prompt interaction review only; generated text still
+has to pass the deterministic checker before it can be promoted into
+`./examples`.
 
 Review a completed hosted run before promotion:
 
@@ -69,20 +72,20 @@ That review writes:
 ```
 
 The review mode is offline. It checks the required prompt set, manifest,
-report, model-check artifact, request/response/content files, prompt
-fingerprints, probe labels, probe fingerprints, expected `artifact_kind`
-values, artifact fingerprints, and prompt-pack envelope shape. A hosted probe
-is not accepted only because it is non-empty: extracted content must classify
-as the expected outcome for that prompt, either `prompt-envelope-artifact` or
-`prompt-envelope-questions`. The
+report, model-check artifact, response model identity,
+request/response/content files, prompt fingerprints, probe labels, probe
+fingerprints, expected `artifact_kind` values, artifact fingerprints, and
+prompt-pack envelope shape. A hosted probe is not accepted only because it is
+non-empty: extracted content must classify as the expected outcome for that
+prompt, either `prompt-envelope-artifact` or `prompt-envelope-questions`. The
 review prints `prompt-envelope-valid-count`, `prompt-envelope-artifact-count`,
 `prompt-envelope-questions-count`,
 `prompt-envelope-artifact-required-count`,
 `prompt-envelope-questions-expected-count`, `prompt-outcome-match-count`, and
-`prompt-envelope-invalid-count`. It also repeats `default-max-tokens`,
-`max-tokens`, `token-budget-default`, and any `token-budget-warning` line from
-the live run, persists the accepted/rejected review text as a fingerprinted
-review artifact, and rejects empty output, raw non-envelope
-output, generic artifact kinds, unexpected question-only answers for
-artifact-required probes, or artifacts captured with the wrong task-specific
-probe.
+`prompt-envelope-invalid-count`, plus `model-check`, `model-check-model-count`,
+and `model-check-model-id`. It also repeats `default-max-tokens`, `max-tokens`,
+`token-budget-default`, and any `token-budget-warning` line from the live run,
+persists the accepted/rejected review text as a fingerprinted review artifact,
+and rejects empty output, raw non-envelope output, model identity mismatches,
+generic artifact kinds, unexpected question-only answers for artifact-required
+probes, or artifacts captured with the wrong task-specific probe.

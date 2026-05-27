@@ -77,7 +77,9 @@ implement chat completions.
 The harness writes and fingerprints `models.json` for the `/v1/models`
 response before probing prompts. When `--skip-model-check` is used for a local
 fake endpoint, `models.json` records the skipped check and endpoint so review
-still proves the bypass was explicit.
+still proves the bypass was explicit. Review mode parses that model list,
+prints `model-check-model-id`, and rejects any hosted response whose `model`
+field is missing or not present in `models.json`.
 
 Run it only when `http://inteligentia-pro-1:8080/` is reachable and the output
 will be reviewed:
@@ -101,20 +103,23 @@ python3 scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run
 ```
 
 Review mode checks request, response, content, report, manifest, fingerprint
-artifacts, model-check evidence, prompt-specific probe metadata, expected
-`artifact_kind` values, and prompt-pack envelope shape for each required system
-prompt. It also enforces the expected outcome for each prompt: eight probes must produce
-`prompt-envelope-artifact`, while the interview, diagnostic-repair, and interop
-probes must produce `prompt-envelope-questions`. It prints
+artifacts, model-check evidence, response model identity, prompt-specific probe
+metadata, expected `artifact_kind` values, and prompt-pack envelope shape for
+each required system prompt. It also enforces the expected outcome for each
+prompt: eight probes must produce `prompt-envelope-artifact`, while the
+interview, diagnostic-repair, and interop probes must produce
+`prompt-envelope-questions`. It prints
 `prompt-envelope-valid-count`, `prompt-envelope-artifact-count`,
 `prompt-envelope-questions-count`,
 `prompt-envelope-artifact-required-count`,
 `prompt-envelope-questions-expected-count`, `prompt-outcome-match-count`, and
-`prompt-envelope-invalid-count`. It also repeats `default-max-tokens`,
-`max-tokens`, `token-budget-default`, and any `token-budget-warning`, then
+`prompt-envelope-invalid-count`, plus `model-check`, `model-check-model-count`,
+and `model-check-model-id`. It also repeats `default-max-tokens`, `max-tokens`,
+`token-budget-default`, and any `token-budget-warning`, then
 persists the accepted/rejected review text as a fingerprinted harness review
 artifact. A non-empty raw model
 response is still rejected when it is not a valid prompt-pack envelope or when
 an artifact-required prompt returns only blocking questions. A generic artifact
-kind is rejected, and a generic probe is rejected when its `probe-label` or
-`probe-fingerprint` does not match the expected task-specific probes.
+kind is rejected, a response model outside the recorded model list is rejected,
+and a generic probe is rejected when its `probe-label` or `probe-fingerprint`
+does not match the expected task-specific probes.
