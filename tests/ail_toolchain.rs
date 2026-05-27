@@ -21456,10 +21456,19 @@ fn cli_ail_story_uses_default_toolchain_agent_entrypoint() {
         agent_trace.contains("action VerifyBytecodeArtifact started"),
         "{agent_trace}"
     );
+    let agent_trace_fingerprint =
+        fs::read_to_string(artifact_dir.join("agent-trace.fingerprint.txt")).unwrap();
+    assert_eq!(
+        agent_trace_fingerprint.trim(),
+        fnv64_fingerprint(&agent_trace)
+    );
     let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-story.txt")).unwrap();
     assert!(manifest.contains("agent agent.ailbc.json"), "{manifest}");
     assert!(
-        manifest.contains("agent-trace agent-trace.txt"),
+        manifest.contains(&format!(
+            "agent-trace agent-trace.txt {}",
+            agent_trace_fingerprint.trim()
+        )),
         "{manifest}"
     );
 
@@ -22040,6 +22049,20 @@ fn cli_ail_story_surfaces_blocking_questions_as_story_artifact() {
         manifest.contains(&format!(
             "story-questions story-questions.ail-interview.md {}",
             questions_fingerprint.trim()
+        )),
+        "{manifest}"
+    );
+    let agent_trace = fs::read_to_string(artifact_dir.join("agent-trace.txt")).unwrap();
+    let agent_trace_fingerprint =
+        fs::read_to_string(artifact_dir.join("agent-trace.fingerprint.txt")).unwrap();
+    assert_eq!(
+        agent_trace_fingerprint.trim(),
+        fnv64_fingerprint(&agent_trace)
+    );
+    assert!(
+        manifest.contains(&format!(
+            "agent-trace agent-trace.txt {}",
+            agent_trace_fingerprint.trim()
         )),
         "{manifest}"
     );

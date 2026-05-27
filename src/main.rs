@@ -7140,6 +7140,13 @@ fn write_ail_story_question_artifacts(
     if let Some(agent_trace_text) = agent_trace_text.as_deref() {
         fs::write(root.join("agent-trace.txt"), agent_trace_text)
             .map_err(|error| format!("failed to write ail-story agent trace artifact: {error}"))?;
+        fs::write(
+            root.join("agent-trace.fingerprint.txt"),
+            format!("{}\n", ail_artifact_fingerprint(agent_trace_text)),
+        )
+        .map_err(|error| {
+            format!("failed to write ail-story agent trace fingerprint artifact: {error}")
+        })?;
     }
     let manifest_text =
         render_ail_story_questions_manifest(&AilStoryQuestionsManifestArtifactSet {
@@ -7266,6 +7273,15 @@ fn write_ail_story_mode_artifacts(
     let build_manifest_text = fs::read_to_string(root.join("manifest.ail-build.txt")).ok();
     let agent_bytecode_text = fs::read_to_string(root.join("agent.ailbc.json")).ok();
     let agent_trace_text = fs::read_to_string(root.join("agent-trace.txt")).ok();
+    if let Some(agent_trace_text) = agent_trace_text.as_deref() {
+        fs::write(
+            root.join("agent-trace.fingerprint.txt"),
+            format!("{}\n", ail_artifact_fingerprint(agent_trace_text)),
+        )
+        .map_err(|error| {
+            format!("failed to write ail-story agent trace fingerprint artifact: {error}")
+        })?;
+    }
     let manifest_text = render_ail_story_manifest(&AilStoryManifestArtifactSet {
         story_source_text: &story_source_text,
         story_normalized_text: &story_normalized_text,
