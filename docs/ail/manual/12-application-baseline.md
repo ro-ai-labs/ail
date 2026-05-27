@@ -95,7 +95,9 @@ permission. Each incident rejection now has a package-local conformance repair
 tutorial and checked repair proof that preserve the diagnostic, source
 provenance, graph item, repair suggestion, corrected fixture candidate, checked
 Core, and verified bytecode before a repaired variant is considered for
-promotion.
+promotion. `examples/examples.md` now includes `example-122` as the first
+accepted incident repair-promotion replay for the private-notes public timeline
+fixture.
 
 ## Relationship To User Story Mode
 

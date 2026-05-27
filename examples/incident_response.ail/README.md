@@ -102,13 +102,18 @@ diagnostic, source provenance, affected graph item, repair suggestion,
 corrected fixture candidate, checked Core, and verified bytecode before any
 repaired variant is promoted.
 
+The top-level replay catalog includes `example-122`, which promotes the
+private-notes public timeline repair candidate into an accepted end-to-end
+example with stored request, response, story, checked Core, bytecode, and VM
+trace evidence.
+
 ## Next Example To Read
 
 Read `../refund_tool.ail/README.md` before this package if you want the smaller
 AgentTool safety surface first. After this package, the next useful examples
-should promote repaired incident variants through a corpus-copy import path,
-plus a richer stateful application that teaches persistence, idempotency,
-locks, and replay after failure.
+should add more repaired incident variants through the same corpus-copy import
+path, plus a richer stateful application that teaches persistence,
+idempotency, locks, and replay after failure.
 
 ## v0.3 Learning Signal
 

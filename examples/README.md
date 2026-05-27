@@ -317,11 +317,11 @@ be replayed with `ail-examples` before promotion.
 The generated files are committed so release verification does not depend on
 live LLM access. The current corpus stores:
 
-- `examples.md`: 123 manifest entries with prompt, executor, profile, surface,
+- `examples.md`: 124 manifest entries with prompt, executor, profile, surface,
   use-case, capability-level, capability-under-test, program scale, program
   domain, module/spec/story counts, interaction metadata, user-story metadata,
   story journey, distinctness, capture-origin, checker-result, target, and
-  v0.3 learning metadata. One hundred thirteen entries are accepted
+  v0.3 learning metadata. One hundred fifteen entries are accepted
   prompt-to-artifact examples that replay through checked Core, bytecode, VM
   trace, and binary or target-contract evidence; nine entries are rejected
   diagnostic examples.

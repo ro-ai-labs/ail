@@ -836,7 +836,7 @@ fn docs_example_inventory_names_every_package_directory() {
     );
     assert!(inventory.contains("Package directories: 26"), "{inventory}");
     assert!(
-        inventory.contains("Counted catalog examples: 123"),
+        inventory.contains("Counted catalog examples: 124"),
         "{inventory}"
     );
     let story_count = fs::read_dir(format!("{examples_dir}/stories"))
@@ -870,16 +870,16 @@ fn docs_example_inventory_names_every_package_directory() {
                 .is_some_and(|extension| extension == "json")
         })
         .count();
-    assert_eq!(story_count, 123, "story file count drifted");
-    assert_eq!(request_count, 123, "request transcript count drifted");
-    assert_eq!(response_count, 123, "response artifact count drifted");
-    assert!(inventory.contains("Story files: 123"), "{inventory}");
+    assert_eq!(story_count, 124, "story file count drifted");
+    assert_eq!(request_count, 124, "request transcript count drifted");
+    assert_eq!(response_count, 124, "response artifact count drifted");
+    assert!(inventory.contains("Story files: 124"), "{inventory}");
     assert!(
-        inventory.contains("Stored request transcripts: 123"),
+        inventory.contains("Stored request transcripts: 124"),
         "{inventory}"
     );
     assert!(
-        inventory.contains("Stored response artifacts: 123"),
+        inventory.contains("Stored response artifacts: 124"),
         "{inventory}"
     );
     assert!(
@@ -1489,8 +1489,8 @@ fn docs_define_v03_release_completion_audit() {
         fs::read_to_string(format!("{}/README.md", env!("CARGO_MANIFEST_DIR"))).unwrap();
 
     for required in [
-        "123-entry replay catalog",
-        "checker-result-count accepted 114",
+        "124-entry replay catalog",
+        "checker-result-count accepted 115",
         "checker-result-count rejected 9",
     ] {
         assert!(top_readme.contains(required), "{required}\n{top_readme}");
@@ -1498,8 +1498,8 @@ fn docs_define_v03_release_completion_audit() {
     for required in [
         "scripts/run_v03_release_audit.py",
         "AIL v0.3 release completion",
-        "123-entry",
-        "114 accepted",
+        "124-entry",
+        "115 accepted",
         "9 rejected",
         "python3 scripts/run_ail_interactive_manual.py --all --run-checks",
         "cargo run -- ail-examples examples --artifact-dir",
@@ -27863,9 +27863,9 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         String::from_utf8_lossy(&output.stderr)
     );
     let report = fs::read_to_string(artifact_dir.join("examples-report.txt")).unwrap();
-    assert!(report.contains("entry-count 123"), "{report}");
+    assert!(report.contains("entry-count 124"), "{report}");
     assert!(
-        report.contains("checker-result-count accepted 114"),
+        report.contains("checker-result-count accepted 115"),
         "{report}"
     );
     assert!(
@@ -27881,7 +27881,7 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("capability-level-count high-level 49"),
+        report.contains("capability-level-count high-level 50"),
         "{report}"
     );
     assert!(
@@ -27929,7 +27929,7 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("capture-origin-count live-codex 119"),
+        report.contains("capture-origin-count live-codex 120"),
         "{report}"
     );
     assert!(
@@ -28632,6 +28632,19 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
+        report.contains("entry example-122")
+            && report.contains(
+                "semantic-task incident-response-private-notes-repair-promoted-122"
+            )
+            && report.contains("entry-artifact example-122 checked-core")
+            && report.contains("entry-artifact example-122 vm-trace")
+            && report.contains("IncidentEscalated")
+            && report.contains(
+                "entry-semantic-anchors example-122 private notes; public timeline; IncidentEscalated; conformance repair proof"
+            ),
+        "{report}"
+    );
+    assert!(
         report.contains("entry example-114")
             && report.contains("semantic-task incident-response-live-codex-114")
             && report.contains("entry-artifact example-114 vm-trace")
@@ -28639,15 +28652,15 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("program-domain-count application 10")
+        report.contains("program-domain-count application 11")
             && report.contains("program-domain-count diagnostic 9")
             && report.contains("program-domain-count runtime 21")
-            && report.contains("program-scale-count multi-module-system 54")
-            && report.contains("story-roundtrip-count semantic-similar 114"),
+            && report.contains("program-scale-count multi-module-system 55")
+            && report.contains("story-roundtrip-count semantic-similar 115"),
         "{report}"
     );
     assert!(
-        report.contains("semantic-anchor-story-count 123")
+        report.contains("semantic-anchor-story-count 124")
             && report.contains(
                 "entry-semantic-anchors example-0 Option<T>; Result<T; E>; Map<K; V>; Option.map; OptionMapEvaluated; interview.system.md"
             )
@@ -29352,9 +29365,9 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
     let model_executor_manifest =
         fs::read_to_string(artifact_dir.join("model-executor-manifest.txt")).unwrap();
     assert!(
-        model_executor_manifest.contains("entry-count 123")
-            && model_executor_manifest.contains("executor-family codex-skill-agent count 119")
-            && model_executor_manifest.contains("capture-origin live-codex count 119")
+        model_executor_manifest.contains("entry-count 124")
+            && model_executor_manifest.contains("executor-family codex-skill-agent count 120")
+            && model_executor_manifest.contains("capture-origin live-codex count 120")
             && model_executor_manifest.contains(
                 "entry example-100 semantic-task stateful-counter-live-codex-accepted-100"
             )
@@ -29397,6 +29410,9 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
             )
             && model_executor_manifest.contains(
                 "entry example-121 semantic-task recursive-factorial-live-codex-trace-debug-121"
+            )
+            && model_executor_manifest.contains(
+                "entry example-122 semantic-task incident-response-private-notes-repair-promoted-122"
             ),
         "{model_executor_manifest}"
     );
@@ -32954,13 +32970,14 @@ fn cli_ail_v03_roadmap_advances_completed_application_story_signal() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(
         stdout.contains(
-            "signal Application examples need repaired incident promotion variants and richer stateful application walkthroughs after package-local diagnostics have checked repair proofs. count 10"
+            "signal Application examples need more repaired incident promotion variants and richer stateful application walkthroughs after the first package-local repair proof is promoted. count 11"
         ),
         "{stdout}"
     );
     assert!(
         !stdout.contains("Application examples need user-story walkthroughs from intent to runtime trace.")
-            && !stdout.contains("Application examples need package-local rejected fixtures and story amendment comparisons after story-to-runtime walkthroughs."),
+            && !stdout.contains("Application examples need package-local rejected fixtures and story amendment comparisons after story-to-runtime walkthroughs.")
+            && !stdout.contains("Application examples need repaired incident promotion variants and richer stateful application walkthroughs after package-local diagnostics have checked repair proofs."),
         "{stdout}"
     );
 

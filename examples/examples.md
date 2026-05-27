@@ -1119,7 +1119,7 @@ story-file: stories/example-30.md
 story-journey: story-to-spec
 story-roundtrip: semantic-similar
 distinctness-claim: support-ticket-live-codex-interview-30 exercises docs/ail/prompts/interview.system.md over application-workflow.
-v0.3-signal: Application examples need repaired incident promotion variants and richer stateful application walkthroughs after package-local diagnostics have checked repair proofs.
+v0.3-signal: Application examples need more repaired incident promotion variants and richer stateful application walkthroughs after the first package-local repair proof is promoted.
 prompt-file: docs/ail/prompts/interview.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
@@ -1155,7 +1155,7 @@ story-file: stories/example-31.md
 story-journey: story-to-spec
 story-roundtrip: semantic-similar
 distinctness-claim: support-ticket-live-codex-requirements-31 exercises docs/ail/prompts/requirements.system.md over application-workflow.
-v0.3-signal: Application examples need repaired incident promotion variants and richer stateful application walkthroughs after package-local diagnostics have checked repair proofs.
+v0.3-signal: Application examples need more repaired incident promotion variants and richer stateful application walkthroughs after the first package-local repair proof is promoted.
 prompt-file: docs/ail/prompts/requirements.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
@@ -1191,7 +1191,7 @@ story-file: stories/example-32.md
 story-journey: story-to-spec
 story-roundtrip: semantic-similar
 distinctness-claim: support-ticket-live-spec-input-32 exercises docs/ail/prompts/spec-draft.system.md over application-workflow.
-v0.3-signal: Application examples need repaired incident promotion variants and richer stateful application walkthroughs after package-local diagnostics have checked repair proofs.
+v0.3-signal: Application examples need more repaired incident promotion variants and richer stateful application walkthroughs after the first package-local repair proof is promoted.
 prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
@@ -1228,7 +1228,7 @@ story-file: stories/example-33.md
 story-journey: story-to-spec
 story-roundtrip: semantic-similar
 distinctness-claim: support-ticket-live-codex-core-draft-33 exercises docs/ail/prompts/core-draft.system.md over application-workflow.
-v0.3-signal: Application examples need repaired incident promotion variants and richer stateful application walkthroughs after package-local diagnostics have checked repair proofs.
+v0.3-signal: Application examples need more repaired incident promotion variants and richer stateful application walkthroughs after the first package-local repair proof is promoted.
 prompt-file: docs/ail/prompts/core-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:0175222e4a84bec4
@@ -1264,7 +1264,7 @@ story-file: stories/example-34.md
 story-journey: story-amendment
 story-roundtrip: semantic-similar
 distinctness-claim: support-ticket-live-codex-diagnostic-repair-34 exercises docs/ail/prompts/diagnostic-repair.system.md over application-workflow.
-v0.3-signal: Application examples need repaired incident promotion variants and richer stateful application walkthroughs after package-local diagnostics have checked repair proofs.
+v0.3-signal: Application examples need more repaired incident promotion variants and richer stateful application walkthroughs after the first package-local repair proof is promoted.
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:c9700f2c2e57e49e
@@ -3248,7 +3248,7 @@ story-file: stories/example-90.md
 story-journey: story-to-spec
 story-roundtrip: semantic-similar
 distinctness-claim: support-ticket-live-codex-interview-90 exercises docs/ail/prompts/interview.system.md over application-workflow.
-v0.3-signal: Application examples need repaired incident promotion variants and richer stateful application walkthroughs after package-local diagnostics have checked repair proofs.
+v0.3-signal: Application examples need more repaired incident promotion variants and richer stateful application walkthroughs after the first package-local repair proof is promoted.
 prompt-file: docs/ail/prompts/interview.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
@@ -3284,7 +3284,7 @@ story-file: stories/example-91.md
 story-journey: story-to-spec
 story-roundtrip: semantic-similar
 distinctness-claim: support-ticket-live-codex-requirements-91 exercises docs/ail/prompts/requirements.system.md over application-workflow.
-v0.3-signal: Application examples need repaired incident promotion variants and richer stateful application walkthroughs after package-local diagnostics have checked repair proofs.
+v0.3-signal: Application examples need more repaired incident promotion variants and richer stateful application walkthroughs after the first package-local repair proof is promoted.
 prompt-file: docs/ail/prompts/requirements.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
@@ -3320,7 +3320,7 @@ story-file: stories/example-92.md
 story-journey: story-to-spec
 story-roundtrip: semantic-similar
 distinctness-claim: support-ticket-live-codex-spec-92 exercises docs/ail/prompts/spec-draft.system.md over application-workflow.
-v0.3-signal: Application examples need repaired incident promotion variants and richer stateful application walkthroughs after package-local diagnostics have checked repair proofs.
+v0.3-signal: Application examples need more repaired incident promotion variants and richer stateful application walkthroughs after the first package-local repair proof is promoted.
 prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
@@ -3356,7 +3356,7 @@ story-file: stories/example-93.md
 story-journey: story-to-spec
 story-roundtrip: semantic-similar
 distinctness-claim: support-ticket-live-codex-core-draft-93 exercises docs/ail/prompts/core-draft.system.md over application-workflow.
-v0.3-signal: Application examples need repaired incident promotion variants and richer stateful application walkthroughs after package-local diagnostics have checked repair proofs.
+v0.3-signal: Application examples need more repaired incident promotion variants and richer stateful application walkthroughs after the first package-local repair proof is promoted.
 prompt-file: docs/ail/prompts/core-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:0175222e4a84bec4
@@ -3392,7 +3392,7 @@ story-file: stories/example-94.md
 story-journey: story-amendment
 story-roundtrip: semantic-similar
 distinctness-claim: support-ticket-live-codex-diagnostic-repair-94 exercises docs/ail/prompts/diagnostic-repair.system.md over application-workflow.
-v0.3-signal: Application examples need repaired incident promotion variants and richer stateful application walkthroughs after package-local diagnostics have checked repair proofs.
+v0.3-signal: Application examples need more repaired incident promotion variants and richer stateful application walkthroughs after the first package-local repair proof is promoted.
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:c9700f2c2e57e49e
@@ -4406,6 +4406,43 @@ checker-result: accepted
 target: vm
 vm-action: factorial
 runtime-state: n=7
+
+## Example: example-122
+semantic-task: incident-response-private-notes-repair-promoted-122
+profile: Application
+surface-tags: application-workflow,repair-promotion,package-import,multi-module
+package: examples/incident_response.ail
+use-case: Accepted repair promotion for the private-notes rejected incident fixture, proving the conformance repair candidate can be replayed through checked Core, bytecode, and VM trace without exposing private notes.
+capability-level: high-level
+capability-under-test: conformance-repair-promotion
+program-scale: multi-module-system
+program-domain: application
+module-count: 4
+spec-count: 4
+story-count: 6
+interacts-with: incident_identity,incident_policy,incident_notifications,incident_response
+user-story-id: incident-response-private-notes-repair-promotion-story
+user-story: As a reviewer I can promote the incident private-notes repair candidate so that public timeline behavior is accepted only after checked repair proof evidence.
+acceptance-criteria: checked incident repair candidate exists; checked core exists; bytecode exists; VM trace evidence exists; private notes are not revealed
+story-evidence: vm-trace
+story-file: stories/example-122.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
+distinctness-claim: incident-response-private-notes-repair-promoted-122 validates conformance-repair-promotion with stored transcript replay, package-local repair-proof evidence, and VM evidence.
+v0.3-signal: Application examples need more repaired incident promotion variants and richer stateful application walkthroughs after the first package-local repair proof is promoted.
+prompt-file: docs/ail/prompts/diagnostic-repair.system.md
+prompt-version: ail-prompts.v0.2
+prompt-fingerprint: fnv64:c9700f2c2e57e49e
+executor-family: codex-skill-agent
+executor-label: codex-ail-repair-promotion-reviewer
+capture-origin: live-codex
+request-file: requests/example-122.json
+response-file: responses/example-122.json
+artifact-kind: ail-spec
+checker-result: accepted
+target: vm
+vm-action: EscalateIncident
+runtime-state: incident.id=INC-1;incident.status=Declared;incident.severity=Sev1
 ## Example: example-30-story
 semantic-task: support-ticket-story-promoted-30
 profile: Application
