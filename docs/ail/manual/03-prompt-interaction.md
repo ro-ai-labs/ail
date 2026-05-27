@@ -63,6 +63,14 @@ requests. The default live budget is `--max-tokens 768`; lower budgets are
 useful for failure probes, but may cut off verbose valid envelopes before
 `checker_handoff` is emitted.
 
+The Rust authoring entrypoints use the same chat shape for
+`/v1/chat/completions`: the prompt-pack asset is sent as a `system message`,
+the story or command request is sent as the `user` message, `stream` is
+`false`, thinking is disabled, and JSON mode is requested with
+`response_format: {"type":"json_object"}`. Root `/completion` endpoints remain
+supported through the legacy single prompt body for local servers that do not
+implement chat completions.
+
 The harness writes and fingerprints `models.json` for the `/v1/models`
 response before probing prompts. When `--skip-model-check` is used for a local
 fake endpoint, `models.json` records the skipped check and endpoint so review

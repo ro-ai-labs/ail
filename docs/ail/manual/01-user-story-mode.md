@@ -64,6 +64,14 @@ If a story is missing `user-story`, `acceptance-criteria`, or at least three
 semantic anchors, `ail-story` prints `AIL-STORY-` diagnostics and exits before
 contacting an LLM.
 
+When `ail-story` contacts a `/v1/chat/completions` endpoint, the prompt-pack
+asset for each stage is sent as the chat `system` message and the story-grounded
+request is sent as the `user` message. The request also sets `stream: false`,
+disables model thinking through `chat_template_kwargs`, and asks for the
+prompt-pack JSON envelope with `response_format: {"type":"json_object"}`.
+This keeps live story authoring aligned with the hosted prompt-pack harness
+instead of using a separate prompt format.
+
 ## Artifact Walkthrough
 
 After a successful compile run, inspect these files:

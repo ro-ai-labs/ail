@@ -140,6 +140,12 @@ python3 scripts/run_ail_interactive_manual.py --chapter v03-authoring-gate --dry
 Those flags must propagate to the live User Story mode, prompt interaction,
 AgentTool policy, and direct `ail-story --llm-endpoint` commands so the manual
 can validate prompt interactions without depending on one network endpoint.
+For `/v1/chat/completions`, the main Rust authoring path must use the same
+prompt shape as the hosted prompt harness: prompt-pack text in a `system`
+message, story or command payload in a `user` message, `stream: false`,
+disabled thinking, and JSON mode via
+`response_format: {"type":"json_object"}`. Root `/completion` compatibility is
+kept for local servers that only accept a single prompt.
 
 Repeated story families are checked across entries. Any `user-story-id` family
 with at least five entries must cover at least three prompt files and at least

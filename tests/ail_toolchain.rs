@@ -1266,6 +1266,8 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
                 "cargo run -- ail-prompt-corpus docs/ail/corpus/prompts",
                 "scripts/run_v03_prompt_llm_harness.py --dry-run",
                 "manifest.ail-prompt-corpus.txt",
+                "system message",
+                "response_format: {\"type\":\"json_object\"}",
             ],
         ),
         (
@@ -21825,6 +21827,15 @@ fn cli_ail_story_builds_checked_artifacts_from_story_file() {
     );
     assert_eq!(request_bodies.len(), 2);
     assert!(
+        request_bodies[0].contains(r#""role":"system""#)
+            && request_bodies[0].contains("# Prompt: requirements.system")
+            && request_bodies[0].contains(r#""role":"user""#)
+            && request_bodies[0].contains(r#""response_format":{"type":"json_object"}"#)
+            && request_bodies[0].contains(r#""stream":false"#),
+        "{}",
+        request_bodies[0]
+    );
+    assert!(
         request_bodies[0].contains("USER STORY MODE INPUT"),
         "{}",
         request_bodies[0]
@@ -21845,6 +21856,15 @@ fn cli_ail_story_builds_checked_artifacts_from_story_file() {
         ),
         "{}",
         request_bodies[0]
+    );
+    assert!(
+        request_bodies[1].contains(r#""role":"system""#)
+            && request_bodies[1].contains("# Prompt: spec-draft.system")
+            && request_bodies[1].contains(r#""role":"user""#)
+            && request_bodies[1].contains(r#""response_format":{"type":"json_object"}"#)
+            && request_bodies[1].contains(r#""stream":false"#),
+        "{}",
+        request_bodies[1]
     );
     assert!(
         request_bodies[1].contains("Preserve these story semantic anchors"),
@@ -22866,6 +22886,14 @@ fn cli_ail_interview_surfaces_prompt_envelope_questions_as_artifact() {
         String::from_utf8_lossy(&output.stderr)
     );
     let request_body = server.join().unwrap();
+    assert!(
+        request_body.contains(r#""role":"system""#)
+            && request_body.contains("# Prompt: interview.system")
+            && request_body.contains(r#""role":"user""#)
+            && request_body.contains(r#""response_format":{"type":"json_object"}"#)
+            && request_body.contains(r#""stream":false"#),
+        "{request_body}"
+    );
     assert!(request_body.contains("# Prompt: interview.system"));
     assert!(request_body.contains("target artifact: blocking questions or AIL-Requirements seed"));
     assert!(request_body.contains("prompt_file: interview.system.md"));

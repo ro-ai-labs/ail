@@ -149,10 +149,7 @@ struct LlmHttpCompletion {
 fn invoke_completion(endpoint: &str, prompt: &str) -> Result<LlmHttpCompletion, String> {
     let parsed = parse_http_endpoint(endpoint)?;
     let body = if is_chat_completion_path(&parsed.path) {
-        format!(
-            "{{\"messages\":[{{\"role\":\"user\",\"content\":{}}}],\"max_tokens\":4096,\"temperature\":0.0,\"chat_template_kwargs\":{{\"enable_thinking\":false}}}}",
-            json_string(prompt)
-        )
+        chat_completion_body(prompt)
     } else {
         format!(
             "{{\"prompt\":{},\"n_predict\":2048,\"temperature\":0.0}}",
@@ -196,6 +193,54 @@ fn invoke_completion(endpoint: &str, prompt: &str) -> Result<LlmHttpCompletion, 
         response_body: response_body.to_string(),
         content,
     })
+}
+
+fn chat_completion_body(prompt: &str) -> String {
+    let (system_prompt, user_prompt) = split_prompt_pack_chat_messages(prompt);
+    format!(
+        concat!(
+            "{{",
+            "\"messages\":[",
+            "{{\"role\":\"system\",\"content\":{}}},",
+            "{{\"role\":\"user\",\"content\":{}}}",
+            "],",
+            "\"max_tokens\":4096,",
+            "\"temperature\":0.0,",
+            "\"stream\":false,",
+            "\"chat_template_kwargs\":{{\"enable_thinking\":false}},",
+            "\"response_format\":{{\"type\":\"json_object\"}}",
+            "}}"
+        ),
+        json_string(&system_prompt),
+        json_string(&user_prompt)
+    )
+}
+
+fn split_prompt_pack_chat_messages(prompt: &str) -> (String, String) {
+    let default_system_prompt = "You are the AIL toolchain's prompt-pack executor. Follow the provided AIL prompt contract, return only the requested artifact, and never claim the output is trusted until the checker verifies it.";
+    let Some(system_start_marker) = prompt.find("\n# Prompt:") else {
+        return (default_system_prompt.to_string(), prompt.to_string());
+    };
+    let system_start = system_start_marker + 1;
+    let system_end = prompt[system_start..]
+        .find("\nPrefer the prompt-pack JSON envelope")
+        .map(|offset| system_start + offset)
+        .unwrap_or(prompt.len());
+    let system_prompt = prompt[system_start..system_end].trim().to_string();
+    if system_prompt.is_empty() {
+        return (default_system_prompt.to_string(), prompt.to_string());
+    }
+
+    let mut user_prompt = String::new();
+    user_prompt.push_str(prompt[..system_start].trim_end());
+    let user_tail = prompt[system_end..].trim_start();
+    if !user_tail.is_empty() {
+        if !user_prompt.is_empty() {
+            user_prompt.push_str("\n\n");
+        }
+        user_prompt.push_str(user_tail);
+    }
+    (system_prompt, user_prompt)
 }
 
 fn is_chat_completion_path(path: &str) -> bool {
