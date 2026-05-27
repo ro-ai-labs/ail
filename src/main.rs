@@ -507,6 +507,7 @@ struct AilE2eCorpusEvaluation {
     workflow_scheduler_review_text: Option<String>,
     unsafe_boundary_review_text: Option<String>,
     complex_story_graph_text: Option<String>,
+    application_walkthrough_text: Option<String>,
     dependency_review_text: Option<String>,
     stdlib_walkthrough_text: Option<String>,
     diagnostics_text: Option<String>,
@@ -3006,6 +3007,7 @@ fn evaluate_rejected_ail_e2e_corpus_entry(
         workflow_scheduler_review_text: None,
         unsafe_boundary_review_text: None,
         complex_story_graph_text: None,
+        application_walkthrough_text: None,
         dependency_review_text: None,
         stdlib_walkthrough_text: None,
         diagnostics_text: Some(diagnostics_text),
@@ -3510,6 +3512,7 @@ fn evaluate_ail_e2e_corpus_entry(
             workflow_scheduler_review_text: None,
             unsafe_boundary_review_text: None,
             complex_story_graph_text: None,
+            application_walkthrough_text: None,
             dependency_review_text: None,
             stdlib_walkthrough_text: None,
             diagnostics_text: None,
@@ -3678,6 +3681,14 @@ fn evaluate_ail_e2e_corpus_entry(
         vm_trace_text.as_deref(),
         target_report_text.as_deref(),
     );
+    let application_walkthrough_text = render_ail_e2e_application_walkthrough_text(
+        entry,
+        &semantic_anchors,
+        Some(&checked_core_text),
+        Some(&bytecode_text),
+        vm_trace_text.as_deref(),
+        target_report_text.as_deref(),
+    );
     let dependency_review_text = render_ail_e2e_dependency_review_text(
         entry,
         &semantic_anchors,
@@ -3714,6 +3725,7 @@ fn evaluate_ail_e2e_corpus_entry(
         workflow_scheduler_review_text,
         unsafe_boundary_review_text,
         complex_story_graph_text,
+        application_walkthrough_text,
         dependency_review_text,
         stdlib_walkthrough_text,
         diagnostics_text: None,
@@ -4015,6 +4027,17 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
     );
     push_ail_e2e_fingerprint_reuse_lines(
         &mut lines,
+        "application-walkthrough",
+        evaluations,
+        |evaluation| {
+            evaluation
+                .application_walkthrough_text
+                .as_ref()
+                .map(|text| ail_artifact_fingerprint(text))
+        },
+    );
+    push_ail_e2e_fingerprint_reuse_lines(
+        &mut lines,
         "dependency-review",
         evaluations,
         |evaluation| {
@@ -4291,6 +4314,14 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
                 entry.id,
                 entry.id,
                 ail_artifact_fingerprint(complex_story_graph_text)
+            ));
+        }
+        if let Some(application_walkthrough_text) = &evaluation.application_walkthrough_text {
+            lines.push(format!(
+                "entry-artifact {} application-walkthrough examples/{}/application-walkthrough.txt {}",
+                entry.id,
+                entry.id,
+                ail_artifact_fingerprint(application_walkthrough_text)
             ));
         }
         if let Some(dependency_review_text) = &evaluation.dependency_review_text {
@@ -4591,6 +4622,14 @@ fn push_ail_e2e_entry_artifact_lines(
             entry.id,
             entry.id,
             ail_artifact_fingerprint(complex_story_graph_text)
+        ));
+    }
+    if let Some(application_walkthrough_text) = &evaluation.application_walkthrough_text {
+        lines.push(format!(
+            "{prefix} {} application-walkthrough examples/{}/application-walkthrough.txt {}",
+            entry.id,
+            entry.id,
+            ail_artifact_fingerprint(application_walkthrough_text)
         ));
     }
     if let Some(dependency_review_text) = &evaluation.dependency_review_text {
@@ -5524,6 +5563,154 @@ fn render_ail_e2e_complex_story_graph_text(
     }
     lines.push(
         "complex-story-graph-summary Incident Response evidence connects imported modules, UI surfaces, workflow transitions, target contracts, regenerated story views, semantic anchors, and replay fingerprints for reviewer audit."
+            .to_string(),
+    );
+    Some(format!("{}\n", lines.join("\n")))
+}
+
+fn render_ail_e2e_application_walkthrough_text(
+    entry: &AilE2eCorpusEntry,
+    semantic_anchors: &[String],
+    checked_core_text: Option<&str>,
+    bytecode_text: Option<&str>,
+    vm_trace_text: Option<&str>,
+    target_report_text: Option<&str>,
+) -> Option<String> {
+    let field = |key: &str| entry.fields.get(key).map(String::as_str).unwrap_or("");
+    let application_signal = "Application examples need more repaired incident promotion variants and richer stateful application walkthroughs after the first package-local repair proof is promoted.";
+    if field("v0.3-signal") != application_signal {
+        return None;
+    }
+    let runtime_evidence = if target_report_text.is_some() {
+        "target-report"
+    } else if vm_trace_text.is_some() {
+        "vm-trace"
+    } else if bytecode_text.is_some() {
+        "bytecode"
+    } else {
+        "checked-core"
+    };
+    let package = field("package");
+    let action = entry
+        .fields
+        .get("vm-action")
+        .filter(|value| !value.is_empty())
+        .map(String::as_str)
+        .unwrap_or("review-application-evidence");
+    let mut lines = vec![
+        "AIL-Application-Walkthrough:".to_string(),
+        format!("entry {}", entry.id),
+        format!("semantic-task {}", field("semantic-task")),
+        format!("package {package}"),
+        format!("profile {}", field("profile")),
+        format!("program-domain {}", field("program-domain")),
+        format!("capability-under-test {}", field("capability-under-test")),
+        "application-walkthrough-artifact deterministic-text".to_string(),
+        format!("user-story-id {}", field("user-story-id")),
+        format!("story-journey {}", field("story-journey")),
+        format!("story-roundtrip {}", field("story-roundtrip")),
+        format!("story-evidence {}", field("story-evidence")),
+        format!("target-contract {}", field("target")),
+        format!("runtime-state {}", field("runtime-state")),
+        format!("action {action}"),
+        "walkthrough-step story".to_string(),
+        "walkthrough-step requirements".to_string(),
+        "walkthrough-step spec".to_string(),
+        "walkthrough-step checked-core".to_string(),
+        "walkthrough-step bytecode".to_string(),
+        "walkthrough-step runtime-or-target-evidence".to_string(),
+        format!("runtime-evidence {runtime_evidence}"),
+    ];
+    if package.ends_with("support_ticket.ail") {
+        lines.extend([
+            "application-surface support-ticket-lifecycle".to_string(),
+            "stateful-boundary ticket.status Open -> Closed".to_string(),
+            "trace-event TicketClosed".to_string(),
+        ]);
+    } else if package.ends_with("incident_response.ail") {
+        let repair_variant = if field("semantic-task").contains("commander-review") {
+            "commander-review"
+        } else if field("semantic-task").contains("private-notes") {
+            "private-notes"
+        } else {
+            "incident-repair"
+        };
+        lines.extend([
+            "application-surface incident-repair-promotion".to_string(),
+            "repair-promotion conformance-repair-proof".to_string(),
+            format!("repair-promotion-variant {repair_variant}"),
+            "stateful-boundary incident.status Declared -> Escalated".to_string(),
+            "trace-event IncidentEscalated".to_string(),
+        ]);
+        let repair_provenance = match repair_variant {
+            "private-notes" => Some((
+                "private-notes-public-timeline-leak.ail-spec.md",
+                "AIL-APP-006",
+            )),
+            "commander-review" => Some((
+                "escalation-without-commander-review.ail-spec.md",
+                "AIL-APP-007",
+            )),
+            _ => None,
+        };
+        if let Some((rejected_fixture, expected_diagnostic)) = repair_provenance {
+            let repair_rejected_fixture =
+                format!("examples/incident_response.ail/examples/rejected/{rejected_fixture}");
+            let repair_artifact_base = format!("rejected/{rejected_fixture}");
+            let reviewer = entry
+                .fields
+                .get("executor-label")
+                .filter(|value| !value.is_empty())
+                .map(String::as_str)
+                .unwrap_or("codex-ail-repair-promotion-reviewer");
+            lines.extend([
+                "repair-provenance package-local-conformance".to_string(),
+                format!("repair-rejected-fixture {repair_rejected_fixture}"),
+                format!("repair-expected-diagnostic {expected_diagnostic}"),
+                format!("repair-proof-artifact {repair_artifact_base}/repair-proof.txt"),
+                format!(
+                    "repair-candidate-artifact {repair_artifact_base}/repair-candidate.ail-spec.md"
+                ),
+                "repair-candidate-source examples/incident_response.ail/examples/accepted/incident-escalation-minimal.ail-spec.md".to_string(),
+                format!("repair-promotion-reviewer {reviewer}"),
+            ]);
+        }
+    } else {
+        lines.extend([
+            "application-surface application-workflow".to_string(),
+            "stateful-boundary application state is explicit before runtime replay".to_string(),
+            "trace-event application workflow trace is preserved".to_string(),
+        ]);
+    }
+    for anchor in semantic_anchors {
+        lines.push(format!("story-anchor {anchor}"));
+    }
+    if let Some(checked_core_text) = checked_core_text {
+        lines.push(format!(
+            "checked-core-fingerprint {}",
+            ail_artifact_fingerprint(checked_core_text)
+        ));
+    }
+    if let Some(bytecode_text) = bytecode_text {
+        lines.push(format!(
+            "bytecode-fingerprint {}",
+            ail_artifact_fingerprint(bytecode_text)
+        ));
+    }
+    if let Some(vm_trace_text) = vm_trace_text {
+        lines.push(format!(
+            "vm-trace-fingerprint {}",
+            ail_artifact_fingerprint(vm_trace_text)
+        ));
+    }
+    if let Some(target_report_text) = target_report_text {
+        lines.push(format!(
+            "target-report-fingerprint {}",
+            ail_artifact_fingerprint(target_report_text)
+        ));
+    }
+    lines.push(
+        "application-walkthrough-summary Application evidence connects user story, requirements, spec, checked Core, bytecode, runtime or target proof, stateful boundary, trace event, semantic anchors, and replay fingerprints for reviewer audit."
             .to_string(),
     );
     Some(format!("{}\n", lines.join("\n")))
@@ -6842,6 +7029,29 @@ fn write_ail_e2e_corpus_artifacts(
             )
             .map_err(|error| {
                 format!("failed to write examples complex story graph fingerprint: {error}")
+            })?;
+        }
+        if let Some(application_walkthrough_text) = &evaluation.application_walkthrough_text {
+            let entry_dir = root.join("examples").join(&evaluation.entry.id);
+            fs::create_dir_all(&entry_dir).map_err(|error| {
+                format!("failed to create examples entry artifact dir: {error}")
+            })?;
+            fs::write(
+                entry_dir.join("application-walkthrough.txt"),
+                application_walkthrough_text,
+            )
+            .map_err(|error| {
+                format!("failed to write examples application walkthrough: {error}")
+            })?;
+            fs::write(
+                entry_dir.join("application-walkthrough.fingerprint.txt"),
+                format!(
+                    "{}\n",
+                    ail_artifact_fingerprint(application_walkthrough_text)
+                ),
+            )
+            .map_err(|error| {
+                format!("failed to write examples application walkthrough fingerprint: {error}")
             })?;
         }
         if let Some(dependency_review_text) = &evaluation.dependency_review_text {

@@ -1791,7 +1791,9 @@ fn script_v03_signal_status_audit_marks_agent_policy_import_promoted() {
         "signal-status-evidence Workflow examples need retry/backoff semantics and richer scheduler policies beyond temporal-policy diagnostics. cargo run -- ail-examples examples --release-evidence",
         "signal-status UI examples need richer package-local walkthroughs and stricter semantic tagging. count 5 status promoted",
         "signal-status-evidence UI examples need richer package-local walkthroughs and stricter semantic tagging. cargo run -- ail-examples examples --release-evidence",
-        "promoted-count 11",
+        "signal-status Application examples need more repaired incident promotion variants and richer stateful application walkthroughs after the first package-local repair proof is promoted. count 12 status promoted",
+        "signal-status-evidence Application examples need more repaired incident promotion variants and richer stateful application walkthroughs after the first package-local repair proof is promoted. cargo run -- ail-examples examples --release-evidence",
+        "promoted-count 12",
         "missing-status-count 0",
         "audit-result accepted",
     ] {
@@ -29603,6 +29605,14 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
+        report.contains("application-walkthrough-fingerprint-observed-count 12"),
+        "{report}"
+    );
+    assert!(
+        report.contains("application-walkthrough-fingerprint-duplicate-entry-count 0"),
+        "{report}"
+    );
+    assert!(
         report.contains("dependency-review-fingerprint-observed-count 10"),
         "{report}"
     );
@@ -30059,6 +30069,115 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         report.contains(&format!(
             "entry-artifact example-111 complex-story-graph examples/example-111/complex-story-graph.txt {}",
             complex_story_graph_111_fingerprint.trim()
+        )),
+        "{report}"
+    );
+    let application_walkthrough_30 =
+        fs::read_to_string(artifact_dir.join("examples/example-30/application-walkthrough.txt"))
+            .unwrap();
+    assert!(
+        application_walkthrough_30.contains("AIL-Application-Walkthrough:")
+            && application_walkthrough_30.contains("entry example-30")
+            && application_walkthrough_30
+                .contains("semantic-task support-ticket-live-codex-interview-30")
+            && application_walkthrough_30.contains("package examples/support_ticket.ail")
+            && application_walkthrough_30.contains("profile Application")
+            && application_walkthrough_30.contains("program-domain os-utility")
+            && application_walkthrough_30.contains("capability-under-test application-workflow")
+            && application_walkthrough_30
+                .contains("application-walkthrough-artifact deterministic-text")
+            && application_walkthrough_30.contains("application-surface support-ticket-lifecycle")
+            && application_walkthrough_30.contains("user-story-id support-ticket-story")
+            && application_walkthrough_30.contains("story-journey story-to-spec")
+            && application_walkthrough_30.contains("story-roundtrip semantic-similar")
+            && application_walkthrough_30.contains("story-evidence target-report")
+            && application_walkthrough_30.contains("target-contract linux-x86_64-elf")
+            && application_walkthrough_30
+                .contains("runtime-state ticket.id=T-1;ticket.status=Open")
+            && application_walkthrough_30.contains("action CloseTicket")
+            && application_walkthrough_30.contains("walkthrough-step story")
+            && application_walkthrough_30.contains("walkthrough-step requirements")
+            && application_walkthrough_30.contains("walkthrough-step spec")
+            && application_walkthrough_30.contains("walkthrough-step checked-core")
+            && application_walkthrough_30.contains("walkthrough-step bytecode")
+            && application_walkthrough_30.contains("walkthrough-step runtime-or-target-evidence")
+            && application_walkthrough_30
+                .contains("stateful-boundary ticket.status Open -> Closed")
+            && application_walkthrough_30.contains("trace-event TicketClosed")
+            && application_walkthrough_30.contains("runtime-evidence target-report")
+            && application_walkthrough_30.contains("story-anchor Support Tickets")
+            && application_walkthrough_30.contains("story-anchor Close ticket")
+            && application_walkthrough_30.contains("story-anchor TicketClosed")
+            && application_walkthrough_30.contains("checked-core-fingerprint ")
+            && application_walkthrough_30.contains("bytecode-fingerprint ")
+            && application_walkthrough_30.contains("target-report-fingerprint ")
+            && application_walkthrough_30.contains("application-walkthrough-summary "),
+        "{application_walkthrough_30}"
+    );
+    let application_walkthrough_30_fingerprint = fs::read_to_string(
+        artifact_dir.join("examples/example-30/application-walkthrough.fingerprint.txt"),
+    )
+    .unwrap();
+    assert_eq!(
+        application_walkthrough_30_fingerprint.trim(),
+        fnv64_fingerprint(&application_walkthrough_30)
+    );
+    assert!(
+        report.contains(&format!(
+            "entry-artifact example-30 application-walkthrough examples/example-30/application-walkthrough.txt {}",
+            application_walkthrough_30_fingerprint.trim()
+        )),
+        "{report}"
+    );
+    let application_walkthrough_122 =
+        fs::read_to_string(artifact_dir.join("examples/example-122/application-walkthrough.txt"))
+            .unwrap();
+    assert!(
+        application_walkthrough_122.contains("AIL-Application-Walkthrough:")
+            && application_walkthrough_122.contains("entry example-122")
+            && application_walkthrough_122
+                .contains("semantic-task incident-response-private-notes-repair-promoted-122")
+            && application_walkthrough_122.contains("application-surface incident-repair-promotion")
+            && application_walkthrough_122.contains("repair-promotion conformance-repair-proof")
+            && application_walkthrough_122.contains("repair-promotion-variant private-notes")
+            && application_walkthrough_122.contains("repair-provenance package-local-conformance")
+            && application_walkthrough_122.contains(
+                "repair-rejected-fixture examples/incident_response.ail/examples/rejected/private-notes-public-timeline-leak.ail-spec.md"
+            )
+            && application_walkthrough_122.contains("repair-expected-diagnostic AIL-APP-006")
+            && application_walkthrough_122.contains(
+                "repair-proof-artifact rejected/private-notes-public-timeline-leak.ail-spec.md/repair-proof.txt"
+            )
+            && application_walkthrough_122.contains(
+                "repair-candidate-artifact rejected/private-notes-public-timeline-leak.ail-spec.md/repair-candidate.ail-spec.md"
+            )
+            && application_walkthrough_122.contains(
+                "repair-candidate-source examples/incident_response.ail/examples/accepted/incident-escalation-minimal.ail-spec.md"
+            )
+            && application_walkthrough_122
+                .contains("repair-promotion-reviewer codex-ail-repair-promotion-reviewer")
+            && application_walkthrough_122.contains(
+                "stateful-boundary incident.status Declared -> Escalated"
+            )
+            && application_walkthrough_122.contains("trace-event IncidentEscalated")
+            && application_walkthrough_122.contains("story-anchor private notes")
+            && application_walkthrough_122.contains("story-anchor conformance repair proof")
+            && application_walkthrough_122.contains("vm-trace-fingerprint ")
+            && application_walkthrough_122.contains("application-walkthrough-summary "),
+        "{application_walkthrough_122}"
+    );
+    let application_walkthrough_122_fingerprint = fs::read_to_string(
+        artifact_dir.join("examples/example-122/application-walkthrough.fingerprint.txt"),
+    )
+    .unwrap();
+    assert_eq!(
+        application_walkthrough_122_fingerprint.trim(),
+        fnv64_fingerprint(&application_walkthrough_122)
+    );
+    assert!(
+        report.contains(&format!(
+            "entry-artifact example-122 application-walkthrough examples/example-122/application-walkthrough.txt {}",
+            application_walkthrough_122_fingerprint.trim()
         )),
         "{report}"
     );
@@ -30632,6 +30751,20 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         manifest.contains(&format!(
             "entry-artifact example-111 complex-story-graph examples/example-111/complex-story-graph.txt {}",
             complex_story_graph_111_fingerprint.trim()
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "entry-artifact example-30 application-walkthrough examples/example-30/application-walkthrough.txt {}",
+            application_walkthrough_30_fingerprint.trim()
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "entry-artifact example-122 application-walkthrough examples/example-122/application-walkthrough.txt {}",
+            application_walkthrough_122_fingerprint.trim()
         )),
         "{manifest}"
     );

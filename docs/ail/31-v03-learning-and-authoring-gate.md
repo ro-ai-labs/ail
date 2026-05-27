@@ -245,6 +245,8 @@ The `ail-examples` replay bundle must also write deterministic story artifacts:
 - `examples/<entry-id>/unsafe-boundary-review.fingerprint.txt` for accepted C interop entries
 - `examples/<entry-id>/complex-story-graph.txt` for accepted incident-response complex-system entries
 - `examples/<entry-id>/complex-story-graph.fingerprint.txt` for accepted incident-response complex-system entries
+- `examples/<entry-id>/application-walkthrough.txt` for accepted Application-signal entries
+- `examples/<entry-id>/application-walkthrough.fingerprint.txt` for accepted Application-signal entries
 - `examples/<entry-id>/dependency-review.txt` for accepted package-import entries
 - `examples/<entry-id>/dependency-review.fingerprint.txt` for accepted package-import entries
 - `examples/<entry-id>/stdlib-walkthrough.txt` for accepted stdlib-generic entries
@@ -362,7 +364,14 @@ and service-owner UI surfaces, lifecycle transitions, target contracts,
 regenerated story views, semantic anchors, runtime evidence, and replay
 fingerprints. The report must summarize these files with
 `complex-story-graph-fingerprint-*` lines and list each graph in
-`manifest.ail-examples.txt`. Accepted package-import entries must emit
+`manifest.ail-examples.txt`. Accepted Application-signal entries must emit
+`application-walkthrough.txt`, which records the user-story id, story journey,
+target contract, runtime state, action, story-to-requirements-to-spec-to-Core
+walkthrough steps, stateful boundary, trace event, semantic anchors, runtime
+or target evidence, and replay fingerprints. The report must summarize these
+files with `application-walkthrough-fingerprint-*` lines and list each
+walkthrough in `manifest.ail-examples.txt`. Accepted package-import entries
+must emit
 `dependency-review.txt`, which records the local package, imported package,
 import alias, imported type owner, capability grant, story anchors, runtime
 evidence, and replay fingerprints. The report must summarize these files with
@@ -584,8 +593,15 @@ as prose. The current examples reveal these next-version gaps:
   fixture candidates, checked Core, and verified bytecode. The corpus now
   includes `example-122` and `example-123`, accepted private-notes and
   commander-review repair promotion replays sourced from that package-local
-  proof chain. The next bar is a richer stateful application walkthrough and
-  broader repaired incident promotion coverage.
+  proof chain. Accepted support-ticket and incident repair-promotion
+  Application-signal entries now emit `application-walkthrough.txt` and
+  fingerprint artifacts for `example-30` through `example-34`, `example-90`
+  through `example-94`, `example-122`, and `example-123`, tying user story,
+  requirements, spec, checked Core, bytecode, runtime or target evidence,
+  stateful boundary, trace event, repair provenance, semantic anchors, and
+  replay fingerprints into reviewer-facing evidence. The next bar is broader
+  repaired incident promotion coverage and multi-action persistent application
+  flows that teach idempotency, locks, and replay after failure.
 - UI examples now emit deterministic visual review, accessibility review,
   workflow authoring artifacts, deterministic UI patch plans, package-local
   `ui-semantic-tags.txt` walkthroughs for the Option Map bridge entries, a

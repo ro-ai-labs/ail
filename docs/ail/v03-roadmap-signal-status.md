@@ -14,9 +14,9 @@ rationale: The v0.3 release audit now bundles the AgentTool capture plan, human-
 evidence: scripts/run_v03_agent_policy_import_audit.py
 
 signal: Application examples need more repaired incident promotion variants and richer stateful application walkthroughs after the first package-local repair proof is promoted.
-status: deferred
-rationale: The private-notes and commander-review incident repair proofs are promoted as example-122 and example-123, but richer stateful application walkthroughs and broader repaired incident coverage remain intentionally open.
-evidence: docs/ail/31-v03-learning-and-authoring-gate.md
+status: promoted
+rationale: Support-ticket and incident repair-promotion Application entries now emit deterministic application-walkthrough artifacts for example-30 through example-34, example-90 through example-94, example-122, and example-123, tying user story, requirements, spec, checked Core, bytecode, runtime or target evidence, stateful boundary, trace event, repair provenance, semantic anchors, and replay fingerprints into reviewer-facing evidence.
+evidence: cargo run -- ail-examples examples --release-evidence
 
 signal: Complex systems need richer story graphs that span imported modules, UI surfaces, workflows, target contracts, and regenerated story views.
 status: promoted

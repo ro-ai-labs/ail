@@ -58,6 +58,10 @@ Incident-response complex-system entries include `complex-story-graph.txt`, a
 deterministic graph review artifact that links imported modules, UI surfaces,
 workflow transitions, target contracts, regenerated story views, semantic
 anchors, runtime evidence, and replay fingerprints.
+Application-signal entries include `application-walkthrough.txt`, a
+deterministic walkthrough artifact that links the user-story id, story journey,
+runtime state, action, stateful boundary, trace event, checked Core, bytecode,
+runtime or target evidence, semantic anchors, and replay fingerprints.
 
 ## Review Rule
 
@@ -84,3 +88,7 @@ For incident-response complex-system entries, check
 `complex-story-graph-fingerprint-*` report lines and the corresponding
 `entry-artifact ... complex-story-graph ...` manifest entries before claiming
 multi-surface story graph evidence is covered.
+For Application-signal entries, check
+`application-walkthrough-fingerprint-*` report lines and the corresponding
+`entry-artifact ... application-walkthrough ...` manifest entries before
+claiming stateful application walkthrough evidence is covered.

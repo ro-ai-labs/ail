@@ -64,6 +64,7 @@ Useful artifacts after replay include:
 - `examples/example-30/artifact.ailbc.json`
 - `examples/example-30/target-report.txt`
 - `examples/example-30/user-story.txt`
+- `examples/example-30/application-walkthrough.txt`
 - `examples/example-90/target-report.txt`
 - `examples/example-99/diagnostics.txt`
 - `examples/example-101/diagnostics.txt`
@@ -155,9 +156,14 @@ Support Ticket is replay-clean and useful as the Application baseline. Its
 accepted and diagnostic story files now carry semantic anchors for the core
 ticket action, secret internal notes, prompt surfaces, target reports, and
 diagnostic failure taxonomies. v0.3 now has deterministic manual evidence that
-starts from a story and reaches native runtime trace output. The next bar is a
-guided application tutorial that compares package-local conformance, explicit
-story amendment examples, prompt-surface replay, package-import replay, and
-native binary evidence. The local conformance slice now covers the first
-application-specific boundaries for assignee role checks, overdue scheduler
-time checks, and public-update preservation.
+starts from a story and reaches native runtime trace output. The replay bundle
+now also emits `application-walkthrough.txt` for the support-ticket
+Application-signal entries, tying story journey, runtime state, `CloseTicket`,
+stateful boundary, `TicketClosed`, checked Core, bytecode, target evidence,
+semantic anchors, and fingerprints into one reviewer-facing file. The next bar
+is a guided application tutorial that compares package-local conformance,
+explicit story amendment examples, prompt-surface replay, package-import
+replay, native binary evidence, and multi-action persistent workflow evidence.
+The local conformance slice now covers the first application-specific
+boundaries for assignee role checks, overdue scheduler time checks, and
+public-update preservation.

@@ -374,6 +374,11 @@ live LLM access. The current corpus stores:
   `option_map.ail` UI-surface bridge entries to record the package-local
   `Option.map` walkthrough, `ui.form`, `ui.route`, `ui.state`, story anchors,
   runtime evidence, and upstream fingerprints.
+- `examples/<entry-id>/application-walkthrough.txt`: generated for accepted
+  Application-signal entries to record the user-story id, story journey,
+  runtime state, action, stateful boundary, trace event, checked Core,
+  bytecode, runtime or target evidence, semantic anchors, and upstream
+  fingerprints.
 - `ui-patch-capture-plan.json`, `ui-patch-import-demo-report.txt`, and
   `ui-patch-runtime-state-check-report.txt`: generated in scratch artifact
   directories by `scripts/run_v03_ui_patch_capture_plan.py`,
@@ -431,17 +436,18 @@ capability-level counts, program-scale counts, story-journey counts,
 program-domain counts, story-evidence counts, capture-origin counts, response,
 extracted-artifact, checked Core, bytecode, VM trace, native, target-report,
 UI review, UI review patch, UI semantic tags, agent policy review,
-unsafe-boundary review, complex story graph, diagnostics, repair-tutorial,
-repair-candidate, repair-checked-core, repair-bytecode, repair-vm-trace,
-repair-target-report, repair-diff, and repair-promotion-review fingerprint
-reuse. Response and extracted-artifact duplicate counts are intentionally
-nonzero for the paired `example-122` and `example-123` incident repair
-promotions, while target-report duplicate counts must remain zero before
-claiming the v0.2 prompt-to-artifact release gate. Accepted UI workflow and
-UI-surface replay must emit `ui-review-fingerprint-*` and
-`ui-review-patch-fingerprint-*` report lines plus `ui-review` and
-`ui-review-patch` manifest entries before claiming the visual/accessibility
-patch-planning path. Option Map UI-surface bridge replay must emit
+unsafe-boundary review, complex story graph, application walkthrough,
+diagnostics, repair-tutorial, repair-candidate, repair-checked-core,
+repair-bytecode, repair-vm-trace, repair-target-report, repair-diff, and
+repair-promotion-review fingerprint reuse. Response and extracted-artifact
+duplicate counts are intentionally nonzero for the paired `example-122` and
+`example-123` incident repair promotions, while target-report duplicate counts
+must remain zero before claiming the v0.2 prompt-to-artifact release gate.
+Accepted UI workflow and UI-surface replay must emit
+`ui-review-fingerprint-*` and `ui-review-patch-fingerprint-*` report lines
+plus `ui-review` and `ui-review-patch` manifest entries before claiming the
+visual/accessibility patch-planning path. Option Map UI-surface bridge replay
+must emit
 `ui-semantic-tags-fingerprint-*` report lines plus `ui-semantic-tags` manifest
 entries before claiming package-local UI semantic tagging. The human-approved
 import path is checked by
@@ -459,6 +465,10 @@ The human-approved AgentTool import path is checked by
 `scripts/run_v03_agent_policy_import_demo.py`; the import report must include
 `source-preserved true`, `proposed-accepted true`,
 `policy-handoff-imported true`, and `policy-handoff-replayed true`.
+Accepted Application-signal replay must emit
+`application-walkthrough-fingerprint-*` report lines plus
+`application-walkthrough` manifest entries before claiming stateful
+application walkthrough evidence.
 Rejected example replay
 includes stored prompt-envelope diagnostics for malformed model outputs and
 profile mismatch checker-handoff diagnostics, plus checked AIL-Spec
@@ -516,6 +526,11 @@ evidence across five user-story families. Its accepted complex-system entries
 emit `complex-story-graph.txt` artifacts that bind those imported modules, UI
 surfaces, workflow transitions, target contracts, regenerated story views,
 semantic anchors, and replay fingerprints into one reviewer-facing graph.
+Support-ticket and incident repair-promotion Application-signal entries also
+emit `application-walkthrough.txt` artifacts that bind user story,
+requirements, spec, checked Core, bytecode, runtime or target proof, stateful
+boundary, trace event, repair provenance, semantic anchors, and replay
+fingerprints into reviewer-facing application evidence.
 
 Replay with:
 

@@ -61,6 +61,7 @@ Useful artifacts to inspect after replay:
 - `examples/example-111/artifact.ailbc.json`
 - `examples/example-111/vm-trace.txt`
 - `examples/example-111/complex-story-graph.txt`
+- `examples/example-122/application-walkthrough.txt`
 - `examples/example-112/target-report.txt`
 - `examples/example-113/user-story.txt`
 - `examples/example-114/target-report.txt`
@@ -106,7 +107,10 @@ repaired variant is promoted.
 The top-level replay catalog includes `example-122` and `example-123`, which
 promote the private-notes public timeline and commander-review repair
 candidates into accepted end-to-end examples with stored request, response,
-story, checked Core, bytecode, and VM trace evidence.
+story, checked Core, bytecode, VM trace evidence, and deterministic
+`application-walkthrough.txt` artifacts that preserve repair provenance,
+stateful escalation boundary, `IncidentEscalated`, semantic anchors, and
+replay fingerprints.
 
 ## Next Example To Read
 
@@ -122,6 +126,10 @@ Incident Response is the current high-level benchmark for AIL examples. It
 now emits deterministic complex story graphs across imported modules, UI
 surfaces, workflow transitions, target contracts, regenerated story views,
 semantic anchors, and replay fingerprints for `example-111` through
-`example-115`. The next bar is cross-package graph diffs for story amendments
-that change multiple imported modules or UI surfaces at once, plus additional
-repaired incident variants through the same corpus-copy import path.
+`example-115`. Accepted incident repair-promotion entries now also emit
+deterministic application walkthroughs that tie the repaired private-notes and
+commander-review proof chain to checked Core, bytecode, VM trace, stateful
+escalation, and semantic anchors. The next bar is cross-package graph diffs
+for story amendments that change multiple imported modules or UI surfaces at
+once, plus additional repaired incident variants through the same corpus-copy
+import path.
