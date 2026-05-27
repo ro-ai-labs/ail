@@ -650,8 +650,8 @@ fn example_learning_readmes_cover_repeated_family_gaps() {
         "## Next Example To Read",
         "## v0.3 Learning Signal",
         "multi-agent handoff",
-        "policy-review variants",
-        "repair tutorial",
+        "agent policy review",
+        "human-approved",
         "examples/rejected",
         "example-103/diagnostics.txt",
     ] {
@@ -25343,9 +25343,24 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
+        report.contains("agent-policy-review-fingerprint-observed-count 15"),
+        "{report}"
+    );
+    assert!(
         report.contains(
             "v03-signal-count UI authoring needs human-approved visual patch import workflows after deterministic UI patch plans are replayed. 4"
         ),
+        "{report}"
+    );
+    assert!(
+        report.contains(
+            "v03-signal-count AgentTool authoring needs human-approved multi-agent policy handoff imports after deterministic policy reviews are replayed. 15"
+        ),
+        "{report}"
+    );
+    assert!(
+        !report
+            .contains("AgentTool examples need multi-agent handoff and policy-review exercises."),
         "{report}"
     );
     assert!(
@@ -25413,6 +25428,42 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         report.contains(&format!(
             "entry-artifact example-108 ui-review-patch examples/example-108/ui-review-patch.txt {}",
             ui_review_patch_108_fingerprint.trim()
+        )),
+        "{report}"
+    );
+    let agent_policy_review_40 =
+        fs::read_to_string(artifact_dir.join("examples/example-40/agent-policy-review.txt"))
+            .unwrap();
+    assert!(
+        agent_policy_review_40.contains("AIL-Agent-Policy-Review:")
+            && agent_policy_review_40.contains("entry example-40")
+            && agent_policy_review_40.contains("profile AgentTool")
+            && agent_policy_review_40.contains("program-domain agent-tool")
+            && agent_policy_review_40.contains("agent-policy-review-artifact deterministic-text")
+            && agent_policy_review_40.contains("multi-agent-handoff-review required")
+            && agent_policy_review_40
+                .contains("agent-contract-check ail-agent-contracts examples/agents")
+            && agent_policy_review_40.contains("tool-permission-review required")
+            && agent_policy_review_40.contains("tool-approval-review required")
+            && agent_policy_review_40.contains("external-call-review required")
+            && agent_policy_review_40.contains("secret-redaction-review required")
+            && agent_policy_review_40.contains("human-approval-required true")
+            && agent_policy_review_40.contains("runtime-evidence target-report")
+            && agent_policy_review_40.contains("target-report-fingerprint "),
+        "{agent_policy_review_40}"
+    );
+    let agent_policy_review_40_fingerprint = fs::read_to_string(
+        artifact_dir.join("examples/example-40/agent-policy-review.fingerprint.txt"),
+    )
+    .unwrap();
+    assert_eq!(
+        agent_policy_review_40_fingerprint.trim(),
+        fnv64_fingerprint(&agent_policy_review_40)
+    );
+    assert!(
+        report.contains(&format!(
+            "entry-artifact example-40 agent-policy-review examples/example-40/agent-policy-review.txt {}",
+            agent_policy_review_40_fingerprint.trim()
         )),
         "{report}"
     );
@@ -25813,6 +25864,13 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         manifest.contains(&format!(
             "entry-artifact example-108 ui-review-patch examples/example-108/ui-review-patch.txt {}",
             ui_review_patch_108_fingerprint.trim()
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "entry-artifact example-40 agent-policy-review examples/example-40/agent-policy-review.txt {}",
+            agent_policy_review_40_fingerprint.trim()
         )),
         "{manifest}"
     );
@@ -29013,6 +29071,50 @@ fn cli_ail_v03_roadmap_advances_completed_ui_authoring_signal() {
     assert!(
         !stdout.contains("UI authoring needs patchable visual review workflows after accessibility diagnostics are replayed.")
             && !stdout.contains("UI authoring needs stronger visual review artifacts"),
+        "{stdout}"
+    );
+
+    let roadmap = fs::read_to_string(artifact_dir.join("v03-roadmap.txt")).unwrap();
+    assert_eq!(stdout, roadmap);
+
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
+fn cli_ail_v03_roadmap_advances_completed_agent_tool_signal() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-v03-roadmap-release-agent-tool-signal-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-v03-roadmap",
+            "examples",
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+            "--release-evidence",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains(
+            "signal AgentTool authoring needs human-approved multi-agent policy handoff imports after deterministic policy reviews are replayed. count 15"
+        ),
+        "{stdout}"
+    );
+    assert!(
+        !stdout
+            .contains("AgentTool examples need multi-agent handoff and policy-review exercises."),
         "{stdout}"
     );
 

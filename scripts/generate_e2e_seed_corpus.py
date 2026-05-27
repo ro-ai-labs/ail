@@ -176,7 +176,7 @@ ACCEPTED_FIXTURES = {
         "spec_count": "3",
         "story_count": "3",
         "interacts_with": "payment.provider,policy.engine,audit.log",
-        "v03_signal": "AgentTool examples need multi-agent handoff and policy-review exercises.",
+        "v03_signal": "AgentTool authoring needs human-approved multi-agent policy handoff imports after deterministic policy reviews are replayed.",
         "vm_action": "RefundCustomerPayment",
         "runtime_state": "order.id=O-1;payment.captured=true;refund.amount=100",
     },

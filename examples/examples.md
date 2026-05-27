@@ -1480,7 +1480,7 @@ story-file: stories/example-40.md
 story-journey: story-to-spec
 story-roundtrip: semantic-similar
 distinctness-claim: refund-tool-live-codex-interview-40 exercises docs/ail/prompts/interview.system.md over agent-tool-safety.
-v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
+v0.3-signal: AgentTool authoring needs human-approved multi-agent policy handoff imports after deterministic policy reviews are replayed.
 prompt-file: docs/ail/prompts/interview.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
@@ -1516,7 +1516,7 @@ story-file: stories/example-41.md
 story-journey: story-to-spec
 story-roundtrip: semantic-similar
 distinctness-claim: refund-tool-live-codex-requirements-41 exercises docs/ail/prompts/requirements.system.md over agent-tool-safety.
-v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
+v0.3-signal: AgentTool authoring needs human-approved multi-agent policy handoff imports after deterministic policy reviews are replayed.
 prompt-file: docs/ail/prompts/requirements.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
@@ -1552,7 +1552,7 @@ story-file: stories/example-42.md
 story-journey: story-to-spec
 story-roundtrip: semantic-similar
 distinctness-claim: refund-tool-live-codex-spec-draft-42 exercises docs/ail/prompts/spec-draft.system.md over agent-tool-safety.
-v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
+v0.3-signal: AgentTool authoring needs human-approved multi-agent policy handoff imports after deterministic policy reviews are replayed.
 prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
@@ -1588,7 +1588,7 @@ story-file: stories/example-43.md
 story-journey: story-to-spec
 story-roundtrip: semantic-similar
 distinctness-claim: refund-tool-live-codex-core-draft-43 exercises docs/ail/prompts/core-draft.system.md over agent-tool-safety.
-v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
+v0.3-signal: AgentTool authoring needs human-approved multi-agent policy handoff imports after deterministic policy reviews are replayed.
 prompt-file: docs/ail/prompts/core-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:0175222e4a84bec4
@@ -1624,7 +1624,7 @@ story-file: stories/example-44.md
 story-journey: story-amendment
 story-roundtrip: semantic-similar
 distinctness-claim: refund-tool-live-codex-diagnostic-repair-44 exercises docs/ail/prompts/diagnostic-repair.system.md over agent-tool-safety.
-v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
+v0.3-signal: AgentTool authoring needs human-approved multi-agent policy handoff imports after deterministic policy reviews are replayed.
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:c9700f2c2e57e49e
@@ -1660,7 +1660,7 @@ story-file: stories/example-45.md
 story-journey: spec-to-story
 story-roundtrip: semantic-similar
 distinctness-claim: refund-tool-live-codex-core-to-spec-45 exercises docs/ail/prompts/core-to-spec.system.md over agent-tool-safety.
-v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
+v0.3-signal: AgentTool authoring needs human-approved multi-agent policy handoff imports after deterministic policy reviews are replayed.
 prompt-file: docs/ail/prompts/core-to-spec.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:9f447e07620792b2
@@ -1696,7 +1696,7 @@ story-file: stories/example-46.md
 story-journey: spec-to-story
 story-roundtrip: semantic-similar
 distinctness-claim: refund-tool-live-codex-core-to-summary-46 exercises docs/ail/prompts/core-to-summary.system.md over agent-tool-safety.
-v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
+v0.3-signal: AgentTool authoring needs human-approved multi-agent policy handoff imports after deterministic policy reviews are replayed.
 prompt-file: docs/ail/prompts/core-to-summary.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:49f26ec41d722633
@@ -1732,7 +1732,7 @@ story-file: stories/example-47.md
 story-journey: story-amendment
 story-roundtrip: semantic-similar
 distinctness-claim: refund-tool-live-codex-flow-patch-47 exercises docs/ail/prompts/flow-patch.system.md over agent-tool-safety.
-v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
+v0.3-signal: AgentTool authoring needs human-approved multi-agent policy handoff imports after deterministic policy reviews are replayed.
 prompt-file: docs/ail/prompts/flow-patch.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:30136a21ab8d8eb6
@@ -1768,7 +1768,7 @@ story-file: stories/example-48.md
 story-journey: story-amendment
 story-roundtrip: semantic-similar
 distinctness-claim: refund-tool-live-codex-trace-debug-48 exercises docs/ail/prompts/trace-debug.system.md over agent-tool-safety.
-v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
+v0.3-signal: AgentTool authoring needs human-approved multi-agent policy handoff imports after deterministic policy reviews are replayed.
 prompt-file: docs/ail/prompts/trace-debug.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:f5fffd069da83242
@@ -1804,7 +1804,7 @@ story-file: stories/example-49.md
 story-journey: story-amendment
 story-roundtrip: semantic-similar
 distinctness-claim: refund-tool-live-codex-interop-49 exercises docs/ail/prompts/interop.system.md over agent-tool-safety.
-v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
+v0.3-signal: AgentTool authoring needs human-approved multi-agent policy handoff imports after deterministic policy reviews are replayed.
 prompt-file: docs/ail/prompts/interop.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:87f6dd1772d48729
@@ -1840,7 +1840,7 @@ story-file: stories/example-50.md
 story-journey: story-to-spec
 story-roundtrip: semantic-similar
 distinctness-claim: refund-tool-live-codex-interview-50 exercises docs/ail/prompts/interview.system.md over agent-tool-safety.
-v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
+v0.3-signal: AgentTool authoring needs human-approved multi-agent policy handoff imports after deterministic policy reviews are replayed.
 prompt-file: docs/ail/prompts/interview.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:5ca61a4509169980
@@ -1876,7 +1876,7 @@ story-file: stories/example-51.md
 story-journey: story-to-spec
 story-roundtrip: semantic-similar
 distinctness-claim: refund-tool-live-codex-requirements-51 exercises docs/ail/prompts/requirements.system.md over agent-tool-safety.
-v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
+v0.3-signal: AgentTool authoring needs human-approved multi-agent policy handoff imports after deterministic policy reviews are replayed.
 prompt-file: docs/ail/prompts/requirements.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:68e966969e0b1c12
@@ -1912,7 +1912,7 @@ story-file: stories/example-52.md
 story-journey: story-to-spec
 story-roundtrip: semantic-similar
 distinctness-claim: refund-tool-live-spec-input-52 exercises docs/ail/prompts/spec-draft.system.md over agent-tool-safety.
-v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
+v0.3-signal: AgentTool authoring needs human-approved multi-agent policy handoff imports after deterministic policy reviews are replayed.
 prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
@@ -1949,7 +1949,7 @@ story-file: stories/example-53.md
 story-journey: story-to-spec
 story-roundtrip: semantic-similar
 distinctness-claim: refund-tool-live-codex-core-draft-53 exercises docs/ail/prompts/core-draft.system.md over agent-tool-safety.
-v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
+v0.3-signal: AgentTool authoring needs human-approved multi-agent policy handoff imports after deterministic policy reviews are replayed.
 prompt-file: docs/ail/prompts/core-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:0175222e4a84bec4
@@ -1985,7 +1985,7 @@ story-file: stories/example-54.md
 story-journey: story-amendment
 story-roundtrip: semantic-similar
 distinctness-claim: refund-tool-live-codex-diagnostic-repair-54 exercises docs/ail/prompts/diagnostic-repair.system.md over agent-tool-safety.
-v0.3-signal: AgentTool examples need multi-agent handoff and policy-review exercises.
+v0.3-signal: AgentTool authoring needs human-approved multi-agent policy handoff imports after deterministic policy reviews are replayed.
 prompt-file: docs/ail/prompts/diagnostic-repair.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:c9700f2c2e57e49e

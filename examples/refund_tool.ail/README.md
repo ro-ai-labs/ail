@@ -92,8 +92,11 @@ policy, notification, dashboard, and postmortem surfaces.
 
 ## v0.3 Learning Signal
 
-The current Refund Tool corpus is replay-clean but too repetitive: many entries
-prove prompt-surface coverage over the same runtime state. v0.3 should add
-multi-agent handoff, policy-review variants, denied refunds, provider retry or
-backoff behavior, audit redaction review, and a repair tutorial that turns each
-rejected fixture into a corrected spec.
+The current Refund Tool corpus now emits deterministic agent policy review
+artifacts for every accepted AgentTool entry. Those reviews bind multi-agent handoff
+roles, `ail-agent-contracts examples/agents`, permission and approval review,
+external-call review, secret-redaction review, audit-trace review, and runtime
+evidence to the replay bundle. The next v0.3 bar is a human-approved
+multi-agent policy handoff import workflow, plus denied refunds, provider retry
+or backoff behavior, and richer repair tutorials for package-local rejected
+fixtures.

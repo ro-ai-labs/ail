@@ -479,6 +479,7 @@ struct AilE2eCorpusEvaluation {
     target_report_text: Option<String>,
     ui_review_text: Option<String>,
     ui_review_patch_text: Option<String>,
+    agent_policy_review_text: Option<String>,
     diagnostics_text: Option<String>,
     repair_tutorial_text: Option<String>,
     repair_proof: Option<AilE2eRepairProofArtifacts>,
@@ -2337,6 +2338,7 @@ fn evaluate_rejected_ail_e2e_corpus_entry(
         target_report_text: None,
         ui_review_text: None,
         ui_review_patch_text: None,
+        agent_policy_review_text: None,
         diagnostics_text: Some(diagnostics_text),
         repair_tutorial_text: Some(repair_tutorial_text),
         repair_proof: Some(repair_proof),
@@ -2805,6 +2807,7 @@ fn evaluate_ail_e2e_corpus_entry(
             target_report_text: None,
             ui_review_text: None,
             ui_review_patch_text: None,
+            agent_policy_review_text: None,
             diagnostics_text: None,
             repair_tutorial_text: None,
             repair_proof: None,
@@ -2913,6 +2916,13 @@ fn evaluate_ail_e2e_corpus_entry(
             target_report_text.as_deref(),
         )
     });
+    let agent_policy_review_text = render_ail_e2e_agent_policy_review_text(
+        entry,
+        Some(&checked_core_text),
+        Some(&bytecode_text),
+        vm_trace_text.as_deref(),
+        target_report_text.as_deref(),
+    );
     Ok(AilE2eCorpusEvaluation {
         entry: entry.clone(),
         semantic_anchors,
@@ -2925,6 +2935,7 @@ fn evaluate_ail_e2e_corpus_entry(
         target_report_text,
         ui_review_text,
         ui_review_patch_text,
+        agent_policy_review_text,
         diagnostics_text: None,
         repair_tutorial_text: None,
         repair_proof: None,
@@ -3134,6 +3145,17 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
                 .map(|text| ail_artifact_fingerprint(text))
         },
     );
+    push_ail_e2e_fingerprint_reuse_lines(
+        &mut lines,
+        "agent-policy-review",
+        evaluations,
+        |evaluation| {
+            evaluation
+                .agent_policy_review_text
+                .as_ref()
+                .map(|text| ail_artifact_fingerprint(text))
+        },
+    );
     push_ail_e2e_fingerprint_reuse_lines(&mut lines, "diagnostics", evaluations, |evaluation| {
         evaluation
             .diagnostics_text
@@ -3326,6 +3348,14 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
                 entry.id,
                 entry.id,
                 ail_artifact_fingerprint(ui_review_patch_text)
+            ));
+        }
+        if let Some(agent_policy_review_text) = &evaluation.agent_policy_review_text {
+            lines.push(format!(
+                "entry-artifact {} agent-policy-review examples/{}/agent-policy-review.txt {}",
+                entry.id,
+                entry.id,
+                ail_artifact_fingerprint(agent_policy_review_text)
             ));
         }
         if let Some(diagnostics_text) = &evaluation.diagnostics_text {
@@ -3546,6 +3576,14 @@ fn push_ail_e2e_entry_artifact_lines(
             entry.id,
             entry.id,
             ail_artifact_fingerprint(ui_review_patch_text)
+        ));
+    }
+    if let Some(agent_policy_review_text) = &evaluation.agent_policy_review_text {
+        lines.push(format!(
+            "{prefix} {} agent-policy-review examples/{}/agent-policy-review.txt {}",
+            entry.id,
+            entry.id,
+            ail_artifact_fingerprint(agent_policy_review_text)
         ));
     }
     if let Some(diagnostics_text) = &evaluation.diagnostics_text {
@@ -3811,6 +3849,80 @@ fn render_ail_e2e_ui_review_patch_text(
             .to_string(),
     );
     format!("{}\n", lines.join("\n"))
+}
+
+fn render_ail_e2e_agent_policy_review_text(
+    entry: &AilE2eCorpusEntry,
+    checked_core_text: Option<&str>,
+    bytecode_text: Option<&str>,
+    vm_trace_text: Option<&str>,
+    target_report_text: Option<&str>,
+) -> Option<String> {
+    let field = |key: &str| entry.fields.get(key).map(String::as_str).unwrap_or("");
+    if field("profile") != "AgentTool" && field("program-domain") != "agent-tool" {
+        return None;
+    }
+    let runtime_evidence = if target_report_text.is_some() {
+        "target-report"
+    } else if vm_trace_text.is_some() {
+        "vm-trace"
+    } else if bytecode_text.is_some() {
+        "bytecode"
+    } else {
+        "checked-core"
+    };
+    let mut lines = vec![
+        "AIL-Agent-Policy-Review:".to_string(),
+        format!("entry {}", entry.id),
+        format!("semantic-task {}", field("semantic-task")),
+        format!("profile {}", field("profile")),
+        format!("program-domain {}", field("program-domain")),
+        format!("executor-family {}", field("executor-family")),
+        format!("executor-label {}", field("executor-label")),
+        format!("prompt-file {}", field("prompt-file")),
+        format!("interacts-with {}", field("interacts-with")),
+        "agent-policy-review-artifact deterministic-text".to_string(),
+        "multi-agent-handoff-review required".to_string(),
+        "agent-contract-check ail-agent-contracts examples/agents".to_string(),
+        "handoff-roles requirements-writer,spec-writer,diagnostic-repairer,prompt-reviewer,repair-promotion-reviewer".to_string(),
+        "tool-permission-review required".to_string(),
+        "tool-approval-review required".to_string(),
+        "external-call-review required".to_string(),
+        "secret-redaction-review required".to_string(),
+        "audit-trace-review required".to_string(),
+        "human-approval-required true".to_string(),
+        "policy-import-status proposed-only".to_string(),
+        format!("runtime-evidence {runtime_evidence}"),
+    ];
+    if let Some(checked_core_text) = checked_core_text {
+        lines.push(format!(
+            "checked-core-fingerprint {}",
+            ail_artifact_fingerprint(checked_core_text)
+        ));
+    }
+    if let Some(bytecode_text) = bytecode_text {
+        lines.push(format!(
+            "bytecode-fingerprint {}",
+            ail_artifact_fingerprint(bytecode_text)
+        ));
+    }
+    if let Some(vm_trace_text) = vm_trace_text {
+        lines.push(format!(
+            "vm-trace-fingerprint {}",
+            ail_artifact_fingerprint(vm_trace_text)
+        ));
+    }
+    if let Some(target_report_text) = target_report_text {
+        lines.push(format!(
+            "target-report-fingerprint {}",
+            ail_artifact_fingerprint(target_report_text)
+        ));
+    }
+    lines.push(
+        "agent-policy-review-summary AgentTool evidence is ready for human-approved multi-agent policy handoff import."
+            .to_string(),
+    );
+    Some(format!("{}\n", lines.join("\n")))
 }
 
 fn ail_join_nonempty_set(values: &BTreeSet<String>) -> String {
@@ -4717,6 +4829,24 @@ fn write_ail_e2e_corpus_artifacts(
             )
             .map_err(|error| {
                 format!("failed to write examples UI review patch fingerprint: {error}")
+            })?;
+        }
+        if let Some(agent_policy_review_text) = &evaluation.agent_policy_review_text {
+            let entry_dir = root.join("examples").join(&evaluation.entry.id);
+            fs::create_dir_all(&entry_dir).map_err(|error| {
+                format!("failed to create examples entry artifact dir: {error}")
+            })?;
+            fs::write(
+                entry_dir.join("agent-policy-review.txt"),
+                agent_policy_review_text,
+            )
+            .map_err(|error| format!("failed to write examples agent policy review: {error}"))?;
+            fs::write(
+                entry_dir.join("agent-policy-review.fingerprint.txt"),
+                format!("{}\n", ail_artifact_fingerprint(agent_policy_review_text)),
+            )
+            .map_err(|error| {
+                format!("failed to write examples agent policy review fingerprint: {error}")
             })?;
         }
         if let Some(diagnostics_text) = &evaluation.diagnostics_text {

@@ -203,6 +203,8 @@ The `ail-examples` replay bundle must also write deterministic story artifacts:
 - `examples/<entry-id>/ui-review.fingerprint.txt` for accepted UI workflow or UI-surface entries
 - `examples/<entry-id>/ui-review-patch.txt` for accepted UI workflow or UI-surface entries
 - `examples/<entry-id>/ui-review-patch.fingerprint.txt` for accepted UI workflow or UI-surface entries
+- `examples/<entry-id>/agent-policy-review.txt` for accepted AgentTool entries
+- `examples/<entry-id>/agent-policy-review.fingerprint.txt` for accepted AgentTool entries
 - `examples/<entry-id>/repair-tutorial.txt` for rejected entries
 - `examples/<entry-id>/repair-tutorial.fingerprint.txt` for rejected entries
 - `examples/<entry-id>/repair-candidate.ail-spec.md` for rejected entries
@@ -217,16 +219,24 @@ The `ail-examples` replay bundle must also write deterministic story artifacts:
 
 The story artifact is derived from catalog metadata and fingerprinted in the
 same report and manifest as request, response, checked Core, bytecode, VM
-trace, native, target-report, UI review, UI review patch, diagnostics, and repair-tutorial
-artifacts. Accepted `ui-workflow` entries and accepted entries tagged with the
-`ui` surface must also emit `ui-review.txt`, which records deterministic visual
-review, accessibility review, workflow authoring, runtime evidence,
-semantic-anchor preservation, and upstream fingerprints. Replay must also emit
-`ui-review-patch.txt`, a proposed-only deterministic patch plan that names the
-`ail-flow-edit` handoff, requires human approval, and binds itself to the UI
-review fingerprint. The report must summarize these files with
+trace, native, target-report, UI review, UI review patch, agent policy review,
+diagnostics, and repair-tutorial artifacts. Accepted `ui-workflow` entries and
+accepted entries tagged with the `ui` surface must also emit `ui-review.txt`,
+which records deterministic visual review, accessibility review, workflow
+authoring, runtime evidence, semantic-anchor preservation, and upstream
+fingerprints. Replay must also emit `ui-review-patch.txt`, a proposed-only
+deterministic patch plan that names the `ail-flow-edit` handoff, requires human
+approval, and binds itself to the UI review fingerprint. The report must
+summarize these files with
 `ui-review-fingerprint-*` and `ui-review-patch-fingerprint-*` lines and list
-each UI review and patch plan in `manifest.ail-examples.txt`. The repair tutorial is derived from
+each UI review and patch plan in `manifest.ail-examples.txt`. Accepted
+`AgentTool` entries must also emit `agent-policy-review.txt`, which records the
+multi-agent handoff roles, `ail-agent-contracts examples/agents` check, tool
+permission and approval review, external-call review, secret-redaction review,
+audit-trace review, human approval requirement, runtime evidence, and upstream
+fingerprints. The report must summarize these files with
+`agent-policy-review-fingerprint-*` lines and list each review in
+`manifest.ail-examples.txt`. The repair tutorial is derived from
 rejected-entry metadata and diagnostics so the corpus teaches how to move from
 a failed prompt/spec response to a corrected spec. The repair proof chain must
 then show that corrected spec reaching checked Core, verified bytecode, and
@@ -276,7 +286,11 @@ as prose. The current examples reveal these next-version gaps:
   accessibility diagnostic fixture that repairs to checked Core, verified
   bytecode, and Wasm target-contract evidence. The next bar is a human-approved
   visual patch import workflow.
-- AgentTool examples need multi-agent handoff and policy-review scenarios.
+- AgentTool examples now emit deterministic policy review artifacts with
+  multi-agent handoff roles, contract checks, permission and approval review,
+  external-call review, secret-redaction review, audit-trace review, and
+  runtime evidence. The next bar is a human-approved multi-agent policy
+  handoff import workflow.
 - Compiler/self-hosting examples need pass composition and fixed-point checks.
 - Systems examples need hardware-facing contracts, scheduler or interrupt
   semantics, and clearer unsupported-target migration guidance.

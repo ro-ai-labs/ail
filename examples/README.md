@@ -323,6 +323,12 @@ live LLM access. The current corpus stores:
 - `examples/<entry-id>/ui-review-patch.txt`: generated beside each UI review
   to record a proposed-only `ail-flow-edit` patch plan, human approval
   requirement, patch scope, and upstream UI review fingerprint.
+- `examples/<entry-id>/agent-policy-review.txt`: generated for each accepted
+  AgentTool entry to record deterministic multi-agent handoff review, the
+  `ail-agent-contracts examples/agents` check, permission and approval review,
+  external-call review, secret-redaction review, audit-trace review, human
+  approval requirement, runtime evidence, and upstream fingerprints. It is
+  fingerprinted beside the review as `agent-policy-review.fingerprint.txt`.
 
 This is checked release evidence with four replay-clean live LLM
 captures and one hundred thirteen replay-clean live Codex skill-agent captures. The
@@ -332,15 +338,18 @@ entries `capture-origin: live-codex`. The replay report exposes
 capability-level counts, program-scale counts, story-journey counts,
 program-domain counts, story-evidence counts, capture-origin counts, response,
 extracted-artifact, checked Core, bytecode, VM trace, native, target-report,
-UI review, UI review patch, diagnostics, repair-tutorial, repair-candidate,
-repair-checked-core, repair-bytecode, repair-vm-trace, repair-target-report,
-repair-diff, and repair-promotion-review fingerprint reuse. Response,
-extracted-artifact, and target-report duplicate counts must remain zero before
-claiming the v0.2 prompt-to-artifact release gate. Accepted UI workflow and
+UI review, UI review patch, agent policy review, diagnostics, repair-tutorial,
+repair-candidate, repair-checked-core, repair-bytecode, repair-vm-trace,
+repair-target-report, repair-diff, and repair-promotion-review fingerprint
+reuse. Response, extracted-artifact, and target-report duplicate counts must
+remain zero before claiming the v0.2 prompt-to-artifact release gate. Accepted UI workflow and
 UI-surface replay must emit `ui-review-fingerprint-*` and
 `ui-review-patch-fingerprint-*` report lines plus `ui-review` and
 `ui-review-patch` manifest entries before claiming the visual/accessibility
-patch-planning path. Rejected example replay
+patch-planning path. Accepted AgentTool replay must emit
+`agent-policy-review-fingerprint-*` report lines plus `agent-policy-review`
+manifest entries before claiming the multi-agent policy handoff review path.
+Rejected example replay
 includes stored prompt-envelope diagnostics for malformed model outputs and
 profile mismatch checker-handoff diagnostics, plus checked AIL-Spec
 diagnostics for missing trace coverage and hallucinated capability or
@@ -377,6 +386,13 @@ fingerprinted in the replay bundle. Other UI-tagged seed
 entries still use surface metadata to keep threshold checks active. Package-import seed
 entries replay through package-aware import resolution and compile the composed
 support package through checked Core, bytecode, and VM trace artifacts.
+
+The AgentTool seed entries replay the refund tool across the prompt pack and
+now produce `agent-policy-review.txt` artifacts. These reviews bind the
+Codex/LLM executor label, prompt file, named payment provider, policy engine,
+audit log interactions, human approval requirement, and runtime evidence into a
+fingerprinted artifact so the next v0.3 step can import approved multi-agent
+policy handoff decisions instead of treating prompt-surface coverage as enough.
 
 The corpus also includes `incident_response.ail`, a multi-module application
 that imports identity, policy, and notification support packages and exercises
