@@ -60,6 +60,7 @@ Useful artifacts to inspect after replay:
 - `examples/example-111/checked.ail-core.txt`
 - `examples/example-111/artifact.ailbc.json`
 - `examples/example-111/vm-trace.txt`
+- `examples/example-111/complex-story-graph.txt`
 - `examples/example-112/target-report.txt`
 - `examples/example-113/user-story.txt`
 - `examples/example-114/target-report.txt`
@@ -118,8 +119,9 @@ idempotency, locks, and replay after failure.
 ## v0.3 Learning Signal
 
 Incident Response is the current high-level benchmark for AIL examples. It
-shows that complex systems need richer story graphs across imported modules,
-UI surfaces, workflow transitions, target contracts, and regenerated story
-views. v0.3 should promote this from a passing corpus family into a guided
-walkthrough with additional repair paths and story-diff artifacts that show
-exactly how a user story amends the checked spec.
+now emits deterministic complex story graphs across imported modules, UI
+surfaces, workflow transitions, target contracts, regenerated story views,
+semantic anchors, and replay fingerprints for `example-111` through
+`example-115`. The next bar is cross-package graph diffs for story amendments
+that change multiple imported modules or UI surfaces at once, plus additional
+repaired incident variants through the same corpus-copy import path.

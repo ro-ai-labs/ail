@@ -51,6 +51,10 @@ runtime fingerprints. C interop entries include
 that links zlib/libc host calls, pointer ownership, borrowed mutable buffers,
 noescape callbacks, `repr(C)` layout, status maps, nullable contracts,
 package-local FFI fixtures, diagnostics, and replay fingerprints.
+Incident-response complex-system entries include `complex-story-graph.txt`, a
+deterministic graph review artifact that links imported modules, UI surfaces,
+workflow transitions, target contracts, regenerated story views, semantic
+anchors, runtime evidence, and replay fingerprints.
 
 ## Review Rule
 
@@ -69,3 +73,7 @@ claiming retry/backoff scheduler evidence is covered.
 For C interop entries, check `unsafe-boundary-review-fingerprint-*` report
 lines and the corresponding `entry-artifact ... unsafe-boundary-review ...`
 manifest entries before claiming unsafe-boundary tutorial evidence is covered.
+For incident-response complex-system entries, check
+`complex-story-graph-fingerprint-*` report lines and the corresponding
+`entry-artifact ... complex-story-graph ...` manifest entries before claiming
+multi-surface story graph evidence is covered.

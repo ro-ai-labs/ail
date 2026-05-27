@@ -1781,13 +1781,15 @@ fn script_v03_signal_status_audit_marks_agent_policy_import_promoted() {
         "signal-status-evidence Package graphs need clearer authoring guidance and dependency review views. cargo run -- ail-examples examples --release-evidence",
         "signal-status Generics need reusable conformance fixtures and teachable stdlib walkthroughs. count 10 status promoted",
         "signal-status-evidence Generics need reusable conformance fixtures and teachable stdlib walkthroughs. cargo run -- ail-examples examples --release-evidence",
+        "signal-status Complex systems need richer story graphs that span imported modules, UI surfaces, workflows, target contracts, and regenerated story views. count 5 status promoted",
+        "signal-status-evidence Complex systems need richer story graphs that span imported modules, UI surfaces, workflows, target contracts, and regenerated story views. cargo run -- ail-examples examples --release-evidence",
         "signal-status Interop needs deeper unsafe-boundary tutorials and more ABI fixture diversity. count 10 status promoted",
         "signal-status-evidence Interop needs deeper unsafe-boundary tutorials and more ABI fixture diversity. cargo run -- ail-examples examples --release-evidence",
         "signal-status Turing Core examples need richer termination proofs beyond base-case, decreasing-argument, and numeric stack-bound patterns. count 5 status promoted",
         "signal-status-evidence Turing Core examples need richer termination proofs beyond base-case, decreasing-argument, and numeric stack-bound patterns. docs/ail/manual/14-turing-core.md",
         "signal-status Workflow examples need retry/backoff semantics and richer scheduler policies beyond temporal-policy diagnostics. count 5 status promoted",
         "signal-status-evidence Workflow examples need retry/backoff semantics and richer scheduler policies beyond temporal-policy diagnostics. cargo run -- ail-examples examples --release-evidence",
-        "promoted-count 9",
+        "promoted-count 10",
         "missing-status-count 0",
         "audit-result accepted",
     ] {
@@ -29583,6 +29585,14 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
+        report.contains("complex-story-graph-fingerprint-observed-count 5"),
+        "{report}"
+    );
+    assert!(
+        report.contains("complex-story-graph-fingerprint-duplicate-entry-count 0"),
+        "{report}"
+    );
+    assert!(
         report.contains("dependency-review-fingerprint-observed-count 10"),
         "{report}"
     );
@@ -29950,6 +29960,52 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         report.contains(&format!(
             "entry-artifact example-85 unsafe-boundary-review examples/example-85/unsafe-boundary-review.txt {}",
             unsafe_boundary_review_85_fingerprint.trim()
+        )),
+        "{report}"
+    );
+    let complex_story_graph_111 =
+        fs::read_to_string(artifact_dir.join("examples/example-111/complex-story-graph.txt"))
+            .unwrap();
+    assert!(
+        complex_story_graph_111.contains("AIL-Complex-Story-Graph:")
+            && complex_story_graph_111.contains("entry example-111")
+            && complex_story_graph_111.contains("semantic-task incident-response-live-codex-111")
+            && complex_story_graph_111.contains("complex-surface multi-module-incident-workflow")
+            && complex_story_graph_111.contains("imported-module incident_identity")
+            && complex_story_graph_111.contains("imported-module incident_policy")
+            && complex_story_graph_111.contains("imported-module incident_notifications")
+            && complex_story_graph_111.contains("root-module incident_response")
+            && complex_story_graph_111.contains("ui-surface incident command center")
+            && complex_story_graph_111.contains("workflow-transition Declare incident")
+            && complex_story_graph_111.contains("workflow-transition Escalate incident")
+            && complex_story_graph_111.contains("workflow-transition Resolve incident")
+            && complex_story_graph_111.contains("workflow-transition Start postmortem")
+            && complex_story_graph_111.contains("target-contract vm")
+            && complex_story_graph_111.contains("story-journey story-to-spec")
+            && complex_story_graph_111.contains("story-roundtrip semantic-similar")
+            && complex_story_graph_111.contains("story-evidence vm-trace")
+            && complex_story_graph_111.contains("regenerated-story-view user-story.txt")
+            && complex_story_graph_111.contains("story-anchor Incident")
+            && complex_story_graph_111.contains("story-anchor IncidentDeclared")
+            && complex_story_graph_111.contains("runtime-evidence vm-trace")
+            && complex_story_graph_111.contains("checked-core-fingerprint ")
+            && complex_story_graph_111.contains("bytecode-fingerprint ")
+            && complex_story_graph_111.contains("vm-trace-fingerprint ")
+            && complex_story_graph_111.contains("complex-story-graph-summary "),
+        "{complex_story_graph_111}"
+    );
+    let complex_story_graph_111_fingerprint = fs::read_to_string(
+        artifact_dir.join("examples/example-111/complex-story-graph.fingerprint.txt"),
+    )
+    .unwrap();
+    assert_eq!(
+        complex_story_graph_111_fingerprint.trim(),
+        fnv64_fingerprint(&complex_story_graph_111)
+    );
+    assert!(
+        report.contains(&format!(
+            "entry-artifact example-111 complex-story-graph examples/example-111/complex-story-graph.txt {}",
+            complex_story_graph_111_fingerprint.trim()
         )),
         "{report}"
     );
@@ -30509,6 +30565,13 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         manifest.contains(&format!(
             "entry-artifact example-85 unsafe-boundary-review examples/example-85/unsafe-boundary-review.txt {}",
             unsafe_boundary_review_85_fingerprint.trim()
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "entry-artifact example-111 complex-story-graph examples/example-111/complex-story-graph.txt {}",
+            complex_story_graph_111_fingerprint.trim()
         )),
         "{manifest}"
     );

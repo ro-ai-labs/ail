@@ -96,7 +96,7 @@ packages visible without making a separate non-end-to-end example category.
   and audit-trail gaps.
 - `incident_response.ail/README.md`: high-level multi-module incident response
   with identity, policy, notification, UI, workflow, target-contract, and story
-  journey evidence.
+  graph evidence.
 - `incident_identity.ail/README.md`: responder, commander, service-owner,
   user, and team support types imported by incident response.
 - `incident_policy.ail/README.md`: service-tier and escalation-policy support
@@ -418,18 +418,19 @@ escapes are rejected before replay so example evidence remains portable and
 human-reviewable.
 
 This is checked release evidence with four replay-clean live LLM
-captures and one hundred twenty-one replay-clean live Codex skill-agent
+captures and one hundred twenty-two replay-clean live Codex skill-agent
 captures. The current corpus marks zero entries `capture-origin:
 deterministic-seed`, four entries `capture-origin: live-llm`, one hundred
-twenty-one entries `capture-origin: live-codex`, and one hundred eighteen
+twenty-two entries `capture-origin: live-codex`, and one hundred eighteen
 `codex-ail-spec-writer` executor-label entries. The replay report exposes
 capability-level counts, program-scale counts, story-journey counts,
 program-domain counts, story-evidence counts, capture-origin counts, response,
 extracted-artifact, checked Core, bytecode, VM trace, native, target-report,
-UI review, UI review patch, agent policy review, diagnostics, repair-tutorial,
-repair-candidate, repair-checked-core, repair-bytecode, repair-vm-trace,
-repair-target-report, repair-diff, and repair-promotion-review fingerprint
-reuse. Response and extracted-artifact duplicate counts are intentionally
+UI review, UI review patch, agent policy review, unsafe-boundary review,
+complex story graph, diagnostics, repair-tutorial, repair-candidate,
+repair-checked-core, repair-bytecode, repair-vm-trace, repair-target-report,
+repair-diff, and repair-promotion-review fingerprint reuse. Response and
+extracted-artifact duplicate counts are intentionally
 nonzero for the paired `example-122` and `example-123` incident repair
 promotions, while target-report duplicate counts must remain zero before
 claiming the v0.2 prompt-to-artifact release gate. Accepted UI workflow and
@@ -502,7 +503,10 @@ The corpus also includes `incident_response.ail`, a multi-module application
 that imports identity, policy, and notification support packages and exercises
 incident declaration, escalation, responder notification, dashboards, command
 routes, lifecycle workflow, VM traces, Wasm contracts, and Darwin contract
-evidence across five user-story families.
+evidence across five user-story families. Its accepted complex-system entries
+emit `complex-story-graph.txt` artifacts that bind those imported modules, UI
+surfaces, workflow transitions, target contracts, regenerated story views,
+semantic anchors, and replay fingerprints into one reviewer-facing graph.
 
 Replay with:
 

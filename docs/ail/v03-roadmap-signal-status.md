@@ -19,9 +19,9 @@ rationale: The private-notes and commander-review incident repair proofs are pro
 evidence: docs/ail/31-v03-learning-and-authoring-gate.md
 
 signal: Complex systems need richer story graphs that span imported modules, UI surfaces, workflows, target contracts, and regenerated story views.
-status: deferred
-rationale: Incident-response examples now span imported modules and target evidence, but richer regenerated multi-surface story graphs remain a next-version work item.
-evidence: docs/ail/31-v03-learning-and-authoring-gate.md
+status: promoted
+rationale: Incident-response complex-system examples now emit deterministic complex-story-graph artifacts for example-111 through example-115, tying imported identity, policy, and notification modules, the incident_response root workflow, command-center and service-owner UI surfaces, lifecycle transitions, target contracts, regenerated story views, semantic anchors, and replay fingerprints into reviewer-facing evidence.
+evidence: cargo run -- ail-examples examples --release-evidence
 
 signal: Generic runtime behavior needs clearer type-inference explanations.
 status: promoted

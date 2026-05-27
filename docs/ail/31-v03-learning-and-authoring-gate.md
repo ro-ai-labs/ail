@@ -241,6 +241,8 @@ The `ail-examples` replay bundle must also write deterministic story artifacts:
 - `examples/<entry-id>/agent-policy-review.fingerprint.txt` for accepted AgentTool entries
 - `examples/<entry-id>/unsafe-boundary-review.txt` for accepted C interop entries
 - `examples/<entry-id>/unsafe-boundary-review.fingerprint.txt` for accepted C interop entries
+- `examples/<entry-id>/complex-story-graph.txt` for accepted incident-response complex-system entries
+- `examples/<entry-id>/complex-story-graph.fingerprint.txt` for accepted incident-response complex-system entries
 - `examples/<entry-id>/dependency-review.txt` for accepted package-import entries
 - `examples/<entry-id>/dependency-review.fingerprint.txt` for accepted package-import entries
 - `examples/<entry-id>/stdlib-walkthrough.txt` for accepted stdlib-generic entries
@@ -345,6 +347,13 @@ release, borrowed mutable pointer boundaries, noescape callback constraints,
 rejected ABI fixtures, FFI diagnostics, trace coverage, runtime evidence, and
 replay fingerprints. The report must summarize these files with
 `unsafe-boundary-review-fingerprint-*` lines and list each review in
+`manifest.ail-examples.txt`. Accepted incident-response complex-system entries
+must emit `complex-story-graph.txt`, which records imported identity, policy,
+and notification modules, the `incident_response` root workflow, command-center
+and service-owner UI surfaces, lifecycle transitions, target contracts,
+regenerated story views, semantic anchors, runtime evidence, and replay
+fingerprints. The report must summarize these files with
+`complex-story-graph-fingerprint-*` lines and list each graph in
 `manifest.ail-examples.txt`. Accepted package-import entries must emit
 `dependency-review.txt`, which records the local package, imported package,
 import alias, imported type owner, capability grant, story anchors, runtime
@@ -649,9 +658,15 @@ as prose. The current examples reveal these next-version gaps:
   `MaintenanceCycleCompleted`, accepted/rejected package fixtures, and replay
   fingerprints into reviewer-facing evidence. The next bar is richer scheduler
   policy forms and story amendments that explain temporal policy changes.
-- Incident-response examples show that complex systems need richer story
-  graphs across imported modules, UI surfaces, workflow transitions, target
-  contracts, and regenerated story views.
+- Incident-response complex-system examples now emit deterministic
+  `complex-story-graph.txt` and fingerprint artifacts for `example-111`
+  through `example-115`, tying imported identity, policy, and notification
+  modules, the `incident_response` root workflow, command-center and
+  service-owner UI surfaces, lifecycle transitions, target contracts,
+  regenerated story views, semantic anchors, and replay fingerprints into
+  reviewer-facing evidence. The next bar is cross-package graph diffs for
+  story amendments that change multiple imported modules or UI surfaces at
+  once.
 - Recursive Turing Core examples now include checked recursive factorial
   replay, an accepted explicit stack-depth fixture, an accepted well-founded
   termination-measure fixture, and package-local rejected fixtures for

@@ -505,6 +505,7 @@ struct AilE2eCorpusEvaluation {
     state_boundary_review_text: Option<String>,
     workflow_scheduler_review_text: Option<String>,
     unsafe_boundary_review_text: Option<String>,
+    complex_story_graph_text: Option<String>,
     dependency_review_text: Option<String>,
     stdlib_walkthrough_text: Option<String>,
     diagnostics_text: Option<String>,
@@ -3002,6 +3003,7 @@ fn evaluate_rejected_ail_e2e_corpus_entry(
         state_boundary_review_text: None,
         workflow_scheduler_review_text: None,
         unsafe_boundary_review_text: None,
+        complex_story_graph_text: None,
         dependency_review_text: None,
         stdlib_walkthrough_text: None,
         diagnostics_text: Some(diagnostics_text),
@@ -3504,6 +3506,7 @@ fn evaluate_ail_e2e_corpus_entry(
             state_boundary_review_text: None,
             workflow_scheduler_review_text: None,
             unsafe_boundary_review_text: None,
+            complex_story_graph_text: None,
             dependency_review_text: None,
             stdlib_walkthrough_text: None,
             diagnostics_text: None,
@@ -3656,6 +3659,14 @@ fn evaluate_ail_e2e_corpus_entry(
         vm_trace_text.as_deref(),
         target_report_text.as_deref(),
     );
+    let complex_story_graph_text = render_ail_e2e_complex_story_graph_text(
+        entry,
+        &semantic_anchors,
+        Some(&checked_core_text),
+        Some(&bytecode_text),
+        vm_trace_text.as_deref(),
+        target_report_text.as_deref(),
+    );
     let dependency_review_text = render_ail_e2e_dependency_review_text(
         entry,
         &semantic_anchors,
@@ -3690,6 +3701,7 @@ fn evaluate_ail_e2e_corpus_entry(
         state_boundary_review_text,
         workflow_scheduler_review_text,
         unsafe_boundary_review_text,
+        complex_story_graph_text,
         dependency_review_text,
         stdlib_walkthrough_text,
         diagnostics_text: None,
@@ -3969,6 +3981,17 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
     );
     push_ail_e2e_fingerprint_reuse_lines(
         &mut lines,
+        "complex-story-graph",
+        evaluations,
+        |evaluation| {
+            evaluation
+                .complex_story_graph_text
+                .as_ref()
+                .map(|text| ail_artifact_fingerprint(text))
+        },
+    );
+    push_ail_e2e_fingerprint_reuse_lines(
+        &mut lines,
         "dependency-review",
         evaluations,
         |evaluation| {
@@ -4229,6 +4252,14 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
                 entry.id,
                 entry.id,
                 ail_artifact_fingerprint(unsafe_boundary_review_text)
+            ));
+        }
+        if let Some(complex_story_graph_text) = &evaluation.complex_story_graph_text {
+            lines.push(format!(
+                "entry-artifact {} complex-story-graph examples/{}/complex-story-graph.txt {}",
+                entry.id,
+                entry.id,
+                ail_artifact_fingerprint(complex_story_graph_text)
             ));
         }
         if let Some(dependency_review_text) = &evaluation.dependency_review_text {
@@ -4513,6 +4544,14 @@ fn push_ail_e2e_entry_artifact_lines(
             entry.id,
             entry.id,
             ail_artifact_fingerprint(unsafe_boundary_review_text)
+        ));
+    }
+    if let Some(complex_story_graph_text) = &evaluation.complex_story_graph_text {
+        lines.push(format!(
+            "{prefix} {} complex-story-graph examples/{}/complex-story-graph.txt {}",
+            entry.id,
+            entry.id,
+            ail_artifact_fingerprint(complex_story_graph_text)
         ));
     }
     if let Some(dependency_review_text) = &evaluation.dependency_review_text {
@@ -5279,6 +5318,91 @@ fn render_ail_e2e_unsafe_boundary_review_text(
     }
     lines.push(
         "unsafe-boundary-summary C Interop evidence explains ownership, borrowing, callbacks, layout, status maps, nullable contracts, accepted and rejected fixtures, diagnostics, trace coverage, and replay fingerprints for reviewer audit."
+            .to_string(),
+    );
+    Some(format!("{}\n", lines.join("\n")))
+}
+
+fn render_ail_e2e_complex_story_graph_text(
+    entry: &AilE2eCorpusEntry,
+    semantic_anchors: &[String],
+    checked_core_text: Option<&str>,
+    bytecode_text: Option<&str>,
+    vm_trace_text: Option<&str>,
+    target_report_text: Option<&str>,
+) -> Option<String> {
+    let field = |key: &str| entry.fields.get(key).map(String::as_str).unwrap_or("");
+    let complex_signal = "Complex systems need richer story graphs that span imported modules, UI surfaces, workflows, target contracts, and regenerated story views.";
+    let is_incident_response_complex_story = field("v0.3-signal") == complex_signal
+        && field("package").ends_with("incident_response.ail");
+    if !is_incident_response_complex_story {
+        return None;
+    }
+    let runtime_evidence = if target_report_text.is_some() {
+        "target-report"
+    } else if vm_trace_text.is_some() {
+        "vm-trace"
+    } else if bytecode_text.is_some() {
+        "bytecode"
+    } else {
+        "checked-core"
+    };
+    let mut lines = vec![
+        "AIL-Complex-Story-Graph:".to_string(),
+        format!("entry {}", entry.id),
+        format!("semantic-task {}", field("semantic-task")),
+        format!("package {}", field("package")),
+        format!("profile {}", field("profile")),
+        format!("program-domain {}", field("program-domain")),
+        format!("capability-under-test {}", field("capability-under-test")),
+        "complex-story-graph-artifact deterministic-text".to_string(),
+        "complex-surface multi-module-incident-workflow".to_string(),
+        "imported-module incident_identity".to_string(),
+        "imported-module incident_policy".to_string(),
+        "imported-module incident_notifications".to_string(),
+        "root-module incident_response".to_string(),
+        "ui-surface incident command center".to_string(),
+        "ui-surface service owner dashboard".to_string(),
+        "workflow-transition Declare incident".to_string(),
+        "workflow-transition Escalate incident".to_string(),
+        "workflow-transition Resolve incident".to_string(),
+        "workflow-transition Start postmortem".to_string(),
+        format!("target-contract {}", field("target")),
+        format!("story-journey {}", field("story-journey")),
+        format!("story-roundtrip {}", field("story-roundtrip")),
+        format!("story-evidence {}", field("story-evidence")),
+        "regenerated-story-view user-story.txt".to_string(),
+        format!("runtime-evidence {runtime_evidence}"),
+    ];
+    for anchor in semantic_anchors {
+        lines.push(format!("story-anchor {anchor}"));
+    }
+    if let Some(checked_core_text) = checked_core_text {
+        lines.push(format!(
+            "checked-core-fingerprint {}",
+            ail_artifact_fingerprint(checked_core_text)
+        ));
+    }
+    if let Some(bytecode_text) = bytecode_text {
+        lines.push(format!(
+            "bytecode-fingerprint {}",
+            ail_artifact_fingerprint(bytecode_text)
+        ));
+    }
+    if let Some(vm_trace_text) = vm_trace_text {
+        lines.push(format!(
+            "vm-trace-fingerprint {}",
+            ail_artifact_fingerprint(vm_trace_text)
+        ));
+    }
+    if let Some(target_report_text) = target_report_text {
+        lines.push(format!(
+            "target-report-fingerprint {}",
+            ail_artifact_fingerprint(target_report_text)
+        ));
+    }
+    lines.push(
+        "complex-story-graph-summary Incident Response evidence connects imported modules, UI surfaces, workflow transitions, target contracts, regenerated story views, semantic anchors, and replay fingerprints for reviewer audit."
             .to_string(),
     );
     Some(format!("{}\n", lines.join("\n")))
@@ -6561,6 +6685,24 @@ fn write_ail_e2e_corpus_artifacts(
             )
             .map_err(|error| {
                 format!("failed to write examples unsafe boundary review fingerprint: {error}")
+            })?;
+        }
+        if let Some(complex_story_graph_text) = &evaluation.complex_story_graph_text {
+            let entry_dir = root.join("examples").join(&evaluation.entry.id);
+            fs::create_dir_all(&entry_dir).map_err(|error| {
+                format!("failed to create examples entry artifact dir: {error}")
+            })?;
+            fs::write(
+                entry_dir.join("complex-story-graph.txt"),
+                complex_story_graph_text,
+            )
+            .map_err(|error| format!("failed to write examples complex story graph: {error}"))?;
+            fs::write(
+                entry_dir.join("complex-story-graph.fingerprint.txt"),
+                format!("{}\n", ail_artifact_fingerprint(complex_story_graph_text)),
+            )
+            .map_err(|error| {
+                format!("failed to write examples complex story graph fingerprint: {error}")
             })?;
         }
         if let Some(dependency_review_text) = &evaluation.dependency_review_text {
