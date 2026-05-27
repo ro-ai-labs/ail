@@ -2928,6 +2928,18 @@ fn script_v03_repair_promotion_capture_plan_writes_fingerprinted_plan() {
     let _ = fs::remove_dir_all(&output_dir);
     fs::create_dir_all(&corpus_dir).unwrap();
     write_e2e_transcript_files(&corpus_dir, 101);
+    fs::write(
+        corpus_dir.join("stories").join("example-99.md"),
+        e2e_story_file_text_with_overrides(
+            99,
+            &[
+                ("story-evidence", "diagnostics"),
+                ("story-journey", "diagnostic-story"),
+                ("story-roundtrip", "diagnostic-preserving"),
+            ],
+        ),
+    )
+    .unwrap();
     let mut corpus_text = String::new();
     for index in 0..101 {
         if index == 99 {
@@ -2939,6 +2951,9 @@ fn script_v03_repair_promotion_capture_plan_writes_fingerprinted_plan() {
                         "responses/rejected-repair-capture-plan.json",
                     ),
                     ("checker-result", "rejected"),
+                    ("story-evidence", "diagnostics"),
+                    ("story-journey", "diagnostic-story"),
+                    ("story-roundtrip", "diagnostic-preserving"),
                     ("expected-diagnostic", "AIL001"),
                     ("failure-taxonomy", "semantic-drift"),
                 ],
@@ -27466,6 +27481,11 @@ fn cli_ail_e2e_corpus_replays_imported_package_specs() {
     )
     .unwrap();
     fs::write(
+        corpus_dir.join("stories").join("example-10.md"),
+        e2e_story_file_text_with_overrides(10, &[("story-evidence", "vm-trace")]),
+    )
+    .unwrap();
+    fs::write(
         corpus_dir.join("examples.md"),
         e2e_corpus_text_with_override(
             10,
@@ -27478,6 +27498,7 @@ fn cli_ail_e2e_corpus_replays_imported_package_specs() {
                 ("package", "examples/support_composed.ail"),
                 ("response-file", "responses/example-10.json"),
                 ("target", "vm"),
+                ("story-evidence", "vm-trace"),
                 ("vm-action", "CloseTicket"),
                 ("runtime-state", "ticket.id=T-1;ticket.status=Open"),
             ],
@@ -27548,6 +27569,11 @@ fn cli_ail_e2e_corpus_replays_ui_profile_specs() {
     )
     .unwrap();
     fs::write(
+        corpus_dir.join("stories").join("example-65.md"),
+        e2e_story_file_text_with_overrides(65, &[("story-evidence", "checked-core")]),
+    )
+    .unwrap();
+    fs::write(
         corpus_dir.join("examples.md"),
         e2e_corpus_text_with_override(
             65,
@@ -27562,6 +27588,7 @@ fn cli_ail_e2e_corpus_replays_ui_profile_specs() {
                 ("package", "examples/ui_workflow.ail"),
                 ("response-file", "responses/example-65.json"),
                 ("target", "vm"),
+                ("story-evidence", "checked-core"),
                 ("vm-action", ""),
                 ("runtime-state", ""),
             ],
@@ -28979,6 +29006,59 @@ fn cli_ail_e2e_corpus_rejects_unknown_story_evidence() {
 }
 
 #[test]
+fn cli_ail_e2e_corpus_requires_story_evidence_artifact_to_exist() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let corpus_dir = std::env::temp_dir().join(format!(
+        "ail-examples-story-evidence-artifact-{}",
+        std::process::id()
+    ));
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-examples-story-evidence-artifact-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&corpus_dir);
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::create_dir_all(&corpus_dir).unwrap();
+    write_e2e_transcript_files(&corpus_dir, 100);
+    fs::write(
+        corpus_dir.join("stories").join("example-95.md"),
+        e2e_story_file_text_with_overrides(95, &[("story-evidence", "target-report")]),
+    )
+    .unwrap();
+    fs::write(
+        corpus_dir.join("examples.md"),
+        e2e_corpus_text_with_override(95, &[("story-evidence", "target-report")]),
+    )
+    .unwrap();
+
+    let output = Command::new(binary)
+        .args([
+            "ail-examples",
+            corpus_dir.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        !output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains(
+            "examples catalog entry example-95 story-evidence target-report requires target-report artifact"
+        ),
+        "{stderr}"
+    );
+
+    let _ = fs::remove_dir_all(corpus_dir);
+    let _ = fs::remove_dir_all(artifact_dir);
+}
+
+#[test]
 fn cli_ail_e2e_corpus_requires_program_domain_metadata() {
     assert_e2e_corpus_override_failure(
         "program-domain-metadata",
@@ -29455,6 +29535,18 @@ fn cli_ail_e2e_corpus_replays_rejected_prompt_failures() {
         .unwrap(),
     )
     .unwrap();
+    fs::write(
+        corpus_dir.join("stories").join("example-99.md"),
+        e2e_story_file_text_with_overrides(
+            99,
+            &[
+                ("story-evidence", "diagnostics"),
+                ("story-journey", "diagnostic-story"),
+                ("story-roundtrip", "diagnostic-preserving"),
+            ],
+        ),
+    )
+    .unwrap();
     let mut corpus_text = String::new();
     for index in 0..101 {
         if index == 99 {
@@ -29469,6 +29561,9 @@ fn cli_ail_e2e_corpus_replays_rejected_prompt_failures() {
                     ("request-file", "requests/rejected-0.json"),
                     ("response-file", "responses/rejected-0.json"),
                     ("checker-result", "rejected"),
+                    ("story-evidence", "diagnostics"),
+                    ("story-journey", "diagnostic-story"),
+                    ("story-roundtrip", "diagnostic-preserving"),
                     ("expected-diagnostic", "AIL001"),
                     ("failure-taxonomy", "semantic-drift"),
                 ],
@@ -30601,6 +30696,18 @@ fn cli_ail_e2e_corpus_replays_rejected_prompt_envelope_failures() {
         r#"{"artifact_kind":"AIL-Spec Canonical","artifact_text":"Action: Close ticket.","questions":["Who can close tickets?"],"checker_handoff":{"must_check":true,"expected_profile":"Application"}}"#,
     )
     .unwrap();
+    fs::write(
+        corpus_dir.join("stories").join("example-100.md"),
+        e2e_story_file_text_with_overrides(
+            100,
+            &[
+                ("story-evidence", "diagnostics"),
+                ("story-journey", "diagnostic-story"),
+                ("story-roundtrip", "diagnostic-preserving"),
+            ],
+        ),
+    )
+    .unwrap();
     let mut corpus_text = String::new();
     for index in 0..101 {
         if index == 100 {
@@ -30618,6 +30725,9 @@ fn cli_ail_e2e_corpus_replays_rejected_prompt_envelope_failures() {
                     ("response-file", "responses/rejected-envelope.json"),
                     ("artifact-kind", "prompt-envelope"),
                     ("checker-result", "rejected"),
+                    ("story-evidence", "diagnostics"),
+                    ("story-journey", "diagnostic-story"),
+                    ("story-roundtrip", "diagnostic-preserving"),
                     ("expected-diagnostic", "AIL-PROMPT-001"),
                     ("failure-taxonomy", "prompt-envelope"),
                 ],

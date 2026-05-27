@@ -154,6 +154,10 @@ User stories are also first-class. A story can start the development flow
 preserve a rejected diagnostic (`diagnostic-story`). Replay writes a
 deterministic `user-story.txt` artifact for every entry so the story view can
 be fingerprinted beside checked Core, bytecode, VM traces, and target reports.
+The catalog's `story-evidence` value must name an artifact produced by replay:
+`checked-core`, `bytecode`, `vm-trace`, `target-report`, or `diagnostics`.
+Entries that claim evidence which was not generated are rejected before report
+artifacts are written.
 Rejected entries also get a deterministic `repair-tutorial.txt` artifact that
 keeps the expected diagnostic, failure taxonomy, story file, prompt file,
 package, diagnostic summary, and replay repair steps together for reviewer and

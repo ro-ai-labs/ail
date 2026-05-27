@@ -4750,6 +4750,34 @@ fn validate_ail_e2e_corpus_live_release_evidence(
     Ok(())
 }
 
+fn validate_ail_e2e_story_evidence_artifacts(
+    evaluations: &[AilE2eCorpusEvaluation],
+) -> Result<(), String> {
+    for evaluation in evaluations {
+        let story_evidence = evaluation
+            .entry
+            .fields
+            .get("story-evidence")
+            .map(String::as_str)
+            .unwrap_or_default();
+        let produced = match story_evidence {
+            "checked-core" => evaluation.checked_core_text.is_some(),
+            "bytecode" => evaluation.bytecode_text.is_some(),
+            "vm-trace" => evaluation.vm_trace_text.is_some(),
+            "target-report" => evaluation.target_report_text.is_some(),
+            "diagnostics" => evaluation.diagnostics_text.is_some(),
+            _ => true,
+        };
+        if !produced {
+            return Err(format!(
+                "examples catalog entry {} story-evidence {story_evidence} requires {story_evidence} artifact",
+                evaluation.entry.id
+            ));
+        }
+    }
+    Ok(())
+}
+
 fn validate_ail_e2e_repair_proof_distinctness(
     evaluations: &[AilE2eCorpusEvaluation],
 ) -> Result<(), String> {
@@ -5198,6 +5226,7 @@ fn run_ail_e2e_corpus_command(path: &str, cli_options: &CliOptions) -> Result<u8
     for entry in &entries {
         evaluations.push(evaluate_ail_e2e_corpus_entry(entry)?);
     }
+    validate_ail_e2e_story_evidence_artifacts(&evaluations)?;
     if cli_options.release_evidence {
         validate_ail_e2e_repair_proof_distinctness(&evaluations)?;
     }
@@ -5228,6 +5257,7 @@ fn run_ail_v03_roadmap_command(path: &str, cli_options: &CliOptions) -> Result<u
     for entry in &entries {
         evaluations.push(evaluate_ail_e2e_corpus_entry(entry)?);
     }
+    validate_ail_e2e_story_evidence_artifacts(&evaluations)?;
     if cli_options.release_evidence {
         validate_ail_e2e_repair_proof_distinctness(&evaluations)?;
     }

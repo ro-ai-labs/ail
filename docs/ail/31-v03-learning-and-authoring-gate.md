@@ -66,6 +66,8 @@ Each entry in `examples/examples.md` must include:
 - `acceptance-criteria`: observable criteria tied to checked artifacts.
 - `story-evidence`: strongest artifact that proves the story path, one of
   `checked-core`, `bytecode`, `vm-trace`, `target-report`, or `diagnostics`.
+  Replay rejects the entry if the named artifact is not actually produced for
+  that entry.
 - `story-journey`: one of `story-to-spec`, `spec-to-story`,
   `story-amendment`, or `diagnostic-story`.
 - `story-roundtrip`: `semantic-similar` for accepted stories or
