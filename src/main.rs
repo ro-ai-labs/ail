@@ -1317,6 +1317,7 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
         "codex-ail-spec-writer.md",
         "codex-ail-diagnostic-repairer.md",
         "codex-ail-prompt-reviewer.md",
+        "codex-ail-story-promotion-reviewer.md",
         "codex-ail-repair-promotion-reviewer.md",
         "codex-ail-agent-policy-reviewer.md",
         "codex-ail-ui-patch-reviewer.md",
@@ -1333,6 +1334,10 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
         .iter()
         .find(|contract| contract.label == "codex-ail-repair-promotion-reviewer")
         .ok_or_else(|| "missing codex-ail-repair-promotion-reviewer contract".to_string())?;
+    let story_promotion_reviewer = contracts
+        .iter()
+        .find(|contract| contract.label == "codex-ail-story-promotion-reviewer")
+        .ok_or_else(|| "missing codex-ail-story-promotion-reviewer contract".to_string())?;
     let agent_policy_reviewer = contracts
         .iter()
         .find(|contract| contract.label == "codex-ail-agent-policy-reviewer")
@@ -1344,18 +1349,7 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
     for required in [
         "scripts/run_v03_prompt_llm_harness.py --review-artifacts",
         "scripts/run_v03_story_llm_harness.py --review-artifacts",
-        "scripts/run_v03_story_promotion_capture_plan.py --story-artifacts",
-        "story-promotion-capture-plan.json",
-        "story-promotion-capture-plan.fingerprint.txt",
-        "scripts/run_v03_story_promotion_import_demo.py",
-        "story-promotion-import-demo-report.txt",
-        "story-promotion-import-demo-report.fingerprint.txt",
-        "story-artifacts-preserved true",
-        "proposed-accepted true",
-        "default-max-tokens",
-        "max-tokens",
-        "token-budget-default",
-        "token-budget-warning",
+        "examples/agents/codex-ail-story-promotion-reviewer.md",
         "ail-examples examples --artifact-dir",
         "cargo run -- ail-v03-roadmap examples",
         "v03-roadmap.txt",
@@ -1364,6 +1358,40 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
             return Err(format!(
                 "agent contract {} missing {required}",
                 prompt_reviewer.file_name
+            ));
+        }
+    }
+    for required in [
+        "scripts/run_v03_story_llm_harness.py --review-artifacts",
+        "scripts/run_v03_story_promotion_capture_plan.py --story-artifacts",
+        "story-promotion-capture-plan.json",
+        "story-promotion-capture-plan.fingerprint.txt",
+        "scripts/run_v03_story_promotion_import_demo.py",
+        "story-promotion-import-demo-report.txt",
+        "story-promotion-import-demo-report.fingerprint.txt",
+        "story-artifacts-preserved true",
+        "proposed-accepted true",
+        "promotion-decision accepted-for-promotion",
+        "human-approval-required true",
+        "promotion-source human-approved-story-promotion-batch",
+        "human-approved-story-promotion-batch.fingerprint.txt",
+        "default-max-tokens",
+        "max-tokens",
+        "token-budget-default",
+        "token-budget-warning",
+        "agent-trace",
+        "semantic-anchor-missing-count 0",
+        "ail-examples examples --artifact-dir",
+        "cargo run -- ail-v03-roadmap examples",
+        "accepted-for-promotion",
+        "needs-repair",
+        "rejected-for-promotion",
+        "v03-roadmap.txt",
+    ] {
+        if !story_promotion_reviewer.text.contains(required) {
+            return Err(format!(
+                "agent contract {} missing {required}",
+                story_promotion_reviewer.file_name
             ));
         }
     }
@@ -1470,13 +1498,12 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
         "name: ail-prompt-interaction-reviewer",
         "description: Use when",
         "examples/agents/codex-ail-prompt-reviewer.md",
+        "examples/agents/codex-ail-story-promotion-reviewer.md",
         "examples/agents/codex-ail-repair-promotion-reviewer.md",
         "http://inteligentia-pro-1:8080/",
         "python3 scripts/run_v03_prompt_llm_harness.py --dry-run",
         "python3 scripts/run_v03_prompt_llm_harness.py --review-artifacts /tmp/ail-v03-prompt-llm",
         "python3 scripts/run_v03_story_llm_harness.py --review-artifacts /tmp/ail-v03-story-llm",
-        "python3 scripts/run_v03_story_promotion_capture_plan.py --story-artifacts /tmp/ail-v03-story-llm",
-        "python3 scripts/run_v03_story_promotion_import_demo.py",
         "python3 scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run-checks --include-live",
         "cargo run -- ail-agent-contracts examples/agents",
         "cargo run -- ail-examples examples --artifact-dir",
@@ -1489,15 +1516,6 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
         "manifest.v03-prompt-llm.txt",
         "prompt-llm-harness-review.txt",
         "prompt-llm-harness-review.fingerprint.txt",
-        "story-promotion-capture-plan.json",
-        "story-promotion-capture-plan.fingerprint.txt",
-        "story-promotion-import-demo-report.txt",
-        "story-promotion-import-demo-report.fingerprint.txt",
-        "story-artifacts-preserved true",
-        "default-max-tokens",
-        "max-tokens",
-        "token-budget-default",
-        "token-budget-warning",
         "v03-roadmap.txt",
         "repair-promotion-review.txt",
         "repair-promotion-review.fingerprint.txt",
@@ -1513,6 +1531,45 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
             return Err(format!(
                 "codex skill {} missing {required}",
                 skill_path.display()
+            ));
+        }
+    }
+    let story_skill_path = root.join("skills/ail-story-promotion-reviewer/SKILL.md");
+    let story_skill_text = fs::read_to_string(&story_skill_path).map_err(|error| {
+        format!(
+            "failed to read codex skill {}: {error}",
+            story_skill_path.display()
+        )
+    })?;
+    for required in [
+        "name: ail-story-promotion-reviewer",
+        "description: Use when",
+        "examples/agents/codex-ail-story-promotion-reviewer.md",
+        "python3 scripts/run_v03_story_llm_harness.py --review-artifacts /tmp/ail-v03-story-llm",
+        "python3 scripts/run_v03_story_promotion_capture_plan.py --story-artifacts /tmp/ail-v03-story-llm",
+        "python3 scripts/run_v03_story_promotion_import_demo.py",
+        "cargo run -- ail-agent-contracts examples/agents",
+        "cargo run -- ail-examples examples --artifact-dir",
+        "cargo run -- ail-v03-roadmap examples --artifact-dir",
+        "story-promotion-capture-plan.json",
+        "story-promotion-capture-plan.fingerprint.txt",
+        "story-promotion-import-demo-report.txt",
+        "story-promotion-import-demo-report.fingerprint.txt",
+        "story-artifacts-preserved true",
+        "proposed-accepted true",
+        "promotion-decision accepted-for-promotion",
+        "human-approval-required true",
+        "promotion-source human-approved-story-promotion-batch",
+        "human-approved-story-promotion-batch.fingerprint.txt",
+        "semantic-anchor-missing-count 0",
+        "accepted-for-promotion",
+        "needs-repair",
+        "rejected-for-promotion",
+    ] {
+        if !story_skill_text.contains(required) {
+            return Err(format!(
+                "codex skill {} missing {required}",
+                story_skill_path.display()
             ));
         }
     }
@@ -1682,6 +1739,7 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
     println!(
         "review-command scripts/run_v03_agent_policy_live_reviewer_harness.py --review-artifacts"
     );
+    println!("story-promotion-contract codex-ail-story-promotion-reviewer");
     println!("story-promotion-import-artifact story-promotion-import-demo-report.txt");
     println!("repair-promotion-artifact repair-promotion-review.txt");
     println!("repair-promotion-import-artifact repair-promotion-import-demo-report.txt");
@@ -1692,6 +1750,7 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
     println!("roadmap-artifact v03-roadmap.txt");
     println!("roadmap-command cargo run -- ail-v03-roadmap examples --artifact-dir");
     println!("codex-skill examples/agents/skills/ail-prompt-interaction-reviewer/SKILL.md");
+    println!("codex-skill examples/agents/skills/ail-story-promotion-reviewer/SKILL.md");
     println!("codex-skill examples/agents/skills/ail-system-prompt-harness-runner/SKILL.md");
     println!("codex-skill examples/agents/skills/ail-repair-promotion-reviewer/SKILL.md");
     println!("codex-skill examples/agents/skills/ail-agent-policy-reviewer/SKILL.md");

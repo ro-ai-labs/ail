@@ -296,7 +296,13 @@ must contain generated `artifact_text` for both the requirements and spec
 stages, reported as `story-prompt-envelope-artifact-count 2` and
 `story-prompt-envelope-questions-count 0`.
 
-After the review is accepted, create a plan-only promotion capture artifact:
+After the story-promotion reviewer accepts the reviewed story artifacts, create
+a plan-only promotion capture artifact:
+
+```text
+examples/agents/codex-ail-story-promotion-reviewer.md
+examples/agents/skills/ail-story-promotion-reviewer/SKILL.md
+```
 
 ```sh
 python3 scripts/run_v03_story_promotion_capture_plan.py \
@@ -355,8 +361,8 @@ accepted example, writes
 The harness is intentionally outside the default test suite because it depends
 on the hosted llama.cpp server and model behavior. Promote a live run into the
 examples corpus only after the generated requirements, spec, Core, bytecode,
-agent trace, manifest, story-promotion capture plan, and story-promotion import
-demo report have been reviewed.
+agent trace, manifest, story-promotion reviewer contract, story-promotion
+capture plan, and story-promotion import demo report have been reviewed.
 
 The review mode is offline. It checks story source and normalized story
 fingerprints, story-mode report metadata, generated requirements, accepted

@@ -4507,7 +4507,7 @@ prompt-file: docs/ail/prompts/spec-draft.system.md
 prompt-version: ail-prompts.v0.2
 prompt-fingerprint: fnv64:b23778093326102c
 executor-family: codex-skill-agent
-executor-label: codex-ail-prompt-reviewer-story-demo
+executor-label: codex-ail-story-promotion-reviewer-demo
 capture-origin: live-codex
 request-file: requests/example-30-story.json
 response-file: responses/example-30-story.json

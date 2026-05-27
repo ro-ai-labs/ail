@@ -13,6 +13,9 @@ hosted LLM or Codex skill-agent output is promoted into `./examples`.
 This skill implements the evidence contract in
 `examples/agents/codex-ail-prompt-reviewer.md`. The model may draft or review
 artifacts, but deterministic replay remains the authority.
+User Story mode promotion decisions are covered by
+`examples/agents/codex-ail-story-promotion-reviewer.md`; prompt reviewers only
+handoff reviewed story artifacts to that promotion reviewer.
 Repair promotion decisions are covered by
 `examples/agents/codex-ail-repair-promotion-reviewer.md`; prompt and story
 reviewers must still verify that generated artifacts do not bypass
@@ -25,6 +28,8 @@ reviewers must still verify that generated artifacts do not bypass
 - Current prompt files under `docs/ail/prompts/`.
 - Current agent contracts under `examples/agents/`.
 - Current examples replay and v0.3 roadmap artifacts.
+- Current story promotion artifacts when generated content is proposed for a
+  User Story mode promotion.
 - Current repair promotion artifacts when generated content repairs a rejected
   example.
 - Optional hosted llama.cpp endpoint: `http://inteligentia-pro-1:8080/`.
@@ -57,16 +62,11 @@ Review User Story mode artifacts:
 python3 scripts/run_v03_story_llm_harness.py --review-artifacts /tmp/ail-v03-story-llm
 ```
 
-Create the plan-only story promotion handoff:
+Hand reviewed story artifacts to the dedicated story-promotion reviewer before
+any promotion decision:
 
 ```sh
-python3 scripts/run_v03_story_promotion_capture_plan.py --story-artifacts /tmp/ail-v03-story-llm --output-dir /tmp/ail-v03-story-promotion-capture-plan
-```
-
-Run the deterministic story promotion import demo after human approval:
-
-```sh
-python3 scripts/run_v03_story_promotion_import_demo.py --story-artifacts /tmp/ail-v03-story-llm --capture-plan-dir /tmp/ail-v03-story-promotion-capture-plan
+cargo run -- ail-agent-contracts examples/agents
 ```
 
 Run the interactive manual live gate when prompt interaction evidence must be
@@ -107,23 +107,7 @@ The review report must include:
 - `model-check-model-count`
 - `model-check-model-id`
 - `story-llm-harness-report.txt`
-- `story-promotion-capture-plan.json`
-- `story-promotion-capture-plan.txt`
-- `story-promotion-capture-plan.fingerprint.txt`
-- `story-promotion-import-demo-report.txt`
-- `story-promotion-import-demo-report.fingerprint.txt`
-- `story-artifacts-preserved true`
-- `proposed-accepted true`
-- `capture-plan story-promotion-capture-plan.json`
-- `promotion-decision accepted-for-promotion`
-- `human-approval-required true`
-- `promotion-source human-approved-story-promotion-batch`
-- `human-approved-story-promotion-batch.fingerprint.txt`
-- `batch-plan-fingerprint`
-- `default-max-tokens`
-- `max-tokens`
-- `token-budget-default`
-- `token-budget-warning` when present in the accepted story review
+- `examples/agents/codex-ail-story-promotion-reviewer.md`
 - `examples-report.txt`
 - `v03-roadmap.txt`
 - `repair-promotion-review.txt`
@@ -150,8 +134,8 @@ Return `needs-repair` or `rejected-for-promotion` when:
 - probe metadata is missing, stale, or generic
 - hosted output is non-empty but fails offline review
 - story artifacts lose semantic anchors or agent trace evidence
-- story promotion capture-plan artifacts are missing
-- story promotion import-demo evidence is missing
+- a User Story mode promotion is proposed without the dedicated
+  story-promotion reviewer contract
 - `examples-report.txt` or `v03-roadmap.txt` is missing
 - generated content was modified silently instead of preserving the original
   hosted output as evidence

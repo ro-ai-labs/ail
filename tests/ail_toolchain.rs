@@ -2794,19 +2794,7 @@ fn examples_agents_include_prompt_review_contract() {
         "Repair promotion review report",
         "scripts/run_v03_prompt_llm_harness.py --review-artifacts",
         "scripts/run_v03_story_llm_harness.py --review-artifacts",
-        "scripts/run_v03_story_promotion_capture_plan.py --story-artifacts",
-        "scripts/run_v03_story_promotion_import_demo.py",
-        "story-promotion-capture-plan.json",
-        "story-promotion-import-demo-report.txt",
-        "story-artifacts-preserved true",
-        "capture-plan story-promotion-capture-plan.json",
-        "promotion-source human-approved-story-promotion-batch",
-        "human-approved-story-promotion-batch.fingerprint.txt",
-        "batch-plan-fingerprint",
-        "default-max-tokens",
-        "max-tokens",
-        "token-budget-default",
-        "token-budget-warning",
+        "codex-ail-story-promotion-reviewer.md",
         "repair-promotion-review.txt",
     ] {
         assert!(
@@ -2825,21 +2813,7 @@ fn examples_agents_include_prompt_review_contract() {
         "prompt-envelope-questions-expected-count",
         "prompt-outcome-match-count",
         "prompt-envelope-invalid-count",
-        "story-promotion-capture-plan.json",
-        "story-promotion-capture-plan.fingerprint.txt",
-        "story-promotion-import-demo-report.txt",
-        "story-promotion-import-demo-report.fingerprint.txt",
-        "story-artifacts-preserved true",
-        "capture-plan story-promotion-capture-plan.json",
-        "promotion-decision accepted-for-promotion",
-        "human-approval-required true",
-        "promotion-source human-approved-story-promotion-batch",
-        "human-approved-story-promotion-batch.fingerprint.txt",
-        "batch-plan-fingerprint",
-        "default-max-tokens",
-        "max-tokens",
-        "token-budget-default",
-        "token-budget-warning",
+        "examples/agents/codex-ail-story-promotion-reviewer.md",
         "ail-examples examples --artifact-dir",
         "cargo run -- ail-v03-roadmap examples",
         "v03-roadmap.txt",
@@ -2868,6 +2842,97 @@ fn examples_agents_include_prompt_review_contract() {
             repair_promotion_reviewer.contains(required),
             "{required}\n{repair_promotion_reviewer}"
         );
+    }
+}
+
+#[test]
+fn examples_agents_include_story_promotion_review_contract() {
+    let agent_readme = fs::read_to_string(format!(
+        "{}/examples/agents/README.md",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .unwrap();
+    let story_promotion_reviewer = fs::read_to_string(format!(
+        "{}/examples/agents/codex-ail-story-promotion-reviewer.md",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .unwrap();
+    let story_skill = fs::read_to_string(format!(
+        "{}/examples/agents/skills/ail-story-promotion-reviewer/SKILL.md",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .unwrap();
+    for required in [
+        "codex-ail-story-promotion-reviewer",
+        "codex-ail-story-promotion-reviewer.md",
+        "Story promotion review report and capture plan",
+        "examples/agents/skills/ail-story-promotion-reviewer/SKILL.md",
+        "story-promotion-import-demo-report.txt",
+        "human-approved-story-promotion-batch.fingerprint.txt",
+    ] {
+        assert!(
+            agent_readme.contains(required),
+            "{required}\n{agent_readme}"
+        );
+    }
+    for required in [
+        "version: 0.1.0",
+        "executor-label: codex-ail-story-promotion-reviewer",
+        "executor-family: codex-skill-agent",
+        "target artifact: AIL-Story-Promotion-Review",
+        "scripts/run_v03_story_llm_harness.py --review-artifacts",
+        "scripts/run_v03_story_promotion_capture_plan.py --story-artifacts",
+        "story-promotion-capture-plan.json",
+        "story-promotion-capture-plan.fingerprint.txt",
+        "scripts/run_v03_story_promotion_import_demo.py",
+        "story-promotion-import-demo-report.txt",
+        "story-promotion-import-demo-report.fingerprint.txt",
+        "story-artifacts-preserved true",
+        "proposed-accepted true",
+        "promotion-decision accepted-for-promotion",
+        "human-approval-required true",
+        "promotion-source human-approved-story-promotion-batch",
+        "human-approved-story-promotion-batch.fingerprint.txt",
+        "default-max-tokens",
+        "max-tokens",
+        "token-budget-default",
+        "token-budget-warning",
+        "agent-trace",
+        "semantic-anchor-missing-count 0",
+        "ail-examples examples --artifact-dir",
+        "cargo run -- ail-v03-roadmap examples",
+        "accepted-for-promotion",
+        "needs-repair",
+        "rejected-for-promotion",
+    ] {
+        assert!(
+            story_promotion_reviewer.contains(required),
+            "{required}\n{story_promotion_reviewer}"
+        );
+    }
+    for required in [
+        "name: ail-story-promotion-reviewer",
+        "description: Use when",
+        "examples/agents/codex-ail-story-promotion-reviewer.md",
+        "python3 scripts/run_v03_story_llm_harness.py --review-artifacts /tmp/ail-v03-story-llm",
+        "python3 scripts/run_v03_story_promotion_capture_plan.py --story-artifacts /tmp/ail-v03-story-llm",
+        "python3 scripts/run_v03_story_promotion_import_demo.py",
+        "story-promotion-capture-plan.json",
+        "story-promotion-capture-plan.fingerprint.txt",
+        "story-promotion-import-demo-report.txt",
+        "story-promotion-import-demo-report.fingerprint.txt",
+        "story-artifacts-preserved true",
+        "proposed-accepted true",
+        "promotion-decision accepted-for-promotion",
+        "human-approval-required true",
+        "promotion-source human-approved-story-promotion-batch",
+        "human-approved-story-promotion-batch.fingerprint.txt",
+        "semantic-anchor-missing-count 0",
+        "accepted-for-promotion",
+        "needs-repair",
+        "rejected-for-promotion",
+    ] {
+        assert!(story_skill.contains(required), "{required}\n{story_skill}");
     }
 }
 
@@ -3132,13 +3197,12 @@ fn codex_skill_documents_prompt_interaction_review_gate() {
         "name: ail-prompt-interaction-reviewer",
         "description: Use when",
         "examples/agents/codex-ail-prompt-reviewer.md",
+        "examples/agents/codex-ail-story-promotion-reviewer.md",
         "examples/agents/codex-ail-repair-promotion-reviewer.md",
         "http://inteligentia-pro-1:8080/",
         "python3 scripts/run_v03_prompt_llm_harness.py --dry-run",
         "python3 scripts/run_v03_prompt_llm_harness.py --review-artifacts /tmp/ail-v03-prompt-llm",
         "python3 scripts/run_v03_story_llm_harness.py --review-artifacts /tmp/ail-v03-story-llm",
-        "python3 scripts/run_v03_story_promotion_capture_plan.py --story-artifacts /tmp/ail-v03-story-llm",
-        "python3 scripts/run_v03_story_promotion_import_demo.py",
         "python3 scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run-checks --include-live",
         "cargo run -- ail-agent-contracts examples/agents",
         "cargo run -- ail-examples examples --artifact-dir",
@@ -3151,21 +3215,6 @@ fn codex_skill_documents_prompt_interaction_review_gate() {
         "manifest.v03-prompt-llm.txt",
         "prompt-llm-harness-review.txt",
         "prompt-llm-harness-review.fingerprint.txt",
-        "story-promotion-capture-plan.json",
-        "story-promotion-capture-plan.fingerprint.txt",
-        "story-promotion-import-demo-report.txt",
-        "story-promotion-import-demo-report.fingerprint.txt",
-        "story-artifacts-preserved true",
-        "capture-plan story-promotion-capture-plan.json",
-        "promotion-decision accepted-for-promotion",
-        "human-approval-required true",
-        "promotion-source human-approved-story-promotion-batch",
-        "human-approved-story-promotion-batch.fingerprint.txt",
-        "batch-plan-fingerprint",
-        "default-max-tokens",
-        "max-tokens",
-        "token-budget-default",
-        "token-budget-warning",
         "v03-roadmap.txt",
         "repair-promotion-review.txt",
         "repair-promotion-review.fingerprint.txt",
@@ -3244,17 +3293,19 @@ fn cli_ail_agent_contracts_validates_prompt_reviewer_contract() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     for required in [
         "AIL-Agent-Contracts-Report:",
-        "contract-count 7",
+        "contract-count 8",
         "contract codex-ail-requirements-writer",
         "contract codex-ail-spec-writer",
         "contract codex-ail-diagnostic-repairer",
         "contract codex-ail-prompt-reviewer",
+        "contract codex-ail-story-promotion-reviewer",
         "contract codex-ail-repair-promotion-reviewer",
         "contract codex-ail-agent-policy-reviewer",
         "contract codex-ail-ui-patch-reviewer",
         "review-command scripts/run_v03_prompt_llm_harness.py --review-artifacts",
         "review-command scripts/run_v03_story_llm_harness.py --review-artifacts",
         "review-command scripts/run_v03_agent_policy_live_reviewer_harness.py --review-artifacts",
+        "story-promotion-contract codex-ail-story-promotion-reviewer",
         "repair-promotion-artifact repair-promotion-review.txt",
         "agent-policy-import-artifact agent-policy-import-demo-report.txt",
         "agent-policy-live-review-artifact agent-policy-live-review-report.txt",
@@ -3265,6 +3316,7 @@ fn cli_ail_agent_contracts_validates_prompt_reviewer_contract() {
         "roadmap-artifact v03-roadmap.txt",
         "roadmap-command cargo run -- ail-v03-roadmap examples --artifact-dir",
         "codex-skill examples/agents/skills/ail-prompt-interaction-reviewer/SKILL.md",
+        "codex-skill examples/agents/skills/ail-story-promotion-reviewer/SKILL.md",
         "codex-skill examples/agents/skills/ail-system-prompt-harness-runner/SKILL.md",
         "codex-skill examples/agents/skills/ail-repair-promotion-reviewer/SKILL.md",
         "codex-skill examples/agents/skills/ail-agent-policy-reviewer/SKILL.md",

@@ -22,11 +22,11 @@ cargo run -- ail-agent-contracts examples/agents
 ```
 
 The report must include the requirements writer, spec writer, diagnostic
-repairer, prompt reviewer, repair-promotion reviewer, AgentTool policy
-reviewer, and UI patch reviewer contracts. The prompt reviewer contract must
-require prompt harness review, story harness review, examples replay, and
-`cargo run -- ail-v03-roadmap examples`. The repair promotion reviewer contract
-must require `repair-promotion-review.txt`,
+repairer, prompt reviewer, story-promotion reviewer, repair-promotion reviewer,
+AgentTool policy reviewer, and UI patch reviewer contracts. The prompt reviewer
+contract must require prompt harness review, story harness review, examples
+replay, and `cargo run -- ail-v03-roadmap examples`. The repair promotion
+reviewer contract must require `repair-promotion-review.txt`,
 `repair-promotion-review.fingerprint.txt`, and
 `repair-promotion-review-fingerprint-observed-count`.
 
@@ -58,8 +58,9 @@ include `source-preserved true`, `proposed-accepted true`,
 proposal-only until the visual review, patched Core, and runtime UI-state
 witness all agree.
 
-For User Story mode promotion, the prompt reviewer contract must also require
-`story-promotion-import-demo-report.txt`,
+For User Story mode promotion, the story-promotion reviewer contract,
+`codex-ail-story-promotion-reviewer.md`, must require
+`story-promotion-capture-plan.json`, `story-promotion-import-demo-report.txt`,
 `story-promotion-import-demo-report.fingerprint.txt`,
 `story-artifacts-preserved true`, `proposed-accepted true`,
 `capture-plan story-promotion-capture-plan.json`,
@@ -75,6 +76,7 @@ The same gate also validates the repo-local Codex skills:
 
 ```text
 examples/agents/skills/ail-prompt-interaction-reviewer/SKILL.md
+examples/agents/skills/ail-story-promotion-reviewer/SKILL.md
 examples/agents/skills/ail-system-prompt-harness-runner/SKILL.md
 examples/agents/skills/ail-repair-promotion-reviewer/SKILL.md
 examples/agents/skills/ail-agent-policy-reviewer/SKILL.md
@@ -83,9 +85,9 @@ examples/agents/skills/ail-ui-patch-reviewer/SKILL.md
 
 Those skills are the reusable procedures for running and reviewing hosted
 llama.cpp prompt artifacts, User Story mode artifacts, examples replay,
-`v03-roadmap.txt`, and repair promotion and AgentTool policy evidence,
-including deterministic import demos, before generated content is promoted
-into `./examples`. The UI patch reviewer skill adds the visual/flow patch
+`v03-roadmap.txt`, story promotion, repair promotion, and AgentTool policy
+evidence, including deterministic import demos, before generated content is
+promoted into `./examples`. The UI patch reviewer skill adds the visual/flow patch
 import gate for `ui-patch-import-demo-report.txt` and
 `ui-patch-runtime-state-check-report.txt`.
 Hosted llama.cpp prompt-pack evidence must not accept artifacts whose

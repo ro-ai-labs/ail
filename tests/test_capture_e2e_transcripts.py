@@ -2696,8 +2696,8 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             codex_request.write_text(
                 json.dumps(
                     {
-                        "agent_contract": "examples/agents/codex-ail-prompt-reviewer.md",
-                        "executor_label": "codex-ail-prompt-reviewer-story-test",
+                        "agent_contract": "examples/agents/codex-ail-story-promotion-reviewer.md",
+                        "executor_label": "codex-ail-story-promotion-reviewer-test",
                         "source_entry_id": "example-30",
                         "task": "Approve the reviewed User Story mode artifact for corpus promotion.",
                     },
@@ -2727,7 +2727,7 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
                                 "entry_id": "example-30-story-capture",
                                 "source_entry_id": "example-30",
                                 "executor_family": "codex-skill-agent",
-                                "executor_label": "codex-ail-prompt-reviewer-story-test",
+                                "executor_label": "codex-ail-story-promotion-reviewer-test",
                                 "semantic_task": "support-ticket-story-promoted-30",
                                 "request_json_file": str(codex_request),
                                 "response_json_file": str(codex_response),
@@ -2773,7 +2773,7 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             self.assertIn("story-evidence: vm-trace", promoted_section)
             self.assertIn("capture-origin: live-codex", promoted_section)
             self.assertIn(
-                "executor-label: codex-ail-prompt-reviewer-story-test",
+                "executor-label: codex-ail-story-promotion-reviewer-test",
                 promoted_section,
             )
             story_file = output_dir / "stories" / "example-30-story-capture.md"
@@ -3032,6 +3032,21 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             promoted_section = examples.split("## Example: example-30-story-demo", 1)[1]
             self.assertIn("checker-result: accepted", source_section)
             self.assertIn("checker-result: accepted", promoted_section)
+            self.assertIn(
+                "executor-label: codex-ail-story-promotion-reviewer-demo",
+                promoted_section,
+            )
+            approved_request = json.loads(
+                (work_dir / "approved-story-request.json").read_text()
+            )
+            self.assertEqual(
+                approved_request["agent_contract"],
+                "examples/agents/codex-ail-story-promotion-reviewer.md",
+            )
+            self.assertEqual(
+                approved_request["executor_label"],
+                "codex-ail-story-promotion-reviewer-demo",
+            )
             self.assertTrue(
                 (output_artifacts / "examples" / "example-30-story-demo" / "checked.ail-core.txt")
                 .exists()

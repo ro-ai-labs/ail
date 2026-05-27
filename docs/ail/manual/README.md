@@ -210,7 +210,8 @@ python3 scripts/run_ail_interactive_manual.py --chapter agent-policy-import --ru
   requirements, blocking-question evidence, accepted spec, checked Core,
   bytecode, stored LLM request/response/content transcripts, prompt-envelope
   counts, agent trace and fingerprint evidence, native target runtime-trace evidence, a
-  story promotion capture artifact, and a corpus-copy import demo with
+  story promotion reviewer contract, story promotion capture artifact, and a
+  corpus-copy import demo with
   `story-promotion-import-demo-report.txt`,
   `story-artifacts-preserved true`, `proposed-accepted true`,
   `promotion-source human-approved-story-promotion-batch`, and

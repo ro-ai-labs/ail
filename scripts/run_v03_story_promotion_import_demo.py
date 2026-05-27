@@ -134,7 +134,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument(
         "--output-artifacts", default="/tmp/ail-v03-story-promotion-import-artifacts"
     )
-    parser.add_argument("--executor-label", default="codex-ail-prompt-reviewer-story-demo")
+    parser.add_argument("--executor-label", default="codex-ail-story-promotion-reviewer-demo")
     parser.add_argument("--semantic-task", default="support-ticket-story-promoted-30")
     parsed = parser.parse_args(argv)
     parsed.story_artifacts = Path(parsed.story_artifacts)
@@ -180,6 +180,8 @@ def main(argv: list[str]) -> int:
     write_json(
         request_path,
         {
+            "agent_contract": "examples/agents/codex-ail-story-promotion-reviewer.md",
+            "agent_contract_version": "0.1.0",
             "approval_mode": "deterministic-demo",
             "executor_label": args.executor_label,
             "source_entry_id": args.source_entry_id,

@@ -172,7 +172,9 @@ Repair-promotion batches may also append a proposed accepted entry by supplying
 keeps the rejected source entry in place, writes fresh transcript and story
 files for the proposed accepted entry, and still relies on offline replay for
 spec -> Core -> bytecode -> runtime or target evidence.
-Story-promotion batches may append a proposed accepted entry by supplying
+Story-promotion batches may append a proposed accepted entry after
+`examples/agents/codex-ail-story-promotion-reviewer.md` approves the reviewed
+story artifact bundle. The batch supplies
 `source_entry_id`, `entry_id`, approved request/response JSON, and
 `story_promotion_capture_plan_json`. That mode validates the reviewed story
 harness plan, copies the full story artifact bundle into the corpus copy under

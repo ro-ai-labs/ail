@@ -97,6 +97,8 @@ story-prompt-envelope-valid-count
 story-prompt-envelope-artifact-count
 story-prompt-envelope-questions-count
 story-prompt-envelope-invalid-count
+codex-ail-story-promotion-reviewer.md
+examples/agents/skills/ail-story-promotion-reviewer/SKILL.md
 story-promotion-capture-plan.json
 story-promotion-capture-plan.txt
 story-promotion-capture-plan.fingerprint.txt

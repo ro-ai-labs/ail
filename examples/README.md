@@ -196,8 +196,12 @@ append `proposed_entry_id` from the plan by supplying a batch entry with
 fingerprint, keeps the rejected source entry unchanged, writes new `requests/`,
 `responses/`, and `stories/` files for the repaired accepted entry, and replays
 the corpus copy before any generated corpus copy is committed.
-User Story mode promotion follows the same corpus-copy rule. After
-`scripts/run_v03_story_promotion_capture_plan.py` writes
+User Story mode promotion follows the same corpus-copy rule. The dedicated
+story-promotion reviewer contract,
+`examples/agents/codex-ail-story-promotion-reviewer.md`, and skill,
+`examples/agents/skills/ail-story-promotion-reviewer/SKILL.md`, own the
+promotion decision. After `scripts/run_v03_story_promotion_capture_plan.py`
+writes
 `story-promotion-capture-plan.json`, a batch entry may supply
 `story_promotion_capture_plan_json` with human-approved request/response JSON.
 The importer validates the plan fingerprint, copies the reviewed story artifact
