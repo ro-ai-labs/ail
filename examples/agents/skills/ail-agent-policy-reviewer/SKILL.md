@@ -77,8 +77,13 @@ The review report must include:
 - `agent-policy-live-review-report.txt`
 - `agent-policy-live-review-report.fingerprint.txt`
 - `manifest.v03-agent-policy-live-review.txt`
+- `models.json`
+- `models.fingerprint.txt`
 - `agent-policy-live-review-review.txt`
 - `agent-policy-live-review-review.fingerprint.txt`
+- `model-check present`
+- `model-check-model-count`
+- `model-check-model-id`
 - `reviewer-envelope-valid-count`
 - `reviewer-envelope-invalid-count`
 - `evidence-bundle-present-count`
@@ -122,6 +127,9 @@ Return `needs-repair` or `rejected-for-import` when:
 - hosted reviewer evidence is claimed but
   `scripts/run_v03_agent_policy_live_reviewer_harness.py --review-artifacts`
   is missing or reports `review-result rejected`
+- hosted reviewer evidence is claimed but the offline review reports
+  `model-check missing`, a hosted reviewer response omits `model`, or a
+  response model is not listed in `models.json`
 - hosted reviewer evidence is claimed but recorded reviewer requests do not
   include `Evidence bundle status: complete`, an `evidence-bundle-fingerprint`,
   every required artifact fingerprint, and bounded content excerpts from the

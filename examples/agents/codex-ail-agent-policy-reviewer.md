@@ -32,6 +32,8 @@ corpus entry.
 - `agent-policy-live-review-report.txt`
 - `agent-policy-live-review-report.fingerprint.txt`
 - `manifest.v03-agent-policy-live-review.txt`
+- `models.json`
+- `models.fingerprint.txt`
 - `agent-policy-live-review-review.txt`
 - `agent-policy-live-review-review.fingerprint.txt`
 - reviewer notes about intended AgentTool policy handoff promotion
@@ -65,8 +67,13 @@ Return an `AIL-Agent-Policy-Review` report that records:
 - `agent-policy-live-review-report.txt`
 - `agent-policy-live-review-report.fingerprint.txt`
 - `manifest.v03-agent-policy-live-review.txt`
+- `models.json`
+- `models.fingerprint.txt`
 - `agent-policy-live-review-review.txt`
 - `agent-policy-live-review-review.fingerprint.txt`
+- `model-check present`
+- `model-check-model-count`
+- `model-check-model-id`
 - `reviewer-envelope-valid-count`
 - `reviewer-envelope-invalid-count`
 - `evidence-bundle-present-count`
@@ -169,6 +176,8 @@ The offline review must include `agent-policy-live-review-report.txt`,
 `agent-policy-live-review-review.txt`,
 `agent-policy-live-review-review.fingerprint.txt`,
 `manifest.v03-agent-policy-live-review.txt`,
+`models.json`, `models.fingerprint.txt`, `model-check`,
+`model-check-model-count`, `model-check-model-id`,
 `reviewer-envelope-valid-count`, `reviewer-envelope-invalid-count`,
 `evidence-bundle-present-count`, `default-max-tokens`, `max-tokens`,
 `token-budget-default`, any `token-budget-warning`,

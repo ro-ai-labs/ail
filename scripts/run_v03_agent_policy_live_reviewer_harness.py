@@ -223,6 +223,34 @@ def load_json(path: Path, errors: list[str]) -> dict[str, object]:
     return value
 
 
+def model_entries(models_text: str) -> tuple[bool, list[str], str]:
+    if not models_text.strip():
+        return False, [], "models.json is empty"
+    try:
+        payload = json.loads(models_text)
+    except json.JSONDecodeError as error:
+        return False, [], f"invalid json models.json: {error}"
+    if not isinstance(payload, dict):
+        return False, [], "models.json must be a JSON object"
+    if payload.get("skipped") is True:
+        return True, ["<skipped>"], ""
+    raw_entries = payload.get("data")
+    if not isinstance(raw_entries, list):
+        raw_entries = payload.get("models")
+    if not isinstance(raw_entries, list):
+        return False, [], "models.json must include data or models list"
+    ids: list[str] = []
+    for entry in raw_entries:
+        if not isinstance(entry, dict):
+            continue
+        model_id = entry.get("id") or entry.get("name") or entry.get("model")
+        if isinstance(model_id, str) and model_id.strip():
+            ids.append(model_id.strip())
+    if not ids:
+        return False, [], "models.json did not name any models"
+    return True, ids, ""
+
+
 def request_user_probe(body: object) -> str:
     if not isinstance(body, dict):
         return ""
@@ -548,6 +576,11 @@ def review_artifacts(args: argparse.Namespace, contracts: list[tuple[str, str, s
     report_text = read_required_text(
         artifact_root / "agent-policy-live-review-report.txt", errors
     )
+    models_text = read_required_text(artifact_root / "models.json", errors)
+    model_check_ok, model_ids, model_check_error = model_entries(models_text)
+    if model_check_error:
+        errors.append(model_check_error)
+    model_id_set = set(model_ids)
     report_lines = report_text.splitlines()
 
     for path, fingerprint_path in [
@@ -562,9 +595,8 @@ def review_artifacts(args: argparse.Namespace, contracts: list[tuple[str, str, s
     ]:
         if check_fingerprint(path, errors, fingerprint_path):
             fingerprint_checks += 1
-    if (artifact_root / "models.json").exists():
-        if check_fingerprint(artifact_root / "models.json", errors):
-            fingerprint_checks += 1
+    if check_fingerprint(artifact_root / "models.json", errors):
+        fingerprint_checks += 1
 
     if "AIL-Agent-Policy-Live-Reviewer-Harness-Manifest:" not in manifest_text:
         errors.append("manifest missing AIL-Agent-Policy-Live-Reviewer-Harness-Manifest header")
@@ -632,6 +664,14 @@ def review_artifacts(args: argparse.Namespace, contracts: list[tuple[str, str, s
                 errors.append(f"{evidence_error} {role}")
         if not response:
             errors.append(f"missing response json {role}")
+        elif model_check_ok and model_ids != ["<skipped>"]:
+            response_model = response.get("model")
+            if not isinstance(response_model, str) or not response_model.strip():
+                errors.append(f"response model missing for {role}")
+            elif response_model.strip() not in model_id_set:
+                errors.append(
+                    f"response model {response_model.strip()} not present in models.json for {role}"
+                )
         if f"artifact {role} contract {contract_path}" not in manifest_text:
             errors.append(f"manifest missing reviewer artifact {role}")
         role_report_line = next(
@@ -660,6 +700,9 @@ def review_artifacts(args: argparse.Namespace, contracts: list[tuple[str, str, s
         f"reviewer-decision-accept-count {decision_accept}",
         f"reviewer-decision-needs-repair-count {decision_needs_repair}",
         f"reviewer-decision-reject-count {decision_reject}",
+        f"model-check {'present' if model_check_ok else 'missing'}",
+        f"model-check-model-count {len(model_ids)}",
+        f"model-check-model-id {','.join(model_ids) if model_ids else '<missing>'}",
         f"fingerprint-check-count {fingerprint_checks}",
     ]
     if errors:
@@ -724,6 +767,23 @@ def run_live(args: argparse.Namespace, contracts: list[tuple[str, str, str]]) ->
     if not args.skip_model_check:
         models = get_json(models_url_for_endpoint(args.endpoint))
         models_text = json.dumps(models, indent=2, sort_keys=True) + "\n"
+        write_text(artifact_root / "models.json", models_text)
+        write_text(artifact_root / "models.fingerprint.txt", fnv64(models_text) + "\n")
+        manifest_lines.append("artifact models models.json models.fingerprint.txt")
+    else:
+        models_text = (
+            json.dumps(
+                {
+                    "object": "ail-model-check",
+                    "skipped": True,
+                    "endpoint": args.endpoint,
+                    "models_url": models_url_for_endpoint(args.endpoint),
+                },
+                indent=2,
+                sort_keys=True,
+            )
+            + "\n"
+        )
         write_text(artifact_root / "models.json", models_text)
         write_text(artifact_root / "models.fingerprint.txt", fnv64(models_text) + "\n")
         manifest_lines.append("artifact models models.json models.fingerprint.txt")

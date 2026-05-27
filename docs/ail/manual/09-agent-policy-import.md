@@ -150,6 +150,9 @@ The default hosted reviewer budget is `--max-tokens 768`. The live report and
 offline review repeat `default-max-tokens`, the actual `max-tokens`,
 `token-budget-default`, and any `token-budget-warning`, so truncated or
 over-budget reviewer evidence is visible before promotion decisions.
+The live harness also records the endpoint model list in `models.json` and
+`models.fingerprint.txt`; `--skip-model-check` must record an explicit skipped
+model-check artifact instead of silently omitting the check.
 
 Then review the recorded request, response, and content bundle offline:
 
@@ -163,8 +166,13 @@ The review must write and validate:
 agent-policy-live-review-report.txt
 agent-policy-live-review-report.fingerprint.txt
 manifest.v03-agent-policy-live-review.txt
+models.json
+models.fingerprint.txt
 agent-policy-live-review-review.txt
 agent-policy-live-review-review.fingerprint.txt
+model-check
+model-check-model-count
+model-check-model-id
 reviewer-envelope-valid-count
 reviewer-envelope-invalid-count
 evidence-bundle-present-count
@@ -178,8 +186,9 @@ reviewer-decision-reject-count
 ```
 
 The live reviewer report is accepted only when every reviewer envelope is
-valid, every recorded request contains the deterministic evidence bundle, and
-every role returns `decision: accept`. Valid `needs-repair` or `reject`
+valid, each response `model` is present in `models.json` when the model check is
+not skipped, every recorded request contains the deterministic evidence bundle,
+and every role returns `decision: accept`. Valid `needs-repair` or `reject`
 decisions produce `review-result needs-repair` and a nonzero exit so the hosted
 output becomes repair backlog instead of promotion evidence. It still does not
 edit `./examples`; promotion remains gated by deterministic replay, human

@@ -1547,7 +1547,51 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             self.assertIn("reviewer-decision-accept-count 5", review.stdout)
             self.assertIn("reviewer-decision-needs-repair-count 0", review.stdout)
             self.assertIn("reviewer-decision-reject-count 0", review.stdout)
+            self.assertIn("model-check present", review.stdout)
+            self.assertIn("model-check-model-count 1", review.stdout)
+            self.assertIn("model-check-model-id test-model", review.stdout)
             self.assertIn("review-result accepted", review.stdout)
+        finally:
+            shutil.rmtree(artifact_dir, ignore_errors=True)
+
+    def test_agent_policy_live_reviewer_harness_review_rejects_unlisted_response_model(self):
+        artifact_dir = Path(
+            tempfile.mkdtemp(prefix="ail-agent-policy-live-model-mismatch-")
+        )
+        try:
+            write_agent_policy_live_reviewer_fixture(artifact_dir)
+
+            response_path = artifact_dir / "responses" / "prompt-reviewer.json"
+            response = json.loads(response_path.read_text())
+            response["model"] = "unlisted-model"
+            response_text = json.dumps(response, indent=2, sort_keys=True) + "\n"
+            write_text(
+                response_path.with_suffix(".fingerprint.txt"),
+                fnv64(response_text) + "\n",
+            )
+            write_text(response_path, response_text)
+
+            review = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_agent_policy_live_reviewer_harness.py",
+                    "--review-artifacts",
+                    str(artifact_dir),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+
+            self.assertNotEqual(review.returncode, 0)
+            self.assertIn("review-result rejected", review.stdout)
+            self.assertIn("model-check present", review.stdout)
+            self.assertIn("model-check-model-count 1", review.stdout)
+            self.assertIn("model-check-model-id test-model", review.stdout)
+            self.assertIn(
+                "response model unlisted-model not present in models.json for prompt-reviewer",
+                review.stdout,
+            )
         finally:
             shutil.rmtree(artifact_dir, ignore_errors=True)
 
@@ -1664,6 +1708,12 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
                 capture_output=True,
             )
             self.assertEqual(run.returncode, 0, f"stdout:\n{run.stdout}\nstderr:\n{run.stderr}")
+            models = json.loads((artifact_dir / "models.json").read_text())
+            self.assertEqual(models["skipped"], True)
+            self.assertEqual(
+                (artifact_dir / "models.fingerprint.txt").read_text().strip(),
+                fnv64((artifact_dir / "models.json").read_text()),
+            )
             self.assertEqual(len(_CompletionHandler.requests), len(AGENT_POLICY_LIVE_ROLES))
             request = json.loads(
                 (artifact_dir / "requests" / "requirements-writer.json").read_text()

@@ -66,14 +66,16 @@ artifact, import-demo evidence, deterministic handoff witness, and optional
 hosted live reviewer artifact review required before a policy handoff
 amendment can be proposed as an accepted corpus entry. Hosted review evidence
 must include `agent-policy-live-review-report.txt`,
-`agent-policy-live-review-review.txt`, `reviewer-envelope-valid-count`, and
-`reviewer-decision-accept-count` when it is claimed. The offline review also
-requires `evidence-bundle-present-count`, `default-max-tokens`, `max-tokens`,
-`token-budget-default`, and any `token-budget-warning`, proving each hosted
-reviewer request included the deterministic policy review, capture plan,
-import report, and multi-agent handoff excerpts plus fingerprints under a
-visible generation budget. Valid hosted envelopes with `needs-repair` or
-`reject` decisions are not promotion evidence; the offline review records
+`agent-policy-live-review-review.txt`, `models.json`,
+`models.fingerprint.txt`, `model-check-model-id`,
+`reviewer-envelope-valid-count`, and `reviewer-decision-accept-count` when it
+is claimed. The offline review also requires `evidence-bundle-present-count`,
+`default-max-tokens`, `max-tokens`, `token-budget-default`, and any
+`token-budget-warning`, proving each hosted reviewer request included the
+deterministic policy review, capture plan, import report, and multi-agent
+handoff excerpts plus fingerprints under a visible generation budget. Valid
+hosted envelopes with `needs-repair` or `reject` decisions are not promotion
+evidence; the offline review records
 `reviewer-decision-needs-repair-count`, `reviewer-decision-reject-count`, and
 `review-result needs-repair`.
 
