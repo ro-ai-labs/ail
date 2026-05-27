@@ -22,19 +22,24 @@ cargo run -- ail-agent-contracts examples/agents
 ```
 
 The report must include the requirements writer, spec writer, diagnostic
-repairer, and prompt reviewer contracts. The prompt reviewer contract must
-require prompt harness review, story harness review, examples replay, and
-`cargo run -- ail-v03-roadmap examples`.
+repairer, prompt reviewer, and repair-promotion reviewer contracts. The prompt
+reviewer contract must require prompt harness review, story harness review,
+examples replay, and `cargo run -- ail-v03-roadmap examples`. The repair
+promotion reviewer contract must require `repair-promotion-review.txt`,
+`repair-promotion-review.fingerprint.txt`, and
+`repair-promotion-review-fingerprint-observed-count`.
 
-The same gate also validates the repo-local Codex skill:
+The same gate also validates the repo-local Codex skills:
 
 ```text
 examples/agents/skills/ail-prompt-interaction-reviewer/SKILL.md
+examples/agents/skills/ail-repair-promotion-reviewer/SKILL.md
 ```
 
-That skill is the reusable procedure for reviewing hosted llama.cpp prompt
-artifacts, User Story mode artifacts, examples replay, and `v03-roadmap.txt`
-before generated content is promoted into `./examples`.
+Those skills are the reusable procedures for reviewing hosted llama.cpp prompt
+artifacts, User Story mode artifacts, examples replay, `v03-roadmap.txt`, and
+repair promotion evidence before generated content is promoted into
+`./examples`.
 
 ## Toolchain Agent Package
 

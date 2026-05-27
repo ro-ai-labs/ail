@@ -87,6 +87,12 @@ Run deterministic agent-entrypoint checks:
 python3 scripts/run_ail_interactive_manual.py --chapter agent-entrypoint --run-checks
 ```
 
+Run deterministic repair-promotion checks:
+
+```sh
+python3 scripts/run_ail_interactive_manual.py --chapter repair-promotion --run-checks
+```
+
 Live LLM chapters are opt-in. Add `--include-live` only when
 `http://inteligentia-pro-1:8080/` is reachable and the generated artifacts will
 be reviewed before promotion into `./examples`.
@@ -113,7 +119,10 @@ python3 scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run
   `04-agent-entrypoint.md`.
 - `v03-roadmap`: direct next-version backlog generated from the examples
   corpus with `ail-v03-roadmap`. Prose: `05-v03-roadmap.md`.
+- `repair-promotion`: deterministic review of rejected-example repair evidence
+  before proposing a repaired artifact for accepted-corpus promotion. Prose:
+  `07-repair-promotion.md`.
 - `v03-authoring-gate`: the deterministic v0.3 audit that runs User Story
-  mode, examples replay, roadmap printing, prompt interaction, and
-  agent-entrypoint checks from one manual chapter. Prose:
-  `06-v03-authoring-gate.md`.
+  mode, examples replay, roadmap printing, prompt interaction,
+  agent-entrypoint, and repair-promotion checks from one manual chapter.
+  Prose: `06-v03-authoring-gate.md`.

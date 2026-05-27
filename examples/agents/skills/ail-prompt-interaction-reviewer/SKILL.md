@@ -13,6 +13,10 @@ hosted LLM or Codex skill-agent output is promoted into `./examples`.
 This skill implements the evidence contract in
 `examples/agents/codex-ail-prompt-reviewer.md`. The model may draft or review
 artifacts, but deterministic replay remains the authority.
+Repair promotion decisions are covered by
+`examples/agents/codex-ail-repair-promotion-reviewer.md`; prompt and story
+reviewers must still verify that generated artifacts do not bypass
+`repair-promotion-review.txt`.
 
 ## Required Inputs
 
@@ -21,6 +25,8 @@ artifacts, but deterministic replay remains the authority.
 - Current prompt files under `docs/ail/prompts/`.
 - Current agent contracts under `examples/agents/`.
 - Current examples replay and v0.3 roadmap artifacts.
+- Current repair promotion artifacts when generated content repairs a rejected
+  example.
 - Optional hosted llama.cpp endpoint: `http://inteligentia-pro-1:8080/`.
 
 ## Review Sequence
@@ -65,6 +71,13 @@ cargo run -- ail-examples examples --artifact-dir /tmp/ail-prompt-review-example
 cargo run -- ail-v03-roadmap examples --artifact-dir /tmp/ail-prompt-review-roadmap --release-evidence
 ```
 
+When generated output repairs a rejected example, run the repair promotion
+chapter before promotion:
+
+```sh
+python3 scripts/run_ail_interactive_manual.py --chapter repair-promotion --run-checks
+```
+
 ## Required Evidence
 
 The review report must include:
@@ -78,6 +91,9 @@ The review report must include:
 - `story-llm-harness-report.txt`
 - `examples-report.txt`
 - `v03-roadmap.txt`
+- `repair-promotion-review.txt`
+- `repair-promotion-review.fingerprint.txt`
+- `repair-promotion-review-fingerprint-observed-count`
 - prompt file fingerprints when available
 - probe labels and probe fingerprints
 - expected `artifact_kind` validation for every prompt

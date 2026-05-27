@@ -1033,6 +1033,7 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         "manual/04-agent-entrypoint.md",
         "manual/05-v03-roadmap.md",
         "manual/06-v03-authoring-gate.md",
+        "manual/07-repair-promotion.md",
     ] {
         assert!(
             docs_index.contains(manual_chapter),
@@ -1057,12 +1058,14 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         "prompt-interaction",
         "agent-entrypoint",
         "v03-roadmap",
+        "repair-promotion",
         "v03-authoring-gate",
         "02-examples-release.md",
         "03-prompt-interaction.md",
         "04-agent-entrypoint.md",
         "05-v03-roadmap.md",
         "06-v03-authoring-gate.md",
+        "07-repair-promotion.md",
     ] {
         assert!(
             manual_index.contains(required),
@@ -1178,6 +1181,7 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "chapter prompt-interaction",
         "chapter agent-entrypoint",
         "chapter v03-roadmap",
+        "chapter repair-promotion",
         "chapter v03-authoring-gate",
     ] {
         assert!(list_stdout.contains(required), "{required}\n{list_stdout}");
@@ -1303,6 +1307,30 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         );
     }
 
+    let repair_promotion_dry_run = Command::new("python3")
+        .args([&script, "--chapter", "repair-promotion", "--dry-run"])
+        .output()
+        .unwrap();
+    assert!(
+        repair_promotion_dry_run.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&repair_promotion_dry_run.stdout),
+        String::from_utf8_lossy(&repair_promotion_dry_run.stderr)
+    );
+    let repair_promotion_stdout = String::from_utf8_lossy(&repair_promotion_dry_run.stdout);
+    for required in [
+        "id repair-promotion",
+        "doc docs/ail/manual/07-repair-promotion.md",
+        "cargo run -- ail-examples examples",
+        "repair-promotion-review.txt",
+        "repair-promotion-review-fingerprint-observed-count",
+    ] {
+        assert!(
+            repair_promotion_stdout.contains(required),
+            "{required}\n{repair_promotion_stdout}"
+        );
+    }
+
     let gate_dry_run = Command::new("python3")
         .args([&script, "--chapter", "v03-authoring-gate", "--dry-run"])
         .output()
@@ -1322,9 +1350,11 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "python3 scripts/run_ail_interactive_manual.py --chapter v03-roadmap --run-checks",
         "python3 scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run-checks",
         "python3 scripts/run_ail_interactive_manual.py --chapter agent-entrypoint --run-checks",
+        "python3 scripts/run_ail_interactive_manual.py --chapter repair-promotion --run-checks",
         "evidence examples-report.txt",
         "evidence v03-roadmap.txt",
         "evidence agent-trace.txt",
+        "evidence repair-promotion-review.txt",
     ] {
         assert!(gate_stdout.contains(required), "{required}\n{gate_stdout}");
     }
@@ -1482,20 +1512,25 @@ fn examples_agents_include_prompt_review_contract() {
         env!("CARGO_MANIFEST_DIR")
     ))
     .unwrap();
+    let repair_promotion_reviewer = fs::read_to_string(format!(
+        "{}/examples/agents/codex-ail-repair-promotion-reviewer.md",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .unwrap();
     for required in [
         "codex-ail-prompt-reviewer",
         "codex-ail-prompt-reviewer.md",
+        "codex-ail-repair-promotion-reviewer",
+        "codex-ail-repair-promotion-reviewer.md",
         "Prompt and story harness review report",
+        "Repair promotion review report",
         "scripts/run_v03_prompt_llm_harness.py --review-artifacts",
         "scripts/run_v03_story_llm_harness.py --review-artifacts",
+        "repair-promotion-review.txt",
     ] {
         assert!(
             agent_readme.contains(required),
             "{required}\n{agent_readme}"
-        );
-        assert!(
-            prompt_reviewer.contains(required),
-            "{required}\n{prompt_reviewer}"
         );
     }
     for required in [
@@ -1515,6 +1550,23 @@ fn examples_agents_include_prompt_review_contract() {
             "{required}\n{prompt_reviewer}"
         );
     }
+    for required in [
+        "version: 0.1.0",
+        "executor-label: codex-ail-repair-promotion-reviewer",
+        "executor-family: codex-skill-agent",
+        "target artifact: AIL-Repair-Promotion-Review",
+        "repair-promotion-review.txt",
+        "repair-promotion-review.fingerprint.txt",
+        "repair-promotion-review-fingerprint-observed-count",
+        "accepted-for-promotion",
+        "human-approval-required true",
+        "Do not promote generated content into ./examples",
+    ] {
+        assert!(
+            repair_promotion_reviewer.contains(required),
+            "{required}\n{repair_promotion_reviewer}"
+        );
+    }
 }
 
 #[test]
@@ -1528,6 +1580,7 @@ fn codex_skill_documents_prompt_interaction_review_gate() {
         "name: ail-prompt-interaction-reviewer",
         "description: Use when",
         "examples/agents/codex-ail-prompt-reviewer.md",
+        "examples/agents/codex-ail-repair-promotion-reviewer.md",
         "http://inteligentia-pro-1:8080/",
         "python3 scripts/run_v03_prompt_llm_harness.py --dry-run",
         "python3 scripts/run_v03_prompt_llm_harness.py --review-artifacts /tmp/ail-v03-prompt-llm",
@@ -1542,6 +1595,9 @@ fn codex_skill_documents_prompt_interaction_review_gate() {
         "prompt-llm-harness-review.txt",
         "prompt-llm-harness-review.fingerprint.txt",
         "v03-roadmap.txt",
+        "repair-promotion-review.txt",
+        "repair-promotion-review.fingerprint.txt",
+        "repair-promotion-review-fingerprint-observed-count",
         "accepted-for-promotion",
         "needs-repair",
         "rejected-for-promotion",
@@ -1566,16 +1622,19 @@ fn cli_ail_agent_contracts_validates_prompt_reviewer_contract() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     for required in [
         "AIL-Agent-Contracts-Report:",
-        "contract-count 4",
+        "contract-count 5",
         "contract codex-ail-requirements-writer",
         "contract codex-ail-spec-writer",
         "contract codex-ail-diagnostic-repairer",
         "contract codex-ail-prompt-reviewer",
+        "contract codex-ail-repair-promotion-reviewer",
         "review-command scripts/run_v03_prompt_llm_harness.py --review-artifacts",
         "review-command scripts/run_v03_story_llm_harness.py --review-artifacts",
+        "repair-promotion-artifact repair-promotion-review.txt",
         "roadmap-artifact v03-roadmap.txt",
         "roadmap-command cargo run -- ail-v03-roadmap examples --artifact-dir",
         "codex-skill examples/agents/skills/ail-prompt-interaction-reviewer/SKILL.md",
+        "codex-skill examples/agents/skills/ail-repair-promotion-reviewer/SKILL.md",
         "agent-contracts-result accepted",
     ] {
         assert!(stdout.contains(required), "{required}\n{stdout}");
@@ -24958,6 +25017,10 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         report.contains("repair-diff-fingerprint-observed-count 8"),
         "{report}"
     );
+    assert!(
+        report.contains("repair-promotion-review-fingerprint-observed-count 8"),
+        "{report}"
+    );
     for (entry_id, failure_taxonomy, repair_evidence_kind) in rejected_entries {
         let repair_tutorial = fs::read_to_string(
             artifact_dir
@@ -25154,6 +25217,69 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
             )),
             "{report}"
         );
+        let repair_promotion_review = fs::read_to_string(
+            artifact_dir
+                .join("examples")
+                .join(entry_id)
+                .join("repair-promotion-review.txt"),
+        )
+        .unwrap();
+        assert!(
+            repair_promotion_review.contains("AIL-Repair-Promotion-Review:")
+                && repair_promotion_review.contains(&format!("entry {entry_id}"))
+                && repair_promotion_review.contains("promotion-decision accepted-for-promotion")
+                && repair_promotion_review.contains("checker-result rejected-to-repaired")
+                && repair_promotion_review
+                    .contains(&format!("failure-taxonomy {failure_taxonomy}"))
+                && repair_promotion_review.contains("expected-diagnostic-removed true")
+                && repair_promotion_review
+                    .contains(&format!("repair-evidence-kind {repair_evidence_kind}"))
+                && repair_promotion_review.contains(&format!(
+                    "repair-tutorial-fingerprint {}",
+                    repair_tutorial_fingerprint.trim()
+                ))
+                && repair_promotion_review.contains(&format!(
+                    "repair-candidate-fingerprint {}",
+                    repair_candidate_fingerprint.trim()
+                ))
+                && repair_promotion_review.contains(&format!(
+                    "repair-checked-core-fingerprint {}",
+                    repair_core_fingerprint.trim()
+                ))
+                && repair_promotion_review.contains(&format!(
+                    "repair-bytecode-fingerprint {}",
+                    repair_bytecode_fingerprint.trim()
+                ))
+                && repair_promotion_review.contains(&format!(
+                    "repair-evidence-fingerprint {}",
+                    repair_evidence_fingerprint.trim()
+                ))
+                && repair_promotion_review.contains(&format!(
+                    "repair-diff-fingerprint {}",
+                    repair_diff_fingerprint.trim()
+                ))
+                && repair_promotion_review.contains("semantic-anchor-missing-count 0")
+                && repair_promotion_review.contains("promotion-review-summary "),
+            "{repair_promotion_review}"
+        );
+        let repair_promotion_review_fingerprint = fs::read_to_string(
+            artifact_dir
+                .join("examples")
+                .join(entry_id)
+                .join("repair-promotion-review.fingerprint.txt"),
+        )
+        .unwrap();
+        assert_eq!(
+            repair_promotion_review_fingerprint.trim(),
+            fnv64_fingerprint(&repair_promotion_review)
+        );
+        assert!(
+            report.contains(&format!(
+                "entry-artifact {entry_id} repair-promotion-review examples/{entry_id}/repair-promotion-review.txt {}",
+                repair_promotion_review_fingerprint.trim()
+            )),
+            "{report}"
+        );
     }
     let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-examples.txt")).unwrap();
     assert!(manifest.contains("AIL-Examples-Manifest:"), "{manifest}");
@@ -25215,6 +25341,20 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
             manifest.contains(&format!(
                 "entry-artifact {entry_id} repair-diff examples/{entry_id}/repair-diff.txt {}",
                 repair_diff_fingerprint.trim()
+            )),
+            "{manifest}"
+        );
+        let repair_promotion_review_fingerprint = fs::read_to_string(
+            artifact_dir
+                .join("examples")
+                .join(entry_id)
+                .join("repair-promotion-review.fingerprint.txt"),
+        )
+        .unwrap();
+        assert!(
+            manifest.contains(&format!(
+                "entry-artifact {entry_id} repair-promotion-review examples/{entry_id}/repair-promotion-review.txt {}",
+                repair_promotion_review_fingerprint.trim()
             )),
             "{manifest}"
         );
@@ -27542,6 +27682,10 @@ fn cli_ail_e2e_corpus_replays_rejected_prompt_failures() {
         "{report}"
     );
     assert!(
+        report.contains("repair-promotion-review-fingerprint-observed-count 1"),
+        "{report}"
+    );
+    assert!(
         report.contains(&format!(
             "entry-artifact example-99 repair-tutorial examples/example-99/repair-tutorial.txt {}",
             repair_tutorial_fingerprint.trim()
@@ -27583,6 +27727,57 @@ fn cli_ail_e2e_corpus_replays_rejected_prompt_failures() {
         )),
         "{report}"
     );
+    let repair_promotion_review =
+        fs::read_to_string(artifact_dir.join("examples/example-99/repair-promotion-review.txt"))
+            .unwrap();
+    assert!(
+        repair_promotion_review.contains("AIL-Repair-Promotion-Review:")
+            && repair_promotion_review.contains("entry example-99")
+            && repair_promotion_review.contains("promotion-decision accepted-for-promotion")
+            && repair_promotion_review.contains("checker-result rejected-to-repaired")
+            && repair_promotion_review.contains("failure-taxonomy semantic-drift")
+            && repair_promotion_review.contains("expected-diagnostic AIL001")
+            && repair_promotion_review.contains("expected-diagnostic-removed true")
+            && repair_promotion_review.contains("repair-evidence-kind repair-vm-trace")
+            && repair_promotion_review.contains(&format!(
+                "repair-candidate-fingerprint {}",
+                repair_candidate_fingerprint.trim()
+            ))
+            && repair_promotion_review.contains(&format!(
+                "repair-checked-core-fingerprint {}",
+                repair_core_fingerprint.trim()
+            ))
+            && repair_promotion_review.contains(&format!(
+                "repair-bytecode-fingerprint {}",
+                repair_bytecode_fingerprint.trim()
+            ))
+            && repair_promotion_review.contains(&format!(
+                "repair-evidence-fingerprint {}",
+                repair_vm_trace_fingerprint.trim()
+            ))
+            && repair_promotion_review.contains(&format!(
+                "repair-diff-fingerprint {}",
+                repair_diff_fingerprint.trim()
+            ))
+            && repair_promotion_review.contains("semantic-anchor-preserved-count 3")
+            && repair_promotion_review.contains("semantic-anchor-missing-count 0"),
+        "{repair_promotion_review}"
+    );
+    let repair_promotion_review_fingerprint = fs::read_to_string(
+        artifact_dir.join("examples/example-99/repair-promotion-review.fingerprint.txt"),
+    )
+    .unwrap();
+    assert_eq!(
+        repair_promotion_review_fingerprint.trim(),
+        fnv64_fingerprint(&repair_promotion_review)
+    );
+    assert!(
+        report.contains(&format!(
+            "entry-artifact example-99 repair-promotion-review examples/example-99/repair-promotion-review.txt {}",
+            repair_promotion_review_fingerprint.trim()
+        )),
+        "{report}"
+    );
     let manifest = fs::read_to_string(artifact_dir.join("manifest.ail-examples.txt")).unwrap();
     assert!(
         manifest.contains(&format!(
@@ -27602,6 +27797,13 @@ fn cli_ail_e2e_corpus_replays_rejected_prompt_failures() {
         manifest.contains(&format!(
             "entry-artifact example-99 repair-diff examples/example-99/repair-diff.txt {}",
             repair_diff_fingerprint.trim()
+        )),
+        "{manifest}"
+    );
+    assert!(
+        manifest.contains(&format!(
+            "entry-artifact example-99 repair-promotion-review examples/example-99/repair-promotion-review.txt {}",
+            repair_promotion_review_fingerprint.trim()
         )),
         "{manifest}"
     );

@@ -207,6 +207,7 @@ The `ail-examples` replay bundle must also write deterministic story artifacts:
 - `examples/<entry-id>/repair-vm-trace.txt` or
   `examples/<entry-id>/repair-target-report.txt` for rejected entries
 - `examples/<entry-id>/repair-diff.txt` for rejected entries
+- `examples/<entry-id>/repair-promotion-review.txt` for rejected entries
 - `v03-roadmap.txt`
 - `v03-roadmap.fingerprint.txt`
 
@@ -219,6 +220,11 @@ spec. The repair proof chain must then show that corrected spec reaching
 checked Core, verified bytecode, and runtime or target evidence. The repair
 diff must connect rejected and repaired fingerprints, mark the expected
 diagnostic as removed, and preserve story semantic anchors for review. The
+repair promotion review must then make the promotion decision explicit,
+including `accepted-for-promotion`, `human-approval-required true`, the
+proposed accepted entry id, and fingerprints for every upstream repair
+artifact. This makes promotion auditable without automatically editing the
+corpus. The
 report must also summarize semantic-anchor preservation with total, preserved,
 and missing counts plus per-entry preservation lines. The roadmap artifact is
 fingerprinted and listed in `manifest.ail-examples.txt` beside the examples
@@ -260,9 +266,10 @@ as prose. The current examples reveal these next-version gaps:
 - Systems examples need hardware-facing contracts, scheduler or interrupt
   semantics, and clearer unsupported-target migration guidance.
 - Rejected examples now emit repair tutorials, corrected repair proof chains,
-  and semantic repair diffs; the next bar is to teach reviewer-approved repair
-  promotion, where an agent can propose whether a repaired artifact should
-  become a new accepted corpus entry.
+  semantic repair diffs, and deterministic promotion review artifacts; the next
+  bar is to turn reviewer-approved repair promotion into a guided capture flow
+  that can create a proposed accepted corpus entry without losing the rejected
+  evidence.
 - Incident-response examples show that complex systems need richer story
   graphs across imported modules, UI surfaces, workflow transitions, target
   contracts, and regenerated story views.

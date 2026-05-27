@@ -304,6 +304,49 @@ BASE_CHAPTERS: tuple[ManualChapter, ...] = (
             ),
         ),
     ),
+    ManualChapter(
+        chapter_id="repair-promotion",
+        title="Repair Promotion Review",
+        doc="docs/ail/manual/07-repair-promotion.md",
+        purpose="Review rejected-example repair evidence before proposing a repaired artifact for corpus promotion.",
+        commands=(
+            ManualCommand(
+                label="replay-repair-promotion-evidence",
+                command=(
+                    "cargo",
+                    "run",
+                    "--",
+                    "ail-examples",
+                    "examples",
+                    "--artifact-dir",
+                    "/tmp/ail-manual-repair-promotion",
+                    "--release-evidence",
+                ),
+                evidence=(
+                    "examples-report.txt",
+                    "manifest.ail-examples.txt",
+                    "repair-promotion-review.txt",
+                    "repair-promotion-review.fingerprint.txt",
+                    "repair-promotion-review-fingerprint-observed-count",
+                ),
+            ),
+            ManualCommand(
+                label="inspect-repair-promotion-review-lines",
+                command=(
+                    "rg",
+                    "-n",
+                    "repair-promotion-review-fingerprint-observed-count|entry-artifact example-99 repair-promotion-review|entry-artifact example-107 repair-promotion-review",
+                    "/tmp/ail-manual-repair-promotion/examples-report.txt",
+                    "/tmp/ail-manual-repair-promotion/manifest.ail-examples.txt",
+                ),
+                evidence=(
+                    "repair-promotion-review-fingerprint-observed-count",
+                    "entry-artifact example-99 repair-promotion-review",
+                    "entry-artifact example-107 repair-promotion-review",
+                ),
+            ),
+        ),
+    ),
 )
 
 V03_AUTHORING_GATE = ManualChapter(
@@ -385,6 +428,21 @@ V03_AUTHORING_GATE = ManualChapter(
             evidence=(
                 "agent.ailbc.json",
                 "agent-trace.txt",
+            ),
+        ),
+        ManualCommand(
+            label="run-repair-promotion-checks",
+            command=(
+                "python3",
+                "scripts/run_ail_interactive_manual.py",
+                "--chapter",
+                "repair-promotion",
+                "--run-checks",
+            ),
+            evidence=(
+                "repair-promotion-review.txt",
+                "repair-promotion-review.fingerprint.txt",
+                "repair-promotion-review-fingerprint-observed-count",
             ),
         ),
         ManualCommand(

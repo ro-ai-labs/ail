@@ -479,6 +479,7 @@ struct AilE2eRepairProofArtifacts {
     vm_trace_text: Option<String>,
     target_report_text: Option<String>,
     repair_diff_text: String,
+    promotion_review_text: String,
 }
 
 #[derive(Debug, Default)]
@@ -1265,6 +1266,7 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
         "codex-ail-spec-writer.md",
         "codex-ail-diagnostic-repairer.md",
         "codex-ail-prompt-reviewer.md",
+        "codex-ail-repair-promotion-reviewer.md",
     ];
     let mut contracts = Vec::new();
     for file_name in required_contracts {
@@ -1274,6 +1276,10 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
         .iter()
         .find(|contract| contract.label == "codex-ail-prompt-reviewer")
         .ok_or_else(|| "missing codex-ail-prompt-reviewer contract".to_string())?;
+    let repair_promotion_reviewer = contracts
+        .iter()
+        .find(|contract| contract.label == "codex-ail-repair-promotion-reviewer")
+        .ok_or_else(|| "missing codex-ail-repair-promotion-reviewer contract".to_string())?;
     for required in [
         "scripts/run_v03_prompt_llm_harness.py --review-artifacts",
         "scripts/run_v03_story_llm_harness.py --review-artifacts",
@@ -1288,6 +1294,23 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
             ));
         }
     }
+    for required in [
+        "repair-promotion-review.txt",
+        "repair-promotion-review.fingerprint.txt",
+        "repair-promotion-review-fingerprint-observed-count",
+        "accepted-for-promotion",
+        "human-approval-required true",
+        "semantic-anchor-missing-count 0",
+        "ail-examples examples --artifact-dir",
+        "manifest.ail-examples.txt",
+    ] {
+        if !repair_promotion_reviewer.text.contains(required) {
+            return Err(format!(
+                "agent contract {} missing {required}",
+                repair_promotion_reviewer.file_name
+            ));
+        }
+    }
     let skill_path = root.join("skills/ail-prompt-interaction-reviewer/SKILL.md");
     let skill_text = fs::read_to_string(&skill_path).map_err(|error| {
         format!(
@@ -1299,6 +1322,7 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
         "name: ail-prompt-interaction-reviewer",
         "description: Use when",
         "examples/agents/codex-ail-prompt-reviewer.md",
+        "examples/agents/codex-ail-repair-promotion-reviewer.md",
         "http://inteligentia-pro-1:8080/",
         "python3 scripts/run_v03_prompt_llm_harness.py --dry-run",
         "python3 scripts/run_v03_prompt_llm_harness.py --review-artifacts /tmp/ail-v03-prompt-llm",
@@ -1313,6 +1337,9 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
         "prompt-llm-harness-review.txt",
         "prompt-llm-harness-review.fingerprint.txt",
         "v03-roadmap.txt",
+        "repair-promotion-review.txt",
+        "repair-promotion-review.fingerprint.txt",
+        "repair-promotion-review-fingerprint-observed-count",
         "accepted-for-promotion",
         "needs-repair",
         "rejected-for-promotion",
@@ -1321,6 +1348,33 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
             return Err(format!(
                 "codex skill {} missing {required}",
                 skill_path.display()
+            ));
+        }
+    }
+    let repair_skill_path = root.join("skills/ail-repair-promotion-reviewer/SKILL.md");
+    let repair_skill_text = fs::read_to_string(&repair_skill_path).map_err(|error| {
+        format!(
+            "failed to read codex skill {}: {error}",
+            repair_skill_path.display()
+        )
+    })?;
+    for required in [
+        "name: ail-repair-promotion-reviewer",
+        "description: Use when",
+        "examples/agents/codex-ail-repair-promotion-reviewer.md",
+        "python3 scripts/run_ail_interactive_manual.py --chapter repair-promotion --run-checks",
+        "cargo run -- ail-examples examples --artifact-dir",
+        "repair-promotion-review.txt",
+        "repair-promotion-review.fingerprint.txt",
+        "repair-promotion-review-fingerprint-observed-count",
+        "accepted-for-promotion",
+        "human-approval-required true",
+        "semantic-anchor-missing-count 0",
+    ] {
+        if !repair_skill_text.contains(required) {
+            return Err(format!(
+                "codex skill {} missing {required}",
+                repair_skill_path.display()
             ));
         }
     }
@@ -1335,9 +1389,11 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
     }
     println!("review-command scripts/run_v03_prompt_llm_harness.py --review-artifacts");
     println!("review-command scripts/run_v03_story_llm_harness.py --review-artifacts");
+    println!("repair-promotion-artifact repair-promotion-review.txt");
     println!("roadmap-artifact v03-roadmap.txt");
     println!("roadmap-command cargo run -- ail-v03-roadmap examples --artifact-dir");
     println!("codex-skill examples/agents/skills/ail-prompt-interaction-reviewer/SKILL.md");
+    println!("codex-skill examples/agents/skills/ail-repair-promotion-reviewer/SKILL.md");
     println!("agent-contracts-result accepted");
     Ok(0)
 }
@@ -2214,15 +2270,17 @@ fn evaluate_rejected_ail_e2e_corpus_entry(
     let repair_tutorial_text =
         render_ail_e2e_repair_tutorial(entry, expected_diagnostic, failure_taxonomy, &lines[4..]);
     let semantic_anchors = read_ail_e2e_entry_semantic_anchors(entry)?;
-    let repair_proof = build_ail_e2e_repair_proof(
+    let repair_proof = build_ail_e2e_repair_proof(AilE2eRepairProofInput {
         entry,
         package_path,
         failure_taxonomy,
         artifact_kind,
         expected_diagnostic,
-        &artifact_text,
-        &semantic_anchors,
-    )?;
+        rejected_artifact_text: &artifact_text,
+        diagnostics_text: &diagnostics_text,
+        repair_tutorial_text: &repair_tutorial_text,
+        semantic_anchors: &semantic_anchors,
+    })?;
     Ok(AilE2eCorpusEvaluation {
         entry: entry.clone(),
         semantic_anchors,
@@ -2240,26 +2298,32 @@ fn evaluate_rejected_ail_e2e_corpus_entry(
     })
 }
 
+struct AilE2eRepairProofInput<'a> {
+    entry: &'a AilE2eCorpusEntry,
+    package_path: &'a str,
+    failure_taxonomy: &'a str,
+    artifact_kind: &'a str,
+    expected_diagnostic: &'a str,
+    rejected_artifact_text: &'a str,
+    diagnostics_text: &'a str,
+    repair_tutorial_text: &'a str,
+    semantic_anchors: &'a [String],
+}
+
 fn build_ail_e2e_repair_proof(
-    entry: &AilE2eCorpusEntry,
-    package_path: &str,
-    failure_taxonomy: &str,
-    artifact_kind: &str,
-    expected_diagnostic: &str,
-    rejected_artifact_text: &str,
-    semantic_anchors: &[String],
+    input: AilE2eRepairProofInput<'_>,
 ) -> Result<AilE2eRepairProofArtifacts, String> {
     let (package, candidate_spec_text) = load_ail_e2e_repair_candidate_package(
-        entry,
-        package_path,
-        failure_taxonomy,
-        artifact_kind,
+        input.entry,
+        input.package_path,
+        input.failure_taxonomy,
+        input.artifact_kind,
     )?;
     let document =
         parse_ail_package_spec_text(&package, &candidate_spec_text).map_err(|error| {
             format!(
                 "examples catalog rejected entry {} repair candidate failed to parse: {error}",
-                entry.id
+                input.entry.id
             )
         })?;
     let core = elaborate_ail_core(&package, &document);
@@ -2267,11 +2331,12 @@ fn build_ail_e2e_repair_proof(
     if !diagnostics.is_empty() {
         return Err(format!(
             "examples catalog rejected entry {} repair candidate still has diagnostics:\n{}",
-            entry.id,
+            input.entry.id,
             diagnostics.join("\n")
         ));
     }
-    let target = entry
+    let target = input
+        .entry
         .fields
         .get("target")
         .map(String::as_str)
@@ -2279,7 +2344,7 @@ fn build_ail_e2e_repair_proof(
     if let Err(error) = check_darwin_macho_contract_supported_effects(&core, target) {
         return Err(format!(
             "examples catalog rejected entry {} repair candidate failed target check: {error}",
-            entry.id
+            input.entry.id
         ));
     }
     let bytecode = compile_ail_core_bytecode(&core)?;
@@ -2287,11 +2352,11 @@ fn build_ail_e2e_repair_proof(
     if !bytecode_diagnostics.is_empty() {
         return Err(format!(
             "examples catalog rejected entry {} repair candidate has bytecode diagnostics:\n{}",
-            entry.id,
+            input.entry.id,
             bytecode_diagnostics.join("\n")
         ));
     }
-    let repair_action_name = ail_e2e_repair_action_name(entry, &bytecode)?;
+    let repair_action_name = ail_e2e_repair_action_name(input.entry, &bytecode)?;
     let target_report_text = match target {
         "wasm32-unknown-sandbox-wasm" => Some(render_ail_compile_wasm_contract_report(
             &bytecode,
@@ -2308,7 +2373,7 @@ fn build_ail_e2e_repair_proof(
         _ => None,
     };
     let vm_trace_text = if target_report_text.is_none() {
-        let runtime_state = parse_ail_e2e_runtime_state(entry)?;
+        let runtime_state = parse_ail_e2e_runtime_state(input.entry)?;
         let run = run_ail_bytecode_action(&bytecode, &repair_action_name, runtime_state)?;
         Some(format!("{}\n", run.trace.join("\n")))
     } else {
@@ -2317,17 +2382,32 @@ fn build_ail_e2e_repair_proof(
     let checked_core_text = render_ail_core(&core);
     let bytecode_text = format!("{}\n", render_ail_bytecode(&bytecode));
     let repair_diff_text = render_ail_e2e_repair_diff(AilE2eRepairDiffInput {
-        entry,
-        failure_taxonomy,
-        expected_diagnostic,
-        rejected_artifact_text,
+        entry: input.entry,
+        failure_taxonomy: input.failure_taxonomy,
+        expected_diagnostic: input.expected_diagnostic,
+        rejected_artifact_text: input.rejected_artifact_text,
         candidate_spec_text: &candidate_spec_text,
         checked_core_text: &checked_core_text,
         bytecode_text: &bytecode_text,
         vm_trace_text: vm_trace_text.as_deref(),
         target_report_text: target_report_text.as_deref(),
-        semantic_anchors,
+        semantic_anchors: input.semantic_anchors,
     });
+    let promotion_review_text =
+        render_ail_e2e_repair_promotion_review(AilE2eRepairPromotionReviewInput {
+            entry: input.entry,
+            failure_taxonomy: input.failure_taxonomy,
+            expected_diagnostic: input.expected_diagnostic,
+            diagnostics_text: input.diagnostics_text,
+            repair_tutorial_text: input.repair_tutorial_text,
+            candidate_spec_text: &candidate_spec_text,
+            checked_core_text: &checked_core_text,
+            bytecode_text: &bytecode_text,
+            vm_trace_text: vm_trace_text.as_deref(),
+            target_report_text: target_report_text.as_deref(),
+            repair_diff_text: &repair_diff_text,
+            semantic_anchors: input.semantic_anchors,
+        });
     Ok(AilE2eRepairProofArtifacts {
         candidate_spec_text,
         checked_core_text,
@@ -2335,6 +2415,7 @@ fn build_ail_e2e_repair_proof(
         vm_trace_text,
         target_report_text,
         repair_diff_text,
+        promotion_review_text,
     })
 }
 
@@ -2400,6 +2481,88 @@ fn render_ail_e2e_repair_diff(input: AilE2eRepairDiffInput<'_>) -> String {
         lines.push(format!("semantic-anchor {anchor} preserved"));
     }
     lines.push("repair-diff-summary rejected diagnostic reproduced, corrected artifact checked, and repaired proof evidence generated".to_string());
+    format!("{}\n", lines.join("\n"))
+}
+
+struct AilE2eRepairPromotionReviewInput<'a> {
+    entry: &'a AilE2eCorpusEntry,
+    failure_taxonomy: &'a str,
+    expected_diagnostic: &'a str,
+    diagnostics_text: &'a str,
+    repair_tutorial_text: &'a str,
+    candidate_spec_text: &'a str,
+    checked_core_text: &'a str,
+    bytecode_text: &'a str,
+    vm_trace_text: Option<&'a str>,
+    target_report_text: Option<&'a str>,
+    repair_diff_text: &'a str,
+    semantic_anchors: &'a [String],
+}
+
+fn render_ail_e2e_repair_promotion_review(input: AilE2eRepairPromotionReviewInput<'_>) -> String {
+    let repair_evidence_kind = if input.target_report_text.is_some() {
+        "repair-target-report"
+    } else {
+        "repair-vm-trace"
+    };
+    let repair_evidence_text = input
+        .target_report_text
+        .or(input.vm_trace_text)
+        .unwrap_or("");
+    let story_text = render_ail_e2e_user_story_text(input.entry, input.semantic_anchors);
+    let (preserved_count, missing_count) =
+        ail_e2e_semantic_anchor_preservation_counts(&story_text, input.semantic_anchors);
+    let mut lines = vec![
+        "AIL-Repair-Promotion-Review:".to_string(),
+        format!("entry {}", input.entry.id),
+        "reviewer-agent codex-ail-repair-promotion-reviewer".to_string(),
+        "promotion-decision accepted-for-promotion".to_string(),
+        "human-approval-required true".to_string(),
+        format!("proposed-accepted-entry-id {}-repaired", input.entry.id),
+        "checker-result rejected-to-repaired".to_string(),
+        format!("failure-taxonomy {}", input.failure_taxonomy),
+        format!("expected-diagnostic {}", input.expected_diagnostic),
+        "expected-diagnostic-removed true".to_string(),
+        format!("repair-evidence-kind {repair_evidence_kind}"),
+        format!(
+            "diagnostics-fingerprint {}",
+            ail_artifact_fingerprint(input.diagnostics_text)
+        ),
+        format!(
+            "repair-tutorial-fingerprint {}",
+            ail_artifact_fingerprint(input.repair_tutorial_text)
+        ),
+        format!(
+            "repair-candidate-fingerprint {}",
+            ail_artifact_fingerprint(input.candidate_spec_text)
+        ),
+        format!(
+            "repair-checked-core-fingerprint {}",
+            ail_artifact_fingerprint(input.checked_core_text)
+        ),
+        format!(
+            "repair-bytecode-fingerprint {}",
+            ail_artifact_fingerprint(input.bytecode_text)
+        ),
+        format!(
+            "repair-evidence-fingerprint {}",
+            ail_artifact_fingerprint(repair_evidence_text)
+        ),
+        format!(
+            "repair-diff-fingerprint {}",
+            ail_artifact_fingerprint(input.repair_diff_text)
+        ),
+        format!(
+            "semantic-anchor-count {}",
+            input.semantic_anchors.len()
+        ),
+        format!("semantic-anchor-preserved-count {preserved_count}"),
+        format!("semantic-anchor-missing-count {missing_count}"),
+        "promotion-review-summary rejected replay reproduced the expected diagnostic and the repaired candidate passed checked Core, bytecode, and VM or target evidence.".to_string(),
+    ];
+    for anchor in input.semantic_anchors {
+        lines.push(format!("semantic-anchor {anchor} preserved"));
+    }
     format!("{}\n", lines.join("\n"))
 }
 
@@ -2963,6 +3126,17 @@ fn render_ail_e2e_corpus_report(evaluations: &[AilE2eCorpusEvaluation]) -> Strin
             .as_ref()
             .map(|proof| ail_artifact_fingerprint(&proof.repair_diff_text))
     });
+    push_ail_e2e_fingerprint_reuse_lines(
+        &mut lines,
+        "repair-promotion-review",
+        evaluations,
+        |evaluation| {
+            evaluation
+                .repair_proof
+                .as_ref()
+                .map(|proof| ail_artifact_fingerprint(&proof.promotion_review_text))
+        },
+    );
     push_ail_e2e_native_fingerprint_reuse_lines(&mut lines, evaluations);
     for evaluation in evaluations {
         let entry = &evaluation.entry;
@@ -3327,6 +3501,12 @@ fn push_ail_e2e_repair_proof_artifact_lines(
         entry.id,
         entry.id,
         ail_artifact_fingerprint(&repair_proof.repair_diff_text)
+    ));
+    lines.push(format!(
+        "{prefix} {} repair-promotion-review examples/{}/repair-promotion-review.txt {}",
+        entry.id,
+        entry.id,
+        ail_artifact_fingerprint(&repair_proof.promotion_review_text)
     ));
 }
 
@@ -4362,6 +4542,23 @@ fn write_ail_e2e_corpus_artifacts(
             )
             .map_err(|error| {
                 format!("failed to write examples repair diff fingerprint: {error}")
+            })?;
+            fs::write(
+                entry_dir.join("repair-promotion-review.txt"),
+                &repair_proof.promotion_review_text,
+            )
+            .map_err(|error| {
+                format!("failed to write examples repair promotion review: {error}")
+            })?;
+            fs::write(
+                entry_dir.join("repair-promotion-review.fingerprint.txt"),
+                format!(
+                    "{}\n",
+                    ail_artifact_fingerprint(&repair_proof.promotion_review_text)
+                ),
+            )
+            .map_err(|error| {
+                format!("failed to write examples repair promotion review fingerprint: {error}")
             })?;
         }
     }

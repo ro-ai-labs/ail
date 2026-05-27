@@ -117,7 +117,10 @@ one of these version surfaces or add a versioned surface through
 - `manual/05-v03-roadmap.md`: direct `ail-v03-roadmap` backlog view over the
   examples-derived learning signals.
 - `manual/06-v03-authoring-gate.md`: one deterministic audit over User Story
-  mode, examples replay, roadmap, prompt, and agent checks.
+  mode, examples replay, roadmap, prompt, agent, and repair-promotion checks.
+- `manual/07-repair-promotion.md`: deterministic review of rejected-example
+  repair evidence before proposing a repaired artifact for accepted-corpus
+  promotion.
 
 ## Versioned Assets
 
