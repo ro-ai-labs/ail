@@ -211,7 +211,10 @@ def write_story_llm_review_fixture(artifact_dir, omit_agent_trace=False):
         "package: support-ticket\n"
         "user-story-id: support-ticket-agent-story\n"
         "semantic-anchor-count: 4\n"
-        "endpoint: http://127.0.0.1:8080/v1/chat/completions\n"
+        "llm-endpoint: http://127.0.0.1:8080/v1/chat/completions\n"
+        "story-llm-transcript-count: 2\n"
+        "story-prompt-envelope-valid-count: 2\n"
+        "story-prompt-envelope-invalid-count: 0\n"
     )
     requirements = (
         "AIL-Requirements:\n"
@@ -226,6 +229,75 @@ def write_story_llm_review_fixture(artifact_dir, omit_agent_trace=False):
     core = "AIL-Core:\nnode action CloseTicket\n"
     flow_review = json.dumps({"profile": "Application", "actions": ["Close ticket"]}) + "\n"
     bytecode = json.dumps({"version": "ail-bytecode-0", "package": "support-ticket"}) + "\n"
+    requirements_envelope = (
+        json.dumps(
+            {
+                "artifact_kind": "AIL-Requirements",
+                "artifact_text": requirements,
+                "questions": [],
+                "checker_handoff": {
+                    "must_check": True,
+                    "expected_profile": "Application",
+                    "expected_features": [],
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n"
+    )
+    spec_envelope = (
+        json.dumps(
+            {
+                "artifact_kind": "AIL-Spec Canonical",
+                "artifact_text": spec,
+                "questions": [],
+                "checker_handoff": {
+                    "must_check": True,
+                    "expected_profile": "Application",
+                    "expected_features": [],
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n"
+    )
+    requirements_request = (
+        json.dumps(
+            {
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": "USER STORY MODE INPUT\nReturn AIL-Requirements.",
+                    }
+                ],
+                "temperature": 0.0,
+            },
+            sort_keys=True,
+        )
+        + "\n"
+    )
+    requirements_response = (
+        json.dumps({"choices": [{"message": {"content": requirements_envelope.strip()}}]})
+        + "\n"
+    )
+    spec_request = (
+        json.dumps(
+            {
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": "Preserve these story semantic anchors and return AIL-Spec Canonical.",
+                    }
+                ],
+                "temperature": 0.0,
+            },
+            sort_keys=True,
+        )
+        + "\n"
+    )
+    spec_response = (
+        json.dumps({"choices": [{"message": {"content": spec_envelope.strip()}}]}) + "\n"
+    )
     build_manifest = (
         "AIL-Build-Manifest:\n"
         f"bytecode artifact.ailbc.json {fnv64(bytecode)}\n"
@@ -251,6 +323,24 @@ def write_story_llm_review_fixture(artifact_dir, omit_agent_trace=False):
         ("review.ail-flow.json", "review.ail-flow.fingerprint.txt", flow_review),
         ("artifact.ailbc.json", "artifact.fingerprint.txt", bytecode),
         ("manifest.ail-build.txt", "manifest.fingerprint.txt", build_manifest),
+        (
+            "llm/requirements.request.json",
+            "llm/requirements.request.fingerprint.txt",
+            requirements_request,
+        ),
+        (
+            "llm/requirements.response.json",
+            "llm/requirements.response.fingerprint.txt",
+            requirements_response,
+        ),
+        (
+            "llm/requirements.content.txt",
+            "llm/requirements.content.fingerprint.txt",
+            requirements_envelope,
+        ),
+        ("llm/spec.request.json", "llm/spec.request.fingerprint.txt", spec_request),
+        ("llm/spec.response.json", "llm/spec.response.fingerprint.txt", spec_response),
+        ("llm/spec.content.txt", "llm/spec.content.fingerprint.txt", spec_envelope),
     ]
     if not omit_agent_trace:
         artifacts.append(("agent-trace.txt", "agent-trace.fingerprint.txt", agent_trace))
@@ -268,6 +358,15 @@ def write_story_llm_review_fixture(artifact_dir, omit_agent_trace=False):
         f"spec accepted.ail-spec.md {fnv64(spec)}\n"
         f"core checked.ail-core.txt {fnv64(core)}\n"
         f"bytecode artifact.ailbc.json {fnv64(bytecode)}\n"
+        "llm-requirements-request "
+        f"llm/requirements.request.json {fnv64(requirements_request)}\n"
+        "llm-requirements-response "
+        f"llm/requirements.response.json {fnv64(requirements_response)}\n"
+        "llm-requirements-content "
+        f"llm/requirements.content.txt {fnv64(requirements_envelope)}\n"
+        f"llm-spec-request llm/spec.request.json {fnv64(spec_request)}\n"
+        f"llm-spec-response llm/spec.response.json {fnv64(spec_response)}\n"
+        f"llm-spec-content llm/spec.content.txt {fnv64(spec_envelope)}\n"
         f"build-manifest manifest.ail-build.txt {fnv64(build_manifest)}\n"
     )
     write_text(artifact_dir / "manifest.ail-story.txt", manifest)
@@ -532,6 +631,9 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             self.assertIn("AIL-Story-LLM-Harness-Review:", review.stdout)
             self.assertIn("story-id support-ticket-agent-story", review.stdout)
             self.assertIn("semantic-anchor-count 4", review.stdout)
+            self.assertIn("story-llm-transcript-check-count 6", review.stdout)
+            self.assertIn("story-prompt-envelope-valid-count 2", review.stdout)
+            self.assertIn("story-prompt-envelope-invalid-count 0", review.stdout)
             self.assertIn("agent-trace present", review.stdout)
             self.assertIn("review-result accepted", review.stdout)
         finally:
