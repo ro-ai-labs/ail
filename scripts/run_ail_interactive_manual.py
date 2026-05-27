@@ -812,6 +812,7 @@ BASE_CHAPTERS: tuple[ManualChapter, ...] = (
                     "manifest.ail-examples.txt",
                     "agent-policy-review.txt",
                     "agent-policy-review-fingerprint-observed-count",
+                    "handoff-roles requirements-writer,spec-writer,diagnostic-repairer,prompt-reviewer,agent-policy-reviewer",
                 ),
             ),
             ManualCommand(
@@ -845,6 +846,7 @@ BASE_CHAPTERS: tuple[ManualChapter, ...] = (
                     "agent-policy-capture-plan.txt",
                     "agent-policy-capture-plan.fingerprint.txt",
                     "agent-contract-check ail-agent-contracts examples/agents",
+                    "handoff-roles requirements-writer,spec-writer,diagnostic-repairer,prompt-reviewer,agent-policy-reviewer",
                     "human-approval-required true",
                 ),
             ),

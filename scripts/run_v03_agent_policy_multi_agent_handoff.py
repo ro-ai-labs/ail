@@ -12,6 +12,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 POLICY_HANDOFF_TRACE = "PolicyHandoffApprovedScenario40"
+EXPECTED_HANDOFF_ROLES = (
+    "requirements-writer,spec-writer,diagnostic-repairer,"
+    "prompt-reviewer,agent-policy-reviewer"
+)
 
 
 def fnv64(text: str) -> str:
@@ -81,6 +85,7 @@ def validate_plan(plan: dict[str, object], source_entry_id: str) -> None:
     require_plan_value(plan, "policy_import_decision", "accepted-for-import")
     require_plan_value(plan, "policy_import_status", "proposed-only")
     require_plan_value(plan, "agent_contract_check", "ail-agent-contracts examples/agents")
+    require_plan_value(plan, "handoff_roles", EXPECTED_HANDOFF_ROLES)
     require_plan_value(plan, "human_approval_required", True)
     require_plan_value(plan, "must_supply_request_response_json", True)
     require_plan_value(plan, "preserve_source_entry", True)
@@ -158,6 +163,7 @@ def main(argv: list[str]) -> int:
     for required in [
         "human-approval-required true",
         "agent-contract-check ail-agent-contracts examples/agents",
+        f"handoff-roles {EXPECTED_HANDOFF_ROLES}",
         "tool-permission-review required",
         "tool-approval-review required",
         "external-call-review required",

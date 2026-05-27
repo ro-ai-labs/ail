@@ -10,6 +10,10 @@ from pathlib import Path
 
 
 BATCH_CAPTURE_SCRIPT = "scripts/capture_example_batch.py"
+EXPECTED_HANDOFF_ROLES = (
+    "requirements-writer,spec-writer,diagnostic-repairer,"
+    "prompt-reviewer,agent-policy-reviewer"
+)
 
 
 def fnv64(text: str) -> str:
@@ -87,6 +91,7 @@ def validate_inputs(args: argparse.Namespace) -> tuple[dict[str, str], str]:
     require_value(values, "agent-policy-review-artifact", "deterministic-text", errors)
     require_value(values, "multi-agent-handoff-review", "required", errors)
     require_value(values, "agent-contract-check", "ail-agent-contracts examples/agents", errors)
+    require_value(values, "handoff-roles", EXPECTED_HANDOFF_ROLES, errors)
     require_value(values, "tool-permission-review", "required", errors)
     require_value(values, "tool-approval-review", "required", errors)
     require_value(values, "external-call-review", "required", errors)

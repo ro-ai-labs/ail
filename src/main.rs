@@ -4015,7 +4015,7 @@ fn render_ail_e2e_agent_policy_review_text(
         "agent-policy-review-artifact deterministic-text".to_string(),
         "multi-agent-handoff-review required".to_string(),
         "agent-contract-check ail-agent-contracts examples/agents".to_string(),
-        "handoff-roles requirements-writer,spec-writer,diagnostic-repairer,prompt-reviewer,repair-promotion-reviewer".to_string(),
+        "handoff-roles requirements-writer,spec-writer,diagnostic-repairer,prompt-reviewer,agent-policy-reviewer".to_string(),
         "tool-permission-review required".to_string(),
         "tool-approval-review required".to_string(),
         "external-call-review required".to_string(),

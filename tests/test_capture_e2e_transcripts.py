@@ -281,6 +281,9 @@ def write_story_llm_review_fixture(artifact_dir, omit_agent_trace=False):
     core = "AIL-Core:\nnode action CloseTicket\n"
     flow_review = json.dumps({"profile": "Application", "actions": ["Close ticket"]}) + "\n"
     bytecode = json.dumps({"version": "ail-bytecode-0", "package": "support-ticket"}) + "\n"
+    agent_bytecode = (
+        json.dumps({"version": "ail-bytecode-0", "package": "ail-toolchain-agent"}) + "\n"
+    )
     requirements_envelope = (
         json.dumps(
             {
@@ -374,6 +377,7 @@ def write_story_llm_review_fixture(artifact_dir, omit_agent_trace=False):
         ("checked.ail-core.txt", "checked.ail-core.fingerprint.txt", core),
         ("review.ail-flow.json", "review.ail-flow.fingerprint.txt", flow_review),
         ("artifact.ailbc.json", "artifact.fingerprint.txt", bytecode),
+        ("agent.ailbc.json", "agent.fingerprint.txt", agent_bytecode),
         ("manifest.ail-build.txt", "manifest.fingerprint.txt", build_manifest),
         (
             "llm/requirements.request.json",
@@ -410,6 +414,7 @@ def write_story_llm_review_fixture(artifact_dir, omit_agent_trace=False):
         f"spec accepted.ail-spec.md {fnv64(spec)}\n"
         f"core checked.ail-core.txt {fnv64(core)}\n"
         f"bytecode artifact.ailbc.json {fnv64(bytecode)}\n"
+        f"agent agent.ailbc.json {fnv64(agent_bytecode)}\n"
         "llm-requirements-request "
         f"llm/requirements.request.json {fnv64(requirements_request)}\n"
         "llm-requirements-response "
@@ -421,6 +426,13 @@ def write_story_llm_review_fixture(artifact_dir, omit_agent_trace=False):
         f"llm-spec-content llm/spec.content.txt {fnv64(spec_envelope)}\n"
         f"build-manifest manifest.ail-build.txt {fnv64(build_manifest)}\n"
     )
+    if not omit_agent_trace:
+        manifest = manifest.replace(
+            "llm-requirements-request ",
+            f"agent-trace agent-trace.txt {fnv64(agent_trace)}\n"
+            "llm-requirements-request ",
+            1,
+        )
     write_text(artifact_dir / "manifest.ail-story.txt", manifest)
     write_text(artifact_dir / "manifest.ail-story.fingerprint.txt", fnv64(manifest) + "\n")
 
@@ -2603,6 +2615,80 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             shutil.rmtree(capture_plan_dir, ignore_errors=True)
             shutil.rmtree(output_corpus, ignore_errors=True)
             shutil.rmtree(output_artifacts, ignore_errors=True)
+
+    def test_agent_policy_capture_plan_rejects_stale_handoff_roles(self):
+        examples_artifacts = Path(tempfile.mkdtemp(prefix="ail-agent-policy-stale-roles-"))
+        capture_plan_dir = Path(tempfile.mkdtemp(prefix="ail-agent-policy-stale-plan-"))
+        try:
+            entry_dir = examples_artifacts / "examples" / "example-40"
+            checked_core = "node Tool RefundCustomerPayment\n"
+            bytecode = '{"artifact_kind":"AIL-Bytecode"}\n'
+            review_text = "\n".join(
+                [
+                    "AIL-Agent-Policy-Review:",
+                    "entry example-40",
+                    "semantic-task refund-tool-live-codex-interview-40",
+                    "profile AgentTool",
+                    "program-domain agent-tool",
+                    "executor-family codex-skill-agent",
+                    "executor-label codex-ail-spec-writer",
+                    "prompt-file docs/ail/prompts/interview.system.md",
+                    "interacts-with payment.provider,policy.engine,audit.log",
+                    "agent-policy-review-artifact deterministic-text",
+                    "multi-agent-handoff-review required",
+                    "agent-contract-check ail-agent-contracts examples/agents",
+                    "handoff-roles requirements-writer,spec-writer,diagnostic-repairer,prompt-reviewer,repair-promotion-reviewer",
+                    "tool-permission-review required",
+                    "tool-approval-review required",
+                    "external-call-review required",
+                    "secret-redaction-review required",
+                    "audit-trace-review required",
+                    "human-approval-required true",
+                    "policy-import-status proposed-only",
+                    "runtime-evidence bytecode",
+                    f"checked-core-fingerprint {fnv64(checked_core)}",
+                    f"bytecode-fingerprint {fnv64(bytecode)}",
+                    "",
+                ]
+            )
+            write_text(entry_dir / "checked.ail-core.txt", checked_core)
+            write_text(entry_dir / "artifact.ailbc.json", bytecode)
+            write_text(entry_dir / "agent-policy-review.txt", review_text)
+            write_text(
+                entry_dir / "agent-policy-review.fingerprint.txt",
+                fnv64(review_text) + "\n",
+            )
+            manifest_line = (
+                "entry-artifact example-40 agent-policy-review "
+                f"examples/example-40/agent-policy-review.txt {fnv64(review_text)}"
+            )
+            write_text(examples_artifacts / "examples-report.txt", manifest_line + "\n")
+            write_text(
+                examples_artifacts / "manifest.ail-examples.txt",
+                manifest_line + "\n",
+            )
+
+            plan = subprocess.run(
+                [
+                    "python3",
+                    "scripts/run_v03_agent_policy_capture_plan.py",
+                    "--examples-artifacts",
+                    str(examples_artifacts),
+                    "--entry-id",
+                    "example-40",
+                    "--output-dir",
+                    str(capture_plan_dir),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertNotEqual(plan.returncode, 0, plan.stdout)
+            self.assertIn("handoff-roles expected", plan.stderr)
+            self.assertIn("agent-policy-reviewer", plan.stderr)
+        finally:
+            shutil.rmtree(examples_artifacts, ignore_errors=True)
+            shutil.rmtree(capture_plan_dir, ignore_errors=True)
 
 
 if __name__ == "__main__":

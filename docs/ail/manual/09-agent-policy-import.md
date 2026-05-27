@@ -47,6 +47,7 @@ agent-policy-capture-plan.json
 agent-policy-capture-plan.txt
 agent-policy-capture-plan.fingerprint.txt
 agent-contract-check ail-agent-contracts examples/agents
+handoff-roles requirements-writer,spec-writer,diagnostic-repairer,prompt-reviewer,agent-policy-reviewer
 human-approval-required true
 preserve-source-entry true
 ```

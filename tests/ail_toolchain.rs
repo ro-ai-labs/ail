@@ -1267,6 +1267,7 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
                 "agent-policy-import-demo-report.txt",
                 "agent-policy-live-review-report.txt",
                 "agent-policy-live-review-review.txt",
+                "handoff-roles requirements-writer,spec-writer,diagnostic-repairer,prompt-reviewer,agent-policy-reviewer",
                 "evidence-bundle-present-count",
                 "policy-handoff-imported true",
                 "policy-handoff-replayed true",
@@ -1679,6 +1680,7 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "cargo run -- ail-examples examples",
         "agent-policy-review.txt",
         "agent-policy-review-fingerprint-observed-count",
+        "handoff-roles requirements-writer,spec-writer,diagnostic-repairer,prompt-reviewer,agent-policy-reviewer",
         "scripts/run_v03_agent_policy_capture_plan.py",
         "agent-policy-capture-plan.json",
         "scripts/run_v03_agent_policy_import_demo.py",
@@ -26594,6 +26596,10 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
             && agent_policy_review_40.contains("multi-agent-handoff-review required")
             && agent_policy_review_40
                 .contains("agent-contract-check ail-agent-contracts examples/agents")
+            && agent_policy_review_40.contains(
+                "handoff-roles requirements-writer,spec-writer,diagnostic-repairer,prompt-reviewer,agent-policy-reviewer"
+            )
+            && !agent_policy_review_40.contains("repair-promotion-reviewer")
             && agent_policy_review_40.contains("tool-permission-review required")
             && agent_policy_review_40.contains("tool-approval-review required")
             && agent_policy_review_40.contains("external-call-review required")
