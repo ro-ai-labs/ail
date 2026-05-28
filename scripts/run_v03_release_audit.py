@@ -231,6 +231,25 @@ def build_v03_audit_plan(
             ),
         ),
         AuditStep(
+            "rejected-repair-audit",
+            [
+                "python3",
+                "scripts/run_v03_rejected_repair_audit.py",
+                "--base-corpus",
+                "examples",
+                "--examples-artifacts",
+                str(artifacts / "v03-examples"),
+                "--artifact-dir",
+                str(artifacts / "v03-rejected-repair-audit"),
+            ],
+            artifacts / "v03-rejected-repair-audit",
+            "manifest.v03-rejected-repair-audit.txt",
+            (
+                "rejected-repair-audit-report.txt",
+                "rejected-repair-audit-report.fingerprint.txt",
+            ),
+        ),
+        AuditStep(
             "agent-policy-import",
             [
                 "python3",

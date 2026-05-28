@@ -303,6 +303,12 @@ The `ail-examples` replay bundle must also write deterministic story artifacts:
   `manifest.v03-agent-policy-import.txt` in the release audit bundle when the
   AgentTool capture plan, import demo, and multi-agent handoff witness are
   preserved as v0.3 promotion evidence.
+- `rejected-repair-audit-report.txt`,
+  `rejected-repair-audit-report.fingerprint.txt`, and
+  `manifest.v03-rejected-repair-audit.txt` in the release audit bundle when
+  all rejected entries behind the repair-tutorial roadmap signal are checked
+  against diagnostics, corrected specs, checked Core, bytecode, repair
+  evidence, diffs, promotion reviews, and manifest fingerprints.
 - `systems-profile-audit-report.txt`,
   `systems-profile-audit-report.fingerprint.txt`,
   `manifest.v03-systems-profile-audit.txt`, `receive-runtime-trace.txt`,
@@ -444,6 +450,7 @@ cargo run -- ail-conformance examples/incident_notifications.ail --artifact-dir 
 cargo run -- ail-conformance examples/recursive_factorial.ail --artifact-dir /tmp/ail-v03-recursive-factorial
 python3 scripts/run_v03_systems_profile_audit.py --artifact-dir /tmp/ail-v03-systems-profile-audit
 cargo run -- ail-examples examples --artifact-dir /tmp/ail-v03-learning-examples --release-evidence
+python3 scripts/run_v03_rejected_repair_audit.py --base-corpus examples --examples-artifacts /tmp/ail-v03-learning-examples --artifact-dir /tmp/ail-v03-rejected-repair-audit
 cargo run -- ail-v03-roadmap examples --artifact-dir /tmp/ail-v03-roadmap --release-evidence
 test -f /tmp/ail-v03-learning-examples/v03-roadmap.txt
 git diff --check -- examples docs/ail src tests scripts
@@ -482,6 +489,7 @@ python3 scripts/run_v03_systems_profile_audit.py --artifact-dir /tmp/ail-v03-rel
 cargo run -- ail-bootstrap examples/ail_toolchain_agent.ail --pass examples/compiler_pass.ail --agent examples/ail_toolchain_agent.ail --target linux-x86_64-elf --artifact-dir /tmp/ail-v03-release-evidence/artifacts/v03-bootstrap
 cargo run -- ail-examples examples --artifact-dir /tmp/ail-v03-release-evidence/artifacts/v03-examples --release-evidence
 python3 scripts/run_v03_story_promotion_batch_plan.py --base-corpus examples --examples-artifacts /tmp/ail-v03-release-evidence/artifacts/v03-examples --artifact-dir /tmp/ail-v03-release-evidence/artifacts/v03-story-promotion-batch-plan
+python3 scripts/run_v03_rejected_repair_audit.py --base-corpus examples --examples-artifacts /tmp/ail-v03-release-evidence/artifacts/v03-examples --artifact-dir /tmp/ail-v03-release-evidence/artifacts/v03-rejected-repair-audit
 python3 scripts/run_v03_agent_policy_import_audit.py --examples-artifacts /tmp/ail-v03-release-evidence/artifacts/v03-examples --base-corpus examples --source-entry-id example-40 --output-dir /tmp/ail-v03-release-evidence/artifacts/v03-agent-policy-import
 cargo run -- ail-v03-roadmap examples --artifact-dir /tmp/ail-v03-release-evidence/artifacts/v03-roadmap --release-evidence
 python3 scripts/run_v03_signal_status_audit.py --roadmap-file /tmp/ail-v03-release-evidence/artifacts/v03-roadmap/v03-roadmap.txt --status-file docs/ail/v03-roadmap-signal-status.md --output-dir /tmp/ail-v03-release-evidence/artifacts/v03-roadmap-signal-status --min-count 5
@@ -503,6 +511,12 @@ corpus with 119 accepted and 9 rejected entries, plus `examples-report.txt`,
 `story-promotion-batch-plan.fingerprint.txt`, and
 `manifest.v03-story-promotion-batch-plan.txt`, proving all four promoted User
 Story mode entries have reviewer-produced promotion reviews in the replay. The
+rejected repair audit step must preserve
+`rejected-repair-audit-report.txt` and
+`manifest.v03-rejected-repair-audit.txt`, proving all eight rejected entries
+behind the repair-tutorial roadmap signal have corrected specs, checked Core,
+bytecode, VM or target repair evidence, diffs, promotion reviews, removed
+diagnostics, and zero missing semantic anchors. The
 AgentTool import step must preserve
 `agent-policy-import-audit-report.txt`,
 `agent-policy-import-demo-report.txt`, and
@@ -695,16 +709,22 @@ as prose. The current examples reveal these next-version gaps:
   `network_driver.ail` that runs package-local conformance, accepts scheduler
   and interrupt fixtures, rejects invalid interrupt/task contracts with stable
   diagnostics, compiles `NetworkPacketReceiver` to a Linux x86_64 ELF target,
-  and runs the executable to observe resource, capability, effect, and trace
-  output. The next bar is clearer unsupported-target migration guidance and a
-  broader driver family with transmit and interrupt-handler runtime variants.
+  runs the executable to observe resource, capability, effect, and trace
+  output, and bundles receive, transmit, interrupt-handler, and
+  unsupported-target migration evidence in the Systems profile audit. The next
+  bar is richer hardware target diversity and device-specific failure recovery
+  contracts.
 - Rejected examples now emit repair tutorials, corrected repair proof chains,
   semantic repair diffs, deterministic promotion review artifacts, plan-only
   repair promotion capture plans, and a human-approved batch import demo that
   can create the proposed accepted corpus entry while preserving the rejected
-  evidence. The next bar is broader multi-diagnostic promotion coverage and
-  reviewer-produced promotion decisions instead of one deterministic import
-  script.
+  evidence. The rejected repair audit now checks all eight rejected entries
+  behind the high-count repair-tutorial signal as one fingerprinted batch with
+  removed diagnostics, corrected specs, checked Core, bytecode, VM or target
+  evidence, diffs, promotion reviews, and zero missing semantic anchors. The
+  next bar is reviewer-produced live repair decisions across accepted and
+  rejected repair outcomes instead of deterministic-only promotion review
+  artifacts.
 - Secret Access examples now include package-local accepted/rejected
   conformance fixtures for support-role guarded secret reads, redaction,
   denied-access traces, and declared `PermissionDenied` failures. Release

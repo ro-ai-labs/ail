@@ -290,9 +290,10 @@ python3 scripts/run_ail_interactive_manual.py --chapter agent-policy-import --ru
   `stateful_counter.ail` package, including persistence, idempotent retry,
   shared-state serialization, replay-recovery fixtures, and counter VM trace
   output. Prose: `13-stateful-runtime.md`.
-- `repair-promotion`: deterministic review of rejected-example repair evidence
-  before proposing a repaired artifact for accepted-corpus promotion. Prose:
-  `07-repair-promotion.md`.
+- `repair-promotion`: deterministic review and batch audit of rejected-example
+  repair tutorials, corrected specs, checked Core, bytecode, repair evidence,
+  diffs, and promotion reviews before proposing repaired artifacts for
+  accepted-corpus promotion. Prose: `07-repair-promotion.md`.
 - `ui-patch-import`: deterministic review of UI patch plans before importing a
   human-approved `ail-flow-edit` candidate into a replayed corpus copy, then
   writing visual-regression and runtime UI-state evidence for the imported

@@ -1580,6 +1580,7 @@ fn docs_define_v03_release_completion_audit() {
         "python3 scripts/run_ail_interactive_manual.py --all --run-checks",
         "python3 scripts/run_v03_system_prompt_harness_plan.py --artifact-dir",
         "python3 scripts/run_v03_story_promotion_batch_plan.py --base-corpus examples --examples-artifacts",
+        "python3 scripts/run_v03_rejected_repair_audit.py --base-corpus examples --examples-artifacts",
         "python3 scripts/run_v03_systems_profile_audit.py --artifact-dir",
         "cargo run -- ail-examples examples --artifact-dir",
         "cargo run -- ail-v03-roadmap examples --artifact-dir",
@@ -1647,6 +1648,7 @@ fn script_v03_release_audit_dry_run_lists_completion_gates() {
         "step examples command cargo run -- ail-examples examples --artifact-dir",
         "step story-promotion-batch-plan command python3 scripts/run_v03_story_promotion_batch_plan.py --base-corpus examples --examples-artifacts",
         "step agent-policy-import command python3 scripts/run_v03_agent_policy_import_audit.py --examples-artifacts",
+        "step rejected-repair-audit command python3 scripts/run_v03_rejected_repair_audit.py --base-corpus examples --examples-artifacts",
         "step roadmap command cargo run -- ail-v03-roadmap examples --artifact-dir",
         "step conformance-recursive-factorial command cargo run -- ail-conformance examples/recursive_factorial.ail --artifact-dir",
         "step systems-profile-audit command python3 scripts/run_v03_systems_profile_audit.py --artifact-dir",
@@ -1662,6 +1664,8 @@ fn script_v03_release_audit_dry_run_lists_completion_gates() {
         "artifact-required-file story-promotion-batch-plan.txt",
         "artifact-required-file story-promotion-batch-plan.json",
         "artifact-required-file story-promotion-batch-plan.fingerprint.txt",
+        "artifact-required-file rejected-repair-audit-report.txt",
+        "artifact-required-file rejected-repair-audit-report.fingerprint.txt",
         "artifact-required-file systems-profile-audit-report.txt",
         "artifact-required-file systems-profile-audit-report.fingerprint.txt",
         "artifact-required-file transmit-runtime-trace.txt",
@@ -1891,6 +1895,111 @@ fn script_v03_systems_profile_audit_writes_runtime_variant_and_migration_report(
 }
 
 #[test]
+fn script_v03_rejected_repair_audit_writes_signal_entry_repair_report() {
+    let root = std::env::temp_dir().join(format!(
+        "ail-v03-rejected-repair-audit-{}",
+        std::process::id()
+    ));
+    let examples_artifacts = root.join("examples-artifacts");
+    let audit_artifacts = root.join("audit");
+    let _ = fs::remove_dir_all(&root);
+
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let examples = Command::new(binary)
+        .args([
+            "ail-examples",
+            "examples",
+            "--artifact-dir",
+            examples_artifacts.to_str().unwrap(),
+            "--release-evidence",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        examples.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&examples.stdout),
+        String::from_utf8_lossy(&examples.stderr)
+    );
+
+    let script = format!(
+        "{}/scripts/run_v03_rejected_repair_audit.py",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let output = Command::new("python3")
+        .args([
+            &script,
+            "--base-corpus",
+            "examples",
+            "--examples-artifacts",
+            examples_artifacts.to_str().unwrap(),
+            "--artifact-dir",
+            audit_artifacts.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let report =
+        fs::read_to_string(audit_artifacts.join("rejected-repair-audit-report.txt")).unwrap();
+    for required in [
+        "AIL-v0.3-Rejected-Repair-Audit:",
+        "base-corpus examples",
+        "v03-roadmap-signal Rejected examples need repair tutorials that convert diagnostics into corrected specs.",
+        "signal-entry-count 8",
+        "total-rejected-entry-count 9",
+        "failure-taxonomy-count 8",
+        "entry example-99 failure-taxonomy semantic-drift expected-diagnostic AIL001 repair-evidence-kind repair-vm-trace",
+        "entry example-104 failure-taxonomy unsupported-target expected-diagnostic AIL-BACKEND-001 repair-evidence-kind repair-target-report",
+        "entry example-107 failure-taxonomy package-resolution expected-diagnostic AIL registry import shared-lib as Shared was not found in registry index repair-evidence-kind repair-vm-trace",
+        "entry-artifact example-99 repair-tutorial examples/example-99/repair-tutorial.txt",
+        "entry-artifact example-104 repair-target-report examples/example-104/repair-target-report.txt",
+        "entry-artifact example-107 repair-promotion-review examples/example-107/repair-promotion-review.txt",
+        "repair-tutorial-count 8",
+        "repair-candidate-count 8",
+        "repair-checked-core-count 8",
+        "repair-bytecode-count 8",
+        "repair-evidence-count 8",
+        "repair-diff-count 8",
+        "repair-promotion-review-count 8",
+        "expected-diagnostic-removed-count 8",
+        "semantic-anchor-missing-count 0",
+        "promotion-ready-count 8",
+        "audit-result accepted",
+    ] {
+        assert!(report.contains(required), "{required}\n{report}");
+    }
+    let report_fingerprint =
+        fs::read_to_string(audit_artifacts.join("rejected-repair-audit-report.fingerprint.txt"))
+            .unwrap();
+    assert_eq!(report_fingerprint.trim(), fnv64_fingerprint(&report));
+
+    let manifest =
+        fs::read_to_string(audit_artifacts.join("manifest.v03-rejected-repair-audit.txt")).unwrap();
+    for required in [
+        "AIL-v0.3-Rejected-Repair-Audit-Manifest:",
+        "report rejected-repair-audit-report.txt",
+        "examples-artifacts",
+        "entry example-99 repair-promotion-review",
+        "entry example-104 repair-target-report",
+        "entry example-107 repair-promotion-review",
+        "audit-result accepted",
+    ] {
+        assert!(manifest.contains(required), "{required}\n{manifest}");
+    }
+    let manifest_fingerprint =
+        fs::read_to_string(audit_artifacts.join("manifest.fingerprint.txt")).unwrap();
+    assert_eq!(manifest_fingerprint.trim(), fnv64_fingerprint(&manifest));
+
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn script_v03_signal_status_audit_classifies_high_count_roadmap_signals() {
     let script = format!(
         "{}/scripts/run_v03_signal_status_audit.py",
@@ -2072,6 +2181,8 @@ fn script_v03_signal_status_audit_marks_agent_policy_import_promoted() {
         "signal-status-evidence Package graphs need clearer authoring guidance and dependency review views. cargo run -- ail-examples examples --release-evidence",
         "signal-status Generics need reusable conformance fixtures and teachable stdlib walkthroughs. count 10 status promoted",
         "signal-status-evidence Generics need reusable conformance fixtures and teachable stdlib walkthroughs. cargo run -- ail-examples examples --release-evidence",
+        "signal-status Rejected examples need repair tutorials that convert diagnostics into corrected specs. count 8 status promoted",
+        "signal-status-evidence Rejected examples need repair tutorials that convert diagnostics into corrected specs. scripts/run_v03_rejected_repair_audit.py",
         "signal-status Complex systems need richer story graphs that span imported modules, UI surfaces, workflows, target contracts, and regenerated story views. count 5 status promoted",
         "signal-status-evidence Complex systems need richer story graphs that span imported modules, UI surfaces, workflows, target contracts, and regenerated story views. cargo run -- ail-examples examples --release-evidence",
         "signal-status Interop needs deeper unsafe-boundary tutorials and more ABI fixture diversity. count 10 status promoted",
@@ -2088,7 +2199,8 @@ fn script_v03_signal_status_audit_marks_agent_policy_import_promoted() {
         "signal-status-evidence Self-hosting needs multiple composed compiler-pass variants and reviewer-visible pass-order conflict diagnostics. docs/ail/31-v03-learning-and-authoring-gate.md",
         "signal-status Systems profile needs unsupported-target migration guidance and broader transmit/interrupt runtime variants. count 9 status promoted",
         "signal-status-evidence Systems profile needs unsupported-target migration guidance and broader transmit/interrupt runtime variants. scripts/run_v03_systems_profile_audit.py",
-        "promoted-count 14",
+        "promoted-count 15",
+        "deferred-count 0",
         "missing-status-count 0",
         "audit-result accepted",
     ] {
@@ -2485,6 +2597,10 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "cargo run -- ail-examples examples",
         "repair-promotion-review.txt",
         "repair-promotion-review-fingerprint-observed-count",
+        "scripts/run_v03_rejected_repair_audit.py",
+        "rejected-repair-audit-report.txt",
+        "signal-entry-count 8",
+        "promotion-ready-count 8",
         "scripts/run_v03_repair_promotion_capture_plan.py",
         "repair-promotion-capture-plan.json",
         "scripts/run_v03_repair_promotion_import_demo.py",
@@ -2667,6 +2783,9 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "evidence rejected: overdue-without-time-requirement.ail-spec.md AIL-APP-002",
         "evidence rejected: status-change-without-public-update.ail-spec.md AIL-APP-003",
         "evidence repair-promotion-review.txt",
+        "evidence rejected-repair-audit-report.txt",
+        "evidence signal-entry-count 8",
+        "evidence promotion-ready-count 8",
         "evidence repair-promotion-capture-plan.json",
         "evidence repair-promotion-import-demo-report.txt",
         "evidence ui-patch-capture-plan.json",

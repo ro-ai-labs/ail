@@ -44,9 +44,9 @@ rationale: Support Composed package-import examples now emit deterministic depen
 evidence: cargo run -- ail-examples examples --release-evidence
 
 signal: Rejected examples need repair tutorials that convert diagnostics into corrected specs.
-status: deferred
-rationale: Rejected entries now emit repair tutorials, repair proofs, diffs, and promotion reviews, but multi-diagnostic promotion coverage and reviewer-produced decisions are still the next bar.
-evidence: docs/ail/31-v03-learning-and-authoring-gate.md
+status: promoted
+rationale: The rejected repair audit now checks all eight rejected entries behind this roadmap signal, verifies diagnostics, repair tutorials, corrected repair candidates, checked Core, bytecode, VM or target repair evidence, repair diffs, promotion reviews, fingerprint entries in the examples report and manifest, expected-diagnostic removal, and zero missing semantic anchors. Broader reviewer-produced live repair decisions remain a post-promotion bar.
+evidence: scripts/run_v03_rejected_repair_audit.py
 
 signal: Security examples need threat-model annotations and audit trails.
 status: promoted

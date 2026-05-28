@@ -33,6 +33,44 @@ Each rejected entry writes:
 The report also records `repair-promotion-review-fingerprint-observed-count`
 and lists each promotion review in `manifest.ail-examples.txt`.
 
+## Rejected Repair Audit
+
+After replay, run the v0.3 rejected repair audit:
+
+```sh
+python3 scripts/run_v03_rejected_repair_audit.py \
+  --base-corpus examples \
+  --examples-artifacts /tmp/ail-manual-repair-promotion \
+  --artifact-dir /tmp/ail-manual-rejected-repair-audit
+```
+
+The audit writes:
+
+```text
+/tmp/ail-manual-rejected-repair-audit/rejected-repair-audit-report.txt
+/tmp/ail-manual-rejected-repair-audit/rejected-repair-audit-report.fingerprint.txt
+/tmp/ail-manual-rejected-repair-audit/manifest.v03-rejected-repair-audit.txt
+```
+
+It must report:
+
+```text
+signal-entry-count 8
+total-rejected-entry-count 9
+failure-taxonomy-count 8
+repair-tutorial-count 8
+repair-candidate-count 8
+repair-checked-core-count 8
+repair-bytecode-count 8
+repair-evidence-count 8
+repair-diff-count 8
+repair-promotion-review-count 8
+expected-diagnostic-removed-count 8
+semantic-anchor-missing-count 0
+promotion-ready-count 8
+audit-result accepted
+```
+
 ## Review Rule
 
 Treat `promotion-decision accepted-for-promotion` as a proposal for reviewer

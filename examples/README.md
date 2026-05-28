@@ -199,6 +199,21 @@ append `proposed_entry_id` from the plan by supplying a batch entry with
 fingerprint, keeps the rejected source entry unchanged, writes new `requests/`,
 `responses/`, and `stories/` files for the repaired accepted entry, and replays
 the corpus copy before any generated corpus copy is committed.
+Run the v0.3 rejected repair audit against replay artifacts to check the
+high-count repair-tutorial signal as a batch:
+
+```sh
+python3 scripts/run_v03_rejected_repair_audit.py \
+  --base-corpus examples \
+  --examples-artifacts /tmp/ail-examples-seed-artifacts \
+  --artifact-dir /tmp/ail-v03-rejected-repair-audit
+```
+
+The audit must report `signal-entry-count 8`, `repair-tutorial-count 8`,
+`repair-candidate-count 8`, `repair-promotion-review-count 8`,
+`expected-diagnostic-removed-count 8`, `semantic-anchor-missing-count 0`, and
+`promotion-ready-count 8`, with every artifact fingerprint matched against
+`examples-report.txt` and `manifest.ail-examples.txt`.
 User Story mode promotion follows the same corpus-copy rule. The dedicated
 story-promotion reviewer contract,
 `examples/agents/codex-ail-story-promotion-reviewer.md`, and skill,

@@ -229,6 +229,10 @@ add counter.value by 1 -> 42
 repair-promotion-review.txt
 repair-promotion-review.fingerprint.txt
 repair-promotion-review-fingerprint-observed-count
+rejected-repair-audit-report.txt
+manifest.v03-rejected-repair-audit.txt
+signal-entry-count 8
+promotion-ready-count 8
 repair-promotion-capture-plan.json
 repair-promotion-capture-plan.txt
 repair-promotion-capture-plan.fingerprint.txt

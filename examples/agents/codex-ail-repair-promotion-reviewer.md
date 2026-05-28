@@ -21,6 +21,8 @@ verified bytecode, VM or target evidence, and repair diff.
 - rejected entry id
 - `repair-promotion-review.txt`
 - `repair-promotion-review.fingerprint.txt`
+- `rejected-repair-audit-report.txt`
+- `manifest.v03-rejected-repair-audit.txt`
 - `repair-promotion-capture-plan.json`
 - `repair-promotion-capture-plan.fingerprint.txt`
 - `repair-promotion-import-demo-report.txt`
@@ -72,7 +74,18 @@ python3 scripts/run_ail_interactive_manual.py --chapter repair-promotion --run-c
 
 The resulting report must include `repair-promotion-review.txt`,
 `repair-promotion-review.fingerprint.txt`, and
-`repair-promotion-review-fingerprint-observed-count`. The plan-only promotion
+`repair-promotion-review-fingerprint-observed-count`. The rejected repair audit
+must also pass for the high-count repair-tutorial signal:
+
+```sh
+python3 scripts/run_v03_rejected_repair_audit.py \
+  --base-corpus examples \
+  --examples-artifacts /tmp/ail-repair-promotion-review \
+  --artifact-dir /tmp/ail-rejected-repair-audit
+```
+
+The audit must include `signal-entry-count 8`, `promotion-ready-count 8`, and
+`semantic-anchor-missing-count 0`. The plan-only promotion
 bridge must also be generated with:
 
 ```sh

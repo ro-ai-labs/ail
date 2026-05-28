@@ -121,9 +121,10 @@ one of these version surfaces or add a versioned surface through
   mode, examples replay, roadmap, prompt, agent, bootstrap self-hosting,
   Systems profile, stateful runtime, Application baseline, repair-promotion,
   UI patch import, and AgentTool policy import checks.
-- `manual/07-repair-promotion.md`: deterministic review of rejected-example
-  repair evidence before proposing a repaired artifact for accepted-corpus
-  promotion.
+- `manual/07-repair-promotion.md`: deterministic review and batch audit of
+  rejected-example repair tutorials, corrected specs, checked Core, bytecode,
+  repair evidence, diffs, and promotion reviews before proposing repaired
+  artifacts for accepted-corpus promotion.
 - `manual/08-ui-patch-import.md`: deterministic review of UI patch plans before
   importing a human-approved `ail-flow-edit` candidate into a replayed corpus
   copy, then writing visual-regression and runtime UI-state evidence for the

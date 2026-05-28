@@ -42,6 +42,15 @@ Replay examples directly when reviewing a different artifact directory:
 cargo run -- ail-examples examples --artifact-dir /tmp/ail-repair-promotion-review --release-evidence
 ```
 
+Run the batch repair audit before judging the roadmap signal:
+
+```sh
+python3 scripts/run_v03_rejected_repair_audit.py \
+  --base-corpus examples \
+  --examples-artifacts /tmp/ail-repair-promotion-review \
+  --artifact-dir /tmp/ail-rejected-repair-audit
+```
+
 ## Required Evidence
 
 The review report must include:
@@ -49,6 +58,10 @@ The review report must include:
 - `repair-promotion-review.txt`
 - `repair-promotion-review.fingerprint.txt`
 - `repair-promotion-review-fingerprint-observed-count`
+- `rejected-repair-audit-report.txt`
+- `manifest.v03-rejected-repair-audit.txt`
+- `signal-entry-count 8`
+- `promotion-ready-count 8`
 - `repair-promotion-capture-plan.json`
 - `repair-promotion-capture-plan.fingerprint.txt`
 - `repair-promotion-import-demo-report.txt`
