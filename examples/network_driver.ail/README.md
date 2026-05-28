@@ -9,15 +9,16 @@ grants, and trace guarantees before any native or target-contract artifact is
 trusted.
 
 This package is intentionally small. Its value is that the same concepts used
-by application workflows also apply to a packet receiver that owns a buffer,
-borrows packet metadata, performs a device read, writes into the receive
-buffer, releases it, and records packet processing evidence.
+by application workflows also apply to packet receive, packet transmit, and
+interrupt-handler components that declare resources, capabilities, effects,
+runtime traces, and target constraints before native evidence is trusted.
 
 ## Concepts Taught
 
 - System profile packages with explicit resources, capabilities, effects, and
   guarantees.
 - Ownership and borrowing for `rx buffer` and `packet metadata`.
+- Transmit-path ownership for `tx descriptor` and borrowed `tx queue`.
 - Region placement for packet processing memory.
 - Scheduler task, priority, and timing declarations.
 - Interrupt context, priority, and mask declarations.
@@ -72,7 +73,7 @@ cargo run -- ail-conformance examples/network_driver.ail --artifact-dir /tmp/ail
 ```
 
 The interactive manual Systems profile chapter composes conformance, native
-compile, and runtime trace evidence:
+compile, runtime trace, and v0.3 variant audit evidence:
 
 ```bash
 python3 scripts/run_ail_interactive_manual.py --chapter systems-profile --run-checks
@@ -90,6 +91,25 @@ cargo run -- ail-compile examples/network_driver.ail \
 
 Running `/tmp/ail-manual-systems-profile-network-driver.elf` should emit
 resource, capability, effect, guarantee, and `trace PacketReceived` evidence.
+
+The v0.3 Systems audit runs the receive, transmit, and interrupt-handler
+variants as one fingerprinted bundle:
+
+```bash
+python3 scripts/run_v03_systems_profile_audit.py --artifact-dir /tmp/ail-v03-systems-profile-audit
+```
+
+Useful audit artifacts:
+
+- `systems-profile-audit-report.txt`
+- `manifest.v03-systems-profile-audit.txt`
+- `receive-runtime-trace.txt`
+- `transmit-runtime-trace.txt`
+- `interrupt-handler-runtime-trace.txt`
+
+The report ties the rejected unsupported-target `example-104` diagnostic
+`AIL-BACKEND-001` to migration guidance: move Linux-only syscall effects
+behind target-support metadata or choose `linux-x86_64-elf`.
 
 ## Rejected Fixtures
 
@@ -119,6 +139,7 @@ layout, and status-map diagnostics.
 Network Driver is the current low-level System profile anchor, but it is still
 too narrow to prove realistic driver development. v0.3 now has deterministic
 manual evidence for receive-path conformance, scheduler and interrupt fixtures,
-native target artifacts, and runtime traces. The next bar is a small driver
-family with transmit and interrupt-handler runtime variants plus clearer
-unsupported-target migration guidance.
+packet-transmit conformance, native target artifacts, receive/transmit/
+interrupt-handler runtime traces, and unsupported-target migration guidance.
+The next bar is a small driver family with richer hardware target diversity and
+device-specific failure recovery contracts.

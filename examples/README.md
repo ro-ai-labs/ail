@@ -69,7 +69,8 @@ packages visible without making a separate non-end-to-end example category.
   arithmetic bytecode fixture for executable semantics.
 - `network_driver.ail/README.md`: low-level System profile resources,
   ownership, borrowing, device effects, scheduler and interrupt fixtures,
-  native target evidence, runtime traces, and rejected contract diagnostics.
+  native target evidence, receive/transmit/interrupt-handler runtime traces,
+  unsupported-target migration guidance, and rejected contract diagnostics.
 - `c_interop.ail/README.md`: C ABI, pointer ownership, callbacks, layout,
   status-map failures, host imports, unsafe-boundary review artifacts, and
   invalid interop repair evidence.

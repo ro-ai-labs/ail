@@ -277,10 +277,11 @@ python3 scripts/run_ail_interactive_manual.py --chapter agent-policy-import --ru
 - `turing-core`: deterministic recursive function conformance for base-case
   recursion, explicit stack bounds, well-founded termination measures, and
   `AIL-CONTROL-003` rejected fixtures. Prose: `14-turing-core.md`.
-- `systems-profile`: deterministic conformance, native compile, and runtime
-  trace evidence for the `network_driver.ail` low-level Systems profile package,
-  including scheduler and interrupt accepted/rejected fixtures. Prose:
-  `11-systems-profile.md`.
+- `systems-profile`: deterministic conformance, native compile, receive
+  runtime trace, v0.3 receive/transmit/interrupt-handler variant audit, and
+  unsupported-target migration guidance for the `network_driver.ail` low-level
+  Systems profile package, including scheduler and interrupt accepted/rejected
+  fixtures. Prose: `11-systems-profile.md`.
 - `application-baseline`: deterministic conformance evidence for the
   `support_ticket.ail` high-level Application profile package, including
   package-local accepted and rejected fixtures. Prose:

@@ -183,6 +183,7 @@ rejected: recursive-without-decreasing-argument.ail-spec.md AIL-CONTROL-003
 conformance-report.txt
 manifest.ail-conformance.txt
 accepted: scheduler-task-minimal.ail-spec.md
+accepted: packet-transmit-minimal.ail-spec.md
 accepted: interrupt-context-minimal.ail-spec.md
 rejected: interrupt-context-blocking-effect.ail-spec.md AIL033
 rejected: scheduler-task-unknown-context.ail-spec.md AIL035
@@ -210,6 +211,11 @@ manifest.ail-compile.txt
 machine-bytecode-contract linux-x86_64-elf
 system effect read network device
 trace PacketReceived
+systems-profile-audit-report.txt
+manifest.v03-systems-profile-audit.txt
+runtime-variant transmit action NetworkPacketTransmitter target linux-x86_64-elf trace PacketTransmitted
+runtime-variant interrupt-handler action TimerInterruptHandler target linux-x86_64-elf trace TimerInterruptHandled
+unsupported-target-migration example-104 AIL-BACKEND-001 aarch64-apple-darwin-libsystem-macho
 accepted: persistent-increment-minimal.ail-spec.md
 accepted: idempotent-increment-request-minimal.ail-spec.md
 accepted: locked-counter-increment-minimal.ail-spec.md

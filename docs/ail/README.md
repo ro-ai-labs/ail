@@ -141,8 +141,8 @@ one of these version surfaces or add a versioned surface through
   termination measures, and `AIL-CONTROL-003` rejected fixtures.
 - `manual/11-systems-profile.md`: deterministic Systems profile evidence for
   `network_driver.ail`, including scheduler and interrupt conformance fixtures,
-  Linux x86_64 native target artifacts, and runtime resource/effect trace
-  output.
+  Linux x86_64 native target artifacts, receive/transmit/interrupt-handler
+  runtime traces, and unsupported-target migration guidance.
 - `manual/12-application-baseline.md`: deterministic Application baseline
   evidence for `support_ticket.ail`, including package-local accepted and
   rejected conformance fixtures for support-ticket authoring boundaries.

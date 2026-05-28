@@ -303,6 +303,12 @@ The `ail-examples` replay bundle must also write deterministic story artifacts:
   `manifest.v03-agent-policy-import.txt` in the release audit bundle when the
   AgentTool capture plan, import demo, and multi-agent handoff witness are
   preserved as v0.3 promotion evidence.
+- `systems-profile-audit-report.txt`,
+  `systems-profile-audit-report.fingerprint.txt`,
+  `manifest.v03-systems-profile-audit.txt`, `receive-runtime-trace.txt`,
+  `transmit-runtime-trace.txt`, and `interrupt-handler-runtime-trace.txt` in
+  the release audit bundle when the Systems profile receive, transmit,
+  interrupt-handler, and unsupported-target migration evidence is preserved.
 - `agent-policy-live-review-report.txt`,
   `agent-policy-live-review-report.fingerprint.txt`,
   `manifest.v03-agent-policy-live-review.txt`,
@@ -436,6 +442,7 @@ cargo run -- ail-conformance examples/secret_access.ail --artifact-dir /tmp/ail-
 cargo run -- ail-conformance examples/stateful_counter.ail --artifact-dir /tmp/ail-v03-stateful-counter
 cargo run -- ail-conformance examples/incident_notifications.ail --artifact-dir /tmp/ail-v03-incident-notifications
 cargo run -- ail-conformance examples/recursive_factorial.ail --artifact-dir /tmp/ail-v03-recursive-factorial
+python3 scripts/run_v03_systems_profile_audit.py --artifact-dir /tmp/ail-v03-systems-profile-audit
 cargo run -- ail-examples examples --artifact-dir /tmp/ail-v03-learning-examples --release-evidence
 cargo run -- ail-v03-roadmap examples --artifact-dir /tmp/ail-v03-roadmap --release-evidence
 test -f /tmp/ail-v03-learning-examples/v03-roadmap.txt
@@ -471,6 +478,7 @@ cargo run -- ail-conformance examples/secret_access.ail --artifact-dir /tmp/ail-
 cargo run -- ail-conformance examples/stateful_counter.ail --artifact-dir /tmp/ail-v03-release-evidence/artifacts/v03-conformance-stateful-counter
 cargo run -- ail-conformance examples/incident_notifications.ail --artifact-dir /tmp/ail-v03-release-evidence/artifacts/v03-conformance-incident-notifications
 cargo run -- ail-conformance examples/recursive_factorial.ail --artifact-dir /tmp/ail-v03-release-evidence/artifacts/v03-conformance-recursive-factorial
+python3 scripts/run_v03_systems_profile_audit.py --artifact-dir /tmp/ail-v03-release-evidence/artifacts/v03-systems-profile-audit
 cargo run -- ail-bootstrap examples/ail_toolchain_agent.ail --pass examples/compiler_pass.ail --agent examples/ail_toolchain_agent.ail --target linux-x86_64-elf --artifact-dir /tmp/ail-v03-release-evidence/artifacts/v03-bootstrap
 cargo run -- ail-examples examples --artifact-dir /tmp/ail-v03-release-evidence/artifacts/v03-examples --release-evidence
 python3 scripts/run_v03_story_promotion_batch_plan.py --base-corpus examples --examples-artifacts /tmp/ail-v03-release-evidence/artifacts/v03-examples --artifact-dir /tmp/ail-v03-release-evidence/artifacts/v03-story-promotion-batch-plan
@@ -500,7 +508,11 @@ AgentTool import step must preserve
 `agent-policy-import-demo-report.txt`, and
 `agent-policy-multi-agent-handoff-report.txt` so the high-count AgentTool
 handoff signal can be marked promoted from deterministic release evidence. The
-roadmap signal-status step must then
+Systems profile audit step must preserve
+`systems-profile-audit-report.txt`, `transmit-runtime-trace.txt`, and
+`interrupt-handler-runtime-trace.txt` so the high-count Systems profile signal
+can be marked promoted from deterministic release evidence. The roadmap
+signal-status step must then
 classify every roadmap signal with count `5` or higher as `promoted` or
 `deferred` in `docs/ail/v03-roadmap-signal-status.md` and write
 `v03-roadmap-signal-status.txt`, its fingerprint, and

@@ -132,6 +132,24 @@ def build_v03_audit_plan(
             "manifest.ail-conformance.txt",
         ),
         AuditStep(
+            "systems-profile-audit",
+            [
+                "python3",
+                "scripts/run_v03_systems_profile_audit.py",
+                "--artifact-dir",
+                str(artifacts / "v03-systems-profile-audit"),
+            ],
+            artifacts / "v03-systems-profile-audit",
+            "manifest.v03-systems-profile-audit.txt",
+            (
+                "systems-profile-audit-report.txt",
+                "systems-profile-audit-report.fingerprint.txt",
+                "receive-runtime-trace.txt",
+                "transmit-runtime-trace.txt",
+                "interrupt-handler-runtime-trace.txt",
+            ),
+        ),
+        AuditStep(
             "bootstrap",
             [
                 "cargo",

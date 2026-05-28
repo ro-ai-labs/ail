@@ -64,9 +64,9 @@ rationale: Stateful Counter examples now emit deterministic state-boundary revie
 evidence: cargo run -- ail-examples examples --release-evidence
 
 signal: Systems profile needs unsupported-target migration guidance and broader transmit/interrupt runtime variants.
-status: deferred
-rationale: Systems manual evidence covers scheduler, interrupt, native receive, and invalid-contract diagnostics, but transmit and interrupt-handler variants plus unsupported-target migration guidance remain deferred.
-evidence: docs/ail/31-v03-learning-and-authoring-gate.md
+status: promoted
+rationale: The Systems profile audit now compiles and runs receive, transmit, and interrupt-handler variants, verifies the packet-transmit fixture through conformance, fingerprints each runtime trace, and ties unsupported-target migration guidance to rejected catalog entry example-104 with AIL-BACKEND-001 evidence. Broader driver families and hardware target diversity remain a post-promotion bar.
+evidence: scripts/run_v03_systems_profile_audit.py
 
 signal: Turing Core examples need richer termination proofs beyond base-case, decreasing-argument, and numeric stack-bound patterns.
 status: promoted

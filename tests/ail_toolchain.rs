@@ -1366,6 +1366,9 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
                 "run-ui-patch-import-checks",
                 "run-agent-policy-import-checks",
                 "story-promotion-batch-plan.txt",
+                "systems-profile-audit-report.txt",
+                "runtime-variant transmit action NetworkPacketTransmitter",
+                "unsupported-target-migration example-104 AIL-BACKEND-001",
             ],
         ),
         (
@@ -1407,12 +1410,20 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
                 "/tmp/ail-manual-systems-profile-network-driver.elf",
                 "conformance-report.txt",
                 "accepted: scheduler-task-minimal.ail-spec.md",
+                "accepted: packet-transmit-minimal.ail-spec.md",
                 "accepted: interrupt-context-minimal.ail-spec.md",
                 "AIL033",
                 "AIL035",
                 "native-bytecode-report.txt",
                 "system effect read network device",
                 "trace PacketReceived",
+                "scripts/run_v03_systems_profile_audit.py",
+                "systems-profile-audit-report.txt",
+                "transmit-runtime-trace.txt",
+                "interrupt-handler-runtime-trace.txt",
+                "runtime-variant transmit action NetworkPacketTransmitter",
+                "runtime-variant interrupt-handler action TimerInterruptHandler",
+                "unsupported-target-migration example-104 AIL-BACKEND-001",
             ],
         ),
         (
@@ -1569,6 +1580,7 @@ fn docs_define_v03_release_completion_audit() {
         "python3 scripts/run_ail_interactive_manual.py --all --run-checks",
         "python3 scripts/run_v03_system_prompt_harness_plan.py --artifact-dir",
         "python3 scripts/run_v03_story_promotion_batch_plan.py --base-corpus examples --examples-artifacts",
+        "python3 scripts/run_v03_systems_profile_audit.py --artifact-dir",
         "cargo run -- ail-examples examples --artifact-dir",
         "cargo run -- ail-v03-roadmap examples --artifact-dir",
         "cargo run -- ail-agent-contracts examples/agents",
@@ -1637,6 +1649,7 @@ fn script_v03_release_audit_dry_run_lists_completion_gates() {
         "step agent-policy-import command python3 scripts/run_v03_agent_policy_import_audit.py --examples-artifacts",
         "step roadmap command cargo run -- ail-v03-roadmap examples --artifact-dir",
         "step conformance-recursive-factorial command cargo run -- ail-conformance examples/recursive_factorial.ail --artifact-dir",
+        "step systems-profile-audit command python3 scripts/run_v03_systems_profile_audit.py --artifact-dir",
         "step roadmap-signal-status command python3 scripts/run_v03_signal_status_audit.py --roadmap-file",
         "step bootstrap-pass-order-conflict command cargo test cli_ail_bootstrap_rejects_duplicate_user_pass_sequence_with_diagnostics --test ail_toolchain -- --exact",
         "step prompt-llm-review command python3 scripts/run_v03_prompt_llm_harness.py --review-artifacts",
@@ -1649,6 +1662,10 @@ fn script_v03_release_audit_dry_run_lists_completion_gates() {
         "artifact-required-file story-promotion-batch-plan.txt",
         "artifact-required-file story-promotion-batch-plan.json",
         "artifact-required-file story-promotion-batch-plan.fingerprint.txt",
+        "artifact-required-file systems-profile-audit-report.txt",
+        "artifact-required-file systems-profile-audit-report.fingerprint.txt",
+        "artifact-required-file transmit-runtime-trace.txt",
+        "artifact-required-file interrupt-handler-runtime-trace.txt",
         "artifact-required-file bootstrap-pass-order-diagnostics.txt",
         "artifact-required-file v03-roadmap.txt",
         "artifact-required-file v03-roadmap-signal-status.txt",
@@ -1778,6 +1795,96 @@ fn script_v03_story_promotion_batch_plan_writes_multi_story_inventory() {
     }
     let manifest_fingerprint =
         fs::read_to_string(batch_artifacts.join("manifest.fingerprint.txt")).unwrap();
+    assert_eq!(manifest_fingerprint.trim(), fnv64_fingerprint(&manifest));
+
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn script_v03_systems_profile_audit_writes_runtime_variant_and_migration_report() {
+    let root = std::env::temp_dir().join(format!(
+        "ail-v03-systems-profile-audit-{}",
+        std::process::id()
+    ));
+    let artifact_dir = root.join("systems-profile");
+    let _ = fs::remove_dir_all(&root);
+
+    let script = format!(
+        "{}/scripts/run_v03_systems_profile_audit.py",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let output = Command::new("python3")
+        .args([&script, "--artifact-dir", artifact_dir.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let report = fs::read_to_string(artifact_dir.join("systems-profile-audit-report.txt")).unwrap();
+    for required in [
+        "AIL-v0.3-Systems-Profile-Audit:",
+        "package examples/network_driver.ail",
+        "v03-roadmap-signal Systems profile needs unsupported-target migration guidance and broader transmit/interrupt runtime variants.",
+        "accepted-fixture packet-receive-minimal.ail-spec.md",
+        "accepted-fixture packet-transmit-minimal.ail-spec.md",
+        "accepted-fixture interrupt-context-minimal.ail-spec.md",
+        "rejected-fixture interrupt-context-blocking-effect.ail-spec.md AIL033",
+        "unsupported-target-migration example-104 AIL-BACKEND-001 aarch64-apple-darwin-libsystem-macho",
+        "unsupported-target-guidance move linux-only syscall effects behind target-support metadata or choose linux-x86_64-elf",
+        "runtime-variant receive action NetworkPacketReceiver target linux-x86_64-elf trace PacketReceived",
+        "runtime-variant transmit action NetworkPacketTransmitter target linux-x86_64-elf trace PacketTransmitted",
+        "runtime-variant interrupt-handler action TimerInterruptHandler target linux-x86_64-elf trace TimerInterruptHandled",
+        "transmit-runtime-variant true",
+        "interrupt-handler-runtime-variant true",
+        "audit-result accepted",
+    ] {
+        assert!(report.contains(required), "{required}\n{report}");
+    }
+    let report_fingerprint =
+        fs::read_to_string(artifact_dir.join("systems-profile-audit-report.fingerprint.txt"))
+            .unwrap();
+    assert_eq!(report_fingerprint.trim(), fnv64_fingerprint(&report));
+
+    let transmit_trace =
+        fs::read_to_string(artifact_dir.join("transmit-runtime-trace.txt")).unwrap();
+    assert!(
+        transmit_trace.contains("system component Network packet transmitter started")
+            && transmit_trace.contains("system effect read tx queue")
+            && transmit_trace.contains("system effect write network device")
+            && transmit_trace.contains("trace PacketTransmitted"),
+        "{transmit_trace}"
+    );
+    let interrupt_trace =
+        fs::read_to_string(artifact_dir.join("interrupt-handler-runtime-trace.txt")).unwrap();
+    assert!(
+        interrupt_trace.contains("system component Timer interrupt handler started")
+            && interrupt_trace.contains("system context interrupt")
+            && interrupt_trace.contains("system effect read timer device")
+            && interrupt_trace.contains("trace TimerInterruptHandled"),
+        "{interrupt_trace}"
+    );
+
+    let manifest =
+        fs::read_to_string(artifact_dir.join("manifest.v03-systems-profile-audit.txt")).unwrap();
+    for required in [
+        "AIL-v0.3-Systems-Profile-Audit-Manifest:",
+        "report systems-profile-audit-report.txt",
+        "runtime-trace receive-runtime-trace.txt",
+        "runtime-trace transmit-runtime-trace.txt",
+        "runtime-trace interrupt-handler-runtime-trace.txt",
+        "compile-manifest receive/manifest.ail-compile.txt",
+        "compile-manifest transmit/manifest.ail-compile.txt",
+        "compile-manifest interrupt-handler/manifest.ail-compile.txt",
+        "audit-result accepted",
+    ] {
+        assert!(manifest.contains(required), "{required}\n{manifest}");
+    }
+    let manifest_fingerprint =
+        fs::read_to_string(artifact_dir.join("manifest.fingerprint.txt")).unwrap();
     assert_eq!(manifest_fingerprint.trim(), fnv64_fingerprint(&manifest));
 
     fs::remove_dir_all(root).unwrap();
@@ -1979,7 +2086,9 @@ fn script_v03_signal_status_audit_marks_agent_policy_import_promoted() {
         "signal-status-evidence Application examples need more repaired incident promotion variants and richer stateful application walkthroughs after the first package-local repair proof is promoted. cargo run -- ail-examples examples --release-evidence",
         "signal-status Self-hosting needs multiple composed compiler-pass variants and reviewer-visible pass-order conflict diagnostics. count 10 status promoted",
         "signal-status-evidence Self-hosting needs multiple composed compiler-pass variants and reviewer-visible pass-order conflict diagnostics. docs/ail/31-v03-learning-and-authoring-gate.md",
-        "promoted-count 13",
+        "signal-status Systems profile needs unsupported-target migration guidance and broader transmit/interrupt runtime variants. count 9 status promoted",
+        "signal-status-evidence Systems profile needs unsupported-target migration guidance and broader transmit/interrupt runtime variants. scripts/run_v03_systems_profile_audit.py",
+        "promoted-count 14",
         "missing-status-count 0",
         "audit-result accepted",
     ] {
@@ -2283,6 +2392,7 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "cargo run -- ail-conformance examples/network_driver.ail",
         "--artifact-dir /tmp/ail-manual-systems-profile-conformance",
         "accepted: scheduler-task-minimal.ail-spec.md",
+        "accepted: packet-transmit-minimal.ail-spec.md",
         "accepted: interrupt-context-minimal.ail-spec.md",
         "rejected: interrupt-context-blocking-effect.ail-spec.md AIL033",
         "rejected: scheduler-task-unknown-context.ail-spec.md AIL035",
@@ -2295,6 +2405,11 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "/tmp/ail-manual-systems-profile-network-driver.elf",
         "evidence system effect read network device",
         "evidence trace PacketReceived",
+        "python3 scripts/run_v03_systems_profile_audit.py --artifact-dir /tmp/ail-manual-systems-profile-audit",
+        "evidence systems-profile-audit-report.txt",
+        "evidence runtime-variant transmit action NetworkPacketTransmitter",
+        "evidence runtime-variant interrupt-handler action TimerInterruptHandler",
+        "evidence unsupported-target-migration example-104 AIL-BACKEND-001",
     ] {
         assert!(
             systems_profile_stdout.contains(required),
@@ -2524,11 +2639,16 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "evidence no-host-backend-source true",
         "evidence conformance-report.txt",
         "evidence accepted: scheduler-task-minimal.ail-spec.md",
+        "evidence accepted: packet-transmit-minimal.ail-spec.md",
         "evidence accepted: interrupt-context-minimal.ail-spec.md",
         "evidence native-bytecode-report.txt",
         "evidence machine-bytecode-contract linux-x86_64-elf",
         "evidence system effect read network device",
         "evidence trace PacketReceived",
+        "evidence systems-profile-audit-report.txt",
+        "evidence runtime-variant transmit action NetworkPacketTransmitter",
+        "evidence runtime-variant interrupt-handler action TimerInterruptHandler",
+        "evidence unsupported-target-migration example-104 AIL-BACKEND-001",
         "evidence accepted: persistent-increment-minimal.ail-spec.md",
         "evidence accepted: idempotent-increment-request-minimal.ail-spec.md",
         "evidence accepted: locked-counter-increment-minimal.ail-spec.md",
@@ -2918,7 +3038,12 @@ fn script_ail_interactive_manual_v03_authoring_gate_run_checks_succeeds() {
         "AIL-BOOTSTRAP-PASS-ORDER-001",
         "ail conformance: package network-driver",
         "accepted: scheduler-task-minimal.ail-spec.md",
+        "accepted: packet-transmit-minimal.ail-spec.md",
         "accepted: interrupt-context-minimal.ail-spec.md",
+        "AIL-v0.3-Systems-Profile-Audit:",
+        "runtime-variant transmit action NetworkPacketTransmitter target linux-x86_64-elf trace PacketTransmitted",
+        "runtime-variant interrupt-handler action TimerInterruptHandler target linux-x86_64-elf trace TimerInterruptHandled",
+        "unsupported-target-migration example-104 AIL-BACKEND-001",
         "accepted: persistent-increment-minimal.ail-spec.md",
         "accepted: idempotent-increment-request-minimal.ail-spec.md",
         "accepted: locked-counter-increment-minimal.ail-spec.md",
@@ -3008,6 +3133,7 @@ fn script_ail_interactive_manual_systems_profile_run_checks_succeeds() {
         "running check-network-driver-conformance",
         "evidence conformance-report.txt",
         "accepted: scheduler-task-minimal.ail-spec.md",
+        "accepted: packet-transmit-minimal.ail-spec.md",
         "accepted: interrupt-context-minimal.ail-spec.md",
         "AIL033",
         "AIL035",
@@ -3018,6 +3144,12 @@ fn script_ail_interactive_manual_systems_profile_run_checks_succeeds() {
         "running run-network-driver-native",
         "evidence system effect read network device",
         "evidence trace PacketReceived",
+        "running audit-systems-profile-variants",
+        "AIL-v0.3-Systems-Profile-Audit:",
+        "runtime-variant transmit action NetworkPacketTransmitter target linux-x86_64-elf trace PacketTransmitted",
+        "runtime-variant interrupt-handler action TimerInterruptHandler target linux-x86_64-elf trace TimerInterruptHandled",
+        "unsupported-target-migration example-104 AIL-BACKEND-001",
+        "audit-result accepted",
     ] {
         assert!(stdout.contains(required), "{required}\n{stdout}");
     }
@@ -23917,6 +24049,7 @@ fn cli_ail_conformance_checks_system_profile_fixtures() {
     assert!(stdout.contains("accepted: lock-guard-minimal.ail-spec.md"));
     assert!(stdout.contains("accepted: move-resource-minimal.ail-spec.md"));
     assert!(stdout.contains("accepted: mutable-borrow-minimal.ail-spec.md"));
+    assert!(stdout.contains("accepted: packet-transmit-minimal.ail-spec.md"));
     assert!(stdout.contains("accepted: packet-receive-minimal.ail-spec.md"));
     assert!(stdout.contains("accepted: scheduler-task-priority-minimal.ail-spec.md"));
     assert!(stdout.contains("accepted: scheduler-task-minimal.ail-spec.md"));
