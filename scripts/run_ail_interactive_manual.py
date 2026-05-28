@@ -1935,6 +1935,7 @@ def print_chapter(
 
 
 def print_runbook(include_live: bool, overrides: LiveOverrides) -> None:
+    print_coverage_summary(include_live)
     print("AIL-Interactive-Manual-Runbook:")
     for chapter in CHAPTERS:
         print(f"chapter {chapter.chapter_id} {chapter.title}")
@@ -1946,6 +1947,44 @@ def print_runbook(include_live: bool, overrides: LiveOverrides) -> None:
             print(shell_line(command, overrides))
             for evidence in command.evidence:
                 print(f"evidence {evidence}")
+
+
+def print_coverage_summary(include_live: bool) -> None:
+    all_commands = [command for chapter in CHAPTERS for command in chapter.commands]
+    deterministic_commands = [command for command in all_commands if not command.live]
+    live_commands = [command for command in all_commands if command.live]
+    printed_commands = [
+        command for chapter in CHAPTERS for command in chapter_commands(chapter, include_live)
+    ]
+    printed_live_commands = [command for command in printed_commands if command.live]
+    evidence_anchor_count = sum(len(command.evidence) for command in all_commands)
+    print("AIL-Interactive-Manual-Coverage:")
+    print(f"chapter-count {len(CHAPTERS)}")
+    print(f"deterministic-run-chapter-count {len(BASE_CHAPTERS)}")
+    print(f"summary-command-count {len(all_commands)}")
+    print(f"summary-deterministic-command-count {len(deterministic_commands)}")
+    print(f"summary-live-command-count {len(live_commands)}")
+    print(f"summary-evidence-anchor-count {evidence_anchor_count}")
+    print(f"printed-command-count {len(printed_commands)}")
+    print(f"printed-live-command-count {len(printed_live_commands)}")
+    print("run-all-scope deterministic-base-chapters")
+    print("live-execution-scope opt-in-with---include-live")
+    for chapter in CHAPTERS:
+        chapter_live_commands = [command for command in chapter.commands if command.live]
+        chapter_evidence_count = sum(len(command.evidence) for command in chapter.commands)
+        print(f"chapter-summary {chapter.chapter_id} command-count {len(chapter.commands)}")
+        print(
+            f"chapter-summary {chapter.chapter_id} "
+            f"deterministic-command-count {len(chapter.commands) - len(chapter_live_commands)}"
+        )
+        print(
+            f"chapter-summary {chapter.chapter_id} "
+            f"live-command-count {len(chapter_live_commands)}"
+        )
+        print(
+            f"chapter-summary {chapter.chapter_id} "
+            f"evidence-anchor-count {chapter_evidence_count}"
+        )
 
 
 def run_chapter_checks(

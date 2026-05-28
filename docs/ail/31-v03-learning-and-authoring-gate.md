@@ -461,6 +461,7 @@ git diff --check
 cargo check
 cargo test
 cargo clippy --all-targets -- -D warnings
+python3 scripts/run_ail_interactive_manual.py --all --dry-run
 python3 scripts/run_ail_interactive_manual.py --all --run-checks
 python3 scripts/run_ail_interactive_manual.py --chapter v03-authoring-gate --run-checks
 cargo run -- ail-agent-contracts examples/agents
@@ -526,6 +527,9 @@ AIL v0.3 may be called complete only when:
   every artifact-producing command.
 - The `ail-examples` evidence still reports a 128-entry corpus with 119
   accepted and 9 rejected entries, all stored under `./examples`.
+- The interactive manual `--all --dry-run` path reports chapter, command, live
+  command, printed command, and evidence-anchor coverage before any checks are
+  executed.
 - The interactive manual `--all --run-checks` path passes without relying on
   a live endpoint.
 - The v0.3 roadmap is generated from the same examples corpus and every

@@ -1549,6 +1549,7 @@ fn docs_define_v03_release_completion_audit() {
         "128-entry",
         "119 accepted",
         "9 rejected",
+        "python3 scripts/run_ail_interactive_manual.py --all --dry-run",
         "python3 scripts/run_ail_interactive_manual.py --all --run-checks",
         "cargo run -- ail-examples examples --artifact-dir",
         "cargo run -- ail-v03-roadmap examples --artifact-dir",
@@ -1608,6 +1609,7 @@ fn script_v03_release_audit_dry_run_lists_completion_gates() {
     for required in [
         "AIL-v0.3-Release-Audit-Manifest:",
         "mode dry-run",
+        "step interactive-manual-all-dry-run command python3 scripts/run_ail_interactive_manual.py --all --dry-run",
         "step interactive-manual-all command python3 scripts/run_ail_interactive_manual.py --all --run-checks",
         "step interactive-manual-v03-authoring-gate command python3 scripts/run_ail_interactive_manual.py --chapter v03-authoring-gate --run-checks",
         "step agent-contracts command cargo run -- ail-agent-contracts examples/agents",
@@ -2635,6 +2637,58 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
             roadmap_stdout.contains(required),
             "{required}\n{roadmap_stdout}"
         );
+    }
+}
+
+#[test]
+fn script_ail_interactive_manual_all_dry_run_prints_coverage_summary() {
+    let manual_index = fs::read_to_string(format!(
+        "{}/docs/ail/manual/README.md",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .unwrap();
+    assert!(
+        manual_index.contains("python3 scripts/run_ail_interactive_manual.py --all --dry-run"),
+        "{manual_index}"
+    );
+
+    let script = format!(
+        "{}/scripts/run_ail_interactive_manual.py",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let output = Command::new("python3")
+        .args([&script, "--all", "--dry-run"])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    for required in [
+        "AIL-Interactive-Manual-Coverage:",
+        "chapter-count 14",
+        "deterministic-run-chapter-count 13",
+        "summary-command-count",
+        "summary-deterministic-command-count",
+        "summary-live-command-count",
+        "summary-evidence-anchor-count",
+        "printed-command-count",
+        "printed-live-command-count 16",
+        "chapter-summary user-story-mode command-count",
+        "chapter-summary v03-authoring-gate command-count",
+        "chapter-summary v03-authoring-gate live-command-count 3",
+        "chapter-summary turing-core command-count 1",
+        "chapter-summary ui-patch-import command-count 5",
+        "run-all-scope deterministic-base-chapters",
+        "live-execution-scope opt-in-with---include-live",
+        "AIL-Interactive-Manual-Runbook:",
+        "step user-story-mode.6 verify-story-wasm-target-local",
+        "step v03-authoring-gate.13 run-agent-policy-import-checks",
+    ] {
+        assert!(stdout.contains(required), "{required}\n{stdout}");
     }
 }
 

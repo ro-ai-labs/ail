@@ -10,6 +10,20 @@ List the available chapters:
 python3 scripts/run_ail_interactive_manual.py --list
 ```
 
+Print the whole-manual coverage inventory and runbook without executing any
+command:
+
+```sh
+python3 scripts/run_ail_interactive_manual.py --all --dry-run
+```
+
+The coverage header reports total chapter, deterministic run chapter, command,
+live command, printed command, printed live command, and evidence-anchor
+counts. It also prints a `chapter-summary` block for each chapter so release
+reviewers can verify that the manual still covers every deterministic and live
+authoring surface before running the full audit. Live command execution remains
+opt-in with `--include-live`.
+
 Print the User Story mode walkthrough:
 
 ```sh

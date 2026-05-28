@@ -27,6 +27,10 @@ def build_v03_audit_plan(
         AuditStep("cargo-test", ["cargo", "test"]),
         AuditStep("cargo-clippy", ["cargo", "clippy", "--all-targets", "--", "-D", "warnings"]),
         AuditStep(
+            "interactive-manual-all-dry-run",
+            ["python3", "scripts/run_ail_interactive_manual.py", "--all", "--dry-run"],
+        ),
+        AuditStep(
             "interactive-manual-all",
             ["python3", "scripts/run_ail_interactive_manual.py", "--all", "--run-checks"],
         ),
