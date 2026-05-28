@@ -228,6 +228,23 @@ harness option for fake endpoints without `/v1/models`. `--live-artifact-root`
 rewrites the known manual `/tmp/ail-*` artifact paths under one root so local
 live rehearsals do not overwrite hosted-run evidence.
 
+For release evidence, assemble one reviewed live root with these subdirectories
+before running the `--include-live` release audit:
+
+```text
+/tmp/ail-v03-release-live/
+  prompt-llm/
+  story-llm/
+  story-promotion-live-review/
+  agent-policy-live-review/
+```
+
+The Story Promotion review must be generated from the same capture-plan and
+import-work artifacts that preserve
+`promotion-source human-approved-story-promotion-batch` and
+`batch-plan-fingerprint`; otherwise the offline reviewer rejects the evidence
+bundle even if the hosted response said `decision: accept`.
+
 For prompt-pack evidence, `--include-live` runs both the hosted harness and the
 offline artifact review:
 

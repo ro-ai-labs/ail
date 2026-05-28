@@ -554,6 +554,17 @@ python3 scripts/run_v03_story_promotion_live_reviewer_harness.py --review-artifa
 python3 scripts/run_v03_agent_policy_live_reviewer_harness.py --review-artifacts /tmp/ail-v03-release-live/agent-policy-live-review
 ```
 
+The live artifact root is a release-root contract, not a scratch directory.
+Before claiming hosted evidence, it must contain exactly the reviewed
+subdirectories that the audit references:
+
+- `prompt-llm/` from the hosted prompt-pack harness.
+- `story-llm/` from the hosted User Story mode harness.
+- `story-promotion-live-review/` from the hosted Story Promotion reviewer
+  after the capture plan and import demo report point at
+  `promotion-source human-approved-story-promotion-batch`.
+- `agent-policy-live-review/` from the hosted AgentTool policy reviewer.
+
 These review commands do not call a model. They accept only already captured
 request, response, model-check, manifest, and reviewer artifacts, then fail if
 the prompt envelope, story artifact, evidence bundle, or reviewer decision
