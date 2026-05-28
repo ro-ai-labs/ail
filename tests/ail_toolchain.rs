@@ -836,7 +836,7 @@ fn docs_example_inventory_names_every_package_directory() {
     );
     assert!(inventory.contains("Package directories: 26"), "{inventory}");
     assert!(
-        inventory.contains("Counted catalog examples: 127"),
+        inventory.contains("Counted catalog examples: 128"),
         "{inventory}"
     );
     let story_count = fs::read_dir(format!("{examples_dir}/stories"))
@@ -870,16 +870,16 @@ fn docs_example_inventory_names_every_package_directory() {
                 .is_some_and(|extension| extension == "json")
         })
         .count();
-    assert_eq!(story_count, 127, "story file count drifted");
-    assert_eq!(request_count, 127, "request transcript count drifted");
-    assert_eq!(response_count, 127, "response artifact count drifted");
-    assert!(inventory.contains("Story files: 127"), "{inventory}");
+    assert_eq!(story_count, 128, "story file count drifted");
+    assert_eq!(request_count, 128, "request transcript count drifted");
+    assert_eq!(response_count, 128, "response artifact count drifted");
+    assert!(inventory.contains("Story files: 128"), "{inventory}");
     assert!(
-        inventory.contains("Stored request transcripts: 127"),
+        inventory.contains("Stored request transcripts: 128"),
         "{inventory}"
     );
     assert!(
-        inventory.contains("Stored response artifacts: 127"),
+        inventory.contains("Stored response artifacts: 128"),
         "{inventory}"
     );
     assert!(
@@ -1531,8 +1531,8 @@ fn docs_define_v03_release_completion_audit() {
         fs::read_to_string(format!("{}/README.md", env!("CARGO_MANIFEST_DIR"))).unwrap();
 
     for required in [
-        "127-entry replay catalog",
-        "checker-result-count accepted 118",
+        "128-entry replay catalog",
+        "checker-result-count accepted 119",
         "checker-result-count rejected 9",
     ] {
         assert!(top_readme.contains(required), "{required}\n{top_readme}");
@@ -1540,8 +1540,8 @@ fn docs_define_v03_release_completion_audit() {
     for required in [
         "scripts/run_v03_release_audit.py",
         "AIL v0.3 release completion",
-        "127-entry",
-        "118 accepted",
+        "128-entry",
+        "119 accepted",
         "9 rejected",
         "python3 scripts/run_ail_interactive_manual.py --all --run-checks",
         "cargo run -- ail-examples examples --artifact-dir",
@@ -24316,6 +24316,135 @@ fn cli_ail_story_builds_checked_artifacts_from_story_file() {
 }
 
 #[test]
+fn cli_ail_story_spec_prompt_enumerates_source_ui_trace_events() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("ui_workflow.ail");
+    let unique_suffix = format!(
+        "{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
+    let story_file = std::env::temp_dir().join(format!("ail-story-ui-{unique_suffix}.md"));
+    let artifact_dir = std::env::temp_dir().join(format!("ail-story-ui-artifacts-{unique_suffix}"));
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::write(
+        &story_file,
+        concat!(
+            "# UI Workflow Story\n\n",
+            "user-story-id: ui-workflow-story\n",
+            "user-story: As a reviewer I can inspect the ticket detail route, create-ticket form, support manager dashboard, and refund approval workflow.\n",
+            "acceptance-criteria: checked requirements exist; checked spec exists; bytecode exists; source UI trace events are preserved\n",
+            "semantic-anchors: Ticket detail; Create ticket; Support manager dashboard; Refund approval; RouteTicketDetailViewed; DashboardViewed\n"
+        ),
+    )
+    .unwrap();
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let requirements = concat!(
+        "AIL-Requirements:\n",
+        "- Ticket fields include id, title, and status for the Support UI.\n",
+        "- The UI route Ticket detail reads Ticket.id and Ticket.status and records trace event named RouteTicketDetailViewed.\n",
+        "- The Create ticket form action requires title input and records trace event named FormValidationFailed when title validation fails.\n",
+        "- The Support manager dashboard reads Ticket.status and records trace event named DashboardViewed.\n",
+        "- The Refund approval workflow blocks Provider call before Manager approval and records trace event named RefundApprovalWorkflowViewed.\n",
+        "- The UI preserves requester read permission on the Ticket detail route.\n",
+        "- The UI preserves Support manager permission on the overdue-ticket dashboard.\n",
+        "- The UI guarantees source trace records must preserve the route, form, dashboard, and workflow audit path.\n"
+    );
+    let requirements_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(&format!(
+            r#"{{"artifact_kind":"AIL-Requirements","artifact_text":{},"questions":[],"checker_handoff":{{"must_check":true,"expected_profile":"UI","expected_features":[]}}}}"#,
+            json_string(requirements)
+        ))
+    );
+    let response_spec = fs::read_to_string(format!("{package}/spec.ail-spec.md")).unwrap();
+    let spec_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(&format!(
+            r#"{{"artifact_kind":"AIL-Spec Canonical","artifact_text":{},"questions":[],"checker_handoff":{{"must_check":true,"expected_profile":"UI","expected_features":[]}}}}"#,
+            json_string(&response_spec)
+        ))
+    );
+    let server = serve_chat_responses(listener, vec![requirements_body, spec_body]);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-story",
+            &package,
+            "--story-file",
+            story_file.to_str().unwrap(),
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+            "--llm-endpoint",
+            &format!("http://127.0.0.1:{}/v1/chat/completions", addr.port()),
+        ])
+        .output()
+        .unwrap();
+
+    let request_bodies = server.join().unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(request_bodies.len(), 2);
+    assert!(
+        request_bodies[1].contains("Required source trace events to preserve exactly:"),
+        "{}",
+        request_bodies[1]
+    );
+    for trace in [
+        "TicketCreated",
+        "ProviderCallStarted",
+        "RouteTicketDetailViewed",
+        "FormValidationFailed",
+        "DashboardViewed",
+        "RefundApprovalWorkflowViewed",
+    ] {
+        assert!(
+            request_bodies[1].contains(trace),
+            "{trace}\n{}",
+            request_bodies[1]
+        );
+    }
+    assert!(
+        request_bodies[1].contains(
+            "Route:, Form:, Dashboard:, and Workflow: trace records must be copied as trace bullets, not summarized as prose."
+        ),
+        "{}",
+        request_bodies[1]
+    );
+    assert!(
+        request_bodies[1].contains("Use this exact UI profile surface shape:"),
+        "{}",
+        request_bodies[1]
+    );
+    assert!(
+        request_bodies[1].contains("Route: <human label>."),
+        "{}",
+        request_bodies[1]
+    );
+    assert!(
+        request_bodies[1].contains("Dashboard: <human label>."),
+        "{}",
+        request_bodies[1]
+    );
+    assert!(
+        request_bodies[1].contains("Workflow: <human label>."),
+        "{}",
+        request_bodies[1]
+    );
+
+    fs::remove_file(story_file).unwrap();
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
 fn cli_ail_story_uses_default_toolchain_agent_entrypoint() {
     let binary = env!("CARGO_BIN_EXE_ail");
     let package = fixture("support_ticket.ail");
@@ -28944,9 +29073,9 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         String::from_utf8_lossy(&output.stderr)
     );
     let report = fs::read_to_string(artifact_dir.join("examples-report.txt")).unwrap();
-    assert!(report.contains("entry-count 127"), "{report}");
+    assert!(report.contains("entry-count 128"), "{report}");
     assert!(
-        report.contains("checker-result-count accepted 118"),
+        report.contains("checker-result-count accepted 119"),
         "{report}"
     );
     assert!(
@@ -28962,7 +29091,7 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("capability-level-count high-level 53"),
+        report.contains("capability-level-count high-level 54"),
         "{report}"
     );
     assert!(
@@ -29010,7 +29139,7 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("capture-origin-count live-codex 123"),
+        report.contains("capture-origin-count live-codex 124"),
         "{report}"
     );
     assert!(
@@ -29736,12 +29865,12 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         report.contains("program-domain-count application 13")
             && report.contains("program-domain-count diagnostic 9")
             && report.contains("program-domain-count runtime 21")
-            && report.contains("program-scale-count multi-module-system 58")
-            && report.contains("story-roundtrip-count semantic-similar 118"),
+            && report.contains("program-scale-count multi-module-system 59")
+            && report.contains("story-roundtrip-count semantic-similar 119"),
         "{report}"
     );
     assert!(
-        report.contains("semantic-anchor-story-count 127")
+        report.contains("semantic-anchor-story-count 128")
             && report.contains(
                 "entry-semantic-anchors example-0 Option<T>; Result<T; E>; Map<K; V>; Option.map; OptionMapEvaluated; interview.system.md"
             )
@@ -29797,9 +29926,9 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         ),
         "{incident_user_story}"
     );
-    assert!(report.contains("profile-count UI 4"), "{report}");
+    assert!(report.contains("profile-count UI 5"), "{report}");
     assert!(
-        report.contains("target-count wasm32-unknown-sandbox-wasm 17"),
+        report.contains("target-count wasm32-unknown-sandbox-wasm 18"),
         "{report}"
     );
     assert!(
@@ -29827,11 +29956,11 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("ui-review-fingerprint-observed-count 13"),
+        report.contains("ui-review-fingerprint-observed-count 14"),
         "{report}"
     );
     assert!(
-        report.contains("ui-review-patch-fingerprint-observed-count 13"),
+        report.contains("ui-review-patch-fingerprint-observed-count 14"),
         "{report}"
     );
     assert!(
@@ -29903,7 +30032,7 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         "{report}"
     );
     assert!(
-        report.contains("story-promotion-review-fingerprint-observed-count 3"),
+        report.contains("story-promotion-review-fingerprint-observed-count 4"),
         "{report}"
     );
     assert!(
@@ -30615,6 +30744,49 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
         )),
         "{report}"
     );
+    let story_promotion_review_65 = fs::read_to_string(
+        artifact_dir.join("examples/example-65-story/story-promotion-review.txt"),
+    )
+    .unwrap();
+    assert!(
+        story_promotion_review_65.contains("AIL-Story-Promotion-Review:")
+            && story_promotion_review_65.contains("entry example-65-story")
+            && story_promotion_review_65.contains("semantic-task ui-workflow-story-promoted-65")
+            && story_promotion_review_65.contains("package examples/ui_workflow.ail")
+            && story_promotion_review_65.contains("profile UI")
+            && story_promotion_review_65.contains("source-entry example-65")
+            && story_promotion_review_65
+                .contains("story-artifacts story-artifacts/example-65-story")
+            && story_promotion_review_65.contains("user-story-id ui-workflow-story")
+            && story_promotion_review_65.contains("story-prompt-envelope-valid-count 2")
+            && story_promotion_review_65.contains("story-prompt-envelope-invalid-count 0")
+            && story_promotion_review_65.contains("runtime-evidence target-report")
+            && story_promotion_review_65.contains("target-contract wasm32-unknown-sandbox-wasm")
+            && story_promotion_review_65.contains("story-anchor Ticket detail")
+            && story_promotion_review_65.contains("story-anchor Create ticket")
+            && story_promotion_review_65.contains("story-anchor Support manager dashboard")
+            && story_promotion_review_65.contains("story-anchor Refund approval")
+            && story_promotion_review_65.contains("checked-core-fingerprint ")
+            && story_promotion_review_65.contains("bytecode-fingerprint ")
+            && story_promotion_review_65.contains("vm-trace-fingerprint ")
+            && story_promotion_review_65.contains("target-report-fingerprint "),
+        "{story_promotion_review_65}"
+    );
+    let story_promotion_review_65_fingerprint = fs::read_to_string(
+        artifact_dir.join("examples/example-65-story/story-promotion-review.fingerprint.txt"),
+    )
+    .unwrap();
+    assert_eq!(
+        story_promotion_review_65_fingerprint.trim(),
+        fnv64_fingerprint(&story_promotion_review_65)
+    );
+    assert!(
+        report.contains(&format!(
+            "entry-artifact example-65-story story-promotion-review examples/example-65-story/story-promotion-review.txt {}",
+            story_promotion_review_65_fingerprint.trim()
+        )),
+        "{report}"
+    );
     let dependency_review_10 =
         fs::read_to_string(artifact_dir.join("examples/example-10/dependency-review.txt")).unwrap();
     assert!(
@@ -31305,9 +31477,9 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
     let model_executor_manifest =
         fs::read_to_string(artifact_dir.join("model-executor-manifest.txt")).unwrap();
     assert!(
-        model_executor_manifest.contains("entry-count 127")
-            && model_executor_manifest.contains("executor-family codex-skill-agent count 123")
-            && model_executor_manifest.contains("capture-origin live-codex count 123")
+        model_executor_manifest.contains("entry-count 128")
+            && model_executor_manifest.contains("executor-family codex-skill-agent count 124")
+            && model_executor_manifest.contains("capture-origin live-codex count 124")
             && model_executor_manifest.contains(
                 "entry example-100 semantic-task stateful-counter-live-codex-accepted-100"
             )
@@ -31359,6 +31531,9 @@ fn cli_ail_e2e_corpus_replays_checked_live_release_corpus() {
             )
             && model_executor_manifest.contains(
                 "entry example-80-story semantic-task repeated-task-story-promoted-80"
+            )
+            && model_executor_manifest.contains(
+                "entry example-65-story semantic-task ui-workflow-story-promoted-65"
             ),
         "{model_executor_manifest}"
     );
@@ -31404,9 +31579,9 @@ fn cli_ail_e2e_corpus_promotes_second_incident_repair_variant() {
             ),
         "{report}"
     );
-    assert!(report.contains("entry-count 127"), "{report}");
+    assert!(report.contains("entry-count 128"), "{report}");
     assert!(
-        report.contains("checker-result-count accepted 118"),
+        report.contains("checker-result-count accepted 119"),
         "{report}"
     );
     assert!(
@@ -31414,16 +31589,19 @@ fn cli_ail_e2e_corpus_promotes_second_incident_repair_variant() {
         "{report}"
     );
     assert!(
-        report.contains("story-roundtrip-count semantic-similar 118"),
+        report.contains("story-roundtrip-count semantic-similar 119"),
         "{report}"
     );
 
     let model_executor_manifest =
         fs::read_to_string(artifact_dir.join("model-executor-manifest.txt")).unwrap();
     assert!(
-        model_executor_manifest.contains("entry-count 127")
+        model_executor_manifest.contains("entry-count 128")
             && model_executor_manifest.contains(
                 "entry example-123 semantic-task incident-response-commander-review-repair-promoted-123"
+            )
+            && model_executor_manifest.contains(
+                "entry example-65-story semantic-task ui-workflow-story-promoted-65"
             ),
         "{model_executor_manifest}"
     );
@@ -35069,7 +35247,7 @@ fn cli_ail_v03_roadmap_advances_completed_story_promotion_signal() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(
         stdout.contains(
-            "signal User Story mode needs reviewer-produced promotion decisions and multi-story promotion variants after deterministic promotion imports are replayed. count 3"
+            "signal User Story mode needs reviewer-produced promotion decisions and multi-story promotion variants after deterministic promotion imports are replayed. count 4"
         ),
         "{stdout}"
     );

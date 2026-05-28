@@ -12044,6 +12044,7 @@ fn check_ail_spec_preserves_requirement_traces(
         let Some(trace_name) = requirement_trace_name(line) else {
             continue;
         };
+        let lowered = line.to_ascii_lowercase();
         let action_names = requirement_matching_action_names(document, line);
         if action_names.is_empty() {
             if !document_preserves_trace(document, &trace_name) {
@@ -12051,11 +12052,16 @@ fn check_ail_spec_preserves_requirement_traces(
             }
             continue;
         }
+        if requirement_mentions_ui_surface(&lowered)
+            && document_preserves_trace(document, &trace_name)
+        {
+            continue;
+        }
         for action_name in action_names {
             let Some(action) = document.actions.get(&action_name) else {
                 continue;
             };
-            if !action.traces.iter().any(|trace| trace == &trace_name) {
+            if !action_or_linked_ui_surface_preserves_trace(document, action, &trace_name) {
                 missing_traces.insert((action_name, trace_name.clone()));
             }
         }
@@ -12067,7 +12073,7 @@ fn check_ail_spec_preserves_requirement_traces(
                 (
                     format!("spec is missing required trace event {trace_name}"),
                     format!(
-                        "Add a trace bullet that records trace event {trace_name} on the relevant action or failure."
+                        "Add a trace bullet that records trace event {trace_name} on the relevant action, failure, Route, Form, Dashboard, or Workflow."
                     ),
                 )
             } else {
@@ -12076,7 +12082,7 @@ fn check_ail_spec_preserves_requirement_traces(
                         "spec is missing required trace event {trace_name} for action {action_name}"
                     ),
                     format!(
-                        "Add '- the system records a trace event named {trace_name}' to action {action_name}."
+                        "Add '- the system records a trace event named {trace_name}' to action {action_name}, or add the trace to a Form that calls {action_name}."
                     ),
                 )
             };
@@ -12119,6 +12125,24 @@ fn requirement_matching_action_names(document: &AilDocument, line: &str) -> Vec<
         .collect()
 }
 
+fn requirement_mentions_ui_surface(lowered_requirement: &str) -> bool {
+    ["route", "form", "dashboard", "workflow"]
+        .iter()
+        .any(|surface| lowered_requirement.contains(surface))
+}
+
+fn action_or_linked_ui_surface_preserves_trace(
+    document: &AilDocument,
+    action: &AilAction,
+    trace_name: &str,
+) -> bool {
+    action.traces.iter().any(|trace| trace == trace_name)
+        || document.forms.values().any(|form| {
+            form.action.as_deref() == Some(action.name.as_str())
+                && form.failure_traces.iter().any(|trace| trace == trace_name)
+        })
+}
+
 fn document_preserves_trace(document: &AilDocument, trace_name: &str) -> bool {
     document
         .actions
@@ -12136,6 +12160,22 @@ fn document_preserves_trace(document: &AilDocument, trace_name: &str) -> bool {
             .system_components
             .values()
             .any(|component| component.traces.iter().any(|trace| trace == trace_name))
+        || document
+            .routes
+            .values()
+            .any(|route| route.traces.iter().any(|trace| trace == trace_name))
+        || document
+            .forms
+            .values()
+            .any(|form| form.failure_traces.iter().any(|trace| trace == trace_name))
+        || document
+            .dashboards
+            .values()
+            .any(|dashboard| dashboard.traces.iter().any(|trace| trace == trace_name))
+        || document
+            .workflows
+            .values()
+            .any(|workflow| workflow.traces.iter().any(|trace| trace == trace_name))
 }
 
 fn action_preserves_permission_requirement(action: &AilAction) -> bool {
@@ -14017,6 +14057,66 @@ fn build_ail_draft_prompt(package: &AilPackage, user_prompt: &str) -> String {
             "- <TraceName>\n\n",
             "The tool guarantees:\n\n",
             "- <guarantee>\n\n",
+            "Failure <Name> happens when <condition>:\n\n",
+            "- <handling rule>\n",
+            "- the trace records <TraceName>\n"
+        )
+    } else if package.metadata.profile == "UI"
+        || package.metadata.features.iter().any(|feature| {
+            matches!(
+                feature.as_str(),
+                "routes" | "forms" | "dashboards" | "workflows" | "accessibility"
+            )
+        })
+    {
+        concat!(
+            "Use this exact UI profile surface shape:\n",
+            "The application <Name> manages <purpose>.\n\n",
+            "A <Thing> has:\n\n",
+            "- <field>: <Type>\n\n",
+            "Action: <human label>.\n\n",
+            "When <trigger>:\n\n",
+            "- the system requires <rule>\n",
+            "- the system reads <field or effect>\n",
+            "- the system changes <field or effect>\n",
+            "- the system guarantees <guarantee>\n",
+            "- the system records a trace event named <TraceName>\n\n",
+            "Route: <human label>.\n\n",
+            "The route path is:\n\n",
+            "- <path>\n\n",
+            "The route reads:\n\n",
+            "- <Thing.field>\n\n",
+            "The route requires permission:\n\n",
+            "- <permission rule>\n\n",
+            "The route records trace:\n\n",
+            "- <TraceName>\n\n",
+            "Form: <human label>.\n\n",
+            "The form calls action:\n\n",
+            "- <ActionName>\n\n",
+            "The form fields are:\n\n",
+            "- <field>: <Type>\n\n",
+            "The form validates:\n\n",
+            "- <validation rule>\n\n",
+            "If form validation fails:\n\n",
+            "- <TraceName>\n\n",
+            "The form accessibility is:\n\n",
+            "- <accessibility rule>\n\n",
+            "Dashboard: <human label>.\n\n",
+            "The dashboard reads:\n\n",
+            "- <Thing.field>\n\n",
+            "The dashboard requires permission:\n\n",
+            "- <permission rule>\n\n",
+            "The dashboard filters:\n\n",
+            "- <filter rule>\n\n",
+            "The dashboard records trace:\n\n",
+            "- <TraceName>\n\n",
+            "Workflow: <human label>.\n\n",
+            "The workflow steps are:\n\n",
+            "- <step>\n\n",
+            "The workflow blocks:\n\n",
+            "- <blocked step> before <prerequisite step>\n\n",
+            "The workflow records trace:\n\n",
+            "- <TraceName>\n\n",
             "Failure <Name> happens when <condition>:\n\n",
             "- <handling rule>\n",
             "- the trace records <TraceName>\n"

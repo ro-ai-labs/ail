@@ -479,7 +479,7 @@ python3 scripts/run_v03_signal_status_audit.py --roadmap-file /tmp/ail-v03-relea
 The runner writes `release-audit-manifest.txt`,
 `release-audit-manifest.fingerprint.txt`, per-command logs, and all
 artifact-producing command output under the bundle root. The `ail-examples`
-step must emit the 127-entry corpus with 118 accepted and 9 rejected entries,
+step must emit the 128-entry corpus with 119 accepted and 9 rejected entries,
 plus `examples-report.txt`, `v03-roadmap.txt`,
 `model-executor-manifest.txt`, their fingerprints, and
 `manifest.ail-examples.txt`. The AgentTool import step must preserve
@@ -524,7 +524,7 @@ AIL v0.3 may be called complete only when:
 - `scripts/run_v03_release_audit.py` passes from a clean checkout.
 - The release audit bundle preserves manifests, fingerprints, and logs for
   every artifact-producing command.
-- The `ail-examples` evidence still reports a 127-entry corpus with 118
+- The `ail-examples` evidence still reports a 128-entry corpus with 119
   accepted and 9 rejected entries, all stored under `./examples`.
 - The interactive manual `--all --run-checks` path passes without relying on
   a live endpoint.

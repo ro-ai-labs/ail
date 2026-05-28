@@ -1,0 +1,138 @@
+package: ui-workflow
+version: 0.2.0
+profile: UI
+entry: spec.ail-spec.md
+features: routes, forms, dashboards, workflows, accessibility, actions, traces
+imports:
+capability-grants:
+conformance: v0.2
+target-support: ail-core.schema.v0=supported, wasm32-unknown-sandbox-wasm=supported
+schema-version: ail-core.schema.v0
+safety-level: standard
+base_llm_endpoint: http://inteligentia-pro-1:8080/v1/chat/completions
+
+nodes:
+node Accessibility title error is announced
+node Action CreateTicket
+node Action ProviderCall [label=Provider call,trigger=a provider call starts]
+node Application Support UI [purpose=ticket intake, operational dashboards, and provider handoff workflows]
+node Dashboard SupportManagerDashboard [label=Support manager dashboard]
+node Field CreateTicketForm.title : Text
+node Field Ticket.id : Text [secret=false]
+node Field Ticket.status : State<New, Open, Overdue, Refunded> [secret=false]
+node Field Ticket.title : Text [secret=false]
+node Filter status is Overdue
+node Form CreateTicketForm [label=Create ticket]
+node Permission Support manager may view overdue tickets
+node Permission requester may read ticket
+node Provenance action:CreateTicket
+node Provenance action:CreateTicket.requirement:title
+node Provenance action:CreateTicket.trace:TicketCreated
+node Provenance action:ProviderCall
+node Provenance action:ProviderCall.requirement:Manager approval
+node Provenance action:ProviderCall.trace:ProviderCallStarted
+node Provenance application
+node Provenance dashboard:SupportManagerDashboard
+node Provenance dashboard:SupportManagerDashboard.filter:status is Overdue
+node Provenance dashboard:SupportManagerDashboard.permission:Support manager may view overdue tickets
+node Provenance dashboard:SupportManagerDashboard.read:Ticket.status
+node Provenance dashboard:SupportManagerDashboard.trace:DashboardViewed
+node Provenance field:Ticket.id
+node Provenance field:Ticket.status
+node Provenance field:Ticket.title
+node Provenance form:CreateTicketForm
+node Provenance form:CreateTicketForm.accessibility:title error is announced
+node Provenance form:CreateTicketForm.field:title
+node Provenance form:CreateTicketForm.trace:FormValidationFailed
+node Provenance form:CreateTicketForm.validation:title is not empty
+node Provenance route:TicketDetail
+node Provenance route:TicketDetail.permission:requester may read ticket
+node Provenance route:TicketDetail.read:Ticket.id
+node Provenance route:TicketDetail.read:Ticket.status
+node Provenance route:TicketDetail.trace:RouteTicketDetailViewed
+node Provenance thing:Ticket
+node Provenance workflow:RefundApproval
+node Provenance workflow:RefundApproval.step:Manager approval
+node Provenance workflow:RefundApproval.step:Provider call
+node Provenance workflow:RefundApproval.step:Request
+node Provenance workflow:RefundApproval.trace:RefundApprovalWorkflowViewed
+node Route TicketDetail [label=Ticket detail,path=/tickets/:ticket_id]
+node Rule Manager approval
+node Rule title
+node Rule title is not empty
+node Step RefundApproval.Manager approval [label=Manager approval]
+node Step RefundApproval.Provider call [label=Provider call]
+node Step RefundApproval.Request [label=Request]
+node Thing Ticket
+node Trace DashboardViewed
+node Trace FormValidationFailed
+node Trace ProviderCallStarted
+node Trace RefundApprovalWorkflowViewed
+node Trace RouteTicketDetailViewed
+node Trace TicketCreated
+node Value SupportManagerDashboard.Ticket.status
+node Value TicketDetail.Ticket.id
+node Value TicketDetail.Ticket.status
+node Workflow RefundApproval [label=Refund approval]
+
+edges:
+edge has_provenance Application:Support UI -> Provenance:application
+edge contains Application:Support UI -> Thing:Ticket
+edge has_provenance Thing:Ticket -> Provenance:thing:Ticket
+edge has_field Thing:Ticket -> Field:Ticket.id
+edge has_provenance Field:Ticket.id -> Provenance:field:Ticket.id
+edge has_field Thing:Ticket -> Field:Ticket.status
+edge has_provenance Field:Ticket.status -> Provenance:field:Ticket.status
+edge has_field Thing:Ticket -> Field:Ticket.title
+edge has_provenance Field:Ticket.title -> Provenance:field:Ticket.title
+edge has_provenance Route:TicketDetail -> Provenance:route:TicketDetail
+edge reads Route:TicketDetail -> Value:TicketDetail.Ticket.id [provenance=route:TicketDetail.read:Ticket.id]
+edge has_provenance Value:TicketDetail.Ticket.id -> Provenance:route:TicketDetail.read:Ticket.id
+edge reads Route:TicketDetail -> Value:TicketDetail.Ticket.status [provenance=route:TicketDetail.read:Ticket.status]
+edge has_provenance Value:TicketDetail.Ticket.status -> Provenance:route:TicketDetail.read:Ticket.status
+edge requires Route:TicketDetail -> Permission:requester may read ticket
+edge has_provenance Permission:requester may read ticket -> Provenance:route:TicketDetail.permission:requester may read ticket
+edge records_trace Route:TicketDetail -> Trace:RouteTicketDetailViewed
+edge has_provenance Trace:RouteTicketDetailViewed -> Provenance:route:TicketDetail.trace:RouteTicketDetailViewed
+edge has_provenance Form:CreateTicketForm -> Provenance:form:CreateTicketForm
+edge calls Form:CreateTicketForm -> Action:CreateTicket [provenance=form:CreateTicketForm.action:CreateTicket]
+edge has_field Form:CreateTicketForm -> Field:CreateTicketForm.title
+edge has_provenance Field:CreateTicketForm.title -> Provenance:form:CreateTicketForm.field:title
+edge validates Form:CreateTicketForm -> Rule:title is not empty
+edge has_provenance Rule:title is not empty -> Provenance:form:CreateTicketForm.validation:title is not empty
+edge records_trace Form:CreateTicketForm -> Trace:FormValidationFailed
+edge has_provenance Trace:FormValidationFailed -> Provenance:form:CreateTicketForm.trace:FormValidationFailed
+edge has_accessibility Form:CreateTicketForm -> Accessibility:title error is announced
+edge has_provenance Accessibility:title error is announced -> Provenance:form:CreateTicketForm.accessibility:title error is announced
+edge has_provenance Dashboard:SupportManagerDashboard -> Provenance:dashboard:SupportManagerDashboard
+edge reads Dashboard:SupportManagerDashboard -> Value:SupportManagerDashboard.Ticket.status [provenance=dashboard:SupportManagerDashboard.read:Ticket.status]
+edge has_provenance Value:SupportManagerDashboard.Ticket.status -> Provenance:dashboard:SupportManagerDashboard.read:Ticket.status
+edge requires Dashboard:SupportManagerDashboard -> Permission:Support manager may view overdue tickets
+edge has_provenance Permission:Support manager may view overdue tickets -> Provenance:dashboard:SupportManagerDashboard.permission:Support manager may view overdue tickets
+edge filters Dashboard:SupportManagerDashboard -> Filter:status is Overdue
+edge has_provenance Filter:status is Overdue -> Provenance:dashboard:SupportManagerDashboard.filter:status is Overdue
+edge records_trace Dashboard:SupportManagerDashboard -> Trace:DashboardViewed
+edge has_provenance Trace:DashboardViewed -> Provenance:dashboard:SupportManagerDashboard.trace:DashboardViewed
+edge has_provenance Workflow:RefundApproval -> Provenance:workflow:RefundApproval
+edge contains Workflow:RefundApproval -> Step:RefundApproval.Request
+edge has_provenance Step:RefundApproval.Request -> Provenance:workflow:RefundApproval.step:Request
+edge contains Workflow:RefundApproval -> Step:RefundApproval.Manager approval
+edge has_provenance Step:RefundApproval.Manager approval -> Provenance:workflow:RefundApproval.step:Manager approval
+edge contains Workflow:RefundApproval -> Step:RefundApproval.Provider call
+edge has_provenance Step:RefundApproval.Provider call -> Provenance:workflow:RefundApproval.step:Provider call
+edge blocks_before Step:RefundApproval.Provider call -> Step:RefundApproval.Manager approval [provenance=workflow:RefundApproval.block:Provider call before Manager approval]
+edge records_trace Workflow:RefundApproval -> Trace:RefundApprovalWorkflowViewed
+edge has_provenance Trace:RefundApprovalWorkflowViewed -> Provenance:workflow:RefundApproval.trace:RefundApprovalWorkflowViewed
+edge contains Application:Support UI -> Action:CreateTicket
+edge has_provenance Action:CreateTicket -> Provenance:action:CreateTicket
+edge requires Action:CreateTicket -> Rule:title
+edge has_provenance Rule:title -> Provenance:action:CreateTicket.requirement:title
+edge writes Action:CreateTicket -> Field:Ticket.status [provenance=action:CreateTicket.write:Ticket.status]
+edge records_trace Action:CreateTicket -> Trace:TicketCreated
+edge has_provenance Trace:TicketCreated -> Provenance:action:CreateTicket.trace:TicketCreated
+edge contains Application:Support UI -> Action:ProviderCall
+edge has_provenance Action:ProviderCall -> Provenance:action:ProviderCall
+edge requires Action:ProviderCall -> Rule:Manager approval
+edge has_provenance Rule:Manager approval -> Provenance:action:ProviderCall.requirement:Manager approval
+edge records_trace Action:ProviderCall -> Trace:ProviderCallStarted
+edge has_provenance Trace:ProviderCallStarted -> Provenance:action:ProviderCall.trace:ProviderCallStarted

@@ -4591,3 +4591,40 @@ target: linux-x86_64-elf
 vm-action: RunMaintenanceCycle
 runtime-state: counter.value=0
 story-artifacts: story-artifacts/example-80-story
+## Example: example-65-story
+semantic-task: ui-workflow-story-promoted-65
+profile: UI
+surface-tags: user-story-mode
+package: examples/ui_workflow.ail
+use-case: Human-approved User Story mode promotion for a reviewed story artifact bundle that already produced requirements, spec, Core, bytecode, and trace evidence.
+capability-level: high-level
+capability-under-test: user-story-mode-promotion
+program-scale: multi-module-system
+program-domain: ui-workflow
+module-count: 3
+spec-count: 3
+story-count: 3
+interacts-with: ui.route,ui.form,ui.dashboard
+user-story-id: ui-workflow-story
+user-story: As a reviewer I can inspect ui-workflow behavior so that regenerated user stories remain semantically similar to the checked spec.
+acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists
+story-evidence: vm-trace
+story-file: stories/example-65-story.md
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
+distinctness-claim: ui-workflow-story-promoted-65 validates user-story-mode-promotion with stored transcript replay and promoted executor evidence.
+v0.3-signal: User Story mode needs reviewer-produced promotion decisions and multi-story promotion variants after deterministic promotion imports are replayed.
+prompt-file: docs/ail/prompts/spec-draft.system.md
+prompt-version: ail-prompts.v0.2
+prompt-fingerprint: fnv64:b23778093326102c
+executor-family: codex-skill-agent
+executor-label: codex-ail-story-promotion-reviewer-demo
+capture-origin: live-codex
+request-file: requests/example-65-story.json
+response-file: responses/example-65-story.json
+artifact-kind: ail-spec
+checker-result: accepted
+target: wasm32-unknown-sandbox-wasm
+vm-action: CreateTicketForm
+runtime-state: ticket.title=Bug
+story-artifacts: story-artifacts/example-65-story

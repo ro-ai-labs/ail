@@ -1,0 +1,24 @@
+AIL-Story-Mode-Report:
+entrypoint: ail-story
+package: ui-workflow
+version: 0.2.0
+story-file: /tmp/ail-v03-story-ui-workflow-example-65-story.md
+user-story-id: ui-workflow-story
+story-journey: story-to-spec
+story-roundtrip: semantic-similar
+semantic-anchor-count: 6
+llm-endpoint: http://inteligentia-pro-1:8080/v1/chat/completions
+default-max-tokens: 4096
+max-tokens: 4096
+token-budget-default: true
+story-llm-transcript-count: 2
+story-prompt-envelope-valid-count: 2
+story-prompt-envelope-invalid-count: 0
+story-llm-transcript: requirements artifact-kind AIL-Requirements content-kind prompt-envelope-artifact
+story-llm-transcript: spec artifact-kind AIL-Spec Canonical content-kind prompt-envelope-artifact
+semantic-anchor: Ticket detail
+semantic-anchor: Create ticket
+semantic-anchor: Support manager dashboard
+semantic-anchor: Refund approval
+semantic-anchor: CreateTicketForm
+semantic-anchor: wasm32-unknown-sandbox-wasm

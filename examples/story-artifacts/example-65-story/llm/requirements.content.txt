@@ -1,0 +1,38 @@
+{
+  "artifact_kind": "AIL-Requirements",
+  "artifact_text": "AIL-Requirements:\n- Domain Object Ticket has fields id: Text, title: Text, and status: State<New, Open, Overdue, Refunded>.\n- Action CreateTicket requires input title: Text and precondition that title is not empty.\n- Action CreateTicket guarantees creation of Ticket.status upon successful submission.\n- Action ProviderCall requires precondition Manager approval before execution.\n- Failure Case FormValidationFailed occurs when CreateTicketForm validation fails (e.g., empty title).\n- Trace Event TicketCreated is recorded when a ticket is successfully created.\n- Trace Event ProviderCallStarted is recorded when a provider call begins.\n- Trace Event RouteTicketDetailViewed is recorded when the Ticket detail route is viewed.\n- Trace Event FormValidationFailed is recorded when form validation fails.\n- Trace Event DashboardViewed is recorded when the Support manager dashboard is viewed.\n- Trace Event RefundApprovalWorkflowViewed is recorded when the Refund approval workflow is viewed.\n- Permission requester may read Ticket.id and Ticket.status via route /tickets/:ticket_id.\n- Permission Support manager may view Ticket.status filtered by status is Overdue on the dashboard.\n- Workflow Refund approval blocks Provider call before Manager approval.\n- Accessibility requirement: title error is announced when form validation fails.\n- No Secret<...> fields are declared in the source AIL-Spec; no secret-handling guarantees are required.\n- No explicit permissions beyond requester read and Support manager view are declared; no other permissions are assumed.\n- Runtime input includes wasm32-unknown-sandbox-wasm target environment.\n- Semantic anchor Ticket detail maps to route /tickets/:ticket_id reading Ticket.id and Ticket.status.\n- Semantic anchor Create ticket maps to form CreateTicketForm calling action CreateTicket.\n- Semantic anchor Support manager dashboard maps to dashboard reading Ticket.status with filter status is Overdue.\n- Semantic anchor Refund approval maps to workflow with steps Request, Manager approval, Provider call.\n- Semantic anchor CreateTicketForm maps to form with field title: Text and validation title is not empty.\n- Semantic anchor wasm32-unknown-sandbox-wasm maps to runtime target environment.\n- Package ui-workflow interacts with ui.route, ui.form, and ui.dashboard.\n- Module count is 3, spec count is 3, story count is 3.\n- Story journey is story-to-spec, roundtrip is semantic-similar, evidence is target-report.\n- Acceptance criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists.",
+  "questions": [],
+  "assumptions": [],
+  "provenance": [
+    "user-story-id: ui-workflow-story",
+    "package source AIL-Spec: Ticket domain object",
+    "package source AIL-Spec: Action Create ticket",
+    "package source AIL-Spec: Action Provider call",
+    "package source AIL-Spec: Route Ticket detail",
+    "package source AIL-Spec: Form Create ticket",
+    "package source AIL-Spec: Dashboard Support manager dashboard",
+    "package source AIL-Spec: Workflow Refund approval",
+    "semantic-anchors: Ticket detail; Create ticket; Support manager dashboard; Refund approval; CreateTicketForm; wasm32-unknown-sandbox-wasm",
+    "interacts-with: ui.route,ui.form,ui.dashboard",
+    "module-count: 3",
+    "spec-count: 3",
+    "story-count: 3",
+    "story-journey: story-to-spec",
+    "story-roundtrip: semantic-similar",
+    "story-evidence: target-report",
+    "acceptance-criteria: checked spec exists; checked core exists; bytecode exists; runtime or target evidence exists"
+  ],
+  "checker_handoff": {
+    "must_check": true,
+    "expected_profile": "UI",
+    "expected_features": [
+      "routes",
+      "forms",
+      "dashboards",
+      "workflows",
+      "accessibility",
+      "actions",
+      "traces"
+    ]
+  }
+}

@@ -1,0 +1,9 @@
+AIL-Build-Manifest:
+source-package source.ail-package.md source.ail-spec.md fnv64:6e6a79e0aa109465
+requirements requirements.ail-requirements.md fnv64:c48148ab09e9f2ae
+spec accepted.ail-spec.md fnv64:2b2c5ddcf12cf1f7
+core checked.ail-core.txt fnv64:32eb793f43c8fe34
+flow-review review.ail-flow.json fnv64:8fe231bdaaec4614
+bytecode artifact.ailbc.json fnv64:b7c72c1c1bc1cd05
+agent agent.ailbc.json fnv64:abcbfa93b16fff79
+trace agent-trace.txt

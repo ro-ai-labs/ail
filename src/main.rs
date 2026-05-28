@@ -14624,12 +14624,93 @@ fn prompt_with_requested_native_action(prompt: &str, action: Option<&str>) -> St
     )
 }
 
+fn clean_source_trace_event(candidate: &str) -> Option<String> {
+    let cleaned = candidate
+        .trim()
+        .trim_matches(|ch: char| {
+            ch == '.'
+                || ch == ','
+                || ch == ';'
+                || ch == ':'
+                || ch == '`'
+                || ch == '"'
+                || ch == '\''
+                || ch == ')'
+                || ch == '('
+        })
+        .split_whitespace()
+        .next()
+        .unwrap_or("")
+        .trim_matches(|ch: char| {
+            ch == '.'
+                || ch == ','
+                || ch == ';'
+                || ch == ':'
+                || ch == '`'
+                || ch == '"'
+                || ch == '\''
+                || ch == ')'
+                || ch == '('
+        });
+    if cleaned.is_empty()
+        || !cleaned
+            .chars()
+            .all(|ch| ch.is_ascii_alphanumeric() || ch == '_' || ch == '-')
+    {
+        return None;
+    }
+    Some(cleaned.to_string())
+}
+
+fn push_unique_source_trace_event(trace_events: &mut Vec<String>, candidate: &str) {
+    let Some(trace_event) = clean_source_trace_event(candidate) else {
+        return;
+    };
+    if !trace_events.iter().any(|existing| existing == &trace_event) {
+        trace_events.push(trace_event);
+    }
+}
+
+fn source_spec_trace_events(source_spec_text: &str) -> Vec<String> {
+    let mut trace_events = Vec::new();
+    let mut collect_trace_bullets = false;
+    for raw_line in source_spec_text.lines() {
+        let line = raw_line.trim();
+        let lowered = line.to_ascii_lowercase();
+        if let Some(index) = lowered.find("trace event named ") {
+            let start = index + "trace event named ".len();
+            push_unique_source_trace_event(&mut trace_events, &line[start..]);
+        }
+        if let Some(index) = lowered.find("the trace records ") {
+            let start = index + "the trace records ".len();
+            push_unique_source_trace_event(&mut trace_events, &line[start..]);
+        }
+        if collect_trace_bullets {
+            if let Some(trace_event) = line.strip_prefix("- ") {
+                push_unique_source_trace_event(&mut trace_events, trace_event);
+                continue;
+            }
+            if !line.is_empty() {
+                collect_trace_bullets = false;
+            }
+        }
+        if lowered.ends_with("records trace:")
+            || lowered.ends_with("record trace:")
+            || lowered.ends_with("records a trace:")
+            || (lowered.starts_with("if ") && lowered.ends_with(" fails:"))
+        {
+            collect_trace_bullets = true;
+        }
+    }
+    trace_events
+}
+
 fn prompt_with_source_spec_context(prompt: &str, source_spec_text: &str) -> String {
     let source_spec_text = source_spec_text.trim();
     if source_spec_text.is_empty() {
         return prompt.to_string();
     }
-    format!(
+    let mut contextual_prompt = format!(
         concat!(
             "{}\n\n",
             "PACKAGE SOURCE AIL-SPEC CONTEXT:\n",
@@ -14638,7 +14719,15 @@ fn prompt_with_source_spec_context(prompt: &str, source_spec_text: &str) -> Stri
             "If the source AIL-Spec contains Route:, Form:, Dashboard:, or Workflow: preserve their reads, permissions, filters, blocks, and trace records unless the human request explicitly changes them."
         ),
         prompt, source_spec_text
-    )
+    );
+    let trace_events = source_spec_trace_events(source_spec_text);
+    if !trace_events.is_empty() {
+        contextual_prompt.push_str(&format!(
+            "\n\nRequired source trace events to preserve exactly: {}.\nRoute:, Form:, Dashboard:, and Workflow: trace records must be copied as trace bullets, not summarized as prose.",
+            trace_events.join("; ")
+        ));
+    }
+    contextual_prompt
 }
 
 fn draft_checked_ail_spec_for_requirements(

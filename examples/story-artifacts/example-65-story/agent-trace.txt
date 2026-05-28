@@ -1,0 +1,90 @@
+entrypoint=ail-story
+buildrequest.story-id=ui-workflow-story
+buildrequest.semantic-anchors=Ticket detail; Create ticket; Support manager dashboard; Refund approval; CreateTicketForm; wasm32-unknown-sandbox-wasm
+action CaptureRequirements started
+rule passed: the BuildRequest to exist
+read buildrequest.developer prompt
+write buildrequest.requirements coverage checklist=Prepared
+write buildrequest.status=RequirementsCaptured
+guarantee checked: requirements mention domain objects, actions, failures, guarantees, traces, secrets, and runtime inputs before compilation
+trace RequirementsCaptured
+action PrepareSpecDraft started
+rule passed: the BuildRequest to exist
+rule passed: the BuildRequest status to be RequirementsCaptured or RequirementsLoaded
+read buildrequest.requirements
+write buildrequest.spec coverage checklist=Prepared
+guarantee checked: the spec prompt preserves captured or loaded requirements, domain model, actions, failures, guarantees, traces, secrets, runtime inputs, and bytecode compilation path
+trace SpecDraftPrepared
+action AcceptSpecDraft started
+rule passed: the BuildRequest to exist
+rule passed: the BuildRequest status to be RequirementsCaptured or RequirementsLoaded or SpecLoaded
+read buildrequest.requirements
+read buildrequest.spec
+write buildrequest.spec review report=Accepted
+write buildrequest.status=SpecCaptured
+guarantee checked: the accepted spec preserves the checked requirements or saved spec artifact boundary and remains eligible for AIL-Core lowering and VM or native target compilation
+trace SpecDraftAccepted
+action AcceptCoreIR started
+rule passed: the BuildRequest to exist
+rule passed: the BuildRequest status to be SpecCaptured or CoreLoaded or PassApplied
+read buildrequest.requirements
+read buildrequest.spec
+read buildrequest.core ir
+write buildrequest.core review report=Accepted
+write buildrequest.status=CoreChecked
+guarantee checked: the checked AIL-Core IR preserves the accepted spec or saved core artifact boundary and remains eligible for VM or native target compilation
+trace CoreIrAccepted
+action AcceptFlowReview started
+rule passed: the BuildRequest to exist
+rule passed: the BuildRequest status to be CoreChecked
+read buildrequest.core ir
+read buildrequest.core ir fingerprint
+read buildrequest.flow review
+read buildrequest.flow review fingerprint
+write buildrequest.flow review report=Accepted
+write buildrequest.status=FlowReviewed
+guarantee checked: the AIL-Flow review projection was rendered from the checked AIL-Core IR and is tied to deterministic core and flow fingerprints before bytecode compilation
+trace FlowReviewAccepted
+action CompileApplication started
+rule passed: the BuildRequest to exist
+rule passed: the BuildRequest status to be SpecCaptured or CoreChecked or FlowReviewed
+read buildrequest.requirements
+read buildrequest.spec
+write buildrequest.core ir=Checked
+write buildrequest.bytecode artifact=Emitted
+write buildrequest.status=BytecodeReady
+guarantee checked: the compiler emits a verified toolchain artifact and no Rust or host-language backend source
+trace ApplicationBytecodeCompiled
+action VerifyBytecodeArtifact started
+rule passed: the BuildRequest to exist
+rule passed: the BuildRequest status to be BytecodeReady
+read buildrequest.bytecode artifact
+read buildrequest.bytecode fingerprint
+write buildrequest.bytecode verification report=Verified
+guarantee checked: the bytecode artifact is AIL-Bytecode with a deterministic fingerprint and not Rust or host-language backend source
+trace BytecodeArtifactVerified
+action VerifyBuildManifest started
+rule passed: the BuildRequest to exist
+rule passed: the BuildRequest status to be BytecodeReady
+rule passed: the BuildRequest machine bytecode contract to exist
+rule passed: the BuildRequest machine bytecode contract to be machine-bytecode-contract linux-x86_64-elf bytecode-level machine bytecode-container linux-elf-executable bytecode-format elf64-little-x86_64-executable or none
+read buildrequest.artifact manifest
+read buildrequest.artifact manifest fingerprint
+read buildrequest.source package
+read buildrequest.source package fingerprint
+read buildrequest.requirements fingerprint
+read buildrequest.spec fingerprint
+read buildrequest.core ir fingerprint
+read buildrequest.flow review fingerprint
+read buildrequest.bytecode fingerprint
+read buildrequest.target artifact fingerprint
+read buildrequest.compiler pass target artifact fingerprint
+read buildrequest.prompt portability report fingerprint
+read buildrequest.machine bytecode contract
+read buildrequest.native bytecode report
+read buildrequest.native bytecode report fingerprint
+read buildrequest.dependency report
+read buildrequest.dependency report fingerprint
+write buildrequest.artifact manifest verification report=Verified
+guarantee checked: the build manifest ties requirements, spec, AIL-Core, AIL-Flow review projection, compiler-pass, agent, prompt-portability, bytecode, native bytecode report, and native target artifacts with deterministic fingerprints and no Rust or host-language backend source
+trace BuildManifestVerified
