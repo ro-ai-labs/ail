@@ -1270,6 +1270,13 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         "story-promotion-capture-plan.fingerprint.txt",
         "story-promotion-import-demo-report.txt",
         "story-promotion-import-demo-report.fingerprint.txt",
+        "scripts/run_v03_story_promotion_batch_plan.py",
+        "story-promotion-batch-plan.txt",
+        "story-promotion-batch-plan.json",
+        "story-promotion-batch-plan.fingerprint.txt",
+        "manifest.v03-story-promotion-batch-plan.txt",
+        "batch-entry-count 4",
+        "story-promotion-review-fingerprint-count 4",
         "story-promotion-live-review-report.txt",
         "story-promotion-live-review-review.txt",
         "manifest.v03-story-promotion-live-review.txt",
@@ -1306,6 +1313,9 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
                 "cargo run -- ail-examples examples",
                 "examples-report.txt",
                 "model-executor-manifest.txt",
+                "scripts/run_v03_story_promotion_batch_plan.py",
+                "story-promotion-batch-plan.txt",
+                "manifest.v03-story-promotion-batch-plan.txt",
             ],
         ),
         (
@@ -1328,6 +1338,8 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
                 "examples/ail_toolchain_agent.ail",
                 "codex-ail-ui-patch-reviewer.md",
                 "examples/agents/skills/ail-ui-patch-reviewer/SKILL.md",
+                "scripts/run_v03_story_promotion_batch_plan.py",
+                "story-promotion-batch-plan.txt",
                 "ui-patch-import-demo-report.txt",
                 "ui-patch-runtime-state-check-report.txt",
                 "cli_ail_build_agent_verifies_bytecode_artifact_after_compile",
@@ -1353,6 +1365,7 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
                 "run-systems-profile-checks",
                 "run-ui-patch-import-checks",
                 "run-agent-policy-import-checks",
+                "story-promotion-batch-plan.txt",
             ],
         ),
         (
@@ -1555,6 +1568,7 @@ fn docs_define_v03_release_completion_audit() {
         "python3 scripts/run_ail_interactive_manual.py --all --dry-run",
         "python3 scripts/run_ail_interactive_manual.py --all --run-checks",
         "python3 scripts/run_v03_system_prompt_harness_plan.py --artifact-dir",
+        "python3 scripts/run_v03_story_promotion_batch_plan.py --base-corpus examples --examples-artifacts",
         "cargo run -- ail-examples examples --artifact-dir",
         "cargo run -- ail-v03-roadmap examples --artifact-dir",
         "cargo run -- ail-agent-contracts examples/agents",
@@ -1619,6 +1633,7 @@ fn script_v03_release_audit_dry_run_lists_completion_gates() {
         "step system-prompt-harness-plan command python3 scripts/run_v03_system_prompt_harness_plan.py --artifact-dir",
         "step agent-contracts command cargo run -- ail-agent-contracts examples/agents",
         "step examples command cargo run -- ail-examples examples --artifact-dir",
+        "step story-promotion-batch-plan command python3 scripts/run_v03_story_promotion_batch_plan.py --base-corpus examples --examples-artifacts",
         "step agent-policy-import command python3 scripts/run_v03_agent_policy_import_audit.py --examples-artifacts",
         "step roadmap command cargo run -- ail-v03-roadmap examples --artifact-dir",
         "step conformance-recursive-factorial command cargo run -- ail-conformance examples/recursive_factorial.ail --artifact-dir",
@@ -1631,6 +1646,9 @@ fn script_v03_release_audit_dry_run_lists_completion_gates() {
         "artifact-required-file agent-policy-import-audit-report.txt",
         "artifact-required-file system-prompt-harness-plan.txt",
         "artifact-required-file system-prompt-harness-plan.json",
+        "artifact-required-file story-promotion-batch-plan.txt",
+        "artifact-required-file story-promotion-batch-plan.json",
+        "artifact-required-file story-promotion-batch-plan.fingerprint.txt",
         "artifact-required-file bootstrap-pass-order-diagnostics.txt",
         "artifact-required-file v03-roadmap.txt",
         "artifact-required-file v03-roadmap-signal-status.txt",
@@ -1643,6 +1661,126 @@ fn script_v03_release_audit_dry_run_lists_completion_gates() {
     assert_eq!(fingerprint.trim(), fnv64_fingerprint(&manifest));
     fs::remove_dir_all(bundle_root).unwrap();
     let _ = fs::remove_dir_all(live_root);
+}
+
+#[test]
+fn script_v03_story_promotion_batch_plan_writes_multi_story_inventory() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let root = std::env::temp_dir().join(format!(
+        "ail-v03-story-promotion-batch-plan-{}",
+        std::process::id()
+    ));
+    let examples_artifacts = root.join("examples");
+    let batch_artifacts = root.join("batch-plan");
+    let _ = fs::remove_dir_all(&root);
+
+    let examples = Command::new(binary)
+        .args([
+            "ail-examples",
+            "examples",
+            "--artifact-dir",
+            examples_artifacts.to_str().unwrap(),
+            "--release-evidence",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        examples.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&examples.stdout),
+        String::from_utf8_lossy(&examples.stderr)
+    );
+
+    let script = format!(
+        "{}/scripts/run_v03_story_promotion_batch_plan.py",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let output = Command::new("python3")
+        .args([
+            &script,
+            "--base-corpus",
+            "examples",
+            "--examples-artifacts",
+            examples_artifacts.to_str().unwrap(),
+            "--artifact-dir",
+            batch_artifacts.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let plan = fs::read_to_string(batch_artifacts.join("story-promotion-batch-plan.txt")).unwrap();
+    for required in [
+        "AIL-v0.3-Story-Promotion-Batch-Plan:",
+        "base-corpus examples",
+        "batch-entry-count 4",
+        "story-promotion-review-fingerprint-count 4",
+        "human-approval-required true",
+        "promotion-source human-approved-story-promotion-batch",
+        "reviewer-contract examples/agents/codex-ail-story-promotion-reviewer.md",
+        "reviewer-skill examples/agents/skills/ail-story-promotion-reviewer/SKILL.md",
+        "v03-roadmap-signal User Story mode needs reviewer-produced promotion decisions and multi-story promotion variants after deterministic promotion imports are replayed.",
+        "batch-entry example-30-story",
+        "batch-entry example-65-story",
+        "batch-entry example-80-story",
+        "batch-entry example-90-story",
+        "batch-entry-review example-30-story examples/example-30-story/story-promotion-review.txt",
+        "batch-entry-review example-65-story examples/example-65-story/story-promotion-review.txt",
+        "batch-entry-review example-80-story examples/example-80-story/story-promotion-review.txt",
+        "batch-entry-review example-90-story examples/example-90-story/story-promotion-review.txt",
+        "batch-entry-source example-30-story example-30",
+        "batch-entry-source example-65-story example-65",
+        "batch-entry-source example-80-story example-80",
+        "batch-entry-source example-90-story example-90",
+        "batch-entry-target example-65-story wasm32-unknown-sandbox-wasm",
+        "batch-entry-vm-action example-80-story RunMaintenanceCycle",
+        "audit-result accepted",
+    ] {
+        assert!(plan.contains(required), "{required}\n{plan}");
+    }
+    let plan_fingerprint =
+        fs::read_to_string(batch_artifacts.join("story-promotion-batch-plan.fingerprint.txt"))
+            .unwrap();
+    assert_eq!(plan_fingerprint.trim(), fnv64_fingerprint(&plan));
+
+    let plan_json =
+        fs::read_to_string(batch_artifacts.join("story-promotion-batch-plan.json")).unwrap();
+    assert!(plan_json.contains("\"entry_count\": 4"), "{plan_json}");
+    assert!(
+        plan_json.contains("\"entry_id\": \"example-65-story\""),
+        "{plan_json}"
+    );
+    assert!(
+        plan_json.contains("\"story_promotion_review_fingerprint_count\": 4"),
+        "{plan_json}"
+    );
+
+    let manifest =
+        fs::read_to_string(batch_artifacts.join("manifest.v03-story-promotion-batch-plan.txt"))
+            .unwrap();
+    for required in [
+        "AIL-v0.3-Story-Promotion-Batch-Plan-Manifest:",
+        "plan story-promotion-batch-plan.txt",
+        "json story-promotion-batch-plan.json",
+        "fingerprint story-promotion-batch-plan.fingerprint.txt",
+        "story-promotion-review example-30-story examples/example-30-story/story-promotion-review.txt",
+        "story-promotion-review example-65-story examples/example-65-story/story-promotion-review.txt",
+        "story-promotion-review example-80-story examples/example-80-story/story-promotion-review.txt",
+        "story-promotion-review example-90-story examples/example-90-story/story-promotion-review.txt",
+        "audit-result accepted",
+    ] {
+        assert!(manifest.contains(required), "{required}\n{manifest}");
+    }
+    let manifest_fingerprint =
+        fs::read_to_string(batch_artifacts.join("manifest.fingerprint.txt")).unwrap();
+    assert_eq!(manifest_fingerprint.trim(), fnv64_fingerprint(&manifest));
+
+    fs::remove_dir_all(root).unwrap();
 }
 
 #[test]
@@ -1939,6 +2077,7 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "python3 scripts/run_v03_story_llm_harness.py --review-artifacts /tmp/ail-v03-story-llm",
         "python3 scripts/run_v03_story_promotion_capture_plan.py --story-artifacts /tmp/ail-v03-story-llm",
         "python3 scripts/run_v03_story_promotion_import_demo.py",
+        "python3 scripts/run_v03_story_promotion_batch_plan.py --base-corpus examples --examples-artifacts /tmp/ail-manual-story-promotion-examples --artifact-dir /tmp/ail-manual-story-promotion-batch-plan",
         "evidence story-llm-harness-report.txt",
         "evidence agent-story-id-match",
         "evidence agent-semantic-anchor-match-count",
@@ -1954,6 +2093,11 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "evidence promotion-source human-approved-story-promotion-batch",
         "evidence human-approved-story-promotion-batch.fingerprint.txt",
         "evidence batch-plan-fingerprint",
+        "evidence story-promotion-batch-plan.txt",
+        "evidence story-promotion-batch-plan.json",
+        "evidence manifest.v03-story-promotion-batch-plan.txt",
+        "evidence batch-entry-count 4",
+        "evidence batch-entry example-65-story",
         "live false",
     ] {
         assert!(
@@ -2346,6 +2490,10 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "evidence examples-report.txt",
         "evidence v03-roadmap.txt",
         "evidence v03-roadmap.fingerprint.txt",
+        "evidence story-promotion-batch-plan.txt",
+        "evidence manifest.v03-story-promotion-batch-plan.txt",
+        "evidence batch-entry-count 4",
+        "evidence story-promotion-review-fingerprint-count 4",
         "evidence accepted: bytecode-verification-minimal.ail-spec.md",
         "evidence rejected: bytecode-verification-without-fingerprint.ail-spec.md AIL-AGENT-001",
         "evidence agent-trace.txt",
@@ -2463,6 +2611,11 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "evidence promotion-source human-approved-story-promotion-batch",
         "evidence human-approved-story-promotion-batch.fingerprint.txt",
         "evidence batch-plan-fingerprint",
+        "evidence story-promotion-batch-plan.txt",
+        "evidence story-promotion-batch-plan.json",
+        "evidence manifest.v03-story-promotion-batch-plan.txt",
+        "evidence batch-entry-count 4",
+        "evidence batch-entry example-65-story",
         "evidence story-promotion-live-review-report.txt",
         "evidence story-promotion-live-review-report.fingerprint.txt",
         "evidence story-promotion-live-review-review.txt",
@@ -2687,7 +2840,7 @@ fn script_ail_interactive_manual_all_dry_run_prints_coverage_summary() {
         "summary-live-command-count",
         "summary-evidence-anchor-count",
         "printed-command-count",
-        "printed-live-command-count 16",
+        "printed-live-command-count 17",
         "chapter-summary user-story-mode command-count",
         "chapter-summary v03-authoring-gate command-count",
         "chapter-summary v03-authoring-gate live-command-count 3",
@@ -3027,6 +3180,8 @@ fn examples_agents_include_story_promotion_review_contract() {
         "Story promotion review report and capture plan",
         "examples/agents/skills/ail-story-promotion-reviewer/SKILL.md",
         "story-promotion-import-demo-report.txt",
+        "story-promotion-batch-plan.txt",
+        "manifest.v03-story-promotion-batch-plan.txt",
         "scripts/run_v03_story_promotion_live_reviewer_harness.py --review-artifacts",
         "story-promotion-live-review-report.txt",
         "models.json",
@@ -3048,10 +3203,16 @@ fn examples_agents_include_story_promotion_review_contract() {
         "story-promotion-capture-plan.json",
         "story-promotion-capture-plan.fingerprint.txt",
         "scripts/run_v03_story_promotion_import_demo.py",
+        "scripts/run_v03_story_promotion_batch_plan.py",
         "scripts/run_v03_story_promotion_live_reviewer_harness.py --dry-run",
         "scripts/run_v03_story_promotion_live_reviewer_harness.py --review-artifacts",
         "story-promotion-import-demo-report.txt",
         "story-promotion-import-demo-report.fingerprint.txt",
+        "story-promotion-batch-plan.txt",
+        "story-promotion-batch-plan.json",
+        "manifest.v03-story-promotion-batch-plan.txt",
+        "batch-entry-count 4",
+        "story-promotion-review-fingerprint-count 4",
         "story-promotion-live-review-report.txt",
         "story-promotion-live-review-review.txt",
         "manifest.v03-story-promotion-live-review.txt",
@@ -3097,12 +3258,18 @@ fn examples_agents_include_story_promotion_review_contract() {
         "python3 scripts/run_v03_story_llm_harness.py --review-artifacts /tmp/ail-v03-story-llm",
         "python3 scripts/run_v03_story_promotion_capture_plan.py --story-artifacts /tmp/ail-v03-story-llm",
         "python3 scripts/run_v03_story_promotion_import_demo.py",
+        "python3 scripts/run_v03_story_promotion_batch_plan.py",
         "python3 scripts/run_v03_story_promotion_live_reviewer_harness.py --dry-run",
         "python3 scripts/run_v03_story_promotion_live_reviewer_harness.py --review-artifacts /tmp/ail-v03-story-promotion-live-review",
         "story-promotion-capture-plan.json",
         "story-promotion-capture-plan.fingerprint.txt",
         "story-promotion-import-demo-report.txt",
         "story-promotion-import-demo-report.fingerprint.txt",
+        "story-promotion-batch-plan.txt",
+        "story-promotion-batch-plan.json",
+        "manifest.v03-story-promotion-batch-plan.txt",
+        "batch-entry-count 4",
+        "story-promotion-review-fingerprint-count 4",
         "story-promotion-live-review-report.txt",
         "story-promotion-live-review-review.txt",
         "manifest.v03-story-promotion-live-review.txt",

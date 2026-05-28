@@ -193,6 +193,26 @@ def build_v03_audit_plan(
             ),
         ),
         AuditStep(
+            "story-promotion-batch-plan",
+            [
+                "python3",
+                "scripts/run_v03_story_promotion_batch_plan.py",
+                "--base-corpus",
+                "examples",
+                "--examples-artifacts",
+                str(artifacts / "v03-examples"),
+                "--artifact-dir",
+                str(artifacts / "v03-story-promotion-batch-plan"),
+            ],
+            artifacts / "v03-story-promotion-batch-plan",
+            "manifest.v03-story-promotion-batch-plan.txt",
+            (
+                "story-promotion-batch-plan.txt",
+                "story-promotion-batch-plan.json",
+                "story-promotion-batch-plan.fingerprint.txt",
+            ),
+        ),
+        AuditStep(
             "agent-policy-import",
             [
                 "python3",

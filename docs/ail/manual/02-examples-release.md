@@ -67,6 +67,12 @@ deterministic promotion review artifact that links the preserved story bundle,
 source entry, reviewer decision, story-mode report, LLM harness report,
 model-check output, agent trace, checked Core, bytecode, runtime or target
 evidence, semantic anchors, and replay fingerprints.
+The release replay can then be summarized by
+`scripts/run_v03_story_promotion_batch_plan.py --examples-artifacts
+/tmp/ail-manual-examples`, which writes `story-promotion-batch-plan.txt`,
+`story-promotion-batch-plan.json`, `story-promotion-batch-plan.fingerprint.txt`,
+and `manifest.v03-story-promotion-batch-plan.txt` with `batch-entry-count 4`
+and `story-promotion-review-fingerprint-count 4`.
 
 ## Review Rule
 
@@ -100,4 +106,7 @@ claiming stateful application walkthrough evidence is covered.
 For User Story mode promotion entries, check
 `story-promotion-review-fingerprint-*` report lines and the corresponding
 `entry-artifact ... story-promotion-review ...` manifest entries before
-claiming reviewer-produced promotion decision evidence is covered.
+claiming reviewer-produced promotion decision evidence is covered. Also check
+`story-promotion-batch-plan.txt` and
+`manifest.v03-story-promotion-batch-plan.txt` before claiming the promoted
+story variants are covered as one reviewed batch inventory.

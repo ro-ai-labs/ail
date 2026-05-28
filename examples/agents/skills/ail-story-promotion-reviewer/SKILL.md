@@ -61,6 +61,7 @@ Replay examples and write the v0.3 roadmap evidence before promotion:
 
 ```sh
 cargo run -- ail-examples examples --artifact-dir /tmp/ail-story-promotion-review --release-evidence
+python3 scripts/run_v03_story_promotion_batch_plan.py --base-corpus examples --examples-artifacts /tmp/ail-story-promotion-review --artifact-dir /tmp/ail-story-promotion-batch-plan
 cargo run -- ail-v03-roadmap examples --artifact-dir /tmp/ail-story-promotion-roadmap --release-evidence
 ```
 
@@ -77,6 +78,10 @@ The review report must include:
 - `story-promotion-capture-plan.fingerprint.txt`
 - `story-promotion-import-demo-report.txt`
 - `story-promotion-import-demo-report.fingerprint.txt`
+- `story-promotion-batch-plan.txt`
+- `story-promotion-batch-plan.json`
+- `story-promotion-batch-plan.fingerprint.txt`
+- `manifest.v03-story-promotion-batch-plan.txt`
 - `story-promotion-live-review-report.txt`
 - `story-promotion-live-review-review.txt`
 - `manifest.v03-story-promotion-live-review.txt`
@@ -97,6 +102,12 @@ The review report must include:
 - `promotion-source human-approved-story-promotion-batch`
 - `human-approved-story-promotion-batch.fingerprint.txt`
 - `batch-plan-fingerprint`
+- `batch-entry-count 4`
+- `story-promotion-review-fingerprint-count 4`
+- `batch-entry example-30-story`
+- `batch-entry example-65-story`
+- `batch-entry example-80-story`
+- `batch-entry example-90-story`
 - `default-max-tokens`
 - `max-tokens`
 - `token-budget-default`
@@ -124,6 +135,11 @@ Return `needs-repair` or `rejected-for-promotion` when:
   `human-approval-required true`, or
   `promotion-source human-approved-story-promotion-batch`
 - the human-approved batch fingerprint is missing
+- `scripts/run_v03_story_promotion_batch_plan.py` has not produced
+  `story-promotion-batch-plan.txt` and
+  `manifest.v03-story-promotion-batch-plan.txt`
+- the batch plan does not report `batch-entry-count 4` and
+  `story-promotion-review-fingerprint-count 4`
 - replay counts are hardcoded instead of copied from the generated corpus
   replay report
 - the visible hosted generation budget is missing

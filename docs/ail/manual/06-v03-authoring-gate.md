@@ -122,6 +122,11 @@ human-approval-required true
 promotion-source human-approved-story-promotion-batch
 human-approved-story-promotion-batch.fingerprint.txt
 batch-plan-fingerprint
+story-promotion-batch-plan.txt
+story-promotion-batch-plan.json
+manifest.v03-story-promotion-batch-plan.txt
+batch-entry-count 4
+story-promotion-review-fingerprint-count 4
 story-amendment-comparison.txt
 story-amendment-comparison.fingerprint.txt
 story-amendment-comparison: present

@@ -473,6 +473,7 @@ cargo run -- ail-conformance examples/incident_notifications.ail --artifact-dir 
 cargo run -- ail-conformance examples/recursive_factorial.ail --artifact-dir /tmp/ail-v03-release-evidence/artifacts/v03-conformance-recursive-factorial
 cargo run -- ail-bootstrap examples/ail_toolchain_agent.ail --pass examples/compiler_pass.ail --agent examples/ail_toolchain_agent.ail --target linux-x86_64-elf --artifact-dir /tmp/ail-v03-release-evidence/artifacts/v03-bootstrap
 cargo run -- ail-examples examples --artifact-dir /tmp/ail-v03-release-evidence/artifacts/v03-examples --release-evidence
+python3 scripts/run_v03_story_promotion_batch_plan.py --base-corpus examples --examples-artifacts /tmp/ail-v03-release-evidence/artifacts/v03-examples --artifact-dir /tmp/ail-v03-release-evidence/artifacts/v03-story-promotion-batch-plan
 python3 scripts/run_v03_agent_policy_import_audit.py --examples-artifacts /tmp/ail-v03-release-evidence/artifacts/v03-examples --base-corpus examples --source-entry-id example-40 --output-dir /tmp/ail-v03-release-evidence/artifacts/v03-agent-policy-import
 cargo run -- ail-v03-roadmap examples --artifact-dir /tmp/ail-v03-release-evidence/artifacts/v03-roadmap --release-evidence
 python3 scripts/run_v03_signal_status_audit.py --roadmap-file /tmp/ail-v03-release-evidence/artifacts/v03-roadmap/v03-roadmap.txt --status-file docs/ail/v03-roadmap-signal-status.md --output-dir /tmp/ail-v03-release-evidence/artifacts/v03-roadmap-signal-status --min-count 5
@@ -489,7 +490,12 @@ hosted commands, model-check policy, and reviewer handoff were fingerprinted
 before live prompt execution. The `ail-examples` step must emit the 128-entry
 corpus with 119 accepted and 9 rejected entries, plus `examples-report.txt`,
 `v03-roadmap.txt`, `model-executor-manifest.txt`, their fingerprints, and
-`manifest.ail-examples.txt`. The AgentTool import step must preserve
+`manifest.ail-examples.txt`. The story promotion batch-plan step must preserve
+`story-promotion-batch-plan.txt`, `story-promotion-batch-plan.json`,
+`story-promotion-batch-plan.fingerprint.txt`, and
+`manifest.v03-story-promotion-batch-plan.txt`, proving all four promoted User
+Story mode entries have reviewer-produced promotion reviews in the replay. The
+AgentTool import step must preserve
 `agent-policy-import-audit-report.txt`,
 `agent-policy-import-demo-report.txt`, and
 `agent-policy-multi-agent-handoff-report.txt` so the high-count AgentTool

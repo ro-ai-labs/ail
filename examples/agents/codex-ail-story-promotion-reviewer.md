@@ -57,6 +57,14 @@ Return an `AIL-Story-Promotion-Review` report that records:
   `batch-plan-fingerprint`
 - story promotion import-demo batch fingerprint:
   `human-approved-story-promotion-batch.fingerprint.txt`
+- story promotion batch-plan artifacts:
+  `story-promotion-batch-plan.txt`, `story-promotion-batch-plan.json`,
+  `story-promotion-batch-plan.fingerprint.txt`, and
+  `manifest.v03-story-promotion-batch-plan.txt`
+- story promotion batch-plan checks:
+  `batch-entry-count 4`, `story-promotion-review-fingerprint-count 4`,
+  `batch-entry example-30-story`, `batch-entry example-65-story`,
+  `batch-entry example-80-story`, and `batch-entry example-90-story`
 - hosted Story Promotion live reviewer artifacts:
   `story-promotion-live-review-report.txt`,
   `story-promotion-live-review-review.txt`,
@@ -133,6 +141,20 @@ batch entry with `source_entry_id`, `entry_id`,
 `story_promotion_capture_plan_json`. The batch importer must append the
 proposed accepted story entry in a corpus copy and must not rewrite the source
 entry or the reviewed story artifact bundle.
+
+After replay, run:
+
+```sh
+python3 scripts/run_v03_story_promotion_batch_plan.py \
+  --base-corpus examples \
+  --examples-artifacts /tmp/ail-manual-story-promotion-examples \
+  --artifact-dir /tmp/ail-manual-story-promotion-batch-plan
+```
+
+The batch plan must preserve
+`manifest.v03-story-promotion-batch-plan.txt` and prove that every promoted
+story entry has a fingerprinted `story-promotion-review.txt` artifact before
+the reviewer treats User Story promotion coverage as complete.
 
 When hosted reviewer evidence is claimed, run:
 

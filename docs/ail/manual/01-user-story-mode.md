@@ -420,6 +420,23 @@ cargo run -- ail-examples examples \
   --release-evidence
 ```
 
+Build the multi-story promotion batch inventory from that replay:
+
+```sh
+python3 scripts/run_v03_story_promotion_batch_plan.py \
+  --base-corpus examples \
+  --examples-artifacts /tmp/ail-manual-story-promotion-examples \
+  --artifact-dir /tmp/ail-manual-story-promotion-batch-plan
+```
+
+That writes `story-promotion-batch-plan.txt`,
+`story-promotion-batch-plan.json`, `story-promotion-batch-plan.fingerprint.txt`,
+and `manifest.v03-story-promotion-batch-plan.txt`. The plan must include
+`batch-entry-count 4`, `story-promotion-review-fingerprint-count 4`,
+`batch-entry example-30-story`, `batch-entry example-65-story`,
+`batch-entry example-80-story`, `batch-entry example-90-story`, and
+`promotion-source human-approved-story-promotion-batch`.
+
 Then print, run, and review the hosted Story Promotion reviewer harness:
 
 ```sh
@@ -452,7 +469,9 @@ examples report must include
 `story-promotion-review-fingerprint-observed-count` and
 `story-promotion-review-fingerprint-duplicate-entry-count 0`; the manifest
 must list each `entry-artifact ... story-promotion-review ...` line before the
-promotion decision is treated as corpus evidence.
+promotion decision is treated as corpus evidence. The batch plan then verifies
+those per-entry reviews as one reviewer-facing inventory before the promotion
+set is treated as complete.
 
 The harness is intentionally outside the default test suite because it depends
 on the hosted llama.cpp server and model behavior. Promote a live run into the

@@ -219,6 +219,13 @@ so the same deterministic wrapper can be run against a corpus copy that already
 contains promoted story entries to prove additional reviewed variants. It still
 requires offline `ail-examples` replay before any generated corpus copy is
 committed.
+After replay, run `scripts/run_v03_story_promotion_batch_plan.py` against the
+generated examples artifacts. It writes `story-promotion-batch-plan.txt`,
+`story-promotion-batch-plan.json`, `story-promotion-batch-plan.fingerprint.txt`,
+and `manifest.v03-story-promotion-batch-plan.txt`, and must report
+`batch-entry-count 4`, `story-promotion-review-fingerprint-count 4`, each
+`batch-entry example-*-story`, the dedicated reviewer contract and skill, and
+`promotion-source human-approved-story-promotion-batch`.
 The default corpus replay promotes that decision into
 `examples/<entry-id>/story-promotion-review.txt` for accepted
 `user-story-mode-promotion` entries. The review binds the story artifact
@@ -483,7 +490,10 @@ application walkthrough evidence.
 Accepted User Story mode promotion replay must emit
 `story-promotion-review-fingerprint-*` report lines plus
 `story-promotion-review` manifest entries before claiming reviewer-produced
-promotion decision evidence.
+promotion decision evidence. It must also pass
+`scripts/run_v03_story_promotion_batch_plan.py` and preserve
+`manifest.v03-story-promotion-batch-plan.txt` before claiming the promoted
+story variants are covered as one reviewed batch inventory.
 Rejected example replay
 includes stored prompt-envelope diagnostics for malformed model outputs and
 profile mismatch checker-handoff diagnostics, plus checked AIL-Spec

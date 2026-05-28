@@ -67,10 +67,14 @@ For User Story mode promotion, the story-promotion reviewer contract,
 `promotion-decision accepted-for-promotion`, `human-approval-required true`,
 `promotion-source human-approved-story-promotion-batch`, `batch-plan-fingerprint`,
 `default-max-tokens`, `max-tokens`, `token-budget-default`, and any
-`token-budget-warning`. This keeps reviewed story-mode output, its visible
-hosted generation budget, and the human-approved promotion batch as corpus-copy
-evidence until a promotion imports the full story artifact bundle and proves
-the proposed accepted entry replays.
+`token-budget-warning`. After `ail-examples --release-evidence`, the same gate
+must run `scripts/run_v03_story_promotion_batch_plan.py` and preserve
+`story-promotion-batch-plan.txt`,
+`manifest.v03-story-promotion-batch-plan.txt`, `batch-entry-count 4`, and
+`story-promotion-review-fingerprint-count 4`. This keeps reviewed story-mode
+output, its visible hosted generation budget, and the human-approved promotion
+batch as corpus-copy evidence until a promotion imports the full story artifact
+bundle and proves the proposed accepted entries replay as one reviewed batch.
 
 The same gate also validates the repo-local Codex skills:
 

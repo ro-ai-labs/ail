@@ -253,10 +253,14 @@ python3 scripts/run_ail_interactive_manual.py --chapter agent-policy-import --ru
   `story-promotion-import-demo-report.txt`,
   `story-artifacts-preserved true`, `proposed-accepted true`,
   `promotion-source human-approved-story-promotion-batch`, and
-  `batch-plan-fingerprint`. Prose:
+  `batch-plan-fingerprint`, plus a replay-derived
+  `story-promotion-batch-plan.txt` with `batch-entry-count 4`. Prose:
   `01-user-story-mode.md`.
 - `examples-release`: full `./examples` replay with release evidence and
-  learning metadata. Prose: `02-examples-release.md`.
+  learning metadata, followed by
+  `scripts/run_v03_story_promotion_batch_plan.py` to verify the four promoted
+  story entries as one fingerprinted batch inventory. Prose:
+  `02-examples-release.md`.
 - `prompt-interaction`: prompt-pack and stored transcript inspection for system
   prompt interaction testing, plus an opt-in hosted llama.cpp prompt-pack
   harness. Prose: `03-prompt-interaction.md`.
