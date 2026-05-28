@@ -20,7 +20,9 @@ and verify the default toolchain-agent entrypoint path. They also verify the
 blocking-question branch where the model needs clarification before
 requirements can be trusted, explicit agent compatibility, and the native target
 branch where a story-authored `CloseTicket` executable is run to produce a
-runtime trace.
+runtime trace. They also verify the Wasm target-contract branch where the story
+entry point writes portable target evidence without pretending to emit a native
+ELF.
 
 Run the same chapter with live-compatible fake or alternate endpoint evidence
 by passing the endpoint through the manual runner:
@@ -91,6 +93,9 @@ After a successful compile run, inspect these files:
 /tmp/ail-user-story-mode/agent-trace.fingerprint.txt
 /tmp/ail-user-story-mode/model-check.json
 /tmp/ail-user-story-mode/model-check.fingerprint.txt
+/tmp/ail-user-story-mode/target-contract/manifest.ail-compile.txt
+/tmp/ail-user-story-mode/target-contract/wasm-contract-report.txt
+/tmp/ail-user-story-mode/target-contract/dependency-report.txt
 /tmp/ail-user-story-mode/llm/requirements.request.json
 /tmp/ail-user-story-mode/llm/requirements.response.json
 /tmp/ail-user-story-mode/llm/requirements.content.txt
@@ -108,7 +113,8 @@ semantic-anchor count. It also records `story-llm-transcript-count`,
 `manifest.ail-story.txt` fingerprints story, generated requirements, accepted
 spec, checked Core, bytecode, each stored LLM request/response/content
 transcript, the default agent bytecode and trace, the live model-check
-response, and the underlying `ail-build` manifest.
+response, the underlying `ail-build` manifest, and any story target-contract
+manifest.
 
 Default-agent story manifests include these direct evidence entries:
 
@@ -187,6 +193,49 @@ The runtime evidence must include:
 ```text
 ticket.status=Closed
 trace TicketClosed
+```
+
+## Wasm Target-Contract Variant
+
+To request a Wasm sandbox target report from User Story mode, name the action
+and target, keep `--artifact-dir`, and optionally pass `--out` for a copy of the
+contract report:
+
+```sh
+cargo run -- ail-story examples/support_ticket.ail \
+  --story-file examples/stories/example-30.md \
+  --artifact-dir /tmp/ail-user-story-mode-wasm \
+  --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions \
+  --target wasm32-unknown-sandbox-wasm \
+  --action CloseTicket \
+  --out /tmp/ail-user-story-mode-wasm/CloseTicket.wasm-contract.txt
+```
+
+The story path first emits the normal checked requirements, accepted spec,
+checked Core, bytecode, `manifest.ail-build.txt`, and root `agent-trace.txt`.
+It then runs the existing Wasm contract compiler in
+`target-contract/`, preserving its `manifest.ail-compile.txt`,
+`wasm-contract-report.txt`, and `dependency-report.txt`. The root story
+manifest links the target evidence with:
+
+```text
+target-contract target-contract/manifest.ail-compile.txt <fingerprint>
+```
+
+The deterministic local check for this branch is:
+
+```sh
+cargo test cli_ail_story_wasm_target_writes_story_contract_report --test ail_toolchain
+```
+
+The target-contract evidence must include:
+
+```text
+AIL-Wasm-Contract-Report:
+target wasm32-unknown-sandbox-wasm
+action CloseTicket
+trace-preservation required
+machine-bytecode-contract wasm32-unknown-sandbox-wasm
 ```
 
 ## Story Amendment Comparison

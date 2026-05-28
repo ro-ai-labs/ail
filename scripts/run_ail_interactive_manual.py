@@ -138,6 +138,26 @@ BASE_CHAPTERS: tuple[ManualChapter, ...] = (
                 ),
             ),
             ManualCommand(
+                label="verify-story-wasm-target-local",
+                command=(
+                    "cargo",
+                    "test",
+                    "cli_ail_story_wasm_target_writes_story_contract_report",
+                    "--test",
+                    "ail_toolchain",
+                ),
+                evidence=(
+                    "target-contract/manifest.ail-compile.txt",
+                    "target-contract/wasm-contract-report.txt",
+                    "target-contract/dependency-report.txt",
+                    "manifest.ail-build.txt",
+                    "manifest.ail-story.txt",
+                    "target-contract target-contract/manifest.ail-compile.txt",
+                    "machine-bytecode-contract wasm32-unknown-sandbox-wasm",
+                    "trace-preservation required",
+                ),
+            ),
+            ManualCommand(
                 label="verify-story-amendment-comparison-local",
                 command=(
                     "cargo",

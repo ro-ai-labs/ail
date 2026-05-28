@@ -1243,6 +1243,12 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         "story-llm-transcript-count",
         "story-prompt-envelope-valid-count",
         "story-prompt-envelope-invalid-count",
+        "cli_ail_story_wasm_target_writes_story_contract_report",
+        "target-contract/manifest.ail-compile.txt",
+        "target-contract/wasm-contract-report.txt",
+        "target-contract target-contract/manifest.ail-compile.txt",
+        "machine-bytecode-contract wasm32-unknown-sandbox-wasm",
+        "trace-preservation required",
         "cli_ail_story_story_amendment_writes_comparison_artifact",
         "cli_ail_story_incident_response_story_amendment_preserves_application_anchors",
         "examples/incident_response.ail",
@@ -1892,6 +1898,7 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "cargo test cli_ail_story_uses_default_toolchain_agent_entrypoint --test ail_toolchain",
         "cargo test cli_ail_story_surfaces_blocking_questions_as_story_artifact --test ail_toolchain",
         "cargo test cli_ail_story_native_target_executes_story_runtime_trace --test ail_toolchain",
+        "cargo test cli_ail_story_wasm_target_writes_story_contract_report --test ail_toolchain",
         "cargo test cli_ail_story_incident_response_story_amendment_preserves_application_anchors --test ail_toolchain",
         "evidence manifest.ail-story.txt",
         "evidence agent.ailbc.json",
@@ -1904,6 +1911,10 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "evidence llm-requirements-content",
         "evidence target.elf",
         "evidence native-bytecode-report.txt",
+        "evidence target-contract/manifest.ail-compile.txt",
+        "evidence target-contract/wasm-contract-report.txt",
+        "evidence machine-bytecode-contract wasm32-unknown-sandbox-wasm",
+        "evidence trace-preservation required",
         "evidence ticket.status=Closed",
         "evidence trace TicketClosed",
         "evidence examples/incident_response.ail",
@@ -2671,6 +2682,7 @@ fn script_ail_interactive_manual_v03_authoring_gate_run_checks_succeeds() {
         "running run-user-story-mode-checks",
         "running run-examples-release-checks",
         "running verify-story-runtime-trace-local",
+        "running verify-story-wasm-target-local",
         "running verify-story-amendment-comparison-local",
         "running verify-incident-story-amendment-local",
         "running run-prompt-interaction-checks",
@@ -25182,6 +25194,181 @@ fn cli_ail_story_native_target_executes_story_runtime_trace() {
         agent_trace.contains("entrypoint=ail-story")
             && agent_trace.contains("action CompileNativeTarget started")
             && agent_trace.contains("action VerifyTargetArtifact started"),
+        "{agent_trace}"
+    );
+
+    fs::remove_file(story_file).unwrap();
+    fs::remove_dir_all(artifact_dir).unwrap();
+}
+
+#[test]
+fn cli_ail_story_wasm_target_writes_story_contract_report() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("support_ticket.ail");
+    let agent_package = fixture("ail_toolchain_agent.ail");
+    let unique_suffix = format!(
+        "{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
+    let story_file = std::env::temp_dir().join(format!("ail-story-wasm-target-{unique_suffix}.md"));
+    let artifact_dir =
+        std::env::temp_dir().join(format!("ail-story-wasm-target-artifacts-{unique_suffix}"));
+    let contract_out = artifact_dir.join("CloseTicket.wasm-contract.txt");
+    let _ = fs::remove_dir_all(&artifact_dir);
+    fs::write(
+        &story_file,
+        concat!(
+            "# Support Ticket Wasm Story\n\n",
+            "user-story-id: support-ticket-wasm-story\n",
+            "user-story: As a support agent I can turn a support-ticket story into a wasm sandbox contract report that preserves TicketClosed.\n",
+            "acceptance-criteria: checked requirements exist; checked spec exists; wasm target report exists; target report records TicketClosed trace preservation\n",
+            "story-journey: story-to-spec\n",
+            "story-roundtrip: semantic-similar\n",
+            "story-evidence: target-report\n",
+            "semantic-anchors: Support Tickets; Close ticket; TicketClosed; wasm32-unknown-sandbox-wasm\n"
+        ),
+    )
+    .unwrap();
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let requirements = concat!(
+        "AIL-Requirements:\n",
+        "- The application manages support tickets.\n",
+        "- Ticket fields include id, title, status, and secret internal notes.\n",
+        "- The CloseTicket action requires ticket id input and ticket status not to be Closed.\n",
+        "- Failure NotFound happens when ticket id is missing and records TicketNotFound.\n",
+        "- The action guarantees closed tickets do not appear in the open queue.\n",
+        "- The action records trace event TicketClosed.\n"
+    );
+    let requirements_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(&format!(
+            r#"{{"artifact_kind":"AIL-Requirements","artifact_text":{},"questions":[],"checker_handoff":{{"must_check":true,"expected_profile":"Application","expected_features":[]}}}}"#,
+            json_string(requirements)
+        ))
+    );
+    let response_spec = fs::read_to_string(format!("{package}/spec.ail-spec.md")).unwrap();
+    let spec_body = format!(
+        r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
+        json_string(&format!(
+            r#"{{"artifact_kind":"AIL-Spec Canonical","artifact_text":{},"questions":[],"checker_handoff":{{"must_check":true,"expected_profile":"Application","expected_features":[]}}}}"#,
+            json_string(&response_spec)
+        ))
+    );
+    let server = serve_chat_responses(listener, vec![requirements_body, spec_body]);
+
+    let output = Command::new(binary)
+        .args([
+            "ail-story",
+            &package,
+            "--story-file",
+            story_file.to_str().unwrap(),
+            "--agent",
+            &agent_package,
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+            "--llm-endpoint",
+            &format!("http://127.0.0.1:{}/v1/chat/completions", addr.port()),
+            "--target",
+            "wasm32-unknown-sandbox-wasm",
+            "--action",
+            "CloseTicket",
+            "--out",
+            contract_out.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    let request_bodies = server.join().unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(request_bodies.len(), 2);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("ail-story wrote wasm32-unknown-sandbox-wasm contract"),
+        "{stdout}"
+    );
+    assert!(contract_out.is_file(), "{}", contract_out.display());
+    assert!(!artifact_dir.join("target.elf").exists());
+
+    for artifact in [
+        "story-mode-report.txt",
+        "manifest.ail-story.txt",
+        "manifest.ail-build.txt",
+        "agent-trace.txt",
+    ] {
+        assert!(artifact_dir.join(artifact).is_file(), "{artifact}");
+    }
+    for artifact in [
+        "manifest.ail-compile.txt",
+        "wasm-contract-report.txt",
+        "dependency-report.txt",
+    ] {
+        assert!(
+            artifact_dir
+                .join("target-contract")
+                .join(artifact)
+                .is_file(),
+            "{artifact}"
+        );
+    }
+
+    let contract_report = fs::read_to_string(&contract_out).unwrap();
+    assert!(
+        contract_report.contains("AIL-Wasm-Contract-Report:"),
+        "{contract_report}"
+    );
+    assert!(
+        contract_report.contains("target wasm32-unknown-sandbox-wasm"),
+        "{contract_report}"
+    );
+    assert!(
+        contract_report.contains("action CloseTicket"),
+        "{contract_report}"
+    );
+    assert!(
+        contract_report.contains("trace-preservation required"),
+        "{contract_report}"
+    );
+    let stored_contract_report =
+        fs::read_to_string(artifact_dir.join("target-contract/wasm-contract-report.txt")).unwrap();
+    assert_eq!(stored_contract_report, contract_report);
+
+    let compile_manifest =
+        fs::read_to_string(artifact_dir.join("target-contract/manifest.ail-compile.txt")).unwrap();
+    assert!(
+        compile_manifest.contains("machine-bytecode-contract wasm32-unknown-sandbox-wasm"),
+        "{compile_manifest}"
+    );
+    assert!(
+        compile_manifest.contains(&format!(
+            "wasm-contract wasm-contract-report.txt {}",
+            fnv64_fingerprint(&contract_report)
+        )),
+        "{compile_manifest}"
+    );
+    let story_manifest = fs::read_to_string(artifact_dir.join("manifest.ail-story.txt")).unwrap();
+    assert!(
+        story_manifest.contains("build-manifest manifest.ail-build.txt"),
+        "{story_manifest}"
+    );
+    assert!(
+        story_manifest.contains("target-contract target-contract/manifest.ail-compile.txt"),
+        "{story_manifest}"
+    );
+    let agent_trace = fs::read_to_string(artifact_dir.join("agent-trace.txt")).unwrap();
+    assert!(
+        agent_trace.contains("entrypoint=ail-story")
+            && agent_trace.contains("action CompileApplication started")
+            && agent_trace.contains("action VerifyBytecodeArtifact started"),
         "{agent_trace}"
     );
 

@@ -151,7 +151,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
 }
 
 fn usage() -> String {
-    "usage: ail <ail-check|ail-core|ail-flow|ail-flow-edit|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-interview|ail-requirements|ail-spec|ail-draft|ail-build|ail-story|ail-pass|ail-bootstrap|ail-agent-contracts|ail-v03-roadmap|ail-prompt-corpus|ail-examples|ail-patch> <path> [patch|target-package] [--action name] [--prompt text] [--story-file path] [--interview-file path] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--base-model name] [--target-model name] [--out path] [--all-actions] [--diagnostics-json] [--artifact-dir path] [--llm-endpoint url] [--max-tokens count] [--release-evidence] [key=value ...]\nsaved-core usage: ail <ail-spec|ail-lower|ail-compile|ail-run|ail-build> --core-file <checked-core> [--action name] [--target target] [--out path] [--artifact-dir path] [key=value ...]\nwasm-contract usage: ail ail-compile <package-or-artifact.ailbc.json> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir> OR ail ail-compile --core-file <checked-core> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir>\ncore-patch usage: ail ail-patch --core-file <checked-core> <ail-core.patch.json>\nflow-edit usage: ail ail-flow-edit --core-file <checked-core> <ail-flow.edit.json>\nail-pass usage: ail ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR ail ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]\nail-bootstrap usage: ail ail-bootstrap <toolchain-agent-package> --pass <compiler-pass-package> [--pass <compiler-pass-package> ...] --agent <toolchain-agent-package> --target linux-x86_64-elf --artifact-dir <dir>\nail-story usage: ail ail-story <package> --story-file <story.md> [--artifact-dir <dir>] [--llm-endpoint <url>] [--max-tokens count] [--agent <agent-package-or-bytecode>] [--target <target> --action <ActionName> --out <path>]\nail-agent-contracts usage: ail ail-agent-contracts examples/agents\nail-v03-roadmap usage: ail ail-v03-roadmap examples --artifact-dir <dir> [--release-evidence]\nail-prompt-corpus usage: ail ail-prompt-corpus <corpus-file-or-dir> --artifact-dir <dir>\nail-examples usage: ail ail-examples examples --artifact-dir <dir> [--release-evidence]\ncompatibility alias: ail ail-e2e-corpus <examples-dir> --artifact-dir <dir> [--release-evidence]"
+    "usage: ail <ail-check|ail-core|ail-flow|ail-flow-edit|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-interview|ail-requirements|ail-spec|ail-draft|ail-build|ail-story|ail-pass|ail-bootstrap|ail-agent-contracts|ail-v03-roadmap|ail-prompt-corpus|ail-examples|ail-patch> <path> [patch|target-package] [--action name] [--prompt text] [--story-file path] [--interview-file path] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--base-model name] [--target-model name] [--out path] [--all-actions] [--diagnostics-json] [--artifact-dir path] [--llm-endpoint url] [--max-tokens count] [--release-evidence] [key=value ...]\nsaved-core usage: ail <ail-spec|ail-lower|ail-compile|ail-run|ail-build> --core-file <checked-core> [--action name] [--target target] [--out path] [--artifact-dir path] [key=value ...]\nwasm-contract usage: ail ail-compile <package-or-artifact.ailbc.json> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir> OR ail ail-compile --core-file <checked-core> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir>\ncore-patch usage: ail ail-patch --core-file <checked-core> <ail-core.patch.json>\nflow-edit usage: ail ail-flow-edit --core-file <checked-core> <ail-flow.edit.json>\nail-pass usage: ail ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR ail ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]\nail-bootstrap usage: ail ail-bootstrap <toolchain-agent-package> --pass <compiler-pass-package> [--pass <compiler-pass-package> ...] --agent <toolchain-agent-package> --target linux-x86_64-elf --artifact-dir <dir>\nail-story usage: ail ail-story <package> --story-file <story.md> [--artifact-dir <dir>] [--llm-endpoint <url>] [--max-tokens count] [--agent <agent-package-or-bytecode>] [--target <target> --action <ActionName> --out <path>]; wasm32-unknown-sandbox-wasm writes target-contract/ evidence under --artifact-dir and copies the contract report to --out when provided\nail-agent-contracts usage: ail ail-agent-contracts examples/agents\nail-v03-roadmap usage: ail ail-v03-roadmap examples --artifact-dir <dir> [--release-evidence]\nail-prompt-corpus usage: ail ail-prompt-corpus <corpus-file-or-dir> --artifact-dir <dir>\nail-examples usage: ail ail-examples examples --artifact-dir <dir> [--release-evidence]\ncompatibility alias: ail ail-e2e-corpus <examples-dir> --artifact-dir <dir> [--release-evidence]"
         .to_string()
 }
 
@@ -377,6 +377,7 @@ struct AilStoryManifestArtifactSet<'a> {
     agent_bytecode_text: Option<&'a str>,
     agent_trace_text: Option<&'a str>,
     build_manifest_text: Option<&'a str>,
+    target_contract_manifest_text: Option<&'a str>,
     llm_transcripts: &'a [AilStoryLlmTranscript],
 }
 
@@ -658,6 +659,7 @@ struct AilLowerAgentManifestRun {
     dependency_report_text: Option<String>,
 }
 
+#[derive(Clone)]
 struct AilSourcePackageArtifacts {
     manifest_text: String,
     spec_text: String,
@@ -9462,6 +9464,12 @@ fn render_ail_story_manifest(artifacts: &AilStoryManifestArtifactSet<'_>) -> Str
             ail_artifact_fingerprint(build_manifest_text)
         ));
     }
+    if let Some(target_contract_manifest_text) = artifacts.target_contract_manifest_text {
+        lines.push(format!(
+            "target-contract target-contract/manifest.ail-compile.txt {}",
+            ail_artifact_fingerprint(target_contract_manifest_text)
+        ));
+    }
     format!("{}\n", lines.join("\n"))
 }
 
@@ -9724,6 +9732,11 @@ fn write_ail_story_mode_artifacts(
     }
     write_ail_story_llm_transcript_artifacts(root, artifacts.llm_transcripts)?;
     let build_manifest_text = fs::read_to_string(root.join("manifest.ail-build.txt")).ok();
+    let target_contract_manifest_text = fs::read_to_string(
+        root.join("target-contract")
+            .join("manifest.ail-compile.txt"),
+    )
+    .ok();
     let agent_bytecode_text = fs::read_to_string(root.join("agent.ailbc.json")).ok();
     let agent_trace_text = fs::read_to_string(root.join("agent-trace.txt")).ok();
     if let Some(agent_trace_text) = agent_trace_text.as_deref() {
@@ -9747,6 +9760,7 @@ fn write_ail_story_mode_artifacts(
         agent_bytecode_text: agent_bytecode_text.as_deref(),
         agent_trace_text: agent_trace_text.as_deref(),
         build_manifest_text: build_manifest_text.as_deref(),
+        target_contract_manifest_text: target_contract_manifest_text.as_deref(),
         llm_transcripts: artifacts.llm_transcripts,
     });
     fs::write(root.join("manifest.ail-story.txt"), &manifest_text)
@@ -14610,15 +14624,15 @@ fn prompt_with_saved_interview_answers(
     ))
 }
 
-fn prompt_with_requested_native_action(prompt: &str, action: Option<&str>) -> String {
+fn prompt_with_requested_target_action(prompt: &str, action: Option<&str>) -> String {
     let Some(action) = action else {
         return prompt.to_string();
     };
     format!(
         concat!(
             "{}\n\n",
-            "NATIVE BUILD CONSTRAINT:\n",
-            "The final AIL-Spec, checked AIL-Core, and AIL-Bytecode must define action {} because the requested native target will compile that exact action."
+            "TARGET BUILD CONSTRAINT:\n",
+            "The final AIL-Spec, checked AIL-Core, and AIL-Bytecode must define action {} because the requested target will compile or contract-check that exact action."
         ),
         prompt, action
     )
@@ -16573,6 +16587,60 @@ fn discover_default_ail_toolchain_agent(package: &AilPackage) -> Option<String> 
         .map(|candidate| candidate.to_string_lossy().to_string())
 }
 
+fn is_wasm_sandbox_contract_target(target: &str) -> bool {
+    target == "wasm32-unknown-sandbox-wasm"
+}
+
+fn run_ail_story_wasm_contract_target(
+    core: &ail::ail::AilCore,
+    cli_options: &CliOptions,
+    source_artifacts: Option<&AilSourcePackageArtifacts>,
+) -> Result<u8, String> {
+    let target = cli_options
+        .ail_compile_target
+        .as_deref()
+        .ok_or_else(|| "ail-story wasm contract output requires --target <target>".to_string())?;
+    let artifact_dir = cli_options.artifact_dir.as_deref().ok_or_else(|| {
+        "ail-story wasm contract output requires --artifact-dir <dir>".to_string()
+    })?;
+    let target_contract_dir = std::path::Path::new(artifact_dir).join("target-contract");
+    let mut compile_options = cli_options.clone();
+    compile_options.artifact_dir = Some(target_contract_dir.to_string_lossy().to_string());
+    compile_options.ail_compile_out = None;
+    let exit_code = run_ail_compile_from_core(core, &compile_options, source_artifacts)?;
+    if exit_code != 0 {
+        return Ok(exit_code);
+    }
+    if let Some(out) = cli_options.ail_compile_out.as_deref() {
+        let contract_report_path = target_contract_dir.join("wasm-contract-report.txt");
+        let contract_report = fs::read(&contract_report_path).map_err(|error| {
+            format!(
+                "failed to read ail-story wasm contract report {}: {error}",
+                contract_report_path.display()
+            )
+        })?;
+        if let Some(parent) = std::path::Path::new(out).parent()
+            && !parent.as_os_str().is_empty()
+        {
+            fs::create_dir_all(parent).map_err(|error| {
+                format!(
+                    "failed to create ail-story wasm output dir {}: {error}",
+                    parent.display()
+                )
+            })?;
+        }
+        fs::write(out, &contract_report)
+            .map_err(|error| format!("failed to write ail-story wasm contract {out}: {error}"))?;
+        println!("ail-story wrote {target} contract {out}");
+    } else {
+        println!(
+            "ail-story wrote {target} contract {}",
+            target_contract_dir.display()
+        );
+    }
+    Ok(0)
+}
+
 fn run_ail_story_command(
     path: &str,
     package: &ail::ail::AilPackage,
@@ -16617,7 +16685,11 @@ fn run_ail_story_command(
     if story_cli_options.ail_build_agent.is_none() {
         story_cli_options.ail_build_agent = effective_agent_path.clone();
     }
-    let requirements_prompt = prompt_with_requested_native_action(
+    let story_wasm_contract_target = story_cli_options
+        .ail_compile_target
+        .as_deref()
+        .is_some_and(is_wasm_sandbox_contract_target);
+    let requirements_prompt = prompt_with_requested_target_action(
         &render_ail_story_requirements_prompt(&normalized_story_text),
         cli_options
             .ail_compile_target
@@ -16726,7 +16798,7 @@ fn run_ail_story_command(
     } else {
         None
     };
-    let spec_prompt = prompt_with_requested_native_action(
+    let spec_prompt = prompt_with_requested_target_action(
         &render_ail_story_spec_prompt(&normalized_story_text, semantic_anchors),
         cli_options
             .ail_compile_target
@@ -16761,15 +16833,36 @@ fn run_ail_story_command(
     }
     let document = parse_ail_package_spec_text(package, &draft.spec_text)?;
     let core = elaborate_ail_core(package, &document);
-    let exit_code = run_ail_build_from_core(
+    let target_contract_core = story_wasm_contract_target.then(|| core.clone());
+    let target_contract_source_artifacts =
+        story_wasm_contract_target.then(|| source_artifacts.clone());
+    let mut build_cli_options = story_cli_options.clone();
+    if story_wasm_contract_target {
+        build_cli_options.ail_compile_target = None;
+        build_cli_options.ail_compile_out = None;
+        build_cli_options.ail_action = None;
+    }
+    let mut exit_code = run_ail_build_from_core(
         core,
-        &story_cli_options,
+        &build_cli_options,
         Some(source_artifacts),
         Some(&requirements),
         Some(&draft.spec_text),
         Some(&requirements_prompt),
         agent_start,
     )?;
+    if exit_code == 0
+        && let (Some(target_contract_core), Some(target_contract_source_artifacts)) = (
+            target_contract_core.as_ref(),
+            target_contract_source_artifacts.as_ref(),
+        )
+    {
+        exit_code = run_ail_story_wasm_contract_target(
+            target_contract_core,
+            &story_cli_options,
+            Some(target_contract_source_artifacts),
+        )?;
+    }
     if exit_code == 0
         && let Some(artifact_dir) = cli_options.artifact_dir.as_deref()
     {
@@ -17248,7 +17341,7 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
                     .ail_prompt
                     .as_deref()
                     .ok_or_else(|| "ail-build requires --prompt <text>".to_string())?;
-                let prompt = prompt_with_requested_native_action(
+                let prompt = prompt_with_requested_target_action(
                     prompt,
                     cli_options
                         .ail_compile_target
