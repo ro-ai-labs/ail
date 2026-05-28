@@ -473,7 +473,7 @@ bootstrap gates that define this file:
 cargo fmt --check
 git diff --check
 cargo check
-cargo test
+cargo test -- --test-threads=1
 cargo clippy --all-targets -- -D warnings
 python3 scripts/run_ail_interactive_manual.py --all --dry-run
 python3 scripts/run_ail_interactive_manual.py --all --run-checks
@@ -497,7 +497,10 @@ python3 scripts/run_v03_signal_status_audit.py --roadmap-file /tmp/ail-v03-relea
 
 The runner writes `release-audit-manifest.txt`,
 `release-audit-manifest.fingerprint.txt`, per-command logs, and all
-artifact-producing command output under the bundle root. The system prompt
+artifact-producing command output under the bundle root. The release runner
+uses `cargo test -- --test-threads=1` for the full Rust suite so native
+executable fixtures and local fake LLM listener tests are replayed in a
+deterministic order inside the audited bundle. The system prompt
 harness plan step must preserve `system-prompt-harness-plan.txt`,
 `system-prompt-harness-plan.json`,
 `system-prompt-harness-plan.fingerprint.txt`, and

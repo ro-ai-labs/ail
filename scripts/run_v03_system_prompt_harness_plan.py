@@ -256,6 +256,9 @@ def write_plan(args: argparse.Namespace) -> str:
     (artifact_dir / "manifest.v03-system-prompt-harness-plan.txt").write_text(
         manifest, encoding="utf-8"
     )
+    (artifact_dir / "manifest.fingerprint.txt").write_text(
+        fnv64(manifest.encode("utf-8")) + "\n", encoding="utf-8"
+    )
     return text
 
 

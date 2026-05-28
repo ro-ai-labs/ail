@@ -1582,6 +1582,7 @@ fn docs_define_v03_release_completion_audit() {
         "python3 scripts/run_v03_story_promotion_batch_plan.py --base-corpus examples --examples-artifacts",
         "python3 scripts/run_v03_rejected_repair_audit.py --base-corpus examples --examples-artifacts",
         "python3 scripts/run_v03_systems_profile_audit.py --artifact-dir",
+        "cargo test -- --test-threads=1",
         "cargo run -- ail-examples examples --artifact-dir",
         "cargo run -- ail-v03-roadmap examples --artifact-dir",
         "cargo run -- ail-agent-contracts examples/agents",
@@ -1640,6 +1641,7 @@ fn script_v03_release_audit_dry_run_lists_completion_gates() {
     for required in [
         "AIL-v0.3-Release-Audit-Manifest:",
         "mode dry-run",
+        "step cargo-test command cargo test -- --test-threads=1",
         "step interactive-manual-all-dry-run command python3 scripts/run_ail_interactive_manual.py --all --dry-run",
         "step interactive-manual-all command python3 scripts/run_ail_interactive_manual.py --all --run-checks",
         "step interactive-manual-v03-authoring-gate command python3 scripts/run_ail_interactive_manual.py --chapter v03-authoring-gate --run-checks",
@@ -3950,6 +3952,8 @@ fn script_v03_system_prompt_harness_plan_writes_fingerprinted_prompt_inventory()
     let fingerprint =
         fs::read_to_string(artifact_dir.join("system-prompt-harness-plan.fingerprint.txt"))
             .unwrap();
+    let manifest_fingerprint =
+        fs::read_to_string(artifact_dir.join("manifest.fingerprint.txt")).unwrap();
     let plan_json =
         fs::read_to_string(artifact_dir.join("system-prompt-harness-plan.json")).unwrap();
     for required in [
@@ -3976,6 +3980,7 @@ fn script_v03_system_prompt_harness_plan_writes_fingerprinted_prompt_inventory()
         "{manifest}"
     );
     assert!(fingerprint.starts_with("fnv64:"), "{fingerprint}");
+    assert_eq!(manifest_fingerprint.trim(), fnv64_fingerprint(&manifest));
     assert!(
         plan_json.contains("\"prompt_count\": 11")
             && plan_json.contains("\"skip_model_check\": true")

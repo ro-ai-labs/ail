@@ -24,7 +24,7 @@ def build_v03_audit_plan(
         AuditStep("cargo-fmt", ["cargo", "fmt", "--check"]),
         AuditStep("git-diff-check", ["git", "diff", "--check"]),
         AuditStep("cargo-check", ["cargo", "check"]),
-        AuditStep("cargo-test", ["cargo", "test"]),
+        AuditStep("cargo-test", ["cargo", "test", "--", "--test-threads=1"]),
         AuditStep("cargo-clippy", ["cargo", "clippy", "--all-targets", "--", "-D", "warnings"]),
         AuditStep(
             "interactive-manual-all-dry-run",
