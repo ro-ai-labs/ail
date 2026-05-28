@@ -443,6 +443,25 @@ BASE_CHAPTERS: tuple[ManualChapter, ...] = (
                 command=("rg", "--files", "docs/ail/prompts"),
             ),
             ManualCommand(
+                label="plan-system-prompt-harness",
+                command=(
+                    "python3",
+                    "scripts/run_v03_system_prompt_harness_plan.py",
+                    "--artifact-dir",
+                    "/tmp/ail-manual-system-prompt-harness-plan",
+                ),
+                evidence=(
+                    "system-prompt-harness-plan.txt",
+                    "system-prompt-harness-plan.json",
+                    "system-prompt-harness-plan.fingerprint.txt",
+                    "manifest.v03-system-prompt-harness-plan.txt",
+                    "prompt-count 11",
+                    "model-check-policy required-hosted-model-list",
+                    "reviewer-handoff examples/agents/skills/ail-prompt-interaction-reviewer/SKILL.md",
+                    "promotion-policy do-not-promote-generated-content",
+                ),
+            ),
+            ManualCommand(
                 label="run-prompt-corpus",
                 command=(
                     "cargo",

@@ -44,6 +44,22 @@ def build_v03_audit_plan(
                 "--run-checks",
             ],
         ),
+        AuditStep(
+            "system-prompt-harness-plan",
+            [
+                "python3",
+                "scripts/run_v03_system_prompt_harness_plan.py",
+                "--artifact-dir",
+                str(artifacts / "v03-system-prompt-harness-plan"),
+            ],
+            artifacts / "v03-system-prompt-harness-plan",
+            "manifest.v03-system-prompt-harness-plan.txt",
+            (
+                "system-prompt-harness-plan.txt",
+                "system-prompt-harness-plan.json",
+                "system-prompt-harness-plan.fingerprint.txt",
+            ),
+        ),
         AuditStep("agent-contracts", ["cargo", "run", "--", "ail-agent-contracts", "examples/agents"]),
         AuditStep(
             "conformance-support-ticket",

@@ -90,6 +90,11 @@ evidence, including deterministic import demos, before generated content is
 promoted into `./examples`. The UI patch reviewer skill adds the visual/flow patch
 import gate for `ui-patch-import-demo-report.txt` and
 `ui-patch-runtime-state-check-report.txt`.
+The system prompt harness runner first writes
+`system-prompt-harness-plan.txt` and
+`manifest.v03-system-prompt-harness-plan.txt` with the prompt inventory,
+hosted commands, model-check policy, and reviewer handoff fingerprinted before
+any hosted request runs.
 Hosted llama.cpp prompt-pack evidence must not accept artifacts whose
 model-check was skipped; `model-check skipped` is only valid for local
 fake-server harness tests.

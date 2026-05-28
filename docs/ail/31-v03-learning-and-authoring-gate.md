@@ -464,6 +464,7 @@ cargo clippy --all-targets -- -D warnings
 python3 scripts/run_ail_interactive_manual.py --all --dry-run
 python3 scripts/run_ail_interactive_manual.py --all --run-checks
 python3 scripts/run_ail_interactive_manual.py --chapter v03-authoring-gate --run-checks
+python3 scripts/run_v03_system_prompt_harness_plan.py --artifact-dir /tmp/ail-v03-release-evidence/artifacts/v03-system-prompt-harness-plan
 cargo run -- ail-agent-contracts examples/agents
 cargo run -- ail-conformance examples/support_ticket.ail --artifact-dir /tmp/ail-v03-release-evidence/artifacts/v03-conformance-support-ticket
 cargo run -- ail-conformance examples/secret_access.ail --artifact-dir /tmp/ail-v03-release-evidence/artifacts/v03-conformance-secret-access
@@ -479,10 +480,15 @@ python3 scripts/run_v03_signal_status_audit.py --roadmap-file /tmp/ail-v03-relea
 
 The runner writes `release-audit-manifest.txt`,
 `release-audit-manifest.fingerprint.txt`, per-command logs, and all
-artifact-producing command output under the bundle root. The `ail-examples`
-step must emit the 128-entry corpus with 119 accepted and 9 rejected entries,
-plus `examples-report.txt`, `v03-roadmap.txt`,
-`model-executor-manifest.txt`, their fingerprints, and
+artifact-producing command output under the bundle root. The system prompt
+harness plan step must preserve `system-prompt-harness-plan.txt`,
+`system-prompt-harness-plan.json`,
+`system-prompt-harness-plan.fingerprint.txt`, and
+`manifest.v03-system-prompt-harness-plan.txt`, proving the prompt inventory,
+hosted commands, model-check policy, and reviewer handoff were fingerprinted
+before live prompt execution. The `ail-examples` step must emit the 128-entry
+corpus with 119 accepted and 9 rejected entries, plus `examples-report.txt`,
+`v03-roadmap.txt`, `model-executor-manifest.txt`, their fingerprints, and
 `manifest.ail-examples.txt`. The AgentTool import step must preserve
 `agent-policy-import-audit-report.txt`,
 `agent-policy-import-demo-report.txt`, and
@@ -532,6 +538,9 @@ AIL v0.3 may be called complete only when:
   executed.
 - The interactive manual `--all --run-checks` path passes without relying on
   a live endpoint.
+- The system prompt harness plan artifact fingerprints all required system
+  prompts, hosted commands, model-check policy, and reviewer handoff before any
+  generated prompt content is considered for review.
 - The v0.3 roadmap is generated from the same examples corpus and every
   high-count signal is either intentionally deferred in
   `docs/ail/v03-roadmap-signal-status.md` or promoted into a checked language,

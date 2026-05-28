@@ -1312,8 +1312,11 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
             "03-prompt-interaction.md",
             &[
                 "cargo run -- ail-prompt-corpus docs/ail/corpus/prompts",
+                "scripts/run_v03_system_prompt_harness_plan.py --artifact-dir /tmp/ail-manual-system-prompt-harness-plan",
                 "scripts/run_v03_prompt_llm_harness.py --dry-run",
                 "manifest.ail-prompt-corpus.txt",
+                "system-prompt-harness-plan.txt",
+                "manifest.v03-system-prompt-harness-plan.txt",
                 "system message",
                 "response_format: {\"type\":\"json_object\"}",
             ],
@@ -1551,6 +1554,7 @@ fn docs_define_v03_release_completion_audit() {
         "9 rejected",
         "python3 scripts/run_ail_interactive_manual.py --all --dry-run",
         "python3 scripts/run_ail_interactive_manual.py --all --run-checks",
+        "python3 scripts/run_v03_system_prompt_harness_plan.py --artifact-dir",
         "cargo run -- ail-examples examples --artifact-dir",
         "cargo run -- ail-v03-roadmap examples --artifact-dir",
         "cargo run -- ail-agent-contracts examples/agents",
@@ -1612,6 +1616,7 @@ fn script_v03_release_audit_dry_run_lists_completion_gates() {
         "step interactive-manual-all-dry-run command python3 scripts/run_ail_interactive_manual.py --all --dry-run",
         "step interactive-manual-all command python3 scripts/run_ail_interactive_manual.py --all --run-checks",
         "step interactive-manual-v03-authoring-gate command python3 scripts/run_ail_interactive_manual.py --chapter v03-authoring-gate --run-checks",
+        "step system-prompt-harness-plan command python3 scripts/run_v03_system_prompt_harness_plan.py --artifact-dir",
         "step agent-contracts command cargo run -- ail-agent-contracts examples/agents",
         "step examples command cargo run -- ail-examples examples --artifact-dir",
         "step agent-policy-import command python3 scripts/run_v03_agent_policy_import_audit.py --examples-artifacts",
@@ -1624,6 +1629,8 @@ fn script_v03_release_audit_dry_run_lists_completion_gates() {
         "step story-promotion-live-review command python3 scripts/run_v03_story_promotion_live_reviewer_harness.py --review-artifacts",
         "step agent-policy-live-review command python3 scripts/run_v03_agent_policy_live_reviewer_harness.py --review-artifacts",
         "artifact-required-file agent-policy-import-audit-report.txt",
+        "artifact-required-file system-prompt-harness-plan.txt",
+        "artifact-required-file system-prompt-harness-plan.json",
         "artifact-required-file bootstrap-pass-order-diagnostics.txt",
         "artifact-required-file v03-roadmap.txt",
         "artifact-required-file v03-roadmap-signal-status.txt",
@@ -1971,8 +1978,12 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         "doc docs/ail/manual/03-prompt-interaction.md",
         "cargo run -- ail-prompt-corpus docs/ail/corpus/prompts",
         "cargo run -- ail-examples examples",
+        "python3 scripts/run_v03_system_prompt_harness_plan.py --artifact-dir /tmp/ail-manual-system-prompt-harness-plan",
         "python3 scripts/run_v03_prompt_llm_harness.py --dry-run",
         "manifest.ail-prompt-corpus.txt",
+        "system-prompt-harness-plan.txt",
+        "manifest.v03-system-prompt-harness-plan.txt",
+        "promotion-policy do-not-promote-generated-content",
         "AIL-Examples-Report",
     ] {
         assert!(
@@ -1999,9 +2010,9 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
     );
     let prompt_live_stdout = String::from_utf8_lossy(&prompt_live_dry_run.stdout);
     for required in [
-        "step 6 run-prompt-pack-live",
+        "step 7 run-prompt-pack-live",
         "python3 scripts/run_v03_prompt_llm_harness.py",
-        "step 7 review-prompt-pack-live-artifacts",
+        "step 8 review-prompt-pack-live-artifacts",
         "python3 scripts/run_v03_prompt_llm_harness.py --review-artifacts /tmp/ail-v03-prompt-llm",
         "evidence prompt-envelope-valid-count",
         "evidence prompt-envelope-artifact-required-count",
@@ -3423,6 +3434,7 @@ fn codex_skill_documents_prompt_interaction_review_gate() {
         "name: ail-system-prompt-harness-runner",
         "description: Use when",
         "http://inteligentia-pro-1:8080/",
+        "python3 scripts/run_v03_system_prompt_harness_plan.py --artifact-dir /tmp/ail-v03-system-prompt-harness-plan",
         "python3 scripts/run_v03_prompt_llm_harness.py --dry-run",
         "python3 scripts/run_v03_prompt_llm_harness.py",
         "python3 scripts/run_v03_prompt_llm_harness.py --review-artifacts /tmp/ail-v03-prompt-llm",
@@ -3435,6 +3447,8 @@ fn codex_skill_documents_prompt_interaction_review_gate() {
         "prompt-envelope-valid-count",
         "story-prompt-envelope-valid-count",
         "agent-trace present",
+        "system-prompt-harness-plan.txt",
+        "manifest.v03-system-prompt-harness-plan.txt",
         "cargo run -- ail-agent-contracts examples/agents",
         "cargo run -- ail-examples examples --artifact-dir",
         "cargo run -- ail-v03-roadmap examples --artifact-dir",
@@ -3461,6 +3475,95 @@ fn codex_skill_documents_prompt_interaction_review_gate() {
             "{required}\n{repair_skill}"
         );
     }
+}
+
+#[test]
+fn script_v03_system_prompt_harness_plan_writes_fingerprinted_prompt_inventory() {
+    let script = format!(
+        "{}/scripts/run_v03_system_prompt_harness_plan.py",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let artifact_dir = std::env::temp_dir().join(format!(
+        "ail-v03-system-prompt-harness-plan-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&artifact_dir);
+    let output = Command::new("python3")
+        .args([
+            &script,
+            "--artifact-dir",
+            artifact_dir.to_str().unwrap(),
+            "--endpoint",
+            "http://127.0.0.1:12345/v1/chat/completions",
+            "--skip-model-check",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    for required in [
+        "AIL-v0.3-System-Prompt-Harness-Plan:",
+        "prompt-count 11",
+        "endpoint http://127.0.0.1:12345/v1/chat/completions",
+        "model-check-policy skipped-local-only",
+        "prompt-file docs/ail/prompts/repair.system.md",
+        "prompt-file docs/ail/prompts/interop.system.md",
+        "command prompt-live python3 scripts/run_v03_prompt_llm_harness.py --endpoint http://127.0.0.1:12345/v1/chat/completions --artifact-dir",
+        "command prompt-review python3 scripts/run_v03_prompt_llm_harness.py --review-artifacts",
+        "--allow-skipped-model-check",
+        "command story-review python3 scripts/run_v03_story_llm_harness.py --review-artifacts",
+        "command manual-live-prompt python3 scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run-checks --include-live",
+        "reviewer-handoff examples/agents/skills/ail-prompt-interaction-reviewer/SKILL.md",
+        "promotion-policy do-not-promote-generated-content",
+    ] {
+        assert!(stdout.contains(required), "{required}\n{stdout}");
+    }
+
+    let plan_text =
+        fs::read_to_string(artifact_dir.join("system-prompt-harness-plan.txt")).unwrap();
+    let manifest =
+        fs::read_to_string(artifact_dir.join("manifest.v03-system-prompt-harness-plan.txt"))
+            .unwrap();
+    let fingerprint =
+        fs::read_to_string(artifact_dir.join("system-prompt-harness-plan.fingerprint.txt"))
+            .unwrap();
+    let plan_json =
+        fs::read_to_string(artifact_dir.join("system-prompt-harness-plan.json")).unwrap();
+    for required in [
+        "prompt-count 11",
+        "prompt-file docs/ail/prompts/interview.system.md",
+        "prompt-file docs/ail/prompts/requirements.system.md",
+        "prompt-file docs/ail/prompts/spec-draft.system.md",
+        "prompt-file docs/ail/prompts/core-draft.system.md",
+        "prompt-file docs/ail/prompts/repair.system.md",
+        "prompt-file docs/ail/prompts/diagnostic-repair.system.md",
+        "prompt-file docs/ail/prompts/core-to-spec.system.md",
+        "prompt-file docs/ail/prompts/core-to-summary.system.md",
+        "prompt-file docs/ail/prompts/flow-patch.system.md",
+        "prompt-file docs/ail/prompts/trace-debug.system.md",
+        "prompt-file docs/ail/prompts/interop.system.md",
+    ] {
+        assert!(plan_text.contains(required), "{required}\n{plan_text}");
+    }
+    assert!(
+        manifest.contains("AIL-v0.3-System-Prompt-Harness-Plan-Manifest:")
+            && manifest.contains("plan system-prompt-harness-plan.txt fnv64:")
+            && manifest.contains("json system-prompt-harness-plan.json fnv64:")
+            && manifest.contains("fingerprint system-prompt-harness-plan.fingerprint.txt"),
+        "{manifest}"
+    );
+    assert!(fingerprint.starts_with("fnv64:"), "{fingerprint}");
+    assert!(
+        plan_json.contains("\"prompt_count\": 11")
+            && plan_json.contains("\"skip_model_check\": true")
+            && plan_json.contains("\"reviewer_handoff\""),
+        "{plan_json}"
+    );
 }
 
 #[test]

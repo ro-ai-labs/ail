@@ -32,6 +32,20 @@ Run the deterministic agent contract gate first:
 cargo run -- ail-agent-contracts examples/agents
 ```
 
+Write the plan-only harness inventory for reviewer handoff:
+
+```sh
+python3 scripts/run_v03_system_prompt_harness_plan.py --artifact-dir /tmp/ail-v03-system-prompt-harness-plan
+```
+
+The plan writes `system-prompt-harness-plan.txt`,
+`system-prompt-harness-plan.json`,
+`system-prompt-harness-plan.fingerprint.txt`, and
+`manifest.v03-system-prompt-harness-plan.txt`. It records the full prompt
+inventory, hosted prompt and review commands, interactive manual live commands,
+model-check policy, reviewer handoff, and
+`promotion-policy do-not-promote-generated-content`.
+
 Print prompt-pack probes before contacting the hosted endpoint:
 
 ```sh
@@ -77,6 +91,8 @@ The run is ready for reviewer handoff only when the artifacts include:
 - no `model-check skipped`; skipped model checks are local fake-server evidence only
 - `models.json` and `models.fingerprint.txt` for prompt-pack live runs
 - `model-check.json` and `model-check.fingerprint.txt` for story live runs
+- `system-prompt-harness-plan.txt`
+- `manifest.v03-system-prompt-harness-plan.txt`
 - `prompt-llm-harness-report.txt`
 - `prompt-llm-harness-review.txt`
 - `prompt-llm-harness-review.fingerprint.txt`

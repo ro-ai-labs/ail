@@ -15,6 +15,22 @@ python3 scripts/run_ail_interactive_manual.py --chapter prompt-interaction --run
 
 ## Offline Prompt Corpus
 
+Write the plan-only system prompt harness inventory before running live checks:
+
+```sh
+python3 scripts/run_v03_system_prompt_harness_plan.py --artifact-dir /tmp/ail-manual-system-prompt-harness-plan
+```
+
+The plan writes `system-prompt-harness-plan.txt`,
+`system-prompt-harness-plan.json`,
+`system-prompt-harness-plan.fingerprint.txt`, and
+`manifest.v03-system-prompt-harness-plan.txt`. It records the full
+`prompt-count 11` inventory, one fingerprint per `docs/ail/prompts/*.system.md`
+prompt, the hosted prompt and review commands, the interactive manual live
+commands, the reviewer handoff to
+`examples/agents/skills/ail-prompt-interaction-reviewer/SKILL.md`, and
+`promotion-policy do-not-promote-generated-content`.
+
 Replay the prompt portability corpus:
 
 ```sh

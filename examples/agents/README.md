@@ -69,7 +69,12 @@ The system prompt harness runner is stored at
 execution companion for the reviewer skill: it runs the prompt-pack dry run,
 hosted prompt harness, User Story mode review, interactive manual live checks,
 examples replay, and v0.3 roadmap evidence while preserving model-check
-artifacts for reviewer handoff.
+artifacts for reviewer handoff. The runner starts with
+`scripts/run_v03_system_prompt_harness_plan.py`, which writes
+`system-prompt-harness-plan.txt` and
+`manifest.v03-system-prompt-harness-plan.txt` so the prompt inventory,
+commands, model-check policy, and reviewer handoff are fingerprinted before any
+hosted request runs.
 
 The reusable repair-promotion review skill is stored at
 `examples/agents/skills/ail-repair-promotion-reviewer/SKILL.md`. It mirrors
