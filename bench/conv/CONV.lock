@@ -1,0 +1,13 @@
+ail-conv-bench-lock v1
+# Frozen conversation rungs. persona/must-elicit/forbidden/rubric are the
+# measuring stick; changing one changes what the score means, so the harness
+# aborts on a fingerprint mismatch until a human passes --bless-rungs.
+# best-score is the highest ever achieved and the loop may not drop a rung
+# out of the passing set.
+best-score 0
+best-total 3
+agent-prompt-fingerprint sha256:e4ddabc6b1fafee9078f72a70a797b95
+harness-fingerprint sha256:2aa1690c5070f6b474ad3371051b8aa6
+rung C001-booking fail rung-fingerprint sha256:0195cf7009a83feb2478bce11ec542f1
+rung C002-shift-swap fail rung-fingerprint sha256:f07696879a473836a5197d5008f6a987
+rung C003-customer-notes fail rung-fingerprint sha256:ebcf8c197c2399a085e8c3fcf264e382
