@@ -1,0 +1,16 @@
+ail-bench-lock v1
+# Highest score ever achieved, and the exact rung set that achieved it.
+# The loop may never commit a change that drops a rung out of this set.
+best-score 1
+best-total 11
+rung R000-increment pass ladder-fingerprint sha256:7322fa2c570a5231a8503f7d579ad38b
+rung R001-add fail ladder-fingerprint sha256:3b1fa7a9c6a6f011bf28c776fde4a5a7
+rung R002-arithmetic fail ladder-fingerprint sha256:bea1125cf1bf1be51e3f47196cd46d99
+rung R003-max fail ladder-fingerprint sha256:ebe9e7b819c45ff24d6e20a1649e9e83
+rung R004-abs-sign fail ladder-fingerprint sha256:675a3e750eb092f2ba13b4ba7d3f6f03
+rung R005-factorial fail ladder-fingerprint sha256:dede1a8fa01a6a3dc23545bb164b3ed0
+rung R006-fibonacci fail ladder-fingerprint sha256:3d0696438acfdced8cdb290cefdac6dd
+rung R007-sum-to-n fail ladder-fingerprint sha256:972c3a6db827a852a094eed6ce69c8b5
+rung R008-gcd fail ladder-fingerprint sha256:4c10af10ba023846f2c28469512b3143
+rung R009-collatz fail ladder-fingerprint sha256:fa51a91ddf9bef1b5485c6303c33be05
+rung R010-is-prime fail ladder-fingerprint sha256:096afad0d44ecc12b3b2befd6cffa8dd

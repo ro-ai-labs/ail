@@ -2698,7 +2698,8 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
                 continue;
             }
             if let Some(action_name) = &current_action {
-                parse_action_bullet(&mut document, action_name, bullet);
+                let action_name = action_name.clone();
+                parse_action_bullet(&mut document, &action_name, bullet, line_number)?;
                 continue;
             }
             if let Some(failure_name) = &current_failure {
@@ -4127,6 +4128,7 @@ pub fn check_ail_core_diagnostics(core: &AilCore) -> Vec<AilDiagnostic> {
     diagnostics.extend(check_package_target_support_statuses(core));
     diagnostics.extend(check_core_schema_catalog(core));
     diagnostics.extend(check_field_types(core));
+    diagnostics.extend(check_action_arithmetic_operand_literals(core));
     diagnostics.extend(check_requirement_reference_diagnostics(core));
     diagnostics.extend(check_requirement_field_references(core));
     diagnostics.extend(check_action_failure_declarations(core));
@@ -15505,6 +15507,60 @@ fn action_requires_commander_review(
         })
 }
 
+/// Rejects arithmetic writes whose operand is not an integer literal.
+///
+/// AIL lowering only produces `ADD_INT_FIELD` when the `by` operand parses as an
+/// integer literal. Any other operand — notably a reference to another field —
+/// silently degrades to an opaque `WRITE_FIELD` that carries the English text and
+/// performs no arithmetic at runtime. Until the expression IR lands, that
+/// degradation is reported rather than accepted, so a spec cannot claim a
+/// computation the toolchain will not perform.
+fn check_action_arithmetic_operand_literals(core: &AilCore) -> Vec<AilDiagnostic> {
+    let mut diagnostics = Vec::new();
+    for edge in core.graph.edges.iter().filter(|edge| edge.kind == "writes") {
+        let Some(provenance) = edge.attributes.get("provenance") else {
+            continue;
+        };
+        let Some((_, write_text)) = provenance.split_once(".write:") else {
+            continue;
+        };
+        if !write_text.starts_with("increments ") && !write_text.starts_with("decrements ") {
+            continue;
+        }
+        let Some((_, delta_text)) = write_text.rsplit_once(" by ") else {
+            continue;
+        };
+        let delta_is_literal = delta_text
+            .split(|ch: char| !ch.is_ascii_digit() && ch != '-')
+            .next()
+            .unwrap_or("")
+            .parse::<i64>()
+            .is_ok();
+        if delta_is_literal {
+            continue;
+        }
+        diagnostics.push(
+            AilDiagnostic::error(
+                "AIL-EXPR-001",
+                format!(
+                    "arithmetic write '{write_text}' uses operand '{}', which is not an integer literal",
+                    delta_text.trim()
+                ),
+            )
+            .with_source_provenance(Some(provenance.clone()))
+            .with_affected_graph_item(format!("edge:{}", edge.id))
+            .with_repair_suggestion(
+                "AIL arithmetic currently lowers only integer literal operands into ADD_INT_FIELD. \
+                 Use an integer literal, or express the computation once the AIL expression IR \
+                 supports operands that are read from runtime fields. A non-literal operand would \
+                 otherwise be accepted and then perform no arithmetic at runtime."
+                    .to_string(),
+            ),
+        );
+    }
+    diagnostics
+}
+
 fn check_application_stateful_counter_runtime_policy(core: &AilCore) -> Vec<AilDiagnostic> {
     if core.package.profile != "Application" {
         return Vec::new();
@@ -20073,9 +20129,14 @@ fn parse_compiler_pass_body_bullet(pass: &mut AilCompilerPass, bullet: &str) {
     }
 }
 
-fn parse_action_bullet(document: &mut AilDocument, action_name: &str, bullet: &str) {
+fn parse_action_bullet(
+    document: &mut AilDocument,
+    action_name: &str,
+    bullet: &str,
+    line_number: usize,
+) -> Result<(), String> {
     let Some(action) = document.actions.get_mut(action_name) else {
-        return;
+        return Ok(());
     };
     if let Some(text) = bullet.strip_prefix("the system requires ") {
         action.requirements.push(trim_sentence(text));
@@ -20143,7 +20204,17 @@ fn parse_action_bullet(document: &mut AilDocument, action_name: &str, bullet: &s
         action.secret_protections.push(trim_sentence(text));
     } else if let Some(text) = bullet.strip_prefix("if ") {
         action.failures.push(trim_sentence(text));
+    } else {
+        return Err(format!(
+            "line {line_number}: AIL-PARSE-001 unrecognized action bullet '{bullet}' in action \
+             {action_name} [repair=Rewrite the bullet using an accepted action form such as 'the \
+             system requires ...', 'the system reads ...', 'the system changes ...', 'the system \
+             increments ...', 'the system calls ...', 'the system records a trace event named \
+             ...', 'the system guarantees ...', or 'if ...'. Action bullets are never silently \
+             ignored.]"
+        ));
     }
+    Ok(())
 }
 
 fn normalize_llm_requirement_shorthand(text: &str) -> String {
