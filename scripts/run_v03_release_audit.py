@@ -26,6 +26,16 @@ def build_v03_audit_plan(
         AuditStep("cargo-check", ["cargo", "check"]),
         AuditStep("cargo-test", ["cargo", "test", "--", "--test-threads=1"]),
         AuditStep("cargo-clippy", ["cargo", "clippy", "--all-targets", "--", "-D", "warnings"]),
+        # The capability ladder is the release gate that measures the language
+        # rather than the shape of its artifacts. It fails the audit if a
+        # previously passing rung regresses, if a rung's frozen inputs were
+        # edited, or if a rung recorded in SCORE.lock has been deleted.
+        AuditStep("ail-bench", ["python3", "scripts/ail_bench.py"]),
+        # The two execution backends must compute the same thing. Nothing else
+        # checks this, so a codegen regression that changes what a native binary
+        # computes — while every report and fingerprint stays identical — would
+        # otherwise pass the whole audit.
+        AuditStep("ail-differential", ["python3", "scripts/ail_differential.py"]),
         AuditStep(
             "interactive-manual-all-dry-run",
             ["python3", "scripts/run_ail_interactive_manual.py", "--all", "--dry-run"],

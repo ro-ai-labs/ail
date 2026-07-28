@@ -442,12 +442,25 @@ def main() -> None:
     )
     parser.add_argument(
         "--output-dir",
-        default=str(ROOT / "examples"),
+        required=True,
         help="Directory where examples.md, requests, responses, and stories are written.",
+    )
+    parser.add_argument(
+        "--allow-live-corpus",
+        action="store_true",
+        help="Permit writing into the live ./examples tree (destructive; requires intent).",
     )
     args = parser.parse_args()
 
     corpus = Path(args.output_dir)
+    # This script previously defaulted its output into the live corpus, so an
+    # unattended run with no flags would overwrite ./examples in place. The
+    # output is not release evidence, so writing there is now deliberate only.
+    if corpus.resolve() == (ROOT / "examples").resolve() and not args.allow_live_corpus:
+        raise SystemExit(
+            "refusing to overwrite the live ./examples corpus; pass --allow-live-corpus "
+            "to do this deliberately, or choose a scratch --output-dir"
+        )
     requests = corpus / "requests"
     responses = corpus / "responses"
     stories = corpus / "stories"
