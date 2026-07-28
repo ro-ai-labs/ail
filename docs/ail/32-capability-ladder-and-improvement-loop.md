@@ -445,6 +445,16 @@ broken. The live server is `http://192.168.60.171:8091`.
 
 Nothing else may start until the measurement apparatus is honest.
 
+Status as of 2026-07-28 — done: the ladder and `ail-bench` with the ratchet and
+tamper checks; `AIL-PARSE-001`; `AIL-EXPR-001`; VM/native differential testing;
+`llm.rs` timeouts, retries, resampling, and response parsing; the prompt-harness
+checker gate; both new gates wired into the release audit (25 steps, 127s);
+`LICENSE`; version; the endpoint default and `AIL_LLM_ENDPOINT`; the seed-corpus
+guard. Outstanding: the semantic-equivalence gate and package-preservation guard
+(§5.2), the mutation-sensitivity check (§4.7), and grammar sheets plus exemplars
+for each prompt. Until the equivalence gate lands, no model may write into
+`examples/`.
+
 **Correctness of measurement**
 
 - Add a terminal `else` to `parse_action_bullet`; emit `AIL-PARSE-001` for any

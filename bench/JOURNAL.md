@@ -68,3 +68,31 @@ recording:
 
 A test that cannot fail proves nothing. Each version of this test was checked
 against a deliberately injected divergence before being trusted.
+
+## 2026-07-28 — LLM client hardening and the prompt-harness false green
+
+capability: none — safety of unattended operation
+result: Two defects that would have made an unattended loop actively harmful.
+
+`src/llm.rs` had no timeouts of any kind, so a hung endpoint hung the process
+forever. It also hardcoded `temperature: 0.0` with no seed; since the server is
+bit-deterministic at temperature 0, a failed generation failed identically on
+every retry, making retry a no-op. Both fixed, along with `\uXXXX` decoding,
+response parsing, chunked transfer-encoding, and a loud failure when the model
+returns empty content alongside populated reasoning. Zero dependencies, no
+caller signatures changed, 29 new unit tests.
+
+`scripts/run_v03_prompt_llm_harness.py` reported `review-result accepted` for
+all 11 prompts while never calling `ail-check` on a single produced artifact. It
+now checks every artifact and degrades to `needs-repair` with a non-zero exit
+when any is rejected.
+
+Worth recording: on the first live run through the fixed gate, the real model's
+spec-draft artifact was rejected by `AIL-PARSE-001` — the rule added earlier the
+same day. The diagnostic that closed a latent hole in the parser immediately
+caught genuine model output that the old gate had been passing as accepted.
+
+The test fixture for that harness returned the placeholder string
+"deterministic prompt harness artifact", which is not a program. With the gate
+now real, the fixture had to become a real checkable AIL-Spec. A fixture that
+cannot pass a genuine check was evidence of nothing.

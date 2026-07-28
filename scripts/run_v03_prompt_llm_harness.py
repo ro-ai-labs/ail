@@ -10,18 +10,25 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
+import subprocess
 import sys
+import tempfile
 import urllib.parse
 import urllib.request
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_SERVER = "http://inteligentia-pro-1:8080/"
-DEFAULT_ENDPOINT = "http://inteligentia-pro-1:8080/v1/chat/completions"
+DEFAULT_SERVER = "http://192.168.60.171:8091/"
+DEFAULT_ENDPOINT = "http://192.168.60.171:8091/v1/chat/completions"
 DEFAULT_PROMPT_DIR = "docs/ail/prompts"
 DEFAULT_ARTIFACT_DIR = "/tmp/ail-v03-prompt-llm"
 DEFAULT_MAX_TOKENS = 768
+AIL_BINARY = ROOT / "target" / "debug" / "ail"
+DEFAULT_CHECK_PROFILE = "Application"
+ARTIFACT_CHECK_TIMEOUT = 60
+AIL_DIAGNOSTIC_CODE_PATTERN = re.compile(r"\bAIL[A-Za-z0-9-]*\b")
 REQUIRED_PROMPTS = (
     "interview.system.md",
     "requirements.system.md",
@@ -558,6 +565,81 @@ def model_entries(models_text: str) -> tuple[str, list[str], str]:
     return "present", ids, ""
 
 
+def envelope_artifact_check_input(content: str) -> tuple[str, str]:
+    """Extract the artifact text and checker profile for the AIL-Check gate.
+
+    Falls back to DEFAULT_CHECK_PROFILE when the envelope does not declare a
+    checker_handoff.expected_profile, matching what the envelope contract
+    already asks every artifact-producing prompt to report.
+    """
+    envelope, _error = prompt_envelope_json(content)
+    if not isinstance(envelope, dict):
+        return "", DEFAULT_CHECK_PROFILE
+    artifact_text = envelope.get("artifact_text", "")
+    if not isinstance(artifact_text, str):
+        artifact_text = ""
+    profile = DEFAULT_CHECK_PROFILE
+    checker_handoff = envelope.get("checker_handoff")
+    if isinstance(checker_handoff, dict):
+        expected_profile = checker_handoff.get("expected_profile")
+        if isinstance(expected_profile, str) and expected_profile.strip():
+            profile = expected_profile.strip()
+    return artifact_text, profile
+
+
+def ail_check_package_manifest(package_name: str, profile: str) -> str:
+    return (
+        "# AIL Package\n"
+        "\n"
+        f"name: {package_name}\n"
+        "version: 0.1.0\n"
+        f"profile: {profile}\n"
+        "entry: spec.ail-spec.md\n"
+    )
+
+
+def run_ail_check(package_dir: Path) -> tuple[bool, str]:
+    """Run `ail-check` against a package directory.
+
+    Returns (clean, diagnostic). diagnostic is empty when clean, otherwise the
+    first AIL-prefixed code the checker reported: a real diagnostic code from
+    `ail diagnostics:` output, or the leading token of a hard parse rejection
+    when the checker never reaches its diagnostics pass (parse errors are
+    sometimes prefixed with a `line N: ` marker, so the code is not always the
+    first word of the line).
+    """
+    if not AIL_BINARY.is_file():
+        return False, "AIL-CHECK-BINARY-MISSING"
+    try:
+        completed = subprocess.run(
+            [str(AIL_BINARY), "ail-check", str(package_dir)],
+            capture_output=True,
+            text=True,
+            timeout=ARTIFACT_CHECK_TIMEOUT,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        return False, f"AIL-CHECK-INVOCATION-FAILED ({error})"
+    if completed.returncode == 0 and "ail diagnostics: none" in completed.stdout:
+        return True, ""
+    match = AIL_DIAGNOSTIC_CODE_PATTERN.search(completed.stdout + completed.stderr)
+    if match:
+        return False, match.group(0)
+    return False, "AIL-CHECK-UNKNOWN"
+
+
+def check_prompt_artifact(
+    package_name: str, profile: str, artifact_text: str
+) -> tuple[bool, str]:
+    with tempfile.TemporaryDirectory(prefix="ail-prompt-llm-check-") as workspace:
+        package_dir = Path(workspace) / "package"
+        write_text(
+            package_dir / "ail-package.md",
+            ail_check_package_manifest(package_name, profile),
+        )
+        write_text(package_dir / "spec.ail-spec.md", artifact_text)
+        return run_ail_check(package_dir)
+
+
 def review_artifacts(args: argparse.Namespace, paths: list[Path]) -> int:
     artifact_root = Path(args.review_artifacts)
     errors: list[str] = []
@@ -574,6 +656,11 @@ def review_artifacts(args: argparse.Namespace, paths: list[Path]) -> int:
         "prompt-envelope-questions": 0,
     }
     outcome_match_count = 0
+    artifact_checked_count = 0
+    artifact_check_clean_count = 0
+    artifact_check_rejected_count = 0
+    artifact_check_profile_lines: list[str] = []
+    artifact_check_diagnostic_lines: list[str] = []
     manifest_text = read_required_text(artifact_root / "manifest.v03-prompt-llm.txt", errors)
     report_text = read_required_text(artifact_root / "prompt-llm-harness-report.txt", errors)
     models_text = read_required_text(artifact_root / "models.json", errors)
@@ -646,6 +733,27 @@ def review_artifacts(args: argparse.Namespace, paths: list[Path]) -> int:
         for artifact_path in [request_path, response_path, content_path]:
             if check_fingerprint(artifact_path, errors):
                 fingerprint_checks += 1
+
+        checks_artifact = (
+            expected_content == "prompt-envelope-artifact"
+            and content_kind == "prompt-envelope-artifact"
+        )
+        if checks_artifact:
+            artifact_text, artifact_profile = envelope_artifact_check_input(content)
+            artifact_checked_count += 1
+            artifact_check_profile_lines.append(
+                f"prompt-artifact-check-profile {rel} {artifact_profile}"
+            )
+            clean, diagnostic = check_prompt_artifact(
+                f"prompt-llm-{stem}", artifact_profile, artifact_text
+            )
+            if clean:
+                artifact_check_clean_count += 1
+            else:
+                artifact_check_rejected_count += 1
+                artifact_check_diagnostic_lines.append(
+                    f"prompt-artifact-diagnostic {rel} {diagnostic}"
+                )
 
         if request:
             if request.get("prompt_file") != rel:
@@ -730,6 +838,11 @@ def review_artifacts(args: argparse.Namespace, paths: list[Path]) -> int:
         f"prompt-outcome-match-count {outcome_match_count}",
         "prompt-envelope-invalid-count "
         f"{content_kind_counts['invalid'] + content_kind_counts['empty']}",
+        f"prompt-artifact-checked-count {artifact_checked_count}",
+        f"prompt-artifact-check-clean-count {artifact_check_clean_count}",
+        f"prompt-artifact-check-rejected-count {artifact_check_rejected_count}",
+        *artifact_check_profile_lines,
+        *artifact_check_diagnostic_lines,
         f"model-check {model_check_status}",
         f"model-check-model-count {len(model_ids)}",
         f"model-check-model-id {','.join(model_ids) if model_ids else '<missing>'}",
@@ -739,6 +852,11 @@ def review_artifacts(args: argparse.Namespace, paths: list[Path]) -> int:
         review_lines.append("review-result rejected")
         for error in errors:
             review_lines.append(f"error {error}")
+    elif artifact_check_rejected_count:
+        review_lines.append("review-result needs-repair")
+        review_lines.append(
+            "error prompt artifact check requires repair before promotion"
+        )
     else:
         review_lines.append("review-result accepted")
     review_text = "\n".join(review_lines) + "\n"
@@ -753,7 +871,7 @@ def review_artifacts(args: argparse.Namespace, paths: list[Path]) -> int:
         print(f"error failed to write prompt harness review report: {error}")
         return 1
     print(review_text, end="")
-    return 1 if errors else 0
+    return 1 if errors or artifact_check_rejected_count else 0
 
 
 def report_field(report_lines: list[str], key: str) -> str | None:

@@ -4684,6 +4684,28 @@ fn script_v03_prompt_llm_harness_help_lists_all_prompts_and_dry_run() {
     );
 }
 
+/// A minimal AIL-Spec that checks clean, used as the mock model's artifact.
+///
+/// The prompt harness gates `review-result accepted` on every returned artifact
+/// passing `ail-check`, so the fixture has to be a real program rather than a
+/// placeholder sentence.
+const PROMPT_HARNESS_FIXTURE_SPEC: &str = concat!(
+    "# Prompt Harness Fixture\n",
+    "\n",
+    "The application Counter Example manages stateful counters.\n",
+    "\n",
+    "A Counter has:\n",
+    "\n",
+    "- value: Int\n",
+    "\n",
+    "Action: Increment counter.\n",
+    "\n",
+    "When increment counter happens:\n",
+    "\n",
+    "- the system increments the counter value by 1\n",
+    "- the system records a trace event named CounterIncremented\n",
+);
+
 #[test]
 fn script_v03_prompt_llm_harness_review_writes_fingerprinted_report() {
     let script = format!(
@@ -4737,7 +4759,11 @@ fn script_v03_prompt_llm_harness_review_writes_fingerprinted_report() {
                 ),
                 json_string(artifact_kind),
                 json_string(if returns_artifact {
-                    "deterministic prompt harness artifact"
+                    // The harness now runs every returned artifact through
+                    // ail-check, so this fixture must be a real checkable
+                    // AIL-Spec. A placeholder string would be rejected —
+                    // correctly — and the gate would report needs-repair.
+                    PROMPT_HARNESS_FIXTURE_SPEC
                 } else {
                     ""
                 }),
@@ -4934,8 +4960,7 @@ fn script_v03_story_llm_harness_help_names_endpoint_and_dry_run() {
         "{dry_run_stdout}"
     );
     assert!(
-        dry_run_stdout
-            .contains("--llm-endpoint http://192.168.60.171:8091/v1/chat/completions"),
+        dry_run_stdout.contains("--llm-endpoint http://192.168.60.171:8091/v1/chat/completions"),
         "{dry_run_stdout}"
     );
     assert!(
