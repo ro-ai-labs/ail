@@ -36,6 +36,14 @@ def build_v03_audit_plan(
         # computes — while every report and fingerprint stays identical — would
         # otherwise pass the whole audit.
         AuditStep("ail-differential", ["python3", "scripts/ail_differential.py"]),
+        # Round-trip is a ratchet, not a bar. Seven packages do not reconstruct
+        # from their IR yet; requiring all of them would keep the gate red and
+        # teach everyone to ignore it. Requiring that the count never drops
+        # makes the current 18 a floor a refactor cannot quietly erode.
+        AuditStep(
+            "ail-roundtrip",
+            ["python3", "scripts/ail_roundtrip.py", "--min-pass", "18"],
+        ),
         AuditStep(
             "interactive-manual-all-dry-run",
             ["python3", "scripts/run_ail_interactive_manual.py", "--all", "--dry-run"],

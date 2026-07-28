@@ -184,6 +184,11 @@ def main() -> int:
     )
     parser.add_argument("--model", default="ornith-1.0-35b", help="model id, agent mode only")
     parser.add_argument("--verbose", action="store_true", help="print diffs and checker output")
+    parser.add_argument(
+        "--min-pass",
+        type=int,
+        help="ratchet: fail if fewer than this many packages round-trip equivalently",
+    )
     args = parser.parse_args()
 
     ail = ail_binary()
@@ -210,7 +215,18 @@ def main() -> int:
     scored = len(packages) - skipped
     print()
     print(f"round-trip ({args.mode}) {passed}/{scored} semantically equivalent, {skipped} skipped")
-    return 1 if failures else 0
+
+    # A ratchet rather than a pass/fail bar. Seven packages do not round-trip
+    # yet, so requiring all of them would just keep the gate red and teach
+    # everyone to ignore it. Requiring that the count never drops makes the
+    # existing 18 a floor that a refactor cannot quietly erode.
+    if args.min_pass is not None and passed < args.min_pass:
+        print(
+            f"ROUND-TRIP REGRESSED: {passed} equivalent, floor is {args.min_pass}",
+            file=sys.stderr,
+        )
+        return 2
+    return 0 if args.min_pass is not None else (1 if failures else 0)
 
 
 if __name__ == "__main__":
