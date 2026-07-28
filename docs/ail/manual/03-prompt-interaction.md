@@ -97,7 +97,7 @@ still proves the bypass was explicit. Review mode parses that model list,
 prints `model-check-model-id`, and rejects any hosted response whose `model`
 field is missing or not present in `models.json`.
 
-Run it only when `http://inteligentia-pro-1:8080/` is reachable and the output
+Run it only when `http://192.168.60.171:8091/` is reachable and the output
 will be reviewed:
 
 ```sh

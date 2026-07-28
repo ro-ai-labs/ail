@@ -16,8 +16,8 @@ import urllib.request
 from pathlib import Path
 
 
-DEFAULT_SERVER = "http://inteligentia-pro-1:8080/"
-DEFAULT_ENDPOINT = "http://inteligentia-pro-1:8080/v1/chat/completions"
+DEFAULT_SERVER = "http://192.168.60.171:8091/"
+DEFAULT_ENDPOINT = "http://192.168.60.171:8091/v1/chat/completions"
 DEFAULT_PACKAGE = "examples/support_ticket.ail"
 DEFAULT_STORY_FILE = "examples/stories/example-30.md"
 DEFAULT_ARTIFACT_DIR = "/tmp/ail-v03-story-llm"

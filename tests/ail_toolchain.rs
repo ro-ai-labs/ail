@@ -1301,8 +1301,8 @@ fn docs_ail_manual_links_user_story_mode_chapter() {
         "trace TicketClosed",
         "story-questions.ail-interview.md",
         "ail-story blocking questions",
-        "http://inteligentia-pro-1:8080/",
-        "http://inteligentia-pro-1:8080/v1/chat/completions",
+        "http://192.168.60.171:8091/",
+        "http://192.168.60.171:8091/v1/chat/completions",
     ] {
         assert!(manual.contains(required), "{required}\n{manual}");
     }
@@ -2944,7 +2944,7 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         );
     }
     assert!(
-        !overridden_gate_stdout.contains("http://inteligentia-pro-1:8080"),
+        !overridden_gate_stdout.contains("http://192.168.60.171:8091"),
         "{overridden_gate_stdout}"
     );
 
@@ -2988,7 +2988,7 @@ fn script_ail_interactive_manual_lists_v03_chapters_and_dry_run() {
         );
     }
     assert!(
-        !overridden_story_stdout.contains("http://inteligentia-pro-1:8080"),
+        !overridden_story_stdout.contains("http://192.168.60.171:8091"),
         "{overridden_story_stdout}"
     );
 
@@ -3816,7 +3816,7 @@ fn codex_skill_documents_prompt_interaction_review_gate() {
         "examples/agents/codex-ail-prompt-reviewer.md",
         "examples/agents/codex-ail-story-promotion-reviewer.md",
         "examples/agents/codex-ail-repair-promotion-reviewer.md",
-        "http://inteligentia-pro-1:8080/",
+        "http://192.168.60.171:8091/",
         "python3 scripts/run_v03_prompt_llm_harness.py --dry-run",
         "python3 scripts/run_v03_prompt_llm_harness.py --review-artifacts /tmp/ail-v03-prompt-llm",
         "python3 scripts/run_v03_story_llm_harness.py --review-artifacts /tmp/ail-v03-story-llm",
@@ -3853,7 +3853,7 @@ fn codex_skill_documents_prompt_interaction_review_gate() {
     for required in [
         "name: ail-system-prompt-harness-runner",
         "description: Use when",
-        "http://inteligentia-pro-1:8080/",
+        "http://192.168.60.171:8091/",
         "python3 scripts/run_v03_system_prompt_harness_plan.py --artifact-dir /tmp/ail-v03-system-prompt-harness-plan",
         "python3 scripts/run_v03_prompt_llm_harness.py --dry-run",
         "python3 scripts/run_v03_prompt_llm_harness.py",
@@ -4065,7 +4065,7 @@ fn script_v03_agent_policy_live_reviewer_harness_help_lists_roles_and_dry_run() 
         "--endpoint",
         "--source-entry-id",
         "--proposed-entry-id",
-        "http://inteligentia-pro-1:8080",
+        "http://192.168.60.171:8091",
         "/v1/chat/completions",
     ] {
         assert!(stdout.contains(required), "{required}\n{stdout}");
@@ -4084,8 +4084,8 @@ fn script_v03_agent_policy_live_reviewer_harness_help_lists_roles_and_dry_run() 
     let dry_run_stdout = String::from_utf8_lossy(&dry_run.stdout);
     for required in [
         "AIL-Agent-Policy-Live-Reviewer-Harness:",
-        "model-check curl -sS http://inteligentia-pro-1:8080/v1/models",
-        "endpoint http://inteligentia-pro-1:8080/v1/chat/completions",
+        "model-check curl -sS http://192.168.60.171:8091/v1/models",
+        "endpoint http://192.168.60.171:8091/v1/chat/completions",
         "artifact-dir /tmp/ail-v03-agent-policy-live-review",
         "default-max-tokens 768",
         "max-tokens 768",
@@ -4571,7 +4571,7 @@ fn script_v03_prompt_llm_harness_help_lists_all_prompts_and_dry_run() {
         "--review-artifacts",
         "--endpoint",
         "--prompt-dir",
-        "http://inteligentia-pro-1:8080",
+        "http://192.168.60.171:8091",
         "/v1/chat/completions",
     ] {
         assert!(stdout.contains(required), "{required}\n{stdout}");
@@ -4590,8 +4590,8 @@ fn script_v03_prompt_llm_harness_help_lists_all_prompts_and_dry_run() {
     let dry_run_stdout = String::from_utf8_lossy(&dry_run.stdout);
     for required in [
         "AIL-Prompt-LLM-Harness:",
-        "model-check curl -sS http://inteligentia-pro-1:8080/v1/models",
-        "endpoint http://inteligentia-pro-1:8080/v1/chat/completions",
+        "model-check curl -sS http://192.168.60.171:8091/v1/models",
+        "endpoint http://192.168.60.171:8091/v1/chat/completions",
         "max-tokens 768",
         "prompt docs/ail/prompts/interview.system.md",
         "probe-label interview-clarify-refund-tool",
@@ -4911,7 +4911,7 @@ fn script_v03_story_llm_harness_help_names_endpoint_and_dry_run() {
         "--review-artifacts",
         "--endpoint",
         "--max-tokens",
-        "http://inteligentia-pro-1:8080",
+        "http://192.168.60.171:8091",
         "/v1/chat/completions",
         "examples/stories/example-30.md",
         "Override the default toolchain agent",
@@ -4930,12 +4930,12 @@ fn script_v03_story_llm_harness_help_names_endpoint_and_dry_run() {
     );
     let dry_run_stdout = String::from_utf8_lossy(&dry_run.stdout);
     assert!(
-        dry_run_stdout.contains("curl -sS http://inteligentia-pro-1:8080/v1/models"),
+        dry_run_stdout.contains("curl -sS http://192.168.60.171:8091/v1/models"),
         "{dry_run_stdout}"
     );
     assert!(
         dry_run_stdout
-            .contains("--llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions"),
+            .contains("--llm-endpoint http://192.168.60.171:8091/v1/chat/completions"),
         "{dry_run_stdout}"
     );
     assert!(

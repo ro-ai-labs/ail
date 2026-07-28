@@ -1620,7 +1620,7 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             dry_run.stdout,
         )
         self.assertIn("artifact-kind AIL-AgentTool-Live-Reviewer-Handoff", dry_run.stdout)
-        self.assertIn("model-check curl -sS http://inteligentia-pro-1:8080/v1/models", dry_run.stdout)
+        self.assertIn("model-check curl -sS http://192.168.60.171:8091/v1/models", dry_run.stdout)
 
     def test_story_promotion_live_reviewer_harness_dry_run_lists_contract(self):
         dry_run = subprocess.run(
@@ -1649,7 +1649,7 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             dry_run.stdout,
         )
         self.assertIn(
-            "model-check curl -sS http://inteligentia-pro-1:8080/v1/models",
+            "model-check curl -sS http://192.168.60.171:8091/v1/models",
             dry_run.stdout,
         )
         self.assertIn("story-artifacts /tmp/ail-v03-story-llm", dry_run.stdout)
@@ -1769,7 +1769,7 @@ class CaptureE2eTranscriptsTest(unittest.TestCase):
             self.assertIn("evidence models.json", combined_stdout)
             self.assertIn("evidence models.fingerprint.txt", combined_stdout)
             self.assertIn(f"--llm-endpoint {endpoint}", combined_stdout)
-            self.assertNotIn("http://inteligentia-pro-1:8080", combined_stdout)
+            self.assertNotIn("http://192.168.60.171:8091", combined_stdout)
             self.assertEqual(_CompletionHandler.requests, [])
         finally:
             _CompletionHandler.response_payload = None

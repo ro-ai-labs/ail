@@ -5,7 +5,23 @@ use std::path::{Path, PathBuf};
 
 use crate::core_model::{Edge, Graph, Node, attr, json_string};
 
-pub const DEFAULT_BASE_LLM_ENDPOINT: &str = "http://inteligentia-pro-1:8080/v1/chat/completions";
+/// Compiled-in fallback LLM endpoint.
+///
+/// The previous value pointed at a host that no longer listens, so every
+/// documented live command failed. Prefer [`base_llm_endpoint`], which honours
+/// the `AIL_LLM_ENDPOINT` environment variable, so an unattended run can be
+/// pointed at a different server without editing source or passing a flag
+/// through every layer.
+pub const DEFAULT_BASE_LLM_ENDPOINT: &str = "http://192.168.60.171:8091/v1/chat/completions";
+
+/// The default LLM endpoint, honouring `AIL_LLM_ENDPOINT` when it is set.
+pub fn base_llm_endpoint() -> String {
+    std::env::var("AIL_LLM_ENDPOINT")
+        .ok()
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+        .unwrap_or_else(|| DEFAULT_BASE_LLM_ENDPOINT.to_string())
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AilPackage {
@@ -12424,7 +12440,7 @@ fn parse_package_metadata(text: &str) -> Result<AilPackageMetadata, String> {
     let base_llm_endpoint = values
         .get("base_llm_endpoint")
         .cloned()
-        .unwrap_or_else(|| DEFAULT_BASE_LLM_ENDPOINT.to_string());
+        .unwrap_or_else(base_llm_endpoint);
     Ok(AilPackageMetadata {
         name,
         version,

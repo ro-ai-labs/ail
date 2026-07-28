@@ -738,7 +738,7 @@ AI-IDE interview handoff instead of asking the base model to infer those details
 again.
 LLM endpoints may be the llama.cpp-server root URL, an explicit `/completion`
 URL, or an OpenAI-compatible `/v1/chat/completions` URL. A root URL such as
-`http://inteligentia-pro-1:8080/` is normalized to `/completion`; chat
+`http://192.168.60.171:8091/` is normalized to `/completion`; chat
 completion requests use `messages` and disable model thinking with
 `chat_template_kwargs.enable_thinking=false`.
 `ail-interview` runs the first AI-IDE conversation step with

@@ -30,8 +30,8 @@ For opt-in hosted model probing, use the v0.3 prompt LLM harness:
 python3 scripts/run_v03_prompt_llm_harness.py --dry-run
 ```
 
-The live form contacts `http://inteligentia-pro-1:8080/v1/models`, then probes
-each prompt file through `http://inteligentia-pro-1:8080/v1/chat/completions`
+The live form contacts `http://192.168.60.171:8091/v1/models`, then probes
+each prompt file through `http://192.168.60.171:8091/v1/chat/completions`
 with task-specific probes. Each request records `probe-label` and
 `probe-fingerprint` metadata so review can distinguish useful prompt-surface
 coverage from a generic smoke prompt. The user probe also includes an inline

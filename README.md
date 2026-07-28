@@ -99,24 +99,24 @@ development loop is:
 ```bash
 cargo run -- ail-requirements examples/support_ticket.ail \
   --prompt "Build a support ticket application" \
-  --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
+  --llm-endpoint http://192.168.60.171:8091/v1/chat/completions
 
 cargo run -- ail-spec examples/support_ticket.ail \
   --requirements-file /path/to/requirements.ail-requirements.md \
   --prompt "Draft the support ticket specification" \
-  --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
+  --llm-endpoint http://192.168.60.171:8091/v1/chat/completions
 
 cargo run -- ail-build examples/support_ticket.ail \
   --prompt "Build a support ticket application" \
   --target linux-x86_64-elf \
   --action CloseTicket \
   --artifact-dir /tmp/ail-build \
-  --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
+  --llm-endpoint http://192.168.60.171:8091/v1/chat/completions
 ```
 
 For llama.cpp-server, the hosted development model is exercised through
-`--llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions`. Root URLs
-such as `http://inteligentia-pro-1:8080/` are accepted as shorthand for
+`--llm-endpoint http://192.168.60.171:8091/v1/chat/completions`. Root URLs
+such as `http://192.168.60.171:8091/` are accepted as shorthand for
 `/completion`, and explicit `/completion` paths are also supported, but the
 chat-completions path gives the current hosted model the strongest
 artifact-format behavior. Chat completion requests disable thinking through

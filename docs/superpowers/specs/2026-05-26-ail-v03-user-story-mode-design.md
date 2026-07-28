@@ -44,7 +44,7 @@ binary or target evidence.
    become part of the v0.3 release evidence.
 5. Give the future interactive manual a concrete story-first workflow to teach.
 6. Give the future prompt/agent harness a concrete workflow to exercise against
-   `http://inteligentia-pro-1:8080/`.
+   `http://192.168.60.171:8091/`.
 
 ## Non-Goals
 
@@ -214,11 +214,11 @@ After `ail-story` lands, add a harness command or script that runs a small
 matrix against the local llama.cpp server:
 
 ```sh
-curl -sS http://inteligentia-pro-1:8080/v1/models
+curl -sS http://192.168.60.171:8091/v1/models
 cargo run -- ail-story examples/support_ticket.ail \
   --story-file examples/stories/example-30.md \
   --artifact-dir /tmp/ail-v03-story-llm \
-  --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
+  --llm-endpoint http://192.168.60.171:8091/v1/chat/completions
 ```
 
 The harness is not part of the default unit suite because it depends on
@@ -262,8 +262,8 @@ and a portability report suitable for manual promotion into the corpus.
 
 - Add `docs/ail/manual/01-user-story-mode.md`.
 - Add a small non-default script for live prompt testing against
-  `http://inteligentia-pro-1:8080/v1/chat/completions`, with model discovery
-  through `http://inteligentia-pro-1:8080/v1/models`.
+  `http://192.168.60.171:8091/v1/chat/completions`, with model discovery
+  through `http://192.168.60.171:8091/v1/models`.
 - Tests:
   - manual link/path smoke test;
   - script help text smoke test;
@@ -284,11 +284,11 @@ git diff --check
 For live LLM evidence, run separately:
 
 ```sh
-curl -sS http://inteligentia-pro-1:8080/v1/models
+curl -sS http://192.168.60.171:8091/v1/models
 cargo run -- ail-story examples/support_ticket.ail \
   --story-file examples/stories/example-30.md \
   --artifact-dir /tmp/ail-v03-story-llm \
-  --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
+  --llm-endpoint http://192.168.60.171:8091/v1/chat/completions
 ```
 
 Live LLM evidence is useful for promotion, but the implementation must be

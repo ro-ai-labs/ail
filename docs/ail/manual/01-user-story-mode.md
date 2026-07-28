@@ -47,7 +47,7 @@ a temporary artifact directory:
 cargo run -- ail-story examples/support_ticket.ail \
   --story-file examples/stories/example-30.md \
   --artifact-dir /tmp/ail-user-story-mode \
-  --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions
+  --llm-endpoint http://192.168.60.171:8091/v1/chat/completions
 ```
 
 When `examples/ail_toolchain_agent.ail` is discoverable beside the example
@@ -164,7 +164,7 @@ To request native output, name the action and target:
 cargo run -- ail-story examples/support_ticket.ail \
   --story-file examples/stories/example-30.md \
   --artifact-dir /tmp/ail-user-story-mode-native \
-  --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions \
+  --llm-endpoint http://192.168.60.171:8091/v1/chat/completions \
   --target linux-x86_64-elf \
   --action CloseTicket \
   --out /tmp/ail-user-story-mode-native/CloseTicket
@@ -205,7 +205,7 @@ contract report:
 cargo run -- ail-story examples/support_ticket.ail \
   --story-file examples/stories/example-30.md \
   --artifact-dir /tmp/ail-user-story-mode-wasm \
-  --llm-endpoint http://inteligentia-pro-1:8080/v1/chat/completions \
+  --llm-endpoint http://192.168.60.171:8091/v1/chat/completions \
   --target wasm32-unknown-sandbox-wasm \
   --action CloseTicket \
   --out /tmp/ail-user-story-mode-wasm/CloseTicket.wasm-contract.txt
@@ -297,7 +297,7 @@ Use the harness in dry-run mode first:
 python3 scripts/run_v03_story_llm_harness.py --dry-run
 ```
 
-Then run it live when `http://inteligentia-pro-1:8080/` is reachable:
+Then run it live when `http://192.168.60.171:8091/` is reachable:
 
 ```sh
 python3 scripts/run_v03_story_llm_harness.py
@@ -488,8 +488,8 @@ prompt-envelope validity counts, and toolchain-agent trace order. It then
 persists the same accepted/rejected review text as a fingerprinted harness
 report before a live run can be treated as promotion candidate evidence.
 
-The harness probes `http://inteligentia-pro-1:8080/v1/models` and runs
-`ail-story` against `http://inteligentia-pro-1:8080/v1/chat/completions` by
+The harness probes `http://192.168.60.171:8091/v1/models` and runs
+`ail-story` against `http://192.168.60.171:8091/v1/chat/completions` by
 default. That path has the strongest artifact-format behavior for the hosted
 llama.cpp model; root `/completion` endpoints remain supported for other
 servers but may require prompt/model tuning.

@@ -18,8 +18,8 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_SERVER = "http://inteligentia-pro-1:8080/"
-DEFAULT_ENDPOINT = "http://inteligentia-pro-1:8080/v1/chat/completions"
+DEFAULT_SERVER = "http://192.168.60.171:8091/"
+DEFAULT_ENDPOINT = "http://192.168.60.171:8091/v1/chat/completions"
 DEFAULT_ARTIFACT_DIR = "/tmp/ail-v03-story-promotion-live-review"
 DEFAULT_EXAMPLES_ARTIFACTS = "/tmp/ail-manual-story-promotion-examples"
 DEFAULT_STORY_ARTIFACTS = "/tmp/ail-v03-story-llm"

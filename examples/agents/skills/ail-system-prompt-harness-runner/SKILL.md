@@ -20,7 +20,7 @@ artifacts exist.
 
 - Current prompt files under `docs/ail/prompts/`.
 - Current agent contracts under `examples/agents/`.
-- Hosted llama.cpp endpoint: `http://inteligentia-pro-1:8080/`.
+- Hosted llama.cpp endpoint: `http://192.168.60.171:8091/`.
 - Optional alternate endpoint for local fake-server tests.
 - Optional artifact root for isolated runs.
 

@@ -208,7 +208,7 @@ python3 scripts/run_ail_interactive_manual.py --chapter agent-policy-import --ru
 ```
 
 Live LLM chapters are opt-in. Add `--include-live` only when
-`http://inteligentia-pro-1:8080/` is reachable and the generated artifacts will
+`http://192.168.60.171:8091/` is reachable and the generated artifacts will
 be reviewed before promotion into `./examples`.
 
 Use the same manual commands against a local fake or alternate hosted endpoint

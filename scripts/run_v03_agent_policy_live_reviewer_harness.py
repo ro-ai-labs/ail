@@ -17,8 +17,8 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_SERVER = "http://inteligentia-pro-1:8080/"
-DEFAULT_ENDPOINT = "http://inteligentia-pro-1:8080/v1/chat/completions"
+DEFAULT_SERVER = "http://192.168.60.171:8091/"
+DEFAULT_ENDPOINT = "http://192.168.60.171:8091/v1/chat/completions"
 DEFAULT_ARTIFACT_DIR = "/tmp/ail-v03-agent-policy-live-review"
 DEFAULT_EXAMPLES_ARTIFACTS = "/tmp/ail-manual-agent-policy"
 DEFAULT_CAPTURE_PLAN_DIR = "/tmp/ail-manual-agent-policy-capture-plan"

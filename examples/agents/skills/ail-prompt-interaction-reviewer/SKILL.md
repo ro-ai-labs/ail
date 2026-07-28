@@ -32,7 +32,7 @@ reviewers must still verify that generated artifacts do not bypass
   User Story mode promotion.
 - Current repair promotion artifacts when generated content repairs a rejected
   example.
-- Optional hosted llama.cpp endpoint: `http://inteligentia-pro-1:8080/`.
+- Optional hosted llama.cpp endpoint: `http://192.168.60.171:8091/`.
 
 ## Review Sequence
 

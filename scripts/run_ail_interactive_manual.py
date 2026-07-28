@@ -400,7 +400,7 @@ BASE_CHAPTERS: tuple[ManualChapter, ...] = (
                     "--artifact-dir",
                     "/tmp/ail-user-story-mode",
                     "--llm-endpoint",
-                    "http://inteligentia-pro-1:8080/v1/chat/completions",
+                    "http://192.168.60.171:8091/v1/chat/completions",
                 ),
                 live=True,
             ),

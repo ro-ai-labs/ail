@@ -128,7 +128,7 @@ server. Print the five reviewer probes without contacting the server first:
 python3 scripts/run_v03_agent_policy_live_reviewer_harness.py --dry-run
 ```
 
-When `http://inteligentia-pro-1:8080/` is reachable, run the hosted reviewer
+When `http://192.168.60.171:8091/` is reachable, run the hosted reviewer
 harness after the deterministic policy review, capture plan, import demo, and
 multi-agent handoff commands above have written their artifacts:
 

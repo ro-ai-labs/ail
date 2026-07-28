@@ -4,20 +4,20 @@ use std::fs;
 use std::process::{Command, ExitCode};
 
 use ail::ail::{
-    AilBytecodeProgram, AilPackage, AilPackageMetadata, DEFAULT_BASE_LLM_ENDPOINT, ail_core_hash,
-    ail_document_from_core, apply_ail_core_patch_text, apply_ail_flow_edit_text, apply_ail_patch,
-    check_ail_core, check_ail_requirements, compile_ail_bytecode_native_elf,
-    compile_ail_core_bytecode, compile_ail_core_native_elf, draft_ail_interview,
-    draft_ail_requirements_response, draft_ail_requirements_response_recorded_with_max_tokens,
-    draft_ail_spec, draft_ail_spec_from_requirements,
-    draft_ail_spec_from_requirements_recorded_with_max_tokens, elaborate_ail_core,
-    load_ail_package_dir, parse_ail_bytecode, parse_ail_core_text, parse_ail_package_document,
-    parse_ail_package_spec_text, parse_ail_patch_text, parse_ail_spec_text, render_ail_bytecode,
-    render_ail_core, render_ail_flow_view, render_ail_interview_questions_artifact,
-    render_ail_package_dependency_report, render_ail_runtime_state_lines, render_ail_spec,
-    render_ail_spec_from_core, repair_ail_requirements_from_diagnostics,
-    repair_ail_spec_from_diagnostics, run_ail_bytecode_action, run_ail_compiler_pass_on_core,
-    run_ail_conformance, verify_ail_bytecode,
+    AilBytecodeProgram, AilPackage, AilPackageMetadata, ail_core_hash, ail_document_from_core,
+    apply_ail_core_patch_text, apply_ail_flow_edit_text, apply_ail_patch, check_ail_core,
+    check_ail_requirements, compile_ail_bytecode_native_elf, compile_ail_core_bytecode,
+    compile_ail_core_native_elf, draft_ail_interview, draft_ail_requirements_response,
+    draft_ail_requirements_response_recorded_with_max_tokens, draft_ail_spec,
+    draft_ail_spec_from_requirements, draft_ail_spec_from_requirements_recorded_with_max_tokens,
+    elaborate_ail_core, load_ail_package_dir, parse_ail_bytecode, parse_ail_core_text,
+    parse_ail_package_document, parse_ail_package_spec_text, parse_ail_patch_text,
+    parse_ail_spec_text, render_ail_bytecode, render_ail_core, render_ail_flow_view,
+    render_ail_interview_questions_artifact, render_ail_package_dependency_report,
+    render_ail_runtime_state_lines, render_ail_spec, render_ail_spec_from_core,
+    repair_ail_requirements_from_diagnostics, repair_ail_spec_from_diagnostics,
+    run_ail_bytecode_action, run_ail_compiler_pass_on_core, run_ail_conformance,
+    verify_ail_bytecode,
 };
 use ail::core_model::json_string;
 
@@ -1513,7 +1513,7 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
         "examples/agents/codex-ail-prompt-reviewer.md",
         "examples/agents/codex-ail-story-promotion-reviewer.md",
         "examples/agents/codex-ail-repair-promotion-reviewer.md",
-        "http://inteligentia-pro-1:8080/",
+        "http://192.168.60.171:8091/",
         "python3 scripts/run_v03_prompt_llm_harness.py --dry-run",
         "python3 scripts/run_v03_prompt_llm_harness.py --review-artifacts /tmp/ail-v03-prompt-llm",
         "python3 scripts/run_v03_story_llm_harness.py --review-artifacts /tmp/ail-v03-story-llm",
@@ -1599,7 +1599,7 @@ fn run_ail_agent_contracts_command(path: &str) -> Result<u8, String> {
     for required in [
         "name: ail-system-prompt-harness-runner",
         "description: Use when",
-        "http://inteligentia-pro-1:8080/",
+        "http://192.168.60.171:8091/",
         "python3 scripts/run_v03_prompt_llm_harness.py --dry-run",
         "python3 scripts/run_v03_prompt_llm_harness.py",
         "python3 scripts/run_v03_prompt_llm_harness.py --review-artifacts /tmp/ail-v03-prompt-llm",
@@ -3397,7 +3397,7 @@ fn synthesize_package_resolution_repair_candidate(
             target_support,
             schema_version: field("schema-version"),
             safety_level: field("safety-level"),
-            base_llm_endpoint: DEFAULT_BASE_LLM_ENDPOINT.to_string(),
+            base_llm_endpoint: ail::ail::base_llm_endpoint(),
         },
         root,
         spec_path,
@@ -11897,9 +11897,8 @@ fn run_ail_build_agent(
         requirements_artifact.unwrap_or("skipped").to_string(),
     );
     if let Some(target_model) = prompt_portability.target_model {
-        let base_model = prompt_portability
-            .base_model
-            .unwrap_or(DEFAULT_BASE_LLM_ENDPOINT);
+        let default_endpoint = ail::ail::base_llm_endpoint();
+        let base_model = prompt_portability.base_model.unwrap_or(&default_endpoint);
         if !agent_bytecode
             .actions
             .contains_key("CompareAgentPromptPortability")
@@ -15873,11 +15872,11 @@ fn run_ail_build_from_core(
         agent_run.as_ref(),
     ) {
         Some(render_ail_prompt_portability_report(
-            cli_options
+            &cli_options
                 .ail_build_base_model
-                .as_deref()
-                .or(cli_options.llm_endpoint.as_deref())
-                .unwrap_or(DEFAULT_BASE_LLM_ENDPOINT),
+                .clone()
+                .or_else(|| cli_options.llm_endpoint.clone())
+                .unwrap_or_else(ail::ail::base_llm_endpoint),
             target_model,
             requirements_artifact,
             agent_run,

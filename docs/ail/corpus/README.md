@@ -100,7 +100,7 @@ python3 scripts/capture_example_transcripts.py \
   --base-corpus examples \
   --output-dir /tmp/ail-examples-live-corpus \
   --entry-id example-30 \
-  --endpoint http://inteligentia-pro-1:8080/v1/chat/completions \
+  --endpoint http://192.168.60.171:8091/v1/chat/completions \
   --endpoint-label inteligentia-pro-1-qwen3.6-35b-chat \
   --executor-label unsloth-qwen3.6-35b-a3b-gguf-chat \
   --semantic-task support-ticket-live-capture-30 \
