@@ -37047,3 +37047,97 @@ fn cli_ail_draft_for_system_profile_prompts_system_surface() {
     assert!(stdout.contains("System component: Network packet receiver."));
     assert!(stdout.contains("ail-draft diagnostics: none"));
 }
+
+/// A package is equivalent to itself. Guards the comparator against reporting
+/// spurious differences, which would make every other equivalence result noise.
+#[test]
+fn cli_ail_equivalence_reports_identical_package_as_equivalent() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let package = fixture("support_ticket.ail");
+
+    let output = Command::new(binary)
+        .args(["ail-equivalence", &package, "--baseline", &package])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("removed-count 0"));
+    assert!(stdout.contains("added-count 0"));
+    assert!(stdout.contains("retyped-count 0"));
+    assert!(stdout.contains("semantically-equivalent true"));
+}
+
+/// The failure this gate exists for.
+///
+/// A live `ail-draft` run reduced the 92-line support-ticket package to a
+/// 26-line stub, dropping the user model, `Secret<List<Text>>` internal notes,
+/// four of five actions, both failure sections, and every guarantee — and
+/// `ail-check` reported `diagnostics: none`, because it validates an artifact in
+/// isolation and never compares it to what it replaces.
+#[test]
+fn cli_ail_equivalence_rejects_package_reduced_to_stub() {
+    let binary = env!("CARGO_BIN_EXE_ail");
+    let baseline = fixture("support_ticket.ail");
+    let workspace =
+        std::env::temp_dir().join(format!("ail-equivalence-stub-{}", std::process::id()));
+    let stub = workspace.join("stub.ail");
+    fs::create_dir_all(&stub).unwrap();
+    fs::copy(
+        std::path::Path::new(&baseline).join("ail-package.md"),
+        stub.join("ail-package.md"),
+    )
+    .unwrap();
+    fs::write(
+        stub.join("spec.ail-spec.md"),
+        concat!(
+            "# Support Ticket\n\n",
+            "The application SupportTicket manages customer support interactions.\n\n",
+            "A Ticket has:\n\n",
+            "- id: Text\n",
+            "- status: State<Open, Closed>\n\n",
+            "Action: Close ticket.\n\n",
+            "When close ticket happens:\n\n",
+            "- the system changes the ticket status to Closed\n",
+            "- the system records a trace event named TicketClosed\n",
+        ),
+    )
+    .unwrap();
+
+    // The stub is internally consistent, so the isolated checker accepts it.
+    let check = Command::new(binary)
+        .args(["ail-check", stub.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(String::from_utf8_lossy(&check.stdout).contains("ail diagnostics: none"));
+
+    // Compared against what it replaces, it is a large silent deletion.
+    let output = Command::new(binary)
+        .args([
+            "ail-equivalence",
+            stub.to_str().unwrap(),
+            "--baseline",
+            &baseline,
+        ])
+        .output()
+        .unwrap();
+    assert!(!output.status.success(), "stub must not preserve baseline");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("preserves-baseline false"));
+    assert!(
+        stdout.contains("protects_secret"),
+        "dropped secret protection must be reported\n{stdout}"
+    );
+    assert!(
+        stdout.contains("guarantees Action closeticket"),
+        "dropped guarantees must be reported\n{stdout}"
+    );
+    assert!(
+        stdout.contains("handles_failure"),
+        "dropped failure handling must be reported\n{stdout}"
+    );
+    fs::remove_dir_all(&workspace).ok();
+}

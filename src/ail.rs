@@ -20757,3 +20757,185 @@ fn append_words(target: &mut String, fragment: &str) {
     }
     target.push_str(fragment);
 }
+
+/// A structural difference between two checked AIL-Core graphs.
+///
+/// This is the primitive behind two guarantees AIL depends on.
+///
+/// The first is edit safety. `check_ail_core` validates an artifact in
+/// isolation, so a model that replaces a package with a smaller one that
+/// happens to be internally consistent is reported clean. Comparing a candidate
+/// against the artifact it replaces is what detects silently dropped things,
+/// fields, actions, failures, guarantees, and secrets.
+///
+/// The second is round-trip equivalence, the property that defines AIL: an
+/// agent given only the IR must be able to reconstruct specs that mean the same
+/// thing as the specs the IR came from. That claim is only worth as much as the
+/// comparison behind it, and a text diff cannot make it — English phrasing is
+/// expected to vary while meaning must not.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct AilSemanticDiff {
+    /// Declared in the baseline, absent from the candidate.
+    pub removed: Vec<String>,
+    /// Present in the candidate, absent from the baseline.
+    pub added: Vec<String>,
+    /// Present in both under the same name, but with a different type.
+    pub retyped: Vec<String>,
+}
+
+impl AilSemanticDiff {
+    pub fn is_equivalent(&self) -> bool {
+        self.removed.is_empty() && self.added.is_empty() && self.retyped.is_empty()
+    }
+
+    /// True when the candidate preserves everything the baseline declared.
+    ///
+    /// Additions are permitted: a spec amendment is expected to add. Removals
+    /// and retypings are not, because neither can be the accidental result of
+    /// answering a request to change something.
+    pub fn preserves_baseline(&self) -> bool {
+        self.removed.is_empty() && self.retyped.is_empty()
+    }
+}
+
+/// Node kinds that carry no meaning of their own.
+///
+/// Provenance records which human or agent asserted a node. It is essential for
+/// review and irrelevant to whether two graphs mean the same thing, so it is
+/// excluded from every comparison.
+fn is_semantic_node_kind(kind: &str) -> bool {
+    kind != "Provenance"
+}
+
+/// Compare two graphs for meaning rather than for text.
+///
+/// Names are normalized so that phrasing differences an English projection is
+/// expected to introduce do not register as semantic change.
+fn normalize_semantic_name(text: &str) -> String {
+    let lowered = text.trim().to_ascii_lowercase();
+    let collapsed = lowered.split_whitespace().collect::<Vec<_>>().join(" ");
+    collapsed.trim_end_matches('.').to_string()
+}
+
+fn semantic_node_signatures(core: &AilCore) -> BTreeMap<String, String> {
+    let mut signatures = BTreeMap::new();
+    for node in core
+        .graph
+        .nodes
+        .iter()
+        .filter(|node| is_semantic_node_kind(&node.kind))
+    {
+        let key = format!("{} {}", node.kind, normalize_semantic_name(&node.name));
+        let type_name = node.type_name.clone().unwrap_or_default();
+        signatures.insert(key, normalize_semantic_name(&type_name));
+    }
+    signatures
+}
+
+fn semantic_edge_signatures(core: &AilCore) -> BTreeSet<String> {
+    let node_by_id = core
+        .graph
+        .nodes
+        .iter()
+        .map(|node| (node.id.clone(), node))
+        .collect::<BTreeMap<_, _>>();
+    let mut signatures = BTreeSet::new();
+    for edge in &core.graph.edges {
+        if edge.kind == "has_provenance" {
+            continue;
+        }
+        let Some(source) = node_by_id.get(&edge.source) else {
+            continue;
+        };
+        let Some(target) = node_by_id.get(&edge.target) else {
+            continue;
+        };
+        if !is_semantic_node_kind(&source.kind) || !is_semantic_node_kind(&target.kind) {
+            continue;
+        }
+        signatures.insert(format!(
+            "{} {} {} -> {} {}",
+            edge.kind,
+            source.kind,
+            normalize_semantic_name(&source.name),
+            target.kind,
+            normalize_semantic_name(&target.name)
+        ));
+    }
+    signatures
+}
+
+/// Compare a candidate AIL-Core against a baseline, structurally.
+pub fn compare_ail_core_semantics(baseline: &AilCore, candidate: &AilCore) -> AilSemanticDiff {
+    let mut diff = AilSemanticDiff::default();
+
+    let baseline_nodes = semantic_node_signatures(baseline);
+    let candidate_nodes = semantic_node_signatures(candidate);
+    for (key, baseline_type) in &baseline_nodes {
+        match candidate_nodes.get(key) {
+            None => diff.removed.push(format!("node {key}")),
+            Some(candidate_type) if candidate_type != baseline_type => {
+                diff.retyped.push(format!(
+                    "node {key}: {} -> {}",
+                    if baseline_type.is_empty() {
+                        "(untyped)"
+                    } else {
+                        baseline_type
+                    },
+                    if candidate_type.is_empty() {
+                        "(untyped)"
+                    } else {
+                        candidate_type
+                    }
+                ));
+            }
+            Some(_) => {}
+        }
+    }
+    for key in candidate_nodes.keys() {
+        if !baseline_nodes.contains_key(key) {
+            diff.added.push(format!("node {key}"));
+        }
+    }
+
+    let baseline_edges = semantic_edge_signatures(baseline);
+    let candidate_edges = semantic_edge_signatures(candidate);
+    for edge in baseline_edges.difference(&candidate_edges) {
+        diff.removed.push(format!("edge {edge}"));
+    }
+    for edge in candidate_edges.difference(&baseline_edges) {
+        diff.added.push(format!("edge {edge}"));
+    }
+
+    diff.removed.sort();
+    diff.added.sort();
+    diff.retyped.sort();
+    diff
+}
+
+/// Render a semantic diff as a deterministic, reviewable report.
+pub fn render_ail_semantic_diff(diff: &AilSemanticDiff) -> String {
+    let mut report = String::new();
+    report.push_str("kind: AIL-Semantic-Diff\n");
+    report.push_str(&format!("removed-count {}\n", diff.removed.len()));
+    report.push_str(&format!("added-count {}\n", diff.added.len()));
+    report.push_str(&format!("retyped-count {}\n", diff.retyped.len()));
+    report.push_str(&format!(
+        "preserves-baseline {}\n",
+        diff.preserves_baseline()
+    ));
+    report.push_str(&format!(
+        "semantically-equivalent {}\n",
+        diff.is_equivalent()
+    ));
+    for entry in &diff.removed {
+        report.push_str(&format!("removed {entry}\n"));
+    }
+    for entry in &diff.retyped {
+        report.push_str(&format!("retyped {entry}\n"));
+    }
+    for entry in &diff.added {
+        report.push_str(&format!("added {entry}\n"));
+    }
+    report
+}

@@ -6,18 +6,18 @@ use std::process::{Command, ExitCode};
 use ail::ail::{
     AilBytecodeProgram, AilPackage, AilPackageMetadata, ail_core_hash, ail_document_from_core,
     apply_ail_core_patch_text, apply_ail_flow_edit_text, apply_ail_patch, check_ail_core,
-    check_ail_requirements, compile_ail_bytecode_native_elf, compile_ail_core_bytecode,
-    compile_ail_core_native_elf, draft_ail_interview, draft_ail_requirements_response,
-    draft_ail_requirements_response_recorded_with_max_tokens, draft_ail_spec,
-    draft_ail_spec_from_requirements, draft_ail_spec_from_requirements_recorded_with_max_tokens,
-    elaborate_ail_core, load_ail_package_dir, parse_ail_bytecode, parse_ail_core_text,
-    parse_ail_package_document, parse_ail_package_spec_text, parse_ail_patch_text,
-    parse_ail_spec_text, render_ail_bytecode, render_ail_core, render_ail_flow_view,
-    render_ail_interview_questions_artifact, render_ail_package_dependency_report,
-    render_ail_runtime_state_lines, render_ail_spec, render_ail_spec_from_core,
-    repair_ail_requirements_from_diagnostics, repair_ail_spec_from_diagnostics,
-    run_ail_bytecode_action, run_ail_compiler_pass_on_core, run_ail_conformance,
-    verify_ail_bytecode,
+    check_ail_requirements, compare_ail_core_semantics, compile_ail_bytecode_native_elf,
+    compile_ail_core_bytecode, compile_ail_core_native_elf, draft_ail_interview,
+    draft_ail_requirements_response, draft_ail_requirements_response_recorded_with_max_tokens,
+    draft_ail_spec, draft_ail_spec_from_requirements,
+    draft_ail_spec_from_requirements_recorded_with_max_tokens, elaborate_ail_core,
+    load_ail_package_dir, parse_ail_bytecode, parse_ail_core_text, parse_ail_package_document,
+    parse_ail_package_spec_text, parse_ail_patch_text, parse_ail_spec_text, render_ail_bytecode,
+    render_ail_core, render_ail_flow_view, render_ail_interview_questions_artifact,
+    render_ail_package_dependency_report, render_ail_runtime_state_lines, render_ail_semantic_diff,
+    render_ail_spec, render_ail_spec_from_core, repair_ail_requirements_from_diagnostics,
+    repair_ail_spec_from_diagnostics, run_ail_bytecode_action, run_ail_compiler_pass_on_core,
+    run_ail_conformance, verify_ail_bytecode,
 };
 use ail::core_model::json_string;
 
@@ -41,6 +41,7 @@ struct CliOptions {
     ail_spec_file: Option<String>,
     ail_story_file: Option<String>,
     ail_core_file: Option<String>,
+    ail_baseline_file: Option<String>,
     ail_compile_target: Option<String>,
     ail_compile_out: Option<String>,
     ail_compile_all_actions: bool,
@@ -144,6 +145,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
             | "ail-prompt-corpus"
             | "ail-patch"
             | "ail-flow-edit"
+            | "ail-equivalence"
     ) {
         return run_ail_command(command, path, &cli_options);
     }
@@ -151,7 +153,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
 }
 
 fn usage() -> String {
-    "usage: ail <ail-check|ail-core|ail-flow|ail-flow-edit|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-interview|ail-requirements|ail-spec|ail-draft|ail-build|ail-story|ail-pass|ail-bootstrap|ail-agent-contracts|ail-v03-roadmap|ail-prompt-corpus|ail-examples|ail-patch> <path> [patch|target-package] [--action name] [--prompt text] [--story-file path] [--interview-file path] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--base-model name] [--target-model name] [--out path] [--all-actions] [--diagnostics-json] [--artifact-dir path] [--llm-endpoint url] [--max-tokens count] [--release-evidence] [key=value ...]\nsaved-core usage: ail <ail-spec|ail-lower|ail-compile|ail-run|ail-build> --core-file <checked-core> [--action name] [--target target] [--out path] [--artifact-dir path] [key=value ...]\nwasm-contract usage: ail ail-compile <package-or-artifact.ailbc.json> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir> OR ail ail-compile --core-file <checked-core> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir>\ncore-patch usage: ail ail-patch --core-file <checked-core> <ail-core.patch.json>\nflow-edit usage: ail ail-flow-edit --core-file <checked-core> <ail-flow.edit.json>\nail-pass usage: ail ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR ail ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]\nail-bootstrap usage: ail ail-bootstrap <toolchain-agent-package> --pass <compiler-pass-package> [--pass <compiler-pass-package> ...] --agent <toolchain-agent-package> --target linux-x86_64-elf --artifact-dir <dir>\nail-story usage: ail ail-story <package> --story-file <story.md> [--artifact-dir <dir>] [--llm-endpoint <url>] [--max-tokens count] [--agent <agent-package-or-bytecode>] [--target <target> --action <ActionName> --out <path>]; wasm32-unknown-sandbox-wasm writes target-contract/ evidence under --artifact-dir and copies the contract report to --out when provided\nail-agent-contracts usage: ail ail-agent-contracts examples/agents\nail-v03-roadmap usage: ail ail-v03-roadmap examples --artifact-dir <dir> [--release-evidence]\nail-prompt-corpus usage: ail ail-prompt-corpus <corpus-file-or-dir> --artifact-dir <dir>\nail-examples usage: ail ail-examples examples --artifact-dir <dir> [--release-evidence]\ncompatibility alias: ail ail-e2e-corpus <examples-dir> --artifact-dir <dir> [--release-evidence]"
+    "usage: ail <ail-check|ail-core|ail-flow|ail-flow-edit|ail-equivalence|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-interview|ail-requirements|ail-spec|ail-draft|ail-build|ail-story|ail-pass|ail-bootstrap|ail-agent-contracts|ail-v03-roadmap|ail-prompt-corpus|ail-examples|ail-patch> <path> [patch|target-package] [--action name] [--prompt text] [--story-file path] [--interview-file path] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--base-model name] [--target-model name] [--out path] [--all-actions] [--diagnostics-json] [--artifact-dir path] [--llm-endpoint url] [--max-tokens count] [--release-evidence] [key=value ...]\nsaved-core usage: ail <ail-spec|ail-lower|ail-compile|ail-run|ail-build> --core-file <checked-core> [--action name] [--target target] [--out path] [--artifact-dir path] [key=value ...]\nwasm-contract usage: ail ail-compile <package-or-artifact.ailbc.json> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir> OR ail ail-compile --core-file <checked-core> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir>\ncore-patch usage: ail ail-patch --core-file <checked-core> <ail-core.patch.json>\nflow-edit usage: ail ail-flow-edit --core-file <checked-core> <ail-flow.edit.json>\nail-pass usage: ail ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR ail ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]\nail-bootstrap usage: ail ail-bootstrap <toolchain-agent-package> --pass <compiler-pass-package> [--pass <compiler-pass-package> ...] --agent <toolchain-agent-package> --target linux-x86_64-elf --artifact-dir <dir>\nail-story usage: ail ail-story <package> --story-file <story.md> [--artifact-dir <dir>] [--llm-endpoint <url>] [--max-tokens count] [--agent <agent-package-or-bytecode>] [--target <target> --action <ActionName> --out <path>]; wasm32-unknown-sandbox-wasm writes target-contract/ evidence under --artifact-dir and copies the contract report to --out when provided\nail-agent-contracts usage: ail ail-agent-contracts examples/agents\nail-v03-roadmap usage: ail ail-v03-roadmap examples --artifact-dir <dir> [--release-evidence]\nail-prompt-corpus usage: ail ail-prompt-corpus <corpus-file-or-dir> --artifact-dir <dir>\nail-examples usage: ail ail-examples examples --artifact-dir <dir> [--release-evidence]\ncompatibility alias: ail ail-e2e-corpus <examples-dir> --artifact-dir <dir> [--release-evidence]\nail-equivalence usage: ail ail-equivalence <candidate-package> --baseline <baseline-package-or-core> OR ail ail-equivalence --core-file <candidate-core> --baseline <baseline-package-or-core>"
         .to_string()
 }
 
@@ -17501,6 +17503,29 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
                 Ok(1)
             }
         }
+        "ail-equivalence" => {
+            if !diagnostics.is_empty() {
+                for diagnostic in diagnostics {
+                    println!("{diagnostic}");
+                }
+                return Ok(1);
+            }
+            let Some(baseline_path) = cli_options.ail_baseline_file.as_deref() else {
+                return Err("ail-equivalence requires --baseline <package-or-core>".to_string());
+            };
+            let baseline = load_ail_core_for_equivalence(baseline_path)?;
+            let diff = compare_ail_core_semantics(&baseline, &core);
+            print!("{}", render_ail_semantic_diff(&diff));
+            // Removals and retypings are the failure. Additions are not: a spec
+            // amendment is expected to add, and neither a removal nor a retype
+            // can be the accidental byproduct of answering a request to change
+            // something.
+            if diff.preserves_baseline() {
+                Ok(0)
+            } else {
+                Ok(1)
+            }
+        }
         "ail-core" => {
             if !diagnostics.is_empty() {
                 for diagnostic in diagnostics {
@@ -17620,6 +17645,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
     let mut ail_spec_file = None;
     let mut ail_story_file = None;
     let mut ail_core_file = None;
+    let mut ail_baseline_file: Option<String> = None;
     let mut ail_compile_target = None;
     let mut ail_compile_out = None;
     let mut ail_compile_all_actions = false;
@@ -17736,6 +17762,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
                     | "ail-spec"
                     | "ail-patch"
                     | "ail-flow-edit"
+                    | "ail-equivalence"
             ) {
                 return Err(usage());
             }
@@ -17743,6 +17770,17 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
                 return Err("missing value for --core-file".to_string());
             };
             ail_core_file = Some(path.clone());
+            index += 2;
+            continue;
+        }
+        if arg == "--baseline" {
+            if command != "ail-equivalence" {
+                return Err(usage());
+            }
+            let Some(path) = args.get(index + 1) else {
+                return Err("missing value for --baseline".to_string());
+            };
+            ail_baseline_file = Some(path.clone());
             index += 2;
             continue;
         }
@@ -18073,6 +18111,7 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         ail_spec_file,
         ail_story_file,
         ail_core_file,
+        ail_baseline_file,
         ail_compile_target,
         ail_compile_out,
         ail_compile_all_actions,
@@ -18093,4 +18132,30 @@ fn insert_runtime_state_arg(
     }
     runtime_state.insert(key.to_string(), value.to_string());
     Ok(())
+}
+
+/// Load a baseline AIL-Core from either a package directory or a saved core file.
+///
+/// Accepting both matters in practice: the edit-safety gate compares against the
+/// package on disk, while the round-trip benchmark compares against a checked
+/// core artifact it captured earlier.
+fn load_ail_core_for_equivalence(path: &str) -> Result<ail::ail::AilCore, String> {
+    let candidate = std::path::Path::new(path);
+    if candidate.is_dir() {
+        let package = load_ail_package_dir(candidate)
+            .map_err(|error| format!("failed to load baseline package {path}: {error}"))?;
+        let document = parse_ail_package_document(&package)?;
+        let core = elaborate_ail_core(&package, &document);
+        let diagnostics = check_ail_core(&core);
+        if !diagnostics.is_empty() {
+            return Err(format!(
+                "baseline package {path} does not check clean:\n{}",
+                diagnostics.join("\n")
+            ));
+        }
+        return Ok(core);
+    }
+    let text = std::fs::read_to_string(candidate)
+        .map_err(|error| format!("failed to read baseline {path}: {error}"))?;
+    parse_ail_core_text(&text).map_err(|error| format!("failed to parse baseline {path}: {error}"))
 }
