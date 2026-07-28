@@ -2558,6 +2558,22 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
                     ..AilAction::default()
                 });
             current_action = Some(name);
+            // A UI section cursor left open here would capture this action's
+            // bullets: the route/form/dashboard/workflow handlers are consulted
+            // before the action handler, so an `Action:` block following a
+            // `Route:` block silently lost every bullet, including its traces.
+            // Nothing reported it, because the bullets were consumed rather
+            // than dropped, so AIL-PARSE-001 never fired.
+            current_route = None;
+            current_route_section = None;
+            current_form = None;
+            current_form_section = None;
+            current_dashboard = None;
+            current_dashboard_section = None;
+            current_workflow = None;
+            current_workflow_section = None;
+            current_external_binding = None;
+            current_external_binding_section = None;
             current_thing = None;
             current_tool = None;
             current_tool_section = None;
@@ -2594,6 +2610,22 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
                 action.trigger = trigger;
             }
             current_action = Some(action_name);
+            // A UI section cursor left open here would capture this action's
+            // bullets: the route/form/dashboard/workflow handlers are consulted
+            // before the action handler, so an `Action:` block following a
+            // `Route:` block silently lost every bullet, including its traces.
+            // Nothing reported it, because the bullets were consumed rather
+            // than dropped, so AIL-PARSE-001 never fired.
+            current_route = None;
+            current_route_section = None;
+            current_form = None;
+            current_form_section = None;
+            current_dashboard = None;
+            current_dashboard_section = None;
+            current_workflow = None;
+            current_workflow_section = None;
+            current_external_binding = None;
+            current_external_binding_section = None;
             current_thing = None;
             current_tool = None;
             current_tool_section = None;
@@ -2900,7 +2932,21 @@ pub fn elaborate_ail_core(package: &AilPackage, document: &AilDocument) -> AilCo
         let form_node = graph.add_node("Form", &form.name, None, attr(&[("label", &form.label)]));
         attach_provenance(&mut graph, &form_node, &form.provenance);
         if let Some(action) = &form.action {
-            let action_node = graph.add_node("Action", action, None, BTreeMap::new());
+            // Forms elaborate before actions, and add_node keeps the first node
+            // for a given (kind, name). Materializing the target action with no
+            // attributes here would therefore win over its own declaration, and
+            // the action would lose its label and trigger: the rendered spec
+            // emitted "Action: CreateTicket." and "When :", which no longer
+            // reparses, so the round trip lost the action's traces entirely.
+            // Carry the declared attributes so the node is complete either way.
+            let declared = document
+                .actions
+                .values()
+                .find(|declared| &declared.name == action);
+            let attributes = declared
+                .map(|declared| attr(&[("label", &declared.label), ("trigger", &declared.trigger)]))
+                .unwrap_or_default();
+            let action_node = graph.add_node("Action", action, None, attributes);
             graph.add_edge(
                 "calls",
                 &form_node,
