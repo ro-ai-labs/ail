@@ -122,7 +122,11 @@ def run(command: list[str], cwd: Path | None = None) -> tuple[int, str]:
 def discover_rungs() -> list[Path]:
     if not BENCH.is_dir():
         return []
-    return sorted(p for p in BENCH.iterdir() if p.is_dir() and re.match(r"^R\d{3}-", p.name))
+    # The optional letter admits decomposed sub-rungs (R001a, R001b, ...).
+    # Without it those directories matched nothing and were silently skipped:
+    # they did not fail, they simply never appeared, which is the worst possible
+    # behaviour for a score that is supposed to be falsifiable.
+    return sorted(p for p in BENCH.iterdir() if p.is_dir() and re.match(r"^R\d{3}[a-z]?-", p.name))
 
 
 def load_cases(rung_dir: Path) -> list[tuple[str, list[str]]]:
