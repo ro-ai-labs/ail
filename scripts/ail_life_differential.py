@@ -132,9 +132,9 @@ def frozen():
 def invoke(command,input=b'',timeout=60):
     assert digest(DRIVER.read_bytes())==DRIVER_SHA, 'active driver changed'
     command=list(map(str,command));index=len(RECORDS);start=time.monotonic()
-    files={str(Path(s).resolve()):digest(Path(s).read_bytes()) for s in command if len(s)<4096 and Path(s).is_file()}
+    files={str(Path(s).resolve()):digest(Path(s).read_bytes()) for s in command if len(s)<4096 and Path(s).is_absolute() and Path(s).is_file()}
     for s in command:
-        if len(s)<4096 and Path(s).is_dir():
+        if len(s)<4096 and Path(s).is_absolute() and Path(s).is_dir():
             files.update({str(p.resolve()):digest(p.read_bytes()) for p in Path(s).rglob('*') if p.is_file()})
     record={'command':command,'timeout_seconds':timeout,'stdin_bytes':len(input),'stdin_sha256':digest(input),'driver':str(DRIVER),'driver_sha256':DRIVER_SHA,'command_files':files,'startup_identity_sha256':digest((ROOT/'identity-before.json').read_bytes())}
     RECORDS.append(record);(ROOT/'io'/f'{index:05d}.stdin').write_bytes(input)
@@ -438,9 +438,50 @@ def inherit_preflight(path,deps):
     return inherited,completed
 
 
+def existing_routes(root,package,stem,actions):
+    """Use exact already-built artifacts; do not reconstruct or rewrite them."""
+    routes=[]
+    frontends=[('source',[package]),('core',['--core-file',root/(stem+'.core')]),('rendered',[root/(stem+'-rendered')])]
+    for name,arguments in frontends:
+        forms=[('direct',[AIL,'ail-run',*arguments]),('ste',[AIL,'ail-vm',root/f'{stem}-{name}.ail-ste'])]
+        if name=='source':forms.append(('bytecode',[AIL,'ail-vm',root/f'{stem}-{name}.ailbc.json']))
+        for form,vm in forms:
+            binaries={action:root/f'{stem}-{name}-{form}-{action}.elf' for action in actions}
+            assert all(p.is_file() for p in binaries.values())
+            routes += [(f'{stem}/{name}/{form}/VM',vm,binaries,False),(f'{stem}/{name}/{form}/native',[],binaries,True)]
+    return routes
+
+
+def inherit_matrix(path,cases,deps):
+    path=path.resolve();identity=json.loads((path/'identity-before.json').read_text());failure=json.loads((path/'failure.json').read_text())
+    excluded={'scripts/ail_life_differential.py'}
+    assert {k:v for k,v in identity['dependencies'].items() if k not in excluded}=={k:v for k,v in deps.items() if k not in excluded},'matrix semantic dependencies changed'
+    assert identity['oracle']==FROZEN_ORACLE and identity['compiler']==COMPILER_SHA256
+    assert failure['exception']=="OSError(36, 'File name too long')" and failure['counts']=={'ir_inspections':6,'exact_results':36} and failure['commands']==122
+    assert digest(Path(identity['driver']).read_bytes())==identity['driver_sha256'] and Path(identity['driver']).read_bytes()==(path/'executed-driver.py').read_bytes()
+    records=json.loads((path/'commands.json').read_text());assert len(records)==122
+    completed=[]
+    for number,(label,text,wanted) in enumerate(cases[:36],len(records)-36):
+        record=records[number];expected=[str(AIL),'ail-run',str(PACKAGE),'--action','Analyze','data.request='+text]
+        assert record['command']==expected and record['status']==0 and record['timeout_seconds']==60
+        stdout=(path/'io'/f'{number:05d}.stdout').read_bytes();stderr=(path/'io'/f'{number:05d}.stderr').read_bytes()
+        assert digest(stdout)==record['stdout_sha256'] and digest(stderr)==record['stderr_sha256'] and stderr==b''
+        line=b'out.result=hex:'+wanted.hex().encode()+b'\n'
+        assert [l for l in stdout.splitlines(keepends=True) if l.startswith(b'out.result=')]==[line] and stdout.startswith(b'ail-run succeeded\n') and stdout.endswith(b'trace Simulated\n')
+        completed.append({'route':'app/source/direct/VM','case':label,'command_index':number,'expected_hex':wanted.hex(),'stdout_sha256':digest(stdout),'stderr_sha256':digest(stderr)})
+    files={str(p.resolve()):digest(p.read_bytes()) for p in path.rglob('*') if p.is_file()}
+    (ROOT/'reused-matrix.json').write_text(json.dumps({'path':str(path),'driver_sha256':identity['driver_sha256'],'inherited_results':completed,'source_artifact_files':files,'reason':'absolute path discovery correction only; successful tuples and artifacts retained without replay'},indent=2)+'\n')
+    COUNTS['inherited_exact_results']+=len(completed)
+    routes=existing_routes(path,PACKAGE,'app',['Analyze','Run']);probes=existing_routes(path,path/'direct-probe','probe',ACTIONS)
+    # Reinspect the six immutable ordinary lowered programs, without rebuilding.
+    for stem in ['app','probe']:
+        for name in ['source','core','rendered']:inspect(json.loads((path/f'{stem}-{name}.ailbc.json').read_text()))
+    return routes,probes,len(completed),files
+
+
 def main():
     global ROOT,ORACLE,DRIVER_SHA
-    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--artifact-dir',required=True,type=Path);parser.add_argument('--preflight-only',action='store_true');parser.add_argument('--preflight-evidence',type=Path);parser.add_argument('--worker',action='store_true',help=argparse.SUPPRESS);parser.add_argument('--reservation-fd',type=int,help=argparse.SUPPRESS);args=parser.parse_args()
+    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--artifact-dir',required=True,type=Path);parser.add_argument('--preflight-only',action='store_true');parser.add_argument('--preflight-evidence',type=Path);parser.add_argument('--matrix-evidence',type=Path);parser.add_argument('--worker',action='store_true',help=argparse.SUPPRESS);parser.add_argument('--reservation-fd',type=int,help=argparse.SUPPRESS);args=parser.parse_args()
     assert args.reservation_fd is not None,'worker requires supervisor reservation'
     ROOT=args.artifact_dir.resolve();reserved=os.fstat(args.reservation_fd);actual=ROOT.stat();assert (reserved.st_dev,reserved.st_ino)==(actual.st_dev,actual.st_ino)
     assert not any(ROOT.iterdir());(ROOT/'io').mkdir();assert ctypes.CDLL(None).prctl(36,1,0,0,0)==0
@@ -477,18 +518,23 @@ def main():
                 for v in preflight:direct_check(run(route,v[1],v[2]),route,v,True)
             limits(early);mutations(ROOT);transport_limits(ROOT,probe)
             (ROOT/'preflight.json').write_text(json.dumps({'counts':dict(COUNTS),'commands':len(RECORDS),'direct_report_labels':[v[0] for v in preflight]},indent=2)+'\n')
-        routes=[];probes=[]
+        routes=[];probes=[];matrix_skip=0;matrix_files={}
         if not args.preflight_only:
-            routes=build(ROOT,PACKAGE,'app',['Analyze','Run']);probes=build(ROOT,probe,'probe',ACTIONS);assert len(routes)==len(probes)==14
-            assert (ROOT/'app-source.ail-ste').read_bytes()==(REPO/'examples/ste/conway-life.ail-ste').read_bytes(),'source STE must execute exact checked export bytes'
+            if args.matrix_evidence:routes,probes,matrix_skip,matrix_files=inherit_matrix(args.matrix_evidence,cases,deps)
+            else:routes=build(ROOT,PACKAGE,'app',['Analyze','Run']);probes=build(ROOT,probe,'probe',ACTIONS)
+            assert len(routes)==len(probes)==14
+            assert ((args.matrix_evidence or ROOT)/'app-source.ail-ste').read_bytes()==(REPO/'examples/ste/conway-life.ail-ste').read_bytes(),'source STE must execute exact checked export bytes'
             (ROOT/'expectations.json').write_text(json.dumps({'requests':[(n,w.hex()) for n,_,w in cases],'direct':[(n,a,args,lines.hex(),recovery) for n,a,args,lines,recovery in vectors]},ensure_ascii=False,indent=2)+'\n')
-            for route in routes:
-                for label,text,wanted in cases:selected(run(route,'Analyze',['data.request='+text]),wanted,route)
+            for route_number,route in enumerate(routes):
+                for number,(label,text,wanted) in enumerate(cases):
+                    if route_number==0 and number<matrix_skip:continue
+                    selected(run(route,'Analyze',['data.request='+text]),wanted,route)
                 for label,text,wanted in stdin_cases(cases):exact(run(route,'Run',input=text,stdio=True),wanted,(route[0],label))
                 print('app matrix',route[0],len(cases),len(stdin_cases(cases)),flush=True)
             for route in probes:
                 for v in vectors:direct_check(run(route,v[1],v[2]),route,v)
                 print('direct matrix',route[0],len(vectors),flush=True)
+        assert all(digest(Path(p).read_bytes())==v for p,v in matrix_files.items()),'prior matrix artifacts changed'
         assert all(digest(Path(p).read_bytes())==v for p,v in inherited.items()),'prior preflight evidence changed'
         assert frozen()==before and dependencies()==deps and digest(AIL.read_bytes())==COMPILER_SHA256 and digest(DRIVER.read_bytes())==DRIVER_SHA
         summary={'status':'PASS','counts':dict(COUNTS),'app_routes':len(routes),'direct_routes':len(probes),'direct_vectors':len(vectors),'request_cases':len(cases),'commands':len(RECORDS),'seconds':time.monotonic()-start,'fingerprint':FINGERPRINT,'driver_sha256':DRIVER_SHA}
@@ -502,7 +548,7 @@ def main():
 if __name__=='__main__':
     if '--worker' in sys.argv or '--help' in sys.argv or '-h' in sys.argv: main()
     else:
-        supervisor=argparse.ArgumentParser(description=__doc__);supervisor.add_argument('--artifact-dir',required=True,type=Path);supervisor.add_argument('--preflight-only',action='store_true');supervisor.add_argument('--preflight-evidence',type=Path);args=supervisor.parse_args()
+        supervisor=argparse.ArgumentParser(description=__doc__);supervisor.add_argument('--artifact-dir',required=True,type=Path);supervisor.add_argument('--preflight-only',action='store_true');supervisor.add_argument('--preflight-evidence',type=Path);supervisor.add_argument('--matrix-evidence',type=Path);args=supervisor.parse_args()
         destination=args.artifact_dir.resolve();descriptor=reserve_destination(destination)
         try:
             assert ctypes.CDLL(None).prctl(36,1,0,0,0)==0
