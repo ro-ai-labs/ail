@@ -243,7 +243,7 @@ enabled.
 
 ## Examples
 
-AIL packages live under [examples](examples). The current tree contains 33 package directories
+AIL packages live under [examples](examples). The current tree contains 34 package directories
 with the `.ail` suffix, plus the newer computation examples and the 128-entry replay catalog in
 [`examples/examples.md`](examples/examples.md). Current release replay evidence
 reports `checker-result-count accepted 119` and `checker-result-count rejected 9`.
@@ -260,6 +260,7 @@ Application and workflow packages:
 - `ail_std_expression.ail`
 - `ail_std_json_pretty.ail`
 - `ail_std_lru.ail`
+- `ail_std_life.ail`
 - `ail_std_rle.ail`
 - `ail_std_runtime.ail`
 - `ail_std_security.ail`
@@ -331,3 +332,6 @@ See its [reference](docs/ail/63-json-pretty.md) for the pure API and Bytes trans
 
 The [LRU cache](examples/lru-cache/README.md) exposes reusable immutable state and
 one-request stdin simulation; see the [API reference](docs/ail/64-lru-cache.md).
+
+The [Conway Life application](examples/conway-life/README.md) exposes immutable
+finite-grid APIs and bounded raw stdin; see the [API reference](docs/ail/65-conway-life.md).

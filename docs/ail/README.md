@@ -230,3 +230,5 @@ Use `31-v03-learning-and-authoring-gate.md` before claiming AIL v0.3 complete.
 - [JSON pretty printing](63-json-pretty.md): pure lossless layout, request errors, Bytes transport and bounded raw stdin.
 
 - [LRU cache](64-lru-cache.md): immutable pure cache state, exact events and bounded raw stdin.
+
+- [Conway Life](65-conway-life.md): immutable finite grids, simultaneous B3/S23 and bounded raw stdin.

@@ -276,3 +276,19 @@ and pure API. Life Task 3 and the full 24-rung milestone remain unfinished. Its
 missing Run RED has been captured with no Task 3 product edits. The two Task 2
 process exceptions remain recorded above. Existing benchmark and review evidence
 is retained locally; temporary evidence and build products are outside Git.
+
+
+### Task 2 learning-guide integration correction
+
+Task 3 exposed a missing learning-guide structure in the accepted library README.
+The original owner corrected only that README under the seven established
+headings. The existing exact learning-guide test now passes; its actual prior
+failure and complete new bounded test evidence remain retained. Scoped independent
+review approved the correction. The library implementation, package metadata,
+benchmark and oracle are unchanged, so Life behavior gates were not replayed.
+This new README identity replaces only the prior README entry in the frozen
+Task 3 handoff. The two historical Task 2 process exceptions remain unchanged.
+
+Fix report: .superpowers/sdd/2026-10-12-conway-life/task-2-fix1-report.md.
+Fix review: /tmp/ail-life-task2-fix1-review.md.
+Accepted README SHA256: ec764c7df772afb861e05448c69ec3fd084203a5836d67984b4132185fd56564.

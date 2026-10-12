@@ -79,3 +79,5 @@ first-version and next-version completion gates.
 - [JSON pretty printing](ail/63-json-pretty.md): pure lossless layout, request errors, Bytes transport and bounded raw stdin.
 
 - [LRU cache](ail/64-lru-cache.md): immutable pure cache state, exact events and bounded raw stdin.
+
+- [Conway Life](ail/65-conway-life.md): immutable finite grids, simultaneous B3/S23 and bounded raw stdin.

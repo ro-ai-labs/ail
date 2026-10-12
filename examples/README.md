@@ -44,7 +44,7 @@ The current ladder is:
 
 The catalog is the authoritative replay manifest, but package-local READMEs are
 the teaching path through repeated example families and support modules.
-All 33 package directories include a README.md guide (counting the `.ail` suffix
+All 34 package directories include a README.md guide (counting the `.ail` suffix
 packages; newer computation examples are also documented below).
 `support-packages.md` is the support-only manifest: any top-level
 `examples/*.ail` package that is not counted in `examples.md` must be declared
@@ -647,10 +647,14 @@ and bounded raw stdin. Its [STE export](ste/word-frequency.ail-ste) includes the
 [JSON pretty printing](json-pretty/README.md) imports the pure `ail.std.json.pretty`
 library for lossless duplicate/order/number-token layout and bounded raw stdin.
 Its [STE export](ste/json-pretty.ail-ste) includes the library. This support-only
-library is included in the 33 suffix packages; the historical catalog stays 128.
+library is included in the 34 suffix packages; the historical catalog stays 128.
 
 - `ail_std_json_pretty.ail/README.md`: pure lossless JSON render/renderText/renderRequest, ordered duplicate pairs and opaque number tokens with ordinary runtime limits.
 
 [LRU cache](lru-cache/README.md) imports the pure [LRU library](ail_std_lru.ail/README.md).
 Its [STE export](ste/lru-cache.ail-ste) includes the library. The support-only
 library brings the suffix package count to 33; the historical catalog stays 128.
+
+[Conway Life](conway-life/README.md) imports the pure [Life library](ail_std_life.ail/README.md).
+Its [STE export](ste/conway-life.ail-ste) includes the library. The support-only
+library brings the suffix package count to 34; the historical catalog stays 128.

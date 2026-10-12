@@ -84,3 +84,8 @@ reason: Pure AIL lossless JSON layout preserves ordered duplicate pairs and numb
 role: support-only
 used-by: docs:examples/lru-cache/README.md, test:scripts/ail_lru_differential.py, test:bench/R024-lru-cache
 reason: Pure AIL immutable least-recently-used cache APIs are imported by a bounded raw-stdin request tool and independently checked on VM/native for capability rung R024.
+
+## Support Package: examples/ail_std_life.ail
+role: support-only
+used-by: docs:examples/conway-life/README.md, test:scripts/ail_life_differential.py, test:bench/R025-conway-life
+reason: Pure AIL immutable finite-grid Life APIs are imported by a bounded raw-stdin request tool and independently checked on VM/native for capability rung R025.
