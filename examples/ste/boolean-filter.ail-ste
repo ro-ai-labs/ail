@@ -1,0 +1,118 @@
+AIL-STE 1
+Metadata {"capability_grants":[],"external_bindings":[],"failures":[],"package":"boolean-filter","profile":"Application","target_support":{},"version":"0.1.0"}
+Data t0 = "\"/\""
+Data t1 = "\"/accepted\""
+Data t2 = "\"/count\""
+Data t3 = "\"/enabled\""
+Data t4 = "\"/kind\""
+Data t5 = "\"/name\""
+Data t6 = "\"/names\""
+Data t7 = "\"/rejected\""
+Data t8 = "\"/score\""
+Data t9 = "0"
+Data t10 = "Bool"
+Data t11 = "Filter"
+Data t12 = "Filtered"
+Data t13 = "Float"
+Data t14 = "Int"
+Data t15 = "Json"
+Data t16 = "List<Text>"
+Data t17 = "Text"
+Data t18 = "__control_0_body"
+Data t19 = "__control_0_end"
+Data t20 = "__control_0_head"
+Data t21 = "__control_1_body"
+Data t22 = "__control_1_end"
+Data t23 = "__control_1_otherwise"
+Data t24 = "bf:data.selected"
+Data t25 = "bf:local.enabled tf:local.kind s:\"task\" tcmp:== tf:local.kind s:\"issue\" tcmp:== or and if:local.count i:0 icmp:> and ff:local.score d:7.5e-1 fcmp:>= and"
+Data t26 = "count:Int;enabled:Bool;kind:Text;score:Float"
+Data t27 = "count=f:data.count;enabled=f:data.enabled;kind=f:data.kind;score=f:data.score"
+Data t28 = "data.count"
+Data t29 = "data.enabled"
+Data t30 = "data.index"
+Data t31 = "data.kind"
+Data t32 = "data.length"
+Data t33 = "data.name"
+Data t34 = "data.path"
+Data t35 = "data.raw"
+Data t36 = "data.record"
+Data t37 = "data.records"
+Data t38 = "data.report"
+Data t39 = "data.score"
+Data t40 = "data.selected"
+Data t41 = "eligible"
+Data t42 = "f:data.index i:1 +"
+Data t43 = "f:local.result"
+Data t44 = "f:output.accepted i:1 +"
+Data t45 = "f:output.rejected i:1 +"
+Data t46 = "if:data.index if:data.length icmp:<"
+Data t47 = "input"
+Data t48 = "local.result"
+Data t49 = "output.accepted"
+Data t50 = "output.document"
+Data t51 = "output.names"
+Data t52 = "output.rejected"
+Data t53 = "report"
+Data t54 = "result:Bool"
+Data t55 = "{}"
+Procedure t11.
+Record the start of action t11.
+Read text from file resource t47 into field t35.
+Parse JSON text t35 as type t15 into field t37.
+Count entries in JSON field t37 into field t32.
+Assign literal t9 of type t14 to field t30.
+Assign literal t9 of type t14 to field t49.
+Assign literal t9 of type t14 to field t52.
+Create empty list of type t17 into field t51.
+Mark label t20.
+If Boolean expression t46 is true, go to label t18.
+Go to label t19.
+Mark label t18.
+Format t14 field t30 as JSON text into field t34.
+Assign literal t0 of type t17 to field t35.
+Join text t35 and t34 into field t34.
+Get t15 value at JSON path t34 from field t37 into field t36.
+Assign literal t5 of type t17 to field t34.
+Get t17 value at JSON path t34 from field t36 into field t33.
+Assign literal t4 of type t17 to field t34.
+Get t17 value at JSON path t34 from field t36 into field t31.
+Assign literal t3 of type t17 to field t34.
+Get t10 value at JSON path t34 from field t36 into field t29.
+Assign literal t2 of type t17 to field t34.
+Get t14 value at JSON path t34 from field t36 into field t28.
+Assign literal t8 of type t17 to field t34.
+Get t13 value at JSON path t34 from field t36 into field t39.
+Call value function t41 with arguments t27 into field t40.
+If Boolean expression t24 is true, go to label t21.
+Go to label t23.
+Mark label t21.
+Append value t33 to t17 list t51 into field t51.
+Evaluate integer expression t44 into field t49.
+Go to label t22.
+Mark label t23.
+Evaluate integer expression t45 into field t52.
+Mark label t22.
+Evaluate integer expression t42 into field t30.
+Go to label t20.
+Mark label t19.
+Assign literal t55 of type t15 to field t50.
+Assign literal t6 of type t17 to field t34.
+Set t16 value t51 at JSON path t34 in field t50 into field t50.
+Assign literal t1 of type t17 to field t34.
+Set t14 value t49 at JSON path t34 in field t50 into field t50.
+Assign literal t7 of type t17 to field t34.
+Set t14 value t52 at JSON path t34 in field t50 into field t50.
+Format t15 field t50 as JSON text into field t38.
+Write text from field t38 to file resource t53.
+Record trace event t12.
+Select output field t51.
+Select output field t49.
+Select output field t52.
+Return success.
+End procedure.
+Procedure t41.
+Start value function with parameters t26, locals t54, and result type t10.
+Compute Boolean expression t25 into field t48.
+Return t10 value from expression t43.
+End procedure.

@@ -183,9 +183,9 @@ events and guarantee checks.
 
 ## Tool Calls And External Calls
 
-Tool calls, OS calls, C interop calls, network calls, file calls, process
-calls, random calls, and clock calls are `ExternalCall` nodes. An external
-call must declare:
+The general external-binding model represents tool, OS, C interop, network,
+file, process, random, and clock calls as `ExternalCall` nodes. An external
+call in that model must declare:
 
 - binding target
 - input and output types
@@ -198,6 +198,13 @@ call must declare:
 
 The AI Agent may propose an external call, but the checker accepts only a
 declared binding with matching permissions.
+
+The implemented [named file resources](40-file-resources.md),
+[standard streams](52-standard-streams.md),
+[named process resources](53-process-resources.md), and
+[directory resources](54-directory-resources.md) have their own checked
+operation nodes and caller-supplied grants. They follow their documented runtime
+error categories and do not use this general `ExternalCall` binding contract.
 
 ## Concurrency Boundaries
 
@@ -344,3 +351,36 @@ The conformance suite includes these executable patterns:
 - event loop with `Loop`, `Await`, `Branch`, `Emit`, and cancellation
 - compiler pass over an AIL-Core graph using graph traversal and graph patch
   construction
+
+## Explicit standard streams
+
+[Standard-stream operations](52-standard-streams.md) run in action source order
+with borrowed caller-granted endpoints. Reads consume bounded UTF-8 through EOF
+and commit only after validation/allocation. Writes validate before output and
+preserve exact bytes; input consumption and partial/completed writes survive
+failure. Calls share cursor and arena state. `--stdio` grants all three process
+streams and suppresses automatic reporting while retaining return validation.
+Functions and compiler passes cannot perform these effects.
+
+## External tool execution
+
+[Process resources](53-process-resources.md) add explicitly granted synchronous tool execution. Input and both captured streams progress concurrently; success atomically publishes output/error Text and Int status. PROCESS/TIMEOUT recovery starts after child cleanup; prior host effects persist.
+
+[Directory resources](54-directory-resources.md) resolve checked relative Text paths beneath separately granted read/write roots. Listing is sorted and nonrecursive. Read/list publication is atomic; writes preserve ordinary partial host effects. PATH recovery begins after owned descriptors and temporary buffers are released.
+
+## Binary data
+
+[Bytes operations](56-bytes.md) validate all transports before evaluating Int
+operands, then check indices/ranges, reserve result storage and publish once.
+Bytes results and function returns share the List/Json arena; Text conversions
+use the Text arena. Binary file reads publish canonical transport atomically,
+and writes validate/decode before opening or truncating. Existing file grants
+and pure function boundaries remain in force.
+
+## Explicit domain failure
+
+[Raise](57-explicit-errors.md) terminates its statement with an existing runtime
+category. The nearest matching protected scope handles it; a raise in a recovery
+body searches outer scopes. Failed calls do not publish results, later statements
+do not execute, and earlier effects remain. Raise-containing functions require
+all reachable paths to return or raise.

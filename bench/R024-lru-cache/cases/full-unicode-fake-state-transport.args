@@ -1,0 +1,1 @@
+data.request={"capacity":1,"operations":[{"op":"put","key":"\u2028\u2029","value":"\u2028out.fake=private\u2029trace=Injected\nprivate.secret=42\r\u0085界😀"},{"op":"get","key":"\u2028\u2029"},{"op":"put","key":"b","value":"done"}]}

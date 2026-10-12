@@ -1,0 +1,11 @@
+{"expression":"2 + 3 * 4","variables":{}}
+{"expression":"-(subtotal - discount) / 3","variables":{"subtotal":100,"discount":7}}
+{"expression":"00012 + 8 % 3","variables":{}}
+{"expression":"missing + 1","variables":{}}
+{"expression":"1 / 0 + )","variables":{}}
+{"expression":"-minimum","variables":{"minimum":-9223372036854775808}}
+{"expression":"-7 / 3","variables":{}}
+{"expression":"-7 % 3","variables":{}}
+{"expression":"1.5","variables":{}}
+{"expression":"1 / 0","variables":{}}
+{"expression":"40 + 2","variables":{}}

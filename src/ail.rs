@@ -1,7 +1,83 @@
+#[path = "value_types.rs"]
+mod value_types;
+pub use value_types::AilValueSchemas;
+#[path = "value_operations.rs"]
+mod value_operations;
+pub use value_operations::AilValueOperation;
+#[path = "bool_operations.rs"]
+mod bool_operations;
+pub use bool_operations::AilBooleanOperation;
+#[path = "float_operations.rs"]
+mod float_operations;
+pub use float_operations::AilFloatOperation;
+#[path = "native_float_runtime.rs"]
+mod native_float_runtime;
 use std::collections::{BTreeMap, BTreeSet};
+
+#[path = "control_flow.rs"]
+mod control_flow;
+pub use control_flow::AilControl;
+#[path = "action_order.rs"]
+mod action_order;
+#[path = "expression_core.rs"]
+mod expression_core;
+#[path = "integer_function.rs"]
+mod integer_function;
+#[path = "native_expr.rs"]
+mod native_expr;
+#[path = "recovery.rs"]
+mod recovery;
+pub use integer_function::{AilIntegerCall, AilIntegerFunction, IntegerStep};
+#[path = "value_function.rs"]
+mod value_function;
+#[path = "value_protocol.rs"]
+mod value_protocol;
+pub use value_function::ValueOperation;
+#[path = "bytes_operations.rs"]
+mod bytes_operations;
+#[path = "integer_vm.rs"]
+mod integer_vm;
+pub use bytes_operations::AilBytesOperation;
+#[path = "text_operations.rs"]
+mod text_operations;
+#[path = "value_vm.rs"]
+mod value_vm;
 use std::fmt::{self, Display};
 use std::fs;
 use std::path::{Path, PathBuf};
+pub use text_operations::AilTextOperation;
+#[path = "list_operations.rs"]
+mod list_operations;
+pub use list_operations::{AilListOperation, AilListValue};
+#[path = "literal_assignment.rs"]
+mod literal_assignment;
+pub use literal_assignment::AilLiteralAssignment;
+#[path = "json_codec.rs"]
+mod json_codec;
+pub use json_codec::AilJsonConversion;
+#[path = "structured_json.rs"]
+mod structured_json;
+pub use structured_json::AilJsonAccess;
+#[path = "json_mutation.rs"]
+mod json_mutation;
+pub use json_mutation::AilJsonMutation;
+#[path = "directory_operations.rs"]
+mod directory_operations;
+#[path = "file_operations.rs"]
+mod file_operations;
+pub use directory_operations::parse_binding as parse_ail_directory_binding;
+pub use directory_operations::{AilDirectoryOperation, AilDirectoryResources};
+#[path = "process_operations.rs"]
+mod process_operations;
+pub use process_operations::parse_binding as parse_ail_process_binding;
+pub use process_operations::{AilProcessOperation, AilProcessResources};
+#[path = "standard_streams.rs"]
+mod standard_streams;
+pub use file_operations::{AilFileOperation, AilFileResources};
+pub use file_operations::{
+    parse_binding as parse_ail_file_binding, valid_resource as valid_ail_file_resource,
+};
+pub use standard_streams::{AilStandardStreamOperation, AilStandardStreams};
 
 use crate::core_model::{Edge, Graph, Node, attr, json_string};
 
@@ -174,6 +250,7 @@ pub struct AilPassValue {
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct AilFunction {
+    pub integer: Option<AilIntegerFunction>,
     pub name: String,
     pub label: String,
     pub inputs: BTreeMap<String, AilFunctionValue>,
@@ -417,12 +494,30 @@ pub struct AilSystemSchedulerTaskTiming {
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct AilAction {
+    pub value_operations: Vec<AilValueOperation>,
+    pub boolean_operations: Vec<AilBooleanOperation>,
+    pub float_operations: Vec<AilFloatOperation>,
+    pub json_mutations: Vec<AilJsonMutation>,
+    pub json_accesses: Vec<AilJsonAccess>,
+    pub json_conversions: Vec<AilJsonConversion>,
+    pub directory_operations: Vec<AilDirectoryOperation>,
+    pub process_operations: Vec<AilProcessOperation>,
+    pub standard_stream_operations: Vec<AilStandardStreamOperation>,
+    pub file_operations: Vec<AilFileOperation>,
+    pub literal_assignments: Vec<AilLiteralAssignment>,
+    pub list_operations: Vec<AilListOperation>,
+    pub bytes_operations: Vec<AilBytesOperation>,
+    pub text_operations: Vec<AilTextOperation>,
+    pub integer_calls: Vec<AilIntegerCall>,
+    pub steps: Vec<AilActionStep>,
+    pub controls: Vec<AilControl>,
     pub name: String,
     pub label: String,
     pub trigger: String,
     pub requirements: Vec<String>,
     pub reads: Vec<String>,
     pub writes: Vec<String>,
+    pub outputs: Vec<String>,
     pub calls: Vec<String>,
     pub repeated_calls: Vec<AilRepeatedActionCall>,
     pub failures: Vec<String>,
@@ -430,6 +525,29 @@ pub struct AilAction {
     pub traces: Vec<String>,
     pub secret_protections: Vec<String>,
     pub provenance: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AilActionStep {
+    Variant(usize),
+    Boolean(usize),
+    Float(usize),
+    JsonMutation(usize),
+    JsonAccess(usize),
+    Json(usize),
+    Directory(usize),
+    Process(usize),
+    StandardStream(usize),
+    File(usize),
+    Literal(usize),
+    List(usize),
+    Bytes(usize),
+    Text(usize),
+    IntegerCall(usize),
+    Control(usize),
+    Write(usize),
+    Call(usize),
+    Repeat(usize),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -456,6 +574,7 @@ pub struct AilCore {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AilBytecodeProgram {
+    pub type_schemas: AilValueSchemas,
     pub package_name: String,
     pub package_version: String,
     pub profile: String,
@@ -471,6 +590,13 @@ pub struct AilBytecodeProgram {
 pub struct AilBytecodeAction {
     pub name: String,
     pub instructions: Vec<AilBytecodeInstruction>,
+}
+
+impl AilBytecodeAction {
+    /// Integer function procedures require an action caller to bind arguments.
+    pub fn is_entrypoint(&self) -> bool {
+        !integer_vm::is_function(self) && !value_protocol::is_function(self)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -498,7 +624,7 @@ pub struct AilBytecodeFailure {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-enum AilJsonValue {
+pub(crate) enum AilJsonValue {
     Object(BTreeMap<String, AilJsonValue>),
     Array(Vec<AilJsonValue>),
     String(String),
@@ -509,7 +635,36 @@ pub struct AilRunResult {
     pub status: String,
     pub failure: Option<String>,
     pub final_state: BTreeMap<String, String>,
+    /// Explicit fields selected by the root action; empty preserves legacy output.
+    pub returned_fields: Vec<String>,
     pub trace: Vec<String>,
+}
+
+impl AilRunResult {
+    pub fn output_state(&self) -> BTreeMap<String, String> {
+        if self.returned_fields.is_empty() {
+            return self.final_state.clone();
+        }
+        self.final_state
+            .iter()
+            .filter(|(key, _)| self.returned_fields.contains(key))
+            .map(|(key, value)| (key.clone(), value.clone()))
+            .collect()
+    }
+}
+
+fn validate_returned_fields(
+    state: &BTreeMap<String, String>,
+    fields: &[String],
+) -> Result<(), String> {
+    for key in fields {
+        if !state.contains_key(key) {
+            return Err(format!(
+                "AIL-RUNTIME-OUTPUT: missing returned field '{key}'"
+            ));
+        }
+    }
+    Ok(())
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1852,6 +2007,7 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
     let mut current_system_component: Option<String> = None;
     let mut current_system_section: Option<SystemSection> = None;
     let mut current_function: Option<String> = None;
+    let mut legacy_function_bodies = BTreeSet::new();
     let mut current_function_section: Option<FunctionSection> = None;
     let mut current_type: Option<String> = None;
     let mut current_type_section: Option<TypeSection> = None;
@@ -2040,6 +2196,11 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
         }
         if let Some(label) = parse_type_header(line) {
             let name = label.clone();
+            if document.types.contains_key(&name) {
+                return Err(format!(
+                    "line {line_number}: AIL-VALUE-001: duplicate type declaration"
+                ));
+            }
             document
                 .types
                 .entry(name.clone())
@@ -2486,6 +2647,8 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
             continue;
         }
         if let Some(label) = parse_function_header(line) {
+            current_type = None;
+            current_type_section = None;
             let name = label.clone();
             document
                 .functions
@@ -2515,6 +2678,22 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
             && current_function.is_some()
         {
             current_function_section = Some(section);
+            if matches!(
+                section,
+                FunctionSection::Locals | FunctionSection::Executable
+            ) {
+                if legacy_function_bodies.contains(current_function.as_ref().unwrap()) {
+                    return Err(format!(
+                        "line {line_number}: AIL-FUNCTION-001: cannot mix legacy and executable function bodies"
+                    ));
+                }
+                document
+                    .functions
+                    .get_mut(current_function.as_ref().unwrap())
+                    .unwrap()
+                    .integer
+                    .get_or_insert_with(Default::default);
+            }
             current_thing = None;
             current_tool = None;
             current_tool_section = None;
@@ -2531,6 +2710,12 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
         if let Some(function_name) = parse_function_body_header(line)
             && document.functions.contains_key(&function_name)
         {
+            if document.functions[&function_name].integer.is_some() {
+                return Err(format!(
+                    "line {line_number}: AIL-FUNCTION-001: cannot mix legacy and executable function bodies"
+                ));
+            }
+            legacy_function_bodies.insert(function_name.clone());
             current_function = Some(function_name);
             current_function_section = Some(FunctionSection::Body);
             current_thing = None;
@@ -2547,6 +2732,8 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
             continue;
         }
         if let Some(label) = parse_action_header(line) {
+            current_type = None;
+            current_type_section = None;
             let name = action_name_from_label(&label);
             document
                 .actions
@@ -2589,6 +2776,8 @@ pub fn parse_ail_spec_text(text: &str) -> Result<AilDocument, String> {
             continue;
         }
         if let Some(trigger) = parse_when_line(line) {
+            current_type = None;
+            current_type_section = None;
             let action_name = if action_header_waiting_for_when {
                 current_action
                     .clone()
@@ -3988,6 +4177,15 @@ pub fn elaborate_ail_core(package: &AilPackage, document: &AilDocument) -> AilCo
     }
 
     for action in document.actions.values() {
+        graph.add_node(
+            "Action",
+            &action.name,
+            None,
+            attr(&[("label", &action.label), ("trigger", &action.trigger)]),
+        );
+    }
+
+    for action in document.actions.values() {
         let action_node = graph.add_node(
             "Action",
             &action.name,
@@ -4007,15 +4205,23 @@ pub fn elaborate_ail_core(package: &AilPackage, document: &AilDocument) -> AilCo
                 format!("action:{}.requirement:{requirement}", action.name),
             );
         }
-        for write in &action.writes {
+        for (index, write) in action.writes.iter().enumerate() {
+            if expression_core::elaborate_write(&mut graph, document, &action_node, index, write) {
+                continue;
+            }
             let target = resolve_field_or_effect(&mut graph, document, write);
             let provenance = format!("action:{}.write:{write}", action.name);
-            graph.add_edge(
+            let mut edge = Edge::new(
                 "writes",
                 &action_node,
                 &target,
-                attr(&[("provenance", &provenance)]),
+                attr(&[
+                    ("provenance", &provenance),
+                    ("write_index", &index.to_string()),
+                ]),
             );
+            edge.ordinal = graph.edges.len();
+            graph.edges.push(edge);
             if target.kind == "Effect" {
                 attach_provenance(&mut graph, &target, provenance);
             }
@@ -4023,6 +4229,21 @@ pub fn elaborate_ail_core(package: &AilPackage, document: &AilDocument) -> AilCo
         for read in &action.reads {
             let target = resolve_field_or_effect(&mut graph, document, read);
             let provenance = format!("action:{}.read:{read}", action.name);
+            if let Some(existing) = graph.edges.iter_mut().find(|edge| {
+                edge.kind == "reads"
+                    && edge.source == action_node.id
+                    && edge.target == target.id
+                    && edge.attributes.contains_key("inferred_expression")
+            }) {
+                let mut explicit = Edge::new(
+                    "reads",
+                    &action_node,
+                    &target,
+                    attr(&[("provenance", &provenance)]),
+                );
+                explicit.ordinal = existing.ordinal;
+                *existing = explicit;
+            }
             graph.add_edge(
                 "reads",
                 &action_node,
@@ -4033,11 +4254,19 @@ pub fn elaborate_ail_core(package: &AilPackage, document: &AilDocument) -> AilCo
                 attach_provenance(&mut graph, &target, provenance);
             }
         }
-        for call in &action.calls {
+        expression_core::elaborate_outputs(&mut graph, &action_node, &action.outputs);
+        for (index, call) in action.calls.iter().enumerate() {
             let target = resolve_action_call_target(&graph, document, call).unwrap_or_else(|| {
                 graph.add_node("Effect", format!("call {call}"), None, BTreeMap::new())
             });
-            graph.add_edge("calls", &action_node, &target, BTreeMap::new());
+            action_order::append(
+                &mut graph,
+                "calls",
+                &action_node,
+                &target,
+                BTreeMap::new(),
+                index,
+            );
             if target.kind == "Effect" {
                 attach_provenance(
                     &mut graph,
@@ -4046,7 +4275,7 @@ pub fn elaborate_ail_core(package: &AilPackage, document: &AilDocument) -> AilCo
                 );
             }
         }
-        for repeated_call in &action.repeated_calls {
+        for (index, repeated_call) in action.repeated_calls.iter().enumerate() {
             let target = resolve_action_call_target(&graph, document, &repeated_call.target)
                 .unwrap_or_else(|| {
                     graph.add_node(
@@ -4056,16 +4285,20 @@ pub fn elaborate_ail_core(package: &AilPackage, document: &AilDocument) -> AilCo
                         BTreeMap::new(),
                     )
                 });
-            graph.add_edge(
+            action_order::append(
+                &mut graph,
                 "repeats",
                 &action_node,
                 &target,
                 attr(&[("count", &repeated_call.count.to_string())]),
+                index,
             );
             if target.kind == "Effect" {
                 attach_provenance(&mut graph, &target, repeated_call.provenance.clone());
             }
         }
+        control_flow::elaborate(&mut graph, &action_node, &action.controls);
+        action_order::record_core_order(&mut graph, &action_node, action);
         for protection in &action.secret_protections {
             let target = resolve_secret_target(&mut graph, document, protection);
             graph.add_edge("protects_secret", &action_node, &target, BTreeMap::new());
@@ -4160,6 +4393,32 @@ pub fn elaborate_ail_core(package: &AilPackage, document: &AilDocument) -> AilCo
         }
     }
 
+    value_operations::elaborate(&mut graph, document);
+    integer_function::elaborate(&mut graph, document);
+    value_function::elaborate(&mut graph, document);
+    bytes_operations::elaborate(&mut graph, document);
+    text_operations::elaborate(&mut graph, document);
+    list_operations::elaborate(&mut graph, document);
+    literal_assignment::elaborate(&mut graph, document);
+    directory_operations::elaborate(&mut graph, document);
+    process_operations::elaborate(&mut graph, document);
+    standard_streams::elaborate(&mut graph, document);
+    file_operations::elaborate(&mut graph, document);
+    json_codec::elaborate(&mut graph, document);
+    structured_json::elaborate(&mut graph, document);
+    json_mutation::elaborate(&mut graph, document);
+    float_operations::elaborate(&mut graph, document);
+    bool_operations::elaborate(&mut graph, document);
+    for action in document.actions.values() {
+        if let Some(node) = graph
+            .nodes
+            .iter()
+            .find(|n| n.kind == "Action" && n.name == action.name)
+            .cloned()
+        {
+            action_order::record_core_order(&mut graph, &node, action);
+        }
+    }
     AilCore {
         package: package.metadata.clone(),
         graph,
@@ -4185,12 +4444,60 @@ pub fn check_ail_core_diagnostics(core: &AilCore) -> Vec<AilDiagnostic> {
         .into_iter()
         .map(AilDiagnostic::from_message)
         .collect::<Vec<_>>();
+    let mut ordinals = BTreeSet::new();
+    let mut duplicate_ordinals = BTreeSet::new();
+    for edge in &core.graph.edges {
+        // Legacy payload decoding can consult attached provenance. Uniform
+        // uniqueness leaves no storage-order or opaque-ID tie breaker.
+        if !ordinals.insert(edge.ordinal) {
+            duplicate_ordinals.insert(edge.ordinal);
+        }
+    }
+    diagnostics.extend(duplicate_ordinals.into_iter().map(|ordinal| {
+        AilDiagnostic::error(
+            "AIL-CORE-ORDER-001",
+            format!("duplicate Core edge ordinal {ordinal}; every edge requires a unique ordinal"),
+        )
+    }));
     diagnostics.extend(check_core_schema_version(core));
     diagnostics.extend(check_package_safety_level(core));
     diagnostics.extend(check_package_target_support_statuses(core));
     diagnostics.extend(check_core_schema_catalog(core));
     diagnostics.extend(check_field_types(core));
-    diagnostics.extend(check_action_arithmetic_operand_literals(core));
+    if core
+        .graph
+        .nodes
+        .iter()
+        .any(|n| n.kind == "Field" && n.type_name.as_deref() == Some("Bytes"))
+    {
+        let document = ail_document_from_core(core);
+        for action in document.actions.values() {
+            for write in &action.writes {
+                if let Err(message) = check_bytes_legacy_write(&document, write) {
+                    diagnostics.push(AilDiagnostic::error("AIL-BYTES-001", message));
+                }
+            }
+        }
+    }
+    diagnostics.extend(expression_core::check(core));
+    diagnostics.extend(action_order::check(core));
+    diagnostics.extend(control_flow::check(core));
+    diagnostics.extend(value_operations::check(core));
+    diagnostics.extend(integer_function::check(core));
+    diagnostics.extend(value_function::check(core));
+    diagnostics.extend(bytes_operations::check(core));
+    diagnostics.extend(text_operations::check(core));
+    diagnostics.extend(list_operations::check(core));
+    diagnostics.extend(literal_assignment::check(core));
+    diagnostics.extend(directory_operations::check(core));
+    diagnostics.extend(process_operations::check(core));
+    diagnostics.extend(standard_streams::check(core));
+    diagnostics.extend(file_operations::check(core));
+    diagnostics.extend(json_codec::check(core));
+    diagnostics.extend(structured_json::check(core));
+    diagnostics.extend(json_mutation::check(core));
+    diagnostics.extend(float_operations::check(core));
+    diagnostics.extend(bool_operations::check(core));
     diagnostics.extend(check_requirement_reference_diagnostics(core));
     diagnostics.extend(check_requirement_field_references(core));
     diagnostics.extend(check_action_failure_declarations(core));
@@ -4410,6 +4717,31 @@ fn is_known_core_node_kind(kind: &str) -> bool {
             | "Function"
             | "Guarantee"
             | "Input"
+            | "Control"
+            | "IntegerComparison"
+            | "ValueCall"
+            | "ValueFunctionStep"
+            | "ValueFunctionCall"
+            | "BytesOperation"
+            | "TextOperation"
+            | "ListOperation"
+            | "LiteralAssignment"
+            | "DirectoryOperation"
+            | "ProcessOperation"
+            | "StandardStreamOperation"
+            | "FileOperation"
+            | "JsonConversion"
+            | "JsonAccess"
+            | "JsonMutation"
+            | "VariantOperation"
+            | "FunctionStep"
+            | "IntegerExpression"
+            | "BooleanOperation"
+            | "BooleanExpression"
+            | "TextOperand"
+            | "FloatOperation"
+            | "FloatExpression"
+            | "FloatComparison"
             | "InterruptMask"
             | "InterruptPriority"
             | "Layout"
@@ -4471,6 +4803,103 @@ fn is_known_core_edge_kind(kind: &str) -> bool {
             | "has_termination_bound"
             | "has_termination_measure"
             | "in_region"
+            | "integer_call_step"
+            | "value_parameter"
+            | "value_local"
+            | "value_function_step"
+            | "variant_step"
+            | "variant_operand"
+            | "variant_argument"
+            | "value_field_operand"
+            | "value_expression_operand"
+            | "value_call_target"
+            | "value_call_argument"
+            | "value_condition"
+            | "bytes_step"
+            | "bytes_source"
+            | "bytes_other"
+            | "bytes_destination"
+            | "bytes_index"
+            | "bytes_start"
+            | "bytes_end"
+            | "bytes_value"
+            | "text_step"
+            | "literal_step"
+            | "literal_destination"
+            | "directory_step"
+            | "directory_path"
+            | "directory_destination"
+            | "directory_source"
+            | "process_step"
+            | "process_arguments"
+            | "process_input"
+            | "process_timeout"
+            | "process_stdout"
+            | "process_stderr"
+            | "process_status"
+            | "stream_step"
+            | "stream_source"
+            | "stream_destination"
+            | "file_step"
+            | "file_source"
+            | "file_destination"
+            | "json_access_step"
+            | "json_mutation_step"
+            | "boolean_step"
+            | "boolean_destination"
+            | "boolean_expression"
+            | "boolean_left"
+            | "boolean_right"
+            | "boolean_operand"
+            | "boolean_field"
+            | "text_field"
+            | "float_step"
+            | "float_destination"
+            | "float_source"
+            | "float_expression"
+            | "unary_operand"
+            | "json_mutation_source"
+            | "json_mutation_destination"
+            | "json_mutation_path"
+            | "json_mutation_value"
+            | "json_access_source"
+            | "json_access_destination"
+            | "json_access_path"
+            | "json_step"
+            | "json_source"
+            | "json_destination"
+            | "list_step"
+            | "list_source"
+            | "list_other"
+            | "list_start"
+            | "list_end"
+            | "list_destination"
+            | "list_index"
+            | "list_value"
+            | "text_source"
+            | "text_other"
+            | "text_replacement"
+            | "text_destination"
+            | "text_start"
+            | "text_end"
+            | "function_step"
+            | "function_parameter"
+            | "function_local"
+            | "function_expression"
+            | "function_destination"
+            | "function_condition"
+            | "call_target"
+            | "call_destination"
+            | "call_argument"
+            | "control_step"
+            | "recovery_destination"
+            | "condition"
+            | "comparison_left"
+            | "comparison_right"
+            | "expression_field"
+            | "left_operand"
+            | "right_operand"
+            | "returns_field"
             | "layouts_resource"
             | "lowers_to"
             | "maps_status"
@@ -4560,7 +4989,13 @@ pub fn render_ail_core(core: &AilCore) -> String {
             line.push_str(&format!(" : {type_name}"));
         }
         if !node.attributes.is_empty() {
-            line.push_str(&format!(" [{}]", render_core_attributes(&node.attributes)));
+            let mut attributes = node.attributes.clone();
+            if node.kind == "TextOperand"
+                && let Some(value) = attributes.get_mut("value")
+            {
+                *value = json_string(value);
+            }
+            line.push_str(&format!(" [{}]", render_core_attributes(&attributes)));
         }
         lines.push(line);
     }
@@ -4669,6 +5104,7 @@ pub fn parse_ail_core_text(text: &str) -> Result<AilCore, String> {
     let mut section = "";
     let mut graph = Graph::default();
     let mut node_by_label: BTreeMap<String, Node> = BTreeMap::new();
+    let mut raw_text_bytes = BTreeMap::new();
 
     for (line_index, raw_line) in text.lines().enumerate() {
         let line_number = line_index + 1;
@@ -4740,6 +5176,9 @@ pub fn parse_ail_core_text(text: &str) -> Result<AilCore, String> {
                     parsed.type_name,
                     parsed.attributes,
                 );
+                if let Some(bytes) = parsed.raw_text_bytes {
+                    raw_text_bytes.insert(node.id.clone(), bytes);
+                }
                 let label = core_node_label(&node);
                 if node_by_label.insert(label.clone(), node).is_some() {
                     return Err(format!(
@@ -4767,7 +5206,117 @@ pub fn parse_ail_core_text(text: &str) -> Result<AilCore, String> {
                             parsed.target_label
                         )
                     })?;
-                graph.add_edge(parsed.kind, &source, &target, parsed.attributes);
+                if matches!(
+                    parsed.kind.as_str(),
+                    "has_provenance"
+                        | "has_field"
+                        | "writes"
+                        | "calls"
+                        | "repeats"
+                        | "control_step"
+                        | "recovery_destination"
+                        | "integer_call_step"
+                        | "value_parameter"
+                        | "value_local"
+                        | "value_function_step"
+                        | "variant_step"
+                        | "variant_operand"
+                        | "variant_argument"
+                        | "value_field_operand"
+                        | "value_expression_operand"
+                        | "value_call_target"
+                        | "value_call_argument"
+                        | "value_condition"
+                        | "bytes_step"
+                        | "bytes_source"
+                        | "bytes_other"
+                        | "bytes_destination"
+                        | "bytes_index"
+                        | "bytes_start"
+                        | "bytes_end"
+                        | "bytes_value"
+                        | "text_step"
+                        | "literal_step"
+                        | "literal_destination"
+                        | "directory_step"
+                        | "directory_path"
+                        | "directory_destination"
+                        | "directory_source"
+                        | "process_step"
+                        | "process_arguments"
+                        | "process_input"
+                        | "process_timeout"
+                        | "process_stdout"
+                        | "process_stderr"
+                        | "process_status"
+                        | "stream_step"
+                        | "stream_source"
+                        | "stream_destination"
+                        | "file_step"
+                        | "file_source"
+                        | "file_destination"
+                        | "json_access_step"
+                        | "json_mutation_step"
+                        | "boolean_step"
+                        | "boolean_destination"
+                        | "boolean_expression"
+                        | "boolean_left"
+                        | "boolean_right"
+                        | "boolean_operand"
+                        | "boolean_field"
+                        | "text_field"
+                        | "float_step"
+                        | "float_destination"
+                        | "float_source"
+                        | "float_expression"
+                        | "unary_operand"
+                        | "json_mutation_source"
+                        | "json_mutation_destination"
+                        | "json_mutation_path"
+                        | "json_mutation_value"
+                        | "json_access_source"
+                        | "json_access_destination"
+                        | "json_access_path"
+                        | "json_step"
+                        | "json_source"
+                        | "json_destination"
+                        | "list_step"
+                        | "list_source"
+                        | "list_other"
+                        | "list_start"
+                        | "list_end"
+                        | "list_destination"
+                        | "list_index"
+                        | "list_value"
+                        | "text_source"
+                        | "text_other"
+                        | "text_replacement"
+                        | "text_destination"
+                        | "text_start"
+                        | "text_end"
+                        | "function_step"
+                        | "call_argument"
+                        | "function_parameter"
+                        | "function_local"
+                        | "function_expression"
+                        | "function_destination"
+                        | "function_condition"
+                        | "call_target"
+                        | "call_destination"
+                        | "comparison_left"
+                        | "comparison_right"
+                        | "condition"
+                        | "expression_field"
+                        | "left_operand"
+                        | "right_operand"
+                ) || parsed.kind == "contains" && source.kind == "Type"
+                {
+                    let mut edge = Edge::new(parsed.kind, &source, &target, parsed.attributes);
+                    edge.ordinal = graph.edges.len();
+                    graph.edges.push(edge);
+                } else {
+                    graph.add_edge(parsed.kind, &source, &target, parsed.attributes);
+                }
             }
             _ => unreachable!("AIL-Core parser only sets known sections"),
         }
@@ -4781,7 +5330,7 @@ pub fn parse_ail_core_text(text: &str) -> Result<AilCore, String> {
         ));
     }
 
-    Ok(AilCore {
+    let core = AilCore {
         package: AilPackageMetadata {
             name: package_name.ok_or_else(|| "AIL-Core missing package metadata".to_string())?,
             version: package_version
@@ -4802,7 +5351,9 @@ pub fn parse_ail_core_text(text: &str) -> Result<AilCore, String> {
                 .ok_or_else(|| "AIL-Core missing base_llm_endpoint metadata".to_string())?,
         },
         graph,
-    })
+    };
+    bool_operations::check_raw_text_transport(&core, &raw_text_bytes)?;
+    Ok(core)
 }
 
 fn render_core_attributes(attributes: &BTreeMap<String, String>) -> String {
@@ -4814,6 +5365,7 @@ fn render_core_attributes(attributes: &BTreeMap<String, String>) -> String {
 }
 
 struct ParsedCoreNode {
+    raw_text_bytes: Option<usize>,
     kind: String,
     name: String,
     type_name: Option<String>,
@@ -4836,7 +5388,20 @@ fn parse_core_node_line(line: &str, line_number: usize) -> Result<ParsedCoreNode
             "AIL-Core line {line_number}: node is missing a name"
         ));
     };
-    let (rest, attributes) = parse_core_attribute_suffix(rest, line_number)?;
+    let (rest, mut attributes) = parse_core_attribute_suffix(
+        rest,
+        line_number,
+        matches!(kind, "LiteralAssignment" | "TextOperand"),
+    )?;
+    let raw_text_bytes = (kind == "TextOperand")
+        .then(|| attributes.get("value").map(String::len))
+        .flatten();
+    if kind == "TextOperand"
+        && let Some(value) = attributes.get_mut("value")
+    {
+        *value = literal_assignment::decode("Text", value)
+            .map_err(|error| format!("AIL-Core line {line_number}: {error}"))?;
+    }
     let (name, type_name) = if let Some((name, type_name)) = rest.rsplit_once(" : ") {
         (name.trim().to_string(), Some(type_name.trim().to_string()))
     } else {
@@ -4846,6 +5411,7 @@ fn parse_core_node_line(line: &str, line_number: usize) -> Result<ParsedCoreNode
         return Err(format!("AIL-Core line {line_number}: node name is empty"));
     }
     Ok(ParsedCoreNode {
+        raw_text_bytes,
         kind: kind.to_string(),
         name,
         type_name,
@@ -4862,7 +5428,7 @@ fn parse_core_edge_line(line: &str, line_number: usize) -> Result<ParsedCoreEdge
             "AIL-Core line {line_number}: edge is missing endpoints"
         ));
     };
-    let (rest, attributes) = parse_core_attribute_suffix(rest, line_number)?;
+    let (rest, attributes) = parse_core_attribute_suffix(rest, line_number, false)?;
     let Some((source, target)) = rest.split_once(" -> ") else {
         return Err(format!(
             "AIL-Core line {line_number}: edge is missing ' -> ' endpoint separator"
@@ -4879,30 +5445,74 @@ fn parse_core_edge_line(line: &str, line_number: usize) -> Result<ParsedCoreEdge
 fn parse_core_attribute_suffix(
     text: &str,
     line_number: usize,
+    json_literals: bool,
 ) -> Result<(&str, BTreeMap<String, String>), String> {
     if !text.ends_with(']') {
         return Ok((text, BTreeMap::new()));
     }
-    let Some((prefix, attributes)) = text.rsplit_once(" [") else {
+    // Historical node/edge labels and attributes are unquoted prose. A quote
+    // in an Effect name or action label has no delimiter meaning there.
+    if !json_literals {
+        let (prefix, attributes) = text
+            .rsplit_once(" [")
+            .ok_or_else(|| format!("AIL-Core line {line_number}: malformed attribute suffix"))?;
+        return Ok((
+            prefix,
+            parse_core_attributes(&attributes[..attributes.len() - 1], line_number, false)?,
+        ));
+    }
+    // Locate an outer attribute block. Brackets and commas inside a quoted
+    // JSON literal are data, including quotes escaped by an odd backslash run.
+    let mut quoted = false;
+    let mut escaped = false;
+    let mut depth = 0usize;
+    let mut suffix = None;
+    for (index, ch) in text.char_indices() {
+        if quoted {
+            if escaped {
+                escaped = false;
+            } else if ch == '\\' {
+                escaped = true;
+            } else if ch == '"' {
+                quoted = false;
+            }
+        } else if ch == '"' {
+            quoted = true;
+        } else if ch == '[' {
+            if depth == 0 && index > 0 && text.as_bytes()[index - 1] == b' ' {
+                suffix = Some(index);
+            }
+            depth += 1;
+        } else if ch == ']' {
+            depth = depth.saturating_sub(1);
+        }
+    }
+    let Some(index) = suffix else {
         return Err(format!(
             "AIL-Core line {line_number}: malformed attribute suffix"
         ));
     };
+    let prefix = &text[..index - 1];
+    let attributes = &text[index + 1..];
     let attributes = attributes
         .strip_suffix(']')
         .ok_or_else(|| format!("AIL-Core line {line_number}: malformed attribute suffix"))?;
-    Ok((prefix, parse_core_attributes(attributes, line_number)?))
+    Ok((
+        prefix,
+        parse_core_attributes(attributes, line_number, true)?,
+    ))
 }
 
 fn parse_core_attributes(
     text: &str,
     line_number: usize,
+    json_literals: bool,
 ) -> Result<BTreeMap<String, String>, String> {
     let mut attributes = BTreeMap::new();
     if text.trim().is_empty() {
         return Ok(attributes);
     }
-    for entry in split_core_attribute_entries(text) {
+    for entry in split_core_attribute_entries(text, json_literals) {
         let Some((key, value)) = entry.split_once('=') else {
             return Err(format!(
                 "AIL-Core line {line_number}: malformed attribute '{entry}'"
@@ -4914,16 +5524,35 @@ fn parse_core_attributes(
                 "AIL-Core line {line_number}: attribute key is empty"
             ));
         }
-        attributes.insert(key.to_string(), value.trim().to_string());
+        if attributes
+            .insert(key.to_string(), value.trim().to_string())
+            .is_some()
+        {
+            return Err(format!(
+                "AIL-Core line {line_number}: duplicate attribute '{key}'"
+            ));
+        }
     }
     Ok(attributes)
 }
 
-fn split_core_attribute_entries(text: &str) -> Vec<&str> {
+fn split_core_attribute_entries(text: &str, json_literals: bool) -> Vec<&str> {
     let mut entries = Vec::new();
     let mut start = 0;
+    let mut quoted = false;
+    let mut escaped = false;
     for (index, ch) in text.char_indices() {
-        if ch == ',' && starts_core_attribute_key(&text[index + ch.len_utf8()..]) {
+        if quoted {
+            if escaped {
+                escaped = false;
+            } else if ch == '\\' {
+                escaped = true;
+            } else if ch == '"' {
+                quoted = false;
+            }
+        } else if ch == '"' && json_literals {
+            quoted = true;
+        } else if ch == ',' && starts_core_attribute_key(&text[index + ch.len_utf8()..]) {
             entries.push(text[start..index].trim());
             start = index + ch.len_utf8();
         }
@@ -5773,6 +6402,10 @@ pub fn render_ail_spec(document: &AilDocument) -> String {
             }
             lines.push(String::new());
         }
+        if let Some(integer) = &function.integer {
+            lines.extend(integer_function::render(integer));
+            lines.push(String::new());
+        }
         if !(function.branches.is_empty()
             && function.calls.is_empty()
             && function.termination_bounds.is_empty()
@@ -6166,17 +6799,128 @@ pub fn render_ail_spec(document: &AilDocument) -> String {
         for read in &action.reads {
             lines.push(format!("- the system reads {read}"));
         }
-        for call in &action.calls {
-            lines.push(format!("- the system calls {call}"));
+        for step in action_order::steps(action) {
+            match step {
+                AilActionStep::Boolean(index) => {
+                    if let Some(operation) = action.boolean_operations.get(index) {
+                        lines.push(format!("- {}", operation.source()));
+                    }
+                }
+                AilActionStep::Float(index) => {
+                    if let Some(operation) = action.float_operations.get(index) {
+                        lines.push(format!("- {}", operation.source()));
+                    }
+                }
+                AilActionStep::Variant(index) => {
+                    if let Some(operation) = action.value_operations.get(index) {
+                        lines.push(format!("- {}", operation.source()));
+                    }
+                }
+                AilActionStep::JsonMutation(index) => {
+                    if let Some(operation) = action.json_mutations.get(index) {
+                        lines.push(format!("- {}", operation.source()));
+                    }
+                }
+                AilActionStep::JsonAccess(index) => {
+                    if let Some(operation) = action.json_accesses.get(index) {
+                        lines.push(format!("- {}", operation.source()));
+                    }
+                }
+                AilActionStep::Json(index) => {
+                    if let Some(operation) = action.json_conversions.get(index) {
+                        lines.push(format!("- {}", operation.source()));
+                    }
+                }
+                AilActionStep::Directory(index) => {
+                    if let Some(operation) = action.directory_operations.get(index) {
+                        lines.push(format!("- {}", operation.source()));
+                    }
+                }
+                AilActionStep::Process(index) => {
+                    if let Some(operation) = action.process_operations.get(index) {
+                        lines.push(format!("- {}", operation.source()));
+                    }
+                }
+                AilActionStep::StandardStream(index) => {
+                    if let Some(operation) = action.standard_stream_operations.get(index) {
+                        lines.push(format!("- {}", operation.source()));
+                    }
+                }
+                AilActionStep::File(index) => {
+                    if let Some(operation) = action.file_operations.get(index) {
+                        lines.push(format!("- {}", operation.source()));
+                    }
+                }
+                AilActionStep::Literal(index) => {
+                    if let Some(assignment) = action.literal_assignments.get(index) {
+                        lines.push(format!("- {}", assignment.source()));
+                    }
+                }
+                AilActionStep::List(index) => {
+                    if let Some(operation) = action.list_operations.get(index) {
+                        lines.push(format!("- {}", operation.source()));
+                    }
+                }
+                AilActionStep::Bytes(index) => {
+                    if let Some(operation) = action.bytes_operations.get(index) {
+                        lines.push(format!("- {}", operation.source()));
+                    }
+                }
+                AilActionStep::Text(index) => {
+                    if let Some(operation) = action.text_operations.get(index) {
+                        lines.push(format!("- {}", operation.source()));
+                    }
+                }
+                AilActionStep::IntegerCall(index) => {
+                    if let Some(call) = action.integer_calls.get(index) {
+                        let args = call
+                            .arguments
+                            .iter()
+                            .map(|(n, e)| format!("{n} = {}", e.to_source()))
+                            .collect::<Vec<_>>()
+                            .join("; ");
+                        lines.push(format!(
+                            "- the system calls {} with {} into {}",
+                            call.target,
+                            if args.is_empty() { "none" } else { &args },
+                            call.key
+                        ));
+                    }
+                }
+                AilActionStep::Control(index) => {
+                    if let Some(control) = action.controls.get(index) {
+                        lines.push(format!("- {}", control.source()));
+                    }
+                }
+                AilActionStep::Call(index) => {
+                    let Some(call) = action.calls.get(index) else {
+                        continue;
+                    };
+                    lines.push(format!("- the system calls {call}"));
+                }
+                AilActionStep::Repeat(index) => {
+                    let Some(repeated_call) = action.repeated_calls.get(index) else {
+                        continue;
+                    };
+                    lines.push(format!(
+                        "- the system repeats {} {} times",
+                        repeated_call.target, repeated_call.count
+                    ));
+                }
+                AilActionStep::Write(index) => {
+                    let Some(write) = action.writes.get(index) else {
+                        continue;
+                    };
+                    if write.starts_with("computes ") {
+                        lines.push(format!("- the system {write}"));
+                    } else {
+                        lines.push(format!("- the system changes {write}"));
+                    }
+                }
+            }
         }
-        for repeated_call in &action.repeated_calls {
-            lines.push(format!(
-                "- the system repeats {} {} times",
-                repeated_call.target, repeated_call.count
-            ));
-        }
-        for write in &action.writes {
-            lines.push(format!("- the system changes {write}"));
+        for output in &action.outputs {
+            lines.push(format!("- the system returns {output}"));
         }
         for protection in &action.secret_protections {
             lines.push(format!("- the system does not reveal {protection}"));
@@ -6217,6 +6961,35 @@ pub fn run_ail_action(
     action_name: &str,
     runtime_state: BTreeMap<String, String>,
 ) -> Result<AilRunResult, String> {
+    for action in document.actions.values() {
+        for write in &action.writes {
+            check_bytes_legacy_write(document, write)?;
+        }
+    }
+    if document.actions.values().any(|a| {
+        !a.boolean_operations.is_empty()
+            || !a.float_operations.is_empty()
+            || !a.value_operations.is_empty()
+            || !a.json_mutations.is_empty()
+            || !a.json_accesses.is_empty()
+            || !a.json_conversions.is_empty()
+            || !a.directory_operations.is_empty()
+            || !a.process_operations.is_empty()
+            || !a.standard_stream_operations.is_empty()
+            || !a.file_operations.is_empty()
+            || !a.literal_assignments.is_empty()
+            || !a.list_operations.is_empty()
+            || !a.bytes_operations.is_empty()
+            || !a.text_operations.is_empty()
+            || !a.integer_calls.is_empty()
+            || !a.controls.is_empty()
+            || !a.outputs.is_empty()
+            || a.writes
+                .iter()
+                .any(|w| expression_core::assignment(document, w).is_some())
+    }) {
+        return expression_core::run_document(document, action_name, runtime_state);
+    }
     run_ail_action_inner(document, action_name, runtime_state, 0)
 }
 
@@ -6348,6 +7121,7 @@ fn run_ail_action_inner(
         trace.append(&mut called.trace);
         if called.status != "succeeded" {
             return Ok(AilRunResult {
+                returned_fields: Vec::new(),
                 status: called.status,
                 failure: called.failure,
                 final_state: called.final_state,
@@ -6379,6 +7153,7 @@ fn run_ail_action_inner(
         trace.push(format!("trace {event}"));
     }
     Ok(AilRunResult {
+        returned_fields: Vec::new(),
         status: "succeeded".to_string(),
         failure: None,
         final_state,
@@ -6412,6 +7187,12 @@ pub fn compile_ail_bytecode(
 }
 
 pub fn compile_ail_core_bytecode(core: &AilCore) -> Result<AilBytecodeProgram, String> {
+    crate::ste::parse_ail_ste(&compile_ail_core_ste(core)?)
+}
+
+/// Construct the executable controlled-English intermediate after Core checking.
+/// The bytecode compiler consumes this text through the STE parser.
+pub fn compile_ail_core_ste(core: &AilCore) -> Result<String, String> {
     let diagnostics = check_ail_core(core);
     if !diagnostics.is_empty() {
         return Err(format!(
@@ -6427,7 +7208,7 @@ pub fn compile_ail_core_bytecode(core: &AilCore) -> Result<AilBytecodeProgram, S
         imports: Vec::new(),
     };
     let document = ail_document_from_core(core);
-    compile_ail_document_bytecode(&package, &document)
+    crate::ste::render_ail_ste(&compile_ail_document_bytecode(&package, &document)?)
 }
 
 pub fn compile_ail_core_native_elf(
@@ -6453,7 +7234,30 @@ pub fn compile_ail_core_native_elf(
         .actions
         .get(action_name)
         .ok_or_else(|| format!("unknown AIL action '{action_name}'"))?;
+    if integer_vm::is_function(action) || value_protocol::is_function(action) {
+        return Err("AIL-FUNCTION-001: executable functions require an action caller".into());
+    }
     let action = expand_native_action_calls(action, &program.actions)?;
+    if action.instructions.iter().any(|i| {
+        matches!(
+            i.opcode.as_str(),
+            "CALL_INT" | "CALL_VALUE" | "VALUE_CONSTRUCT" | "VALUE_TEST" | "VALUE_GET"
+        )
+    }) || !program.type_schemas.is_empty()
+    {
+        let functions = program
+            .actions
+            .iter()
+            .filter(|(_, a)| integer_vm::is_function(a) || value_protocol::is_function(a))
+            .map(|(n, a)| (n.clone(), a.clone()))
+            .collect();
+        return native_expr::emit_with_functions(
+            &action,
+            &program.failures,
+            &functions,
+            &program.type_schemas,
+        );
+    }
     emit_linux_x86_64_elf_for_action(&action, &program.failures)
 }
 
@@ -6511,7 +7315,30 @@ pub fn compile_ail_bytecode_native_elf(
         .actions
         .get(action_name)
         .ok_or_else(|| format!("unknown AIL action '{action_name}'"))?;
+    if integer_vm::is_function(action) || value_protocol::is_function(action) {
+        return Err("AIL-FUNCTION-001: executable functions require an action caller".into());
+    }
     let action = expand_native_action_calls(action, &program.actions)?;
+    if action.instructions.iter().any(|i| {
+        matches!(
+            i.opcode.as_str(),
+            "CALL_INT" | "CALL_VALUE" | "VALUE_CONSTRUCT" | "VALUE_TEST" | "VALUE_GET"
+        )
+    }) || !program.type_schemas.is_empty()
+    {
+        let functions = program
+            .actions
+            .iter()
+            .filter(|(_, a)| integer_vm::is_function(a) || value_protocol::is_function(a))
+            .map(|(n, a)| (n.clone(), a.clone()))
+            .collect();
+        return native_expr::emit_with_functions(
+            &action,
+            &program.failures,
+            &functions,
+            &program.type_schemas,
+        );
+    }
     emit_linux_x86_64_elf_for_action(&action, &program.failures)
 }
 
@@ -6525,50 +7352,99 @@ fn expand_native_action_calls(
     actions: &BTreeMap<String, AilBytecodeAction>,
 ) -> Result<AilBytecodeAction, String> {
     let mut next_call_id = 0usize;
-    let instructions =
+    let mut instructions =
         expand_native_action_call_stream(action, actions, false, "", &mut next_call_id, 0)?;
+    if instructions.iter().any(|i| {
+        matches!(
+            i.opcode.as_str(),
+            "RAISE"
+                | "TRY_BEGIN"
+                | "RECOVER"
+                | "TRY_END"
+                | "EVAL_INT"
+                | "OUTPUT_FIELD"
+                | "ADD_INT_FIELD"
+                | "BRANCH_INT"
+                | "EVAL_BOOL"
+                | "BRANCH_BOOL"
+                | "BRANCH_FLOAT"
+                | "EVAL_FLOAT"
+                | "INT_TO_FLOAT"
+                | "FLOAT_TO_INT"
+                | "CALL_INT"
+                | "CALL_VALUE"
+                | "BYTES_LENGTH"
+                | "BYTES_GET"
+                | "BYTES_SLICE"
+                | "BYTES_CONCAT"
+                | "BYTES_SET"
+                | "BYTES_FROM_UTF8"
+                | "BYTES_TO_UTF8"
+                | "BYTES_FROM_HEX"
+                | "BYTES_TO_HEX"
+                | "BYTES_COMPARE"
+                | "TEXT_JOIN"
+                | "TEXT_LENGTH"
+                | "TEXT_SLICE"
+                | "TEXT_FIND"
+                | "TEXT_SPLIT"
+                | "TEXT_JOIN_LIST"
+                | "TEXT_REPLACE"
+                | "TEXT_TRIM"
+                | "LIST_EMPTY"
+                | "LIST_LENGTH"
+                | "LIST_GET"
+                | "LIST_APPEND"
+                | "LIST_SET"
+                | "LIST_CONCAT"
+                | "LIST_SLICE"
+                | "LIST_REVERSE"
+                | "LIST_SORT"
+                | "ASSIGN_LITERAL"
+                | "DIRECTORY_LIST_NAMES"
+                | "DIRECTORY_READ_TEXT"
+                | "DIRECTORY_WRITE_TEXT"
+                | "PROCESS_RUN"
+                | "STDIN_READ_TEXT"
+                | "STDOUT_WRITE_TEXT"
+                | "STDERR_WRITE_TEXT"
+                | "FILE_READ_BYTES"
+                | "FILE_WRITE_BYTES"
+                | "FILE_READ_TEXT"
+                | "FILE_WRITE_TEXT"
+                | "JSON_SET"
+                | "JSON_REMOVE"
+                | "JSON_GET"
+                | "JSON_COUNT"
+                | "JSON_KIND"
+                | "JSON_KEYS"
+                | "JSON_PARSE"
+                | "JSON_FORMAT"
+        )
+    }) {
+        instructions.insert(
+            0,
+            AilBytecodeInstruction::new(
+                "NATIVE_FUEL_ROOT",
+                &[("limit", native_action_fuel_limit(action).to_string())],
+            ),
+        );
+    } else {
+        instructions.retain(|i| {
+            !matches!(
+                i.opcode.as_str(),
+                "NATIVE_FUEL_SCOPE_BEGIN" | "NATIVE_FUEL_SCOPE_END"
+            )
+        });
+    }
     Ok(AilBytecodeAction {
         name: action.name.clone(),
-        instructions: annotate_native_integer_state_effects(instructions)?,
+        instructions,
     })
 }
 
-fn annotate_native_integer_state_effects(
-    instructions: Vec<AilBytecodeInstruction>,
-) -> Result<Vec<AilBytecodeInstruction>, String> {
-    let mut integer_deltas = BTreeMap::<String, i64>::new();
-    let mut annotated = Vec::with_capacity(instructions.len());
-    for mut instruction in instructions {
-        match instruction.opcode.as_str() {
-            "ADD_INT_FIELD" => {
-                let key = instruction
-                    .operands
-                    .get("key")
-                    .ok_or_else(|| "native ADD_INT_FIELD is missing key".to_string())?
-                    .clone();
-                let delta = instruction
-                    .operands
-                    .get("delta")
-                    .ok_or_else(|| {
-                        format!("native ADD_INT_FIELD for field {key} is missing delta")
-                    })?
-                    .parse::<i64>()
-                    .map_err(|_| {
-                        format!("native ADD_INT_FIELD for field {key} has non-integer delta")
-                    })?;
-                let effective_delta = integer_deltas.entry(key).or_insert(0);
-                *effective_delta += delta;
-                instruction.operands.insert(
-                    "native_effective_delta".to_string(),
-                    effective_delta.to_string(),
-                );
-            }
-            "LABEL" | "BRANCH_FIELD_EQUALS" | "JUMP" => integer_deltas.clear(),
-            _ => {}
-        }
-        annotated.push(instruction);
-    }
-    Ok(annotated)
+fn native_action_fuel_limit(action: &AilBytecodeAction) -> usize {
+    action.instructions.len().saturating_mul(1024).max(1024)
 }
 
 fn expand_native_action_call_stream(
@@ -6585,7 +7461,24 @@ fn expand_native_action_call_stream(
             action.name
         ));
     }
+    let has_outputs = inline
+        && action
+            .instructions
+            .iter()
+            .any(|i| i.opcode == "OUTPUT_FIELD");
     let mut instructions = Vec::new();
+    if inline {
+        instructions.push(AilBytecodeInstruction::new(
+            "NATIVE_FUEL_SCOPE_BEGIN",
+            &[("limit", native_action_fuel_limit(action).to_string())],
+        ));
+    }
+    if has_outputs {
+        instructions.push(AilBytecodeInstruction::new(
+            "NATIVE_OUTPUT_SCOPE_BEGIN",
+            &[],
+        ));
+    }
     for (index, instruction) in action.instructions.iter().enumerate() {
         if instruction.opcode == "CALL_ACTION" {
             let target = instruction.operands.get("target").ok_or_else(|| {
@@ -6659,7 +7552,10 @@ fn expand_native_action_call_stream(
             for iteration in 1..=count {
                 instructions.push(AilBytecodeInstruction::new(
                     "NATIVE_TRACE_LINE",
-                    &[("text", format!("repeat {target} iteration {iteration}"))],
+                    &[
+                        ("text", format!("repeat {target} iteration {iteration}")),
+                        ("fuel", "0".into()),
+                    ],
                 ));
                 let call_id = *next_call_id;
                 *next_call_id += 1;
@@ -6686,6 +7582,32 @@ fn expand_native_action_call_stream(
         }
         instructions.push(native_prefixed_label_instruction(instruction, label_prefix));
     }
+    let return_cost = usize::from(
+        inline
+            && action
+                .instructions
+                .last()
+                .is_some_and(|i| i.opcode == "RETURN_SUCCESS"),
+    );
+    if has_outputs {
+        instructions.push(AilBytecodeInstruction::new(
+            "NATIVE_OUTPUT_SCOPE_END",
+            &[("return_cost", return_cost.to_string())],
+        ));
+    }
+    if inline {
+        instructions.push(AilBytecodeInstruction::new(
+            "NATIVE_FUEL_SCOPE_END",
+            &[(
+                "return_cost",
+                if has_outputs {
+                    "0".into()
+                } else {
+                    return_cost.to_string()
+                },
+            )],
+        ));
+    }
     Ok(instructions)
 }
 
@@ -6703,7 +7625,7 @@ fn native_prefixed_label_instruction(
                 *name = format!("{label_prefix}{name}");
             }
         }
-        "BRANCH_FIELD_EQUALS" | "JUMP" => {
+        "BRANCH_FIELD_EQUALS" | "BRANCH_INT" | "BRANCH_FLOAT" | "BRANCH_BOOL" | "JUMP" => {
             if let Some(label) = instruction.operands.get_mut("label") {
                 *label = format!("{label_prefix}{label}");
             }
@@ -6717,6 +7639,77 @@ fn emit_linux_x86_64_elf_for_action(
     action: &AilBytecodeAction,
     failures: &BTreeMap<String, AilBytecodeFailure>,
 ) -> Result<Vec<u8>, String> {
+    if action.instructions.iter().any(|i| {
+        matches!(
+            i.opcode.as_str(),
+            "RAISE"
+                | "TRY_BEGIN"
+                | "RECOVER"
+                | "TRY_END"
+                | "EVAL_INT"
+                | "OUTPUT_FIELD"
+                | "ADD_INT_FIELD"
+                | "BRANCH_INT"
+                | "EVAL_BOOL"
+                | "BRANCH_BOOL"
+                | "BRANCH_FLOAT"
+                | "EVAL_FLOAT"
+                | "INT_TO_FLOAT"
+                | "FLOAT_TO_INT"
+                | "CALL_INT"
+                | "CALL_VALUE"
+                | "BYTES_LENGTH"
+                | "BYTES_GET"
+                | "BYTES_SLICE"
+                | "BYTES_CONCAT"
+                | "BYTES_SET"
+                | "BYTES_FROM_UTF8"
+                | "BYTES_TO_UTF8"
+                | "BYTES_FROM_HEX"
+                | "BYTES_TO_HEX"
+                | "BYTES_COMPARE"
+                | "TEXT_JOIN"
+                | "TEXT_LENGTH"
+                | "TEXT_SLICE"
+                | "TEXT_FIND"
+                | "TEXT_SPLIT"
+                | "TEXT_JOIN_LIST"
+                | "TEXT_REPLACE"
+                | "TEXT_TRIM"
+                | "LIST_EMPTY"
+                | "LIST_LENGTH"
+                | "LIST_GET"
+                | "LIST_APPEND"
+                | "LIST_SET"
+                | "LIST_CONCAT"
+                | "LIST_SLICE"
+                | "LIST_REVERSE"
+                | "LIST_SORT"
+                | "ASSIGN_LITERAL"
+                | "DIRECTORY_LIST_NAMES"
+                | "DIRECTORY_READ_TEXT"
+                | "DIRECTORY_WRITE_TEXT"
+                | "PROCESS_RUN"
+                | "STDIN_READ_TEXT"
+                | "STDOUT_WRITE_TEXT"
+                | "STDERR_WRITE_TEXT"
+                | "FILE_READ_BYTES"
+                | "FILE_WRITE_BYTES"
+                | "FILE_READ_TEXT"
+                | "FILE_WRITE_TEXT"
+                | "JSON_SET"
+                | "JSON_REMOVE"
+                | "JSON_GET"
+                | "JSON_COUNT"
+                | "JSON_KIND"
+                | "JSON_KEYS"
+                | "JSON_PARSE"
+                | "JSON_FORMAT"
+        )
+    }) {
+        return native_expr::emit(action, failures);
+    }
+
     let mut failure_branches = Vec::new();
     let mut data_labels = Vec::new();
     let mut next_data_label = 0usize;
@@ -6736,6 +7729,9 @@ fn emit_linux_x86_64_elf_for_action(
         0x49, 0x89, 0xdd, // mov r13, rbx
         0x49, 0xff, 0xcd, // dec r13
     ]);
+    native_expr::legacy_stdio_initialize(&mut code)?;
+    native_expr::legacy_process_initialize(&mut code)?;
+    native_expr::legacy_directory_initialize(&mut code)?;
 
     for (instruction_index, instruction) in action.instructions.iter().enumerate() {
         if let Some(label) = label_by_instruction.get(&instruction_index) {
@@ -6749,7 +7745,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("action {action} started\n"),
-                    );
+                    )?;
                 }
             }
             "FUNCTION_BEGIN" => {
@@ -6759,7 +7755,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("function {label} started\n"),
-                    );
+                    )?;
                 }
             }
             "FUNCTION_INPUT" => {
@@ -6772,7 +7768,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("function input {name}:{type_name}\n"),
-                    );
+                    )?;
                 }
             }
             "FUNCTION_OUTPUT" => {
@@ -6785,7 +7781,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("function output {name}:{type_name}\n"),
-                    );
+                    )?;
                 }
             }
             "FUNCTION_BRANCH" => {
@@ -6795,7 +7791,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("function branch {condition}\n"),
-                    );
+                    )?;
                 }
             }
             "FUNCTION_CALL" => {
@@ -6805,7 +7801,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("function call {target}\n"),
-                    );
+                    )?;
                 }
             }
             "FUNCTION_RETURN" => {
@@ -6815,7 +7811,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("function return {value}\n"),
-                    );
+                    )?;
                 }
             }
             "NATIVE_TRACE_LINE" => {
@@ -6825,7 +7821,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("{text}\n"),
-                    );
+                    )?;
                 }
             }
             "LABEL" => {}
@@ -6865,7 +7861,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("branch {label} skipped\n"),
-                    );
+                    )?;
                     code.emit_jmp_label(&done_label);
                     code.label(taken_label)?;
                     emit_native_trace_line(
@@ -6873,7 +7869,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("branch {label} taken\n"),
-                    );
+                    )?;
                     code.emit_jmp_label(&target_label);
                     code.label(done_label)?;
                 }
@@ -6897,7 +7893,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("jump {label}\n"),
-                    );
+                    )?;
                     code.emit_jmp_label(&target_label);
                 }
             }
@@ -6965,6 +7961,7 @@ fn emit_linux_x86_64_elf_for_action(
                     code.emit_mov_r14_rax();
                     code.emit_mov_r15_imm64(effective_delta as u64);
                     code.emit_add_r14_r15();
+                    native_expr::legacy_stdio_skip(&mut code, &done_label);
                     code.emit_write_label(1, &stdout_prefix_label, key_prefix.len() as u32);
                     code.emit_mov_rdi_r14();
                     code.emit_mov_esi_imm32(1);
@@ -7012,7 +8009,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("rule passed: {rule}\n"),
-                    );
+                    )?;
                 }
             }
             "REQUIRE_FIELD_NOT_EQUALS" => {
@@ -7049,7 +8046,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("rule passed: {rule}\n"),
-                    );
+                    )?;
                 }
             }
             "REQUIRE_FIELD_IN" => {
@@ -7096,7 +8093,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("rule passed: {rule}\n"),
-                    );
+                    )?;
                 }
             }
             "REQUIRE_FIELD_AFTER" => {
@@ -7152,7 +8149,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("rule passed: {rule}\n"),
-                    );
+                    )?;
                 }
             }
             "OBSERVE_RULE" => {
@@ -7173,7 +8170,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("read {key}\n"),
-                    );
+                    )?;
                 }
             }
             "READ_EFFECT" => {
@@ -7183,7 +8180,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("read {text}\n"),
-                    );
+                    )?;
                 }
             }
             "SET_FIELD" => {
@@ -7198,13 +8195,16 @@ fn emit_linux_x86_64_elf_for_action(
                         "state_write",
                         &line,
                     );
+                    let done = format!("stdio_state_write_done_{instruction_index}");
+                    native_expr::legacy_stdio_skip(&mut code, &done);
                     code.emit_write_label(1, &label, line.len() as u32);
+                    code.label(done)?;
                     emit_native_trace_line(
                         &mut code,
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("write {key}={value}\n"),
-                    );
+                    )?;
                 }
             }
             "COPY_FIELD" => {
@@ -7225,7 +8225,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("write {key}\n"),
-                    );
+                    )?;
                 }
             }
             "WRITE_FIELD" => {
@@ -7243,7 +8243,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("write {key}\n"),
-                    );
+                    )?;
                 }
             }
             "EFFECT" => {
@@ -7253,7 +8253,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("effect {text}\n"),
-                    );
+                    )?;
                 }
             }
             "ASSERT_GUARANTEE" => {
@@ -7263,7 +8263,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("guarantee checked: {text}\n"),
-                    );
+                    )?;
                 }
             }
             "TOOL_BEGIN" => {
@@ -7273,7 +8273,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("tool {label} started\n"),
-                    );
+                    )?;
                 }
             }
             "TOOL_REQUIREMENT" => {
@@ -7283,7 +8283,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("tool requirement {text}\n"),
-                    );
+                    )?;
                 }
             }
             "TOOL_INPUT" => {
@@ -7296,7 +8296,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("tool input {name}:{type_name}\n"),
-                    );
+                    )?;
                 }
             }
             "TOOL_OUTPUT" => {
@@ -7309,7 +8309,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("tool output {name}:{type_name}\n"),
-                    );
+                    )?;
                 }
             }
             "TOOL_READ" => {
@@ -7319,7 +8319,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("tool read {text}\n"),
-                    );
+                    )?;
                 }
             }
             "TOOL_CALL" => {
@@ -7329,7 +8329,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("tool call {target}\n"),
-                    );
+                    )?;
                 }
             }
             "TOOL_WRITE" => {
@@ -7339,7 +8339,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("tool write {text}\n"),
-                    );
+                    )?;
                 }
             }
             "TOOL_PERMISSION" => {
@@ -7349,7 +8349,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("tool permission {text}\n"),
-                    );
+                    )?;
                 }
             }
             "TOOL_APPROVAL" => {
@@ -7359,7 +8359,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("tool approval {text}\n"),
-                    );
+                    )?;
                 }
             }
             "TOOL_SECRET_PROTECTION" => {
@@ -7369,7 +8369,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("tool secret protection {text}\n"),
-                    );
+                    )?;
                 }
             }
             "SYSTEM_BEGIN" => {
@@ -7379,7 +8379,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("system component {label} started\n"),
-                    );
+                    )?;
                 }
             }
             "SYSTEM_RESOURCE" => {
@@ -7392,7 +8392,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("system resource {name}:{type_name}\n"),
-                    );
+                    )?;
                 }
             }
             "SYSTEM_OWNS" => {
@@ -7402,7 +8402,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("system owns {resource}\n"),
-                    );
+                    )?;
                 }
             }
             "SYSTEM_BORROWS" => {
@@ -7412,7 +8412,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("system borrows {resource}\n"),
-                    );
+                    )?;
                 }
             }
             "SYSTEM_MUTABLY_BORROWS" => {
@@ -7422,7 +8422,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("system mutably borrows {resource}\n"),
-                    );
+                    )?;
                 }
             }
             "SYSTEM_REGION" => {
@@ -7435,7 +8435,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("system places {resource} in {region}\n"),
-                    );
+                    )?;
                 }
             }
             "SYSTEM_LAYOUT" => {
@@ -7448,7 +8448,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("system layout {resource} {layout}\n"),
-                    );
+                    )?;
                 }
             }
             "SYSTEM_ALLOCATION" => {
@@ -7461,7 +8461,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("system allocation {resource} {placement}\n"),
-                    );
+                    )?;
                 }
             }
             "SYSTEM_LOCK_GUARD" => {
@@ -7474,7 +8474,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("system lock guard {resource} with {lock}\n"),
-                    );
+                    )?;
                 }
             }
             "SYSTEM_CONTEXT" => {
@@ -7484,7 +8484,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("system context {name}\n"),
-                    );
+                    )?;
                 }
             }
             "SYSTEM_INTERRUPT_PRIORITY" => {
@@ -7497,7 +8497,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("system interrupt priority {context} {priority}\n"),
-                    );
+                    )?;
                 }
             }
             "SYSTEM_INTERRUPT_MASK" => {
@@ -7510,7 +8510,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("system interrupt mask {context} {mask}\n"),
-                    );
+                    )?;
                 }
             }
             "SYSTEM_SCHEDULER_TASK" => {
@@ -7523,7 +8523,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("system scheduler task {task} in {context}\n"),
-                    );
+                    )?;
                 }
             }
             "SYSTEM_TASK_PRIORITY" => {
@@ -7536,7 +8536,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("system task priority {task} {priority}\n"),
-                    );
+                    )?;
                 }
             }
             "SYSTEM_TASK_TIMING" => {
@@ -7550,7 +8550,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("system task timing {task} deadline {deadline} budget {budget}\n"),
-                    );
+                    )?;
                 }
             }
             "SYSTEM_CAPABILITY" => {
@@ -7560,7 +8560,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("system capability {text}\n"),
-                    );
+                    )?;
                 }
             }
             "SYSTEM_EFFECT" => {
@@ -7570,7 +8570,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("system effect {text}\n"),
-                    );
+                    )?;
                 }
             }
             "PASS_BEGIN" => {
@@ -7580,7 +8580,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("compiler pass {label} started\n"),
-                    );
+                    )?;
                 }
             }
             "PASS_INPUT" => {
@@ -7593,7 +8593,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("input {name}:{type_name}\n"),
-                    );
+                    )?;
                 }
             }
             "PASS_OUTPUT" => {
@@ -7606,7 +8606,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("output {name}:{type_name}\n"),
-                    );
+                    )?;
                 }
             }
             "PASS_READ" => {
@@ -7616,7 +8616,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("pass read {text}\n"),
-                    );
+                    )?;
                 }
             }
             "PASS_STEP" => {
@@ -7626,7 +8626,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("pass step {text}\n"),
-                    );
+                    )?;
                 }
             }
             "PASS_WRITE" => {
@@ -7636,7 +8636,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("pass write {text}\n"),
-                    );
+                    )?;
                 }
             }
             "CORE_INFER_READ_PERMISSIONS" => {
@@ -7645,7 +8645,7 @@ fn emit_linux_x86_64_elf_for_action(
                     &mut data_labels,
                     &mut next_data_label,
                     "core transform infer read permissions\n",
-                );
+                )?;
             }
             "EMIT_TRACE" => {
                 if let Some(event) = instruction.operands.get("event") {
@@ -7654,7 +8654,7 @@ fn emit_linux_x86_64_elf_for_action(
                         &mut data_labels,
                         &mut next_data_label,
                         &format!("trace {event}\n"),
-                    );
+                    )?;
                 }
             }
             "RETURN_SUCCESS" => {
@@ -7675,7 +8675,12 @@ fn emit_linux_x86_64_elf_for_action(
         code.label(&branch.label)?;
         for (index, line) in branch.trace_lines.iter().enumerate() {
             let label = format!("{}_trace_{index}", branch.label);
+            let done = format!("{label}_done");
+            if !line.starts_with("failure ") {
+                native_expr::legacy_stdio_skip(&mut code, &done);
+            }
             code.emit_write_label(2, &label, line.len() as u32);
+            code.label(done)?;
         }
         code.emit_exit(1);
     }
@@ -7757,9 +8762,12 @@ fn emit_native_trace_line(
     data_labels: &mut Vec<(String, Vec<u8>)>,
     next_data_label: &mut usize,
     line: &str,
-) {
+) -> Result<(), String> {
     let label = push_native_data_label(data_labels, next_data_label, "trace_write", line);
+    let done = format!("{label}_done");
+    native_expr::legacy_stdio_skip(code, &done);
     code.emit_write_label(2, &label, line.len() as u32);
+    code.label(done)
 }
 
 fn emit_native_copy_state_write(
@@ -7785,6 +8793,7 @@ fn emit_native_copy_state_write(
     let newline_label =
         push_native_data_label(data_labels, next_data_label, "state_copy_newline", b"\n");
     let done_label = format!("state_copy_done_{instruction_index}");
+    native_expr::legacy_stdio_skip(code, &done_label);
     code.emit_lea_rsi_label(&source_label);
     code.emit_mov_edx_imm32(source_prefix.len() as u32);
     code.emit_call_label("find_prefix");
@@ -8241,12 +9250,22 @@ fn compile_ail_document_bytecode(
             let mut actions = document
                 .actions
                 .iter()
-                .map(|(name, action)| (name.clone(), compile_ail_action_bytecode(document, action)))
-                .collect::<BTreeMap<_, _>>();
+                .map(|(name, action)| {
+                    compile_ail_action_bytecode(document, action)
+                        .map(|action| (name.clone(), action))
+                })
+                .collect::<Result<BTreeMap<_, _>, _>>()?;
             for (name, function) in &document.functions {
-                actions
-                    .entry(name.clone())
-                    .or_insert_with(|| compile_ail_function_bytecode(function));
+                let body = if function.integer.is_some() {
+                    integer_function::compile(function, document)?
+                } else {
+                    compile_ail_function_bytecode(function)
+                };
+                if actions.insert(name.clone(), body).is_some() {
+                    return Err(format!(
+                        "AIL-FUNCTION-001: action/function name collision {name}"
+                    ));
+                }
             }
             actions
         }
@@ -8260,7 +9279,7 @@ fn compile_ail_document_bytecode(
             .iter()
             .map(|(name, pass)| (name.clone(), compile_ail_compiler_pass_bytecode(pass)))
             .collect(),
-        "UI" => compile_ail_ui_bytecode_actions(document),
+        "UI" => compile_ail_ui_bytecode_actions(document)?,
         "System" => document
             .system_components
             .iter()
@@ -8286,6 +9305,7 @@ fn compile_ail_document_bytecode(
         })
         .collect();
     Ok(AilBytecodeProgram {
+        type_schemas: value_types::from_document(document)?,
         package_name: package.metadata.name.clone(),
         package_version: package.metadata.version.clone(),
         profile: package.metadata.profile.clone(),
@@ -8299,6 +9319,21 @@ fn compile_ail_document_bytecode(
 }
 
 pub fn ail_document_from_core(core: &AilCore) -> AilDocument {
+    // All generic projections and specialized decoders must share one view:
+    // their operation indices refer to the same relation occurrence order.
+    let ordered_core = if core
+        .graph
+        .edges
+        .windows(2)
+        .all(|pair| pair[0].ordinal <= pair[1].ordinal)
+    {
+        std::borrow::Cow::Borrowed(core)
+    } else {
+        let mut ordered = core.clone();
+        ordered.graph.edges.sort_by_key(|edge| edge.ordinal);
+        std::borrow::Cow::Owned(ordered)
+    };
+    let core = ordered_core.as_ref();
     let node_by_id = graph_node_by_id(core);
     let mut document = AilDocument {
         application: AilApplication::default(),
@@ -8623,6 +9658,7 @@ pub fn ail_document_from_core(core: &AilCore) -> AilDocument {
         .filter(|node| node.kind == "Function")
     {
         let mut function = AilFunction {
+            integer: integer_function::from_core_function(core, function_node),
             name: function_node.name.clone(),
             label: function_node
                 .attributes
@@ -8890,6 +9926,23 @@ pub fn ail_document_from_core(core: &AilCore) -> AilDocument {
         })
     {
         let action = AilAction {
+            boolean_operations: bool_operations::from_core(core, action_node),
+            float_operations: float_operations::from_core(core, action_node),
+            value_operations: value_operations::from_core(core, action_node),
+            json_mutations: json_mutation::from_core(core, action_node),
+            json_accesses: structured_json::from_core(core, action_node),
+            json_conversions: json_codec::from_core(core, action_node),
+            directory_operations: directory_operations::from_core(core, action_node),
+            process_operations: process_operations::from_core(core, action_node),
+            standard_stream_operations: standard_streams::from_core(core, action_node),
+            file_operations: file_operations::from_core(core, action_node),
+            literal_assignments: literal_assignment::from_core(core, action_node),
+            list_operations: list_operations::from_core(core, action_node),
+            bytes_operations: bytes_operations::from_core(core, action_node),
+            text_operations: text_operations::from_core(core, action_node),
+            integer_calls: integer_function::calls_from_core(core, action_node),
+            steps: action_order::from_core(core, action_node),
+            controls: control_flow::from_core(core, action_node),
             name: action_node.name.clone(),
             label: action_node
                 .attributes
@@ -8908,6 +9961,10 @@ pub fn ail_document_from_core(core: &AilCore) -> AilDocument {
                 .collect(),
             reads: outgoing_edge_payloads(core, &node_by_id, action_node, "reads", "read"),
             writes: outgoing_edge_payloads(core, &node_by_id, action_node, "writes", "write"),
+            outputs: outgoing_nodes(core, &node_by_id, action_node, "returns_field")
+                .iter()
+                .map(expression_core::field_key)
+                .collect(),
             calls: outgoing_nodes(core, &node_by_id, action_node, "calls")
                 .into_iter()
                 .filter(|node| node.kind == "Action")
@@ -9355,7 +10412,15 @@ fn outgoing_edge_payloads(
         .iter()
         .filter(|edge| edge.kind == edge_kind && edge.source == source.id)
         .filter_map(|edge| {
+            if edge.kind == "reads" && edge.attributes.contains_key("inferred_expression") {
+                return None;
+            }
             let target = node_by_id.get(&edge.target)?;
+            if edge.kind == "writes"
+                && let Some(text) = expression_core::write_text(core, edge, target)
+            {
+                return Some(text);
+            }
             let prefix = format!(
                 "{}:{}.{}:",
                 core_provenance_source_kind(source),
@@ -9391,7 +10456,7 @@ fn outgoing_repeated_action_calls(
                     .attributes
                     .get("count")
                     .and_then(|count| count.parse::<usize>().ok())
-                    .unwrap_or(1),
+                    .unwrap_or(0),
                 provenance: format!("action:{}.repeat:{}", source.name, target.name),
             })
         })
@@ -9616,12 +10681,16 @@ fn compiler_pass_declares_read_permission_inference(pass: &AilCompilerPass) -> b
         .any(|write| write.to_ascii_lowercase().contains("read permission"))
 }
 
-fn compile_ail_ui_bytecode_actions(document: &AilDocument) -> BTreeMap<String, AilBytecodeAction> {
+fn compile_ail_ui_bytecode_actions(
+    document: &AilDocument,
+) -> Result<BTreeMap<String, AilBytecodeAction>, String> {
     let mut actions = document
         .actions
         .iter()
-        .map(|(name, action)| (name.clone(), compile_ail_action_bytecode(document, action)))
-        .collect::<BTreeMap<_, _>>();
+        .map(|(name, action)| {
+            compile_ail_action_bytecode(document, action).map(|action| (name.clone(), action))
+        })
+        .collect::<Result<BTreeMap<_, _>, _>>()?;
     actions.extend(
         document
             .routes
@@ -9646,7 +10715,7 @@ fn compile_ail_ui_bytecode_actions(document: &AilDocument) -> BTreeMap<String, A
             .iter()
             .map(|(name, workflow)| (name.clone(), compile_ail_ui_workflow_bytecode(workflow))),
     );
-    actions
+    Ok(actions)
 }
 
 fn compile_ail_ui_route_bytecode(document: &AilDocument, route: &AilRoute) -> AilBytecodeAction {
@@ -10151,7 +11220,12 @@ fn function_is_option_map(function: &AilFunction) -> bool {
             .any(|return_value| return_value == "None")
 }
 
-fn compile_ail_action_bytecode(document: &AilDocument, action: &AilAction) -> AilBytecodeAction {
+fn compile_ail_action_bytecode(
+    document: &AilDocument,
+    action: &AilAction,
+) -> Result<AilBytecodeAction, String> {
+    control_flow::check_document(action, document)?;
+    let mut control_emitter = control_flow::Emitter::default();
     let mut instructions = Vec::new();
     instructions.push(AilBytecodeInstruction::new(
         "ACTION_BEGIN",
@@ -10264,53 +11338,209 @@ fn compile_ail_action_bytecode(document: &AilDocument, action: &AilAction) -> Ai
             ));
         }
     }
-    for call in &action.calls {
-        let target =
-            action_call_target_name(document, call).unwrap_or_else(|| action_name_from_label(call));
-        instructions.push(AilBytecodeInstruction::new(
-            "CALL_ACTION",
-            &[("target", target)],
-        ));
-    }
-    for repeated_call in &action.repeated_calls {
-        let target = action_call_target_name(document, &repeated_call.target)
-            .unwrap_or_else(|| action_name_from_label(&repeated_call.target));
-        instructions.push(AilBytecodeInstruction::new(
-            "REPEAT_ACTION",
-            &[
-                ("target", target),
-                ("count", repeated_call.count.to_string()),
-            ],
-        ));
-    }
-    for write in &action.writes {
-        if let Some((key, delta)) = field_integer_delta_assignment(document, write) {
-            instructions.push(AilBytecodeInstruction::new(
-                "ADD_INT_FIELD",
-                &[("key", key), ("delta", delta), ("text", write.clone())],
-            ));
-        } else if let Some((key, value)) = field_write_assignment(document, write) {
-            instructions.push(AilBytecodeInstruction::new(
-                "SET_FIELD",
-                &[("key", key), ("value", value), ("text", write.clone())],
-            ));
-        } else if let Some((source, key)) = field_copy_assignment(document, write) {
-            instructions.push(AilBytecodeInstruction::new(
-                "COPY_FIELD",
-                &[("source", source), ("key", key), ("text", write.clone())],
-            ));
-        } else if let Some(key) = referenced_runtime_field_key(document, write) {
-            instructions.push(AilBytecodeInstruction::new(
-                "WRITE_FIELD",
-                &[("key", key), ("text", write.clone())],
-            ));
-        } else {
-            instructions.push(AilBytecodeInstruction::new(
-                "EFFECT",
-                &[("text", write.clone())],
-            ));
+    for step in action_order::steps(action) {
+        match step {
+            AilActionStep::Boolean(index) => {
+                let operation = action
+                    .boolean_operations
+                    .get(index)
+                    .ok_or("AIL-BOOL-001: invalid Boolean operation index")?;
+                instructions.push(bool_operations::instruction(operation, document)?);
+            }
+            AilActionStep::Float(index) => {
+                let operation = action
+                    .float_operations
+                    .get(index)
+                    .ok_or("AIL-FLOAT-001: invalid float operation index")?;
+                instructions.push(float_operations::instruction(operation, document)?);
+            }
+            AilActionStep::Variant(index) => {
+                instructions.push(value_operations::instruction(
+                    action
+                        .value_operations
+                        .get(index)
+                        .ok_or("missing variant operation")?,
+                    document,
+                )?);
+            }
+            AilActionStep::JsonMutation(index) => {
+                let operation = action
+                    .json_mutations
+                    .get(index)
+                    .ok_or("AIL-JSON-001: invalid JSON mutation index")?;
+                instructions.push(json_mutation::instruction(operation, document)?);
+            }
+            AilActionStep::JsonAccess(index) => {
+                let operation = action
+                    .json_accesses
+                    .get(index)
+                    .ok_or("AIL-JSON-001: invalid JSON access index")?;
+                instructions.push(structured_json::instruction(operation, document)?);
+            }
+            AilActionStep::Json(index) => {
+                let operation = action
+                    .json_conversions
+                    .get(index)
+                    .ok_or("AIL-JSON-001: invalid JSON conversion index")?;
+                instructions.push(json_codec::instruction(operation, document)?);
+            }
+            AilActionStep::Directory(index) => {
+                let operation = action
+                    .directory_operations
+                    .get(index)
+                    .ok_or("AIL-DIRECTORY-001: invalid directory operation index")?;
+                instructions.push(directory_operations::instruction(operation, document)?);
+            }
+            AilActionStep::Process(index) => {
+                let operation = action
+                    .process_operations
+                    .get(index)
+                    .ok_or("AIL-PROCESS-001: invalid process operation index")?;
+                instructions.push(process_operations::instruction(operation, document)?);
+            }
+            AilActionStep::StandardStream(index) => {
+                let operation = action
+                    .standard_stream_operations
+                    .get(index)
+                    .ok_or("AIL-STDIO-001: invalid standard stream operation index")?;
+                instructions.push(standard_streams::instruction(operation, document)?);
+            }
+            AilActionStep::File(index) => {
+                let operation = action
+                    .file_operations
+                    .get(index)
+                    .ok_or("AIL-FILE-001: invalid file operation index")?;
+                instructions.push(file_operations::instruction(operation, document)?);
+            }
+            AilActionStep::Literal(index) => {
+                let assignment = action
+                    .literal_assignments
+                    .get(index)
+                    .ok_or("AIL-LITERAL-001: invalid literal assignment index")?;
+                instructions.push(literal_assignment::instruction(assignment, document)?);
+            }
+            AilActionStep::List(index) => {
+                let operation = action
+                    .list_operations
+                    .get(index)
+                    .ok_or("AIL-LIST-001: invalid list operation index")?;
+                list_operations::check_source(operation, document)?;
+                instructions.push(list_operations::instruction(operation, document)?);
+            }
+            AilActionStep::Bytes(index) => {
+                let operation = action
+                    .bytes_operations
+                    .get(index)
+                    .ok_or("AIL-BYTES-001: invalid byte operation index")?;
+                bytes_operations::check_source(operation, document)?;
+                instructions.push(bytes_operations::instruction(operation)?);
+            }
+            AilActionStep::Text(index) => {
+                let operation = action
+                    .text_operations
+                    .get(index)
+                    .ok_or("AIL-TEXT-001: invalid text operation index")?;
+                text_operations::check_source(operation, document)?;
+                instructions.push(text_operations::instruction(operation)?);
+            }
+            AilActionStep::IntegerCall(index) => {
+                let call = action
+                    .integer_calls
+                    .get(index)
+                    .ok_or("AIL-FUNCTION-001: bad call index")?;
+                if value_function::classify(document).contains(&call.target) {
+                    instructions.push(value_function::action_call_instruction(call, document)?);
+                    continue;
+                }
+                integer_vm::check_source_call(call, document)?;
+                instructions.push(AilBytecodeInstruction::new(
+                    "CALL_INT",
+                    &[
+                        ("target", call.target.clone()),
+                        (
+                            "arguments",
+                            integer_function::encode_arguments(&call.arguments),
+                        ),
+                        ("key", call.key.clone()),
+                    ],
+                ));
+            }
+            AilActionStep::Control(index) => {
+                let control = action
+                    .controls
+                    .get(index)
+                    .ok_or("AIL-CONTROL-001: invalid control index")?;
+                control_emitter.emit(control, &mut instructions)?;
+            }
+            AilActionStep::Call(index) => {
+                let call = action
+                    .calls
+                    .get(index)
+                    .ok_or("AIL-EXPR-002: action step index is out of range")?;
+                let target = action_call_target_name(document, call)
+                    .unwrap_or_else(|| action_name_from_label(call));
+                instructions.push(AilBytecodeInstruction::new(
+                    "CALL_ACTION",
+                    &[("target", target)],
+                ));
+            }
+            AilActionStep::Repeat(index) => {
+                let repeated_call = action
+                    .repeated_calls
+                    .get(index)
+                    .ok_or("AIL-EXPR-002: action step index is out of range")?;
+                let target = action_call_target_name(document, &repeated_call.target)
+                    .unwrap_or_else(|| action_name_from_label(&repeated_call.target));
+                instructions.push(AilBytecodeInstruction::new(
+                    "REPEAT_ACTION",
+                    &[
+                        ("target", target),
+                        ("count", repeated_call.count.to_string()),
+                    ],
+                ));
+            }
+            AilActionStep::Write(index) => {
+                let write = action
+                    .writes
+                    .get(index)
+                    .ok_or("AIL-EXPR-002: action step index is out of range")?;
+                check_bytes_legacy_write(document, write)?;
+                if let Some(parsed) = expression_core::assignment(document, write) {
+                    let (key, expression) = parsed?;
+                    instructions.push(AilBytecodeInstruction::new(
+                        "EVAL_INT",
+                        &[("key", key), ("expression", expression.to_postfix())],
+                    ));
+                } else if let Some((key, delta)) = field_integer_delta_assignment(document, write) {
+                    instructions.push(AilBytecodeInstruction::new(
+                        "ADD_INT_FIELD",
+                        &[("key", key), ("delta", delta), ("text", write.clone())],
+                    ));
+                } else if let Some((key, value)) = field_write_assignment(document, write) {
+                    instructions.push(AilBytecodeInstruction::new(
+                        "SET_FIELD",
+                        &[("key", key), ("value", value), ("text", write.clone())],
+                    ));
+                } else if let Some((source, key)) = field_copy_assignment(document, write) {
+                    instructions.push(AilBytecodeInstruction::new(
+                        "COPY_FIELD",
+                        &[("source", source), ("key", key), ("text", write.clone())],
+                    ));
+                } else if let Some(key) = referenced_runtime_field_key(document, write) {
+                    instructions.push(AilBytecodeInstruction::new(
+                        "WRITE_FIELD",
+                        &[("key", key), ("text", write.clone())],
+                    ));
+                } else {
+                    instructions.push(AilBytecodeInstruction::new(
+                        "EFFECT",
+                        &[("text", write.clone())],
+                    ));
+                }
+            }
         }
     }
+    control_emitter.finish()?;
     for guarantee in &action.guarantees {
         instructions.push(AilBytecodeInstruction::new(
             "ASSERT_GUARANTEE",
@@ -10323,22 +11553,43 @@ fn compile_ail_action_bytecode(document: &AilDocument, action: &AilAction) -> Ai
             &[("event", event.clone())],
         ));
     }
+    for key in &action.outputs {
+        instructions.push(AilBytecodeInstruction::new(
+            "OUTPUT_FIELD",
+            &[("key", key.clone())],
+        ));
+    }
     instructions.push(AilBytecodeInstruction::new("RETURN_SUCCESS", &[]));
-    AilBytecodeAction {
+    Ok(AilBytecodeAction {
         name: action.name.clone(),
         instructions,
-    }
+    })
 }
 
 pub fn render_ail_bytecode(program: &AilBytecodeProgram) -> String {
     format!(
-        "{{\"kind\":\"AIL-Bytecode\",\"package\":{},\"version\":{},\"profile\":{},\"capability_grants\":{},\"target_support\":{},\"external_bindings\":{},\"actions\":[{}],\"failures\":[{}]}}",
+        "{{\"kind\":\"AIL-Bytecode\",\"package\":{},\"version\":{},\"profile\":{},\"capability_grants\":{},\"target_support\":{}{}{},\"actions\":[{}],\"failures\":[{}]}}",
         json_string(&program.package_name),
         json_string(&program.package_version),
         json_string(&program.profile),
         render_ail_bytecode_capability_grants(&program.capability_grants),
         render_json_string_map(&program.target_support),
-        render_ail_bytecode_external_bindings(&program.external_bindings),
+        if program.type_schemas.is_empty() {
+            String::new()
+        } else {
+            format!(
+                ",\"type_schemas\":{}",
+                value_types::render(&program.type_schemas)
+            )
+        },
+        if program.external_bindings_metadata_present || !program.external_bindings.is_empty() {
+            format!(
+                ",\"external_bindings\":{}",
+                render_ail_bytecode_external_bindings(&program.external_bindings)
+            )
+        } else {
+            String::new()
+        },
         program
             .actions
             .values()
@@ -10539,6 +11790,7 @@ pub fn parse_ail_bytecode(text: &str) -> Result<AilBytecodeProgram, String> {
         failures.insert(name.clone(), AilBytecodeFailure { name, traces });
     }
     Ok(AilBytecodeProgram {
+        type_schemas: value_types::parse_metadata(root).map_err(|e| format!("AILBC024 {e}"))?,
         package_name: required_json_string(root, "package")?.to_string(),
         package_version: required_json_string(root, "version")?.to_string(),
         profile: required_json_string(root, "profile")?.to_string(),
@@ -10673,7 +11925,11 @@ fn required_ail_bytecode_string_array(
 }
 
 pub fn verify_ail_bytecode(program: &AilBytecodeProgram) -> Vec<String> {
-    let mut diagnostics = Vec::new();
+    let mut diagnostics = integer_vm::verify(program);
+    if let Err(e) = value_types::encode(&program.type_schemas) {
+        diagnostics.push(format!("AILBC024 {e}"));
+    }
+    diagnostics.extend(value_protocol::verify(program));
     for (target, status) in &program.target_support {
         if !is_known_target_support_status(status) {
             diagnostics.push(format!(
@@ -10684,7 +11940,273 @@ pub fn verify_ail_bytecode(program: &AilBytecodeProgram) -> Vec<String> {
     for action in program.actions.values() {
         let (labels, label_diagnostics) = ail_bytecode_action_labels(action);
         diagnostics.extend(label_diagnostics);
+        if let Err(error) = recovery::Layout::analyze(action) {
+            diagnostics.push(format!("AILBC019 action {}: {error}", action.name));
+        }
+        if action
+            .instructions
+            .iter()
+            .any(|i| matches!(i.opcode.as_str(), "TRY_BEGIN" | "RECOVER" | "TRY_END"))
+            && (!matches!(program.profile.as_str(), "Application" | "C interop")
+                || integer_vm::is_function(action))
+        {
+            diagnostics.push(format!("AILBC019 action {}: recovery requires Application/C interop actions or value functions", action.name));
+        }
         for (index, instruction) in action.instructions.iter().enumerate() {
+            if matches!(
+                instruction.opcode.as_str(),
+                "VALUE_CONSTRUCT" | "VALUE_TEST" | "VALUE_GET"
+            ) {
+                let result = if matches!(program.profile.as_str(), "Application" | "C interop") {
+                    value_operations::verify(instruction, &program.type_schemas)
+                } else {
+                    Err("variant operations require Application or C interop".into())
+                };
+                if let Err(e) = result {
+                    diagnostics.push(format!("AILBC024 {e}"));
+                }
+            }
+            if instruction.opcode == "RAISE" {
+                let checked = if matches!(program.profile.as_str(), "Application" | "C interop") {
+                    recovery::verify_raise(instruction)
+                } else {
+                    Err("AILBC019: raise requires Application or C interop profile".into())
+                };
+                if let Err(error) = checked {
+                    diagnostics.push(format!(
+                        "AILBC019 action {} instruction {index}: {error}",
+                        action.name
+                    ));
+                }
+            }
+            if matches!(instruction.opcode.as_str(), "EVAL_BOOL" | "BRANCH_BOOL") {
+                let checked = if matches!(program.profile.as_str(), "Application" | "C interop") {
+                    bool_operations::verify(instruction)
+                } else {
+                    Err(
+                        "AIL-BOOL-001: Boolean operations require Application or C interop profile"
+                            .into(),
+                    )
+                };
+                if let Err(error) = checked {
+                    diagnostics.push(format!(
+                        "AILBC018 action {} instruction {index}: {error}",
+                        action.name
+                    ));
+                }
+            }
+            if matches!(
+                instruction.opcode.as_str(),
+                "EVAL_FLOAT" | "BRANCH_FLOAT" | "INT_TO_FLOAT" | "FLOAT_TO_INT"
+            ) {
+                let checked = if matches!(program.profile.as_str(), "Application" | "C interop") {
+                    float_operations::verify(instruction)
+                } else {
+                    Err(
+                        "AIL-FLOAT-001: float operations require Application or C interop profile"
+                            .into(),
+                    )
+                };
+                if let Err(error) = checked {
+                    diagnostics.push(format!(
+                        "AILBC017 action {} instruction {index}: {error}",
+                        action.name
+                    ));
+                }
+            }
+            if matches!(
+                instruction.opcode.as_str(),
+                "DIRECTORY_LIST_NAMES" | "DIRECTORY_READ_TEXT" | "DIRECTORY_WRITE_TEXT"
+            ) {
+                let result = if !matches!(program.profile.as_str(), "Application" | "C interop")
+                    || integer_vm::is_function(action)
+                    || value_protocol::is_function(action)
+                {
+                    Err("AIL-DIRECTORY-001: directory operations require Application or C interop actions".into())
+                } else {
+                    directory_operations::verify(instruction)
+                };
+                if let Err(error) = result {
+                    diagnostics.push(format!(
+                        "AILBC022 action {} instruction {index}: {error}",
+                        action.name
+                    ));
+                }
+            }
+            if instruction.opcode == "PROCESS_RUN" {
+                let result = if !matches!(program.profile.as_str(), "Application" | "C interop")
+                    || integer_vm::is_function(action)
+                    || value_protocol::is_function(action)
+                {
+                    Err("AIL-PROCESS-001: process operations require Application or C interop actions".into())
+                } else {
+                    process_operations::verify(instruction)
+                };
+                if let Err(error) = result {
+                    diagnostics.push(format!(
+                        "AILBC021 action {} instruction {index}: {error}",
+                        action.name
+                    ));
+                }
+            }
+            if matches!(
+                instruction.opcode.as_str(),
+                "STDIN_READ_TEXT" | "STDOUT_WRITE_TEXT" | "STDERR_WRITE_TEXT"
+            ) {
+                let result = if !matches!(program.profile.as_str(), "Application" | "C interop")
+                    || integer_vm::is_function(action)
+                    || value_protocol::is_function(action)
+                {
+                    Err("AIL-STDIO-001: standard-stream operations require Application or C interop actions".into())
+                } else {
+                    standard_streams::verify(instruction)
+                };
+                if let Err(error) = result {
+                    diagnostics.push(format!(
+                        "AILBC020 action {} instruction {index}: {error}",
+                        action.name
+                    ));
+                }
+            }
+            if matches!(
+                instruction.opcode.as_str(),
+                "FILE_READ_BYTES" | "FILE_WRITE_BYTES" | "FILE_READ_TEXT" | "FILE_WRITE_TEXT"
+            ) {
+                let result = if matches!(program.profile.as_str(), "Application" | "C interop") {
+                    file_operations::verify(instruction)
+                } else {
+                    Err(
+                        "AIL-FILE-001: file operations require Application or C interop profile"
+                            .into(),
+                    )
+                };
+                if let Err(error) = result {
+                    diagnostics.push(format!(
+                        "AILBC015 action {} instruction {}: {error}",
+                        action.name, index
+                    ));
+                }
+            }
+            if matches!(
+                instruction.opcode.as_str(),
+                "JSON_PARSE"
+                    | "JSON_FORMAT"
+                    | "JSON_GET"
+                    | "JSON_COUNT"
+                    | "JSON_KIND"
+                    | "JSON_KEYS"
+                    | "JSON_SET"
+                    | "JSON_REMOVE"
+            ) {
+                let result = if matches!(program.profile.as_str(), "Application" | "C interop") {
+                    if matches!(instruction.opcode.as_str(), "JSON_SET" | "JSON_REMOVE") {
+                        json_mutation::verify(instruction)
+                    } else if matches!(
+                        instruction.opcode.as_str(),
+                        "JSON_GET" | "JSON_COUNT" | "JSON_KIND" | "JSON_KEYS"
+                    ) {
+                        structured_json::verify(instruction)
+                    } else {
+                        json_codec::verify(instruction)
+                    }
+                } else {
+                    Err(
+                        "AIL-JSON-001: JSON operations require Application or C interop profile"
+                            .into(),
+                    )
+                };
+                if let Err(error) = result {
+                    diagnostics.push(format!(
+                        "AILBC016 action {} instruction {}: {error}",
+                        action.name, index
+                    ));
+                }
+            }
+            if instruction.opcode == "ASSIGN_LITERAL" {
+                let result = if matches!(program.profile.as_str(), "Application" | "C interop") {
+                    literal_assignment::verify(instruction)
+                } else {
+                    Err("AIL-LITERAL-001: literal assignments require Application or C interop profile".into())
+                };
+                if let Err(error) = result {
+                    diagnostics.push(format!(
+                        "AILBC014 action {} instruction {}: {error}",
+                        action.name, index
+                    ));
+                }
+            }
+            if matches!(
+                instruction.opcode.as_str(),
+                "LIST_EMPTY"
+                    | "LIST_LENGTH"
+                    | "LIST_GET"
+                    | "LIST_APPEND"
+                    | "LIST_SET"
+                    | "LIST_CONCAT"
+                    | "LIST_SLICE"
+                    | "LIST_REVERSE"
+                    | "LIST_SORT"
+            ) {
+                let result = if matches!(program.profile.as_str(), "Application" | "C interop") {
+                    list_operations::verify(instruction)
+                } else {
+                    Err(
+                        "AIL-LIST-001: list operations require Application or C interop profile"
+                            .into(),
+                    )
+                };
+                if let Err(error) = result {
+                    diagnostics.push(format!(
+                        "AILBC013 action {} instruction {}: {error}",
+                        action.name, index
+                    ));
+                }
+            }
+            if matches!(
+                instruction.opcode.as_str(),
+                "TEXT_JOIN"
+                    | "TEXT_LENGTH"
+                    | "TEXT_SLICE"
+                    | "TEXT_FIND"
+                    | "TEXT_SPLIT"
+                    | "TEXT_JOIN_LIST"
+                    | "TEXT_REPLACE"
+                    | "TEXT_TRIM"
+            ) {
+                let result = if matches!(
+                    instruction.opcode.as_str(),
+                    "TEXT_SPLIT" | "TEXT_JOIN_LIST" | "TEXT_REPLACE" | "TEXT_TRIM"
+                ) && !matches!(
+                    program.profile.as_str(),
+                    "Application" | "C interop"
+                ) {
+                    Err("AIL-TEXT-001: text transformations require Application or C interop profile".into())
+                } else {
+                    text_operations::verify(instruction)
+                };
+                if let Err(error) = result {
+                    diagnostics.push(format!(
+                        "AILBC012 action {} instruction {}: {error}",
+                        action.name, index
+                    ));
+                }
+            }
+            if instruction.opcode.starts_with("BYTES_") {
+                let result = if matches!(program.profile.as_str(), "Application" | "C interop") {
+                    bytes_operations::verify(instruction)
+                } else {
+                    Err(
+                        "AIL-BYTES-001: byte operations require Application or C interop profile"
+                            .into(),
+                    )
+                };
+                if let Err(error) = result {
+                    diagnostics.push(format!(
+                        "AILBC023 action {} instruction {index}: {error}",
+                        action.name
+                    ));
+                }
+            }
             let Some(required_operands) =
                 ail_bytecode_required_operands(instruction.opcode.as_str())
             else {
@@ -10702,8 +12224,10 @@ pub fn verify_ail_bytecode(program: &AilBytecodeProgram) -> Vec<String> {
                     ));
                 }
             }
-            if matches!(instruction.opcode.as_str(), "BRANCH_FIELD_EQUALS" | "JUMP")
-                && let Some(label) = instruction.operands.get("label")
+            if matches!(
+                instruction.opcode.as_str(),
+                "BRANCH_FIELD_EQUALS" | "BRANCH_INT" | "BRANCH_FLOAT" | "BRANCH_BOOL" | "JUMP"
+            ) && let Some(label) = instruction.operands.get("label")
                 && !labels.contains_key(label)
             {
                 diagnostics.push(format!(
@@ -10729,6 +12253,18 @@ pub fn verify_ail_bytecode(program: &AilBytecodeProgram) -> Vec<String> {
                     action.name, index, target
                 ));
             }
+            if instruction.opcode == "BRANCH_INT"
+                && let Err(error) = crate::condition::IntCondition::from_postfix(
+                    ail_bytecode_operand(instruction, "left"),
+                    ail_bytecode_operand(instruction, "comparison"),
+                    ail_bytecode_operand(instruction, "right"),
+                )
+            {
+                diagnostics.push(format!(
+                    "AILBC010 action {} instruction {}: {error}",
+                    action.name, index
+                ));
+            }
             if instruction.opcode == "ADD_INT_FIELD"
                 && let Some(delta) = instruction.operands.get("delta")
                 && delta.parse::<i64>().is_err()
@@ -10737,6 +12273,21 @@ pub fn verify_ail_bytecode(program: &AilBytecodeProgram) -> Vec<String> {
                     "AILBC006 action {} instruction {} opcode ADD_INT_FIELD delta '{}' is not an integer",
                     action.name, index, delta
                 ));
+            }
+            if instruction.opcode == "EVAL_INT"
+                && let Some(source) = instruction.operands.get("expression")
+                && let Err(error) = crate::expression::IntExpr::from_postfix(source)
+            {
+                diagnostics.push(format!(
+                    "AILBC008 action {} instruction {}: {error}",
+                    action.name, index
+                ));
+            }
+            if matches!(instruction.opcode.as_str(), "EVAL_INT" | "OUTPUT_FIELD")
+                && let Some(key) = instruction.operands.get("key")
+                && !matches!(crate::expression::IntExpr::parse(key), Ok(crate::expression::IntExpr::Field(parsed)) if &parsed == key)
+            {
+                diagnostics.push(format!("AILBC009 invalid field key {key}"));
             }
             if instruction.opcode == "REPEAT_ACTION"
                 && let Some(count) = instruction.operands.get("count")
@@ -10776,15 +12327,78 @@ fn ail_bytecode_action_labels(
     (labels, diagnostics)
 }
 
-fn ail_bytecode_required_operands(opcode: &str) -> Option<&'static [&'static str]> {
+pub(crate) fn ail_bytecode_required_operands(opcode: &str) -> Option<&'static [&'static str]> {
     match opcode {
+        "VALUE_CONSTRUCT" => Some(&["type", "variant", "arguments", "key"]),
+        "VALUE_TEST" => Some(&["type", "variant", "source", "key"]),
+        "VALUE_GET" => Some(&["type", "variant", "field", "source", "key"]),
+        "RAISE" => Some(&["category"]),
+        "TRY_BEGIN" => Some(&["errors", "key"]),
+        "RECOVER" | "TRY_END" => Some(&[]),
+        "JSON_PARSE" | "JSON_FORMAT" => Some(&["key", "source", "type"]),
+        "JSON_SET" => Some(&["key", "path", "source", "type", "value"]),
+        "JSON_REMOVE" => Some(&["key", "path", "source"]),
+        "JSON_GET" => Some(&["key", "path", "source", "type"]),
+        "JSON_COUNT" | "JSON_KIND" | "JSON_KEYS" => Some(&["key", "source"]),
+        "DIRECTORY_LIST_NAMES" | "DIRECTORY_READ_TEXT" => Some(&["resource", "path", "key"]),
+        "DIRECTORY_WRITE_TEXT" => Some(&["resource", "path", "source"]),
+        "PROCESS_RUN" => Some(&[
+            "resource",
+            "arguments",
+            "input",
+            "timeout_ms",
+            "stdout",
+            "stderr",
+            "status",
+        ]),
+        "STDIN_READ_TEXT" => Some(&["key"]),
+        "STDOUT_WRITE_TEXT" | "STDERR_WRITE_TEXT" => Some(&["source"]),
+        "FILE_READ_TEXT" | "FILE_READ_BYTES" => Some(&["resource", "key"]),
+        "FILE_WRITE_TEXT" | "FILE_WRITE_BYTES" => Some(&["resource", "source"]),
+        "ASSIGN_LITERAL" => Some(&["key", "type", "value"]),
+        "LIST_CONCAT" => Some(&["key", "source", "other", "type"]),
+        "LIST_SLICE" => Some(&["key", "source", "start", "end", "type"]),
+        "LIST_REVERSE" => Some(&["key", "source", "type"]),
+        "LIST_SORT" => Some(&["key", "source", "order", "type"]),
+        "LIST_EMPTY" => Some(&["key", "type"]),
+        "LIST_LENGTH" => Some(&["key", "source", "type"]),
+        "LIST_GET" => Some(&["key", "source", "type", "index"]),
+        "LIST_APPEND" => Some(&["key", "source", "type", "value"]),
+        "LIST_SET" => Some(&["key", "source", "type", "index", "value"]),
+        "TEXT_SPLIT" | "TEXT_JOIN_LIST" => Some(&["key", "source", "separator"]),
+        "TEXT_REPLACE" => Some(&["key", "source", "needle", "replacement"]),
+        "TEXT_TRIM" => Some(&["key", "source"]),
+        "BYTES_LENGTH" | "BYTES_FROM_UTF8" | "BYTES_TO_UTF8" | "BYTES_FROM_HEX"
+        | "BYTES_TO_HEX" => Some(&["source", "key"]),
+        "BYTES_GET" => Some(&["source", "index", "key"]),
+        "BYTES_SET" => Some(&["source", "index", "value", "key"]),
+        "BYTES_SLICE" => Some(&["source", "start", "end", "key"]),
+        "BYTES_CONCAT" | "BYTES_COMPARE" => Some(&["left", "right", "key"]),
+        "TEXT_JOIN" => Some(&["key", "left", "right"]),
+        "TEXT_LENGTH" => Some(&["key", "source"]),
+        "TEXT_SLICE" => Some(&["key", "source", "start", "end"]),
+        "TEXT_FIND" => Some(&["key", "source", "needle"]),
         "ACTION_BEGIN" => Some(&["action"]),
         "LABEL" => Some(&["name"]),
         "BRANCH_FIELD_EQUALS" => Some(&["key", "value", "label"]),
+        "EVAL_BOOL" => Some(&["key", "expression"]),
+        "BRANCH_BOOL" => Some(&["expression", "label"]),
+        "EVAL_FLOAT" => Some(&["key", "expression"]),
+        "INT_TO_FLOAT" | "FLOAT_TO_INT" => Some(&["source", "key"]),
+        "BRANCH_FLOAT" => Some(&["left", "comparison", "right", "label"]),
+        "BRANCH_INT" => Some(&["left", "comparison", "right", "label"]),
         "JUMP" => Some(&["label"]),
+        "VALUE_FUNCTION" => Some(&["parameters", "locals", "result"]),
+        "CALL_VALUE" => Some(&["target", "arguments", "key"]),
+        "RETURN_VALUE" => Some(&["expression", "type"]),
+        "INTEGER_FUNCTION" => Some(&["parameters"]),
+        "CALL_INT" => Some(&["target", "arguments", "key"]),
+        "RETURN_INT" => Some(&["expression"]),
         "CALL_ACTION" => Some(&["target"]),
         "REPEAT_ACTION" => Some(&["target", "count"]),
         "ADD_INT_FIELD" => Some(&["key", "delta", "text"]),
+        "EVAL_INT" => Some(&["key", "expression"]),
+        "OUTPUT_FIELD" => Some(&["key"]),
         "REQUIRE_EXISTS" => Some(&["key", "rule", "failure"]),
         "REQUIRE_FIELD_NOT_EQUALS" => Some(&["key", "value", "rule", "failure"]),
         "REQUIRE_FIELD_IN" => Some(&["key", "values", "rule", "failure"]),
@@ -10903,6 +12517,16 @@ fn required_json_object<'a>(
         .ok_or_else(|| format!("AIL-Bytecode field '{key}' must be an object"))
 }
 
+pub(crate) fn parse_ail_json(text: &str) -> Result<AilJsonValue, String> {
+    let mut parser = AilJsonParser::new(text);
+    let value = parser.parse_value()?;
+    parser.skip_whitespace();
+    if !parser.is_finished() {
+        return Err("unexpected trailing JSON content".to_string());
+    }
+    Ok(value)
+}
+
 struct AilJsonParser<'a> {
     chars: std::iter::Peekable<std::str::Chars<'a>>,
 }
@@ -10938,7 +12562,9 @@ impl<'a> AilJsonParser<'a> {
             self.skip_whitespace();
             self.expect_char(':')?;
             let value = self.parse_value()?;
-            object.insert(key, value);
+            if object.insert(key.clone(), value).is_some() {
+                return Err(format!("duplicate JSON key '{key}'"));
+            }
             self.skip_whitespace();
             if self.consume_char('}') {
                 break;
@@ -10973,6 +12599,9 @@ impl<'a> AilJsonParser<'a> {
             match ch {
                 '"' => return Ok(value),
                 '\\' => value.push(self.parse_escape()?),
+                ch if ch <= '\u{001f}' => {
+                    return Err("unescaped control character in JSON string".to_string());
+                }
                 ch => value.push(ch),
             }
         }
@@ -10990,15 +12619,19 @@ impl<'a> AilJsonParser<'a> {
             Some('r') => Ok('\r'),
             Some('t') => Ok('\t'),
             Some('u') => {
-                let mut hex = String::new();
-                for _ in 0..4 {
-                    let Some(ch) = self.chars.next() else {
-                        return Err("incomplete JSON unicode escape".to_string());
-                    };
-                    hex.push(ch);
-                }
-                let code = u32::from_str_radix(&hex, 16)
-                    .map_err(|_| format!("invalid JSON unicode escape '\\u{hex}'"))?;
+                let first = self.parse_unicode_unit()?;
+                let code = if (0xd800..=0xdbff).contains(&first) {
+                    if self.chars.next() != Some('\\') || self.chars.next() != Some('u') {
+                        return Err("JSON high surrogate requires a low surrogate escape".into());
+                    }
+                    let second = self.parse_unicode_unit()?;
+                    if !(0xdc00..=0xdfff).contains(&second) {
+                        return Err("invalid JSON low surrogate".into());
+                    }
+                    0x10000 + ((first - 0xd800) << 10) + (second - 0xdc00)
+                } else {
+                    first
+                };
                 char::from_u32(code).ok_or_else(|| format!("invalid JSON codepoint {code}"))
             }
             Some(ch) => Err(format!("unsupported JSON escape '\\{ch}'")),
@@ -11012,6 +12645,18 @@ impl<'a> AilJsonParser<'a> {
             Some(ch) => Err(format!("expected '{expected}', got '{ch}'")),
             None => Err(format!("expected '{expected}', got end of input")),
         }
+    }
+
+    fn parse_unicode_unit(&mut self) -> Result<u32, String> {
+        let mut code = 0;
+        for _ in 0..4 {
+            let ch = self.chars.next().ok_or("incomplete JSON unicode escape")?;
+            if !ch.is_ascii_hexdigit() {
+                return Err("invalid JSON unicode escape".into());
+            }
+            code = (code << 4) | ch.to_digit(16).expect("ASCII hexadecimal digit");
+        }
+        Ok(code)
     }
 
     fn consume_char(&mut self, expected: char) -> bool {
@@ -11039,19 +12684,163 @@ pub fn run_ail_bytecode_action(
     action_name: &str,
     runtime_state: BTreeMap<String, String>,
 ) -> Result<AilRunResult, String> {
+    run_ail_bytecode_action_with_files(
+        program,
+        action_name,
+        runtime_state,
+        &AilFileResources::default(),
+    )
+}
+
+/// Run verified bytecode with explicit caller-owned named file bindings.
+/// Completed file effects are not rolled back when a later instruction fails.
+pub fn run_ail_bytecode_action_with_files(
+    program: &AilBytecodeProgram,
+    action_name: &str,
+    runtime_state: BTreeMap<String, String>,
+    files: &AilFileResources,
+) -> Result<AilRunResult, String> {
+    run_ail_bytecode_action_with_io(
+        program,
+        action_name,
+        runtime_state,
+        files,
+        &mut AilStandardStreams::default(),
+    )
+}
+
+/// Run verified bytecode with explicit borrowed standard streams and file bindings.
+/// Completed IO effects persist if a subsequent instruction fails.
+pub fn run_ail_bytecode_action_with_io(
+    program: &AilBytecodeProgram,
+    action_name: &str,
+    runtime_state: BTreeMap<String, String>,
+    files: &AilFileResources,
+    streams: &mut AilStandardStreams<'_>,
+) -> Result<AilRunResult, String> {
+    run_ail_bytecode_action_with_resources(
+        program,
+        action_name,
+        runtime_state,
+        files,
+        streams,
+        &AilProcessResources::default(),
+    )
+}
+
+/// Owned caller authority for host effects. Empty maps deny their capabilities.
+#[derive(Default, Clone, Debug)]
+pub struct AilHostResources {
+    pub files: AilFileResources,
+    pub processes: AilProcessResources,
+    pub directories: AilDirectoryResources,
+}
+
+struct BorrowedHostResources<'a> {
+    files: &'a AilFileResources,
+    processes: &'a AilProcessResources,
+    directories: &'a AilDirectoryResources,
+}
+
+/// Run with explicit file, borrowed stream and process capabilities.
+/// Directory access is denied. Completed host effects persist on later failure.
+pub fn run_ail_bytecode_action_with_resources(
+    program: &AilBytecodeProgram,
+    action_name: &str,
+    runtime_state: BTreeMap<String, String>,
+    files: &AilFileResources,
+    streams: &mut AilStandardStreams<'_>,
+    processes: &AilProcessResources,
+) -> Result<AilRunResult, String> {
+    run_with_borrowed_host_resources(
+        program,
+        action_name,
+        runtime_state,
+        &BorrowedHostResources {
+            files,
+            processes,
+            directories: &AilDirectoryResources::default(),
+        },
+        streams,
+    )
+}
+
+/// Run with caller-owned file, process and directory grants and borrowed streams.
+/// The whole program and every binding are validated before any effect.
+pub fn run_ail_bytecode_action_with_host_resources(
+    program: &AilBytecodeProgram,
+    action_name: &str,
+    runtime_state: BTreeMap<String, String>,
+    resources: &AilHostResources,
+    streams: &mut AilStandardStreams<'_>,
+) -> Result<AilRunResult, String> {
+    run_with_borrowed_host_resources(
+        program,
+        action_name,
+        runtime_state,
+        &BorrowedHostResources {
+            files: &resources.files,
+            processes: &resources.processes,
+            directories: &resources.directories,
+        },
+        streams,
+    )
+}
+
+fn run_with_borrowed_host_resources(
+    program: &AilBytecodeProgram,
+    action_name: &str,
+    runtime_state: BTreeMap<String, String>,
+    resources: &BorrowedHostResources<'_>,
+    streams: &mut AilStandardStreams<'_>,
+) -> Result<AilRunResult, String> {
     let diagnostics = verify_ail_bytecode(program);
     if !diagnostics.is_empty() {
         return Err(format!("invalid AIL bytecode:\n{}", diagnostics.join("\n")));
     }
-    run_verified_ail_bytecode_action(program, action_name, runtime_state, 0)
+    file_operations::validate_resources(resources.files)?;
+    process_operations::validate_resources(resources.processes)?;
+    directory_operations::validate_resources(resources.directories)?;
+    let mut final_state = runtime_state;
+    let mut trace = Vec::new();
+    let outcome = run_verified_ail_bytecode_action(
+        program,
+        action_name,
+        &mut final_state,
+        &mut trace,
+        0,
+        &mut 0,
+        &mut 0,
+        resources,
+        streams,
+    )?;
+    Ok(AilRunResult {
+        returned_fields: outcome.returned_fields,
+        status: outcome.status,
+        failure: outcome.failure,
+        final_state,
+        trace,
+    })
 }
 
+struct ActionOutcome {
+    returned_fields: Vec<String>,
+    status: String,
+    failure: Option<String>,
+}
+
+#[allow(clippy::too_many_arguments)]
 fn run_verified_ail_bytecode_action(
     program: &AilBytecodeProgram,
     action_name: &str,
-    runtime_state: BTreeMap<String, String>,
+    final_state: &mut BTreeMap<String, String>,
+    trace: &mut Vec<String>,
     call_depth: usize,
-) -> Result<AilRunResult, String> {
+    text_allocated: &mut usize,
+    list_allocated: &mut usize,
+    resources: &BorrowedHostResources<'_>,
+    streams: &mut AilStandardStreams<'_>,
+) -> Result<ActionOutcome, String> {
     if call_depth > 64 {
         return Err(format!(
             "AIL bytecode action call depth exceeded while calling {action_name}"
@@ -11061,8 +12850,18 @@ fn run_verified_ail_bytecode_action(
         .actions
         .get(action_name)
         .ok_or_else(|| format!("unknown AIL bytecode action '{action_name}'"))?;
-    let mut final_state = runtime_state;
-    let mut trace = Vec::new();
+    if integer_vm::is_function(action) || value_protocol::is_function(action) {
+        return Err("AIL-FUNCTION-001: executable functions require an action caller".into());
+    }
+    let functions = integer_vm::Machine::new(program)?;
+    let value_functions = program
+        .actions
+        .values()
+        .any(value_protocol::is_function)
+        .then(|| value_vm::Machine::new(program))
+        .transpose()?;
+    let mut returned_fields = Vec::new();
+    let recovery = recovery::Layout::analyze(action)?;
     let (labels, _) = ail_bytecode_action_labels(action);
     let mut instruction_pointer = 0usize;
     let mut steps = 0usize;
@@ -11075,508 +12874,812 @@ fn run_verified_ail_bytecode_action(
             ));
         }
         let instruction = &action.instructions[instruction_pointer];
-        match instruction.opcode.as_str() {
-            "ACTION_BEGIN" => {
-                let action = ail_bytecode_operand(instruction, "action");
-                trace.push(format!("action {action} started"));
-            }
-            "FUNCTION_BEGIN" => {
-                trace.push(format!(
-                    "function {} started",
-                    ail_bytecode_operand(instruction, "label")
-                ));
-            }
-            "FUNCTION_INPUT" => {
-                trace.push(format!(
-                    "function input {}:{}",
-                    ail_bytecode_operand(instruction, "name"),
-                    ail_bytecode_operand(instruction, "type")
-                ));
-            }
-            "FUNCTION_OUTPUT" => {
-                trace.push(format!(
-                    "function output {}:{}",
-                    ail_bytecode_operand(instruction, "name"),
-                    ail_bytecode_operand(instruction, "type")
-                ));
-            }
-            "FUNCTION_BRANCH" => {
-                trace.push(format!(
-                    "function branch {}",
-                    ail_bytecode_operand(instruction, "condition")
-                ));
-            }
-            "FUNCTION_CALL" => {
-                trace.push(format!(
-                    "function call {}",
-                    ail_bytecode_operand(instruction, "target")
-                ));
-            }
-            "FUNCTION_RETURN" => {
-                trace.push(format!(
-                    "function return {}",
-                    ail_bytecode_operand(instruction, "value")
-                ));
-            }
-            "LABEL" => {}
-            "BRANCH_FIELD_EQUALS" => {
-                let key = ail_bytecode_operand(instruction, "key");
-                let value = ail_bytecode_operand(instruction, "value");
-                let label = ail_bytecode_operand(instruction, "label");
-                if final_state.get(key).is_some_and(|current| current == value) {
-                    trace.push(format!("branch {label} taken"));
-                    instruction_pointer = *labels
-                        .get(label)
-                        .ok_or_else(|| format!("unknown AIL bytecode label '{label}'"))?;
-                    continue;
+        let mut next_pointer = instruction_pointer + 1;
+        let result = (|| -> Result<Option<ActionOutcome>, String> {
+            match instruction.opcode.as_str() {
+                "RAISE" => {
+                    return Err(recovery::raised_error(ail_bytecode_operand(
+                        instruction,
+                        "category",
+                    )));
                 }
-                trace.push(format!("branch {label} skipped"));
-            }
-            "JUMP" => {
-                let label = ail_bytecode_operand(instruction, "label");
-                trace.push(format!("jump {label}"));
-                instruction_pointer = *labels
-                    .get(label)
-                    .ok_or_else(|| format!("unknown AIL bytecode label '{label}'"))?;
-                continue;
-            }
-            "CALL_ACTION" => {
-                let target = ail_bytecode_operand(instruction, "target");
-                trace.push(format!("call action {target}"));
-                let mut called =
-                    run_verified_ail_bytecode_action(program, target, final_state, call_depth + 1)?;
-                trace.append(&mut called.trace);
-                if called.status != "succeeded" {
-                    return Ok(AilRunResult {
-                        status: called.status,
-                        failure: called.failure,
-                        final_state: called.final_state,
-                        trace,
-                    });
+                "TRY_BEGIN" | "TRY_END" => {}
+                "RECOVER" => {
+                    next_pointer = recovery
+                        .recovering(instruction_pointer)
+                        .ok_or("AILBC019: missing recovery scope")?
+                        .end
+                        + 1;
                 }
-                final_state = called.final_state;
-            }
-            "REPEAT_ACTION" => {
-                let target = ail_bytecode_operand(instruction, "target");
-                let count = ail_bytecode_operand(instruction, "count")
-                    .parse::<usize>()
-                    .map_err(|_| {
-                        format!("REPEAT_ACTION count for '{target}' must be a positive integer")
-                    })?;
-                if count == 0 {
-                    return Err(format!(
-                        "REPEAT_ACTION count for '{target}' must be a positive integer"
+                "VALUE_CONSTRUCT" | "VALUE_TEST" | "VALUE_GET" => value_operations::execute(
+                    instruction,
+                    &program.type_schemas,
+                    final_state,
+                    text_allocated,
+                    list_allocated,
+                )?,
+                "JSON_SET" | "JSON_REMOVE" => {
+                    json_mutation::execute(
+                        instruction,
+                        final_state,
+                        text_allocated,
+                        list_allocated,
+                    )?;
+                    let verb = if instruction.opcode == "JSON_SET" {
+                        "set"
+                    } else {
+                        "removed"
+                    };
+                    trace.push(format!(
+                        "{verb} JSON {}",
+                        ail_bytecode_operand(instruction, "key")
                     ));
                 }
-                trace.push(format!("repeat action {target} {count} times"));
-                for iteration in 1..=count {
-                    trace.push(format!("repeat {target} iteration {iteration}"));
-                    let mut called = run_verified_ail_bytecode_action(
+                "JSON_GET" | "JSON_COUNT" | "JSON_KIND" | "JSON_KEYS" => {
+                    structured_json::execute(
+                        instruction,
+                        final_state,
+                        text_allocated,
+                        list_allocated,
+                    )?;
+                    let operation = match instruction.opcode.as_str() {
+                        "JSON_GET" => "got JSON",
+                        "JSON_KIND" => "got JSON kind",
+                        "JSON_KEYS" => "got JSON keys",
+                        _ => "counted JSON",
+                    };
+                    trace.push(format!(
+                        "{operation} {}",
+                        ail_bytecode_operand(instruction, "key")
+                    ));
+                }
+                "JSON_PARSE" | "JSON_FORMAT" => {
+                    json_codec::execute(instruction, final_state, text_allocated, list_allocated)?;
+                    let verb = if instruction.opcode == "JSON_PARSE" {
+                        "parsed"
+                    } else {
+                        "formatted"
+                    };
+                    trace.push(format!(
+                        "{verb} JSON {}",
+                        ail_bytecode_operand(instruction, "key")
+                    ));
+                }
+                "DIRECTORY_LIST_NAMES" | "DIRECTORY_READ_TEXT" | "DIRECTORY_WRITE_TEXT" => {
+                    directory_operations::execute(
+                        instruction,
+                        final_state,
+                        text_allocated,
+                        list_allocated,
+                        resources.directories,
+                    )?;
+                    let verb = match instruction.opcode.as_str() {
+                        "DIRECTORY_LIST_NAMES" => "listed names in",
+                        "DIRECTORY_READ_TEXT" => "read text from",
+                        _ => "wrote text to",
+                    };
+                    trace.push(format!(
+                        "{verb} directory resource {}",
+                        ail_bytecode_operand(instruction, "resource")
+                    ));
+                }
+                "PROCESS_RUN" => {
+                    process_operations::execute(
+                        instruction,
+                        final_state,
+                        text_allocated,
+                        resources.processes,
+                    )?;
+                    trace.push(format!(
+                        "ran process resource {}",
+                        ail_bytecode_operand(instruction, "resource")
+                    ));
+                }
+                "STDIN_READ_TEXT" | "STDOUT_WRITE_TEXT" | "STDERR_WRITE_TEXT" => {
+                    standard_streams::execute(instruction, final_state, text_allocated, streams)?;
+                    trace.push(
+                        match instruction.opcode.as_str() {
+                            "STDIN_READ_TEXT" => "read standard input",
+                            "STDOUT_WRITE_TEXT" => "wrote standard output",
+                            _ => "wrote standard error",
+                        }
+                        .into(),
+                    );
+                }
+                "FILE_READ_BYTES" | "FILE_WRITE_BYTES" | "FILE_READ_TEXT" | "FILE_WRITE_TEXT" => {
+                    file_operations::execute(
+                        instruction,
+                        final_state,
+                        if instruction.opcode.ends_with("_BYTES") {
+                            list_allocated
+                        } else {
+                            text_allocated
+                        },
+                        resources.files,
+                    )?;
+                    let verb = if matches!(
+                        instruction.opcode.as_str(),
+                        "FILE_READ_TEXT" | "FILE_READ_BYTES"
+                    ) {
+                        "read"
+                    } else {
+                        "wrote"
+                    };
+                    trace.push(format!(
+                        "{verb} file resource {}",
+                        ail_bytecode_operand(instruction, "resource")
+                    ));
+                }
+                "BYTES_LENGTH" | "BYTES_GET" | "BYTES_SLICE" | "BYTES_CONCAT" | "BYTES_SET"
+                | "BYTES_FROM_UTF8" | "BYTES_TO_UTF8" | "BYTES_FROM_HEX" | "BYTES_TO_HEX"
+                | "BYTES_COMPARE" => {
+                    bytes_operations::execute(
+                        instruction,
+                        final_state,
+                        text_allocated,
+                        list_allocated,
+                    )?;
+                    trace.push(format!(
+                        "computed bytes {}",
+                        ail_bytecode_operand(instruction, "key")
+                    ));
+                }
+                "ASSIGN_LITERAL" => {
+                    literal_assignment::execute(instruction, final_state)?;
+                    trace.push(format!(
+                        "assigned literal {}",
+                        ail_bytecode_operand(instruction, "key")
+                    ));
+                }
+                "LIST_EMPTY" | "LIST_LENGTH" | "LIST_GET" | "LIST_APPEND" | "LIST_SET"
+                | "LIST_CONCAT" | "LIST_SLICE" | "LIST_REVERSE" | "LIST_SORT" => {
+                    list_operations::execute(
+                        instruction,
+                        final_state,
+                        text_allocated,
+                        list_allocated,
+                    )?;
+                    trace.push(format!(
+                        "computed list {}",
+                        ail_bytecode_operand(instruction, "key")
+                    ));
+                }
+                "TEXT_JOIN" | "TEXT_LENGTH" | "TEXT_SLICE" | "TEXT_FIND" | "TEXT_SPLIT"
+                | "TEXT_JOIN_LIST" | "TEXT_REPLACE" | "TEXT_TRIM" => {
+                    text_operations::execute(
+                        instruction,
+                        final_state,
+                        text_allocated,
+                        list_allocated,
+                    )?;
+                    trace.push(format!(
+                        "computed text {}",
+                        ail_bytecode_operand(instruction, "key")
+                    ));
+                }
+                "CALL_VALUE" => {
+                    let args = integer_function::decode_arguments(ail_bytecode_operand(
+                        instruction,
+                        "arguments",
+                    ))?;
+                    let value = value_functions
+                        .as_ref()
+                        .ok_or("AIL-FUNCTION-001: missing value functions")?
+                        .call(
+                            ail_bytecode_operand(instruction, "target"),
+                            &args,
+                            final_state,
+                            trace,
+                            text_allocated,
+                            list_allocated,
+                        )?;
+                    final_state.insert(ail_bytecode_operand(instruction, "key").to_string(), value);
+                }
+                "CALL_INT" => {
+                    let args = integer_function::decode_arguments(ail_bytecode_operand(
+                        instruction,
+                        "arguments",
+                    ))?
+                    .into_values()
+                    .map(|e| e.eval(final_state))
+                    .collect::<Result<Vec<_>, _>>()?;
+                    let value = functions.call(
+                        ail_bytecode_operand(instruction, "target"),
+                        &args,
+                        trace,
+                    )?;
+                    final_state.insert(
+                        ail_bytecode_operand(instruction, "key").to_string(),
+                        value.to_string(),
+                    );
+                }
+                "ACTION_BEGIN" => {
+                    let action = ail_bytecode_operand(instruction, "action");
+                    trace.push(format!("action {action} started"));
+                }
+                "FUNCTION_BEGIN" => {
+                    trace.push(format!(
+                        "function {} started",
+                        ail_bytecode_operand(instruction, "label")
+                    ));
+                }
+                "FUNCTION_INPUT" => {
+                    trace.push(format!(
+                        "function input {}:{}",
+                        ail_bytecode_operand(instruction, "name"),
+                        ail_bytecode_operand(instruction, "type")
+                    ));
+                }
+                "FUNCTION_OUTPUT" => {
+                    trace.push(format!(
+                        "function output {}:{}",
+                        ail_bytecode_operand(instruction, "name"),
+                        ail_bytecode_operand(instruction, "type")
+                    ));
+                }
+                "FUNCTION_BRANCH" => {
+                    trace.push(format!(
+                        "function branch {}",
+                        ail_bytecode_operand(instruction, "condition")
+                    ));
+                }
+                "FUNCTION_CALL" => {
+                    trace.push(format!(
+                        "function call {}",
+                        ail_bytecode_operand(instruction, "target")
+                    ));
+                }
+                "FUNCTION_RETURN" => {
+                    trace.push(format!(
+                        "function return {}",
+                        ail_bytecode_operand(instruction, "value")
+                    ));
+                }
+                "EVAL_BOOL" => {
+                    bool_operations::execute(instruction, final_state)?;
+                    trace.push(format!(
+                        "computed boolean {}",
+                        ail_bytecode_operand(instruction, "key")
+                    ));
+                }
+                "BRANCH_BOOL" => {
+                    let expression = crate::bool_expression::BoolExpr::from_postfix(
+                        ail_bytecode_operand(instruction, "expression"),
+                    )?;
+                    if expression.eval(final_state)? {
+                        next_pointer = labels[ail_bytecode_operand(instruction, "label")];
+                        return Ok(None);
+                    }
+                }
+                "EVAL_FLOAT" | "INT_TO_FLOAT" | "FLOAT_TO_INT" => {
+                    float_operations::execute(instruction, final_state)?;
+                    trace.push(format!(
+                        "computed floating {}",
+                        ail_bytecode_operand(instruction, "key")
+                    ));
+                }
+                "BRANCH_FLOAT" => {
+                    let condition = crate::float_expression::FloatCondition::from_postfix(
+                        ail_bytecode_operand(instruction, "left"),
+                        ail_bytecode_operand(instruction, "comparison"),
+                        ail_bytecode_operand(instruction, "right"),
+                    )?;
+                    if condition.eval(final_state)? {
+                        next_pointer = labels[ail_bytecode_operand(instruction, "label")];
+                        return Ok(None);
+                    }
+                }
+                "LABEL" => {}
+                "BRANCH_INT" => {
+                    let condition = crate::condition::IntCondition::from_postfix(
+                        ail_bytecode_operand(instruction, "left"),
+                        ail_bytecode_operand(instruction, "comparison"),
+                        ail_bytecode_operand(instruction, "right"),
+                    )?;
+                    let label = ail_bytecode_operand(instruction, "label");
+                    if condition.eval(final_state)? {
+                        trace.push(format!("branch {label} taken"));
+                        next_pointer = *labels
+                            .get(label)
+                            .ok_or_else(|| format!("unknown AIL bytecode label '{label}'"))?;
+                        return Ok(None);
+                    }
+                    trace.push(format!("branch {label} skipped"));
+                }
+                "BRANCH_FIELD_EQUALS" => {
+                    let key = ail_bytecode_operand(instruction, "key");
+                    let value = ail_bytecode_operand(instruction, "value");
+                    let label = ail_bytecode_operand(instruction, "label");
+                    if final_state.get(key).is_some_and(|current| current == value) {
+                        trace.push(format!("branch {label} taken"));
+                        next_pointer = *labels
+                            .get(label)
+                            .ok_or_else(|| format!("unknown AIL bytecode label '{label}'"))?;
+                        return Ok(None);
+                    }
+                    trace.push(format!("branch {label} skipped"));
+                }
+                "JUMP" => {
+                    let label = ail_bytecode_operand(instruction, "label");
+                    trace.push(format!("jump {label}"));
+                    next_pointer = *labels
+                        .get(label)
+                        .ok_or_else(|| format!("unknown AIL bytecode label '{label}'"))?;
+                    return Ok(None);
+                }
+                "CALL_ACTION" => {
+                    let target = ail_bytecode_operand(instruction, "target");
+                    trace.push(format!("call action {target}"));
+                    let called = run_verified_ail_bytecode_action(
                         program,
                         target,
                         final_state,
+                        trace,
                         call_depth + 1,
+                        text_allocated,
+                        list_allocated,
+                        resources,
+                        streams,
                     )?;
-                    trace.append(&mut called.trace);
                     if called.status != "succeeded" {
-                        return Ok(AilRunResult {
-                            status: called.status,
-                            failure: called.failure,
-                            final_state: called.final_state,
-                            trace,
-                        });
+                        return Ok(Some(called));
                     }
-                    final_state = called.final_state;
                 }
-            }
-            "ADD_INT_FIELD" => {
-                let key = ail_bytecode_operand(instruction, "key");
-                let delta = ail_bytecode_operand(instruction, "delta")
-                    .parse::<i64>()
-                    .map_err(|_| format!("ADD_INT_FIELD delta for '{key}' must be an integer"))?;
-                let current = final_state
+                "REPEAT_ACTION" => {
+                    let target = ail_bytecode_operand(instruction, "target");
+                    let count = ail_bytecode_operand(instruction, "count")
+                        .parse::<usize>()
+                        .map_err(|_| {
+                            format!("REPEAT_ACTION count for '{target}' must be a positive integer")
+                        })?;
+                    if count == 0 {
+                        return Err(format!(
+                            "REPEAT_ACTION count for '{target}' must be a positive integer"
+                        ));
+                    }
+                    trace.push(format!("repeat action {target} {count} times"));
+                    for iteration in 1..=count {
+                        trace.push(format!("repeat {target} iteration {iteration}"));
+                        let called = run_verified_ail_bytecode_action(
+                            program,
+                            target,
+                            final_state,
+                            trace,
+                            call_depth + 1,
+                            text_allocated,
+                            list_allocated,
+                            resources,
+                            streams,
+                        )?;
+                        if called.status != "succeeded" {
+                            return Ok(Some(called));
+                        }
+                    }
+                }
+                "EVAL_INT" => {
+                    let key = ail_bytecode_operand(instruction, "key");
+                    let expression = crate::expression::IntExpr::from_postfix(
+                        ail_bytecode_operand(instruction, "expression"),
+                    )?;
+                    let value = expression.eval(final_state)?;
+                    final_state.insert(key.to_string(), value.to_string());
+                    trace.push(format!("computed {key}"));
+                }
+                "OUTPUT_FIELD" => {
+                    let key = ail_bytecode_operand(instruction, "key").to_string();
+                    if !returned_fields.contains(&key) {
+                        returned_fields.push(key);
+                    }
+                }
+                "ADD_INT_FIELD" => {
+                    let key = ail_bytecode_operand(instruction, "key");
+                    let delta = ail_bytecode_operand(instruction, "delta")
+                        .parse::<i64>()
+                        .map_err(|_| {
+                            format!("ADD_INT_FIELD delta for '{key}' must be an integer")
+                        })?;
+                    let current = final_state
                     .get(key)
-                    .ok_or_else(|| format!("ADD_INT_FIELD missing integer state field '{key}'"))?
+                    .ok_or_else(|| format!("AIL-RUNTIME-INT: ADD_INT_FIELD missing integer state field '{key}'"))?
                     .parse::<i64>()
-                    .map_err(|_| format!("ADD_INT_FIELD state field '{key}' must be an integer"))?;
-                let next = current + delta;
-                final_state.insert(key.to_string(), next.to_string());
-                trace.push(format!("add {key} by {delta} -> {next}"));
+                    .map_err(|_| format!("AIL-RUNTIME-INT: ADD_INT_FIELD state field '{key}' must be an integer"))?;
+                    let next = current
+                        .checked_add(delta)
+                        .ok_or_else(|| format!("AIL-RUNTIME-OVERFLOW: addition for {key}"))?;
+                    final_state.insert(key.to_string(), next.to_string());
+                    trace.push(format!("add {key} by {delta} -> {next}"));
+                }
+                "OPTION_MAP" => match final_state.get("option.variant").map(String::as_str) {
+                    Some("Some") => {
+                        let mapped = final_state
+                            .get("mapper.result")
+                            .cloned()
+                            .ok_or_else(|| "OPTION_MAP missing mapper.result".to_string())?;
+                        final_state.insert("result.variant".to_string(), "Some".to_string());
+                        final_state.insert("result.value".to_string(), mapped);
+                        trace.push(
+                            "option map Some(value) with mapper -> Some(mapped value)".to_string(),
+                        );
+                    }
+                    Some("None") => {
+                        final_state.insert("result.variant".to_string(), "None".to_string());
+                        final_state.remove("result.value");
+                        trace.push("option map None -> None".to_string());
+                    }
+                    Some(other) => {
+                        return Err(format!(
+                            "OPTION_MAP option.variant must be Some or None, got {other}"
+                        ));
+                    }
+                    None => {
+                        return Err("OPTION_MAP missing option.variant".to_string());
+                    }
+                },
+                "REQUIRE_EXISTS" => {
+                    let key = ail_bytecode_operand(instruction, "key");
+                    let rule = ail_bytecode_operand(instruction, "rule");
+                    if !final_state.contains_key(key) {
+                        return Ok(Some(failed_bytecode_outcome(
+                            program,
+                            trace,
+                            ail_bytecode_operand(instruction, "failure"),
+                        )));
+                    }
+                    trace.push(format!("rule passed: {rule}"));
+                }
+                "REQUIRE_FIELD_NOT_EQUALS" => {
+                    let key = ail_bytecode_operand(instruction, "key");
+                    let value = ail_bytecode_operand(instruction, "value");
+                    let rule = ail_bytecode_operand(instruction, "rule");
+                    if final_state.get(key).is_some_and(|current| current == value) {
+                        return Ok(Some(failed_bytecode_outcome(
+                            program,
+                            trace,
+                            ail_bytecode_operand(instruction, "failure"),
+                        )));
+                    }
+                    trace.push(format!("rule passed: {rule}"));
+                }
+                "REQUIRE_FIELD_IN" => {
+                    let key = ail_bytecode_operand(instruction, "key");
+                    let values =
+                        decode_ail_bytecode_list(ail_bytecode_operand(instruction, "values"));
+                    let rule = ail_bytecode_operand(instruction, "rule");
+                    if !final_state
+                        .get(key)
+                        .is_some_and(|current| values.iter().any(|value| current == value))
+                    {
+                        return Ok(Some(failed_bytecode_outcome(
+                            program,
+                            trace,
+                            ail_bytecode_operand(instruction, "failure"),
+                        )));
+                    }
+                    trace.push(format!("rule passed: {rule}"));
+                }
+                "REQUIRE_FIELD_AFTER" => {
+                    let source = ail_bytecode_operand(instruction, "source");
+                    let key = ail_bytecode_operand(instruction, "key");
+                    let rule = ail_bytecode_operand(instruction, "rule");
+                    if final_state
+                        .get(source)
+                        .zip(final_state.get(key))
+                        .is_none_or(|(left, right)| left <= right)
+                    {
+                        return Ok(Some(failed_bytecode_outcome(
+                            program,
+                            trace,
+                            ail_bytecode_operand(instruction, "failure"),
+                        )));
+                    }
+                    trace.push(format!("rule passed: {rule}"));
+                }
+                "OBSERVE_RULE" => {
+                    trace.push(format!(
+                        "rule observed: {}",
+                        ail_bytecode_operand(instruction, "rule")
+                    ));
+                }
+                "READ_FIELD" => {
+                    trace.push(format!("read {}", ail_bytecode_operand(instruction, "key")));
+                }
+                "READ_EFFECT" => {
+                    trace.push(format!(
+                        "read {}",
+                        ail_bytecode_operand(instruction, "text")
+                    ));
+                }
+                "SET_FIELD" => {
+                    let key = ail_bytecode_operand(instruction, "key").to_string();
+                    let value = ail_bytecode_operand(instruction, "value").to_string();
+                    final_state.insert(key.clone(), value.clone());
+                    trace.push(format!("write {key}={value}"));
+                }
+                "COPY_FIELD" => {
+                    let source = ail_bytecode_operand(instruction, "source");
+                    let key = ail_bytecode_operand(instruction, "key").to_string();
+                    if let Some(value) = final_state.get(source).cloned() {
+                        final_state.insert(key.clone(), value);
+                    }
+                    trace.push(format!("write {key}"));
+                }
+                "WRITE_FIELD" => {
+                    trace.push(format!(
+                        "write {}",
+                        ail_bytecode_operand(instruction, "key")
+                    ));
+                }
+                "EFFECT" => {
+                    trace.push(format!(
+                        "effect {}",
+                        ail_bytecode_operand(instruction, "text")
+                    ));
+                }
+                "TOOL_BEGIN" => {
+                    trace.push(format!(
+                        "tool {} started",
+                        ail_bytecode_operand(instruction, "label")
+                    ));
+                }
+                "TOOL_REQUIREMENT" => {
+                    trace.push(format!(
+                        "tool requirement {}",
+                        ail_bytecode_operand(instruction, "text")
+                    ));
+                }
+                "TOOL_INPUT" => {
+                    trace.push(format!(
+                        "tool input {}:{}",
+                        ail_bytecode_operand(instruction, "name"),
+                        ail_bytecode_operand(instruction, "type")
+                    ));
+                }
+                "TOOL_OUTPUT" => {
+                    trace.push(format!(
+                        "tool output {}:{}",
+                        ail_bytecode_operand(instruction, "name"),
+                        ail_bytecode_operand(instruction, "type")
+                    ));
+                }
+                "TOOL_READ" => {
+                    trace.push(format!(
+                        "tool read {}",
+                        ail_bytecode_operand(instruction, "text")
+                    ));
+                }
+                "TOOL_CALL" => {
+                    trace.push(format!(
+                        "tool call {}",
+                        ail_bytecode_operand(instruction, "target")
+                    ));
+                }
+                "TOOL_WRITE" => {
+                    trace.push(format!(
+                        "tool write {}",
+                        ail_bytecode_operand(instruction, "text")
+                    ));
+                }
+                "TOOL_PERMISSION" => {
+                    trace.push(format!(
+                        "tool permission {}",
+                        ail_bytecode_operand(instruction, "text")
+                    ));
+                }
+                "TOOL_APPROVAL" => {
+                    trace.push(format!(
+                        "tool approval {}",
+                        ail_bytecode_operand(instruction, "text")
+                    ));
+                }
+                "TOOL_SECRET_PROTECTION" => {
+                    trace.push(format!(
+                        "tool secret protection {}",
+                        ail_bytecode_operand(instruction, "text")
+                    ));
+                }
+                "SYSTEM_BEGIN" => {
+                    trace.push(format!(
+                        "system component {} started",
+                        ail_bytecode_operand(instruction, "label")
+                    ));
+                }
+                "SYSTEM_RESOURCE" => {
+                    trace.push(format!(
+                        "system resource {}:{}",
+                        ail_bytecode_operand(instruction, "name"),
+                        ail_bytecode_operand(instruction, "type")
+                    ));
+                }
+                "SYSTEM_OWNS" => {
+                    trace.push(format!(
+                        "system owns {}",
+                        ail_bytecode_operand(instruction, "resource")
+                    ));
+                }
+                "SYSTEM_BORROWS" => {
+                    trace.push(format!(
+                        "system borrows {}",
+                        ail_bytecode_operand(instruction, "resource")
+                    ));
+                }
+                "SYSTEM_MUTABLY_BORROWS" => {
+                    trace.push(format!(
+                        "system mutably borrows {}",
+                        ail_bytecode_operand(instruction, "resource")
+                    ));
+                }
+                "SYSTEM_REGION" => {
+                    trace.push(format!(
+                        "system places {} in {}",
+                        ail_bytecode_operand(instruction, "resource"),
+                        ail_bytecode_operand(instruction, "region")
+                    ));
+                }
+                "SYSTEM_LAYOUT" => {
+                    trace.push(format!(
+                        "system layout {} {}",
+                        ail_bytecode_operand(instruction, "resource"),
+                        ail_bytecode_operand(instruction, "layout")
+                    ));
+                }
+                "SYSTEM_ALLOCATION" => {
+                    trace.push(format!(
+                        "system allocation {} {}",
+                        ail_bytecode_operand(instruction, "resource"),
+                        ail_bytecode_operand(instruction, "placement")
+                    ));
+                }
+                "SYSTEM_LOCK_GUARD" => {
+                    trace.push(format!(
+                        "system lock guard {} with {}",
+                        ail_bytecode_operand(instruction, "resource"),
+                        ail_bytecode_operand(instruction, "lock")
+                    ));
+                }
+                "SYSTEM_CONTEXT" => {
+                    trace.push(format!(
+                        "system context {}",
+                        ail_bytecode_operand(instruction, "name")
+                    ));
+                }
+                "SYSTEM_INTERRUPT_PRIORITY" => {
+                    trace.push(format!(
+                        "system interrupt priority {} {}",
+                        ail_bytecode_operand(instruction, "context"),
+                        ail_bytecode_operand(instruction, "priority")
+                    ));
+                }
+                "SYSTEM_INTERRUPT_MASK" => {
+                    trace.push(format!(
+                        "system interrupt mask {} {}",
+                        ail_bytecode_operand(instruction, "context"),
+                        ail_bytecode_operand(instruction, "mask")
+                    ));
+                }
+                "SYSTEM_SCHEDULER_TASK" => {
+                    trace.push(format!(
+                        "system scheduler task {} in {}",
+                        ail_bytecode_operand(instruction, "task"),
+                        ail_bytecode_operand(instruction, "context")
+                    ));
+                }
+                "SYSTEM_TASK_PRIORITY" => {
+                    trace.push(format!(
+                        "system task priority {} {}",
+                        ail_bytecode_operand(instruction, "task"),
+                        ail_bytecode_operand(instruction, "priority")
+                    ));
+                }
+                "SYSTEM_TASK_TIMING" => {
+                    trace.push(format!(
+                        "system task timing {} deadline {} budget {}",
+                        ail_bytecode_operand(instruction, "task"),
+                        ail_bytecode_operand(instruction, "deadline"),
+                        ail_bytecode_operand(instruction, "budget")
+                    ));
+                }
+                "SYSTEM_CAPABILITY" => {
+                    trace.push(format!(
+                        "system capability {}",
+                        ail_bytecode_operand(instruction, "text")
+                    ));
+                }
+                "SYSTEM_EFFECT" => {
+                    trace.push(format!(
+                        "system effect {}",
+                        ail_bytecode_operand(instruction, "text")
+                    ));
+                }
+                "PASS_BEGIN" => {
+                    trace.push(format!(
+                        "compiler pass {} started",
+                        ail_bytecode_operand(instruction, "label")
+                    ));
+                }
+                "PASS_INPUT" => {
+                    trace.push(format!(
+                        "input {}:{}",
+                        ail_bytecode_operand(instruction, "name"),
+                        ail_bytecode_operand(instruction, "type")
+                    ));
+                }
+                "PASS_OUTPUT" => {
+                    trace.push(format!(
+                        "output {}:{}",
+                        ail_bytecode_operand(instruction, "name"),
+                        ail_bytecode_operand(instruction, "type")
+                    ));
+                }
+                "PASS_READ" => {
+                    trace.push(format!(
+                        "pass read {}",
+                        ail_bytecode_operand(instruction, "text")
+                    ));
+                }
+                "PASS_STEP" => {
+                    trace.push(format!(
+                        "pass step {}",
+                        ail_bytecode_operand(instruction, "text")
+                    ));
+                }
+                "PASS_WRITE" => {
+                    trace.push(format!(
+                        "pass write {}",
+                        ail_bytecode_operand(instruction, "text")
+                    ));
+                }
+                "CORE_INFER_READ_PERMISSIONS" => {
+                    trace.push("core transform infer read permissions".to_string());
+                }
+                "ASSERT_GUARANTEE" => {
+                    trace.push(format!(
+                        "guarantee checked: {}",
+                        ail_bytecode_operand(instruction, "text")
+                    ));
+                }
+                "EMIT_TRACE" => {
+                    trace.push(format!(
+                        "trace {}",
+                        ail_bytecode_operand(instruction, "event")
+                    ));
+                }
+                "RETURN_SUCCESS" => {
+                    validate_returned_fields(final_state, &returned_fields)?;
+                    return Ok(Some(ActionOutcome {
+                        returned_fields: std::mem::take(&mut returned_fields),
+                        status: "succeeded".to_string(),
+                        failure: None,
+                    }));
+                }
+                opcode => return Err(format!("unknown AIL bytecode opcode '{opcode}'")),
             }
-            "OPTION_MAP" => match final_state.get("option.variant").map(String::as_str) {
-                Some("Some") => {
-                    let mapped = final_state
-                        .get("mapper.result")
-                        .cloned()
-                        .ok_or_else(|| "OPTION_MAP missing mapper.result".to_string())?;
-                    final_state.insert("result.variant".to_string(), "Some".to_string());
-                    final_state.insert("result.value".to_string(), mapped);
-                    trace.push(
-                        "option map Some(value) with mapper -> Some(mapped value)".to_string(),
+            Ok(None)
+        })();
+        match result {
+            Ok(Some(outcome)) => return Ok(outcome),
+            Ok(None) => {}
+            Err(message) => {
+                if let Some(category) = recovery::category(&message)
+                    && let Some(handler) = recovery.matching(instruction_pointer, category)
+                {
+                    final_state.insert(
+                        handler.key.clone(),
+                        recovery::code(category).unwrap().into(),
                     );
+                    trace.push(format!("recovered {category} into {}", handler.key));
+                    next_pointer = handler.recover + 1;
+                } else {
+                    return Err(message);
                 }
-                Some("None") => {
-                    final_state.insert("result.variant".to_string(), "None".to_string());
-                    final_state.remove("result.value");
-                    trace.push("option map None -> None".to_string());
-                }
-                Some(other) => {
-                    return Err(format!(
-                        "OPTION_MAP option.variant must be Some or None, got {other}"
-                    ));
-                }
-                None => {
-                    return Err("OPTION_MAP missing option.variant".to_string());
-                }
-            },
-            "REQUIRE_EXISTS" => {
-                let key = ail_bytecode_operand(instruction, "key");
-                let rule = ail_bytecode_operand(instruction, "rule");
-                if !final_state.contains_key(key) {
-                    return Ok(failed_bytecode_run(
-                        program,
-                        final_state,
-                        trace,
-                        ail_bytecode_operand(instruction, "failure"),
-                    ));
-                }
-                trace.push(format!("rule passed: {rule}"));
             }
-            "REQUIRE_FIELD_NOT_EQUALS" => {
-                let key = ail_bytecode_operand(instruction, "key");
-                let value = ail_bytecode_operand(instruction, "value");
-                let rule = ail_bytecode_operand(instruction, "rule");
-                if final_state.get(key).is_some_and(|current| current == value) {
-                    return Ok(failed_bytecode_run(
-                        program,
-                        final_state,
-                        trace,
-                        ail_bytecode_operand(instruction, "failure"),
-                    ));
-                }
-                trace.push(format!("rule passed: {rule}"));
-            }
-            "REQUIRE_FIELD_IN" => {
-                let key = ail_bytecode_operand(instruction, "key");
-                let values = decode_ail_bytecode_list(ail_bytecode_operand(instruction, "values"));
-                let rule = ail_bytecode_operand(instruction, "rule");
-                if !final_state
-                    .get(key)
-                    .is_some_and(|current| values.iter().any(|value| current == value))
-                {
-                    return Ok(failed_bytecode_run(
-                        program,
-                        final_state,
-                        trace,
-                        ail_bytecode_operand(instruction, "failure"),
-                    ));
-                }
-                trace.push(format!("rule passed: {rule}"));
-            }
-            "REQUIRE_FIELD_AFTER" => {
-                let source = ail_bytecode_operand(instruction, "source");
-                let key = ail_bytecode_operand(instruction, "key");
-                let rule = ail_bytecode_operand(instruction, "rule");
-                if final_state
-                    .get(source)
-                    .zip(final_state.get(key))
-                    .is_none_or(|(left, right)| left <= right)
-                {
-                    return Ok(failed_bytecode_run(
-                        program,
-                        final_state,
-                        trace,
-                        ail_bytecode_operand(instruction, "failure"),
-                    ));
-                }
-                trace.push(format!("rule passed: {rule}"));
-            }
-            "OBSERVE_RULE" => {
-                trace.push(format!(
-                    "rule observed: {}",
-                    ail_bytecode_operand(instruction, "rule")
-                ));
-            }
-            "READ_FIELD" => {
-                trace.push(format!("read {}", ail_bytecode_operand(instruction, "key")));
-            }
-            "READ_EFFECT" => {
-                trace.push(format!(
-                    "read {}",
-                    ail_bytecode_operand(instruction, "text")
-                ));
-            }
-            "SET_FIELD" => {
-                let key = ail_bytecode_operand(instruction, "key").to_string();
-                let value = ail_bytecode_operand(instruction, "value").to_string();
-                final_state.insert(key.clone(), value.clone());
-                trace.push(format!("write {key}={value}"));
-            }
-            "COPY_FIELD" => {
-                let source = ail_bytecode_operand(instruction, "source");
-                let key = ail_bytecode_operand(instruction, "key").to_string();
-                if let Some(value) = final_state.get(source).cloned() {
-                    final_state.insert(key.clone(), value);
-                }
-                trace.push(format!("write {key}"));
-            }
-            "WRITE_FIELD" => {
-                trace.push(format!(
-                    "write {}",
-                    ail_bytecode_operand(instruction, "key")
-                ));
-            }
-            "EFFECT" => {
-                trace.push(format!(
-                    "effect {}",
-                    ail_bytecode_operand(instruction, "text")
-                ));
-            }
-            "TOOL_BEGIN" => {
-                trace.push(format!(
-                    "tool {} started",
-                    ail_bytecode_operand(instruction, "label")
-                ));
-            }
-            "TOOL_REQUIREMENT" => {
-                trace.push(format!(
-                    "tool requirement {}",
-                    ail_bytecode_operand(instruction, "text")
-                ));
-            }
-            "TOOL_INPUT" => {
-                trace.push(format!(
-                    "tool input {}:{}",
-                    ail_bytecode_operand(instruction, "name"),
-                    ail_bytecode_operand(instruction, "type")
-                ));
-            }
-            "TOOL_OUTPUT" => {
-                trace.push(format!(
-                    "tool output {}:{}",
-                    ail_bytecode_operand(instruction, "name"),
-                    ail_bytecode_operand(instruction, "type")
-                ));
-            }
-            "TOOL_READ" => {
-                trace.push(format!(
-                    "tool read {}",
-                    ail_bytecode_operand(instruction, "text")
-                ));
-            }
-            "TOOL_CALL" => {
-                trace.push(format!(
-                    "tool call {}",
-                    ail_bytecode_operand(instruction, "target")
-                ));
-            }
-            "TOOL_WRITE" => {
-                trace.push(format!(
-                    "tool write {}",
-                    ail_bytecode_operand(instruction, "text")
-                ));
-            }
-            "TOOL_PERMISSION" => {
-                trace.push(format!(
-                    "tool permission {}",
-                    ail_bytecode_operand(instruction, "text")
-                ));
-            }
-            "TOOL_APPROVAL" => {
-                trace.push(format!(
-                    "tool approval {}",
-                    ail_bytecode_operand(instruction, "text")
-                ));
-            }
-            "TOOL_SECRET_PROTECTION" => {
-                trace.push(format!(
-                    "tool secret protection {}",
-                    ail_bytecode_operand(instruction, "text")
-                ));
-            }
-            "SYSTEM_BEGIN" => {
-                trace.push(format!(
-                    "system component {} started",
-                    ail_bytecode_operand(instruction, "label")
-                ));
-            }
-            "SYSTEM_RESOURCE" => {
-                trace.push(format!(
-                    "system resource {}:{}",
-                    ail_bytecode_operand(instruction, "name"),
-                    ail_bytecode_operand(instruction, "type")
-                ));
-            }
-            "SYSTEM_OWNS" => {
-                trace.push(format!(
-                    "system owns {}",
-                    ail_bytecode_operand(instruction, "resource")
-                ));
-            }
-            "SYSTEM_BORROWS" => {
-                trace.push(format!(
-                    "system borrows {}",
-                    ail_bytecode_operand(instruction, "resource")
-                ));
-            }
-            "SYSTEM_MUTABLY_BORROWS" => {
-                trace.push(format!(
-                    "system mutably borrows {}",
-                    ail_bytecode_operand(instruction, "resource")
-                ));
-            }
-            "SYSTEM_REGION" => {
-                trace.push(format!(
-                    "system places {} in {}",
-                    ail_bytecode_operand(instruction, "resource"),
-                    ail_bytecode_operand(instruction, "region")
-                ));
-            }
-            "SYSTEM_LAYOUT" => {
-                trace.push(format!(
-                    "system layout {} {}",
-                    ail_bytecode_operand(instruction, "resource"),
-                    ail_bytecode_operand(instruction, "layout")
-                ));
-            }
-            "SYSTEM_ALLOCATION" => {
-                trace.push(format!(
-                    "system allocation {} {}",
-                    ail_bytecode_operand(instruction, "resource"),
-                    ail_bytecode_operand(instruction, "placement")
-                ));
-            }
-            "SYSTEM_LOCK_GUARD" => {
-                trace.push(format!(
-                    "system lock guard {} with {}",
-                    ail_bytecode_operand(instruction, "resource"),
-                    ail_bytecode_operand(instruction, "lock")
-                ));
-            }
-            "SYSTEM_CONTEXT" => {
-                trace.push(format!(
-                    "system context {}",
-                    ail_bytecode_operand(instruction, "name")
-                ));
-            }
-            "SYSTEM_INTERRUPT_PRIORITY" => {
-                trace.push(format!(
-                    "system interrupt priority {} {}",
-                    ail_bytecode_operand(instruction, "context"),
-                    ail_bytecode_operand(instruction, "priority")
-                ));
-            }
-            "SYSTEM_INTERRUPT_MASK" => {
-                trace.push(format!(
-                    "system interrupt mask {} {}",
-                    ail_bytecode_operand(instruction, "context"),
-                    ail_bytecode_operand(instruction, "mask")
-                ));
-            }
-            "SYSTEM_SCHEDULER_TASK" => {
-                trace.push(format!(
-                    "system scheduler task {} in {}",
-                    ail_bytecode_operand(instruction, "task"),
-                    ail_bytecode_operand(instruction, "context")
-                ));
-            }
-            "SYSTEM_TASK_PRIORITY" => {
-                trace.push(format!(
-                    "system task priority {} {}",
-                    ail_bytecode_operand(instruction, "task"),
-                    ail_bytecode_operand(instruction, "priority")
-                ));
-            }
-            "SYSTEM_TASK_TIMING" => {
-                trace.push(format!(
-                    "system task timing {} deadline {} budget {}",
-                    ail_bytecode_operand(instruction, "task"),
-                    ail_bytecode_operand(instruction, "deadline"),
-                    ail_bytecode_operand(instruction, "budget")
-                ));
-            }
-            "SYSTEM_CAPABILITY" => {
-                trace.push(format!(
-                    "system capability {}",
-                    ail_bytecode_operand(instruction, "text")
-                ));
-            }
-            "SYSTEM_EFFECT" => {
-                trace.push(format!(
-                    "system effect {}",
-                    ail_bytecode_operand(instruction, "text")
-                ));
-            }
-            "PASS_BEGIN" => {
-                trace.push(format!(
-                    "compiler pass {} started",
-                    ail_bytecode_operand(instruction, "label")
-                ));
-            }
-            "PASS_INPUT" => {
-                trace.push(format!(
-                    "input {}:{}",
-                    ail_bytecode_operand(instruction, "name"),
-                    ail_bytecode_operand(instruction, "type")
-                ));
-            }
-            "PASS_OUTPUT" => {
-                trace.push(format!(
-                    "output {}:{}",
-                    ail_bytecode_operand(instruction, "name"),
-                    ail_bytecode_operand(instruction, "type")
-                ));
-            }
-            "PASS_READ" => {
-                trace.push(format!(
-                    "pass read {}",
-                    ail_bytecode_operand(instruction, "text")
-                ));
-            }
-            "PASS_STEP" => {
-                trace.push(format!(
-                    "pass step {}",
-                    ail_bytecode_operand(instruction, "text")
-                ));
-            }
-            "PASS_WRITE" => {
-                trace.push(format!(
-                    "pass write {}",
-                    ail_bytecode_operand(instruction, "text")
-                ));
-            }
-            "CORE_INFER_READ_PERMISSIONS" => {
-                trace.push("core transform infer read permissions".to_string());
-            }
-            "ASSERT_GUARANTEE" => {
-                trace.push(format!(
-                    "guarantee checked: {}",
-                    ail_bytecode_operand(instruction, "text")
-                ));
-            }
-            "EMIT_TRACE" => {
-                trace.push(format!(
-                    "trace {}",
-                    ail_bytecode_operand(instruction, "event")
-                ));
-            }
-            "RETURN_SUCCESS" => {
-                return Ok(AilRunResult {
-                    status: "succeeded".to_string(),
-                    failure: None,
-                    final_state,
-                    trace,
-                });
-            }
-            opcode => return Err(format!("unknown AIL bytecode opcode '{opcode}'")),
         }
-        instruction_pointer += 1;
+        instruction_pointer = next_pointer;
     }
-    Ok(AilRunResult {
+    validate_returned_fields(final_state, &returned_fields)?;
+    Ok(ActionOutcome {
+        returned_fields,
         status: "succeeded".to_string(),
         failure: None,
-        final_state,
-        trace,
     })
 }
 
@@ -11687,23 +13790,21 @@ fn is_secret_ail_node(node: &Node) -> bool {
         || node.type_name.as_deref().is_some_and(type_contains_secret)
 }
 
-fn failed_bytecode_run(
+fn failed_bytecode_outcome(
     program: &AilBytecodeProgram,
-    final_state: BTreeMap<String, String>,
-    mut trace: Vec<String>,
+    trace: &mut Vec<String>,
     failure_name: &str,
-) -> AilRunResult {
+) -> ActionOutcome {
     trace.push(format!("failure {failure_name}"));
     if let Some(failure) = program.failures.get(failure_name) {
         for event in &failure.traces {
             trace.push(format!("trace {event}"));
         }
     }
-    AilRunResult {
+    ActionOutcome {
+        returned_fields: Vec::new(),
         status: "failed".to_string(),
         failure: Some(failure_name.to_string()),
-        final_state,
-        trace,
     }
 }
 
@@ -11732,14 +13833,28 @@ pub fn draft_ail_spec(
     user_prompt: &str,
     endpoint: &str,
 ) -> Result<AilDraftResult, String> {
+    let context = AilEditContext::preserve_package(package)?;
+    draft_ail_spec_with_edit_context(package, user_prompt, endpoint, &context)
+}
+
+pub fn draft_ail_spec_with_edit_context(
+    package: &AilPackage,
+    user_prompt: &str,
+    endpoint: &str,
+    context: &AilEditContext,
+) -> Result<AilDraftResult, String> {
+    context.check_package_snapshot(package)?;
     let prompt = build_ail_draft_prompt(package, user_prompt);
+    let prompt = format!("{prompt}{}", context.render_prompt_context());
     let spec_text = crate::llm::invoke_llm_text_for_artifact(
         endpoint,
         &prompt,
         "AIL-Spec Canonical",
         package.metadata.profile.as_str(),
     )?;
-    Ok(check_ail_draft_spec(package, spec_text))
+    Ok(check_ail_draft_spec_with_edit_context(
+        package, spec_text, None, context,
+    ))
 }
 
 pub fn draft_ail_requirements(
@@ -11748,6 +13863,27 @@ pub fn draft_ail_requirements(
     endpoint: &str,
 ) -> Result<String, String> {
     match draft_ail_requirements_response(package, user_prompt, endpoint)? {
+        crate::llm::LlmArtifactResponse::Artifact(artifact_text) => Ok(artifact_text),
+        crate::llm::LlmArtifactResponse::Questions(questions) => Err(format!(
+            "model returned blocking questions:\n- {}",
+            questions.join("\n- ")
+        )),
+    }
+}
+
+pub fn draft_ail_requirements_with_edit_context(
+    package: &AilPackage,
+    user_prompt: &str,
+    endpoint: &str,
+    context: &AilEditContext,
+) -> Result<String, String> {
+    context.check_package_snapshot(package)?;
+    match draft_ail_requirements_response_with_edit_context(
+        package,
+        user_prompt,
+        endpoint,
+        context,
+    )? {
         crate::llm::LlmArtifactResponse::Artifact(artifact_text) => Ok(artifact_text),
         crate::llm::LlmArtifactResponse::Questions(questions) => Err(format!(
             "model returned blocking questions:\n- {}",
@@ -11770,12 +13906,46 @@ pub fn draft_ail_requirements_response(
     )
 }
 
+pub fn draft_ail_requirements_response_with_edit_context(
+    package: &AilPackage,
+    user_prompt: &str,
+    endpoint: &str,
+    context: &AilEditContext,
+) -> Result<crate::llm::LlmArtifactResponse, String> {
+    context.check_package_snapshot(package)?;
+    let prompt = build_ail_requirements_prompt(package, user_prompt);
+    let prompt = format!("{prompt}{}", context.render_prompt_context());
+    crate::llm::invoke_llm_artifact_response(
+        endpoint,
+        &prompt,
+        "AIL-Requirements",
+        package.metadata.profile.as_str(),
+    )
+}
+
 pub fn draft_ail_requirements_response_recorded(
     package: &AilPackage,
     user_prompt: &str,
     endpoint: &str,
 ) -> Result<crate::llm::LlmRecordedArtifactResponse, String> {
     let prompt = build_ail_requirements_prompt(package, user_prompt);
+    crate::llm::invoke_llm_artifact_response_recorded(
+        endpoint,
+        &prompt,
+        "AIL-Requirements",
+        package.metadata.profile.as_str(),
+    )
+}
+
+pub fn draft_ail_requirements_response_recorded_with_edit_context(
+    package: &AilPackage,
+    user_prompt: &str,
+    endpoint: &str,
+    context: &AilEditContext,
+) -> Result<crate::llm::LlmRecordedArtifactResponse, String> {
+    context.check_package_snapshot(package)?;
+    let prompt = build_ail_requirements_prompt(package, user_prompt);
+    let prompt = format!("{prompt}{}", context.render_prompt_context());
     crate::llm::invoke_llm_artifact_response_recorded(
         endpoint,
         &prompt,
@@ -11791,6 +13961,25 @@ pub fn draft_ail_requirements_response_recorded_with_max_tokens(
     max_tokens: usize,
 ) -> Result<crate::llm::LlmRecordedArtifactResponse, String> {
     let prompt = build_ail_requirements_prompt(package, user_prompt);
+    crate::llm::invoke_llm_artifact_response_recorded_with_max_tokens(
+        endpoint,
+        &prompt,
+        "AIL-Requirements",
+        package.metadata.profile.as_str(),
+        max_tokens,
+    )
+}
+
+pub fn draft_ail_requirements_response_recorded_with_max_tokens_with_edit_context(
+    package: &AilPackage,
+    user_prompt: &str,
+    endpoint: &str,
+    max_tokens: usize,
+    context: &AilEditContext,
+) -> Result<crate::llm::LlmRecordedArtifactResponse, String> {
+    context.check_package_snapshot(package)?;
+    let prompt = build_ail_requirements_prompt(package, user_prompt);
+    let prompt = format!("{prompt}{}", context.render_prompt_context());
     crate::llm::invoke_llm_artifact_response_recorded_with_max_tokens(
         endpoint,
         &prompt,
@@ -11834,6 +14023,30 @@ pub fn repair_ail_requirements_from_diagnostics(
         previous_requirements_text,
         diagnostics,
     );
+    crate::llm::invoke_llm_text_for_artifact(
+        endpoint,
+        &prompt,
+        "AIL-Requirements",
+        package.metadata.profile.as_str(),
+    )
+}
+
+pub fn repair_ail_requirements_from_diagnostics_with_edit_context(
+    package: &AilPackage,
+    user_prompt: &str,
+    previous_requirements_text: &str,
+    diagnostics: &[AilDiagnostic],
+    endpoint: &str,
+    context: &AilEditContext,
+) -> Result<String, String> {
+    context.check_package_snapshot(package)?;
+    let prompt = build_ail_requirements_repair_prompt(
+        package,
+        user_prompt,
+        previous_requirements_text,
+        diagnostics,
+    );
+    let prompt = format!("{prompt}{}", context.render_prompt_context());
     crate::llm::invoke_llm_text_for_artifact(
         endpoint,
         &prompt,
@@ -11891,18 +14104,38 @@ pub fn draft_ail_spec_from_requirements(
     requirements_text: &str,
     endpoint: &str,
 ) -> Result<AilDraftResult, String> {
+    let context = AilEditContext::preserve_package(package)?;
+    draft_ail_spec_from_requirements_with_edit_context(
+        package,
+        user_prompt,
+        requirements_text,
+        endpoint,
+        &context,
+    )
+}
+
+pub fn draft_ail_spec_from_requirements_with_edit_context(
+    package: &AilPackage,
+    user_prompt: &str,
+    requirements_text: &str,
+    endpoint: &str,
+    context: &AilEditContext,
+) -> Result<AilDraftResult, String> {
+    context.check_package_snapshot(package)?;
     let grounded_prompt = format!("{user_prompt}\n\nDRAFT REQUIREMENTS:\n{requirements_text}");
     let prompt = build_ail_draft_prompt(package, &grounded_prompt);
+    let prompt = format!("{prompt}{}", context.render_prompt_context());
     let spec_text = crate::llm::invoke_llm_text_for_artifact(
         endpoint,
         &prompt,
         "AIL-Spec Canonical",
         package.metadata.profile.as_str(),
     )?;
-    Ok(check_ail_draft_spec_with_requirements(
+    Ok(check_ail_draft_spec_with_edit_context(
         package,
         spec_text,
         Some(requirements_text),
+        context,
     ))
 }
 
@@ -11912,8 +14145,27 @@ pub fn draft_ail_spec_from_requirements_recorded(
     requirements_text: &str,
     endpoint: &str,
 ) -> Result<(AilDraftResult, crate::llm::LlmRecordedArtifactResponse), String> {
+    let context = AilEditContext::preserve_package(package)?;
+    draft_ail_spec_from_requirements_recorded_with_edit_context(
+        package,
+        user_prompt,
+        requirements_text,
+        endpoint,
+        &context,
+    )
+}
+
+pub fn draft_ail_spec_from_requirements_recorded_with_edit_context(
+    package: &AilPackage,
+    user_prompt: &str,
+    requirements_text: &str,
+    endpoint: &str,
+    context: &AilEditContext,
+) -> Result<(AilDraftResult, crate::llm::LlmRecordedArtifactResponse), String> {
+    context.check_package_snapshot(package)?;
     let grounded_prompt = format!("{user_prompt}\n\nDRAFT REQUIREMENTS:\n{requirements_text}");
     let prompt = build_ail_draft_prompt(package, &grounded_prompt);
+    let prompt = format!("{prompt}{}", context.render_prompt_context());
     let recorded = crate::llm::invoke_llm_artifact_response_recorded(
         endpoint,
         &prompt,
@@ -11924,7 +14176,12 @@ pub fn draft_ail_spec_from_requirements_recorded(
         return Err("model returned blocking questions for AIL-Spec Canonical".to_string());
     };
     Ok((
-        check_ail_draft_spec_with_requirements(package, spec_text.clone(), Some(requirements_text)),
+        check_ail_draft_spec_with_edit_context(
+            package,
+            spec_text.clone(),
+            Some(requirements_text),
+            context,
+        ),
         recorded,
     ))
 }
@@ -11936,8 +14193,29 @@ pub fn draft_ail_spec_from_requirements_recorded_with_max_tokens(
     endpoint: &str,
     max_tokens: usize,
 ) -> Result<(AilDraftResult, crate::llm::LlmRecordedArtifactResponse), String> {
+    let context = AilEditContext::preserve_package(package)?;
+    draft_ail_spec_from_requirements_recorded_with_max_tokens_with_edit_context(
+        package,
+        user_prompt,
+        requirements_text,
+        endpoint,
+        max_tokens,
+        &context,
+    )
+}
+
+pub fn draft_ail_spec_from_requirements_recorded_with_max_tokens_with_edit_context(
+    package: &AilPackage,
+    user_prompt: &str,
+    requirements_text: &str,
+    endpoint: &str,
+    max_tokens: usize,
+    context: &AilEditContext,
+) -> Result<(AilDraftResult, crate::llm::LlmRecordedArtifactResponse), String> {
+    context.check_package_snapshot(package)?;
     let grounded_prompt = format!("{user_prompt}\n\nDRAFT REQUIREMENTS:\n{requirements_text}");
     let prompt = build_ail_draft_prompt(package, &grounded_prompt);
+    let prompt = format!("{prompt}{}", context.render_prompt_context());
     let recorded = crate::llm::invoke_llm_artifact_response_recorded_with_max_tokens(
         endpoint,
         &prompt,
@@ -11949,7 +14227,12 @@ pub fn draft_ail_spec_from_requirements_recorded_with_max_tokens(
         return Err("model returned blocking questions for AIL-Spec Canonical".to_string());
     };
     Ok((
-        check_ail_draft_spec_with_requirements(package, spec_text.clone(), Some(requirements_text)),
+        check_ail_draft_spec_with_edit_context(
+            package,
+            spec_text.clone(),
+            Some(requirements_text),
+            context,
+        ),
         recorded,
     ))
 }
@@ -11962,6 +14245,28 @@ pub fn repair_ail_spec_from_diagnostics(
     diagnostics: &[AilDiagnostic],
     endpoint: &str,
 ) -> Result<AilDraftResult, String> {
+    let context = AilEditContext::preserve_package(package)?;
+    repair_ail_spec_from_diagnostics_with_edit_context(
+        package,
+        user_prompt,
+        requirements_text,
+        previous_spec_text,
+        diagnostics,
+        endpoint,
+        &context,
+    )
+}
+
+pub fn repair_ail_spec_from_diagnostics_with_edit_context(
+    package: &AilPackage,
+    user_prompt: &str,
+    requirements_text: &str,
+    previous_spec_text: &str,
+    diagnostics: &[AilDiagnostic],
+    endpoint: &str,
+    context: &AilEditContext,
+) -> Result<AilDraftResult, String> {
+    context.check_package_snapshot(package)?;
     let prompt = build_ail_repair_prompt(
         package,
         user_prompt,
@@ -11969,32 +14274,37 @@ pub fn repair_ail_spec_from_diagnostics(
         previous_spec_text,
         diagnostics,
     );
+    let prompt = format!("{prompt}{}", context.render_prompt_context());
     let spec_text = crate::llm::invoke_llm_text_for_artifact(
         endpoint,
         &prompt,
         "AIL-Spec Canonical",
         package.metadata.profile.as_str(),
     )?;
-    Ok(check_ail_draft_spec_with_requirements(
+    Ok(check_ail_draft_spec_with_edit_context(
         package,
         spec_text,
         Some(requirements_text),
+        context,
     ))
 }
 
-fn check_ail_draft_spec(package: &AilPackage, spec_text: String) -> AilDraftResult {
-    check_ail_draft_spec_with_requirements(package, spec_text, None)
-}
-
-fn check_ail_draft_spec_with_requirements(
+pub fn check_ail_draft_spec_with_edit_context(
     package: &AilPackage,
     spec_text: String,
     requirements_text: Option<&str>,
+    context: &AilEditContext,
 ) -> AilDraftResult {
+    if let Err(error) = context.check_package_snapshot(package) {
+        return AilDraftResult {
+            spec_text,
+            diagnostics: vec![AilDiagnostic::error("AIL-EDIT-SNAPSHOT", error)],
+        };
+    }
     let diagnostics = match parse_ail_package_spec_text(package, &spec_text) {
         Ok(document) => {
-            let mut diagnostics =
-                check_ail_core_diagnostics(&elaborate_ail_core(package, &document));
+            let core = elaborate_ail_core(package, &document);
+            let mut diagnostics = check_ail_core_diagnostics(&core);
             if let Some(requirements_text) = requirements_text {
                 diagnostics.extend(check_ail_spec_preserves_requirement_permissions(
                     &document,
@@ -12009,6 +14319,7 @@ fn check_ail_draft_spec_with_requirements(
                     requirements_text,
                 ));
             }
+            diagnostics.extend(context.check_candidate(&core));
             diagnostics
         }
         Err(error) => vec![AilDiagnostic::error(
@@ -12803,6 +15114,9 @@ fn parse_target_support_specs(text: &str) -> Result<BTreeMap<String, String>, St
 }
 
 fn merge_ail_import(target: &mut AilDocument, imported: AilDocument) {
+    for (name, ty) in imported.types {
+        target.types.insert(name, ty);
+    }
     for (name, thing) in imported.things {
         target.things.insert(name, thing);
     }
@@ -12839,6 +15153,16 @@ fn set_graph_node_attribute(graph: &mut Graph, node_id: &str, key: &str, value: 
 
 fn namespace_ail_document(document: &AilDocument, alias: &str) -> AilDocument {
     let thing_names = document.things.keys().cloned().collect::<Vec<_>>();
+    let type_names = document
+        .types
+        .keys()
+        .filter_map(|t| value_types::parse(t).ok().map(|t| t.head))
+        .collect::<BTreeSet<_>>();
+    let all_type_names = thing_names
+        .iter()
+        .cloned()
+        .chain(type_names.iter().cloned())
+        .collect::<Vec<_>>();
     let failure_names = document.failures.keys().cloned().collect::<Vec<_>>();
     let mut namespaced = AilDocument {
         application: AilApplication {
@@ -12875,7 +15199,7 @@ fn namespace_ail_document(document: &AilDocument, alias: &str) -> AilDocument {
                 field.name.clone(),
                 AilField {
                     name: field.name.clone(),
-                    type_name: qualify_type_name(&field.type_name, alias, &thing_names),
+                    type_name: qualify_type_name(&field.type_name, alias, &all_type_names),
                     is_secret: field.is_secret,
                     provenance: format!("field:{thing_name}.{}", field.name),
                 },
@@ -12896,6 +15220,87 @@ fn namespace_ail_document(document: &AilDocument, alias: &str) -> AilDocument {
         namespaced.actions.insert(
             action_name.clone(),
             AilAction {
+                boolean_operations: action
+                    .boolean_operations
+                    .iter()
+                    .map(|op| bool_operations::namespace(op, alias))
+                    .collect(),
+                float_operations: action
+                    .float_operations
+                    .iter()
+                    .map(|op| float_operations::namespace(op, alias))
+                    .collect(),
+                value_operations: action
+                    .value_operations
+                    .iter()
+                    .map(|op| value_operations::namespace(op, alias, &type_names, false))
+                    .collect(),
+                json_mutations: action
+                    .json_mutations
+                    .iter()
+                    .map(|operation| json_mutation::namespace(operation, alias))
+                    .collect(),
+                json_accesses: action
+                    .json_accesses
+                    .iter()
+                    .map(|operation| structured_json::namespace(operation, alias))
+                    .collect(),
+                json_conversions: action
+                    .json_conversions
+                    .iter()
+                    .map(|operation| json_codec::namespace(operation, alias))
+                    .collect(),
+                directory_operations: action
+                    .directory_operations
+                    .iter()
+                    .map(|operation| directory_operations::namespace(operation, alias))
+                    .collect(),
+                process_operations: action
+                    .process_operations
+                    .iter()
+                    .map(|operation| process_operations::namespace(operation, alias))
+                    .collect(),
+                standard_stream_operations: action
+                    .standard_stream_operations
+                    .iter()
+                    .map(|operation| standard_streams::namespace(operation, alias))
+                    .collect(),
+                file_operations: action
+                    .file_operations
+                    .iter()
+                    .map(|operation| file_operations::namespace(operation, alias))
+                    .collect(),
+                literal_assignments: action
+                    .literal_assignments
+                    .iter()
+                    .map(|assignment| literal_assignment::namespace(assignment, alias))
+                    .collect(),
+                list_operations: action
+                    .list_operations
+                    .iter()
+                    .map(|operation| list_operations::namespace(operation, alias))
+                    .collect(),
+                bytes_operations: action
+                    .bytes_operations
+                    .iter()
+                    .map(|operation| bytes_operations::namespace(operation, alias))
+                    .collect(),
+                text_operations: action
+                    .text_operations
+                    .iter()
+                    .map(|operation| text_operations::namespace(operation, alias))
+                    .collect(),
+                integer_calls: action
+                    .integer_calls
+                    .iter()
+                    .map(|c| integer_function::namespace_call(c, alias, false))
+                    .collect(),
+                steps: action.steps.clone(),
+                controls: action
+                    .controls
+                    .iter()
+                    .map(|c| control_flow::namespace(c, alias))
+                    .collect(),
                 name: action_name.clone(),
                 label: format!("{alias}.{}", action.label),
                 trigger: qualify_reference_text(&action.trigger, alias, &thing_names),
@@ -12912,7 +15317,16 @@ fn namespace_ail_document(document: &AilDocument, alias: &str) -> AilDocument {
                 writes: action
                     .writes
                     .iter()
-                    .map(|text| qualify_reference_text(text, alias, &thing_names))
+                    .map(|text| {
+                        namespace_integer_delta_write(document, text, alias)
+                            .or_else(|| expression_core::namespace_write(document, text, alias))
+                            .unwrap_or_else(|| qualify_reference_text(text, alias, &thing_names))
+                    })
+                    .collect(),
+                outputs: action
+                    .outputs
+                    .iter()
+                    .map(|text| format!("{}.{}", runtime_subject_key(alias), text))
                     .collect(),
                 calls: action
                     .calls
@@ -12964,7 +15378,12 @@ fn namespace_ail_document(document: &AilDocument, alias: &str) -> AilDocument {
             AilType {
                 name: type_name.clone(),
                 label: qualify_name(alias, &type_decl.label),
-                variants: namespace_variants(alias, &type_name, &type_decl.variants, &thing_names),
+                variants: namespace_variants(
+                    alias,
+                    &type_name,
+                    &type_decl.variants,
+                    &all_type_names,
+                ),
                 provenance: format!("type:{type_name}"),
             },
         );
@@ -12999,19 +15418,23 @@ fn namespace_ail_document(document: &AilDocument, alias: &str) -> AilDocument {
         namespaced.functions.insert(
             function_name.clone(),
             AilFunction {
+                integer: function
+                    .integer
+                    .as_ref()
+                    .map(|f| integer_function::namespace_function(f, alias, &type_names)),
                 name: function_name.clone(),
                 label: qualify_name(alias, &function.label),
                 inputs: namespace_function_values(
                     alias,
                     &function_name,
                     &function.inputs,
-                    &thing_names,
+                    &all_type_names,
                 ),
                 outputs: namespace_function_values(
                     alias,
                     &function_name,
                     &function.outputs,
-                    &thing_names,
+                    &all_type_names,
                 ),
                 branches: function.branches.clone(),
                 calls: function
@@ -13050,13 +15473,13 @@ fn namespace_ail_document(document: &AilDocument, alias: &str) -> AilDocument {
                     alias,
                     &binding_name,
                     &binding.inputs,
-                    &thing_names,
+                    &all_type_names,
                 ),
                 outputs: namespace_external_binding_values(
                     alias,
                     &binding_name,
                     &binding.outputs,
-                    &thing_names,
+                    &all_type_names,
                 ),
                 status_maps: binding.status_maps.clone(),
                 capabilities: binding.capabilities.clone(),
@@ -13082,8 +15505,8 @@ fn namespace_ail_document(document: &AilDocument, alias: &str) -> AilDocument {
                     .iter()
                     .map(|text| qualify_reference_text(text, alias, &thing_names))
                     .collect(),
-                inputs: namespace_tool_slots(alias, &tool_name, &tool.inputs, &thing_names),
-                outputs: namespace_tool_slots(alias, &tool_name, &tool.outputs, &thing_names),
+                inputs: namespace_tool_slots(alias, &tool_name, &tool.inputs, &all_type_names),
+                outputs: namespace_tool_slots(alias, &tool_name, &tool.outputs, &all_type_names),
                 reads: tool
                     .reads
                     .iter()
@@ -13134,8 +15557,8 @@ fn namespace_ail_document(document: &AilDocument, alias: &str) -> AilDocument {
                 name: pass_name.clone(),
                 label: format!("{alias}.{}", pass.label),
                 purpose: pass.purpose.clone(),
-                inputs: namespace_pass_values(alias, &pass_name, &pass.inputs, &thing_names),
-                outputs: namespace_pass_values(alias, &pass_name, &pass.outputs, &thing_names),
+                inputs: namespace_pass_values(alias, &pass_name, &pass.inputs, &all_type_names),
+                outputs: namespace_pass_values(alias, &pass_name, &pass.outputs, &all_type_names),
                 reads: pass
                     .reads
                     .iter()
@@ -13554,7 +15977,14 @@ fn namespace_variant_fields(
                 field.name.clone(),
                 AilVariantField {
                     name: field.name.clone(),
-                    type_name: qualify_type_name(&field.type_name, alias, thing_names),
+                    type_name: value_types::qualify(
+                        &field.type_name,
+                        alias,
+                        &thing_names.iter().cloned().collect(),
+                        &value_types::parse(type_name)
+                            .map(|t| t.args.into_iter().map(|a| a.head).collect())
+                            .unwrap_or_default(),
+                    ),
                     provenance: format!(
                         "type:{type_name}.variant:{}.field:{}",
                         variant.name, field.name
@@ -13627,18 +16057,12 @@ fn qualify_failure_reference(reference: &str, alias: &str, failure_names: &[Stri
 
 fn qualify_type_name(type_name: &str, alias: &str, thing_names: &[String]) -> String {
     let type_name = normalize_type_name(type_name);
-    if thing_names.iter().any(|thing| thing == &type_name) {
-        return qualify_name(alias, &type_name);
-    }
-    for wrapper in ["Secret", "List", "Option", "Pointer", "Nullable", "NonNull"] {
-        if let Some(inner) = generic_inner(&type_name, wrapper) {
-            return format!(
-                "{wrapper}<{}>",
-                qualify_type_name(inner, alias, thing_names)
-            );
-        }
-    }
-    type_name
+    value_types::qualify(
+        &type_name,
+        alias,
+        &thing_names.iter().cloned().collect(),
+        &BTreeSet::new(),
+    )
 }
 
 fn qualify_reference_text(text: &str, alias: &str, thing_names: &[String]) -> String {
@@ -14212,7 +16636,7 @@ fn build_ail_draft_prompt(package: &AilPackage, user_prompt: &str) -> String {
             "{}\n",
             "Output only parseable AIL-Spec structured English. Do not include code fences, Markdown commentary, labels like Application:, or reasoning.\n",
             "{}\n",
-            "The checker will decide whether the candidate is accepted, so preserve explicit things, fields, tools, actions, system components, capabilities, failures, guarantees, traces, and secret handling.\n\n",
+            "The checker and immutable edit authority decide whether the candidate is accepted. Follow the selected edit authority for existing things, fields, tools, actions, system components, capabilities, failures, guarantees, traces, and secret handling.\n\n",
             "Use canonical AIL type spellings: Text, State<Open, Closed>, List<Text>, Option<Text>, and Secret<List<Text>> for a secret list of text values.\n\n",
             "Do not emit a secret-redaction line unless the checked requirements or package source define Secret<...>. If no source secret exists, omit that line entirely; do not invent internal tokens, credentials, notes, or private data.\n\n",
             "{}\n\n",
@@ -14243,6 +16667,7 @@ fn failed_run(
         }
     }
     AilRunResult {
+        returned_fields: Vec::new(),
         status: "failed".to_string(),
         failure: Some(failure_name.to_string()),
         final_state,
@@ -14407,6 +16832,24 @@ fn field_copy_assignment(document: &AilDocument, write: &str) -> Option<(String,
     Some((source_key, destination_key))
 }
 
+fn check_bytes_legacy_write(document: &AilDocument, write: &str) -> Result<(), String> {
+    if let Some((key, _)) = field_write_assignment(document, write) {
+        if runtime_field_type_name(document, &key) == Some("Bytes") {
+            return Err(
+                "AIL-BYTES-001: Bytes constants require an explicit typed literal assignment"
+                    .into(),
+            );
+        }
+    } else if let Some((source, key)) = field_copy_assignment(document, write) {
+        let source_bytes = runtime_field_type_name(document, &source) == Some("Bytes");
+        let destination_bytes = runtime_field_type_name(document, &key) == Some("Bytes");
+        if source_bytes != destination_bytes {
+            return Err("AIL-BYTES-001: Bytes copies require Bytes fields on both sides; use an explicit conversion".into());
+        }
+    }
+    Ok(())
+}
+
 fn application_user_id_key(document: &AilDocument, text: &str) -> Option<String> {
     let normalized = normalized_field_reference_text(text).to_ascii_lowercase();
     for user in &document.application.users {
@@ -14457,13 +16900,27 @@ fn field_integer_delta_assignment(document: &AilDocument, write: &str) -> Option
         .or_else(|| write.strip_prefix("decrements ").map(|rest| (-1_i64, rest)))?;
     let (field_text, delta_text) = rest.rsplit_once(" by ")?;
     let key = referenced_runtime_field_key(document, field_text.trim_start_matches("the "))?;
-    let delta = delta_text
-        .split(|ch: char| !ch.is_ascii_digit() && ch != '-')
-        .next()
-        .unwrap_or("")
-        .parse::<i64>()
-        .ok()?;
-    Some((key, (sign * delta).to_string()))
+    let delta = crate::expression::parse_integer(delta_text).ok()?;
+    let delta = if sign < 0 {
+        delta.checked_neg()?
+    } else {
+        delta
+    };
+    Some((key, delta.to_string()))
+}
+
+fn namespace_integer_delta_write(
+    document: &AilDocument,
+    write: &str,
+    alias: &str,
+) -> Option<String> {
+    let (key, _) = field_integer_delta_assignment(document, write)?;
+    let verb = write.split_once(' ')?.0;
+    let delta = write.rsplit_once(" by ")?.1;
+    Some(format!(
+        "{verb} {}.{key} by {delta}",
+        runtime_subject_key(alias)
+    ))
 }
 
 fn field_write_to_assignment(document: &AilDocument, write: &str) -> Option<(String, String)> {
@@ -14548,6 +17005,24 @@ fn split_allowed_requirement_values(text: &str) -> Vec<String> {
 
 fn referenced_runtime_field_key(document: &AilDocument, text: &str) -> Option<String> {
     let normalized = text.to_ascii_lowercase();
+    let reference = normalized.trim().trim_start_matches("the ");
+    if matches!(crate::expression::IntExpr::parse(reference), Ok(crate::expression::IntExpr::Field(key)) if key == reference)
+    {
+        // A complete dotted reference names its owner explicitly. Never fall back
+        // to a matching bare field when that qualified declaration is absent.
+        let mut matches = document
+            .things
+            .values()
+            .flat_map(|thing| {
+                thing
+                    .fields
+                    .values()
+                    .map(move |field| runtime_field_key(&thing.name, &field.name))
+            })
+            .filter(|key| key.eq_ignore_ascii_case(reference));
+        let key = matches.next()?;
+        return matches.next().is_none().then_some(key);
+    }
     let mut nested_matches = Vec::new();
     let mut qualified_matches = Vec::new();
     let mut field_matches = Vec::new();
@@ -14902,7 +17377,7 @@ fn typed_node_diagnostic_kind(kind: &str) -> &'static str {
 }
 
 fn suggested_declared_type_name(type_name: &str) -> String {
-    for wrapper in ["Option", "List", "Secret", "Pointer", "Nullable", "NonNull"] {
+    for &wrapper in AIL_WRAPPER_TYPE_HEADS {
         if let Some(inner) = generic_inner(type_name, wrapper) {
             return suggested_declared_type_name(inner);
         }
@@ -14982,8 +17457,30 @@ fn check_secret_internal_notes_role_requirements(core: &AilCore) -> Vec<AilDiagn
     }
     let node_by_id = graph_node_by_id(core);
     let mut diagnostics = Vec::new();
-    for edge in core.graph.edges.iter().filter(|edge| edge.kind == "reads") {
-        let Some(action) = node_by_id.get(&edge.source) else {
+    for (edge, owner) in core
+        .graph
+        .edges
+        .iter()
+        .filter(|edge| edge.kind == "reads")
+        .map(|edge| (edge, edge.source.as_str()))
+        .chain(bytes_operations::accesses(core, "reads"))
+        .chain(text_operations::accesses(core, "reads"))
+        .chain(list_operations::accesses(core, "reads"))
+        .chain(literal_assignment::accesses(core, "reads"))
+        .chain(standard_streams::accesses(core, "reads"))
+        .chain(directory_operations::accesses(core, "reads"))
+        .chain(process_operations::accesses(core, "reads"))
+        .chain(file_operations::accesses(core, "reads"))
+        .chain(json_codec::accesses(core, "reads"))
+        .chain(structured_json::accesses(core, "reads"))
+        .chain(json_mutation::accesses(core, "reads"))
+        .chain(float_operations::accesses(core, "reads"))
+        .chain(bool_operations::accesses(core, "reads"))
+        .chain(control_flow::accesses(core, "reads"))
+        .chain(value_operations::accesses(core, "reads"))
+        .chain(value_function::accesses(core, "reads"))
+    {
+        let Some(action) = node_by_id.get(owner) else {
             continue;
         };
         if action.kind != "Action" {
@@ -15567,60 +18064,6 @@ fn action_requires_commander_review(
             let compact = compact_semantic_text(&rule.name);
             compact.contains("commanderreview") || compact.contains("commanderapproval")
         })
-}
-
-/// Rejects arithmetic writes whose operand is not an integer literal.
-///
-/// AIL lowering only produces `ADD_INT_FIELD` when the `by` operand parses as an
-/// integer literal. Any other operand — notably a reference to another field —
-/// silently degrades to an opaque `WRITE_FIELD` that carries the English text and
-/// performs no arithmetic at runtime. Until the expression IR lands, that
-/// degradation is reported rather than accepted, so a spec cannot claim a
-/// computation the toolchain will not perform.
-fn check_action_arithmetic_operand_literals(core: &AilCore) -> Vec<AilDiagnostic> {
-    let mut diagnostics = Vec::new();
-    for edge in core.graph.edges.iter().filter(|edge| edge.kind == "writes") {
-        let Some(provenance) = edge.attributes.get("provenance") else {
-            continue;
-        };
-        let Some((_, write_text)) = provenance.split_once(".write:") else {
-            continue;
-        };
-        if !write_text.starts_with("increments ") && !write_text.starts_with("decrements ") {
-            continue;
-        }
-        let Some((_, delta_text)) = write_text.rsplit_once(" by ") else {
-            continue;
-        };
-        let delta_is_literal = delta_text
-            .split(|ch: char| !ch.is_ascii_digit() && ch != '-')
-            .next()
-            .unwrap_or("")
-            .parse::<i64>()
-            .is_ok();
-        if delta_is_literal {
-            continue;
-        }
-        diagnostics.push(
-            AilDiagnostic::error(
-                "AIL-EXPR-001",
-                format!(
-                    "arithmetic write '{write_text}' uses operand '{}', which is not an integer literal",
-                    delta_text.trim()
-                ),
-            )
-            .with_source_provenance(Some(provenance.clone()))
-            .with_affected_graph_item(format!("edge:{}", edge.id))
-            .with_repair_suggestion(
-                "AIL arithmetic currently lowers only integer literal operands into ADD_INT_FIELD. \
-                 Use an integer literal, or express the computation once the AIL expression IR \
-                 supports operands that are read from runtime fields. A non-literal operand would \
-                 otherwise be accepted and then perform no arithmetic at runtime."
-                    .to_string(),
-            ),
-        );
-    }
-    diagnostics
 }
 
 fn check_application_stateful_counter_runtime_policy(core: &AilCore) -> Vec<AilDiagnostic> {
@@ -18747,13 +21190,30 @@ fn check_secret_access_protection(
 ) -> Vec<AilDiagnostic> {
     let node_by_id = graph_node_by_id(core);
     let mut diagnostics = Vec::new();
-    for edge in core
+    for (edge, owner) in core
         .graph
         .edges
         .iter()
         .filter(|edge| edge.kind == edge_kind)
+        .map(|edge| (edge, edge.source.as_str()))
+        .chain(bytes_operations::accesses(core, edge_kind))
+        .chain(text_operations::accesses(core, edge_kind))
+        .chain(list_operations::accesses(core, edge_kind))
+        .chain(literal_assignment::accesses(core, edge_kind))
+        .chain(standard_streams::accesses(core, edge_kind))
+        .chain(directory_operations::accesses(core, edge_kind))
+        .chain(process_operations::accesses(core, edge_kind))
+        .chain(file_operations::accesses(core, edge_kind))
+        .chain(json_codec::accesses(core, edge_kind))
+        .chain(structured_json::accesses(core, edge_kind))
+        .chain(json_mutation::accesses(core, edge_kind))
+        .chain(float_operations::accesses(core, edge_kind))
+        .chain(bool_operations::accesses(core, edge_kind))
+        .chain(control_flow::accesses(core, edge_kind))
+        .chain(value_operations::accesses(core, edge_kind))
+        .chain(value_function::accesses(core, edge_kind))
     {
-        let Some(action) = node_by_id.get(&edge.source) else {
+        let Some(action) = node_by_id.get(owner) else {
             continue;
         };
         let Some(target) = node_by_id.get(&edge.target) else {
@@ -18960,33 +21420,51 @@ fn normalized_field_reference_text(text: &str) -> String {
         .to_string()
 }
 
+// Shared vocabulary for field checking and nominal declaration admission.
+const AIL_PRIMITIVE_TYPE_NAMES: &[&str] = &[
+    "Bytes",
+    "Text",
+    "Time",
+    "Duration",
+    "Bool",
+    "Json",
+    "Int",
+    "Float",
+    "UInt8",
+    "UInt16",
+    "UInt32",
+    "UInt64",
+    "CInt",
+    "CChar",
+    "Void",
+    "Decimal",
+    "Money",
+    "Buffer",
+    "Device",
+    "AIL-Core graph",
+    "permission inference policy",
+    "Diagnostic",
+];
+const AIL_WRAPPER_TYPE_HEADS: &[&str] =
+    &["Option", "List", "Secret", "Pointer", "Nullable", "NonNull"];
+const AIL_STATE_TYPE_HEAD: &str = "State";
+const AIL_CALLBACK_TYPE_HEAD: &str = "Callback";
+
+fn is_reserved_ail_type_head(head: &str) -> bool {
+    AIL_PRIMITIVE_TYPE_NAMES.contains(&head)
+        || AIL_WRAPPER_TYPE_HEADS.contains(&head)
+        || matches!(head, AIL_STATE_TYPE_HEAD | AIL_CALLBACK_TYPE_HEAD)
+        // Existing broader runtime reservation remains conservative even where
+        // the field checker does not yet accept these bare nominal heads.
+        || matches!(head, "Map" | "Set" | "Result" | "Unit" | "Handle" | "Resource" | "Never")
+}
+
 fn is_known_ail_type(type_name: &str, declared_types: &BTreeSet<&str>) -> bool {
     let type_name = type_name.trim();
-    if matches!(
-        type_name,
-        "Text"
-            | "Time"
-            | "Duration"
-            | "Bool"
-            | "Int"
-            | "UInt8"
-            | "UInt16"
-            | "UInt32"
-            | "UInt64"
-            | "CInt"
-            | "CChar"
-            | "Void"
-            | "Decimal"
-            | "Money"
-            | "Buffer"
-            | "Device"
-            | "AIL-Core graph"
-            | "permission inference policy"
-            | "Diagnostic"
-    ) {
+    if AIL_PRIMITIVE_TYPE_NAMES.contains(&type_name) {
         return true;
     }
-    if declared_types.contains(type_name) {
+    if declared_types.contains(type_name) || value_types::known(type_name, declared_types) {
         return true;
     }
     if type_name.len() == 1
@@ -18997,16 +21475,19 @@ fn is_known_ail_type(type_name: &str, declared_types: &BTreeSet<&str>) -> bool {
     {
         return true;
     }
-    if let Some(values) = generic_inner(type_name, "State") {
+    if let Some(values) = generic_inner(type_name, AIL_STATE_TYPE_HEAD) {
         return values
             .split(',')
             .map(str::trim)
             .all(|value| !value.is_empty());
     }
-    if type_name.starts_with("Callback<") && type_name.ends_with('>') {
+    if type_name
+        .strip_prefix(AIL_CALLBACK_TYPE_HEAD)
+        .is_some_and(|suffix| suffix.starts_with('<') && suffix.ends_with('>'))
+    {
         return true;
     }
-    for wrapper in ["Option", "List", "Secret", "Pointer", "Nullable", "NonNull"] {
+    for &wrapper in AIL_WRAPPER_TYPE_HEADS {
         if let Some(inner) = generic_inner(type_name, wrapper) {
             return is_known_ail_type(inner, declared_types);
         }
@@ -19081,7 +21562,7 @@ fn parse_function_header(line: &str) -> Option<String> {
 
 fn parse_type_header(line: &str) -> Option<String> {
     let label = line.strip_prefix("Type: ")?;
-    Some(label.trim().trim_end_matches('.').to_string())
+    Some(normalize_type_name(label.trim().trim_end_matches('.')))
 }
 
 fn parse_type_variants_header(document: &AilDocument, line: &str) -> Option<String> {
@@ -19164,6 +21645,8 @@ fn parse_function_section(line: &str) -> Option<FunctionSection> {
     match line {
         "The function needs:" => Some(FunctionSection::Inputs),
         "The function produces:" => Some(FunctionSection::Outputs),
+        "The function stores:" => Some(FunctionSection::Locals),
+        "The function executes:" => Some(FunctionSection::Executable),
         _ => None,
     }
 }
@@ -19501,9 +21984,120 @@ fn parse_compiler_pass_bullet(
             let value = parse_pass_value(pass_name, "output", bullet, line_number)?;
             pass.outputs.insert(value.name.clone(), value);
         }
-        CompilerPassSection::Body => parse_compiler_pass_body_bullet(pass, bullet),
+        CompilerPassSection::Body => {
+            let unsupported =
+                if control_flow::recovery_bullet(bullet) || control_flow::raise_bullet(bullet) {
+                    Some(("AIL-CONTROL-001", "runtime recovery"))
+                } else if is_list_transformation_bullet(bullet) {
+                    Some(("AIL-LIST-001", "list transformations"))
+                } else if is_text_transformation_bullet(bullet) {
+                    Some(("AIL-TEXT-001", "text transformations"))
+                } else if is_boolean_execution_bullet(bullet) {
+                    Some(("AIL-BOOL-001", "Boolean operations"))
+                } else if is_floating_execution_bullet(bullet) {
+                    Some(("AIL-FLOAT-001", "floating operations"))
+                } else if is_json_execution_bullet(bullet) {
+                    Some(("AIL-JSON-001", "JSON conversions"))
+                } else if bytes_operations::recognized_bullet(bullet) {
+                    Some(("AIL-BYTES-001", "byte operations"))
+                } else if directory_operations::recognized_bullet(bullet) {
+                    Some(("AIL-DIRECTORY-001", "directory operations"))
+                } else if process_operations::recognized_bullet(bullet) {
+                    Some(("AIL-PROCESS-001", "process operations"))
+                } else if standard_streams::recognized_bullet(bullet) {
+                    Some(("AIL-STDIO-001", "standard-stream operations"))
+                } else if file_operations::recognized_binary_bullet(bullet)
+                    || file_operations::parse_bullet(bullet).is_some()
+                {
+                    Some(("AIL-FILE-001", "file operations"))
+                } else if literal_assignment::parse_bullet(bullet).is_some() {
+                    Some(("AIL-LITERAL-001", "literal assignments"))
+                } else if [
+                    "the system joins text ",
+                    "the system counts characters in ",
+                    "the system slices text ",
+                    "the system finds text ",
+                ]
+                .iter()
+                .any(|prefix| bullet.starts_with(prefix))
+                {
+                    Some(("AIL-TEXT-001", "text operations"))
+                } else if list_operations::parse_bullet(bullet).is_some() {
+                    Some(("AIL-LIST-001", "list operations"))
+                } else {
+                    None
+                };
+            if let Some((code, operation)) = unsupported {
+                return Err(format!(
+                    "line {line_number}: {code}: {operation} require an executable action; compiler-pass bodies are descriptive"
+                ));
+            }
+            parse_compiler_pass_body_bullet(pass, bullet);
+        }
     }
     Ok(())
+}
+
+fn is_list_transformation_bullet(bullet: &str) -> bool {
+    let bullet = trim_sentence(bullet);
+    let operation = bullet
+        .strip_prefix("the system ")
+        .or_else(|| bullet.strip_prefix("the function "));
+    operation.is_some_and(|text| {
+        ["concatenates", "reverses", "sorts"]
+            .iter()
+            .any(|verb| text == *verb || text.starts_with(&format!("{verb} ")))
+            || text == "slices list"
+            || text.starts_with("slices list ")
+    })
+}
+
+fn is_text_transformation_bullet(bullet: &str) -> bool {
+    let bullet = trim_sentence(bullet);
+    let operation = bullet
+        .strip_prefix("the system ")
+        .or_else(|| bullet.strip_prefix("the function "));
+    operation.is_some_and(|text| {
+        ["splits", "replaces", "trims"]
+            .iter()
+            .any(|verb| text == *verb || text.starts_with(&format!("{verb} ")))
+            || text == "joins list"
+            || text.starts_with("joins list ")
+    })
+}
+
+fn is_json_execution_bullet(bullet: &str) -> bool {
+    let normalized = match bullet.strip_prefix("the function ") {
+        Some(rest) => std::borrow::Cow::Owned(format!("the system {rest}")),
+        None => std::borrow::Cow::Borrowed(bullet),
+    };
+    json_mutation::parse_bullet(&normalized).is_some()
+        || structured_json::parse_bullet(&normalized).is_some()
+        || json_codec::parse_bullet(&normalized).is_some()
+}
+
+fn is_boolean_execution_bullet(bullet: &str) -> bool {
+    let normalized = match bullet.strip_prefix("the function ") {
+        Some(rest) => std::borrow::Cow::Owned(format!("the system {rest}")),
+        None => std::borrow::Cow::Borrowed(bullet),
+    };
+    bool_operations::parse_bullet(&normalized).is_some()
+        || (matches!(normalized.as_ref(), "if boolean" | "if boolean:")
+            || normalized.starts_with("if boolean "))
+        || (matches!(normalized.as_ref(), "while boolean" | "while boolean:")
+            || normalized.starts_with("while boolean "))
+}
+
+fn is_floating_execution_bullet(bullet: &str) -> bool {
+    let normalized = match bullet.strip_prefix("the function ") {
+        Some(rest) => std::borrow::Cow::Owned(format!("the system {rest}")),
+        None => std::borrow::Cow::Borrowed(bullet),
+    };
+    float_operations::parse_bullet(&normalized).is_some()
+        || normalized.starts_with("the system appends floating ")
+        || (normalized.starts_with("the system sets item ") && normalized.contains(" to floating "))
+        || normalized.starts_with("if floating ")
+        || normalized.starts_with("while floating ")
 }
 
 fn parse_function_bullet(
@@ -19520,6 +22114,11 @@ fn parse_function_bullet(
     match section {
         FunctionSection::Inputs => {
             let (name, type_name) = parse_typed_bullet(bullet, line_number)?;
+            if function.inputs.contains_key(&name) {
+                return Err(format!(
+                    "line {line_number}: duplicate function input {name}"
+                ));
+            }
             function.inputs.insert(
                 name.clone(),
                 AilFunctionValue {
@@ -19531,6 +22130,11 @@ fn parse_function_bullet(
         }
         FunctionSection::Outputs => {
             let (name, type_name) = parse_typed_bullet(bullet, line_number)?;
+            if function.outputs.contains_key(&name) {
+                return Err(format!(
+                    "line {line_number}: duplicate function output {name}"
+                ));
+            }
             function.outputs.insert(
                 name.clone(),
                 AilFunctionValue {
@@ -19540,7 +22144,101 @@ fn parse_function_bullet(
                 },
             );
         }
-        FunctionSection::Body => parse_function_body_bullet(function, bullet),
+        FunctionSection::Locals => {
+            let (name, type_name) = parse_typed_bullet(bullet, line_number)?;
+            if function
+                .integer
+                .get_or_insert_with(Default::default)
+                .locals
+                .insert(name.clone(), normalize_type_name(&type_name))
+                .is_some()
+            {
+                return Err(format!("line {line_number}: duplicate local {name}"));
+            }
+        }
+        FunctionSection::Executable if file_operations::recognized_binary_bullet(bullet) => {
+            return Err(format!(
+                "line {line_number}: AIL-FILE-001: binary file operations require an executable action"
+            ));
+        }
+        FunctionSection::Executable if directory_operations::recognized_bullet(bullet) => {
+            return Err(format!(
+                "line {line_number}: AIL-DIRECTORY-001: directory operations require an executable action"
+            ));
+        }
+        FunctionSection::Executable if process_operations::recognized_bullet(bullet) => {
+            return Err(format!(
+                "line {line_number}: AIL-PROCESS-001: process operations require an executable action"
+            ));
+        }
+        FunctionSection::Executable if standard_streams::recognized_bullet(bullet) => {
+            return Err(format!(
+                "line {line_number}: AIL-STDIO-001: standard-stream operations require an executable action"
+            ));
+        }
+        FunctionSection::Executable => integer_function::parse_bullet(
+            function.integer.get_or_insert_with(Default::default),
+            bullet,
+        )
+        .map_err(|e| format!("line {line_number}: {e}"))?,
+        FunctionSection::Body => {
+            if file_operations::recognized_binary_bullet(bullet) {
+                return Err(format!(
+                    "line {line_number}: AIL-FILE-001: binary file operations require an executable action"
+                ));
+            }
+            if bytes_operations::recognized_bullet(bullet) {
+                return Err(format!(
+                    "line {line_number}: AIL-BYTES-001: byte operations require an executable action or function body"
+                ));
+            }
+            if directory_operations::recognized_bullet(bullet) {
+                return Err(format!(
+                    "line {line_number}: AIL-DIRECTORY-001: directory operations require an executable action"
+                ));
+            }
+            if process_operations::recognized_bullet(bullet) {
+                return Err(format!(
+                    "line {line_number}: AIL-PROCESS-001: process operations require an executable action"
+                ));
+            }
+            if standard_streams::recognized_bullet(bullet) {
+                return Err(format!(
+                    "line {line_number}: AIL-STDIO-001: standard-stream operations require an executable action"
+                ));
+            }
+            if control_flow::recovery_bullet(bullet) || control_flow::raise_bullet(bullet) {
+                return Err(format!(
+                    "line {line_number}: AIL-CONTROL-001: runtime recovery requires an executable action or 'The function executes:' body"
+                ));
+            }
+            if is_list_transformation_bullet(bullet) {
+                return Err(format!(
+                    "line {line_number}: AIL-LIST-001: list transformations require an executable action or 'The function executes:' body"
+                ));
+            }
+            if is_text_transformation_bullet(bullet) {
+                return Err(format!(
+                    "line {line_number}: AIL-TEXT-001: text transformations require an executable action or 'The function executes:' body"
+                ));
+            }
+            if is_boolean_execution_bullet(bullet) {
+                return Err(format!(
+                    "line {line_number}: AIL-BOOL-001: Boolean operations require an executable action or 'The function executes:' body"
+                ));
+            }
+            if is_floating_execution_bullet(bullet) {
+                return Err(format!(
+                    "line {line_number}: AIL-FLOAT-001: floating operations require an executable action or 'The function executes:' body"
+                ));
+            }
+            if is_json_execution_bullet(bullet) {
+                return Err(format!(
+                    "line {line_number}: AIL-JSON-001: JSON operations require an executable action or 'The function executes:' body"
+                ));
+            }
+            parse_function_body_bullet(function, bullet);
+        }
     }
     Ok(())
 }
@@ -19559,7 +22257,15 @@ fn parse_type_bullet(
     match section {
         TypeSection::Variants => {
             let variant = parse_variant_bullet(type_name, bullet, line_number)?;
-            type_decl.variants.insert(variant.name.clone(), variant);
+            if type_decl
+                .variants
+                .insert(variant.name.clone(), variant)
+                .is_some()
+            {
+                return Err(format!(
+                    "line {line_number}: AIL-VALUE-001: duplicate variant"
+                ));
+            }
         }
     }
     Ok(())
@@ -19678,12 +22384,18 @@ fn parse_variant_bullet(
         let payloads = payloads
             .strip_suffix(')')
             .ok_or_else(|| format!("line {line_number}: malformed variant payload list"))?;
-        let fields = payloads
-            .split(',')
+        let mut seen = BTreeSet::new();
+        let fields = value_types::split_types(payloads)?
+            .into_iter()
             .map(str::trim)
             .filter(|payload| !payload.is_empty())
             .map(|payload| {
                 let (name, field_type_name) = parse_typed_bullet(payload, line_number)?;
+                if !seen.insert(name.clone()) {
+                    return Err(format!(
+                        "line {line_number}: AIL-VALUE-001: duplicate payload"
+                    ));
+                }
                 Ok((
                     name.clone(),
                     AilVariantField {
@@ -20200,6 +22912,152 @@ fn parse_action_bullet(
     let Some(action) = document.actions.get_mut(action_name) else {
         return Ok(());
     };
+    if let Some(operation) = value_operations::parse_bullet(bullet) {
+        let operation = operation?;
+        action
+            .steps
+            .push(AilActionStep::Variant(action.value_operations.len()));
+        action.value_operations.push(operation);
+        return Ok(());
+    }
+    if let Some(operation) = bool_operations::parse_bullet(bullet) {
+        let operation = operation.map_err(|e| format!("line {line_number}: {e}"))?;
+        action
+            .steps
+            .push(AilActionStep::Boolean(action.boolean_operations.len()));
+        action.boolean_operations.push(operation);
+        return Ok(());
+    }
+    if let Some(operation) = float_operations::parse_bullet(bullet) {
+        let operation = operation.map_err(|e| format!("line {line_number}: {e}"))?;
+        action
+            .steps
+            .push(AilActionStep::Float(action.float_operations.len()));
+        action.float_operations.push(operation);
+        return Ok(());
+    }
+    if let Some(operation) = json_mutation::parse_bullet(bullet) {
+        let operation = operation.map_err(|e| format!("line {line_number}: {e}"))?;
+        action
+            .steps
+            .push(AilActionStep::JsonMutation(action.json_mutations.len()));
+        action.json_mutations.push(operation);
+        return Ok(());
+    }
+    if let Some(operation) = structured_json::parse_bullet(bullet) {
+        let operation = operation.map_err(|e| format!("line {line_number}: {e}"))?;
+        action
+            .steps
+            .push(AilActionStep::JsonAccess(action.json_accesses.len()));
+        action.json_accesses.push(operation);
+        return Ok(());
+    }
+    if let Some(operation) = json_codec::parse_bullet(bullet) {
+        let operation = operation.map_err(|e| format!("line {line_number}: {e}"))?;
+        action
+            .steps
+            .push(AilActionStep::Json(action.json_conversions.len()));
+        action.json_conversions.push(operation);
+        return Ok(());
+    }
+    if let Some(operation) = directory_operations::parse_bullet(bullet) {
+        let operation = operation.map_err(|e| format!("line {line_number}: {e}"))?;
+        action
+            .steps
+            .push(AilActionStep::Directory(action.directory_operations.len()));
+        action.directory_operations.push(operation);
+        return Ok(());
+    }
+    if let Some(operation) = process_operations::parse_bullet(bullet) {
+        let operation = operation.map_err(|e| format!("line {line_number}: {e}"))?;
+        action
+            .steps
+            .push(AilActionStep::Process(action.process_operations.len()));
+        action.process_operations.push(operation);
+        return Ok(());
+    }
+    if let Some(operation) = standard_streams::parse_bullet(bullet) {
+        let operation = operation.map_err(|e| format!("line {line_number}: {e}"))?;
+        action.steps.push(AilActionStep::StandardStream(
+            action.standard_stream_operations.len(),
+        ));
+        action.standard_stream_operations.push(operation);
+        return Ok(());
+    }
+    if let Some(operation) = file_operations::parse_bullet(bullet) {
+        let operation = operation.map_err(|e| format!("line {line_number}: {e}"))?;
+        action
+            .steps
+            .push(AilActionStep::File(action.file_operations.len()));
+        action.file_operations.push(operation);
+        return Ok(());
+    }
+    if let Some(assignment) = literal_assignment::parse_bullet(bullet) {
+        let assignment = assignment.map_err(|e| format!("line {line_number}: {e}"))?;
+        action
+            .steps
+            .push(AilActionStep::Literal(action.literal_assignments.len()));
+        action.literal_assignments.push(assignment);
+        return Ok(());
+    }
+    if let Some(operation) = list_operations::parse_bullet(bullet) {
+        let operation = operation.map_err(|e| format!("line {line_number}: {e}"))?;
+        action
+            .steps
+            .push(AilActionStep::List(action.list_operations.len()));
+        action.list_operations.push(operation);
+        return Ok(());
+    }
+    if let Some(operation) = bytes_operations::parse_bullet(bullet) {
+        let operation = operation.map_err(|e| format!("line {line_number}: {e}"))?;
+        action
+            .steps
+            .push(AilActionStep::Bytes(action.bytes_operations.len()));
+        action.bytes_operations.push(operation);
+        return Ok(());
+    }
+    if let Some(operation) = text_operations::parse_bullet(bullet) {
+        let operation = operation.map_err(|e| format!("line {line_number}: {e}"))?;
+        action
+            .steps
+            .push(AilActionStep::Text(action.text_operations.len()));
+        action.text_operations.push(operation);
+        return Ok(());
+    }
+    if let Some(text) = bullet.strip_prefix("the system calls ")
+        && text.contains(" into ")
+    {
+        let call =
+            integer_function::parse_call(text).map_err(|e| format!("line {line_number}: {e}"))?;
+        action
+            .steps
+            .push(AilActionStep::IntegerCall(action.integer_calls.len()));
+        action.integer_calls.push(call);
+        return Ok(());
+    }
+    if control_flow::raise_bullet(bullet) && !bullet.starts_with("the system ") {
+        return Err(format!(
+            "line {line_number}: AIL-CONTROL-001: action raises require the system subject"
+        ));
+    }
+    if let Some(control) = control_flow::parse_bullet(bullet) {
+        let control = control.map_err(|message| format!("line {line_number}: {message}"))?;
+        action
+            .steps
+            .push(AilActionStep::Control(action.controls.len()));
+        action.controls.push(control);
+        return Ok(());
+    }
+    if control_flow::inside_block(action) && !control_flow::executable_bullet(bullet) {
+        return Err(format!(
+            "line {line_number}: AIL-CONTROL-001: only executable writes/calls and control statements belong inside blocks; move declarations outside"
+        ));
+    }
+    let counts = (
+        action.writes.len(),
+        action.calls.len(),
+        action.repeated_calls.len(),
+    );
     if let Some(text) = bullet.strip_prefix("the system requires ") {
         action.requirements.push(trim_sentence(text));
     } else if let Some(text) = bullet.strip_prefix("Requires ") {
@@ -20212,6 +23070,12 @@ fn parse_action_bullet(
         action.writes.push(trim_sentence(text));
     } else if let Some(text) = bullet.strip_prefix("Changes ") {
         action.writes.push(trim_sentence(text));
+    } else if let Some(text) = bullet.strip_prefix("the system computes ") {
+        action
+            .writes
+            .push(format!("computes {}", trim_sentence(text)));
+    } else if let Some(text) = bullet.strip_prefix("the system returns ") {
+        action.outputs.push(trim_sentence(text));
     } else if let Some(text) = bullet.strip_prefix("the system increments ") {
         action
             .writes
@@ -20233,9 +23097,8 @@ fn parse_action_bullet(
     } else if let Some(text) = bullet.strip_prefix("the system calls ") {
         action.calls.push(trim_sentence(text));
     } else if let Some(text) = bullet.strip_prefix("the system repeats ") {
-        if let Some(repeated_call) = parse_repeated_action_call(action_name, text) {
-            action.repeated_calls.push(repeated_call);
-        }
+        let repeated_call = parse_repeated_action_call(action_name, text).ok_or_else(|| format!("line {line_number}: AIL-PARSE-001: repeats requires an action and a positive integer count"))?;
+        action.repeated_calls.push(repeated_call);
     } else if let Some(text) = bullet.strip_prefix("the system records a trace event named ") {
         action.traces.push(trim_sentence(text));
     } else if let Some(text) = bullet.strip_prefix("Records trace event named ") {
@@ -20276,6 +23139,15 @@ fn parse_action_bullet(
              ignored.]"
         ));
     }
+    if action.writes.len() > counts.0 {
+        action.steps.push(AilActionStep::Write(counts.0));
+    }
+    if action.calls.len() > counts.1 {
+        action.steps.push(AilActionStep::Call(counts.1));
+    }
+    if action.repeated_calls.len() > counts.2 {
+        action.steps.push(AilActionStep::Repeat(counts.2));
+    }
     Ok(())
 }
 
@@ -20289,7 +23161,10 @@ fn normalize_llm_requirement_shorthand(text: &str) -> String {
 
 fn parse_repeated_action_call(action_name: &str, text: &str) -> Option<AilRepeatedActionCall> {
     let text = trim_sentence(text);
-    let text = text.strip_suffix(" times").unwrap_or(&text);
+    let text = text
+        .strip_suffix(" times sequentially")
+        .or_else(|| text.strip_suffix(" times"))
+        .unwrap_or(&text);
     let (target, count) = text.rsplit_once(' ')?;
     let count = count.parse::<usize>().ok()?;
     (count > 0).then(|| AilRepeatedActionCall {
@@ -20360,7 +23235,12 @@ fn normalize_type_name(type_name: &str) -> String {
             return format!("{wrapper}<{}>", normalize_type_name(inner));
         }
     }
-    type_name.to_string()
+    if type_name.starts_with("State<") {
+        return type_name.to_string();
+    }
+    value_types::parse(type_name)
+        .map(|t| t.to_string())
+        .unwrap_or_else(|_| type_name.to_string())
 }
 
 fn generic_inner<'a>(type_name: &'a str, wrapper: &str) -> Option<&'a str> {
@@ -20615,6 +23495,17 @@ fn find_referenced_field(
     document: &AilDocument,
     text: &str,
 ) -> Option<crate::core_model::Node> {
+    if let Some((key, _)) = field_integer_delta_assignment(document, text) {
+        return graph
+            .nodes
+            .iter()
+            .find(|node| {
+                node.kind == "Field"
+                    && !node.attributes.contains_key("function_owner")
+                    && expression_core::field_key(node) == key
+            })
+            .cloned();
+    }
     let text = text.to_ascii_lowercase();
     let mut candidates = Vec::new();
     for thing in document.things.values() {
@@ -20666,6 +23557,8 @@ enum CompilerPassSection {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum FunctionSection {
+    Locals,
+    Executable,
     Inputs,
     Outputs,
     Body,
@@ -20804,184 +23697,13 @@ fn append_words(target: &mut String, fragment: &str) {
     target.push_str(fragment);
 }
 
-/// A structural difference between two checked AIL-Core graphs.
-///
-/// This is the primitive behind two guarantees AIL depends on.
-///
-/// The first is edit safety. `check_ail_core` validates an artifact in
-/// isolation, so a model that replaces a package with a smaller one that
-/// happens to be internally consistent is reported clean. Comparing a candidate
-/// against the artifact it replaces is what detects silently dropped things,
-/// fields, actions, failures, guarantees, and secrets.
-///
-/// The second is round-trip equivalence, the property that defines AIL: an
-/// agent given only the IR must be able to reconstruct specs that mean the same
-/// thing as the specs the IR came from. That claim is only worth as much as the
-/// comparison behind it, and a text diff cannot make it — English phrasing is
-/// expected to vary while meaning must not.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct AilSemanticDiff {
-    /// Declared in the baseline, absent from the candidate.
-    pub removed: Vec<String>,
-    /// Present in the candidate, absent from the baseline.
-    pub added: Vec<String>,
-    /// Present in both under the same name, but with a different type.
-    pub retyped: Vec<String>,
-}
+#[path = "edit_semantics.rs"]
+mod edit_semantics;
+pub use edit_semantics::{
+    AilSemanticDiff, AilSemanticLoweringValidation, compare_ail_core_semantics,
+    render_ail_semantic_diff,
+};
 
-impl AilSemanticDiff {
-    pub fn is_equivalent(&self) -> bool {
-        self.removed.is_empty() && self.added.is_empty() && self.retyped.is_empty()
-    }
-
-    /// True when the candidate preserves everything the baseline declared.
-    ///
-    /// Additions are permitted: a spec amendment is expected to add. Removals
-    /// and retypings are not, because neither can be the accidental result of
-    /// answering a request to change something.
-    pub fn preserves_baseline(&self) -> bool {
-        self.removed.is_empty() && self.retyped.is_empty()
-    }
-}
-
-/// Node kinds that carry no meaning of their own.
-///
-/// Provenance records which human or agent asserted a node. It is essential for
-/// review and irrelevant to whether two graphs mean the same thing, so it is
-/// excluded from every comparison.
-fn is_semantic_node_kind(kind: &str) -> bool {
-    kind != "Provenance"
-}
-
-/// Compare two graphs for meaning rather than for text.
-///
-/// Names are normalized so that phrasing differences an English projection is
-/// expected to introduce do not register as semantic change.
-fn normalize_semantic_name(text: &str) -> String {
-    let lowered = text.trim().to_ascii_lowercase();
-    let collapsed = lowered.split_whitespace().collect::<Vec<_>>().join(" ");
-    collapsed.trim_end_matches('.').to_string()
-}
-
-fn semantic_node_signatures(core: &AilCore) -> BTreeMap<String, String> {
-    let mut signatures = BTreeMap::new();
-    for node in core
-        .graph
-        .nodes
-        .iter()
-        .filter(|node| is_semantic_node_kind(&node.kind))
-    {
-        let key = format!("{} {}", node.kind, normalize_semantic_name(&node.name));
-        let type_name = node.type_name.clone().unwrap_or_default();
-        signatures.insert(key, normalize_semantic_name(&type_name));
-    }
-    signatures
-}
-
-fn semantic_edge_signatures(core: &AilCore) -> BTreeSet<String> {
-    let node_by_id = core
-        .graph
-        .nodes
-        .iter()
-        .map(|node| (node.id.clone(), node))
-        .collect::<BTreeMap<_, _>>();
-    let mut signatures = BTreeSet::new();
-    for edge in &core.graph.edges {
-        if edge.kind == "has_provenance" {
-            continue;
-        }
-        let Some(source) = node_by_id.get(&edge.source) else {
-            continue;
-        };
-        let Some(target) = node_by_id.get(&edge.target) else {
-            continue;
-        };
-        if !is_semantic_node_kind(&source.kind) || !is_semantic_node_kind(&target.kind) {
-            continue;
-        }
-        signatures.insert(format!(
-            "{} {} {} -> {} {}",
-            edge.kind,
-            source.kind,
-            normalize_semantic_name(&source.name),
-            target.kind,
-            normalize_semantic_name(&target.name)
-        ));
-    }
-    signatures
-}
-
-/// Compare a candidate AIL-Core against a baseline, structurally.
-pub fn compare_ail_core_semantics(baseline: &AilCore, candidate: &AilCore) -> AilSemanticDiff {
-    let mut diff = AilSemanticDiff::default();
-
-    let baseline_nodes = semantic_node_signatures(baseline);
-    let candidate_nodes = semantic_node_signatures(candidate);
-    for (key, baseline_type) in &baseline_nodes {
-        match candidate_nodes.get(key) {
-            None => diff.removed.push(format!("node {key}")),
-            Some(candidate_type) if candidate_type != baseline_type => {
-                diff.retyped.push(format!(
-                    "node {key}: {} -> {}",
-                    if baseline_type.is_empty() {
-                        "(untyped)"
-                    } else {
-                        baseline_type
-                    },
-                    if candidate_type.is_empty() {
-                        "(untyped)"
-                    } else {
-                        candidate_type
-                    }
-                ));
-            }
-            Some(_) => {}
-        }
-    }
-    for key in candidate_nodes.keys() {
-        if !baseline_nodes.contains_key(key) {
-            diff.added.push(format!("node {key}"));
-        }
-    }
-
-    let baseline_edges = semantic_edge_signatures(baseline);
-    let candidate_edges = semantic_edge_signatures(candidate);
-    for edge in baseline_edges.difference(&candidate_edges) {
-        diff.removed.push(format!("edge {edge}"));
-    }
-    for edge in candidate_edges.difference(&baseline_edges) {
-        diff.added.push(format!("edge {edge}"));
-    }
-
-    diff.removed.sort();
-    diff.added.sort();
-    diff.retyped.sort();
-    diff
-}
-
-/// Render a semantic diff as a deterministic, reviewable report.
-pub fn render_ail_semantic_diff(diff: &AilSemanticDiff) -> String {
-    let mut report = String::new();
-    report.push_str("kind: AIL-Semantic-Diff\n");
-    report.push_str(&format!("removed-count {}\n", diff.removed.len()));
-    report.push_str(&format!("added-count {}\n", diff.added.len()));
-    report.push_str(&format!("retyped-count {}\n", diff.retyped.len()));
-    report.push_str(&format!(
-        "preserves-baseline {}\n",
-        diff.preserves_baseline()
-    ));
-    report.push_str(&format!(
-        "semantically-equivalent {}\n",
-        diff.is_equivalent()
-    ));
-    for entry in &diff.removed {
-        report.push_str(&format!("removed {entry}\n"));
-    }
-    for entry in &diff.retyped {
-        report.push_str(&format!("retyped {entry}\n"));
-    }
-    for entry in &diff.added {
-        report.push_str(&format!("added {entry}\n"));
-    }
-    report
-}
+#[path = "edit_admission.rs"]
+mod edit_admission;
+pub use edit_admission::AilEditContext;

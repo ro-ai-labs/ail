@@ -67,6 +67,37 @@ Each proposed patch includes:
 - provenance
 - validation result
 
+## Executable edit admission
+
+Package drafting, requirements-to-Spec, story and build preserve a checked
+source baseline by default. Candidate validity alone does not authorize
+replacement. Capture one immutable `AilEditContext` before generation and reuse
+it across every retry and repair; retain the already resolved import snapshot.
+Only the caller can supply an `ail-core.patch.v0` expected target through
+`--expected-patch`. Requirements prose and model output cannot grant authority.
+The candidate must match that checked target exactly, with no unrelated additions.
+
+`--greenfield` is an explicit decision for empty local source, with protected
+metadata and imports. Invalid nonempty source fails closed. Independent ordinary
+Action, Function and Type declarations may extend a preservation baseline; old
+owners and their ordered relations remain frozen. Imported compiled records also
+remain protected when the import baseline can lower. Standalone requirements
+prose retains empty-source compatibility and is not executable authorization.
+
+Admission precedes AcceptSpec, compiler/native execution and accepted publication.
+Draft diagnostics expose `AIL-EDIT-*`; build/story manifests bind deterministic
+admission evidence. Story anchor coverage is separate. CLI source-consistency
+checks run before accepted writes; this is pre-publication consistency, without
+atomic filesystem isolation or rollback from arbitrary later I/O failures.
+Explicit compiler passes have separate checked transformation evidence, with the
+edit proof scoped to pre-pass Core.
+
+The implemented comparison is a conservative checked structural predicate, not
+a general observational equivalence proof. Executable provenance remains exact;
+Core-to-Spec parentheses can change retained policy text despite equal bytecode.
+See [Trustworthy edits](60-trustworthy-edits.md) for policy, CLI/API modes,
+diagnostics, proof limits and the independent oracle.
+
 ## Conversion Tasks
 
 The agent may convert:

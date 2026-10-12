@@ -1,0 +1,113 @@
+AIL-STE 1
+Metadata {"capability_grants":[],"external_bindings":[],"failures":[],"package":"float-measurements","profile":"Application","target_support":{},"version":"0.1.0"}
+Data t0 = "\"/\""
+Data t1 = "\"/belowFreezing\""
+Data t2 = "\"/celsius\""
+Data t3 = "\"/count\""
+Data t4 = "\"/fahrenheit/-\""
+Data t5 = "\"/mean\""
+Data t6 = "\"/wholeMean\""
+Data t7 = "0"
+Data t8 = "0e0"
+Data t9 = "<"
+Data t10 = "Float"
+Data t11 = "Int"
+Data t12 = "Json"
+Data t13 = "Report"
+Data t14 = "Reported"
+Data t15 = "Text"
+Data t16 = "__control_0_body"
+Data t17 = "__control_0_end"
+Data t18 = "__control_0_head"
+Data t19 = "__control_1_body"
+Data t20 = "__control_1_otherwise"
+Data t21 = "celsius:Float"
+Data t22 = "celsius=f:data.celsius"
+Data t23 = "d:0e0"
+Data t24 = "data.appendPath"
+Data t25 = "data.celsius"
+Data t26 = "data.countFloat"
+Data t27 = "data.document"
+Data t28 = "data.fahrenheit"
+Data t29 = "data.index"
+Data t30 = "data.indexText"
+Data t31 = "data.path"
+Data t32 = "data.raw"
+Data t33 = "data.readings"
+Data t34 = "data.report"
+Data t35 = "data.slash"
+Data t36 = "data.total"
+Data t37 = "f:data.celsius"
+Data t38 = "f:data.index"
+Data t39 = "f:data.index i:1 +"
+Data t40 = "f:data.total f:data.countFloat /"
+Data t41 = "f:data.total f:data.fahrenheit +"
+Data t42 = "f:local.celsius d:9e0 * d:5e0 / d:3.2e1 +"
+Data t43 = "f:local.result"
+Data t44 = "f:output.belowFreezing i:1 +"
+Data t45 = "f:output.count"
+Data t46 = "fahrenheit"
+Data t47 = "input"
+Data t48 = "local.result"
+Data t49 = "output.belowFreezing"
+Data t50 = "output.count"
+Data t51 = "output.document"
+Data t52 = "output.mean"
+Data t53 = "output.wholeMean"
+Data t54 = "report"
+Data t55 = "result:Float"
+Data t56 = "{\"fahrenheit\":[]}"
+Procedure t13.
+Record the start of action t13.
+Read text from file resource t47 into field t32.
+Parse JSON text t32 as type t12 into field t27.
+Assign literal t2 of type t15 to field t31.
+Get t12 value at JSON path t31 from field t27 into field t33.
+Count entries in JSON field t33 into field t50.
+Assign literal t56 of type t12 to field t51.
+Assign literal t7 of type t11 to field t29.
+Assign literal t7 of type t11 to field t49.
+Assign literal t8 of type t10 to field t36.
+Assign literal t0 of type t15 to field t35.
+Assign literal t4 of type t15 to field t24.
+Mark label t18.
+If integer comparison t38 t9 t45 is true, go to label t16.
+Go to label t17.
+Mark label t16.
+Format t11 field t29 as JSON text into field t30.
+Join text t35 and t30 into field t31.
+Get t10 value at JSON path t31 from field t33 into field t25.
+Call value function t46 with arguments t22 into field t28.
+Compute floating expression t41 into field t36.
+Set t10 value t28 at JSON path t24 in field t51 into field t51.
+If floating comparison t37 t9 t23 is true, go to label t19.
+Go to label t20.
+Mark label t19.
+Evaluate integer expression t44 into field t49.
+Mark label t20.
+Evaluate integer expression t39 into field t29.
+Go to label t18.
+Mark label t17.
+Convert integer field t50 into floating field t26.
+Compute floating expression t40 into field t52.
+Convert floating field t52 into integer field t53.
+Assign literal t3 of type t15 to field t31.
+Set t11 value t50 at JSON path t31 in field t51 into field t51.
+Assign literal t1 of type t15 to field t31.
+Set t11 value t49 at JSON path t31 in field t51 into field t51.
+Assign literal t5 of type t15 to field t31.
+Set t10 value t52 at JSON path t31 in field t51 into field t51.
+Assign literal t6 of type t15 to field t31.
+Set t11 value t53 at JSON path t31 in field t51 into field t51.
+Format t12 field t51 as JSON text into field t34.
+Write text from field t34 to file resource t54.
+Record trace event t14.
+Select output field t50.
+Select output field t52.
+Return success.
+End procedure.
+Procedure t46.
+Start value function with parameters t21, locals t55, and result type t10.
+Compute floating expression t42 into field t48.
+Return t10 value from expression t43.
+End procedure.

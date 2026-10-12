@@ -1,0 +1,1 @@
+data.request={"capacity":1,"operations":[{"op":"put","key":"a","value":null},{"op":"get","key":"a"},{"op":"put","key":"a","value":false},{"op":"put","key":"b","value":2},{"op":"get","key":"a"},{"op":"get","key":"b"}]}

@@ -1,0 +1,98 @@
+AIL-STE 1
+Metadata {"capability_grants":[],"external_bindings":[],"failures":[],"package":"tool-coordinator","profile":"Application","target_support":{},"version":"0.1.0"}
+Data t0 = "\"/arguments\""
+Data t1 = "\"/error\""
+Data t2 = "\"/input\""
+Data t3 = "\"/status\""
+Data t4 = "\"/stderr\""
+Data t5 = "\"/stdout\""
+Data t6 = "\"/timeout\""
+Data t7 = "\"\\n\""
+Data t8 = "0"
+Data t9 = "<"
+Data t10 = "=="
+Data t11 = "Coordinate"
+Data t12 = "Int"
+Data t13 = "JSON;JSON-PATH;PROCESS;TEXT;TIMEOUT"
+Data t14 = "Json"
+Data t15 = "List<Text>"
+Data t16 = "Text"
+Data t17 = "ToolsCompleted"
+Data t18 = "__control_0_body"
+Data t19 = "__control_0_end"
+Data t20 = "__control_0_head"
+Data t21 = "__control_1_body"
+Data t22 = "__control_1_otherwise"
+Data t23 = "data.arguments"
+Data t24 = "data.count"
+Data t25 = "data.error"
+Data t26 = "data.errors"
+Data t27 = "data.index"
+Data t28 = "data.input"
+Data t29 = "data.length"
+Data t30 = "data.line"
+Data t31 = "data.lines"
+Data t32 = "data.output"
+Data t33 = "data.path"
+Data t34 = "data.raw"
+Data t35 = "data.report"
+Data t36 = "data.result"
+Data t37 = "data.separator"
+Data t38 = "data.status"
+Data t39 = "data.task"
+Data t40 = "data.timeout"
+Data t41 = "f:data.count"
+Data t42 = "f:data.index"
+Data t43 = "f:data.index i:1 +"
+Data t44 = "f:data.length"
+Data t45 = "i:0"
+Data t46 = "worker"
+Data t47 = "{\"status\":null,\"stdout\":\"\",\"stderr\":\"\",\"error\":\"\"}"
+Procedure t11.
+Record the start of action t11.
+Read text from standard input into field t34.
+Assign literal t7 of type t16 to field t37.
+Split text in field t34 by field t37 into field t31.
+Count items in t16 list t31 into field t24.
+Assign literal t8 of type t12 to field t27.
+Mark label t20.
+If integer comparison t42 t9 t41 is true, go to label t18.
+Go to label t19.
+Mark label t18.
+Get item t42 from t16 list t31 into field t30.
+Evaluate integer expression t43 into field t27.
+Trim whitespace from field t30 into field t30.
+Count characters in text t30 into field t29.
+If integer comparison t44 t10 t45 is true, go to label t21.
+Go to label t22.
+Mark label t21.
+Go to label t20.
+Mark label t22.
+Assign literal t47 of type t14 to field t36.
+Begin recovery for errors t13 into field t25.
+Parse JSON text t30 as type t14 into field t39.
+Assign literal t0 of type t16 to field t33.
+Get t15 value at JSON path t33 from field t39 into field t23.
+Assign literal t2 of type t16 to field t33.
+Get t16 value at JSON path t33 from field t39 into field t28.
+Assign literal t6 of type t16 to field t33.
+Get t12 value at JSON path t33 from field t39 into field t40.
+Run process t46 with arguments t23, input t28, limit t40 milliseconds, output t32, errors t26, and status t38.
+Assign literal t3 of type t16 to field t33.
+Set t12 value t38 at JSON path t33 in field t36 into field t36.
+Assign literal t5 of type t16 to field t33.
+Set t16 value t32 at JSON path t33 in field t36 into field t36.
+Assign literal t4 of type t16 to field t33.
+Set t16 value t26 at JSON path t33 in field t36 into field t36.
+Run the recovery handler.
+Assign literal t1 of type t16 to field t33.
+Set t16 value t25 at JSON path t33 in field t36 into field t36.
+End recovery.
+Format t14 field t36 as JSON text into field t35.
+Join text t35 and t37 into field t35.
+Write text from field t35 to standard output.
+Go to label t20.
+Mark label t19.
+Record trace event t17.
+Return success.
+End procedure.

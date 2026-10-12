@@ -1,0 +1,7 @@
+[
+  {"name":"ship parser","kind":"task","enabled":true,"count":3,"score":0.95},
+  {"name":"deferred bug","kind":"issue","enabled":false,"count":4,"score":0.99},
+  {"name":"Unicode λ fix","kind":"issue","enabled":true,"count":1,"score":0.75},
+  {"name":"empty task","kind":"task","enabled":true,"count":0,"score":0.90},
+  {"name":"note","kind":"note","enabled":true,"count":2,"score":0.85}
+]

@@ -104,7 +104,16 @@ impl Graph {
             return existing.clone();
         }
         let mut edge = Edge::new(kind, source, target, attributes);
-        edge.ordinal = self.edges.len();
+        // A saved graph or a patch can retain gaps after removing edges.
+        // Appending must preserve existing ordinals without reusing one.
+        // At exhaustion, retain MAX rather than panicking or wrapping: the
+        // duplicate ordinal makes the checked patch fail closed.
+        edge.ordinal = self
+            .edges
+            .iter()
+            .map(|edge| edge.ordinal)
+            .max()
+            .map_or(0, |ordinal| ordinal.saturating_add(1));
         self.edges.push(edge.clone());
         edge
     }

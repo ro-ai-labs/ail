@@ -1,0 +1,4 @@
+{"csv":"category,amount,note\nfruit,7,first\n\"office,tools\",-2,\"quoted category\"\nfruit,2,second\n"}
+{broken}
+{"csv":"category,amount\na,+1"}
+{"csv":"category,amount"}

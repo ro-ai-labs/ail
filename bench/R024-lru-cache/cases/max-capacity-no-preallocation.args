@@ -1,0 +1,1 @@
+data.request={"capacity":9223372036854775807,"operations":[{"op":"put","key":"a","value":-0},{"op":"put","key":"b","value":false},{"op":"get","key":"a"}]}

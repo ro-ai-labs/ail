@@ -1,0 +1,458 @@
+AIL-STE 1
+Metadata {"capability_grants":[],"external_bindings":[],"failures":[],"package":"run-length-codec","profile":"Application","target_support":{},"version":"0.1.0"}
+Data t0 = "!="
+Data t1 = "\"\""
+Data t2 = "\"BYTES\""
+Data t3 = "\"MODE\""
+Data t4 = "\"hex:\""
+Data t5 = "\"hex:00\""
+Data t6 = "\"hex:0000000000\""
+Data t7 = "0"
+Data t8 = "1"
+Data t9 = "2"
+Data t10 = "5"
+Data t11 = "<"
+Data t12 = "=="
+Data t13 = ">"
+Data t14 = "BYTES"
+Data t15 = "Bytes"
+Data t16 = "DecodeFile"
+Data t17 = "Decoded"
+Data t18 = "EncodeFile"
+Data t19 = "Encoded"
+Data t20 = "Int"
+Data t21 = "Rle.decode"
+Data t22 = "Rle.decodeBlock"
+Data t23 = "Rle.decodedSize"
+Data t24 = "Rle.encode"
+Data t25 = "Rle.encodeBlock"
+Data t26 = "Rle.encodedSize"
+Data t27 = "Rle.packet"
+Data t28 = "Rle.readCount"
+Data t29 = "Rle.repeatByte"
+Data t30 = "TEXT"
+Data t31 = "Text"
+Data t32 = "Transform"
+Data t33 = "Transformed"
+Data t34 = "__control_0_body"
+Data t35 = "__control_0_end"
+Data t36 = "__control_0_otherwise"
+Data t37 = "__control_1_body"
+Data t38 = "__control_1_end"
+Data t39 = "__control_1_head"
+Data t40 = "__control_1_otherwise"
+Data t41 = "__control_2_body"
+Data t42 = "__control_2_end"
+Data t43 = "__control_2_head"
+Data t44 = "__control_2_otherwise"
+Data t45 = "__control_3_body"
+Data t46 = "__control_3_end"
+Data t47 = "__control_3_head"
+Data t48 = "__control_3_otherwise"
+Data t49 = "__control_4_body"
+Data t50 = "__control_4_otherwise"
+Data t51 = "a:Int;b:Int;c:Int;d:Int"
+Data t52 = "block:Bytes;remaining:Int;result:Bytes"
+Data t53 = "count:Int;index:Int;left:Bytes;leftSize:Int;length:Int;middle:Int;right:Bytes;rightSize:Int;size:Int"
+Data t54 = "count:Int;left:Bytes;length:Int;middle:Int;result:Bytes;right:Bytes;value:Int"
+Data t55 = "count:Int;value:Int"
+Data t56 = "count=f:local.count;value=f:local.value"
+Data t57 = "count=f:local.end f:local.index -;value=f:local.value"
+Data t58 = "count=f:local.leftCount f:local.rightCount +;value=f:local.value"
+Data t59 = "data.caught"
+Data t60 = "data.input"
+Data t61 = "data.operation"
+Data t62 = "data:Bytes"
+Data t63 = "data:Bytes;offset:Int"
+Data t64 = "data=f:data.input"
+Data t65 = "data=f:local.data"
+Data t66 = "data=f:local.data;offset=f:local.index"
+Data t67 = "data=f:local.data;offset=i:0"
+Data t68 = "data=f:local.left"
+Data t69 = "data=f:local.left;offset=f:local.leftLength i:5 -"
+Data t70 = "data=f:local.right"
+Data t71 = "data=f:local.right;offset=i:0"
+Data t72 = "end:Int;index:Int;left:Bytes;leftCount:Int;leftLength:Int;length:Int;middle:Int;next:Int;result:Bytes;right:Bytes;rightCount:Int;rightLength:Int;run:Bytes;value:Int"
+Data t73 = "f:data.operation"
+Data t74 = "f:local.a i:16777216 * f:local.b i:65536 * + f:local.c i:256 * + f:local.d +"
+Data t75 = "f:local.count"
+Data t76 = "f:local.count i:16777216 /"
+Data t77 = "f:local.count i:256 %"
+Data t78 = "f:local.count i:256 / i:256 %"
+Data t79 = "f:local.count i:65536 / i:256 %"
+Data t80 = "f:local.end"
+Data t81 = "f:local.end i:1 +"
+Data t82 = "f:local.index"
+Data t83 = "f:local.index i:1 +"
+Data t84 = "f:local.index i:5 +"
+Data t85 = "f:local.leftLength i:5 -"
+Data t86 = "f:local.leftSize f:local.rightSize +"
+Data t87 = "f:local.leftSize f:local.rightSize + i:5 -"
+Data t88 = "f:local.length"
+Data t89 = "f:local.length i:2 /"
+Data t90 = "f:local.length i:5 %"
+Data t91 = "f:local.length i:5 / i:2 / i:5 *"
+Data t92 = "f:local.middle"
+Data t93 = "f:local.next"
+Data t94 = "f:local.offset"
+Data t95 = "f:local.offset i:1 +"
+Data t96 = "f:local.offset i:2 +"
+Data t97 = "f:local.offset i:3 +"
+Data t98 = "f:local.previous"
+Data t99 = "f:local.remaining"
+Data t100 = "f:local.remaining i:2 %"
+Data t101 = "f:local.remaining i:2 /"
+Data t102 = "f:local.result"
+Data t103 = "f:local.rightLength"
+Data t104 = "f:local.size"
+Data t105 = "f:local.size f:local.count +"
+Data t106 = "f:local.size i:5 +"
+Data t107 = "f:local.value"
+Data t108 = "i:-1"
+Data t109 = "i:0"
+Data t110 = "i:1"
+Data t111 = "i:1048576"
+Data t112 = "i:160"
+Data t113 = "i:2"
+Data t114 = "i:3"
+Data t115 = "i:4"
+Data t116 = "i:5"
+Data t117 = "i:64"
+Data t118 = "if:local.count i:0 icmp:< if:local.count i:1048576 icmp:> or"
+Data t119 = "if:local.count i:0 icmp:<= if:local.count i:4294967295 icmp:> or"
+Data t120 = "index:Int;left:Bytes;leftSize:Int;length:Int;middle:Int;previous:Int;right:Bytes;rightSize:Int;size:Int;value:Int"
+Data t121 = "input"
+Data t122 = "local.a"
+Data t123 = "local.b"
+Data t124 = "local.block"
+Data t125 = "local.c"
+Data t126 = "local.count"
+Data t127 = "local.d"
+Data t128 = "local.data"
+Data t129 = "local.end"
+Data t130 = "local.index"
+Data t131 = "local.left"
+Data t132 = "local.leftCount"
+Data t133 = "local.leftLength"
+Data t134 = "local.leftSize"
+Data t135 = "local.length"
+Data t136 = "local.middle"
+Data t137 = "local.next"
+Data t138 = "local.previous"
+Data t139 = "local.remaining"
+Data t140 = "local.result"
+Data t141 = "local.right"
+Data t142 = "local.rightCount"
+Data t143 = "local.rightLength"
+Data t144 = "local.rightSize"
+Data t145 = "local.run"
+Data t146 = "local.size"
+Data t147 = "local.value"
+Data t148 = "out.error"
+Data t149 = "out.value"
+Data t150 = "output"
+Data t151 = "result:Bytes"
+Data t152 = "result:Bytes;size:Int"
+Data t153 = "tf:data.mode s:\"decode\" tcmp:=="
+Data t154 = "tf:data.mode s:\"encode\" tcmp:=="
+Procedure t16.
+Record the start of action t16.
+Read bytes from file resource t121 into field t60.
+Call value function t21 with arguments t64 into field t149.
+Write bytes from field t149 to file resource t150.
+Record trace event t17.
+Return success.
+End procedure.
+Procedure t18.
+Record the start of action t18.
+Read bytes from file resource t121 into field t60.
+Call value function t24 with arguments t64 into field t149.
+Write bytes from field t149 to file resource t150.
+Record trace event t19.
+Return success.
+End procedure.
+Procedure t21.
+Start value function with parameters t62, locals t152, and result type t15.
+Call value function t23 with arguments t65 into field t146.
+If integer comparison t104 t13 t111 is true, go to label t34.
+Go to label t36.
+Mark label t34.
+Raise error t14.
+Mark label t36.
+Call value function t22 with arguments t65 into field t140.
+Return t15 value from expression t102.
+End procedure.
+Procedure t22.
+Start value function with parameters t62, locals t54, and result type t15.
+Count bytes in field t128 into field t135.
+If integer comparison t88 t12 t109 is true, go to label t34.
+Go to label t36.
+Mark label t34.
+Assign literal t4 of type t15 to field t140.
+Return t15 value from expression t102.
+Mark label t36.
+If integer comparison t88 t12 t116 is true, go to label t37.
+Go to label t40.
+Mark label t37.
+Call value function t28 with arguments t67 into field t126.
+Get byte at index t115 from field t128 into field t147.
+Call value function t29 with arguments t56 into field t140.
+Return t15 value from expression t102.
+Mark label t40.
+Evaluate integer expression t91 into field t136.
+Slice bytes in field t128 from t109 to t92 into field t131.
+Slice bytes in field t128 from t92 to t88 into field t141.
+Call value function t22 with arguments t68 into field t131.
+Call value function t22 with arguments t70 into field t141.
+Join bytes in field t131 and field t141 into field t140.
+Return t15 value from expression t102.
+End procedure.
+Procedure t23.
+Start value function with parameters t62, locals t53, and result type t20.
+Count bytes in field t128 into field t135.
+If integer comparison t90 t0 t109 is true, go to label t34.
+Go to label t36.
+Mark label t34.
+Raise error t14.
+Mark label t36.
+If integer comparison t88 t13 t112 is true, go to label t37.
+Go to label t40.
+Mark label t37.
+Evaluate integer expression t91 into field t136.
+Slice bytes in field t128 from t109 to t92 into field t131.
+Slice bytes in field t128 from t92 to t88 into field t141.
+Call value function t23 with arguments t68 into field t134.
+Call value function t23 with arguments t70 into field t144.
+Return t20 value from expression t86.
+Mark label t40.
+Assign literal t7 of type t20 to field t146.
+Assign literal t7 of type t20 to field t130.
+Mark label t43.
+If integer comparison t82 t11 t88 is true, go to label t41.
+Go to label t42.
+Mark label t41.
+Call value function t28 with arguments t66 into field t126.
+If integer comparison t75 t12 t109 is true, go to label t45.
+Go to label t48.
+Mark label t45.
+Raise error t14.
+Mark label t48.
+Evaluate integer expression t105 into field t146.
+Evaluate integer expression t84 into field t130.
+Go to label t43.
+Mark label t42.
+Return t20 value from expression t104.
+End procedure.
+Procedure t24.
+Start value function with parameters t62, locals t152, and result type t15.
+Call value function t26 with arguments t65 into field t146.
+If integer comparison t104 t13 t111 is true, go to label t34.
+Go to label t36.
+Mark label t34.
+Raise error t14.
+Mark label t36.
+Call value function t25 with arguments t65 into field t140.
+Return t15 value from expression t102.
+End procedure.
+Procedure t25.
+Start value function with parameters t62, locals t72, and result type t15.
+Count bytes in field t128 into field t135.
+If integer comparison t88 t13 t117 is true, go to label t34.
+Go to label t36.
+Mark label t34.
+Evaluate integer expression t89 into field t136.
+Slice bytes in field t128 from t109 to t92 into field t131.
+Slice bytes in field t128 from t92 to t88 into field t141.
+Call value function t25 with arguments t68 into field t131.
+Call value function t25 with arguments t70 into field t141.
+Count bytes in field t131 into field t133.
+Count bytes in field t141 into field t143.
+Get byte at index t108 from field t131 into field t147.
+Get byte at index t115 from field t141 into field t137.
+If integer comparison t107 t12 t93 is true, go to label t37.
+Go to label t40.
+Mark label t37.
+Call value function t28 with arguments t69 into field t132.
+Call value function t28 with arguments t71 into field t142.
+Call value function t27 with arguments t58 into field t145.
+Slice bytes in field t131 from t109 to t85 into field t131.
+Slice bytes in field t141 from t116 to t103 into field t141.
+Join bytes in field t131 and field t145 into field t131.
+Mark label t40.
+Join bytes in field t131 and field t141 into field t140.
+Return t15 value from expression t102.
+Mark label t36.
+Assign literal t4 of type t15 to field t140.
+Assign literal t7 of type t20 to field t130.
+Mark label t43.
+If integer comparison t82 t11 t88 is true, go to label t41.
+Go to label t42.
+Mark label t41.
+Get byte at index t82 from field t128 into field t147.
+Evaluate integer expression t83 into field t129.
+Mark label t47.
+If integer comparison t80 t11 t88 is true, go to label t45.
+Go to label t46.
+Mark label t45.
+Get byte at index t80 from field t128 into field t137.
+If integer comparison t107 t0 t93 is true, go to label t49.
+Go to label t50.
+Mark label t49.
+Go to label t46.
+Mark label t50.
+Evaluate integer expression t81 into field t129.
+Go to label t47.
+Mark label t46.
+Call value function t27 with arguments t57 into field t145.
+Join bytes in field t140 and field t145 into field t140.
+Evaluate integer expression t80 into field t130.
+Go to label t43.
+Mark label t42.
+Return t15 value from expression t102.
+End procedure.
+Procedure t26.
+Start value function with parameters t62, locals t120, and result type t20.
+Count bytes in field t128 into field t135.
+If integer comparison t88 t12 t109 is true, go to label t34.
+Go to label t36.
+Mark label t34.
+Return t20 value from expression t109.
+Mark label t36.
+If integer comparison t88 t13 t117 is true, go to label t37.
+Go to label t40.
+Mark label t37.
+Evaluate integer expression t89 into field t136.
+Slice bytes in field t128 from t109 to t92 into field t131.
+Slice bytes in field t128 from t92 to t88 into field t141.
+Call value function t26 with arguments t68 into field t134.
+Call value function t26 with arguments t70 into field t144.
+Get byte at index t108 from field t131 into field t138.
+Get byte at index t109 from field t141 into field t147.
+If integer comparison t98 t12 t107 is true, go to label t41.
+Go to label t44.
+Mark label t41.
+Return t20 value from expression t87.
+Mark label t44.
+Return t20 value from expression t86.
+Mark label t40.
+Get byte at index t109 from field t128 into field t138.
+Assign literal t10 of type t20 to field t146.
+Assign literal t8 of type t20 to field t130.
+Mark label t47.
+If integer comparison t82 t11 t88 is true, go to label t45.
+Go to label t46.
+Mark label t45.
+Get byte at index t82 from field t128 into field t147.
+If integer comparison t107 t0 t98 is true, go to label t49.
+Go to label t50.
+Mark label t49.
+Evaluate integer expression t106 into field t146.
+Evaluate integer expression t107 into field t138.
+Mark label t50.
+Evaluate integer expression t83 into field t130.
+Go to label t47.
+Mark label t46.
+Return t20 value from expression t104.
+End procedure.
+Procedure t27.
+Start value function with parameters t55, locals t151, and result type t15.
+If Boolean expression t119 is true, go to label t34.
+Go to label t36.
+Mark label t34.
+Raise error t14.
+Mark label t36.
+Assign literal t6 of type t15 to field t140.
+Set byte at index t109 in field t140 to value t76 into field t140.
+Set byte at index t110 in field t140 to value t79 into field t140.
+Set byte at index t113 in field t140 to value t78 into field t140.
+Set byte at index t114 in field t140 to value t77 into field t140.
+Set byte at index t115 in field t140 to value t107 into field t140.
+Return t15 value from expression t102.
+End procedure.
+Procedure t28.
+Start value function with parameters t63, locals t51, and result type t20.
+Get byte at index t94 from field t128 into field t122.
+Get byte at index t95 from field t128 into field t123.
+Get byte at index t96 from field t128 into field t125.
+Get byte at index t97 from field t128 into field t127.
+Return t20 value from expression t74.
+End procedure.
+Procedure t29.
+Start value function with parameters t55, locals t52, and result type t15.
+If Boolean expression t118 is true, go to label t34.
+Go to label t36.
+Mark label t34.
+Raise error t14.
+Mark label t36.
+Assign literal t5 of type t15 to field t124.
+Set byte at index t109 in field t124 to value t107 into field t124.
+Assign literal t4 of type t15 to field t140.
+Evaluate integer expression t75 into field t139.
+Mark label t39.
+If integer comparison t99 t13 t109 is true, go to label t37.
+Go to label t38.
+Mark label t37.
+If integer comparison t100 t12 t110 is true, go to label t41.
+Go to label t44.
+Mark label t41.
+Join bytes in field t140 and field t124 into field t140.
+Mark label t44.
+Evaluate integer expression t101 into field t139.
+If integer comparison t99 t13 t109 is true, go to label t45.
+Go to label t48.
+Mark label t45.
+Join bytes in field t124 and field t124 into field t124.
+Mark label t48.
+Go to label t39.
+Mark label t38.
+Return t15 value from expression t102.
+End procedure.
+Procedure t32.
+Record the start of action t32.
+Assign literal t4 of type t15 to field t149.
+Assign literal t1 of type t31 to field t148.
+Assign literal t7 of type t20 to field t61.
+Begin recovery for errors t30 into field t59.
+If Boolean expression t154 is true, go to label t34.
+Go to label t36.
+Mark label t34.
+Assign literal t8 of type t20 to field t61.
+Go to label t35.
+Mark label t36.
+If Boolean expression t153 is true, go to label t37.
+Go to label t40.
+Mark label t37.
+Assign literal t9 of type t20 to field t61.
+Mark label t40.
+Mark label t35.
+Run the recovery handler.
+Assign literal t7 of type t20 to field t61.
+End recovery.
+If integer comparison t73 t12 t110 is true, go to label t41.
+Go to label t44.
+Mark label t41.
+Begin recovery for errors t14 into field t59.
+Call value function t24 with arguments t64 into field t149.
+Run the recovery handler.
+Assign literal t2 of type t31 to field t148.
+End recovery.
+Go to label t42.
+Mark label t44.
+If integer comparison t73 t12 t113 is true, go to label t45.
+Go to label t48.
+Mark label t45.
+Begin recovery for errors t14 into field t59.
+Call value function t21 with arguments t64 into field t149.
+Run the recovery handler.
+Assign literal t2 of type t31 to field t148.
+End recovery.
+Go to label t46.
+Mark label t48.
+Assign literal t3 of type t31 to field t148.
+Mark label t46.
+Mark label t42.
+Record trace event t33.
+Select output field t149.
+Select output field t148.
+Return success.
+End procedure.

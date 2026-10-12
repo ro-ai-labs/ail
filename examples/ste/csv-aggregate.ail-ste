@@ -1,0 +1,805 @@
+AIL-STE 1
+Metadata {"capability_grants":[],"external_bindings":[],"failures":[],"package":"csv-aggregate","profile":"Application","target_support":{},"version":"0.1.0"}
+Data t0 = "!="
+Data t1 = "\",\""
+Data t2 = "\"/\""
+Data t3 = "\"/-\""
+Data t4 = "\"/amount\""
+Data t5 = "\"/category\""
+Data t6 = "\"/csv\""
+Data t7 = "\"/error\""
+Data t8 = "\"/groups\""
+Data t9 = "\"/next\""
+Data t10 = "\"/ok\""
+Data t11 = "\"/row\""
+Data t12 = "\"/rows\""
+Data t13 = "\"/separator\""
+Data t14 = "\"/total\""
+Data t15 = "\"/value\""
+Data t16 = "\"/width\""
+Data t17 = "\"0123456789\""
+Data t18 = "\"AMOUNT\""
+Data t19 = "\"CSV\""
+Data t20 = "\"HEADER\""
+Data t21 = "\"OVERFLOW\""
+Data t22 = "\"REQUEST\""
+Data t23 = "\"ROW\""
+Data t24 = "\"\\\"\""
+Data t25 = "\"\\\"\\\"\""
+Data t26 = "\"\\n\""
+Data t27 = "\"\\r\""
+Data t28 = "\"~\""
+Data t29 = "\"~0\""
+Data t30 = "\"~1\""
+Data t31 = "-1"
+Data t32 = "0"
+Data t33 = "1"
+Data t34 = "512"
+Data t35 = "<"
+Data t36 = "<="
+Data t37 = "=="
+Data t38 = "Analyze"
+Data t39 = "Analyzed"
+Data t40 = "Bool"
+Data t41 = "Csv.addRow"
+Data t42 = "Csv.amount"
+Data t43 = "Csv.delimiter"
+Data t44 = "Csv.failure"
+Data t45 = "Csv.field"
+Data t46 = "Csv.header"
+Data t47 = "Csv.item"
+Data t48 = "Csv.parse"
+Data t49 = "Csv.pointer"
+Data t50 = "Csv.record"
+Data t51 = "Csv.sortedGroups"
+Data t52 = "Csv.summarize"
+Data t53 = "Csv.summarizeRequest"
+Data t54 = "Csv.textItem"
+Data t55 = "Int"
+Data t56 = "JSON"
+Data t57 = "JSON-PATH"
+Data t58 = "JSON;JSON-PATH"
+Data t59 = "Json"
+Data t60 = "OVERFLOW;TEXT"
+Data t61 = "ReportWritten"
+Data t62 = "Stream"
+Data t63 = "Streamed"
+Data t64 = "TEXT"
+Data t65 = "Text"
+Data t66 = "VALUE"
+Data t67 = "WriteReport"
+Data t68 = "[]"
+Data t69 = "__control_0_body"
+Data t70 = "__control_0_end"
+Data t71 = "__control_0_head"
+Data t72 = "__control_0_otherwise"
+Data t73 = "__control_1_body"
+Data t74 = "__control_1_end"
+Data t75 = "__control_1_head"
+Data t76 = "__control_1_otherwise"
+Data t77 = "__control_2_body"
+Data t78 = "__control_2_otherwise"
+Data t79 = "__control_3_body"
+Data t80 = "__control_3_end"
+Data t81 = "__control_3_head"
+Data t82 = "__control_3_otherwise"
+Data t83 = "__control_4_body"
+Data t84 = "__control_4_end"
+Data t85 = "__control_4_head"
+Data t86 = "__control_4_otherwise"
+Data t87 = "__control_5_body"
+Data t88 = "__control_5_otherwise"
+Data t89 = "__control_6_body"
+Data t90 = "__control_6_otherwise"
+Data t91 = "__control_7_body"
+Data t92 = "__control_7_otherwise"
+Data t93 = "__control_8_body"
+Data t94 = "__control_8_otherwise"
+Data t95 = "actualWidth:Int;amount:Int;category:Int;code:Text;count:Int;error:Text;groups:Json;header:Json;index:Int;path:Text;result:Json;row:Json;rows:Json;total:Int;updated:Json;width:Int"
+Data t96 = "amount:Int;category:Int;error:Text;index:Int;name:Text;path:Text;present:Bool;result:Json;seen:Json;width:Int"
+Data t97 = "amount:Int;category:Text;count:Int;error:Text;group:Json;path:Text;result:Json;subtotal:Int;token:Text"
+Data t98 = "amountIndex:Int;categoryIndex:Int;groups:Json;row:Json;total:Int"
+Data t99 = "amountIndex=f:local.amount;categoryIndex=f:local.category;groups=f:local.groups;row=f:local.row;total=f:local.total"
+Data t100 = "array:Json;index:Int"
+Data t101 = "array=f:local.row;index=f:local.amountIndex"
+Data t102 = "array=f:local.row;index=f:local.categoryIndex"
+Data t103 = "array=f:local.row;index=f:local.index"
+Data t104 = "array=f:local.rows;index=f:local.index"
+Data t105 = "ascending"
+Data t106 = "best:Int;found:Int;length:Int;needle:Text;offset:Int;window:Text"
+Data t107 = "bf:data.ok not"
+Data t108 = "bf:local.first not tf:local.character s:\"\\r\" tcmp:!= tf:local.character s:\"\\n\" tcmp:!= and or"
+Data t109 = "bf:local.first tf:local.separator s:\",\" tcmp:== or"
+Data t110 = "bf:local.present"
+Data t111 = "bf:local.quoted not"
+Data t112 = "character:Text;cursor:Int;field:Json;first:Bool;path:Text;result:Json;row:Json;separator:Text;value:Text"
+Data t113 = "character:Text;cursor:Int;finish:Int;length:Int;next:Int;pair:Text;path:Text;quote:Text;quoted:Bool;result:Json;separator:Text;value:Text"
+Data t114 = "character:Text;digits:Text;error:Text;index:Int;length:Int;position:Int;value:Int"
+Data t115 = "code:Text"
+Data t116 = "code:Text;csv:Text;error:Text;kind:Text;path:Text;request:Json;result:Json"
+Data t117 = "code=f:local.code"
+Data t118 = "count:Int;group:Json;index:Int;key:Text;keys:List<Text>;path:Text;result:Json"
+Data t119 = "cursor:Int;length:Int;path:Text;record:Json;result:Json;row:Json"
+Data t120 = "data.cleaned"
+Data t121 = "data.count"
+Data t122 = "data.index"
+Data t123 = "data.line"
+Data t124 = "data.lines"
+Data t125 = "data.newline"
+Data t126 = "data.ok"
+Data t127 = "data.path"
+Data t128 = "data.raw"
+Data t129 = "data.report"
+Data t130 = "f:data.index"
+Data t131 = "f:data.index i:1 +"
+Data t132 = "f:local.actualWidth"
+Data t133 = "f:local.best"
+Data t134 = "f:local.count"
+Data t135 = "f:local.count i:1 +"
+Data t136 = "f:local.count i:1 -"
+Data t137 = "f:local.cursor"
+Data t138 = "f:local.finish"
+Data t139 = "f:local.finish i:1 +"
+Data t140 = "f:local.finish i:2 +"
+Data t141 = "f:local.found"
+Data t142 = "f:local.index"
+Data t143 = "f:local.index i:1 +"
+Data t144 = "f:local.length"
+Data t145 = "f:local.next"
+Data t146 = "f:local.next i:1 +"
+Data t147 = "f:local.offset"
+Data t148 = "f:local.offset f:local.best +"
+Data t149 = "f:local.offset i:512 +"
+Data t150 = "f:local.position"
+Data t151 = "f:local.result"
+Data t152 = "f:local.start"
+Data t153 = "f:local.start i:1 +"
+Data t154 = "f:local.subtotal f:local.amount +"
+Data t155 = "f:local.total f:local.amount +"
+Data t156 = "f:local.value"
+Data t157 = "f:local.width"
+Data t158 = "false"
+Data t159 = "groups:Json"
+Data t160 = "groups=f:local.groups"
+Data t161 = "i:0"
+Data t162 = "i:1"
+Data t163 = "i:512"
+Data t164 = "if:data.index if:data.count icmp:<"
+Data t165 = "if:local.category i:0 icmp:< if:local.amount i:0 icmp:< or"
+Data t166 = "if:local.found i:0 icmp:>="
+Data t167 = "if:local.found i:0 icmp:>= if:local.found if:local.best icmp:< and"
+Data t168 = "if:local.length i:0 icmp:== if:local.length i:20 icmp:> or"
+Data t169 = "input"
+Data t170 = "key:Text"
+Data t171 = "key=f:local.category"
+Data t172 = "key=f:local.key"
+Data t173 = "key=f:local.name"
+Data t174 = "local.actualWidth"
+Data t175 = "local.amount"
+Data t176 = "local.array"
+Data t177 = "local.best"
+Data t178 = "local.category"
+Data t179 = "local.character"
+Data t180 = "local.code"
+Data t181 = "local.count"
+Data t182 = "local.csv"
+Data t183 = "local.cursor"
+Data t184 = "local.digits"
+Data t185 = "local.error"
+Data t186 = "local.field"
+Data t187 = "local.finish"
+Data t188 = "local.first"
+Data t189 = "local.found"
+Data t190 = "local.group"
+Data t191 = "local.groups"
+Data t192 = "local.header"
+Data t193 = "local.index"
+Data t194 = "local.key"
+Data t195 = "local.keys"
+Data t196 = "local.kind"
+Data t197 = "local.length"
+Data t198 = "local.name"
+Data t199 = "local.needle"
+Data t200 = "local.next"
+Data t201 = "local.offset"
+Data t202 = "local.pair"
+Data t203 = "local.path"
+Data t204 = "local.position"
+Data t205 = "local.present"
+Data t206 = "local.quote"
+Data t207 = "local.quoted"
+Data t208 = "local.record"
+Data t209 = "local.replacement"
+Data t210 = "local.request"
+Data t211 = "local.result"
+Data t212 = "local.row"
+Data t213 = "local.rows"
+Data t214 = "local.seen"
+Data t215 = "local.separator"
+Data t216 = "local.slash"
+Data t217 = "local.subtotal"
+Data t218 = "local.text"
+Data t219 = "local.token"
+Data t220 = "local.total"
+Data t221 = "local.updated"
+Data t222 = "local.value"
+Data t223 = "local.width"
+Data t224 = "local.window"
+Data t225 = "needle:Text;replacement:Text;result:Text;slash:Text"
+Data t226 = "out.result"
+Data t227 = "path:Text;result:Json"
+Data t228 = "path:Text;result:Json;slash:Text;token:Text"
+Data t229 = "path:Text;result:Text;slash:Text;token:Text"
+Data t230 = "quoted:Bool;start:Int;text:Text"
+Data t231 = "quoted=f:local.quoted;start=f:local.cursor;text=f:local.text"
+Data t232 = "quoted=f:local.quoted;start=f:local.start;text=f:local.text"
+Data t233 = "report"
+Data t234 = "row:Json"
+Data t235 = "row=f:local.row"
+Data t236 = "start:Int;text:Text"
+Data t237 = "start=f:local.cursor;text=f:local.text"
+Data t238 = "text:Text"
+Data t239 = "text=f:data.line"
+Data t240 = "text=f:data.raw"
+Data t241 = "text=f:data.request"
+Data t242 = "text=f:local.csv"
+Data t243 = "text=f:local.text"
+Data t244 = "text=f:local.token"
+Data t245 = "tf:data.cleaned s:\"\" tcmp:=="
+Data t246 = "tf:local.character s:\"-\" tcmp:=="
+Data t247 = "tf:local.character s:\"0\" tcmp:== if:local.length if:local.index i:1 i+ icmp:> and"
+Data t248 = "tf:local.character s:\"\\\"\" tcmp:=="
+Data t249 = "tf:local.character s:\"\\n\" tcmp:=="
+Data t250 = "tf:local.error s:\"AIL-RUNTIME-OVERFLOW\" tcmp:=="
+Data t251 = "tf:local.kind s:\"object\" tcmp:!="
+Data t252 = "tf:local.name s:\"\" tcmp:=="
+Data t253 = "tf:local.name s:\"amount\" tcmp:=="
+Data t254 = "tf:local.name s:\"category\" tcmp:=="
+Data t255 = "tf:local.separator s:\"\" tcmp:!="
+Data t256 = "tf:local.separator s:\"\" tcmp:!= tf:local.separator s:\",\" tcmp:!= and tf:local.separator s:\"\\r\" tcmp:!= and tf:local.separator s:\"\\n\" tcmp:!= and"
+Data t257 = "tf:local.separator s:\"\\r\" tcmp:=="
+Data t258 = "true"
+Data t259 = "{\"category\":\"\",\"rows\":0,\"total\":0}"
+Data t260 = "{\"category\":0,\"amount\":0,\"width\":0}"
+Data t261 = "{\"groups\":{},\"total\":0}"
+Data t262 = "{\"ok\":false,\"rows\":0,\"total\":0,\"groups\":[],\"error\":\"\"}"
+Data t263 = "{\"ok\":true,\"rows\":0,\"total\":0,\"groups\":[],\"error\":\"\"}"
+Data t264 = "{\"row\":[],\"next\":0}"
+Data t265 = "{\"value\":\"\",\"next\":0,\"separator\":\"\"}"
+Data t266 = "{}"
+Procedure t38.
+Record the start of action t38.
+Call value function t53 with arguments t241 into field t226.
+Record trace event t39.
+Select output field t226.
+Return success.
+End procedure.
+Procedure t41.
+Start value function with parameters t98, locals t97, and result type t59.
+Call value function t54 with arguments t102 into field t178.
+Call value function t54 with arguments t101 into field t219.
+Call value function t42 with arguments t244 into field t175.
+Call value function t49 with arguments t171 into field t203.
+Begin recovery for errors t57 into field t185.
+Get t59 value at JSON path t203 from field t191 into field t190.
+Run the recovery handler.
+Assign literal t259 of type t59 to field t190.
+Assign literal t5 of type t65 to field t203.
+Set t65 value t178 at JSON path t203 in field t190 into field t190.
+End recovery.
+Assign literal t14 of type t65 to field t203.
+Get t55 value at JSON path t203 from field t190 into field t217.
+Evaluate integer expression t154 into field t217.
+Evaluate integer expression t155 into field t220.
+Set t55 value t217 at JSON path t203 in field t190 into field t190.
+Assign literal t12 of type t65 to field t203.
+Get t55 value at JSON path t203 from field t190 into field t181.
+Evaluate integer expression t135 into field t181.
+Set t55 value t181 at JSON path t203 in field t190 into field t190.
+Call value function t49 with arguments t171 into field t203.
+Set t59 value t190 at JSON path t203 in field t191 into field t191.
+Assign literal t261 of type t59 to field t211.
+Assign literal t8 of type t65 to field t203.
+Set t59 value t191 at JSON path t203 in field t211 into field t211.
+Assign literal t14 of type t65 to field t203.
+Set t55 value t220 at JSON path t203 in field t211 into field t211.
+Return t59 value from expression t151.
+End procedure.
+Procedure t42.
+Start value function with parameters t238, locals t114, and result type t55.
+Count characters in text t218 into field t197.
+If Boolean expression t168 is true, go to label t69.
+Go to label t72.
+Mark label t69.
+Raise error t64.
+Mark label t72.
+Assign literal t32 of type t55 to field t193.
+Slice text t218 from integer t161 to integer t162 into field t179.
+If Boolean expression t246 is true, go to label t73.
+Go to label t76.
+Mark label t73.
+Assign literal t33 of type t55 to field t193.
+Mark label t76.
+If integer comparison t142 t37 t144 is true, go to label t77.
+Go to label t78.
+Mark label t77.
+Raise error t64.
+Mark label t78.
+Slice text t218 from integer t142 to integer t143 into field t179.
+If Boolean expression t247 is true, go to label t79.
+Go to label t82.
+Mark label t79.
+Raise error t64.
+Mark label t82.
+Assign literal t17 of type t65 to field t184.
+Mark label t85.
+If integer comparison t142 t35 t144 is true, go to label t83.
+Go to label t84.
+Mark label t83.
+Slice text t218 from integer t142 to integer t143 into field t179.
+Find text t179 in text t184 into field t204.
+If integer comparison t150 t35 t161 is true, go to label t87.
+Go to label t88.
+Mark label t87.
+Raise error t64.
+Mark label t88.
+Evaluate integer expression t143 into field t193.
+Go to label t85.
+Mark label t84.
+Begin recovery for errors t56 into field t185.
+Parse JSON text t218 as type t55 into field t222.
+Run the recovery handler.
+Raise error t64.
+End recovery.
+Return t55 value from expression t156.
+End procedure.
+Procedure t43.
+Start value function with parameters t230, locals t106, and result type t55.
+Count characters in text t218 into field t197.
+Evaluate integer expression t152 into field t201.
+Mark label t71.
+If integer comparison t147 t35 t144 is true, go to label t69.
+Go to label t70.
+Mark label t69.
+Slice text t218 from integer t147 to integer t149 into field t224.
+Assign literal t34 of type t55 to field t177.
+Assign literal t24 of type t65 to field t199.
+Find text t199 in text t224 into field t189.
+If Boolean expression t166 is true, go to label t73.
+Go to label t76.
+Mark label t73.
+Evaluate integer expression t141 into field t177.
+Mark label t76.
+If Boolean expression t111 is true, go to label t77.
+Go to label t78.
+Mark label t77.
+Assign literal t1 of type t65 to field t199.
+Find text t199 in text t224 into field t189.
+If Boolean expression t167 is true, go to label t79.
+Go to label t82.
+Mark label t79.
+Evaluate integer expression t141 into field t177.
+Mark label t82.
+Assign literal t27 of type t65 to field t199.
+Find text t199 in text t224 into field t189.
+If Boolean expression t167 is true, go to label t83.
+Go to label t86.
+Mark label t83.
+Evaluate integer expression t141 into field t177.
+Mark label t86.
+Assign literal t26 of type t65 to field t199.
+Find text t199 in text t224 into field t189.
+If Boolean expression t167 is true, go to label t87.
+Go to label t88.
+Mark label t87.
+Evaluate integer expression t141 into field t177.
+Mark label t88.
+Mark label t78.
+If integer comparison t133 t35 t163 is true, go to label t89.
+Go to label t90.
+Mark label t89.
+Return t55 value from expression t148.
+Mark label t90.
+Evaluate integer expression t149 into field t201.
+Go to label t71.
+Mark label t70.
+Return t55 value from expression t144.
+End procedure.
+Procedure t44.
+Start value function with parameters t115, locals t227, and result type t59.
+Assign literal t262 of type t59 to field t211.
+Assign literal t7 of type t65 to field t203.
+Set t65 value t180 at JSON path t203 in field t211 into field t211.
+Return t59 value from expression t151.
+End procedure.
+Procedure t45.
+Start value function with parameters t236, locals t113, and result type t59.
+Count characters in text t218 into field t197.
+Slice text t218 from integer t152 to integer t153 into field t179.
+Assign literal t158 of type t40 to field t207.
+If Boolean expression t248 is true, go to label t69.
+Go to label t72.
+Mark label t69.
+Assign literal t258 of type t40 to field t207.
+Evaluate integer expression t153 into field t183.
+Mark label t75.
+If integer comparison t137 t36 t144 is true, go to label t73.
+Go to label t74.
+Mark label t73.
+Call value function t43 with arguments t231 into field t187.
+If integer comparison t138 t37 t144 is true, go to label t77.
+Go to label t78.
+Mark label t77.
+Raise error t64.
+Mark label t78.
+Slice text t218 from integer t139 to integer t140 into field t179.
+If Boolean expression t248 is true, go to label t79.
+Go to label t82.
+Mark label t79.
+Evaluate integer expression t140 into field t183.
+Go to label t80.
+Mark label t82.
+Go to label t74.
+Mark label t80.
+Go to label t75.
+Mark label t74.
+Slice text t218 from integer t153 to integer t138 into field t222.
+Assign literal t25 of type t65 to field t202.
+Assign literal t24 of type t65 to field t206.
+Replace text from field t202 in field t222 with field t206 into field t222.
+Evaluate integer expression t139 into field t200.
+Go to label t70.
+Mark label t72.
+Call value function t43 with arguments t232 into field t187.
+Slice text t218 from integer t138 to integer t139 into field t179.
+If Boolean expression t248 is true, go to label t83.
+Go to label t86.
+Mark label t83.
+Raise error t64.
+Mark label t86.
+Slice text t218 from integer t152 to integer t138 into field t222.
+Evaluate integer expression t138 into field t200.
+Mark label t70.
+Slice text t218 from integer t145 to integer t146 into field t215.
+If Boolean expression t256 is true, go to label t87.
+Go to label t88.
+Mark label t87.
+Raise error t64.
+Mark label t88.
+If Boolean expression t255 is true, go to label t89.
+Go to label t90.
+Mark label t89.
+Evaluate integer expression t146 into field t200.
+If Boolean expression t257 is true, go to label t91.
+Go to label t92.
+Mark label t91.
+Slice text t218 from integer t145 to integer t146 into field t179.
+If Boolean expression t249 is true, go to label t93.
+Go to label t94.
+Mark label t93.
+Evaluate integer expression t146 into field t200.
+Mark label t94.
+Mark label t92.
+Mark label t90.
+Assign literal t265 of type t59 to field t211.
+Assign literal t15 of type t65 to field t203.
+Set t65 value t222 at JSON path t203 in field t211 into field t211.
+Assign literal t9 of type t65 to field t203.
+Set t55 value t200 at JSON path t203 in field t211 into field t211.
+Assign literal t13 of type t65 to field t203.
+Set t65 value t215 at JSON path t203 in field t211 into field t211.
+Return t59 value from expression t151.
+End procedure.
+Procedure t46.
+Start value function with parameters t234, locals t96, and result type t59.
+Count entries in JSON field t212 into field t223.
+Assign literal t31 of type t55 to field t178.
+Assign literal t31 of type t55 to field t175.
+Assign literal t32 of type t55 to field t193.
+Assign literal t266 of type t59 to field t214.
+Mark label t71.
+If integer comparison t142 t35 t157 is true, go to label t69.
+Go to label t70.
+Mark label t69.
+Call value function t54 with arguments t103 into field t198.
+If Boolean expression t252 is true, go to label t73.
+Go to label t76.
+Mark label t73.
+Raise error t66.
+Mark label t76.
+Call value function t49 with arguments t173 into field t203.
+Assign literal t158 of type t40 to field t205.
+Begin recovery for errors t57 into field t185.
+Get t40 value at JSON path t203 from field t214 into field t205.
+Run the recovery handler.
+Assign literal t158 of type t40 to field t205.
+End recovery.
+If Boolean expression t110 is true, go to label t77.
+Go to label t78.
+Mark label t77.
+Raise error t66.
+Mark label t78.
+Assign literal t258 of type t40 to field t205.
+Set t40 value t205 at JSON path t203 in field t214 into field t214.
+If Boolean expression t254 is true, go to label t79.
+Go to label t82.
+Mark label t79.
+Evaluate integer expression t142 into field t178.
+Mark label t82.
+If Boolean expression t253 is true, go to label t83.
+Go to label t86.
+Mark label t83.
+Evaluate integer expression t142 into field t175.
+Mark label t86.
+Evaluate integer expression t143 into field t193.
+Go to label t71.
+Mark label t70.
+If Boolean expression t165 is true, go to label t87.
+Go to label t88.
+Mark label t87.
+Raise error t66.
+Mark label t88.
+Assign literal t260 of type t59 to field t211.
+Assign literal t5 of type t65 to field t203.
+Set t55 value t178 at JSON path t203 in field t211 into field t211.
+Assign literal t4 of type t65 to field t203.
+Set t55 value t175 at JSON path t203 in field t211 into field t211.
+Assign literal t16 of type t65 to field t203.
+Set t55 value t223 at JSON path t203 in field t211 into field t211.
+Return t59 value from expression t151.
+End procedure.
+Procedure t47.
+Start value function with parameters t100, locals t228, and result type t59.
+Format t55 field t193 as JSON text into field t219.
+Assign literal t2 of type t65 to field t216.
+Join text t216 and t219 into field t203.
+Get t59 value at JSON path t203 from field t176 into field t211.
+Return t59 value from expression t151.
+End procedure.
+Procedure t48.
+Start value function with parameters t238, locals t119, and result type t59.
+Count characters in text t218 into field t197.
+Assign literal t32 of type t55 to field t183.
+Assign literal t68 of type t59 to field t211.
+Mark label t71.
+If integer comparison t137 t35 t144 is true, go to label t69.
+Go to label t70.
+Mark label t69.
+Call value function t50 with arguments t237 into field t208.
+Assign literal t11 of type t65 to field t203.
+Get t59 value at JSON path t203 from field t208 into field t212.
+Assign literal t9 of type t65 to field t203.
+Get t55 value at JSON path t203 from field t208 into field t183.
+Assign literal t3 of type t65 to field t203.
+Set t59 value t212 at JSON path t203 in field t211 into field t211.
+Go to label t71.
+Mark label t70.
+Return t59 value from expression t151.
+End procedure.
+Procedure t49.
+Start value function with parameters t170, locals t225, and result type t65.
+Assign literal t28 of type t65 to field t199.
+Assign literal t29 of type t65 to field t209.
+Replace text from field t199 in field t194 with field t209 into field t211.
+Assign literal t2 of type t65 to field t199.
+Assign literal t30 of type t65 to field t209.
+Replace text from field t199 in field t211 with field t209 into field t211.
+Assign literal t2 of type t65 to field t216.
+Join text t216 and t211 into field t211.
+Return t65 value from expression t151.
+End procedure.
+Procedure t50.
+Start value function with parameters t236, locals t112, and result type t59.
+Assign literal t68 of type t59 to field t212.
+Evaluate integer expression t152 into field t183.
+Slice text t218 from integer t152 to integer t153 into field t179.
+Assign literal t258 of type t40 to field t188.
+Mark label t71.
+If Boolean expression t109 is true, go to label t69.
+Go to label t70.
+Mark label t69.
+Call value function t45 with arguments t237 into field t186.
+Assign literal t15 of type t65 to field t203.
+Get t65 value at JSON path t203 from field t186 into field t222.
+Assign literal t9 of type t65 to field t203.
+Get t55 value at JSON path t203 from field t186 into field t183.
+Assign literal t13 of type t65 to field t203.
+Get t65 value at JSON path t203 from field t186 into field t215.
+If Boolean expression t108 is true, go to label t73.
+Go to label t76.
+Mark label t73.
+Assign literal t3 of type t65 to field t203.
+Set t65 value t222 at JSON path t203 in field t212 into field t212.
+Mark label t76.
+Assign literal t158 of type t40 to field t188.
+Go to label t71.
+Mark label t70.
+Assign literal t264 of type t59 to field t211.
+Assign literal t11 of type t65 to field t203.
+Set t59 value t212 at JSON path t203 in field t211 into field t211.
+Assign literal t9 of type t65 to field t203.
+Set t55 value t183 at JSON path t203 in field t211 into field t211.
+Return t59 value from expression t151.
+End procedure.
+Procedure t51.
+Start value function with parameters t159, locals t118, and result type t59.
+Get JSON keys from field t191 into field t195.
+Sort t65 list t195 in t105 order into field t195.
+Count items in t65 list t195 into field t181.
+Assign literal t32 of type t55 to field t193.
+Assign literal t68 of type t59 to field t211.
+Mark label t71.
+If integer comparison t142 t35 t134 is true, go to label t69.
+Go to label t70.
+Mark label t69.
+Get item t142 from t65 list t195 into field t194.
+Call value function t49 with arguments t172 into field t203.
+Get t59 value at JSON path t203 from field t191 into field t190.
+Assign literal t3 of type t65 to field t203.
+Set t59 value t190 at JSON path t203 in field t211 into field t211.
+Evaluate integer expression t143 into field t193.
+Go to label t71.
+Mark label t70.
+Return t59 value from expression t151.
+End procedure.
+Procedure t52.
+Start value function with parameters t238, locals t95, and result type t59.
+Begin recovery for errors t64 into field t185.
+Call value function t48 with arguments t243 into field t213.
+Run the recovery handler.
+Assign literal t19 of type t65 to field t180.
+Call value function t44 with arguments t117 into field t211.
+Return t59 value from expression t151.
+End recovery.
+Count entries in JSON field t213 into field t181.
+If integer comparison t134 t37 t161 is true, go to label t69.
+Go to label t72.
+Mark label t69.
+Assign literal t20 of type t65 to field t180.
+Call value function t44 with arguments t117 into field t211.
+Return t59 value from expression t151.
+Mark label t72.
+Assign literal t32 of type t55 to field t193.
+Call value function t47 with arguments t104 into field t212.
+Begin recovery for errors t66 into field t185.
+Call value function t46 with arguments t235 into field t192.
+Run the recovery handler.
+Assign literal t20 of type t65 to field t180.
+Call value function t44 with arguments t117 into field t211.
+Return t59 value from expression t151.
+End recovery.
+Assign literal t16 of type t65 to field t203.
+Get t55 value at JSON path t203 from field t192 into field t223.
+Assign literal t5 of type t65 to field t203.
+Get t55 value at JSON path t203 from field t192 into field t178.
+Assign literal t4 of type t65 to field t203.
+Get t55 value at JSON path t203 from field t192 into field t175.
+Assign literal t33 of type t55 to field t193.
+Mark label t75.
+If integer comparison t142 t35 t134 is true, go to label t73.
+Go to label t74.
+Mark label t73.
+Call value function t47 with arguments t104 into field t212.
+Count entries in JSON field t212 into field t174.
+If integer comparison t132 t0 t157 is true, go to label t77.
+Go to label t78.
+Mark label t77.
+Assign literal t23 of type t65 to field t180.
+Call value function t44 with arguments t117 into field t211.
+Return t59 value from expression t151.
+Mark label t78.
+Evaluate integer expression t143 into field t193.
+Go to label t75.
+Mark label t74.
+Assign literal t266 of type t59 to field t191.
+Assign literal t32 of type t55 to field t220.
+Assign literal t33 of type t55 to field t193.
+Mark label t81.
+If integer comparison t142 t35 t134 is true, go to label t79.
+Go to label t80.
+Mark label t79.
+Call value function t47 with arguments t104 into field t212.
+Begin recovery for errors t60 into field t185.
+Call value function t41 with arguments t99 into field t221.
+Run the recovery handler.
+Assign literal t18 of type t65 to field t180.
+If Boolean expression t250 is true, go to label t83.
+Go to label t86.
+Mark label t83.
+Assign literal t21 of type t65 to field t180.
+Mark label t86.
+Call value function t44 with arguments t117 into field t211.
+Return t59 value from expression t151.
+End recovery.
+Assign literal t8 of type t65 to field t203.
+Get t59 value at JSON path t203 from field t221 into field t191.
+Assign literal t14 of type t65 to field t203.
+Get t55 value at JSON path t203 from field t221 into field t220.
+Evaluate integer expression t143 into field t193.
+Go to label t81.
+Mark label t80.
+Call value function t51 with arguments t160 into field t191.
+Assign literal t263 of type t59 to field t211.
+Evaluate integer expression t136 into field t181.
+Assign literal t12 of type t65 to field t203.
+Set t55 value t181 at JSON path t203 in field t211 into field t211.
+Assign literal t14 of type t65 to field t203.
+Set t55 value t220 at JSON path t203 in field t211 into field t211.
+Assign literal t8 of type t65 to field t203.
+Set t59 value t191 at JSON path t203 in field t211 into field t211.
+Return t59 value from expression t151.
+End procedure.
+Procedure t53.
+Start value function with parameters t238, locals t116, and result type t59.
+Begin recovery for errors t58 into field t185.
+Parse JSON text t218 as type t59 into field t210.
+Get JSON kind from field t210 into field t196.
+If Boolean expression t251 is true, go to label t69.
+Go to label t72.
+Mark label t69.
+Raise error t56.
+Mark label t72.
+Assign literal t6 of type t65 to field t203.
+Get t65 value at JSON path t203 from field t210 into field t182.
+Run the recovery handler.
+Assign literal t22 of type t65 to field t180.
+Call value function t44 with arguments t117 into field t211.
+Return t59 value from expression t151.
+End recovery.
+Call value function t52 with arguments t242 into field t211.
+Return t59 value from expression t151.
+End procedure.
+Procedure t54.
+Start value function with parameters t100, locals t229, and result type t65.
+Format t55 field t193 as JSON text into field t219.
+Assign literal t2 of type t65 to field t216.
+Join text t216 and t219 into field t203.
+Get t65 value at JSON path t203 from field t176 into field t211.
+Return t65 value from expression t151.
+End procedure.
+Procedure t62.
+Record the start of action t62.
+Read text from standard input into field t128.
+Assign literal t26 of type t65 to field t125.
+Split text in field t128 by field t125 into field t124.
+Count items in t65 list t124 into field t121.
+Assign literal t32 of type t55 to field t122.
+Mark label t71.
+If Boolean expression t164 is true, go to label t69.
+Go to label t70.
+Mark label t69.
+Get item t130 from t65 list t124 into field t123.
+Evaluate integer expression t131 into field t122.
+Trim whitespace from field t123 into field t120.
+If Boolean expression t245 is true, go to label t73.
+Go to label t76.
+Mark label t73.
+Go to label t71.
+Mark label t76.
+Call value function t53 with arguments t239 into field t226.
+Format t59 field t226 as JSON text into field t129.
+Join text t129 and t125 into field t129.
+Write text from field t129 to standard output.
+Go to label t71.
+Mark label t70.
+Record trace event t63.
+Return success.
+End procedure.
+Procedure t67.
+Record the start of action t67.
+Read text from file resource t169 into field t128.
+Call value function t52 with arguments t240 into field t226.
+Assign literal t10 of type t65 to field t127.
+Get t40 value at JSON path t127 from field t226 into field t126.
+If Boolean expression t107 is true, go to label t69.
+Go to label t72.
+Mark label t69.
+Raise error t66.
+Mark label t72.
+Format t59 field t226 as JSON text into field t129.
+Assign literal t26 of type t65 to field t125.
+Join text t129 and t125 into field t129.
+Write text from field t129 to file resource t233.
+Record trace event t61.
+Return success.
+End procedure.

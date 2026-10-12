@@ -35,6 +35,10 @@ severity, blocking behavior, and at least one invalid fixture.
 
 | Code | Primary rule | Condition | Severity | Blocking | Repair |
 | --- | --- | --- | --- | --- | --- |
+| `AIL-BOOL-001` | `ail.boolean.predicate.valid` | invalid Boolean source, typed tree, ownership or expression bound | error | yes | repair the typed predicate and its declared scope |
+| `AILBC018` | `ail.bytecode.boolean.valid` | invalid Boolean instruction operands or profile | error | yes | use exact EVAL_BOOL/BRANCH_BOOL operands in an executable profile |
+| `AILBC020` / `AIL-STDIO-001` | `ail.bytecode.standard-stream.valid` | invalid stream operands, ownership, profile or function effects | error | yes | use exact standard-stream forms in Application/C interop actions with global Text operands |
+| `AILBC019` | `ail.bytecode.recovery.valid` | invalid recovery/RAISE operands, categories, delimiters, scope jumps, raise-function fallthrough or profile | error | yes | use balanced TRY_BEGIN/RECOVER/TRY_END scopes, one known category for RAISE, and returning/raising function paths; jump only within or out of regions |
 | `AIL-TYPE-001` | `ail.core.type.resolves` | unknown type in field, value, input, or output | error | yes | declare or import the type |
 | `AIL-SCHEMA-001` | `ail.core.node.kind-known` | unknown AIL-Core node kind | error | yes | use a node kind declared in `ail-core.schema.v0` |
 | `AIL-SCHEMA-002` | `ail.core.edge.kind-known` | unknown AIL-Core edge kind | error | yes | use an edge kind declared in `ail-core.schema.v0` |
@@ -469,3 +473,19 @@ The agent may propose repairs, but it must:
 - ask a question when the repair changes semantics
 - avoid inventing permissions, effects, failures, or external calls
 - hand the repaired artifact back to the checker
+
+## Process diagnostics
+
+[Process resources](53-process-resources.md#failure-handling-and-cleanup) add AIL-PROCESS-001 / AILBC021, catchable AIL-RUNTIME-PROCESS and AIL-RUNTIME-TIMEOUT, and fatal AIL-RUNTIME-PROCESS-LIMIT. Existing capability, Text, list, integer and IO categories retain their contracts.
+
+[Directory resources](54-directory-resources.md#errors-and-recovery) add AIL-DIRECTORY-001 / AILBC022 and recoverable AIL-RUNTIME-PATH. PATH covers relative grammar/4,095-byte length, file-kind and specified access errors. Text/list size and arena limits, capability failures and other host IO errors retain their fatal boundaries.
+
+[Bytes](56-bytes.md#limits-and-errors) adds AIL-BYTES-001 / AILBC023 and
+catchable AIL-RUNTIME-BYTES. AIL-RUNTIME-BYTES-LIMIT covers raw value size and
+Bytes charges against the shared List/Json arena and is fatal. Index, Text,
+Int, capability and host IO categories preserve their existing boundaries.
+
+[Executable variants](59-executable-variants.md) add AIL-VALUE-001 / AILBC024 for
+custom schemas and typed variant operations. AIL-RUNTIME-VALUE is catchable for
+malformed payloads and wrong-variant extraction; VALUE-LIMIT and VALUE-IO are
+fatal. Existing expression and builtin result-arena error families still apply.

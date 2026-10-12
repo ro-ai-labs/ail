@@ -1,0 +1,32 @@
+AIL-STE 1
+Metadata {"capability_grants":[],"external_bindings":[],"failures":[],"package":"integer-loop","profile":"Application","target_support":{},"version":"0.1.0"}
+Data action = "SumToN"
+Data total = "out.total"
+Data counter = "work.i"
+Data zero = "i:0"
+Data one = "i:1"
+Data current = "f:work.i"
+Data limit = "f:n.value"
+Data comparison = "<="
+Data addition = "f:out.total f:work.i +"
+Data increment = "f:work.i i:1 +"
+Data head = "head"
+Data body = "body"
+Data end = "end"
+Data event = "Calculated"
+Procedure action.
+Record the start of action action.
+Evaluate integer expression zero into field total.
+Evaluate integer expression one into field counter.
+Mark label head.
+If integer comparison current comparison limit is true, go to label body.
+Go to label end.
+Mark label body.
+Evaluate integer expression addition into field total.
+Evaluate integer expression increment into field counter.
+Go to label head.
+Mark label end.
+Record trace event event.
+Select output field total.
+Return success.
+End procedure.

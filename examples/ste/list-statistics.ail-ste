@@ -1,0 +1,152 @@
+AIL-STE 1
+Metadata {"capability_grants":[],"external_bindings":[],"failures":[],"package":"list-statistics","profile":"Application","target_support":{},"version":"0.1.0"}
+Data t0 = "\"/count\""
+Data t1 = "\"/first\""
+Data t2 = "\"/highest\""
+Data t3 = "\"/limit\""
+Data t4 = "\"/median\""
+Data t5 = "\"/second\""
+Data t6 = "\"/sorted\""
+Data t7 = "0"
+Data t8 = "<"
+Data t9 = "=="
+Data t10 = ">"
+Data t11 = "Analyze"
+Data t12 = "Analyzed"
+Data t13 = "Float"
+Data t14 = "Int"
+Data t15 = "Json"
+Data t16 = "List<Float>"
+Data t17 = "Text"
+Data t18 = "__control_0_body"
+Data t19 = "__control_0_otherwise"
+Data t20 = "__control_1_body"
+Data t21 = "__control_1_end"
+Data t22 = "__control_1_otherwise"
+Data t23 = "ascending"
+Data t24 = "count:Int;lower:Float;middle:Int;result:Float;upper:Float"
+Data t25 = "count:Int;result:List<Float>;start:Int;window:List<Float>"
+Data t26 = "data.document"
+Data t27 = "data.first"
+Data t28 = "data.highest"
+Data t29 = "data.limit"
+Data t30 = "data.median"
+Data t31 = "data.merged"
+Data t32 = "data.path"
+Data t33 = "data.raw"
+Data t34 = "data.report"
+Data t35 = "data.second"
+Data t36 = "data.sorted"
+Data t37 = "f:local.count"
+Data t38 = "f:local.count f:local.limit -"
+Data t39 = "f:local.count i:2 %"
+Data t40 = "f:local.count i:2 /"
+Data t41 = "f:local.limit"
+Data t42 = "f:local.lower f:local.upper + d:2e0 /"
+Data t43 = "f:local.middle"
+Data t44 = "f:local.middle i:1 -"
+Data t45 = "f:local.result"
+Data t46 = "f:local.start"
+Data t47 = "f:local.upper"
+Data t48 = "f:output.count"
+Data t49 = "first:List<Float>;second:List<Float>"
+Data t50 = "first=f:data.first;second=f:data.second"
+Data t51 = "highestValues"
+Data t52 = "i:0"
+Data t53 = "i:1"
+Data t54 = "input"
+Data t55 = "limit:Int;sorted:List<Float>"
+Data t56 = "limit=f:data.limit;sorted=f:data.sorted"
+Data t57 = "local.count"
+Data t58 = "local.first"
+Data t59 = "local.limit"
+Data t60 = "local.lower"
+Data t61 = "local.middle"
+Data t62 = "local.result"
+Data t63 = "local.second"
+Data t64 = "local.sorted"
+Data t65 = "local.start"
+Data t66 = "local.upper"
+Data t67 = "local.window"
+Data t68 = "mergeBatches"
+Data t69 = "output.count"
+Data t70 = "output.document"
+Data t71 = "report"
+Data t72 = "result:List<Float>"
+Data t73 = "sorted:List<Float>"
+Data t74 = "sorted=f:data.sorted"
+Data t75 = "sortedMedian"
+Data t76 = "{\"median\":null}"
+Procedure t11.
+Record the start of action t11.
+Read text from file resource t54 into field t33.
+Parse JSON text t33 as type t15 into field t26.
+Assign literal t1 of type t17 to field t32.
+Get t16 value at JSON path t32 from field t26 into field t27.
+Assign literal t5 of type t17 to field t32.
+Get t16 value at JSON path t32 from field t26 into field t35.
+Assign literal t3 of type t17 to field t32.
+Get t14 value at JSON path t32 from field t26 into field t29.
+Call value function t68 with arguments t50 into field t31.
+Sort t13 list t31 in t23 order into field t36.
+Count items in t13 list t36 into field t69.
+Call value function t51 with arguments t56 into field t28.
+Assign literal t76 of type t15 to field t70.
+If integer comparison t48 t10 t52 is true, go to label t18.
+Go to label t19.
+Mark label t18.
+Call value function t75 with arguments t74 into field t30.
+Assign literal t4 of type t17 to field t32.
+Set t13 value t30 at JSON path t32 in field t70 into field t70.
+Mark label t19.
+Assign literal t0 of type t17 to field t32.
+Set t14 value t69 at JSON path t32 in field t70 into field t70.
+Assign literal t6 of type t17 to field t32.
+Set t16 value t36 at JSON path t32 in field t70 into field t70.
+Assign literal t2 of type t17 to field t32.
+Set t16 value t28 at JSON path t32 in field t70 into field t70.
+Format t15 field t70 as JSON text into field t34.
+Write text from field t34 to file resource t71.
+Record trace event t12.
+Select output field t69.
+Return success.
+End procedure.
+Procedure t51.
+Start value function with parameters t55, locals t25, and result type t16.
+Count items in t13 list t64 into field t57.
+If integer comparison t41 t8 t52 is true, go to label t18.
+Go to label t19.
+Mark label t18.
+Assign literal t7 of type t14 to field t59.
+Mark label t19.
+If integer comparison t41 t10 t37 is true, go to label t20.
+Go to label t22.
+Mark label t20.
+Assign literal t7 of type t14 to field t65.
+Go to label t21.
+Mark label t22.
+Evaluate integer expression t38 into field t65.
+Mark label t21.
+Slice t13 list t64 from integer t46 to integer t37 into field t67.
+Reverse t13 list t67 into field t62.
+Return t16 value from expression t45.
+End procedure.
+Procedure t68.
+Start value function with parameters t49, locals t72, and result type t16.
+Concatenate t13 list t58 and list t63 into field t62.
+Return t16 value from expression t45.
+End procedure.
+Procedure t75.
+Start value function with parameters t73, locals t24, and result type t13.
+Count items in t13 list t64 into field t57.
+Evaluate integer expression t40 into field t61.
+Get item t43 from t13 list t64 into field t66.
+If integer comparison t39 t9 t53 is true, go to label t18.
+Go to label t19.
+Mark label t18.
+Return t13 value from expression t47.
+Mark label t19.
+Get item t44 from t13 list t64 into field t60.
+Compute floating expression t42 into field t62.
+Return t13 value from expression t45.
+End procedure.

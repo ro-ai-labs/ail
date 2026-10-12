@@ -1,0 +1,165 @@
+AIL-STE 1
+Metadata {"capability_grants":[],"external_bindings":[],"failures":[],"package":"json-inspection","profile":"Application","target_support":{},"version":"0.1.0"}
+Data t0 = "\"\""
+Data t1 = "\"/\""
+Data t2 = "\"/kind\""
+Data t3 = "\"/leaf_count\""
+Data t4 = "\"/source\""
+Data t5 = "\"~0\""
+Data t6 = "\"~1\""
+Data t7 = "0"
+Data t8 = "<"
+Data t9 = "Inspect"
+Data t10 = "Inspected"
+Data t11 = "Int"
+Data t12 = "Json"
+Data t13 = "Text"
+Data t14 = "__control_0_body"
+Data t15 = "__control_0_end"
+Data t16 = "__control_0_head"
+Data t17 = "__control_0_otherwise"
+Data t18 = "__control_1_body"
+Data t19 = "__control_1_end"
+Data t20 = "__control_1_otherwise"
+Data t21 = "__control_2_body"
+Data t22 = "__control_2_end"
+Data t23 = "__control_2_head"
+Data t24 = "__control_2_otherwise"
+Data t25 = "__control_3_body"
+Data t26 = "__control_3_end"
+Data t27 = "__control_3_otherwise"
+Data t28 = "character:Text;count:Int;index:Int;result:Text;slashEscape:Text;tildeEscape:Text"
+Data t29 = "child:Json;count:Int;index:Int;key:Text;keys:List<Text>;kind:Text;path:Text;result:Int;slash:Text;subtotal:Int;token:Text"
+Data t30 = "data.document"
+Data t31 = "data.path"
+Data t32 = "data.raw"
+Data t33 = "data.report"
+Data t34 = "f:local.count"
+Data t35 = "f:local.index"
+Data t36 = "f:local.index i:1 +"
+Data t37 = "f:local.result"
+Data t38 = "f:local.result f:local.subtotal +"
+Data t39 = "i:1"
+Data t40 = "input"
+Data t41 = "key:Text"
+Data t42 = "key=f:local.key"
+Data t43 = "leafCount"
+Data t44 = "local.character"
+Data t45 = "local.child"
+Data t46 = "local.count"
+Data t47 = "local.index"
+Data t48 = "local.key"
+Data t49 = "local.keys"
+Data t50 = "local.kind"
+Data t51 = "local.path"
+Data t52 = "local.result"
+Data t53 = "local.slash"
+Data t54 = "local.slashEscape"
+Data t55 = "local.subtotal"
+Data t56 = "local.tildeEscape"
+Data t57 = "local.token"
+Data t58 = "local.value"
+Data t59 = "output.document"
+Data t60 = "output.kind"
+Data t61 = "output.leaves"
+Data t62 = "pointerToken"
+Data t63 = "report"
+Data t64 = "tf:local.character s:\"/\" tcmp:=="
+Data t65 = "tf:local.character s:\"~\" tcmp:=="
+Data t66 = "tf:local.kind s:\"object\" tcmp:!= tf:local.kind s:\"array\" tcmp:!= and"
+Data t67 = "tf:local.kind s:\"object\" tcmp:=="
+Data t68 = "value:Json"
+Data t69 = "value=f:data.document"
+Data t70 = "value=f:local.child"
+Data t71 = "{}"
+Procedure t9.
+Record the start of action t9.
+Read text from file resource t40 into field t32.
+Parse JSON text t32 as type t12 into field t30.
+Get JSON kind from field t30 into field t60.
+Call value function t43 with arguments t69 into field t61.
+Assign literal t71 of type t12 to field t59.
+Assign literal t2 of type t13 to field t31.
+Set t13 value t60 at JSON path t31 in field t59 into field t59.
+Assign literal t3 of type t13 to field t31.
+Set t11 value t61 at JSON path t31 in field t59 into field t59.
+Assign literal t4 of type t13 to field t31.
+Set t12 value t30 at JSON path t31 in field t59 into field t59.
+Format t12 field t59 as JSON text into field t33.
+Write text from field t33 to file resource t63.
+Record trace event t10.
+Select output field t60.
+Select output field t61.
+Return success.
+End procedure.
+Procedure t43.
+Start value function with parameters t68, locals t29, and result type t11.
+Get JSON kind from field t58 into field t50.
+If Boolean expression t66 is true, go to label t14.
+Go to label t17.
+Mark label t14.
+Return t11 value from expression t39.
+Mark label t17.
+Count entries in JSON field t58 into field t46.
+If Boolean expression t67 is true, go to label t18.
+Go to label t20.
+Mark label t18.
+Get JSON keys from field t58 into field t49.
+Mark label t20.
+Assign literal t1 of type t13 to field t53.
+Assign literal t7 of type t11 to field t47.
+Assign literal t7 of type t11 to field t52.
+Mark label t23.
+If integer comparison t35 t8 t34 is true, go to label t21.
+Go to label t22.
+Mark label t21.
+If Boolean expression t67 is true, go to label t25.
+Go to label t27.
+Mark label t25.
+Get item t35 from t13 list t49 into field t48.
+Call value function t62 with arguments t42 into field t57.
+Go to label t26.
+Mark label t27.
+Format t11 field t47 as JSON text into field t57.
+Mark label t26.
+Join text t53 and t57 into field t51.
+Get t12 value at JSON path t51 from field t58 into field t45.
+Call value function t43 with arguments t70 into field t55.
+Evaluate integer expression t38 into field t52.
+Evaluate integer expression t36 into field t47.
+Go to label t23.
+Mark label t22.
+Return t11 value from expression t37.
+End procedure.
+Procedure t62.
+Start value function with parameters t41, locals t28, and result type t13.
+Assign literal t0 of type t13 to field t52.
+Assign literal t6 of type t13 to field t54.
+Assign literal t5 of type t13 to field t56.
+Count characters in text t48 into field t46.
+Assign literal t7 of type t11 to field t47.
+Mark label t16.
+If integer comparison t35 t8 t34 is true, go to label t14.
+Go to label t15.
+Mark label t14.
+Slice text t48 from integer t35 to integer t36 into field t44.
+If Boolean expression t64 is true, go to label t18.
+Go to label t20.
+Mark label t18.
+Join text t52 and t54 into field t52.
+Go to label t19.
+Mark label t20.
+If Boolean expression t65 is true, go to label t21.
+Go to label t24.
+Mark label t21.
+Join text t52 and t56 into field t52.
+Go to label t22.
+Mark label t24.
+Join text t52 and t44 into field t52.
+Mark label t22.
+Mark label t19.
+Evaluate integer expression t36 into field t47.
+Go to label t16.
+Mark label t15.
+Return t13 value from expression t37.
+End procedure.

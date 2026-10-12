@@ -44,7 +44,8 @@ The current ladder is:
 
 The catalog is the authoritative replay manifest, but package-local READMEs are
 the teaching path through repeated example families and support modules.
-All 26 package directories include a README.md guide.
+All 33 package directories include a README.md guide (counting the `.ail` suffix
+packages; newer computation examples are also documented below).
 `support-packages.md` is the support-only manifest: any top-level
 `examples/*.ail` package that is not counted in `examples.md` must be declared
 there with `role: support-only`, a `used-by` relationship to counted examples
@@ -110,6 +111,9 @@ packages visible without making a separate non-end-to-end example category.
   for unresolved registry import diagnostics.
 - `ail_std_core.ail/README.md`: standard-library primitive contracts,
   `Identity.copy`, trace coverage, and accepted fixture evidence.
+- `ail_std_expression.ail/README.md`: reusable AIL-authored tokenizer, postfix
+  parser and checked expression evaluator, imported by the
+  [JSON-lines calculator](expression-calculator/README.md) and capability rung R026.
 - `ail_std_collections.ail/README.md`: generic collection and result types,
   `Option.map`, standard-library replay entries, and rejected generic payload
   diagnostics.
@@ -355,7 +359,7 @@ be replayed with `ail-examples` before promotion.
 The generated files are committed so release verification does not depend on
 live LLM access. The current corpus stores:
 
-- `examples.md`: 127 manifest entries with prompt, executor, profile, surface,
+- `examples.md`: 128 manifest entries with prompt, executor, profile, surface,
   use-case, capability-level, capability-under-test, program scale, program
   domain, module/spec/story counts, interaction metadata, user-story metadata,
   story journey, distinctness, capture-origin, checker-result, target, and
@@ -594,3 +598,59 @@ cargo run -- ail-examples examples --artifact-dir /tmp/ail-examples-release-arti
 That mode requires all counted entries to come from stored live captures and
 requires both `live-llm` and `live-codex` origins. The current corpus is
 expected to pass that stricter command with zero deterministic seed entries.
+
+
+For Unix command-line composition, [JSON-lines filter](json-lines-filter) consumes
+bounded stdin and emits exact accepted records on stdout plus a summary on
+stderr. Use `--stdio` with the VM or emitted Linux ELF. See
+[standard streams](../docs/ail/52-standard-streams.md).
+
+## Tool coordinator
+
+[Tool coordinator](tool-coordinator) consumes JSON task lines and invokes a
+caller-bound executable, capturing output/status and recovering launch failures
+or timeouts. Its documented worker is the standalone AIL JSON-lines filter.
+
+[Directory report](directory-report) discovers files beneath a caller-bound input root, computes numeric JSONL summaries, and writes index-named reports plus a manifest beneath a separate output root. PATH/TEXT entry errors and JSON/arithmetic row errors allow later work to continue. Its [STE export](ste/directory-report.ail-ste) runs through the same VM/native pipeline.
+
+[Binary files](binary-files) reads arbitrary bytes, inspects selected PNG header
+metadata in reusable AIL functions, and writes an exact binary copy plus a JSON
+report. Its [STE export](ste/binary-files.ail-ste) preserves both computation and
+caller-granted file effects. Header recognition does not validate the full image.
+
+[Run-length codec](run-length-codec/README.md) imports the pure `ail.std.rle` library
+to encode/decode arbitrary bytes, query output sizes and process caller-granted
+binary files. It raises explicit BYTES errors for malformed formats or oversized
+results. Its [STE export](ste/run-length-codec.ail-ste) includes the library.
+
+- `ail_std_rle.ail/README.md`: reusable pure AIL binary run-length encoding, decoding, size queries and explicit domain errors.
+
+[Binary tree](binary-tree/README.md) imports `ail.std.tree` to insert integer keys,
+retain duplicate multiplicities, search, compute height and traverse in order.
+Its recursive variants and generic declaration execute through both backends;
+R019 compares actual outputs with an independent iterative Python tree.
+
+- `ail_std_tree.ail/README.md`: executable recursive Tree<T> declaration and pure Int binary-search-tree functions.
+
+[CSV aggregation](csv-aggregate/README.md) imports the pure `ail.std.csv` library
+for quoted CSV parsing, checked signed totals, JSON-lines and file reports.
+Its [STE export](ste/csv-aggregate.ail-ste) includes the library.
+
+- `ail_std_csv.ail/README.md`: reusable pure CSV parser and category aggregation with explicit syntax/error priorities and ordinary runtime bounds.
+
+[Word frequency](word-frequency/README.md) imports the pure `ail.std.words` library
+for exact Unicode whitespace words, deterministic top-five ranking, JSON requests
+and bounded raw stdin. Its [STE export](ste/word-frequency.ail-ste) includes the library.
+
+- `ail_std_words.ail/README.md`: reusable pure tokens, frequency summaries and narrow JSON request validation with ordinary runtime bounds.
+
+[JSON pretty printing](json-pretty/README.md) imports the pure `ail.std.json.pretty`
+library for lossless duplicate/order/number-token layout and bounded raw stdin.
+Its [STE export](ste/json-pretty.ail-ste) includes the library. This support-only
+library is included in the 33 suffix packages; the historical catalog stays 128.
+
+- `ail_std_json_pretty.ail/README.md`: pure lossless JSON render/renderText/renderRequest, ordered duplicate pairs and opaque number tokens with ordinary runtime limits.
+
+[LRU cache](lru-cache/README.md) imports the pure [LRU library](ail_std_lru.ail/README.md).
+Its [STE export](ste/lru-cache.ail-ste) includes the library. The support-only
+library brings the suffix package count to 33; the historical catalog stays 128.

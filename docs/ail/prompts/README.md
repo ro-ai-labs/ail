@@ -5,6 +5,10 @@ This directory contains the versioned system prompts referenced by
 produce candidate deterministic artifacts, questions, or repairs, but the
 trusted checker decides acceptance.
 
+For direct executable STE authoring and validation, see
+[ste-authoring.md](ste-authoring.md). This is a CLI workflow guide; the prompt
+envelopes listed below continue to produce specification and Core candidates.
+
 Prompt files:
 
 - `interview.system.md`
@@ -89,3 +93,5 @@ persists the accepted/rejected review text as a fingerprinted review artifact,
 and rejects empty output, raw non-envelope output, model identity mismatches,
 generic artifact kinds, unexpected question-only answers for artifact-required
 probes, or artifacts captured with the wrong task-specific probe.
+
+The [STE authoring guide](ste-authoring.md) includes directory discovery and computed relative files. See [directory resources](../54-directory-resources.md) for authority, bounds, recovery and the discovered-file report workload.

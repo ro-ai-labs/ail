@@ -1,0 +1,62 @@
+The application ToolCoordinator manages tool requests.
+
+A Data has:
+- raw: Text
+- separator: Text
+- lines: List<Text>
+- line: Text
+- count: Int
+- index: Int
+- length: Int
+- task: Json
+- arguments: List<Text>
+- input: Text
+- timeout: Int
+- output: Text
+- errors: Text
+- status: Int
+- error: Text
+- path: Text
+- result: Json
+- report: Text
+
+Action: Coordinate.
+When Coordinate happens:
+- the system reads text from standard input into data.raw
+- the system assigns "\n" to data.separator
+- the system splits text data.raw by data.separator into data.lines
+- the system counts items in list data.lines into data.count
+- the system assigns 0 to data.index
+- while data.index < data.count:
+- the system gets item data.index from list data.lines into data.line
+- the system computes data.index as data.index + 1
+- the system trims text data.line into data.line
+- the system counts characters in data.line into data.length
+- if data.length == 0:
+- continue
+- end if
+- the system assigns {"status":null,"stdout":"","stderr":"","error":""} to data.result
+- try:
+- the system parses JSON text data.line into data.task
+- the system assigns "/arguments" to data.path
+- the system gets JSON value at path data.path from data.task into data.arguments
+- the system assigns "/input" to data.path
+- the system gets JSON value at path data.path from data.task into data.input
+- the system assigns "/timeout" to data.path
+- the system gets JSON value at path data.path from data.task into data.timeout
+- the system runs process resource worker with arguments data.arguments and input data.input within data.timeout milliseconds into data.output with errors data.errors and status data.status
+- the system assigns "/status" to data.path
+- the system sets JSON value at path data.path in data.result to data.status into data.result
+- the system assigns "/stdout" to data.path
+- the system sets JSON value at path data.path in data.result to data.output into data.result
+- the system assigns "/stderr" to data.path
+- the system sets JSON value at path data.path in data.result to data.errors into data.result
+- recover JSON or JSON-PATH or TEXT or PROCESS or TIMEOUT into data.error:
+- the system assigns "/error" to data.path
+- the system sets JSON value at path data.path in data.result to data.error into data.result
+- end try
+- the system formats data.result as JSON text into data.report
+- the system joins text data.report and data.separator into data.report
+- the system writes text data.report to standard output
+- end while
+- the system records a trace event named ToolsCompleted

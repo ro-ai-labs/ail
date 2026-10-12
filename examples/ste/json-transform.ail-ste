@@ -1,0 +1,108 @@
+AIL-STE 1
+Metadata {"capability_grants":[],"external_bindings":[],"failures":[],"package":"json-transform","profile":"Application","target_support":{},"version":"0.1.0"}
+Data t0 = "\"/\""
+Data t1 = "\"/count\""
+Data t2 = "\"/metrics/amount\""
+Data t3 = "\"/name\""
+Data t4 = "\"/names\""
+Data t5 = "\"/private\""
+Data t6 = "\"/processed\""
+Data t7 = "\"/records\""
+Data t8 = "\"/records/-\""
+Data t9 = "\"/total\""
+Data t10 = "0"
+Data t11 = "<"
+Data t12 = "Bool"
+Data t13 = "Int"
+Data t14 = "Json"
+Data t15 = "List<Text>"
+Data t16 = "Text"
+Data t17 = "Transform"
+Data t18 = "Transformed"
+Data t19 = "[]"
+Data t20 = "__control_0_body"
+Data t21 = "__control_0_end"
+Data t22 = "__control_0_head"
+Data t23 = "data.amount"
+Data t24 = "data.amountPath"
+Data t25 = "data.appendPath"
+Data t26 = "data.countPath"
+Data t27 = "data.document"
+Data t28 = "data.index"
+Data t29 = "data.indexText"
+Data t30 = "data.name"
+Data t31 = "data.namePath"
+Data t32 = "data.names"
+Data t33 = "data.namesPath"
+Data t34 = "data.path"
+Data t35 = "data.privatePath"
+Data t36 = "data.processed"
+Data t37 = "data.processedPath"
+Data t38 = "data.raw"
+Data t39 = "data.record"
+Data t40 = "data.records"
+Data t41 = "data.report"
+Data t42 = "data.slash"
+Data t43 = "data.totalPath"
+Data t44 = "f:data.amount i:2 *"
+Data t45 = "f:data.index"
+Data t46 = "f:data.index i:1 +"
+Data t47 = "f:output.count"
+Data t48 = "f:output.total f:data.amount +"
+Data t49 = "input"
+Data t50 = "output.count"
+Data t51 = "output.document"
+Data t52 = "output.total"
+Data t53 = "report"
+Data t54 = "true"
+Data t55 = "{\"records\":[]}"
+Procedure t17.
+Record the start of action t17.
+Read text from file resource t49 into field t38.
+Parse JSON text t38 as type t14 into field t27.
+Assign literal t7 of type t16 to field t34.
+Get t14 value at JSON path t34 from field t27 into field t40.
+Count entries in JSON field t40 into field t50.
+Assign literal t55 of type t14 to field t51.
+Assign literal t19 of type t15 to field t32.
+Assign literal t10 of type t13 to field t52.
+Assign literal t10 of type t13 to field t28.
+Assign literal t54 of type t12 to field t36.
+Assign literal t0 of type t16 to field t42.
+Assign literal t3 of type t16 to field t31.
+Assign literal t2 of type t16 to field t24.
+Assign literal t5 of type t16 to field t35.
+Assign literal t6 of type t16 to field t37.
+Assign literal t8 of type t16 to field t25.
+Assign literal t9 of type t16 to field t43.
+Assign literal t1 of type t16 to field t26.
+Assign literal t4 of type t16 to field t33.
+Mark label t22.
+If integer comparison t45 t11 t47 is true, go to label t20.
+Go to label t21.
+Mark label t20.
+Format t13 field t28 as JSON text into field t29.
+Join text t42 and t29 into field t34.
+Get t14 value at JSON path t34 from field t40 into field t39.
+Remove value at JSON path t35 from field t39 into field t39.
+Get t16 value at JSON path t31 from field t39 into field t30.
+Get t13 value at JSON path t24 from field t39 into field t23.
+Evaluate integer expression t44 into field t23.
+Set t13 value t23 at JSON path t24 in field t39 into field t39.
+Set t12 value t36 at JSON path t37 in field t39 into field t39.
+Set t14 value t39 at JSON path t25 in field t51 into field t51.
+Append value t30 to t16 list t32 into field t32.
+Evaluate integer expression t48 into field t52.
+Evaluate integer expression t46 into field t28.
+Go to label t22.
+Mark label t21.
+Set t13 value t52 at JSON path t43 in field t51 into field t51.
+Set t13 value t50 at JSON path t26 in field t51 into field t51.
+Set t15 value t32 at JSON path t33 in field t51 into field t51.
+Format t14 field t51 as JSON text into field t41.
+Write text from field t41 to file resource t53.
+Record trace event t18.
+Select output field t50.
+Select output field t52.
+Return success.
+End procedure.

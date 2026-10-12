@@ -49,6 +49,8 @@ the rest of the suite.
 30. `29-first-version-completion-gate.md`
 31. `30-next-version-completion-gate.md`
 32. `31-v03-learning-and-authoring-gate.md`
+33. `32-capability-ladder-and-improvement-loop.md`
+34. `33-ste-intermediate.md`
 
 ## Specification Contract
 
@@ -59,6 +61,7 @@ human English
   -> AIL-Spec Canonical
   -> AIL-Core canonical semantic graph
   -> checked program artifact
+  -> AIL-STE executable controlled English
   -> AIL bytecode, VM/native/Wasm/interoperability artifacts, and projections
 ```
 
@@ -74,6 +77,7 @@ the trusted checker is the authority for acceptance.
 | AIL-Core schema | target `ail-core.schema.v0`; stage-0 text artifact is normative for the bootstrap compiler |
 | Prompt pack | draft prompt-pack with JSON envelope, `AIL-PROMPT-001` protocol checks, and offline stored-output corpus verification |
 | Bytecode | stage-0 VM JSON plus native Linux x86_64 ELF target |
+| STE intermediate | `AIL-STE 1`, executable programming profile based on ASD-STE100 Issue 9; full standard conformity is not claimed |
 | Standard library | local package imports support exact version checks; standard library packages and range resolution are not yet versioned |
 | Conformance suite | `first-slice` package fixtures and profile fixtures |
 
@@ -182,3 +186,47 @@ compiler-pass, conformance, and native Linux ELF workflows.
 Use `29-first-version-completion-gate.md` before claiming AIL v0.1 complete.
 Use `30-next-version-completion-gate.md` before claiming AIL v0.2 complete.
 Use `31-v03-learning-and-authoring-gate.md` before claiming AIL v0.3 complete.
+
+- [`34-integer-expressions.md`](34-integer-expressions.md): typed integer computation, ordered calls, result selection, and current capability limits.
+- [`35-control-flow.md`](35-control-flow.md): typed comparisons, source branches and loops, Core validation and per-action execution limits.
+
+- [`36-integer-functions.md`](36-integer-functions.md): named arguments, isolated frames, recursion and early returns through STE and native code.
+- [`37-text-operations.md`](37-text-operations.md): Unicode joins, character counts, slices and searches with checked types and runtime limits.
+- [`38-typed-lists.md`](38-typed-lists.md): integer and text list creation, length, indexing, append and replacement through Core, STE and both runtimes.
+- [`39-typed-literals.md`](39-typed-literals.md): source constants checked against declared types, with opaque JSON data through Core and STE.
+- [`40-file-resources.md`](40-file-resources.md): named UTF-8 file resources, read/write grants, limits and VM/native behavior.
+- [`41-json-conversion.md`](41-json-conversion.md): strict typed JSON parsing, canonical formatting, allocation accounting and file computation.
+- [`42-recursive-json.md`](42-recursive-json.md): nested records, mixed arrays, lossless numbers and typed path lookup.
+- [`43-json-mutation.md`](43-json-mutation.md): JSON set/remove, typed replacements, array append and record-to-report file transformations.
+
+- [`44-value-functions.md`](44-value-functions.md): typed parameters/results, local transformations, recursive frames and a reusable JSON file report.
+- [`45-float-computation.md`](45-float-computation.md): binary64 arithmetic and controls, explicit conversions, finite JSON boundaries and a numeric file report.
+- [`46-floating-lists.md`](46-floating-lists.md): floating lists through source/Core/STE, borrowed function arguments, JSON conversion and a statistics file report.
+- [`47-json-inspection.md`](47-json-inspection.md): JSON kind inspection, ordered key enumeration and generic recursive file traversal.
+- [`48-boolean-predicates.md`](48-boolean-predicates.md): lazy Boolean logic, typed scalar comparisons and reusable record-filter predicates.
+- [`49-text-transformations.md`](49-text-transformations.md): split, list join, replace and Unicode trim with a reusable TSV file report.
+- [`50-list-transformations.md`](50-list-transformations.md): slicing, concatenation, reversal and stable sorting with a file statistics report.
+- [`51-runtime-recovery.md`](51-runtime-recovery.md): explicit data-error handlers, call unwinding and a recovering JSON-lines batch report.
+- [`52-standard-streams.md`](52-standard-streams.md): explicit stdin/stdout/stderr, quiet execution and a composable JSON-lines filter.
+
+- [`53-process-resources.md`](53-process-resources.md): caller-bound external tools, bounded capture, timeouts and an AIL tool coordinator.
+
+- [`54-directory-resources.md`](54-directory-resources.md): separate directory read/write grants, checked relative paths, sorted listing and discovered-file reports.
+
+- [`55-expression-calculator.md`](55-expression-calculator.md): an AIL-authored tokenizer, parser and evaluator, reusable imports, structured errors and JSON-lines requests.
+
+- [`56-bytes.md`](56-bytes.md): immutable byte values, UTF-8/hex conversions, typed functions and binary file operations.
+
+- [`57-explicit-errors.md`](57-explicit-errors.md): explicit errors in actions and typed functions through checked Core, STE and both runtimes.
+- [`58-run-length-codec.md`](58-run-length-codec.md): RLE32 encoding/decoding and size preflight in pure AIL, plus a binary-file application.
+- [`59-executable-variants.md`](59-executable-variants.md): executable recursive variants, schema-checked payloads, generic data and typed function boundaries.
+
+- [Trustworthy edits](60-trustworthy-edits.md): preserve-by-default authoring, explicit expected targets, structural proof limits and independent edit verification; this authoring-correctness milestone adds no ladder rung.
+
+- [CSV aggregation](61-csv-aggregation.md): pure CSV parsing and checked category totals, JSON-lines requests, caller-granted file reports and independent VM/native acceptance.
+
+- [Word frequency](62-word-frequency.md): pure exact tokenization/counting, deterministic ranking and bounded raw stdin.
+
+- [JSON pretty printing](63-json-pretty.md): pure lossless layout, request errors, Bytes transport and bounded raw stdin.
+
+- [LRU cache](64-lru-cache.md): immutable pure cache state, exact events and bounded raw stdin.

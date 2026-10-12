@@ -1,29 +1,41 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::env;
 use std::fs;
+use std::io::Write;
 use std::process::{Command, ExitCode};
 
+use ail::ail::compile_ail_core_ste;
 use ail::ail::{
-    AilBytecodeProgram, AilPackage, AilPackageMetadata, ail_core_hash, ail_document_from_core,
+    AilBytecodeProgram, AilEditContext, AilHostResources, AilPackage, AilPackageMetadata,
+    AilRunResult, AilStandardStreams, ail_core_hash, ail_document_from_core,
     apply_ail_core_patch_text, apply_ail_flow_edit_text, apply_ail_patch, check_ail_core,
     check_ail_requirements, compare_ail_core_semantics, compile_ail_bytecode_native_elf,
     compile_ail_core_bytecode, compile_ail_core_native_elf, draft_ail_interview,
-    draft_ail_requirements_response, draft_ail_requirements_response_recorded_with_max_tokens,
-    draft_ail_spec, draft_ail_spec_from_requirements,
-    draft_ail_spec_from_requirements_recorded_with_max_tokens, elaborate_ail_core,
-    load_ail_package_dir, parse_ail_bytecode, parse_ail_core_text, parse_ail_package_document,
-    parse_ail_package_spec_text, parse_ail_patch_text, parse_ail_spec_text, render_ail_bytecode,
-    render_ail_core, render_ail_flow_view, render_ail_interview_questions_artifact,
-    render_ail_package_dependency_report, render_ail_runtime_state_lines, render_ail_semantic_diff,
-    render_ail_spec, render_ail_spec_from_core, repair_ail_requirements_from_diagnostics,
-    repair_ail_spec_from_diagnostics, run_ail_bytecode_action, run_ail_compiler_pass_on_core,
+    draft_ail_requirements_response,
+    draft_ail_requirements_response_recorded_with_max_tokens_with_edit_context,
+    draft_ail_requirements_response_with_edit_context,
+    draft_ail_spec_from_requirements_recorded_with_max_tokens_with_edit_context,
+    draft_ail_spec_from_requirements_with_edit_context, draft_ail_spec_with_edit_context,
+    elaborate_ail_core, load_ail_package_dir, parse_ail_bytecode, parse_ail_core_text,
+    parse_ail_directory_binding, parse_ail_file_binding, parse_ail_package_document,
+    parse_ail_package_spec_text, parse_ail_patch_text, parse_ail_process_binding,
+    parse_ail_spec_text, render_ail_bytecode, render_ail_core, render_ail_flow_view,
+    render_ail_interview_questions_artifact, render_ail_package_dependency_report,
+    render_ail_runtime_state_lines, render_ail_semantic_diff, render_ail_spec,
+    render_ail_spec_from_core, repair_ail_requirements_from_diagnostics,
+    repair_ail_requirements_from_diagnostics_with_edit_context,
+    repair_ail_spec_from_diagnostics_with_edit_context, run_ail_bytecode_action,
+    run_ail_bytecode_action_with_host_resources, run_ail_compiler_pass_on_core,
     run_ail_conformance, verify_ail_bytecode,
 };
 use ail::core_model::json_string;
+use ail::ste::{parse_ail_ste, render_ail_ste};
 
 #[derive(Clone)]
 struct CliOptions {
     runtime_state: BTreeMap<String, String>,
+    host_resources: AilHostResources,
+    stdio: bool,
     llm_endpoint: Option<String>,
     llm_max_tokens: Option<usize>,
     artifact_dir: Option<String>,
@@ -42,6 +54,9 @@ struct CliOptions {
     ail_story_file: Option<String>,
     ail_core_file: Option<String>,
     ail_baseline_file: Option<String>,
+    ail_preserve_baseline: bool,
+    ail_expected_patch: Option<String>,
+    ail_greenfield: bool,
     ail_compile_target: Option<String>,
     ail_compile_out: Option<String>,
     ail_compile_all_actions: bool,
@@ -89,7 +104,7 @@ fn main() -> ExitCode {
     match run(env::args().skip(1).collect()) {
         Ok(code) => ExitCode::from(code),
         Err(message) => {
-            eprintln!("{message}");
+            write_error_diagnostic(&message);
             ExitCode::from(2)
         }
     }
@@ -103,13 +118,15 @@ fn run(args: Vec<String>) -> Result<u8, String> {
     let pathless_core_file_command = args[1].starts_with("--")
         && matches!(
             command.as_str(),
-            "ail-spec"
+            "ail-ste"
+                | "ail-spec"
                 | "ail-lower"
                 | "ail-compile"
                 | "ail-build"
                 | "ail-run"
                 | "ail-patch"
                 | "ail-flow-edit"
+                | "ail-equivalence"
         );
     let default_path = ".".to_string();
     let (path, option_args): (&String, &[String]) = if pathless_core_file_command {
@@ -118,12 +135,31 @@ fn run(args: Vec<String>) -> Result<u8, String> {
         (&args[1], &args[2..])
     };
     let cli_options = parse_cli_options(command, option_args)?;
+    if command == "ail-equivalence"
+        && pathless_core_file_command
+        && cli_options.ail_core_file.is_none()
+    {
+        return Err(
+            "ail-equivalence requires a candidate package or --core-file <candidate-core>".into(),
+        );
+    }
+    if command == "ail-equivalence"
+        && cli_options.ail_core_file.is_some()
+        && !pathless_core_file_command
+    {
+        return Err("ail-equivalence cannot combine a candidate package with --core-file".into());
+    }
+    if command == "ail-build" && cli_options.ail_core_file.is_some() && !pathless_core_file_command
+    {
+        return Err("ail-build cannot combine a positional package with --core-file; use ail-build --core-file <candidate> with optional --baseline <source>".into());
+    }
     if command == "ail-vm" {
         return run_ail_vm_command(path, &cli_options);
     }
     if matches!(
         command.as_str(),
-        "ail-check"
+        "ail-ste"
+            | "ail-check"
             | "ail-core"
             | "ail-flow"
             | "ail-lower"
@@ -153,7 +189,7 @@ fn run(args: Vec<String>) -> Result<u8, String> {
 }
 
 fn usage() -> String {
-    "usage: ail <ail-check|ail-core|ail-flow|ail-flow-edit|ail-equivalence|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-interview|ail-requirements|ail-spec|ail-draft|ail-build|ail-story|ail-pass|ail-bootstrap|ail-agent-contracts|ail-v03-roadmap|ail-prompt-corpus|ail-examples|ail-patch> <path> [patch|target-package] [--action name] [--prompt text] [--story-file path] [--interview-file path] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--base-model name] [--target-model name] [--out path] [--all-actions] [--diagnostics-json] [--artifact-dir path] [--llm-endpoint url] [--max-tokens count] [--release-evidence] [key=value ...]\nsaved-core usage: ail <ail-spec|ail-lower|ail-compile|ail-run|ail-build> --core-file <checked-core> [--action name] [--target target] [--out path] [--artifact-dir path] [key=value ...]\nwasm-contract usage: ail ail-compile <package-or-artifact.ailbc.json> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir> OR ail ail-compile --core-file <checked-core> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir>\ncore-patch usage: ail ail-patch --core-file <checked-core> <ail-core.patch.json>\nflow-edit usage: ail ail-flow-edit --core-file <checked-core> <ail-flow.edit.json>\nail-pass usage: ail ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR ail ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]\nail-bootstrap usage: ail ail-bootstrap <toolchain-agent-package> --pass <compiler-pass-package> [--pass <compiler-pass-package> ...] --agent <toolchain-agent-package> --target linux-x86_64-elf --artifact-dir <dir>\nail-story usage: ail ail-story <package> --story-file <story.md> [--artifact-dir <dir>] [--llm-endpoint <url>] [--max-tokens count] [--agent <agent-package-or-bytecode>] [--target <target> --action <ActionName> --out <path>]; wasm32-unknown-sandbox-wasm writes target-contract/ evidence under --artifact-dir and copies the contract report to --out when provided\nail-agent-contracts usage: ail ail-agent-contracts examples/agents\nail-v03-roadmap usage: ail ail-v03-roadmap examples --artifact-dir <dir> [--release-evidence]\nail-prompt-corpus usage: ail ail-prompt-corpus <corpus-file-or-dir> --artifact-dir <dir>\nail-examples usage: ail ail-examples examples --artifact-dir <dir> [--release-evidence]\ncompatibility alias: ail ail-e2e-corpus <examples-dir> --artifact-dir <dir> [--release-evidence]\nail-equivalence usage: ail ail-equivalence <candidate-package> --baseline <baseline-package-or-core> OR ail ail-equivalence --core-file <candidate-core> --baseline <baseline-package-or-core>"
+    "usage: ail <ail-ste|ail-check|ail-core|ail-flow|ail-flow-edit|ail-equivalence|ail-lower|ail-compile|ail-run|ail-vm|ail-conformance|ail-interview|ail-requirements|ail-spec|ail-draft|ail-build|ail-story|ail-pass|ail-bootstrap|ail-agent-contracts|ail-v03-roadmap|ail-prompt-corpus|ail-examples|ail-patch> <path> [patch|target-package] [--action name] [--prompt text] [--expected-patch path] [--greenfield] [--baseline path (standalone Core build)] [--story-file path] [--interview-file path] [--requirements-file path] [--spec-file path] [--core-file path] [--pass path] [--agent path] [--target target] [--base-model name] [--target-model name] [--out path] [--all-actions] [--diagnostics-json] [--artifact-dir path] [--llm-endpoint url] [--max-tokens count] [--release-evidence] [--read-file=name=path] [--write-file=name=path] [--run-process=name=/absolute/executable] [--read-directory=name=/absolute/root] [--write-directory=name=/absolute/root] [--stdio (ail-run/ail-vm)] [key=value ...]\nsaved-core usage: ail <ail-spec|ail-lower|ail-compile|ail-run|ail-build> --core-file <checked-core> [--action name] [--target target] [--out path] [--artifact-dir path] [key=value ...]\nwasm-contract usage: ail ail-compile <package-or-artifact.ailbc.json> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir> OR ail ail-compile --core-file <checked-core> (--action <ActionName>|--all-actions) [--agent <agent-package-or-bytecode>] --target wasm32-unknown-sandbox-wasm --artifact-dir <dir>\ncore-patch usage: ail ail-patch --core-file <checked-core> <ail-core.patch.json>\nflow-edit usage: ail ail-flow-edit --core-file <checked-core> <ail-flow.edit.json>\nail-pass usage: ail ail-pass <compiler-pass-package-or-bytecode> <target-package> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>] OR ail ail-pass <compiler-pass-package-or-bytecode> --core-file <checked-core> --action <PassName> [--agent <agent-package-or-bytecode>] [--target linux-x86_64-elf --artifact-dir <dir>]\nail-bootstrap usage: ail ail-bootstrap <toolchain-agent-package> --pass <compiler-pass-package> [--pass <compiler-pass-package> ...] --agent <toolchain-agent-package> --target linux-x86_64-elf --artifact-dir <dir>\nail-story usage: ail ail-story <package> --story-file <story.md> [--artifact-dir <dir>] [--llm-endpoint <url>] [--max-tokens count] [--agent <agent-package-or-bytecode>] [--target <target> --action <ActionName> --out <path>]; wasm32-unknown-sandbox-wasm writes target-contract/ evidence under --artifact-dir and copies the contract report to --out when provided\nail-agent-contracts usage: ail ail-agent-contracts examples/agents\nail-v03-roadmap usage: ail ail-v03-roadmap examples --artifact-dir <dir> [--release-evidence]\nail-prompt-corpus usage: ail ail-prompt-corpus <corpus-file-or-dir> --artifact-dir <dir>\nail-examples usage: ail ail-examples examples --artifact-dir <dir> [--release-evidence]\ncompatibility alias: ail ail-e2e-corpus <examples-dir> --artifact-dir <dir> [--release-evidence]\nail-equivalence usage: ail ail-equivalence <candidate-package> --baseline <baseline-package-or-core> OR ail ail-equivalence --core-file <candidate-core> --baseline <baseline-package-or-core> [--preserve-baseline]"
         .to_string()
 }
 
@@ -317,6 +353,7 @@ fn render_ail_draft_diagnostics_json(
 }
 
 struct AilBuildArtifactSet<'a> {
+    admission_report: Option<&'a str>,
     source_manifest_text: Option<&'a str>,
     source_spec_text: Option<&'a str>,
     requirements: Option<&'a str>,
@@ -368,6 +405,7 @@ struct AilStoryLlmOptions<'a> {
 }
 
 struct AilStoryManifestArtifactSet<'a> {
+    admission_report: &'a str,
     story_source_text: &'a str,
     story_normalized_text: &'a str,
     story_report_text: &'a str,
@@ -666,6 +704,181 @@ struct AilSourcePackageArtifacts {
     manifest_text: String,
     spec_text: String,
     package_dependency_report_text: Option<String>,
+}
+
+/// Files and resolved objects captured before authoring. Re-reads verify consistency;
+/// candidate elaboration always uses the original package/import objects.
+#[derive(Clone)]
+struct AilAuthoringSnapshot {
+    package: AilPackage,
+    files: BTreeMap<std::path::PathBuf, Vec<u8>>,
+}
+
+impl AilAuthoringSnapshot {
+    fn capture(package: &AilPackage) -> Result<Self, String> {
+        fn capture_files(
+            package: &AilPackage,
+            files: &mut BTreeMap<std::path::PathBuf, Vec<u8>>,
+        ) -> Result<(), String> {
+            let mut paths = vec![
+                package.root.join("ail-package.md"),
+                package.spec_path.clone(),
+            ];
+            if let Some(registry) = &package.metadata.registry {
+                paths.push(package.root.join(registry));
+            }
+            for path in paths {
+                let bytes = fs::read(&path)
+                    .map_err(|e| format!("AIL-EDIT-SNAPSHOT: {}: {e}", path.display()))?;
+                if let Some(previous) = files.insert(path.clone(), bytes.clone())
+                    && previous != bytes
+                {
+                    return Err(format!(
+                        "AIL-EDIT-SNAPSHOT: {} changed while capturing source",
+                        path.display()
+                    ));
+                }
+            }
+            if files.get(&package.spec_path).map(Vec::as_slice)
+                != Some(package.spec_text.as_bytes())
+            {
+                return Err("AIL-EDIT-SNAPSHOT: source differs from loaded package".into());
+            }
+            for import in &package.imports {
+                capture_files(&import.package, files)?;
+            }
+            Ok(())
+        }
+        let mut snapshot = Self {
+            package: package.clone(),
+            files: BTreeMap::new(),
+        };
+        capture_files(package, &mut snapshot.files)?;
+        snapshot.verify()?;
+        Ok(snapshot)
+    }
+
+    fn verify(&self) -> Result<(), String> {
+        for (path, expected) in &self.files {
+            let current = fs::read(path)
+                .map_err(|e| format!("AIL-EDIT-SNAPSHOT: {}: {e}", path.display()))?;
+            if &current != expected {
+                return Err(format!(
+                    "AIL-EDIT-SNAPSHOT: {} changed after source capture",
+                    path.display()
+                ));
+            }
+        }
+        let loaded = load_ail_package_dir(&self.package.root)
+            .map_err(|e| format!("AIL-EDIT-SNAPSHOT: {e}"))?;
+        if loaded != self.package {
+            return Err(
+                "AIL-EDIT-SNAPSHOT: resolved source package/imports changed after capture".into(),
+            );
+        }
+        Ok(())
+    }
+
+    fn source_artifacts(&self) -> Result<AilSourcePackageArtifacts, String> {
+        self.verify()?;
+        let manifest_text =
+            String::from_utf8(self.files[&self.package.root.join("ail-package.md")].clone())
+                .map_err(|e| format!("AIL-EDIT-SNAPSHOT: source manifest is not UTF-8: {e}"))?;
+        // This public renderer reads manifests to hash them; bracket it with checks
+        // against the captured bytes rather than treating its re-reads as authority.
+        let package_dependency_report_text = if self.package.imports.is_empty() {
+            None
+        } else {
+            Some(render_ail_package_dependency_report(&self.package)?)
+        };
+        self.verify()?;
+        Ok(AilSourcePackageArtifacts {
+            manifest_text,
+            spec_text: self.package.spec_text.clone(),
+            package_dependency_report_text,
+        })
+    }
+}
+
+struct AilAuthoringContext {
+    edit: AilEditContext,
+    snapshot: AilAuthoringSnapshot,
+}
+
+impl AilAuthoringContext {
+    fn capture(package: &AilPackage, options: &CliOptions) -> Result<Self, String> {
+        let snapshot = AilAuthoringSnapshot::capture(package)?;
+        let edit = if options.ail_greenfield {
+            AilEditContext::greenfield(package)?
+        } else if let Some(path) = &options.ail_expected_patch {
+            let patch = fs::read_to_string(path)
+                .map_err(|e| format!("failed to read expected patch {path}: {e}"))?;
+            AilEditContext::expected_patch(package, &patch)?
+        } else {
+            AilEditContext::preserve_package(package).map_err(|e| {
+                if package.spec_text.trim().is_empty() {
+                    format!("{e}; choose --greenfield for an empty local source")
+                } else {
+                    e
+                }
+            })?
+        };
+        snapshot.verify()?;
+        Ok(Self { edit, snapshot })
+    }
+
+    fn admit(&self, core: &ail::ail::AilCore) -> Result<AilBuildAdmission, String> {
+        self.snapshot.verify()?;
+        AilBuildAdmission::checked(&self.edit, core, Some(self.snapshot.clone()))
+    }
+}
+
+struct AilBuildAdmission {
+    candidate_hash: String,
+    report: String,
+    snapshot: Option<AilAuthoringSnapshot>,
+}
+
+impl AilBuildAdmission {
+    fn checked(
+        context: &AilEditContext,
+        core: &ail::ail::AilCore,
+        snapshot: Option<AilAuthoringSnapshot>,
+    ) -> Result<Self, String> {
+        let diagnostics = context.check_candidate(core);
+        if !diagnostics.is_empty() {
+            return Err(diagnostics
+                .iter()
+                .map(|d| d.detailed_message())
+                .collect::<Vec<_>>()
+                .join("\n"));
+        }
+        Ok(Self {
+            candidate_hash: ail_core_hash(core),
+            report: context.render_admission(core),
+            snapshot,
+        })
+    }
+
+    fn verify(&self, core: &ail::ail::AilCore) -> Result<(), String> {
+        if self.candidate_hash != ail_core_hash(core) {
+            return Err("AIL-EDIT-SNAPSHOT: admitted candidate differs from build input".into());
+        }
+        self.verify_source()
+    }
+
+    fn verify_source(&self) -> Result<(), String> {
+        if let Some(snapshot) = &self.snapshot {
+            snapshot.verify()?;
+        }
+        Ok(())
+    }
+}
+
+#[derive(Default)]
+struct AilBuildAcceptance<'a> {
+    agent_start: Option<AilBuildAgentStart>,
+    admission: Option<&'a AilBuildAdmission>,
 }
 
 struct AilBuildAgentStart {
@@ -3435,12 +3648,17 @@ fn ail_e2e_repair_action_name(
     {
         return Ok(action_name.clone());
     }
-    bytecode.actions.keys().next().cloned().ok_or_else(|| {
-        format!(
-            "examples catalog rejected entry {} repair candidate has no bytecode actions",
-            entry.id
-        )
-    })
+    bytecode
+        .actions
+        .iter()
+        .find(|(_, a)| a.is_entrypoint())
+        .map(|(n, _)| n.clone())
+        .ok_or_else(|| {
+            format!(
+                "examples catalog rejected entry {} repair candidate has no bytecode actions",
+                entry.id
+            )
+        })
 }
 
 fn render_ail_e2e_repair_tutorial(
@@ -3586,7 +3804,13 @@ fn evaluate_ail_e2e_corpus_entry(
         .get("vm-action")
         .filter(|action_name| !action_name.is_empty())
         .map(String::as_str)
-        .or_else(|| bytecode.actions.keys().next().map(String::as_str));
+        .or_else(|| {
+            bytecode
+                .actions
+                .iter()
+                .find(|(_, a)| a.is_entrypoint())
+                .map(|(n, _)| n.as_str())
+        });
     let target_report_text = match target {
         "linux-x86_64-elf" if !native_executables.is_empty() => Some(
             render_ail_e2e_native_target_report(target, native_executables.as_slice())?,
@@ -7609,6 +7833,12 @@ fn run_ail_v03_roadmap_command(path: &str, cli_options: &CliOptions) -> Result<u
 
 fn render_ail_build_manifest(artifacts: &AilBuildArtifactSet<'_>) -> String {
     let mut lines = vec!["AIL-Build-Manifest:".to_string()];
+    if let Some(report) = artifacts.admission_report {
+        lines.push(format!(
+            "edit-admission admission.ail-edit.txt {}",
+            ail_artifact_fingerprint(report)
+        ));
+    }
     if let (Some(source_manifest_text), Some(source_spec_text)) =
         (artifacts.source_manifest_text, artifacts.source_spec_text)
     {
@@ -8219,6 +8449,7 @@ fn write_ail_compile_artifacts(
             format!("failed to write ail-compile core fingerprint artifact: {error}")
         })?;
     }
+    write_ail_ste_artifact(root, artifacts.bytecode_text)?;
     fs::write(root.join("artifact.ailbc.json"), artifacts.bytecode_text)
         .map_err(|error| format!("failed to write ail-compile bytecode artifact: {error}"))?;
     fs::write(
@@ -8342,6 +8573,7 @@ fn write_ail_compile_wasm_contract_artifacts(
             format!("failed to write ail-compile core fingerprint artifact: {error}")
         })?;
     }
+    write_ail_ste_artifact(root, artifacts.bytecode_text)?;
     fs::write(root.join("artifact.ailbc.json"), artifacts.bytecode_text)
         .map_err(|error| format!("failed to write ail-compile bytecode artifact: {error}"))?;
     fs::write(
@@ -8443,6 +8675,7 @@ fn write_ail_compile_darwin_macho_contract_artifacts(
             format!("failed to write ail-compile core fingerprint artifact: {error}")
         })?;
     }
+    write_ail_ste_artifact(root, artifacts.bytecode_text)?;
     fs::write(root.join("artifact.ailbc.json"), artifacts.bytecode_text)
         .map_err(|error| format!("failed to write ail-compile bytecode artifact: {error}"))?;
     fs::write(
@@ -8564,6 +8797,7 @@ fn write_ail_compile_bundle_artifacts(
             format!("failed to write ail-compile core fingerprint artifact: {error}")
         })?;
     }
+    write_ail_ste_artifact(root, artifacts.bytecode_text)?;
     fs::write(root.join("artifact.ailbc.json"), artifacts.bytecode_text)
         .map_err(|error| format!("failed to write ail-compile bytecode artifact: {error}"))?;
     fs::write(
@@ -9028,6 +9262,10 @@ fn write_ail_build_artifacts(
     fs::create_dir_all(root).map_err(|error| {
         format!("failed to create ail-build artifact dir {artifact_dir}: {error}")
     })?;
+    if let Some(report) = artifacts.admission_report {
+        fs::write(root.join("admission.ail-edit.txt"), report)
+            .map_err(|e| format!("failed to write edit admission: {e}"))?;
+    }
     if let (Some(source_manifest_text), Some(source_spec_text)) =
         (artifacts.source_manifest_text, artifacts.source_spec_text)
     {
@@ -9088,6 +9326,7 @@ fn write_ail_build_artifacts(
     .map_err(|error| {
         format!("failed to write ail-build flow review fingerprint artifact: {error}")
     })?;
+    write_ail_ste_artifact(root, artifacts.bytecode_text)?;
     fs::write(root.join("artifact.ailbc.json"), artifacts.bytecode_text)
         .map_err(|error| format!("failed to write ail-build bytecode artifact: {error}"))?;
     fs::write(
@@ -9330,7 +9569,6 @@ fn render_ail_story_amendment_comparison(
     let mut lines = vec![
         "AIL-Story-Amendment-Comparison:".to_string(),
         "entrypoint ail-story".to_string(),
-        "comparison-result accepted".to_string(),
         "story-journey story-amendment".to_string(),
         format!(
             "story-roundtrip {}",
@@ -9404,6 +9642,10 @@ fn render_ail_story_manifest(artifacts: &AilStoryManifestArtifactSet<'_>) -> Str
             ail_artifact_fingerprint(artifacts.story_report_text)
         ),
     ];
+    lines.push(format!(
+        "edit-admission admission.ail-edit.txt {}",
+        ail_artifact_fingerprint(artifacts.admission_report)
+    ));
     if let Some(story_amendment_comparison_text) = artifacts.story_amendment_comparison_text {
         lines.push(format!(
             "story-amendment-comparison story-amendment-comparison.txt {}",
@@ -9663,6 +9905,7 @@ fn write_ail_story_llm_transcript_artifacts(
 fn write_ail_story_mode_artifacts(
     artifact_dir: &str,
     artifacts: AilStoryModeArtifactSet<'_>,
+    admission: &AilBuildAdmission,
 ) -> Result<(), String> {
     let root = std::path::Path::new(artifact_dir);
     fs::create_dir_all(root).map_err(|error| {
@@ -9704,6 +9947,9 @@ fn write_ail_story_mode_artifacts(
     let spec_text = read_required_story_build_artifact(root, "accepted.ail-spec.md")?;
     let core_text = read_required_story_build_artifact(root, "checked.ail-core.txt")?;
     let bytecode_text = read_required_story_build_artifact(root, "artifact.ailbc.json")?;
+    // The checked proof is passed from this run, rather than inferred from
+    // story anchors or an artifact file that happens to say admitted true.
+    let admission_text = &admission.report;
     let story_amendment_comparison_text = render_ail_story_amendment_comparison(
         &story_source_text,
         &story_normalized_text,
@@ -9712,7 +9958,7 @@ fn write_ail_story_mode_artifacts(
         &spec_text,
         &core_text,
         &bytecode_text,
-    );
+    ).map(|text| format!("{text}\ncomparison-result accepted\nexecutable-edit-admission admitted\nedit-admission-fingerprint {}\nanchor-coverage-scope story-text-only\n", ail_artifact_fingerprint(admission_text)));
     if let Some(story_amendment_comparison_text) = story_amendment_comparison_text.as_deref() {
         fs::write(
             root.join("story-amendment-comparison.txt"),
@@ -9751,6 +9997,7 @@ fn write_ail_story_mode_artifacts(
         })?;
     }
     let manifest_text = render_ail_story_manifest(&AilStoryManifestArtifactSet {
+        admission_report: admission_text,
         story_source_text: &story_source_text,
         story_normalized_text: &story_normalized_text,
         story_report_text: &story_report_text,
@@ -9871,6 +10118,7 @@ fn write_ail_lower_artifacts(
         format!("{}\n", ail_artifact_fingerprint(artifacts.core_text)),
     )
     .map_err(|error| format!("failed to write ail-lower core fingerprint artifact: {error}"))?;
+    write_ail_ste_artifact(root, artifacts.bytecode_text)?;
     fs::write(root.join("artifact.ailbc.json"), artifacts.bytecode_text)
         .map_err(|error| format!("failed to write ail-lower bytecode artifact: {error}"))?;
     let bytecode_fingerprint = ail_artifact_fingerprint(artifacts.bytecode_text);
@@ -10727,28 +10975,145 @@ fn write_ail_pass_artifacts(
     Ok(())
 }
 
+fn parse_executable_artifact(path: &str, text: &str) -> Result<AilBytecodeProgram, String> {
+    if path.ends_with(".ail-ste") || text.starts_with("AIL-STE ") {
+        parse_ail_ste(text)
+    } else {
+        parse_ail_bytecode(text)
+    }
+}
+
+fn write_ail_ste_artifact(root: &std::path::Path, bytecode_text: &str) -> Result<(), String> {
+    let ste = render_ail_ste(&parse_ail_bytecode(bytecode_text)?)?;
+    fs::write(root.join("artifact.ail-ste"), &ste)
+        .map_err(|e| format!("failed to write STE intermediate: {e}"))?;
+    fs::write(
+        root.join("artifact.ail-ste.fingerprint.txt"),
+        format!("{}\n", ail_artifact_fingerprint(&ste)),
+    )
+    .map_err(|e| format!("failed to write STE fingerprint: {e}"))?;
+    let manifest = format!(
+        "AIL-STE-Manifest:\nprofile ail-ste-v1\nstandard ASD-STE100-Issue-9\nconformance executable-profile-only\nste artifact.ail-ste {}\nbytecode artifact.ailbc.json {}\n",
+        ail_artifact_fingerprint(&ste),
+        ail_artifact_fingerprint(bytecode_text)
+    );
+    fs::write(root.join("manifest.ail-ste.txt"), manifest)
+        .map_err(|e| format!("failed to write STE manifest: {e}"))?;
+    Ok(())
+}
+
 fn run_ail_vm_command(path: &str, cli_options: &CliOptions) -> Result<u8, String> {
-    let action = cli_options
-        .ail_action
-        .as_deref()
-        .ok_or_else(|| "ail-vm requires --action <name>".to_string())?;
     let bytecode_text =
         fs::read_to_string(path).map_err(|error| format!("failed to read {path}: {error}"))?;
-    let bytecode = parse_ail_bytecode(&bytecode_text)?;
+    let bytecode = parse_executable_artifact(path, &bytecode_text)?;
     let diagnostics = verify_ail_bytecode(&bytecode);
     if !diagnostics.is_empty() {
-        println!("ail-vm diagnostics:");
+        print_execution_diagnostic(cli_options, "ail-vm diagnostics:");
         for diagnostic in diagnostics {
-            println!("{diagnostic}");
+            print_execution_diagnostic(cli_options, diagnostic);
         }
         return Ok(1);
     }
-    let result = run_ail_bytecode_action(&bytecode, action, cli_options.runtime_state.clone())?;
-    println!("ail-vm {}", result.status);
+    run_ail_bytecode_command(&bytecode, cli_options, "ail-vm")
+}
+
+#[cfg(unix)]
+struct BorrowedStandardInput<'a>(std::os::fd::BorrowedFd<'a>);
+
+#[cfg(unix)]
+impl std::io::Read for BorrowedStandardInput<'_> {
+    fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
+        use std::os::fd::AsRawFd;
+        unsafe extern "C" {
+            fn read(fd: std::ffi::c_int, buffer: *mut std::ffi::c_void, count: usize) -> isize;
+        }
+        // StdinLock's internal buffering can prefetch past the limit sentinel.
+        // Borrow its live descriptor without opening, duplicating or closing it.
+        // SAFETY: the borrowed fd remains live and buffer is writable for count bytes.
+        let count = unsafe { read(self.0.as_raw_fd(), buffer.as_mut_ptr().cast(), buffer.len()) };
+        if count < 0 {
+            Err(std::io::Error::last_os_error())
+        } else {
+            Ok(count as usize)
+        }
+    }
+}
+
+fn execute_cli_bytecode(
+    bytecode: &AilBytecodeProgram,
+    action: &str,
+    options: &CliOptions,
+) -> Result<AilRunResult, String> {
+    #[cfg(not(unix))]
+    if options.stdio {
+        return Err("AIL-RUNTIME-CAPABILITY: --stdio currently requires a Unix host".into());
+    }
+    let stdin = std::io::stdin();
+    let stdout = std::io::stdout();
+    let stderr = std::io::stderr();
+    #[cfg(unix)]
+    let input_lock = stdin.lock();
+    #[cfg(unix)]
+    let mut input = BorrowedStandardInput(std::os::fd::AsFd::as_fd(&input_lock));
+    #[cfg(not(unix))]
+    let mut input = stdin.lock();
+    let (mut output, mut errors) = (stdout.lock(), stderr.lock());
+    let mut streams = if options.stdio {
+        AilStandardStreams {
+            stdin: Some(&mut input),
+            stdout: Some(&mut output),
+            stderr: Some(&mut errors),
+        }
+    } else {
+        AilStandardStreams::default()
+    };
+    run_ail_bytecode_action_with_host_resources(
+        bytecode,
+        action,
+        options.runtime_state.clone(),
+        &options.host_resources,
+        &mut streams,
+    )
+}
+
+fn write_error_diagnostic(diagnostic: impl std::fmt::Display) {
+    // Diagnostics cannot recursively fail when the caller's stderr is unusable.
+    let _ = writeln!(std::io::stderr().lock(), "{diagnostic}");
+}
+
+fn print_execution_diagnostic(options: &CliOptions, diagnostic: impl std::fmt::Display) {
+    if options.stdio {
+        write_error_diagnostic(diagnostic);
+    } else {
+        println!("{diagnostic}");
+    }
+}
+
+fn quiet_execution_status(result: &AilRunResult) -> u8 {
+    if let Some(failure) = &result.failure {
+        write_error_diagnostic(format_args!("failure={failure}"));
+    }
+    if result.status == "succeeded" { 0 } else { 1 }
+}
+
+fn run_ail_bytecode_command(
+    bytecode: &AilBytecodeProgram,
+    cli_options: &CliOptions,
+    command: &str,
+) -> Result<u8, String> {
+    let action = cli_options
+        .ail_action
+        .as_deref()
+        .ok_or_else(|| format!("{command} requires --action <name>"))?;
+    let result = execute_cli_bytecode(bytecode, action, cli_options)?;
+    if cli_options.stdio {
+        return Ok(quiet_execution_status(&result));
+    }
+    println!("{command} {}", result.status);
     if let Some(failure) = &result.failure {
         println!("failure={failure}");
     }
-    for (key, value) in &result.final_state {
+    for (key, value) in &result.output_state() {
         println!("{key}={value}");
     }
     if !result.trace.is_empty() {
@@ -11431,7 +11796,7 @@ fn compile_ail_native_artifacts(
     file_prefix: &str,
 ) -> Result<Vec<AilNativeArtifact>, String> {
     let mut artifacts = Vec::new();
-    for action_name in bytecode.actions.keys() {
+    for (action_name, _) in bytecode.actions.iter().filter(|(_, a)| a.is_entrypoint()) {
         let bytes = compile_ail_bytecode_native_elf(bytecode, action_name, target)?;
         artifacts.push(AilNativeArtifact {
             target_name: target.to_string(),
@@ -13786,7 +14151,7 @@ fn render_ail_compile_wasm_contract_bundle_report(
     let mut lines = ail_wasm_contract_report_header(program, target_name)?;
     lines.push("bundle all-actions".to_string());
     lines.push("trace-scope reachable-action-call-graph".to_string());
-    for action_name in program.actions.keys() {
+    for (action_name, _) in program.actions.iter().filter(|(_, a)| a.is_entrypoint()) {
         lines.push(format!(
             "action {action_name} trace-preservation {}",
             ail_wasm_contract_trace_preservation_label(program, action_name)?
@@ -13923,9 +14288,15 @@ fn ail_bytecode_action_reachable_trace_required_inner(
         if instruction.opcode == "EMIT_TRACE" {
             return Ok(true);
         }
-        if instruction.opcode == "CALL_ACTION" {
+        if matches!(
+            instruction.opcode.as_str(),
+            "CALL_ACTION" | "REPEAT_ACTION" | "CALL_INT" | "CALL_VALUE"
+        ) {
             let target = instruction.operands.get("target").ok_or_else(|| {
-                format!("AIL bytecode action {action_name} CALL_ACTION is missing target")
+                format!(
+                    "AIL bytecode action {action_name} {} is missing target",
+                    instruction.opcode
+                )
             })?;
             if ail_bytecode_action_reachable_trace_required_inner(program, target, visited)? {
                 return Ok(true);
@@ -14468,37 +14839,51 @@ fn draft_checked_ail_requirements_for_package_or_questions(
     endpoint: &str,
     agent_requirements_context: Option<&str>,
     retry_prompt_envelope_errors: bool,
+    context: Option<&AilEditContext>,
 ) -> Result<AilRequirementsDraftOutcome, String> {
     let grounded_prompt = grounded_ail_requirements_prompt(prompt, agent_requirements_context);
-    let mut requirements =
-        match draft_ail_requirements_response(package, &grounded_prompt, endpoint) {
-            Ok(ail::llm::LlmArtifactResponse::Artifact(requirements)) => requirements,
-            Ok(ail::llm::LlmArtifactResponse::Questions(questions)) => {
-                return Ok(AilRequirementsDraftOutcome::Questions(questions));
-            }
-            Err(error)
-                if retry_prompt_envelope_errors && is_prompt_envelope_protocol_error(&error) =>
-            {
-                let retry_prompt =
-                    prompt_envelope_retry_prompt(&grounded_prompt, &error, "AIL-Requirements");
-                match draft_ail_requirements_response(package, &retry_prompt, endpoint)? {
-                    ail::llm::LlmArtifactResponse::Artifact(requirements) => requirements,
-                    ail::llm::LlmArtifactResponse::Questions(questions) => {
-                        return Ok(AilRequirementsDraftOutcome::Questions(questions));
-                    }
+    let generate = |prompt: &str| match context {
+        Some(context) => {
+            draft_ail_requirements_response_with_edit_context(package, prompt, endpoint, context)
+        }
+        None => draft_ail_requirements_response(package, prompt, endpoint),
+    };
+    let mut requirements = match generate(&grounded_prompt) {
+        Ok(ail::llm::LlmArtifactResponse::Artifact(requirements)) => requirements,
+        Ok(ail::llm::LlmArtifactResponse::Questions(questions)) => {
+            return Ok(AilRequirementsDraftOutcome::Questions(questions));
+        }
+        Err(error) if retry_prompt_envelope_errors && is_prompt_envelope_protocol_error(&error) => {
+            let retry_prompt =
+                prompt_envelope_retry_prompt(&grounded_prompt, &error, "AIL-Requirements");
+            match generate(&retry_prompt)? {
+                ail::llm::LlmArtifactResponse::Artifact(requirements) => requirements,
+                ail::llm::LlmArtifactResponse::Questions(questions) => {
+                    return Ok(AilRequirementsDraftOutcome::Questions(questions));
                 }
             }
-            Err(error) => return Err(error),
-        };
+        }
+        Err(error) => return Err(error),
+    };
     let mut diagnostics = check_ail_requirements(package, &requirements);
     if !diagnostics.is_empty() {
-        requirements = repair_ail_requirements_from_diagnostics(
-            package,
-            &grounded_prompt,
-            &requirements,
-            &diagnostics,
-            endpoint,
-        )?;
+        requirements = match context {
+            Some(context) => repair_ail_requirements_from_diagnostics_with_edit_context(
+                package,
+                &grounded_prompt,
+                &requirements,
+                &diagnostics,
+                endpoint,
+                context,
+            )?,
+            None => repair_ail_requirements_from_diagnostics(
+                package,
+                &grounded_prompt,
+                &requirements,
+                &diagnostics,
+                endpoint,
+            )?,
+        };
         diagnostics = check_ail_requirements(package, &requirements);
     }
     Ok(AilRequirementsDraftOutcome::Requirements {
@@ -14513,6 +14898,7 @@ fn draft_checked_ail_requirements_for_package(
     endpoint: &str,
     agent_requirements_context: Option<&str>,
     retry_prompt_envelope_errors: bool,
+    context: Option<&AilEditContext>,
 ) -> Result<(String, Vec<ail::ail::AilDiagnostic>), String> {
     match draft_checked_ail_requirements_for_package_or_questions(
         package,
@@ -14520,6 +14906,7 @@ fn draft_checked_ail_requirements_for_package(
         endpoint,
         agent_requirements_context,
         retry_prompt_envelope_errors,
+        context,
     )? {
         AilRequirementsDraftOutcome::Requirements { text, diagnostics } => Ok((text, diagnostics)),
         AilRequirementsDraftOutcome::Questions(questions) => {
@@ -14550,53 +14937,69 @@ fn draft_checked_ail_requirements_for_story_or_questions(
     agent_requirements_context: Option<&str>,
     llm_options: AilStoryLlmOptions<'_>,
     transcripts: &mut Vec<AilStoryLlmTranscript>,
+    context: &AilEditContext,
 ) -> Result<AilRequirementsDraftOutcome, String> {
     let grounded_prompt = grounded_ail_requirements_prompt(prompt, agent_requirements_context);
-    let mut requirements = match draft_ail_requirements_response_recorded_with_max_tokens(
-        package,
-        &grounded_prompt,
-        llm_options.endpoint,
-        llm_options.max_tokens,
-    ) {
-        Ok(recorded) => {
-            push_story_llm_transcript(transcripts, "requirements", "AIL-Requirements", &recorded);
-            match recorded.outcome {
-                ail::llm::LlmArtifactResponse::Artifact(requirements) => requirements,
-                ail::llm::LlmArtifactResponse::Questions(questions) => {
-                    return Ok(AilRequirementsDraftOutcome::Questions(questions));
+    let mut requirements =
+        match draft_ail_requirements_response_recorded_with_max_tokens_with_edit_context(
+            package,
+            &grounded_prompt,
+            llm_options.endpoint,
+            llm_options.max_tokens,
+            context,
+        ) {
+            Ok(recorded) => {
+                push_story_llm_transcript(
+                    transcripts,
+                    "requirements",
+                    "AIL-Requirements",
+                    &recorded,
+                );
+                match recorded.outcome {
+                    ail::llm::LlmArtifactResponse::Artifact(requirements) => requirements,
+                    ail::llm::LlmArtifactResponse::Questions(questions) => {
+                        return Ok(AilRequirementsDraftOutcome::Questions(questions));
+                    }
                 }
             }
-        }
-        Err(error)
-            if llm_options.retry_prompt_envelope_errors
-                && is_prompt_envelope_protocol_error(&error) =>
-        {
-            let retry_prompt =
-                prompt_envelope_retry_prompt(&grounded_prompt, &error, "AIL-Requirements");
-            let recorded = draft_ail_requirements_response_recorded_with_max_tokens(
-                package,
-                &retry_prompt,
-                llm_options.endpoint,
-                llm_options.max_tokens,
-            )?;
-            push_story_llm_transcript(transcripts, "requirements", "AIL-Requirements", &recorded);
-            match recorded.outcome {
-                ail::llm::LlmArtifactResponse::Artifact(requirements) => requirements,
-                ail::llm::LlmArtifactResponse::Questions(questions) => {
-                    return Ok(AilRequirementsDraftOutcome::Questions(questions));
+            Err(error)
+                if llm_options.retry_prompt_envelope_errors
+                    && is_prompt_envelope_protocol_error(&error) =>
+            {
+                let retry_prompt =
+                    prompt_envelope_retry_prompt(&grounded_prompt, &error, "AIL-Requirements");
+                let recorded =
+                    draft_ail_requirements_response_recorded_with_max_tokens_with_edit_context(
+                        package,
+                        &retry_prompt,
+                        llm_options.endpoint,
+                        llm_options.max_tokens,
+                        context,
+                    )?;
+                push_story_llm_transcript(
+                    transcripts,
+                    "requirements",
+                    "AIL-Requirements",
+                    &recorded,
+                );
+                match recorded.outcome {
+                    ail::llm::LlmArtifactResponse::Artifact(requirements) => requirements,
+                    ail::llm::LlmArtifactResponse::Questions(questions) => {
+                        return Ok(AilRequirementsDraftOutcome::Questions(questions));
+                    }
                 }
             }
-        }
-        Err(error) => return Err(error),
-    };
+            Err(error) => return Err(error),
+        };
     let mut diagnostics = check_ail_requirements(package, &requirements);
     if !diagnostics.is_empty() {
-        requirements = repair_ail_requirements_from_diagnostics(
+        requirements = repair_ail_requirements_from_diagnostics_with_edit_context(
             package,
             &grounded_prompt,
             &requirements,
             &diagnostics,
             llm_options.endpoint,
+            context,
         )?;
         diagnostics = check_ail_requirements(package, &requirements);
     }
@@ -14745,6 +15148,20 @@ fn prompt_with_source_spec_context(prompt: &str, source_spec_text: &str) -> Stri
     contextual_prompt
 }
 
+fn prompt_with_authoring_context(
+    prompt: &str,
+    source_spec_text: &str,
+    expected_patch: bool,
+) -> String {
+    // Context-aware model APIs append the selected authority after grammar and
+    // requirements guidance. An expected patch must not inherit stale trace rules.
+    if expected_patch {
+        prompt.to_string()
+    } else {
+        prompt_with_source_spec_context(prompt, source_spec_text)
+    }
+}
+
 fn draft_checked_ail_spec_for_requirements(
     package: &ail::ail::AilPackage,
     prompt: &str,
@@ -14752,6 +15169,67 @@ fn draft_checked_ail_spec_for_requirements(
     endpoint: &str,
     agent_spec_context: Option<&str>,
     retry_prompt_envelope_errors: bool,
+    context: &AilEditContext,
+) -> Result<ail::ail::AilDraftResult, String> {
+    let grounded_prompt = if let Some(agent_spec_context) =
+        agent_spec_context.filter(|context| !context.trim().is_empty())
+    {
+        format!(
+            concat!(
+                "{}\n\n",
+                "Use this AIL agent preflight state as a spec coverage checklist. ",
+                "Do not restate it by itself; produce a complete AIL-Spec candidate that preserves the checked requirements, domain model, actions, failures, guarantees, traces, secrets, runtime inputs, and bytecode compilation path.\n\n",
+                "AGENT SPEC CONTEXT:\n",
+                "{}"
+            ),
+            prompt, agent_spec_context
+        )
+    } else {
+        prompt.to_string()
+    };
+    let mut draft = match draft_ail_spec_from_requirements_with_edit_context(
+        package,
+        &grounded_prompt,
+        requirements,
+        endpoint,
+        context,
+    ) {
+        Ok(draft) => draft,
+        Err(error) if retry_prompt_envelope_errors && is_prompt_envelope_protocol_error(&error) => {
+            let retry_prompt =
+                prompt_envelope_retry_prompt(&grounded_prompt, &error, "AIL-Spec Canonical");
+            draft_ail_spec_from_requirements_with_edit_context(
+                package,
+                &retry_prompt,
+                requirements,
+                endpoint,
+                context,
+            )?
+        }
+        Err(error) => return Err(error),
+    };
+    if !draft.success() {
+        draft = repair_ail_spec_from_diagnostics_with_edit_context(
+            package,
+            &grounded_prompt,
+            requirements,
+            &draft.spec_text,
+            &draft.diagnostics,
+            endpoint,
+            context,
+        )?;
+    }
+    Ok(draft)
+}
+
+fn draft_checked_ail_spec_for_story_requirements(
+    package: &ail::ail::AilPackage,
+    prompt: &str,
+    requirements: &str,
+    agent_spec_context: Option<&str>,
+    llm_options: AilStoryLlmOptions<'_>,
+    transcripts: &mut Vec<AilStoryLlmTranscript>,
+    context: &AilEditContext,
 ) -> Result<ail::ail::AilDraftResult, String> {
     let grounded_prompt = if let Some(agent_spec_context) =
         agent_spec_context.filter(|context| !context.trim().is_empty())
@@ -14770,91 +15248,47 @@ fn draft_checked_ail_spec_for_requirements(
         prompt.to_string()
     };
     let mut draft =
-        match draft_ail_spec_from_requirements(package, &grounded_prompt, requirements, endpoint) {
-            Ok(draft) => draft,
+        match draft_ail_spec_from_requirements_recorded_with_max_tokens_with_edit_context(
+            package,
+            &grounded_prompt,
+            requirements,
+            llm_options.endpoint,
+            llm_options.max_tokens,
+            context,
+        ) {
+            Ok((draft, recorded)) => {
+                push_story_llm_transcript(transcripts, "spec", "AIL-Spec Canonical", &recorded);
+                draft
+            }
             Err(error)
-                if retry_prompt_envelope_errors && is_prompt_envelope_protocol_error(&error) =>
+                if llm_options.retry_prompt_envelope_errors
+                    && is_prompt_envelope_protocol_error(&error) =>
             {
                 let retry_prompt =
                     prompt_envelope_retry_prompt(&grounded_prompt, &error, "AIL-Spec Canonical");
-                draft_ail_spec_from_requirements(package, &retry_prompt, requirements, endpoint)?
+                let (draft, recorded) =
+                    draft_ail_spec_from_requirements_recorded_with_max_tokens_with_edit_context(
+                        package,
+                        &retry_prompt,
+                        requirements,
+                        llm_options.endpoint,
+                        llm_options.max_tokens,
+                        context,
+                    )?;
+                push_story_llm_transcript(transcripts, "spec", "AIL-Spec Canonical", &recorded);
+                draft
             }
             Err(error) => return Err(error),
         };
     if !draft.success() {
-        draft = repair_ail_spec_from_diagnostics(
-            package,
-            &grounded_prompt,
-            requirements,
-            &draft.spec_text,
-            &draft.diagnostics,
-            endpoint,
-        )?;
-    }
-    Ok(draft)
-}
-
-fn draft_checked_ail_spec_for_story_requirements(
-    package: &ail::ail::AilPackage,
-    prompt: &str,
-    requirements: &str,
-    agent_spec_context: Option<&str>,
-    llm_options: AilStoryLlmOptions<'_>,
-    transcripts: &mut Vec<AilStoryLlmTranscript>,
-) -> Result<ail::ail::AilDraftResult, String> {
-    let grounded_prompt = if let Some(agent_spec_context) =
-        agent_spec_context.filter(|context| !context.trim().is_empty())
-    {
-        format!(
-            concat!(
-                "{}\n\n",
-                "Use this AIL agent preflight state as a spec coverage checklist. ",
-                "Do not restate it by itself; produce a complete AIL-Spec candidate that preserves the checked requirements, domain model, actions, failures, guarantees, traces, secrets, runtime inputs, and bytecode compilation path.\n\n",
-                "AGENT SPEC CONTEXT:\n",
-                "{}"
-            ),
-            prompt, agent_spec_context
-        )
-    } else {
-        prompt.to_string()
-    };
-    let mut draft = match draft_ail_spec_from_requirements_recorded_with_max_tokens(
-        package,
-        &grounded_prompt,
-        requirements,
-        llm_options.endpoint,
-        llm_options.max_tokens,
-    ) {
-        Ok((draft, recorded)) => {
-            push_story_llm_transcript(transcripts, "spec", "AIL-Spec Canonical", &recorded);
-            draft
-        }
-        Err(error)
-            if llm_options.retry_prompt_envelope_errors
-                && is_prompt_envelope_protocol_error(&error) =>
-        {
-            let retry_prompt =
-                prompt_envelope_retry_prompt(&grounded_prompt, &error, "AIL-Spec Canonical");
-            let (draft, recorded) = draft_ail_spec_from_requirements_recorded_with_max_tokens(
-                package,
-                &retry_prompt,
-                requirements,
-                llm_options.endpoint,
-                llm_options.max_tokens,
-            )?;
-            push_story_llm_transcript(transcripts, "spec", "AIL-Spec Canonical", &recorded);
-            draft
-        }
-        Err(error) => return Err(error),
-    };
-    if !draft.success() {
-        draft = repair_ail_spec_from_diagnostics(
+        draft = repair_ail_spec_from_diagnostics_with_edit_context(
             package,
             &grounded_prompt,
             requirements,
             &draft.spec_text,
             &draft.diagnostics,
             llm_options.endpoint,
+            context,
         )?;
     }
     Ok(draft)
@@ -14920,12 +15354,15 @@ fn run_ail_core_action(
         .as_deref()
         .ok_or_else(|| "ail-run requires --action <name>".to_string())?;
     let bytecode = compile_ail_core_bytecode(core)?;
-    let result = run_ail_bytecode_action(&bytecode, action, cli_options.runtime_state.clone())?;
+    let result = execute_cli_bytecode(&bytecode, action, cli_options)?;
+    if cli_options.stdio {
+        return Ok(quiet_execution_status(&result));
+    }
     println!("ail-run {}", result.status);
     if let Some(failure) = &result.failure {
         println!("failure={failure}");
     }
-    for line in render_ail_runtime_state_lines(document, &result.final_state) {
+    for line in render_ail_runtime_state_lines(document, &result.output_state()) {
         println!("{line}");
     }
     if !result.trace.is_empty() {
@@ -15380,7 +15817,12 @@ fn run_ail_compile_from_bytecode_file(path: &str, cli_options: &CliOptions) -> R
         .ok_or_else(|| "ail-compile requires --target <target>".to_string())?;
     let bytecode_text =
         fs::read_to_string(path).map_err(|error| format!("failed to read {path}: {error}"))?;
-    let bytecode = parse_ail_bytecode(&bytecode_text)?;
+    let bytecode = parse_executable_artifact(path, &bytecode_text)?;
+    let bytecode_text = if path.ends_with(".ail-ste") || bytecode_text.starts_with("AIL-STE ") {
+        format!("{}\n", render_ail_bytecode(&bytecode))
+    } else {
+        bytecode_text
+    };
     let diagnostics = verify_ail_bytecode(&bytecode);
     if !diagnostics.is_empty() {
         println!("ail-compile diagnostics:");
@@ -15708,8 +16150,16 @@ fn run_ail_build_from_core(
     requirements_artifact: Option<&str>,
     spec_text: Option<&str>,
     capture_prompt: Option<&str>,
-    agent_start: Option<AilBuildAgentStart>,
+    acceptance: AilBuildAcceptance<'_>,
 ) -> Result<u8, String> {
+    let AilBuildAcceptance {
+        agent_start,
+        admission,
+    } = acceptance;
+    if let Some(admission) = &admission {
+        admission.verify(&core)?;
+    }
+    let pre_pass_hash = ail_core_hash(&core);
     let core_diagnostics = check_ail_core(&core);
     if !core_diagnostics.is_empty() {
         println!("ail-build diagnostics:");
@@ -15804,6 +16254,13 @@ fn run_ail_build_from_core(
     } else {
         agent_start
     };
+    let admission_report = admission.as_ref().map(|admission| {
+        let mut report = admission.report.clone();
+        if let Some(pass_path) = &cli_options.ail_build_pass {
+            report.push_str(&format!("\nexplicit-compiler-pass {pass_path}\npre-pass-core-artifact-hash {pre_pass_hash}\npost-pass-core-artifact-hash {}\ntransformation-checked true\nauthoring-proof-scope pre-pass-candidate\npass-behavior-preservation not-claimed\n", ail_core_hash(&core)));
+        }
+        report
+    });
     let mut agent_run = if let Some(agent_path) = &cli_options.ail_build_agent {
         Some(run_ail_build_agent(
             agent_path,
@@ -15886,6 +16343,11 @@ fn run_ail_build_from_core(
     } else {
         None
     };
+    // All source/admission rejection checks precede the first accepted write.
+    // This is a consistency barrier, not atomic isolation from filesystem writers.
+    if let Some(admission) = &admission {
+        admission.verify_source()?;
+    }
     if let Some(artifact_dir) = &cli_options.artifact_dir {
         let core_text = format!("{}\n", render_ail_core(&core));
         let flow_review_text = format!("{}\n", render_ail_flow_view(&core));
@@ -15929,6 +16391,7 @@ fn run_ail_build_from_core(
         };
         if let Some(agent_run) = agent_run.as_mut() {
             let manifest_text = render_ail_build_manifest(&AilBuildArtifactSet {
+                admission_report: admission_report.as_deref(),
                 source_manifest_text: source_artifacts
                     .map(|artifacts| artifacts.manifest_text.as_str()),
                 source_spec_text: source_artifacts.map(|artifacts| artifacts.spec_text.as_str()),
@@ -15989,6 +16452,7 @@ fn run_ail_build_from_core(
         write_ail_build_artifacts(
             artifact_dir,
             AilBuildArtifactSet {
+                admission_report: admission_report.as_deref(),
                 source_manifest_text: source_artifacts
                     .map(|artifacts| artifacts.manifest_text.as_str()),
                 source_spec_text: source_artifacts.map(|artifacts| artifacts.spec_text.as_str()),
@@ -16643,9 +17107,9 @@ fn run_ail_story_wasm_contract_target(
 }
 
 fn run_ail_story_command(
-    path: &str,
     package: &ail::ail::AilPackage,
     cli_options: &CliOptions,
+    authoring: &AilAuthoringContext,
 ) -> Result<u8, String> {
     let story_file = cli_options
         .ail_story_file
@@ -16665,7 +17129,7 @@ fn run_ail_story_command(
     }
     let normalized_story_fields = normalized_ail_story_mode_fields(&story_fields);
     let normalized_story_text = render_ail_story_mode_fields(&normalized_story_fields);
-    let source_artifacts = load_ail_source_package_artifacts(path, "ail-story")?;
+    let source_artifacts = authoring.snapshot.source_artifacts()?;
     let endpoint = cli_options
         .llm_endpoint
         .as_deref()
@@ -16697,8 +17161,11 @@ fn run_ail_story_command(
             .as_ref()
             .and(cli_options.ail_action.as_deref()),
     );
-    let requirements_prompt =
-        prompt_with_source_spec_context(&requirements_prompt, &source_artifacts.spec_text);
+    let requirements_prompt = prompt_with_authoring_context(
+        &requirements_prompt,
+        &source_artifacts.spec_text,
+        cli_options.ail_expected_patch.is_some(),
+    );
     let mut agent_start = if let Some(agent_path) = effective_agent_path.as_deref() {
         let story_id = normalized_story_fields
             .get("user-story-id")
@@ -16749,6 +17216,7 @@ fn run_ail_story_command(
         agent_requirements_context.as_deref(),
         story_llm_options,
         &mut story_llm_transcripts,
+        &authoring.edit,
     )?;
     let (requirements, requirements_diagnostics) = match requirements_outcome {
         AilRequirementsDraftOutcome::Requirements { text, diagnostics } => (text, diagnostics),
@@ -16806,7 +17274,11 @@ fn run_ail_story_command(
             .as_ref()
             .and(cli_options.ail_action.as_deref()),
     );
-    let spec_prompt = prompt_with_source_spec_context(&spec_prompt, &source_artifacts.spec_text);
+    let spec_prompt = prompt_with_authoring_context(
+        &spec_prompt,
+        &source_artifacts.spec_text,
+        cli_options.ail_expected_patch.is_some(),
+    );
     let draft = draft_checked_ail_spec_for_story_requirements(
         package,
         &spec_prompt,
@@ -16814,6 +17286,7 @@ fn run_ail_story_command(
         agent_spec_context.as_deref(),
         story_llm_options,
         &mut story_llm_transcripts,
+        &authoring.edit,
     )?;
     if !draft.success() {
         println!("ail-story diagnostics:");
@@ -16822,6 +17295,9 @@ fn run_ail_story_command(
         }
         return Ok(1);
     }
+    let document = parse_ail_package_spec_text(package, &draft.spec_text)?;
+    let core = elaborate_ail_core(package, &document);
+    let admission = authoring.admit(&core)?;
     if let (Some(agent_path), Some(previous_agent_start)) =
         (effective_agent_path.as_deref(), agent_start.take())
     {
@@ -16832,8 +17308,6 @@ fn run_ail_story_command(
             &draft.spec_text,
         )?);
     }
-    let document = parse_ail_package_spec_text(package, &draft.spec_text)?;
-    let core = elaborate_ail_core(package, &document);
     let target_contract_core = story_wasm_contract_target.then(|| core.clone());
     let target_contract_source_artifacts =
         story_wasm_contract_target.then(|| source_artifacts.clone());
@@ -16850,7 +17324,10 @@ fn run_ail_story_command(
         Some(&requirements),
         Some(&draft.spec_text),
         Some(&requirements_prompt),
-        agent_start,
+        AilBuildAcceptance {
+            agent_start,
+            admission: Some(&admission),
+        },
     )?;
     if exit_code == 0
         && let (Some(target_contract_core), Some(target_contract_source_artifacts)) = (
@@ -16880,12 +17357,95 @@ fn run_ail_story_command(
                 llm_max_tokens: cli_options.llm_max_tokens,
                 llm_transcripts: &story_llm_transcripts,
             },
+            &admission,
         )?;
     }
     Ok(exit_code)
 }
 
 fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Result<u8, String> {
+    if command == "ail-equivalence" {
+        let baseline_path = cli_options
+            .ail_baseline_file
+            .as_deref()
+            .ok_or_else(|| "ail-equivalence requires --baseline <package-or-core>".to_string())?;
+        let baseline = load_ail_core_for_equivalence(baseline_path)?;
+        let candidate = if cli_options.ail_core_file.is_some() {
+            parse_cli_ail_core(cli_options)?
+        } else {
+            let package = load_ail_package_dir(path).map_err(|e| e.to_string())?;
+            let document = parse_ail_package_document(&package)?;
+            elaborate_ail_core(&package, &document)
+        };
+        let diff = compare_ail_core_semantics(&baseline, &candidate);
+        print!("{}", render_ail_semantic_diff(&diff));
+        let accepted = if cli_options.ail_preserve_baseline {
+            diff.preserves_baseline()
+        } else {
+            diff.is_equivalent()
+        };
+        return Ok(if accepted { 0 } else { 1 });
+    }
+
+    if path.ends_with(".ail-ste") && cli_options.ail_spec_file.is_some() {
+        return Err("STE input cannot be combined with --spec-file".to_string());
+    }
+    if command == "ail-ste" {
+        let ste = if path.ends_with(".ail-ste") && cli_options.ail_core_file.is_none() {
+            let text =
+                fs::read_to_string(path).map_err(|e| format!("failed to read {path}: {e}"))?;
+            render_ail_ste(&parse_ail_ste(&text)?)?
+        } else {
+            let core = if cli_options.ail_core_file.is_some() {
+                parse_cli_ail_core(cli_options)?
+            } else {
+                let package = load_ail_package_dir(path)?;
+                elaborate_ail_core(&package, &parse_cli_ail_document(&package, cli_options)?)
+            };
+            compile_ail_core_ste(&core)?
+        };
+        if let Some(dir) = &cli_options.artifact_dir {
+            fs::create_dir_all(dir).map_err(|e| format!("failed to create {dir}: {e}"))?;
+            let bytecode_text = format!("{}\n", render_ail_bytecode(&parse_ail_ste(&ste)?));
+            fs::write(
+                std::path::Path::new(dir).join("artifact.ailbc.json"),
+                &bytecode_text,
+            )
+            .map_err(|e| format!("failed to write bytecode: {e}"))?;
+            write_ail_ste_artifact(std::path::Path::new(dir), &bytecode_text)?;
+        }
+        print!("{ste}");
+        return Ok(0);
+    }
+    if path.ends_with(".ail-ste")
+        && cli_options.ail_core_file.is_none()
+        && matches!(command, "ail-check" | "ail-lower" | "ail-run")
+    {
+        let text = fs::read_to_string(path).map_err(|e| format!("failed to read {path}: {e}"))?;
+        let bytecode = parse_ail_ste(&text)?;
+        match command {
+            "ail-check" => println!("ail diagnostics: none"),
+            "ail-lower" => {
+                if cli_options.ail_build_agent.is_some() {
+                    return Err("ail-lower with STE input does not accept --agent".to_string());
+                }
+                let bytecode_text = format!("{}\n", render_ail_bytecode(&bytecode));
+                if let Some(dir) = &cli_options.artifact_dir {
+                    fs::create_dir_all(dir).map_err(|e| format!("failed to create {dir}: {e}"))?;
+                    fs::write(
+                        std::path::Path::new(dir).join("artifact.ailbc.json"),
+                        &bytecode_text,
+                    )
+                    .map_err(|e| format!("failed to write bytecode: {e}"))?;
+                    write_ail_ste_artifact(std::path::Path::new(dir), &bytecode_text)?;
+                }
+                print!("{bytecode_text}");
+            }
+            "ail-run" => return run_ail_bytecode_command(&bytecode, cli_options, "ail-run"),
+            _ => unreachable!(),
+        }
+        return Ok(0);
+    }
     if command == "ail-bootstrap" {
         return run_ail_bootstrap_command(path, cli_options);
     }
@@ -16906,7 +17466,45 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
     }
     if command == "ail-build" && cli_options.ail_core_file.is_some() {
         let core = parse_cli_ail_core(cli_options)?;
-        return run_ail_build_from_core(core, cli_options, None, None, None, None, None);
+        let admission = if let Some(path) = &cli_options.ail_baseline_file {
+            let (baseline, snapshot) = if std::path::Path::new(path).is_dir() {
+                let package =
+                    load_ail_package_dir(path).map_err(|e| format!("AIL-EDIT-BASELINE: {e}"))?;
+                let snapshot = AilAuthoringSnapshot::capture(&package)?;
+                let document = parse_ail_package_document(&package)
+                    .map_err(|e| format!("AIL-EDIT-BASELINE: {e}"))?;
+                let baseline = elaborate_ail_core(&package, &document);
+                (baseline, Some(snapshot))
+            } else {
+                (
+                    load_ail_core_for_equivalence(path)
+                        .map_err(|e| format!("AIL-EDIT-BASELINE: {e}"))?,
+                    None,
+                )
+            };
+            let context = if let Some(path) = &cli_options.ail_expected_patch {
+                let patch = fs::read_to_string(path)
+                    .map_err(|e| format!("failed to read expected patch {path}: {e}"))?;
+                AilEditContext::expected_core_patch(&baseline, &patch)?
+            } else {
+                AilEditContext::preserve_core(&baseline)?
+            };
+            Some(AilBuildAdmission::checked(&context, &core, snapshot)?)
+        } else {
+            None
+        };
+        return run_ail_build_from_core(
+            core,
+            cli_options,
+            None,
+            None,
+            None,
+            None,
+            AilBuildAcceptance {
+                agent_start: None,
+                admission: admission.as_ref(),
+            },
+        );
     }
     if command == "ail-compile" && cli_options.ail_core_file.is_some() {
         let core = parse_cli_ail_core(cli_options)?;
@@ -16917,7 +17515,7 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
         let diagnostics = check_ail_core(&core);
         if !diagnostics.is_empty() {
             for diagnostic in diagnostics {
-                println!("{diagnostic}");
+                print_execution_diagnostic(cli_options, diagnostic);
             }
             return Ok(1);
         }
@@ -17105,8 +17703,16 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
         return Err("ail-flow-edit requires --core-file <checked-core>".to_string());
     }
     let package = load_ail_package_dir(path)?;
+    let authoring = if matches!(
+        command,
+        "ail-draft" | "ail-spec" | "ail-build" | "ail-story"
+    ) {
+        Some(AilAuthoringContext::capture(&package, cli_options)?)
+    } else {
+        None
+    };
     if command == "ail-story" {
-        return run_ail_story_command(path, &package, cli_options);
+        return run_ail_story_command(&package, cli_options, authoring.as_ref().unwrap());
     }
     if command == "ail-conformance" {
         let result = run_ail_conformance(&package)?;
@@ -17201,7 +17807,9 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
             .llm_endpoint
             .as_deref()
             .unwrap_or(&package.metadata.base_llm_endpoint);
-        let result = draft_ail_spec(&package, prompt, endpoint)?;
+        let authoring = authoring.as_ref().unwrap();
+        let result = draft_ail_spec_with_edit_context(&package, prompt, endpoint, &authoring.edit)?;
+        authoring.snapshot.verify()?;
         if cli_options.diagnostics_json {
             print!(
                 "{}",
@@ -17232,8 +17840,9 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
             .llm_endpoint
             .as_deref()
             .unwrap_or(&package.metadata.base_llm_endpoint);
-        let (requirements, diagnostics) =
-            draft_checked_ail_requirements_for_package(&package, &prompt, endpoint, None, false)?;
+        let (requirements, diagnostics) = draft_checked_ail_requirements_for_package(
+            &package, &prompt, endpoint, None, false, None,
+        )?;
         if !diagnostics.is_empty() {
             println!("ail-requirements diagnostics:");
             for diagnostic in diagnostics {
@@ -17297,7 +17906,9 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
             endpoint,
             None,
             false,
+            &authoring.as_ref().unwrap().edit,
         )?;
+        authoring.as_ref().unwrap().snapshot.verify()?;
         if !draft.success() {
             println!("ail-spec diagnostics:");
             for diagnostic in draft.diagnostics {
@@ -17309,8 +17920,9 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
         return Ok(0);
     }
     if command == "ail-build" {
-        let source_artifacts = load_ail_source_package_artifacts(path, "ail-build")?;
-        let (requirements_artifact, spec_text, core, capture_prompt, agent_start) =
+        let authoring = authoring.as_ref().unwrap();
+        let source_artifacts = authoring.snapshot.source_artifacts()?;
+        let (requirements_artifact, spec_text, core, capture_prompt, agent_start, admission) =
             if let Some(spec_file) = cli_options.ail_spec_file.as_deref() {
                 let spec_text = fs::read_to_string(spec_file)
                     .map_err(|error| format!("failed to read {spec_file}: {error}"))?;
@@ -17325,6 +17937,7 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
                     }
                     return Ok(1);
                 }
+                let admission = authoring.admit(&core)?;
                 let agent_start = if let Some(agent_path) = cli_options.ail_build_agent.as_deref() {
                     let agent_start = start_ail_build_agent_from_saved_spec(&package, &spec_text);
                     Some(run_ail_build_agent_accept_spec(
@@ -17336,7 +17949,7 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
                 } else {
                     None
                 };
-                (None, spec_text, core, None, agent_start)
+                (None, spec_text, core, None, agent_start, admission)
             } else {
                 let prompt = cli_options
                     .ail_prompt
@@ -17349,7 +17962,11 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
                         .as_ref()
                         .and(cli_options.ail_action.as_deref()),
                 );
-                let prompt = prompt_with_source_spec_context(&prompt, &source_artifacts.spec_text);
+                let prompt = prompt_with_authoring_context(
+                    &prompt,
+                    &source_artifacts.spec_text,
+                    cli_options.ail_expected_patch.is_some(),
+                );
                 let requirements_prompt = prompt_with_saved_interview_answers(
                     &prompt,
                     cli_options.ail_interview_file.as_deref(),
@@ -17383,6 +18000,7 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
                             endpoint,
                             agent_requirements_context.as_deref(),
                             true,
+                            Some(&authoring.edit),
                         )?
                     };
                 let capture_prompt = cli_options
@@ -17427,6 +18045,7 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
                     endpoint,
                     agent_spec_context.as_deref(),
                     true,
+                    &authoring.edit,
                 )?;
                 if !draft.success() {
                     println!("ail-build diagnostics:");
@@ -17435,6 +18054,9 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
                     }
                     return Ok(1);
                 }
+                let document = parse_ail_package_spec_text(&package, &draft.spec_text)?;
+                let core = elaborate_ail_core(&package, &document);
+                let admission = authoring.admit(&core)?;
                 if let (Some(agent_path), Some(previous_agent_start)) =
                     (cli_options.ail_build_agent.as_deref(), agent_start.take())
                 {
@@ -17445,14 +18067,13 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
                         &draft.spec_text,
                     )?);
                 }
-                let document = parse_ail_package_spec_text(&package, &draft.spec_text)?;
-                let core = elaborate_ail_core(&package, &document);
                 (
                     Some(requirements),
                     draft.spec_text,
                     core,
                     capture_prompt,
                     agent_start,
+                    admission,
                 )
             };
         return run_ail_build_from_core(
@@ -17462,7 +18083,10 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
             requirements_artifact.as_deref(),
             Some(&spec_text),
             capture_prompt.as_deref(),
-            agent_start,
+            AilBuildAcceptance {
+                agent_start,
+                admission: Some(&admission),
+            },
         );
     }
     let document = parse_cli_ail_document(&package, cli_options)?;
@@ -17500,29 +18124,6 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
                 for diagnostic in diagnostics {
                     println!("{diagnostic}");
                 }
-                Ok(1)
-            }
-        }
-        "ail-equivalence" => {
-            if !diagnostics.is_empty() {
-                for diagnostic in diagnostics {
-                    println!("{diagnostic}");
-                }
-                return Ok(1);
-            }
-            let Some(baseline_path) = cli_options.ail_baseline_file.as_deref() else {
-                return Err("ail-equivalence requires --baseline <package-or-core>".to_string());
-            };
-            let baseline = load_ail_core_for_equivalence(baseline_path)?;
-            let diff = compare_ail_core_semantics(&baseline, &core);
-            print!("{}", render_ail_semantic_diff(&diff));
-            // Removals and retypings are the failure. Additions are not: a spec
-            // amendment is expected to add, and neither a removal nor a retype
-            // can be the accidental byproduct of answering a request to change
-            // something.
-            if diff.preserves_baseline() {
-                Ok(0)
-            } else {
                 Ok(1)
             }
         }
@@ -17616,7 +18217,7 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
         "ail-run" => {
             if !diagnostics.is_empty() {
                 for diagnostic in diagnostics {
-                    println!("{diagnostic}");
+                    print_execution_diagnostic(cli_options, diagnostic);
                 }
                 return Ok(1);
             }
@@ -17627,6 +18228,34 @@ fn run_ail_command(command: &str, path: &str, cli_options: &CliOptions) -> Resul
 }
 
 fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, String> {
+    let mut host_resources = AilHostResources::default();
+    let mut stdio = false;
+    for arg in args.iter().filter(|arg| arg.starts_with("--stdio")) {
+        if arg != "--stdio" || !matches!(command, "ail-run" | "ail-vm") {
+            return Err(
+                "AIL-RUNTIME-CAPABILITY: --stdio is an exact runtime flag for ail-run or ail-vm"
+                    .into(),
+            );
+        }
+    }
+    for arg in args.iter().filter(|arg| arg.starts_with("--run-process")) {
+        if !matches!(command, "ail-run" | "ail-vm") || !arg.starts_with("--run-process=") {
+            return Err("AIL-RUNTIME-CAPABILITY: process bindings require --run-process=<resource>=<absolute-path> on ail-run or ail-vm".into());
+        }
+        parse_ail_process_binding(&arg[14..])?;
+    }
+    for arg in args
+        .iter()
+        .filter(|arg| arg.starts_with("--read-directory") || arg.starts_with("--write-directory"))
+    {
+        let binding = arg
+            .strip_prefix("--read-directory=")
+            .or_else(|| arg.strip_prefix("--write-directory="));
+        if !matches!(command, "ail-run" | "ail-vm") || binding.is_none() {
+            return Err("AIL-RUNTIME-CAPABILITY: directory bindings require --read-directory=<resource>=<absolute-root> or --write-directory=<resource>=<absolute-root> on ail-run or ail-vm".into());
+        }
+        parse_ail_directory_binding(binding.unwrap())?;
+    }
     let mut runtime_state = BTreeMap::new();
     let mut llm_endpoint = None;
     let mut llm_max_tokens = None;
@@ -17646,6 +18275,9 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
     let mut ail_story_file = None;
     let mut ail_core_file = None;
     let mut ail_baseline_file: Option<String> = None;
+    let mut ail_preserve_baseline = false;
+    let mut ail_expected_patch = None;
+    let mut ail_greenfield = false;
     let mut ail_compile_target = None;
     let mut ail_compile_out = None;
     let mut ail_compile_all_actions = false;
@@ -17670,6 +18302,11 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
 
     while index < args.len() {
         let arg = &args[index];
+        if arg == "--stdio" {
+            stdio = true;
+            index += 1;
+            continue;
+        }
         if arg == "--action" {
             if !matches!(
                 command,
@@ -17734,7 +18371,8 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         if arg == "--spec-file" {
             if !matches!(
                 command,
-                "ail-check"
+                "ail-ste"
+                    | "ail-check"
                     | "ail-core"
                     | "ail-flow"
                     | "ail-lower"
@@ -17754,7 +18392,8 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         if arg == "--core-file" {
             if !matches!(
                 command,
-                "ail-lower"
+                "ail-ste"
+                    | "ail-lower"
                     | "ail-pass"
                     | "ail-compile"
                     | "ail-build"
@@ -17769,17 +18408,66 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
             let Some(path) = args.get(index + 1) else {
                 return Err("missing value for --core-file".to_string());
             };
+            if command == "ail-equivalence" && ail_core_file.is_some() {
+                return Err("ail-equivalence accepts one --core-file candidate".into());
+            }
             ail_core_file = Some(path.clone());
             index += 2;
             continue;
         }
+        if arg == "--expected-patch" {
+            if !matches!(
+                command,
+                "ail-draft" | "ail-spec" | "ail-story" | "ail-build"
+            ) {
+                return Err(
+                    "--expected-patch is supported by ail-draft, ail-spec, ail-story and ail-build"
+                        .into(),
+                );
+            }
+            let Some(path) = args.get(index + 1) else {
+                return Err("missing value for --expected-patch".into());
+            };
+            if ail_expected_patch.is_some() {
+                return Err("accepts one --expected-patch".into());
+            }
+            ail_expected_patch = Some(path.clone());
+            index += 2;
+            continue;
+        }
+        if arg == "--greenfield" {
+            if !matches!(
+                command,
+                "ail-draft" | "ail-spec" | "ail-story" | "ail-build"
+            ) || ail_greenfield
+            {
+                return Err("--greenfield is a single flag for ail-draft, ail-spec, ail-story or package ail-build".into());
+            }
+            ail_greenfield = true;
+            index += 1;
+            continue;
+        }
+        if arg == "--preserve-baseline" {
+            if command != "ail-equivalence" || ail_preserve_baseline {
+                return Err("--preserve-baseline is an exact, single ail-equivalence flag".into());
+            }
+            ail_preserve_baseline = true;
+            index += 1;
+            continue;
+        }
         if arg == "--baseline" {
-            if command != "ail-equivalence" {
-                return Err(usage());
+            if !matches!(command, "ail-equivalence" | "ail-build") {
+                return Err(
+                    "--baseline is supported by ail-equivalence and standalone Core ail-build"
+                        .into(),
+                );
             }
             let Some(path) = args.get(index + 1) else {
                 return Err("missing value for --baseline".to_string());
             };
+            if ail_baseline_file.is_some() {
+                return Err("accepts one --baseline".into());
+            }
             ail_baseline_file = Some(path.clone());
             index += 2;
             continue;
@@ -17945,7 +18633,8 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         if arg == "--artifact-dir" {
             if !matches!(
                 command,
-                "ail-interview"
+                "ail-ste"
+                    | "ail-interview"
                     | "ail-spec"
                     | "ail-build"
                     | "ail-pass"
@@ -17971,7 +18660,26 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         if !matches!(command, "ail-run" | "ail-vm") {
             return Err(usage());
         }
-        insert_runtime_state_arg(arg, &mut runtime_state)?;
+        if let Some(binding) = arg.strip_prefix("--read-directory=") {
+            let (name, path) = parse_ail_directory_binding(binding)?;
+            host_resources.directories.reads.insert(name, path);
+        } else if let Some(binding) = arg.strip_prefix("--write-directory=") {
+            let (name, path) = parse_ail_directory_binding(binding)?;
+            host_resources.directories.writes.insert(name, path);
+        } else if let Some(binding) = arg.strip_prefix("--run-process=") {
+            let (name, path) = parse_ail_process_binding(binding)?;
+            host_resources.processes.executables.insert(name, path);
+        } else if let Some(binding) = arg.strip_prefix("--read-file=") {
+            let (name, path) = parse_ail_file_binding(binding)?;
+            host_resources.files.reads.insert(name, path);
+        } else if let Some(binding) = arg.strip_prefix("--write-file=") {
+            let (name, path) = parse_ail_file_binding(binding)?;
+            host_resources.files.writes.insert(name, path);
+        } else if arg.starts_with("--read-file") || arg.starts_with("--write-file") {
+            return Err("AIL-RUNTIME-CAPABILITY: file bindings require --read-file=<resource>=<path> or --write-file=<resource>=<path>".into());
+        } else {
+            insert_runtime_state_arg(arg, &mut runtime_state)?;
+        }
         index += 1;
     }
 
@@ -18092,8 +18800,62 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         return Err("ail-conformance --target requires --artifact-dir <dir>".to_string());
     }
 
+    if ail_greenfield
+        && (ail_expected_patch.is_some() || ail_baseline_file.is_some() || ail_core_file.is_some())
+    {
+        return Err(
+            "--greenfield cannot be combined with --expected-patch, --baseline or --core-file"
+                .into(),
+        );
+    }
+    if command == "ail-build" {
+        if ail_baseline_file.is_some() && ail_core_file.is_none() {
+            return Err("ail-build --baseline requires standalone --core-file".into());
+        }
+        if ail_core_file.is_some() && ail_expected_patch.is_some() && ail_baseline_file.is_none() {
+            return Err("ail-build --expected-patch with --core-file requires --baseline".into());
+        }
+        if ail_core_file.is_some()
+            && (ail_spec_file.is_some()
+                || ail_prompt.is_some()
+                || ail_requirements_file.is_some()
+                || ail_interview_file.is_some()
+                || llm_endpoint.is_some())
+        {
+            return Err(
+                "ail-build --core-file cannot be combined with Spec/model authoring flags".into(),
+            );
+        }
+        if ail_spec_file.is_some()
+            && (ail_prompt.is_some()
+                || ail_requirements_file.is_some()
+                || ail_interview_file.is_some()
+                || llm_endpoint.is_some())
+        {
+            return Err(
+                "ail-build --spec-file cannot be combined with model authoring flags".into(),
+            );
+        }
+    }
+    if command == "ail-spec"
+        && ail_core_file.is_some()
+        && (ail_expected_patch.is_some()
+            || ail_greenfield
+            || ail_prompt.is_some()
+            || ail_requirements_file.is_some()
+            || ail_spec_file.is_some()
+            || llm_endpoint.is_some())
+    {
+        return Err("ail-spec --core-file cannot be combined with authoring flags".into());
+    }
+    if matches!(command, "ail-draft" | "ail-spec" | "ail-story") && ail_spec_file.is_some() {
+        return Err("--spec-file is not a candidate selector for this authoring command".into());
+    }
+
     Ok(CliOptions {
         runtime_state,
+        host_resources,
+        stdio,
         llm_endpoint,
         llm_max_tokens,
         artifact_dir,
@@ -18112,6 +18874,9 @@ fn parse_cli_options(command: &str, args: &[String]) -> Result<CliOptions, Strin
         ail_story_file,
         ail_core_file,
         ail_baseline_file,
+        ail_preserve_baseline,
+        ail_expected_patch,
+        ail_greenfield,
         ail_compile_target,
         ail_compile_out,
         ail_compile_all_actions,
@@ -18157,5 +18922,14 @@ fn load_ail_core_for_equivalence(path: &str) -> Result<ail::ail::AilCore, String
     }
     let text = std::fs::read_to_string(candidate)
         .map_err(|error| format!("failed to read baseline {path}: {error}"))?;
-    parse_ail_core_text(&text).map_err(|error| format!("failed to parse baseline {path}: {error}"))
+    let core = parse_ail_core_text(&text)
+        .map_err(|error| format!("failed to parse baseline {path}: {error}"))?;
+    let diagnostics = check_ail_core(&core);
+    if !diagnostics.is_empty() {
+        return Err(format!(
+            "AIL-EDIT-INVALID-BASELINE: baseline Core {path} does not check clean:\n{}",
+            diagnostics.join("\n")
+        ));
+    }
+    Ok(core)
 }

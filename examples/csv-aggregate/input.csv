@@ -1,0 +1,4 @@
+category,amount,note
+fruit,7,first
+"office,tools",-2,"quoted category"
+fruit,2,second

@@ -1,0 +1,6 @@
+{"value":9,"divisor":2}
+not json
+{"value":4}
+{"value":3,"divisor":0}
+{"value":-9223372036854775808,"divisor":-1}
+{"value":"wrong","divisor":1}

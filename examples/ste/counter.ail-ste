@@ -1,0 +1,14 @@
+AIL-STE 1
+Metadata {"package":"ste-counter","version":"0.1.0","profile":"Application","capability_grants":[],"target_support":{},"external_bindings":[],"failures":[]}
+Data action = "IncrementCounter"
+Data counter = "counter.value"
+Data delta = "7"
+Data description = "Add seven to the counter."
+Data event = "CounterIncremented"
+Procedure action.
+Record the start of action action.
+Add delta to field counter.
+Attribute text = description
+Record trace event event.
+Return success.
+End procedure.

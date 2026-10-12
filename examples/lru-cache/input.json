@@ -1,0 +1,1 @@
+{"capacity":2,"operations":[{"op":"put","key":"a","value":{"x":1,"x":-0}},{"op":"put","key":"b","value":null},{"op":"get","key":"a"},{"op":"put","key":"c","value":3},{"op":"get","key":"b"},{"op":"put","key":"a","value":{"n":1.2500e-2,"n":1E+0003}}]}

@@ -1,0 +1,134 @@
+AIL-STE 1
+Metadata {"capability_grants":[],"external_bindings":[],"failures":[],"package":"floating-lists","profile":"Application","target_support":{},"version":"0.1.0"}
+Data t0 = "\"/centered\""
+Data t1 = "\"/count\""
+Data t2 = "\"/mean\""
+Data t3 = "\"/values\""
+Data t4 = "\"/variance\""
+Data t5 = "0"
+Data t6 = "0e0"
+Data t7 = "<"
+Data t8 = "Analyze"
+Data t9 = "Analyzed"
+Data t10 = "Float"
+Data t11 = "Int"
+Data t12 = "Json"
+Data t13 = "List<Float>"
+Data t14 = "Text"
+Data t15 = "__control_0_body"
+Data t16 = "__control_0_end"
+Data t17 = "__control_0_head"
+Data t18 = "center"
+Data t19 = "count:Int;denominator:Float;index:Int;item:Float;result:Float;total:Float"
+Data t20 = "count:Int;index:Int;item:Float;mean:Float;result:List<Float>"
+Data t21 = "data.centered"
+Data t22 = "data.denominator"
+Data t23 = "data.document"
+Data t24 = "data.index"
+Data t25 = "data.item"
+Data t26 = "data.path"
+Data t27 = "data.raw"
+Data t28 = "data.report"
+Data t29 = "data.values"
+Data t30 = "f:data.index"
+Data t31 = "f:data.index i:1 +"
+Data t32 = "f:local.count"
+Data t33 = "f:local.index"
+Data t34 = "f:local.index i:1 +"
+Data t35 = "f:local.item f:local.mean -"
+Data t36 = "f:local.result"
+Data t37 = "f:local.total f:local.denominator /"
+Data t38 = "f:local.total f:local.item +"
+Data t39 = "f:output.count"
+Data t40 = "f:output.variance f:data.denominator /"
+Data t41 = "f:output.variance f:data.item f:data.item * +"
+Data t42 = "input"
+Data t43 = "local.count"
+Data t44 = "local.denominator"
+Data t45 = "local.index"
+Data t46 = "local.item"
+Data t47 = "local.mean"
+Data t48 = "local.result"
+Data t49 = "local.total"
+Data t50 = "local.values"
+Data t51 = "mean"
+Data t52 = "output.count"
+Data t53 = "output.mean"
+Data t54 = "output.variance"
+Data t55 = "report"
+Data t56 = "values:List<Float>"
+Data t57 = "values=f:data.values"
+Data t58 = "values=f:local.values"
+Procedure t8.
+Record the start of action t8.
+Read text from file resource t42 into field t27.
+Parse JSON text t27 as type t12 into field t23.
+Assign literal t3 of type t14 to field t26.
+Get t13 value at JSON path t26 from field t23 into field t29.
+Count items in t10 list t29 into field t52.
+Call value function t51 with arguments t57 into field t53.
+Call value function t18 with arguments t57 into field t21.
+Assign literal t6 of type t10 to field t54.
+Assign literal t5 of type t11 to field t24.
+Mark label t17.
+If integer comparison t30 t7 t39 is true, go to label t15.
+Go to label t16.
+Mark label t15.
+Get item t30 from t10 list t21 into field t25.
+Compute floating expression t41 into field t54.
+Evaluate integer expression t31 into field t24.
+Go to label t17.
+Mark label t16.
+Convert integer field t52 into floating field t22.
+Compute floating expression t40 into field t54.
+Assign literal t1 of type t14 to field t26.
+Set t11 value t52 at JSON path t26 in field t23 into field t23.
+Assign literal t2 of type t14 to field t26.
+Set t10 value t53 at JSON path t26 in field t23 into field t23.
+Assign literal t0 of type t14 to field t26.
+Set t13 value t21 at JSON path t26 in field t23 into field t23.
+Assign literal t4 of type t14 to field t26.
+Set t10 value t54 at JSON path t26 in field t23 into field t23.
+Format t12 field t23 as JSON text into field t28.
+Write text from field t28 to file resource t55.
+Record trace event t9.
+Select output field t52.
+Select output field t53.
+Select output field t54.
+Return success.
+End procedure.
+Procedure t18.
+Start value function with parameters t56, locals t20, and result type t13.
+Call value function t51 with arguments t58 into field t47.
+Count items in t10 list t50 into field t43.
+Create empty list of type t10 into field t48.
+Assign literal t5 of type t11 to field t45.
+Mark label t17.
+If integer comparison t33 t7 t32 is true, go to label t15.
+Go to label t16.
+Mark label t15.
+Get item t33 from t10 list t50 into field t46.
+Append value t35 to t10 list t48 into field t48.
+Evaluate integer expression t34 into field t45.
+Go to label t17.
+Mark label t16.
+Return t13 value from expression t36.
+End procedure.
+Procedure t51.
+Start value function with parameters t56, locals t19, and result type t10.
+Count items in t10 list t50 into field t43.
+Assign literal t5 of type t11 to field t45.
+Assign literal t6 of type t10 to field t49.
+Mark label t17.
+If integer comparison t33 t7 t32 is true, go to label t15.
+Go to label t16.
+Mark label t15.
+Get item t33 from t10 list t50 into field t46.
+Compute floating expression t38 into field t49.
+Evaluate integer expression t34 into field t45.
+Go to label t17.
+Mark label t16.
+Convert integer field t43 into floating field t44.
+Compute floating expression t37 into field t48.
+Return t10 value from expression t36.
+End procedure.

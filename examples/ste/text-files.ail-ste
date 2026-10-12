@@ -1,0 +1,31 @@
+AIL-STE 1
+Metadata {"capability_grants":[],"external_bindings":[],"failures":[],"package":"text-files","profile":"Application","target_support":{},"version":"0.1.0"}
+Data t0 = "\"Processed by AIL:\\n\""
+Data t1 = "Process"
+Data t2 = "Processed"
+Data t3 = "Save"
+Data t4 = "Saved"
+Data t5 = "Text"
+Data t6 = "data.body"
+Data t7 = "data.heading"
+Data t8 = "data.result"
+Data t9 = "input"
+Data t10 = "output"
+Data t11 = "output.characters"
+Procedure t1.
+Record the start of action t1.
+Read text from file resource t9 into field t6.
+Assign literal t0 of type t5 to field t7.
+Join text t7 and t6 into field t8.
+Count characters in text t8 into field t11.
+Do action t3.
+Record trace event t2.
+Select output field t11.
+Return success.
+End procedure.
+Procedure t3.
+Record the start of action t3.
+Write text from field t8 to file resource t10.
+Record trace event t4.
+Return success.
+End procedure.

@@ -1,0 +1,8 @@
+{
+  "records": [
+    {"name": "Ada", "metrics": {"amount": 12}, "labels": ["review", null]},
+    {"name": "Mihai", "metrics": {"amount": -2}, "active": true},
+    {"name": "Zoë 🙂", "metrics": {"amount": 30}, "ratio": 1.2500e-2}
+  ],
+  "request": {"id": 18446744073709551616, "metadata": null}
+}

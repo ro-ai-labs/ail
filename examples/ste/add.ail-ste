@@ -1,0 +1,13 @@
+AIL-STE 1
+Metadata {"capability_grants":[],"external_bindings":[],"failures":[],"package":"integer-arithmetic","profile":"Application","target_support":{},"version":"0.1.0"}
+Data t0 = "AddNumbers"
+Data t1 = "Calculated"
+Data t2 = "f:sum.a f:sum.b +"
+Data t3 = "sum.total"
+Procedure t0.
+Record the start of action t0.
+Evaluate integer expression t2 into field t3.
+Record trace event t1.
+Select output field t3.
+Return success.
+End procedure.

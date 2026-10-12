@@ -1,0 +1,25 @@
+AIL-STE 1
+Metadata {"capability_grants":[],"external_bindings":[],"failures":[],"package":"unicode-text","profile":"Application","target_support":{},"version":"0.1.0"}
+Data t0 = "Process"
+Data t1 = "Processed"
+Data t2 = "f:input.end"
+Data t3 = "f:input.start"
+Data t4 = "input.first"
+Data t5 = "input.second"
+Data t6 = "output.count"
+Data t7 = "output.joined"
+Data t8 = "output.part"
+Data t9 = "output.position"
+Procedure t0.
+Record the start of action t0.
+Join text t4 and t5 into field t7.
+Count characters in text t7 into field t6.
+Slice text t7 from integer t3 to integer t2 into field t8.
+Find text t5 in text t7 into field t9.
+Record trace event t1.
+Select output field t7.
+Select output field t8.
+Select output field t6.
+Select output field t9.
+Return success.
+End procedure.

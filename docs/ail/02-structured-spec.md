@@ -105,7 +105,10 @@ Stage-0 action bullets use one verb phrase per semantic operation:
 - the system requires <rule>
 - the system reads <thing.field>
 - the system changes <thing.field> to <value>
-- the system calls <action or function> with <arguments>
+- the system computes <thing.field> as <integer expression>
+- the system computes boolean <thing.field> as <Boolean expression>
+- the system returns <thing.field>
+- the system calls <ActionName>
 - the system repeats <ActionName> <count> times
 - the system claims scheduler behavior for <scheduled work>
 - the system uses temporal policy <policy name or window>
@@ -113,9 +116,28 @@ Stage-0 action bullets use one verb phrase per semantic operation:
 - the system guarantees <guarantee>
 ```
 
-Normative rule `ail.spec.action.call-as-effect`: in `first-slice`, an action
-call bullet is preserved as an auditable write/effect text in AIL-Core. It is
-not yet a first-class function-call or return-value edge.
+Calls to declared actions execute in source order alongside writes and repeats.
+The optional word `sequentially` may follow a repeat's `times`. Repeats require
+a positive integer count. Actions share state; these calls do not implement
+general functions with arguments and return values. `returns` selects fields
+for result output and does not exit early.
+
+The executable integer extension also accepts these control bullets:
+
+```text
+- if <integer comparison>:
+- otherwise:
+- end if
+- while <integer comparison>:
+- break
+- continue
+- end while
+```
+
+Blocks contain executable writes, calls, repeats and other control statements.
+Action contract declarations remain outside blocks. See
+[integer expressions](34-integer-expressions.md) and [control flow](35-control-flow.md)
+for complete grammar, limits and execution semantics.
 
 Tool, compiler-pass, and system-profile sections use their profile-specific
 headings from `06-agent-tools.md`, `10-meta-profile.md`, and
@@ -376,3 +398,159 @@ are missing. Examples include:
 - a response exposes a value whose type contains `Secret`
 - a failure is named but no handling or trace is defined
 - two actions can write the same value concurrently without a join rule
+
+
+## Executable integer functions
+
+`The function executes:` introduces an ordered executable body. Inputs use
+`The function needs:`, the single result uses `The function produces:`, and
+optional locals use `The function stores:`. Types may be `Int`, `Float`, `Bool`, `Text`, `Bytes`,
+`List<Int>`, `List<Float>`, `List<Text>` or `Json`; see [value functions](44-value-functions.md).
+Use `local.name` inside functions; named value calls and early returns execute
+through checked Core and STE. Legacy `When <function> runs:` bodies remain
+descriptive and cannot mix with executable sections. See the
+[integer function grammar](36-integer-functions.md) for complete forms and limits.
+
+## Executable text and lists
+
+Actions support [Unicode text operations](37-text-operations.md) and
+[typed integer/text lists](38-typed-lists.md) and [floating lists](46-floating-lists.md). These statements are ordered with
+computations, value calls, branches and loops. Their Core operands carry checked
+global field types and semantic secret accesses; unsupported profiles reject
+them. [Value functions](44-value-functions.md) support these operations on
+declared locals with the `the function` prefix.
+
+[Text transformations](49-text-transformations.md) accept these field operands:
+
+```text
+- the system splits text <source> by <separator> into <List<Text> destination>
+- the system joins list <List<Text> source> with <separator> into <destination>
+- the system replaces text <needle> in <source> with <replacement> into <destination>
+- the system trims text <source> into <destination>
+```
+
+All fields other than the indicated lists have type `Text`. Split preserves empty
+fields and requires a nonempty separator. Replace handles an empty needle at
+Unicode scalar boundaries; trim removes a fixed set of boundary whitespace.
+
+[List transformations](50-list-transformations.md) keep the same list element
+type on every input and output:
+
+```text
+- the system concatenates list <source> and list <other> into <destination>
+- the system slices list <source> from <Int expression> to <Int expression> into <destination>
+- the system reverses list <source> into <destination>
+- the system sorts list <source> in ascending order into <destination>
+- the system sorts list <source> in descending order into <destination>
+```
+
+Slice bounds clamp to endpoints. Sorting is stable in both directions; Float
+NaNs are placed last and both signs of zero retain their relative order.
+
+Use `the system assigns <JSON literal> to <field>` to construct typed constants.
+The destination type determines whether the literal must be an integer,
+finite floating number, boolean, quoted text, integer/floating/text list or Json. See
+[typed literals](39-typed-literals.md) for grammar, escaping and limits.
+
+
+### Named file resources
+
+Use `the system reads text from file resource input into data.text` and
+`the system writes text data.text to file resource output` for executable UTF-8
+file I/O. Fields must be global Text. Resources require explicit caller-provided
+read/write bindings; source and package metadata cannot grant their own access.
+See [file resources](40-file-resources.md) for syntax and runtime behavior.
+
+
+### Typed JSON conversion
+
+Use `the system parses JSON text data.raw into data.values` to parse a Text field
+according to the destination type. Use `the system formats data.values as JSON
+text into output.text` to serialize a typed value into Text. Supported types are
+Int, Float, Bool, Text, List<Int>, List<Float>, List<Text> and Json. Both execute in source order through
+Core, STE and the VM/native backends. See [JSON conversion](41-json-conversion.md).
+
+Declare `Json` for objects, nested or mixed arrays, null and lossless number
+tokens. `the system gets JSON value at path data.path from data.document into
+output.value` uses a Text JSON Pointer and decodes according to the destination
+type. `the system counts entries in JSON data.document into output.count`
+counts immediate array items or object member pairs. See
+[recursive JSON](42-recursive-json.md) for exact grammar, limits and errors.
+`the system gets JSON kind from data.document into output.kind` produces Text;
+`the system gets JSON keys from data.document into output.keys` produces List<Text>
+for an object. See [JSON inspection](47-json-inspection.md) for generic traversal.
+
+Set and remove create updated Json values from global fields:
+
+```text
+the system sets JSON value at path data.path in data.document to data.value into output.document
+the system removes JSON value at path data.path from data.document into output.document
+```
+
+Set converts the declared value type, replaces an existing target, adds a
+missing object member, or appends to an array with final `/-`. Parent containers
+must exist. Remove requires an existing unique target and cannot remove the
+root. Both preserve unmodified member order and number spellings. See
+[JSON mutation](43-json-mutation.md).
+
+[Boolean predicates](48-boolean-predicates.md) support `if boolean ...:` and
+`while boolean ...:` controls, `not`/`and`/`or`, grouping and explicitly typed
+Int/Float/Text/Bool comparisons. All operands remain statically checked even
+when runtime short-circuiting skips their evaluation.
+
+## Runtime recovery
+
+Actions and executable value functions support `try:`, exactly one
+`recover <categories> into <Text field>:` clause, and `end try`. Categories use
+` or ` separators or the keyword `any`; the handler receives a stable runtime
+error code. Earlier successful writes persist, and resource/execution/IO errors
+remain fatal. See [runtime recovery](51-runtime-recovery.md) for the exact
+category set, nesting, call propagation and checked scope rules.
+
+
+## Standard streams
+
+Application/C interop actions support ordered stream effects on declared global
+Text fields:
+
+```text
+- the system reads text from standard input into data.body
+- the system writes text data.body to standard output
+- the system writes text data.warning to standard error
+```
+
+Pass `--stdio` at execution time for grants and clean stdout/stderr. Reads are
+bounded through EOF; writes add no newline. Functions and compiler passes reject
+these effects. See [standard streams](52-standard-streams.md) and the
+[JSON-lines filter](../../examples/json-lines-filter).
+
+## Process actions
+
+Use the exact `the system runs process resource ...` form in [process resources](53-process-resources.md). Its arguments/input/timeout and three destinations are declared global typed fields; effects require a caller binding.
+
+Use the three exact directory forms in [directory resources](54-directory-resources.md): list names, read Text, and write Text. Relative paths and contents are global Text fields; listing destinations are List<Text>. Application/C interop actions can place these effects in loops, branches and recovery scopes.
+
+## Binary values and files
+
+Declare `Bytes` for arbitrary octets. Literal assignments use canonical JSON
+strings such as `"hex:00ff"`. The ten pure forms in [Bytes](56-bytes.md) work in
+actions and typed functions. Binary file effects use `the system reads bytes
+from file resource input into data.body` and `the system writes bytes data.body
+to file resource output`; both require existing caller file grants.
+
+## Explicit errors
+
+Use `the system raises error BYTES` in actions or `the function raises error BYTES`
+in executable functions. The category is a single literal catchable category; no
+message, dynamic category or fatal error is accepted. Existing recovery handles
+the failure. See [explicit errors](57-explicit-errors.md).
+
+## Executable variant data
+
+Existing `Type` declarations can define recursive custom values and concrete
+generic instantiations. Use `constructs TYPE variant VARIANT with ARGUMENTS into
+DESTINATION`, `tests TYPE variant VARIANT of SOURCE into DESTINATION`, and
+`gets field FIELD of TYPE variant VARIANT from SOURCE into DESTINATION`, with the
+normal `the system` or `the function` subject. Named constructor arguments are
+separated by semicolons; no-payload variants use `with none`. See
+[executable variants](59-executable-variants.md) for exact types and examples.

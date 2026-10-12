@@ -1,0 +1,174 @@
+AIL-STE 1
+Metadata {"capability_grants":[],"external_bindings":[],"failures":[],"package":"recovering-json-lines","profile":"Application","target_support":{},"version":"0.1.0"}
+Data t0 = "\"/\""
+Data t1 = "\"/accepted\""
+Data t2 = "\"/divisor\""
+Data t3 = "\"/error\""
+Data t4 = "\"/errors\""
+Data t5 = "\"/rejected\""
+Data t6 = "\"/rows\""
+Data t7 = "\"/value\""
+Data t8 = "\"/values\""
+Data t9 = "\"\\n\""
+Data t10 = "0"
+Data t11 = "<"
+Data t12 = "=="
+Data t13 = "Analyze"
+Data t14 = "Analyzed"
+Data t15 = "Bool"
+Data t16 = "DIVZERO;JSON;JSON-PATH;OVERFLOW"
+Data t17 = "Int"
+Data t18 = "Json"
+Data t19 = "List<Int>"
+Data t20 = "Text"
+Data t21 = "__control_0_body"
+Data t22 = "__control_0_end"
+Data t23 = "__control_0_head"
+Data t24 = "__control_1_body"
+Data t25 = "__control_1_otherwise"
+Data t26 = "__control_2_body"
+Data t27 = "__control_2_end"
+Data t28 = "__control_2_otherwise"
+Data t29 = "accepted:Bool;divisor:Int;error:Text;path:Text;quotient:Int;record:Json;result:Json;value:Int"
+Data t30 = "ascending"
+Data t31 = "bf:data.accepted"
+Data t32 = "data.accepted"
+Data t33 = "data.count"
+Data t34 = "data.error"
+Data t35 = "data.errorCount"
+Data t36 = "data.index"
+Data t37 = "data.length"
+Data t38 = "data.line"
+Data t39 = "data.lines"
+Data t40 = "data.path"
+Data t41 = "data.prefix"
+Data t42 = "data.raw"
+Data t43 = "data.report"
+Data t44 = "data.row"
+Data t45 = "data.separator"
+Data t46 = "data.value"
+Data t47 = "f:data.count"
+Data t48 = "f:data.errorCount i:1 +"
+Data t49 = "f:data.index"
+Data t50 = "f:data.index i:1 +"
+Data t51 = "f:data.length"
+Data t52 = "f:data.value"
+Data t53 = "f:local.result"
+Data t54 = "f:local.value f:local.divisor /"
+Data t55 = "f:output.accepted i:1 +"
+Data t56 = "f:output.rejected i:1 +"
+Data t57 = "f:output.rows i:1 +"
+Data t58 = "i:0"
+Data t59 = "input"
+Data t60 = "local.accepted"
+Data t61 = "local.divisor"
+Data t62 = "local.error"
+Data t63 = "local.path"
+Data t64 = "local.quotient"
+Data t65 = "local.record"
+Data t66 = "local.result"
+Data t67 = "local.text"
+Data t68 = "local.value"
+Data t69 = "output.accepted"
+Data t70 = "output.document"
+Data t71 = "output.errors"
+Data t72 = "output.rejected"
+Data t73 = "output.rows"
+Data t74 = "output.values"
+Data t75 = "parseRow"
+Data t76 = "report"
+Data t77 = "text:Text"
+Data t78 = "text=f:data.line"
+Data t79 = "true"
+Data t80 = "{\"AIL-RUNTIME-DIVZERO\":0,\"AIL-RUNTIME-JSON\":0,\"AIL-RUNTIME-JSON-PATH\":0,\"AIL-RUNTIME-OVERFLOW\":0}"
+Data t81 = "{\"accepted\":false,\"value\":0,\"error\":\"\"}"
+Data t82 = "{}"
+Procedure t13.
+Record the start of action t13.
+Read text from file resource t59 into field t42.
+Assign literal t9 of type t20 to field t45.
+Split text in field t42 by field t45 into field t39.
+Count items in t20 list t39 into field t33.
+Assign literal t10 of type t17 to field t36.
+Assign literal t10 of type t17 to field t73.
+Assign literal t10 of type t17 to field t69.
+Assign literal t10 of type t17 to field t72.
+Create empty list of type t17 into field t74.
+Assign literal t80 of type t18 to field t71.
+Mark label t23.
+If integer comparison t49 t11 t47 is true, go to label t21.
+Go to label t22.
+Mark label t21.
+Get item t49 from t20 list t39 into field t38.
+Evaluate integer expression t50 into field t36.
+Trim whitespace from field t38 into field t38.
+Count characters in text t38 into field t37.
+If integer comparison t51 t12 t58 is true, go to label t24.
+Go to label t25.
+Mark label t24.
+Go to label t23.
+Mark label t25.
+Evaluate integer expression t57 into field t73.
+Call value function t75 with arguments t78 into field t44.
+Assign literal t1 of type t20 to field t40.
+Get t15 value at JSON path t40 from field t44 into field t32.
+If Boolean expression t31 is true, go to label t26.
+Go to label t28.
+Mark label t26.
+Evaluate integer expression t55 into field t69.
+Assign literal t7 of type t20 to field t40.
+Get t17 value at JSON path t40 from field t44 into field t46.
+Append value t52 to t17 list t74 into field t74.
+Go to label t27.
+Mark label t28.
+Evaluate integer expression t56 into field t72.
+Assign literal t3 of type t20 to field t40.
+Get t20 value at JSON path t40 from field t44 into field t34.
+Assign literal t0 of type t20 to field t41.
+Join text t41 and t34 into field t40.
+Get t17 value at JSON path t40 from field t71 into field t35.
+Evaluate integer expression t48 into field t35.
+Set t17 value t35 at JSON path t40 in field t71 into field t71.
+Mark label t27.
+Go to label t23.
+Mark label t22.
+Sort t17 list t74 in t30 order into field t74.
+Assign literal t82 of type t18 to field t70.
+Assign literal t6 of type t20 to field t40.
+Set t17 value t73 at JSON path t40 in field t70 into field t70.
+Assign literal t1 of type t20 to field t40.
+Set t17 value t69 at JSON path t40 in field t70 into field t70.
+Assign literal t5 of type t20 to field t40.
+Set t17 value t72 at JSON path t40 in field t70 into field t70.
+Assign literal t8 of type t20 to field t40.
+Set t19 value t74 at JSON path t40 in field t70 into field t70.
+Assign literal t4 of type t20 to field t40.
+Set t18 value t71 at JSON path t40 in field t70 into field t70.
+Format t18 field t70 as JSON text into field t43.
+Write text from field t43 to file resource t76.
+Record trace event t14.
+Select output field t69.
+Select output field t72.
+Return success.
+End procedure.
+Procedure t75.
+Start value function with parameters t77, locals t29, and result type t18.
+Assign literal t81 of type t18 to field t66.
+Begin recovery for errors t16 into field t62.
+Parse JSON text t67 as type t18 into field t65.
+Assign literal t7 of type t20 to field t63.
+Get t17 value at JSON path t63 from field t65 into field t68.
+Assign literal t2 of type t20 to field t63.
+Get t17 value at JSON path t63 from field t65 into field t61.
+Evaluate integer expression t54 into field t64.
+Assign literal t7 of type t20 to field t63.
+Set t17 value t64 at JSON path t63 in field t66 into field t66.
+Assign literal t79 of type t15 to field t60.
+Assign literal t1 of type t20 to field t63.
+Set t15 value t60 at JSON path t63 in field t66 into field t66.
+Run the recovery handler.
+Assign literal t3 of type t20 to field t63.
+Set t20 value t62 at JSON path t63 in field t66 into field t66.
+End recovery.
+Return t18 value from expression t53.
+End procedure.

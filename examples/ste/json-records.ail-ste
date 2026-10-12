@@ -1,0 +1,78 @@
+AIL-STE 1
+Metadata {"capability_grants":[],"external_bindings":[],"failures":[],"package":"json-records","profile":"Application","target_support":{},"version":"0.1.0"}
+Data t0 = "\"/\""
+Data t1 = "\"/metrics/amount\""
+Data t2 = "\"/name\""
+Data t3 = "\"/records\""
+Data t4 = "0"
+Data t5 = "<"
+Data t6 = "Int"
+Data t7 = "Json"
+Data t8 = "List<Text>"
+Data t9 = "Process"
+Data t10 = "Processed"
+Data t11 = "Text"
+Data t12 = "[]"
+Data t13 = "__control_0_body"
+Data t14 = "__control_0_end"
+Data t15 = "__control_0_head"
+Data t16 = "data.amount"
+Data t17 = "data.amountPath"
+Data t18 = "data.document"
+Data t19 = "data.index"
+Data t20 = "data.indexText"
+Data t21 = "data.name"
+Data t22 = "data.namePath"
+Data t23 = "data.namesJson"
+Data t24 = "data.path"
+Data t25 = "data.raw"
+Data t26 = "data.record"
+Data t27 = "data.records"
+Data t28 = "data.slash"
+Data t29 = "data.totalJson"
+Data t30 = "f:data.index"
+Data t31 = "f:data.index i:1 +"
+Data t32 = "f:output.count"
+Data t33 = "f:output.total f:data.amount +"
+Data t34 = "input"
+Data t35 = "names"
+Data t36 = "output.count"
+Data t37 = "output.names"
+Data t38 = "output.total"
+Data t39 = "total"
+Procedure t9.
+Record the start of action t9.
+Read text from file resource t34 into field t25.
+Parse JSON text t25 as type t7 into field t18.
+Assign literal t3 of type t11 to field t24.
+Get t7 value at JSON path t24 from field t18 into field t27.
+Count entries in JSON field t27 into field t36.
+Assign literal t12 of type t8 to field t37.
+Assign literal t4 of type t6 to field t38.
+Assign literal t4 of type t6 to field t19.
+Assign literal t0 of type t11 to field t28.
+Assign literal t2 of type t11 to field t22.
+Assign literal t1 of type t11 to field t17.
+Mark label t15.
+If integer comparison t30 t5 t32 is true, go to label t13.
+Go to label t14.
+Mark label t13.
+Format t6 field t19 as JSON text into field t20.
+Join text t28 and t20 into field t24.
+Get t7 value at JSON path t24 from field t27 into field t26.
+Get t11 value at JSON path t22 from field t26 into field t21.
+Get t6 value at JSON path t17 from field t26 into field t16.
+Append value t21 to t11 list t37 into field t37.
+Evaluate integer expression t33 into field t38.
+Evaluate integer expression t31 into field t19.
+Go to label t15.
+Mark label t14.
+Format t8 field t37 as JSON text into field t23.
+Format t6 field t38 as JSON text into field t29.
+Write text from field t23 to file resource t35.
+Write text from field t29 to file resource t39.
+Record trace event t10.
+Select output field t36.
+Select output field t38.
+Return success.
+End procedure.

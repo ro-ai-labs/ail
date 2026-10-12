@@ -11,6 +11,8 @@ AIL-English conversation
   -> AIL-Spec Canonical
   -> AIL-Core canonical semantic graph
   -> checker
+  -> AIL-STE executable controlled English
+  -> STE parser and bytecode verifier
   -> AIL-Bytecode
   -> backend-specific native, Wasm, VM, or interop artifacts
   -> projections, diagnostics, traces, manifests, and explanations
@@ -34,6 +36,8 @@ AIL-English
   -> AIL-Core schema v0
   -> checker
   -> canonical hash
+  -> AIL-STE executable controlled English
+  -> STE parser and bytecode verifier
   -> AIL-Bytecode
   -> VM runtime
   -> target lowering plan
@@ -142,3 +146,10 @@ Stage-0 implementation code may host the first parser, checker, VM, and native
 backend while the language matures. The accepted language surface remains
 AIL-Spec, AIL-Core, AIL bytecode, native executable artifacts, manifests,
 reports, and deterministic projections.
+
+[Directory resources](54-directory-resources.md) carry typed relative paths through Core and STE. VM/native execution obtains directory roots exclusively from the caller; shared path resolution and atomic result publication preserve the effect contract.
+
+[Bytes](56-bytes.md) is a distinct executable primitive through Core, STE, VM
+and native code. An allocation-free engine shares byte/UTF-8/hex semantics
+between VM and the embedded native runtime; adapters retain arena accounting
+and caller-bound file authority.

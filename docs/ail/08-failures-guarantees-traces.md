@@ -138,3 +138,33 @@ Agent:
 - The compiler allocated the list on the heap to keep it alive.
 - To avoid the allocation, the pass can stream diagnostics instead.
 ```
+
+## Implemented runtime data recovery
+
+[Runtime recovery](51-runtime-recovery.md) implements explicit data-error handlers
+in executable actions and typed functions through Core, STE, VM and native ELF.
+It is distinct from the declared rule-failure outcomes above: selected runtime
+categories enter a handler, while named failed-action results keep their existing
+behavior. Recovery retains completed writes and file effects, releases failed
+native temporary storage, and preserves arena/fuel limits.
+
+[Standard streams](52-standard-streams.md) preserve consumed input and partial or
+completed output across later errors. Invalid UTF-8 uses catchable TEXT; missing
+grants, IO and limits remain fatal. `--stdio` suppresses automatic console traces
+while retaining VM trace metadata and failure diagnostics on stderr.
+
+## Process failures
+
+[Process resources](53-process-resources.md) return ordinary nonzero child status as data. PROCESS and TIMEOUT are recoverable after descriptor/group cleanup and direct-child reaping. Child side effects persist; failed operations leave all three destination fields unchanged.
+
+[Directory resources](54-directory-resources.md) add recoverable PATH errors for invalid relative paths and path access failures. List/read failures preserve destinations and budgets; failed writes may retain created, truncated or partial files. Traces identify operation/resource without paths, names or contents.
+
+[Bytes](56-bytes.md#limits-and-errors) adds catchable BYTES for malformed
+transport/hex and replacement values outside 0..255. INDEX and TEXT retain
+their operation-specific meanings. BYTES-LIMIT is fatal. File failures do not
+roll back prior writes, and byte/file diagnostics omit raw contents and paths.
+
+[Explicit raise statements](57-explicit-errors.md) let actions and functions
+reject domain data with one existing catchable runtime category. No custom
+payload is included. Prior effects remain and failed calls do not publish a
+result; matching recovery follows the same rules as implicit runtime failures.

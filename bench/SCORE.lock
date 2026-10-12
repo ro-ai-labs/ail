@@ -1,21 +1,28 @@
 ail-bench-lock v1
 # Highest score ever achieved, and the exact rung set that achieved it.
 # The loop may never commit a change that drops a rung out of this set.
-best-score 1
-best-total 16
+best-score 23
+best-total 23
 rung R000-increment pass ladder-fingerprint sha256:7322fa2c570a5231a8503f7d579ad38b
-rung R001-add fail ladder-fingerprint sha256:3b1fa7a9c6a6f011bf28c776fde4a5a7
-rung R001a-expression-ast fail ladder-fingerprint sha256:e84e3536a451a07eb236a8ab13900922
-rung R001b-expression-typed fail ladder-fingerprint sha256:445c78011f8362ef3fddbebc539b045b
-rung R001c-typed-values fail ladder-fingerprint sha256:9c1266b5afce9233264e2b53992b17a0
-rung R001d-vm-evaluates fail ladder-fingerprint sha256:032c1b9c6332f38a7dcecb0e9a01fdaf
-rung R001e-native-add fail ladder-fingerprint sha256:5362cd691f253f5213e45c76955e8ad1
-rung R002-arithmetic fail ladder-fingerprint sha256:bea1125cf1bf1be51e3f47196cd46d99
-rung R003-max fail ladder-fingerprint sha256:ebe9e7b819c45ff24d6e20a1649e9e83
-rung R004-abs-sign fail ladder-fingerprint sha256:675a3e750eb092f2ba13b4ba7d3f6f03
-rung R005-factorial fail ladder-fingerprint sha256:dede1a8fa01a6a3dc23545bb164b3ed0
-rung R006-fibonacci fail ladder-fingerprint sha256:3d0696438acfdced8cdb290cefdac6dd
-rung R007-sum-to-n fail ladder-fingerprint sha256:972c3a6db827a852a094eed6ce69c8b5
-rung R008-gcd fail ladder-fingerprint sha256:4c10af10ba023846f2c28469512b3143
-rung R009-collatz fail ladder-fingerprint sha256:fa51a91ddf9bef1b5485c6303c33be05
-rung R010-is-prime fail ladder-fingerprint sha256:096afad0d44ecc12b3b2befd6cffa8dd
+rung R001-add pass ladder-fingerprint sha256:3b1fa7a9c6a6f011bf28c776fde4a5a7
+rung R001a-expression-ast pass ladder-fingerprint sha256:e84e3536a451a07eb236a8ab13900922
+rung R001b-expression-typed pass ladder-fingerprint sha256:445c78011f8362ef3fddbebc539b045b
+rung R001c-typed-values pass ladder-fingerprint sha256:9c1266b5afce9233264e2b53992b17a0
+rung R001d-vm-evaluates pass ladder-fingerprint sha256:032c1b9c6332f38a7dcecb0e9a01fdaf
+rung R001e-native-add pass ladder-fingerprint sha256:5362cd691f253f5213e45c76955e8ad1
+rung R002-arithmetic pass ladder-fingerprint sha256:bea1125cf1bf1be51e3f47196cd46d99
+rung R003-max pass ladder-fingerprint sha256:ebe9e7b819c45ff24d6e20a1649e9e83
+rung R004-abs-sign pass ladder-fingerprint sha256:675a3e750eb092f2ba13b4ba7d3f6f03
+rung R005-factorial pass ladder-fingerprint sha256:dede1a8fa01a6a3dc23545bb164b3ed0
+rung R006-fibonacci pass ladder-fingerprint sha256:3d0696438acfdced8cdb290cefdac6dd
+rung R007-sum-to-n pass ladder-fingerprint sha256:972c3a6db827a852a094eed6ce69c8b5
+rung R008-gcd pass ladder-fingerprint sha256:4c10af10ba023846f2c28469512b3143
+rung R009-collatz pass ladder-fingerprint sha256:fa51a91ddf9bef1b5485c6303c33be05
+rung R010-is-prime pass ladder-fingerprint sha256:096afad0d44ecc12b3b2befd6cffa8dd
+rung R019-binary-tree pass ladder-fingerprint sha256:2366607a2a2761edf25a49af0567ef69
+rung R021-word-frequency pass ladder-fingerprint sha256:468062b540458705e855e78c52757374
+rung R022-csv-aggregate pass ladder-fingerprint sha256:421457ed6f6825d12c9d9bb1c268ff25
+rung R023-json-pretty pass ladder-fingerprint sha256:611860d22426e9cba9d97d4ba0dcde8d
+rung R024-lru-cache pass ladder-fingerprint sha256:3a45be77224ac7548a556597dbcc0a5c
+rung R026-expression-calculator pass ladder-fingerprint sha256:1933508153ecb4338f90515c8b317322
+rung R027-run-length-codec pass ladder-fingerprint sha256:2084c99467f7ff315c452cd604436b08

@@ -1,0 +1,154 @@
+AIL-STE 1
+Metadata {"capability_grants":[],"external_bindings":[],"failures":[],"package":"value-functions","profile":"Application","target_support":{},"version":"0.1.0"}
+Data t0 = "\"/\""
+Data t1 = "\"/count\""
+Data t2 = "\"/metrics/amount\""
+Data t3 = "\"/name\""
+Data t4 = "\"/names\""
+Data t5 = "\"/private\""
+Data t6 = "\"/processed\""
+Data t7 = "\"/records\""
+Data t8 = "\"/records/-\""
+Data t9 = "\"/total\""
+Data t10 = "\"processed: \""
+Data t11 = "0"
+Data t12 = "<"
+Data t13 = "Bool"
+Data t14 = "Int"
+Data t15 = "Json"
+Data t16 = "List<Text>"
+Data t17 = "Text"
+Data t18 = "Transform"
+Data t19 = "Transformed"
+Data t20 = "[]"
+Data t21 = "__control_0_body"
+Data t22 = "__control_0_end"
+Data t23 = "__control_0_head"
+Data t24 = "addName"
+Data t25 = "amount:Int;path:Text;processed:Bool;result:Json"
+Data t26 = "data.amount"
+Data t27 = "data.amountPath"
+Data t28 = "data.appendPath"
+Data t29 = "data.countPath"
+Data t30 = "data.document"
+Data t31 = "data.index"
+Data t32 = "data.indexText"
+Data t33 = "data.name"
+Data t34 = "data.namePath"
+Data t35 = "data.names"
+Data t36 = "data.namesPath"
+Data t37 = "data.path"
+Data t38 = "data.raw"
+Data t39 = "data.record"
+Data t40 = "data.records"
+Data t41 = "data.report"
+Data t42 = "data.slash"
+Data t43 = "data.totalPath"
+Data t44 = "double"
+Data t45 = "f:data.index"
+Data t46 = "f:data.index i:1 +"
+Data t47 = "f:local.n i:2 *"
+Data t48 = "f:local.result"
+Data t49 = "f:output.count"
+Data t50 = "f:output.total f:data.amount +"
+Data t51 = "input"
+Data t52 = "label"
+Data t53 = "local.amount"
+Data t54 = "local.name"
+Data t55 = "local.names"
+Data t56 = "local.path"
+Data t57 = "local.prefix"
+Data t58 = "local.processed"
+Data t59 = "local.record"
+Data t60 = "local.result"
+Data t61 = "local.text"
+Data t62 = "n"
+Data t63 = "n=f:local.amount"
+Data t64 = "name:Text"
+Data t65 = "name:Text;names:List<Text>"
+Data t66 = "name=f:data.name;names=f:data.names"
+Data t67 = "name=f:local.name"
+Data t68 = "output.count"
+Data t69 = "output.document"
+Data t70 = "output.total"
+Data t71 = "prefix:Text;result:Text"
+Data t72 = "record:Json"
+Data t73 = "record=f:data.record"
+Data t74 = "report"
+Data t75 = "result:List<Text>;text:Text"
+Data t76 = "transformRecord"
+Data t77 = "true"
+Data t78 = "{\"records\":[]}"
+Procedure t18.
+Record the start of action t18.
+Read text from file resource t51 into field t38.
+Parse JSON text t38 as type t15 into field t30.
+Assign literal t7 of type t17 to field t37.
+Get t15 value at JSON path t37 from field t30 into field t40.
+Count entries in JSON field t40 into field t68.
+Assign literal t78 of type t15 to field t69.
+Assign literal t20 of type t16 to field t35.
+Assign literal t11 of type t14 to field t70.
+Assign literal t11 of type t14 to field t31.
+Assign literal t0 of type t17 to field t42.
+Assign literal t3 of type t17 to field t34.
+Assign literal t2 of type t17 to field t27.
+Assign literal t8 of type t17 to field t28.
+Assign literal t9 of type t17 to field t43.
+Assign literal t1 of type t17 to field t29.
+Assign literal t4 of type t17 to field t36.
+Mark label t23.
+If integer comparison t45 t12 t49 is true, go to label t21.
+Go to label t22.
+Mark label t21.
+Format t14 field t31 as JSON text into field t32.
+Join text t42 and t32 into field t37.
+Get t15 value at JSON path t37 from field t40 into field t39.
+Call value function t76 with arguments t73 into field t39.
+Get t17 value at JSON path t34 from field t39 into field t33.
+Get t14 value at JSON path t27 from field t39 into field t26.
+Set t15 value t39 at JSON path t28 in field t69 into field t69.
+Call value function t24 with arguments t66 into field t35.
+Evaluate integer expression t50 into field t70.
+Evaluate integer expression t46 into field t31.
+Go to label t23.
+Mark label t22.
+Set t14 value t70 at JSON path t43 in field t69 into field t69.
+Set t14 value t68 at JSON path t29 in field t69 into field t69.
+Set t16 value t35 at JSON path t36 in field t69 into field t69.
+Format t15 field t69 as JSON text into field t41.
+Write text from field t41 to file resource t74.
+Record trace event t19.
+Select output field t68.
+Select output field t70.
+Return success.
+End procedure.
+Procedure t24.
+Start value function with parameters t65, locals t75, and result type t16.
+Call value function t52 with arguments t67 into field t61.
+Append value t61 to t17 list t55 into field t60.
+Return t16 value from expression t48.
+End procedure.
+Procedure t44.
+Start integer function with parameters t62.
+Return integer expression t47.
+End procedure.
+Procedure t52.
+Start value function with parameters t64, locals t71, and result type t17.
+Assign literal t10 of type t17 to field t57.
+Join text t57 and t54 into field t60.
+Return t17 value from expression t48.
+End procedure.
+Procedure t76.
+Start value function with parameters t72, locals t25, and result type t15.
+Assign literal t5 of type t17 to field t56.
+Remove value at JSON path t56 from field t59 into field t60.
+Assign literal t2 of type t17 to field t56.
+Get t14 value at JSON path t56 from field t60 into field t53.
+Call integer function t44 with arguments t63 into field t53.
+Set t14 value t53 at JSON path t56 in field t60 into field t60.
+Assign literal t6 of type t17 to field t56.
+Assign literal t77 of type t13 to field t58.
+Set t13 value t58 at JSON path t56 in field t60 into field t60.
+Return t15 value from expression t48.
+End procedure.

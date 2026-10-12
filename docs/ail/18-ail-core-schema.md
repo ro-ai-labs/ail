@@ -478,3 +478,215 @@ extension may add optional attributes, new node kinds mapped to existing core
 concepts, or stricter diagnostics that do not change accepted behavior. An
 incompatible extension changes canonical hashing, executable semantics, or
 accepted graph meaning and requires a new schema version.
+
+## Executable integer extension
+
+`IntegerExpression` nodes and `left_operand`, `right_operand`, `expression_field`,
+and `returns_field` edges extend the stage-0 catalog. Writes name typed roots
+through an `expression` attribute. Action writes, calls and repeats carry a
+unique contiguous `step_index`, preserving source execution order and repeated
+operations. See [integer computation](34-integer-expressions.md) for the exact
+shape, limits and backward compatibility with Core lacking step indices.
+
+`Control` nodes and `IntegerComparison : Bool` nodes extend this representation
+with structured blocks. Ordered `control_step` edges connect ordinary actions
+to their control markers; compiler-pass actions cannot carry them. Conditional
+markers have a `condition` edge, and each comparison has `comparison_left` and
+`comparison_right` integer operands. These edges require valid endpoints and
+explicit action step indices. See [control flow](35-control-flow.md).
+
+
+Executable integer functions use `FunctionStep` and `ValueCall` nodes, owned
+local `Field` nodes, and `function_step`, `integer_call_step`,
+`function_parameter`, `function_local`, `function_expression`,
+`function_destination`, `function_condition`, `call_target`, `call_destination`
+and named `call_argument` edges. Function ordering, scope, signatures and
+operand multiplicity are checked. See [integer functions](36-integer-functions.md).
+
+`TextOperation` nodes add `text_kind=join|length|slice|find|split|join_list|replace|trim`. Ordered `text_step`
+edges connect them to executable actions; `text_source`, `text_other` and
+`text_destination` connect typed global fields, while `text_start` and `text_end`
+connect integer-expression slice bounds. Operand multiplicity, ownership,
+types and ordering are checked. Secret-access checks derive reads and writes
+from these executable edges even when descriptive access edges are absent.
+Replace also reads a field through `text_replacement`. Split produces `List<Text>`;
+list join reads that type. Exact operation metadata and attribute-free operand
+edges are checked. See [text operations](37-text-operations.md) and
+[text transformations](49-text-transformations.md).
+
+`ListOperation` nodes add `list_kind=empty|length|get|append|set|concat|slice|reverse|sort` and
+`element_type=Int|Float|Text`. Ordered `list_step` edges connect them to actions.
+Sort additionally requires exact `sort_order=ascending|descending`. Concat adds
+`list_other`; slice adds `list_start` and `list_end` Int expression roots. See
+[list transformations](50-list-transformations.md) for semantics and validation.
+The `list_source` and `list_destination` edges reference global fields; `list_index`
+references an integer expression; `list_value` references an integer or floating expression
+or a text field. The checker validates exact attributes, operands, ownership,
+types, order and supported profiles. Secret accesses derive from these operands
+even when descriptive access edges are absent. See [typed lists](38-typed-lists.md).
+
+`LiteralAssignment` nodes carry `value_type` and `literal` attributes. A
+`literal_step` edge orders the assignment within its owning action, and one
+`literal_destination` references a global field with the same declared type.
+The checker validates the entire JSON literal, exact attributes and edges,
+ownership, order, profile and semantic secret write access. See
+[typed literals](39-typed-literals.md).
+
+
+`FileOperation` nodes carry exactly `file_kind` and `resource`. A `file_step`
+edge orders each operation under one executable action. Reads use one
+`file_destination`; writes use one `file_source`. Operands must be declared
+global Text fields for `read`/`write` or Bytes fields for `read_bytes`/`write_bytes`.
+These edges imply semantic field access for secret checks.
+The resource name is a static identifier, not a filesystem path or authority;
+runtime callers provide separate read/write bindings. See
+[file resources](40-file-resources.md).
+
+
+`JsonConversion` nodes carry exactly `json_kind=parse|format` and `value_type`,
+with no node type. One `json_step` edge orders each conversion under an executable
+action. Exactly one `json_source` and `json_destination` link global fields; the
+parse source and format destination are Text, while the other field matches
+value_type. Supported types are Int, Float, Bool, Text, List<Int>, List<Float>,
+List<Text> and Json. Operand
+edges imply semantic access for secret checks. See [JSON conversion](41-json-conversion.md).
+
+`JsonAccess` nodes carry exactly `json_access_kind=get|count|kind|keys` and `value_type`,
+with no node type. One executable action owns each node through an ordered
+`json_access_step`. Global operands use `json_access_source` (Json),
+`json_access_destination` (result type), and `json_access_path` (Text, get only).
+Count requires Int, kind inspection requires Text, and key enumeration requires
+List<Text>. Only get has a path operand. See [JSON inspection](47-json-inspection.md).
+Exact attributes, multiplicities, ownership,
+profile and field types are checked; these operand edges imply secret accesses.
+The built-in Json type accepts recursive values and is supported by literal
+assignments and JSON conversions. See [recursive JSON](42-recursive-json.md).
+
+`JsonMutation` has no node type. Set nodes carry exactly
+`json_mutation_kind=set` and `value_type`; remove nodes carry only
+`json_mutation_kind=remove`. One `json_mutation_step` edge binds each node to an
+executable action with a numeric `step_index` and optional `operation_index`.
+Global Json source/destination and Text path fields are linked by
+`json_mutation_source`, `json_mutation_destination` and `json_mutation_path`.
+Set also requires `json_mutation_value`, whose field type matches `value_type`;
+remove forbids it. Operand edges have no attributes. Only provenance edges may
+be added. Actual operands imply secret reads/writes. Application and C interop
+profiles support mutation; functions and compiler passes reject it. See
+[JSON mutation](43-json-mutation.md) for semantics and limits.
+
+
+## Executable value functions
+
+A `Function` with `executable_value=true` owns typed `Field` nodes through
+`value_parameter` and `value_local`. Their `function_owner` and `local_name`
+attributes, types and names must agree with the single owner and its declared
+inputs/output. The output name does not implicitly declare a local. Conflicting
+integer/value markers and markers that disagree with the recomputed source
+classification are rejected.
+
+`value_function_step` edges carry contiguous `step_index` values and uniquely
+own `ValueFunctionStep` nodes. Their checked `step_kind` and opcode-specific
+metadata describe operations, calls, returns, control and explicit traces.
+`value_field_operand{name=role}` and `value_expression_operand{name=role}` carry
+explicit operands; field types and expression leaves must match local storage.
+`value_condition` binds a checked `IntegerComparison` or `FloatComparison`.
+Expression operand roles can bind `IntegerExpression` or `FloatExpression`,
+according to the opcode's declared type. `value_call_target` and
+`value_call_argument{name=parameter}` describe typed calls. Operand multiplicity
+is preserved, including when different roles reference the same field.
+
+Action calls use `ValueFunctionCall` with an ordered `integer_call_step` edge,
+sharing source order with existing integer calls. Actual arguments imply secret
+reads, including integer expression leaves; destinations imply writes.
+Checks reject extra attributes, wrong types, hidden global access, foreign
+locals, missing/duplicate edges and orphan/shared steps. See
+[value functions](44-value-functions.md) for the full execution contract.
+
+## Floating computation
+
+`FloatOperation` has no node type and carries exactly
+`float_operation_kind=compute|int_to_float|float_to_int`. One ordered
+`float_step` edge attaches it to an action. A compute node has one
+`float_destination` and `float_expression`; conversion nodes have one
+`float_destination` and `float_source`. Field types must match the operation.
+
+`FloatExpression: Float` has `expression_kind=literal|field|binary|negate`.
+Literal nodes store canonical numeric `value`; binary nodes store `operator`.
+Field nodes use `expression_field`, binary nodes `left_operand`/`right_operand`,
+and negation nodes `unary_operand`. `FloatComparison: Bool` has a `comparison`
+attribute and `comparison_left`/`comparison_right` Float trees. Action controls
+use `control_kind=if_float|while_float` with the existing `condition` edge.
+Each expression tree node has one parent; extra metadata, dangling, shared and
+orphan operands are rejected. Local trees have an exact `function_owner` and
+can reference only uniquely declared local storage. Global operands require one
+declaring Thing and an unambiguous runtime key. See
+[floating-point computation](45-float-computation.md) for the execution contract.
+
+## Boolean predicates
+
+`BooleanOperation` has an ordered `boolean_step`, `boolean_destination` and
+`boolean_expression`. Its `BooleanExpression:Bool` tree uses `boolean_operand`,
+`boolean_left`, `boolean_right` and `boolean_field`. Typed comparisons reuse
+existing numeric expression nodes or `TextOperand:Text` leaves (`value` or
+`text_field`). Controls use `if_boolean|while_boolean` and existing condition
+edges. Function operands retain exact local ownership and typed scope.
+Saved-Core TextOperand `value` uses JSON string quoting; the in-memory graph
+retains the decoded value. Aggregate validation preserves raw escape lengths.
+Combined raw-byte/node/depth checks apply across embedded numeric trees;
+each tree node has one appropriate parent. See
+[Boolean predicates](48-boolean-predicates.md) for exact attributes and limits.
+
+## Runtime recovery controls
+
+Action Control nodes add `control_kind=try|recover|end_try`. Recover alone has
+`recovery_errors` (`any` or sorted unique semicolon-separated data categories)
+and one attribute-free `recovery_destination` edge to a genuine Text field.
+Functions retain owned ValueFunctionStep control nodes and
+`value_field_operand(name=key)` for their local destination. Exact metadata,
+unique ordered owners and semantic write permissions are mandatory. Lowering
+produces structured TRY_BEGIN/RECOVER/TRY_END scopes; ordinary jumps cannot
+enter protected/handler interiors. See [runtime recovery](51-runtime-recovery.md).
+
+## Standard-stream operations
+
+`StandardStreamOperation` has only `stream_kind=stdin_read|stdout_write|stderr_write`
+and no type annotation. Exactly one `stream_step` links it from an executable
+Action, with numeric `step_index` and optional numeric `operation_index`. Reads
+have one attribute-free `stream_destination`; writes have one attribute-free
+`stream_source`. Operands must be genuine global Text declarations. Extra
+metadata, hidden edges, duplicate/foreign ownership, local substitutes and
+unsupported profiles fail with `AIL-STDIO-001`. Provenance remains permitted.
+Derived accesses participate in secret-field checks independently of descriptive
+access edges. See [standard streams](52-standard-streams.md).
+
+## ProcessOperation
+
+[Process resources](53-process-resources.md#core-and-ste) define the exact ProcessOperation attributes, six typed operand edges, unique process_step ownership and independent semantic access checks.
+
+[Directory resources](54-directory-resources.md#core-and-ste) define DirectoryOperation with exact directory_kind/resource attributes, one ordered directory_step, a typed directory_path, and either directory_destination or directory_source. Core validates unique global ownership and derives semantic accesses from these roles.
+
+`BytesOperation` nodes and their `bytes_step`/operand edges are described in
+[Bytes Core and STE](56-bytes.md#core-and-ste). Numeric operands use owned
+IntegerExpression trees; field operands use exact declared Bytes/Text/Int
+types. The checker rejects ambiguous identities/provenance, unexpected roles
+and edges, malformed order and incompatible profiles. Typed function steps
+reuse scoped operand trees. Saved Core retains structural duplicates so that
+they remain rejectable.
+
+## Explicit raise control
+
+`Control` nodes with `control_kind=raise` carry exactly one `error_category`
+attribute and no operand edges. They retain ordinary ordered control ownership
+and provenance. Functions use their existing scoped control-step schema. One of
+the fifteen catchable category literals is required, including for unreachable
+steps. See [explicit errors](57-explicit-errors.md).
+
+## Executable variants
+
+[Executable variant values](59-executable-variants.md) retain owned Type, Variant
+and Field declarations and instantiate a closed concrete schema for execution.
+Construction, tag tests and extraction carry typed operand edges and ordered
+action/function ownership. Named constructor arguments have individual named,
+typed operand edges; no packed arguments string bypasses Core validation.
+Reachable type declarations reject duplicate identities, missing ownership,
+foreign fields and inconsistent provenance before map projection.

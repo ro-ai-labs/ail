@@ -1,0 +1,73 @@
+AIL-STE 1
+Metadata {"capability_grants":[],"external_bindings":[],"failures":[],"package":"json-batch","profile":"Application","target_support":{},"version":"0.1.0"}
+Data t0 = "0"
+Data t1 = "<"
+Data t2 = "Int"
+Data t3 = "List<Int>"
+Data t4 = "Process"
+Data t5 = "Processed"
+Data t6 = "Save"
+Data t7 = "Saved"
+Data t8 = "[]"
+Data t9 = "__control_0_body"
+Data t10 = "__control_0_end"
+Data t11 = "__control_0_head"
+Data t12 = "data.index"
+Data t13 = "data.item"
+Data t14 = "data.numbers"
+Data t15 = "data.raw"
+Data t16 = "data.squaresJson"
+Data t17 = "data.totalJson"
+Data t18 = "f:data.index"
+Data t19 = "f:data.index i:1 +"
+Data t20 = "f:data.item"
+Data t21 = "f:local.n f:local.n *"
+Data t22 = "f:output.count"
+Data t23 = "f:output.total f:data.item +"
+Data t24 = "input"
+Data t25 = "n"
+Data t26 = "n=f:data.item"
+Data t27 = "output.count"
+Data t28 = "output.squares"
+Data t29 = "output.total"
+Data t30 = "square"
+Data t31 = "squares"
+Data t32 = "total"
+Procedure t4.
+Record the start of action t4.
+Read text from file resource t24 into field t15.
+Parse JSON text t15 as type t3 into field t14.
+Assign literal t8 of type t3 to field t28.
+Assign literal t0 of type t2 to field t29.
+Assign literal t0 of type t2 to field t12.
+Count items in t2 list t14 into field t27.
+Mark label t11.
+If integer comparison t18 t1 t22 is true, go to label t9.
+Go to label t10.
+Mark label t9.
+Get item t18 from t2 list t14 into field t13.
+Call integer function t30 with arguments t26 into field t13.
+Append value t20 to t2 list t28 into field t28.
+Evaluate integer expression t23 into field t29.
+Evaluate integer expression t19 into field t12.
+Go to label t11.
+Mark label t10.
+Format t3 field t28 as JSON text into field t16.
+Format t2 field t29 as JSON text into field t17.
+Do action t6.
+Record trace event t5.
+Select output field t27.
+Select output field t29.
+Return success.
+End procedure.
+Procedure t6.
+Record the start of action t6.
+Write text from field t16 to file resource t31.
+Write text from field t17 to file resource t32.
+Record trace event t7.
+Return success.
+End procedure.
+Procedure t30.
+Start integer function with parameters t25.
+Return integer expression t21.
+End procedure.

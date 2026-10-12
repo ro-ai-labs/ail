@@ -1,0 +1,4 @@
+{"ok":true,"rows":3,"total":7,"groups":[{"category":"fruit","rows":2,"total":9},{"category":"office,tools","rows":1,"total":-2}],"error":""}
+{"ok":false,"rows":0,"total":0,"groups":[],"error":"REQUEST"}
+{"ok":false,"rows":0,"total":0,"groups":[],"error":"AMOUNT"}
+{"ok":true,"rows":0,"total":0,"groups":[],"error":""}

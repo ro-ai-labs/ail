@@ -37,6 +37,13 @@ Structured values may be things, lists, maps, options, results, tool calls,
 trace records, diagnostics, graph patches, and compiler-pass inputs or outputs.
 The checker validates every field and nested value against its declared type.
 
+The executable subset is documented separately from these broad contracts.
+[Executable variants](59-executable-variants.md) implement user-defined recursive
+data with concrete generic instantiation, typed construction, tag tests, payload
+extraction and function boundaries on VM/native. They support all current builtin
+leaf types; this does not automatically make every descriptive type or callable
+contract executable.
+
 ## Option And Result
 
 `Option<T>` represents presence or absence. `Some(value)` contains a `T`;

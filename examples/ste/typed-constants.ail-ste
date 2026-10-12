@@ -1,0 +1,72 @@
+AIL-STE 1
+Metadata {"capability_grants":[],"external_bindings":[],"failures":[],"package":"typed-constants","profile":"Application","target_support":{},"version":"0.1.0"}
+Data t0 = "\"Hello, \""
+Data t1 = "\"world! 🙂\""
+Data t2 = "0"
+Data t3 = "<"
+Data t4 = "Bool"
+Data t5 = "Constructed"
+Data t6 = "Demo"
+Data t7 = "Int"
+Data t8 = "List<Int>"
+Data t9 = "Text"
+Data t10 = "[1,-2,3]"
+Data t11 = "[]"
+Data t12 = "__control_0_body"
+Data t13 = "__control_0_end"
+Data t14 = "__control_0_head"
+Data t15 = "data.count"
+Data t16 = "data.greeting"
+Data t17 = "data.index"
+Data t18 = "data.item"
+Data t19 = "data.name"
+Data t20 = "data.numbers"
+Data t21 = "f:data.count"
+Data t22 = "f:data.index"
+Data t23 = "f:data.index i:1 +"
+Data t24 = "f:data.item"
+Data t25 = "f:local.n f:local.n *"
+Data t26 = "f:output.total f:data.item +"
+Data t27 = "false"
+Data t28 = "n"
+Data t29 = "n=f:data.item"
+Data t30 = "output.message"
+Data t31 = "output.ready"
+Data t32 = "output.squares"
+Data t33 = "output.total"
+Data t34 = "square"
+Data t35 = "true"
+Procedure t6.
+Record the start of action t6.
+Assign literal t10 of type t8 to field t20.
+Assign literal t11 of type t8 to field t32.
+Assign literal t2 of type t7 to field t33.
+Assign literal t2 of type t7 to field t17.
+Assign literal t0 of type t9 to field t16.
+Assign literal t1 of type t9 to field t19.
+Assign literal t27 of type t4 to field t31.
+Join text t16 and t19 into field t30.
+Count items in t7 list t20 into field t15.
+Mark label t14.
+If integer comparison t22 t3 t21 is true, go to label t12.
+Go to label t13.
+Mark label t12.
+Get item t22 from t7 list t20 into field t18.
+Call integer function t34 with arguments t29 into field t18.
+Append value t24 to t7 list t32 into field t32.
+Evaluate integer expression t26 into field t33.
+Evaluate integer expression t23 into field t17.
+Go to label t14.
+Mark label t13.
+Assign literal t35 of type t4 to field t31.
+Record trace event t5.
+Select output field t30.
+Select output field t32.
+Select output field t33.
+Select output field t31.
+Return success.
+End procedure.
+Procedure t34.
+Start integer function with parameters t28.
+Return integer expression t25.
+End procedure.

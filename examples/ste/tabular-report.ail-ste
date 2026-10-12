@@ -1,0 +1,204 @@
+AIL-STE 1
+Metadata {"capability_grants":[],"external_bindings":[],"failures":[],"package":"tabular-report","profile":"Application","target_support":{},"version":"0.1.0"}
+Data t0 = "\" | \""
+Data t1 = "\"/accepted\""
+Data t2 = "\"/names\""
+Data t3 = "\"/rejected\""
+Data t4 = "\"/summary\""
+Data t5 = "\"/total_cents\""
+Data t6 = "\"/units\""
+Data t7 = "\"\\n\""
+Data t8 = "\"\\r\\n\""
+Data t9 = "\"\\t\""
+Data t10 = "0"
+Data t11 = "1"
+Data t12 = "Int"
+Data t13 = "Json"
+Data t14 = "List<Text>"
+Data t15 = "Summarize"
+Data t16 = "Summarized"
+Data t17 = "Text"
+Data t18 = "__control_0_body"
+Data t19 = "__control_0_end"
+Data t20 = "__control_0_head"
+Data t21 = "__control_1_body"
+Data t22 = "__control_1_otherwise"
+Data t23 = "__control_2_body"
+Data t24 = "__control_2_otherwise"
+Data t25 = "__control_3_body"
+Data t26 = "__control_3_otherwise"
+Data t27 = "__control_4_body"
+Data t28 = "__control_4_otherwise"
+Data t29 = "cleanColumns"
+Data t30 = "columns:List<Text>;count:Int;index:Int;result:List<Text>;separator:Text;value:Text"
+Data t31 = "crlf:Text;newline:Text;result:Text"
+Data t32 = "data.amount"
+Data t33 = "data.cents"
+Data t34 = "data.centsText"
+Data t35 = "data.cleaned"
+Data t36 = "data.columnCount"
+Data t37 = "data.columns"
+Data t38 = "data.count"
+Data t39 = "data.index"
+Data t40 = "data.line"
+Data t41 = "data.lines"
+Data t42 = "data.name"
+Data t43 = "data.newline"
+Data t44 = "data.path"
+Data t45 = "data.raw"
+Data t46 = "data.report"
+Data t47 = "data.separator"
+Data t48 = "data.units"
+Data t49 = "data.unitsText"
+Data t50 = "f:data.index"
+Data t51 = "f:data.index i:1 +"
+Data t52 = "f:data.units f:data.cents *"
+Data t53 = "f:local.index"
+Data t54 = "f:local.index i:1 +"
+Data t55 = "f:local.result"
+Data t56 = "f:output.accepted i:1 +"
+Data t57 = "f:output.rejected i:1 +"
+Data t58 = "f:output.totalCents f:data.amount +"
+Data t59 = "f:output.units f:data.units +"
+Data t60 = "i:0"
+Data t61 = "i:1"
+Data t62 = "i:2"
+Data t63 = "if:data.columnCount i:3 icmp:!="
+Data t64 = "if:data.index if:data.count icmp:<"
+Data t65 = "if:data.units i:0 icmp:<= if:data.cents i:0 icmp:< or"
+Data t66 = "if:local.index if:local.count icmp:<"
+Data t67 = "input"
+Data t68 = "local.columns"
+Data t69 = "local.count"
+Data t70 = "local.crlf"
+Data t71 = "local.index"
+Data t72 = "local.newline"
+Data t73 = "local.raw"
+Data t74 = "local.result"
+Data t75 = "local.row"
+Data t76 = "local.separator"
+Data t77 = "local.value"
+Data t78 = "normalizeLines"
+Data t79 = "output.accepted"
+Data t80 = "output.document"
+Data t81 = "output.names"
+Data t82 = "output.rejected"
+Data t83 = "output.summary"
+Data t84 = "output.totalCents"
+Data t85 = "output.units"
+Data t86 = "raw:Text"
+Data t87 = "raw=f:data.raw"
+Data t88 = "report"
+Data t89 = "row:Text"
+Data t90 = "row=f:data.line"
+Data t91 = "tf:data.cleaned s:\"\" tcmp:=="
+Data t92 = "tf:data.name s:\"\" tcmp:== tf:data.unitsText s:\"\" tcmp:== or tf:data.centsText s:\"\" tcmp:== or"
+Data t93 = "{}"
+Procedure t15.
+Record the start of action t15.
+Read text from file resource t67 into field t45.
+Call value function t78 with arguments t87 into field t45.
+Assign literal t7 of type t17 to field t43.
+Split text in field t45 by field t43 into field t41.
+Count items in t17 list t41 into field t38.
+Assign literal t11 of type t12 to field t39.
+Create empty list of type t17 into field t81.
+Assign literal t10 of type t12 to field t79.
+Assign literal t10 of type t12 to field t82.
+Assign literal t10 of type t12 to field t85.
+Assign literal t10 of type t12 to field t84.
+Mark label t20.
+If Boolean expression t64 is true, go to label t18.
+Go to label t19.
+Mark label t18.
+Get item t50 from t17 list t41 into field t40.
+Evaluate integer expression t51 into field t39.
+Trim whitespace from field t40 into field t35.
+If Boolean expression t91 is true, go to label t21.
+Go to label t22.
+Mark label t21.
+Go to label t20.
+Mark label t22.
+Call value function t29 with arguments t90 into field t37.
+Count items in t17 list t37 into field t36.
+If Boolean expression t63 is true, go to label t23.
+Go to label t24.
+Mark label t23.
+Evaluate integer expression t57 into field t82.
+Go to label t20.
+Mark label t24.
+Get item t60 from t17 list t37 into field t42.
+Get item t61 from t17 list t37 into field t49.
+Get item t62 from t17 list t37 into field t34.
+If Boolean expression t92 is true, go to label t25.
+Go to label t26.
+Mark label t25.
+Evaluate integer expression t57 into field t82.
+Go to label t20.
+Mark label t26.
+Parse JSON text t49 as type t12 into field t48.
+Parse JSON text t34 as type t12 into field t33.
+If Boolean expression t65 is true, go to label t27.
+Go to label t28.
+Mark label t27.
+Evaluate integer expression t57 into field t82.
+Go to label t20.
+Mark label t28.
+Evaluate integer expression t52 into field t32.
+Evaluate integer expression t59 into field t85.
+Evaluate integer expression t58 into field t84.
+Append value t42 to t17 list t81 into field t81.
+Evaluate integer expression t56 into field t79.
+Go to label t20.
+Mark label t19.
+Assign literal t0 of type t17 to field t47.
+Join text list in field t81 with field t47 into field t83.
+Assign literal t93 of type t13 to field t80.
+Assign literal t2 of type t17 to field t44.
+Set t14 value t81 at JSON path t44 in field t80 into field t80.
+Assign literal t4 of type t17 to field t44.
+Set t17 value t83 at JSON path t44 in field t80 into field t80.
+Assign literal t1 of type t17 to field t44.
+Set t12 value t79 at JSON path t44 in field t80 into field t80.
+Assign literal t3 of type t17 to field t44.
+Set t12 value t82 at JSON path t44 in field t80 into field t80.
+Assign literal t6 of type t17 to field t44.
+Set t12 value t85 at JSON path t44 in field t80 into field t80.
+Assign literal t5 of type t17 to field t44.
+Set t12 value t84 at JSON path t44 in field t80 into field t80.
+Format t13 field t80 as JSON text into field t46.
+Write text from field t46 to file resource t88.
+Record trace event t16.
+Select output field t83.
+Select output field t79.
+Select output field t82.
+Select output field t85.
+Select output field t84.
+Return success.
+End procedure.
+Procedure t29.
+Start value function with parameters t89, locals t30, and result type t14.
+Assign literal t9 of type t17 to field t76.
+Split text in field t75 by field t76 into field t68.
+Create empty list of type t17 into field t74.
+Count items in t17 list t68 into field t69.
+Assign literal t10 of type t12 to field t71.
+Mark label t20.
+If Boolean expression t66 is true, go to label t18.
+Go to label t19.
+Mark label t18.
+Get item t53 from t17 list t68 into field t77.
+Trim whitespace from field t77 into field t77.
+Append value t77 to t17 list t74 into field t74.
+Evaluate integer expression t54 into field t71.
+Go to label t20.
+Mark label t19.
+Return t14 value from expression t55.
+End procedure.
+Procedure t78.
+Start value function with parameters t86, locals t31, and result type t17.
+Assign literal t8 of type t17 to field t70.
+Assign literal t7 of type t17 to field t72.
+Replace text from field t70 in field t73 with field t72 into field t74.
+Return t17 value from expression t55.
+End procedure.

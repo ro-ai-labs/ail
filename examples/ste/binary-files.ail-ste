@@ -1,0 +1,181 @@
+AIL-STE 1
+Metadata {"capability_grants":[],"external_bindings":[],"failures":[],"package":"binary-files","profile":"Application","target_support":{},"version":"0.1.0"}
+Data t0 = "!="
+Data t1 = "\"/bitDepth\""
+Data t2 = "\"/bytes\""
+Data t3 = "\"/colorType\""
+Data t4 = "\"/headerRecognized\""
+Data t5 = "\"/height\""
+Data t6 = "\"/width\""
+Data t7 = "\"hex:49484452\""
+Data t8 = "\"hex:89504e470d0a1a0a\""
+Data t9 = "<"
+Data t10 = ">"
+Data t11 = "Bool"
+Data t12 = "Bytes"
+Data t13 = "Inspect"
+Data t14 = "Inspected"
+Data t15 = "Int"
+Data t16 = "Json"
+Data t17 = "Text"
+Data t18 = "__control_0_body"
+Data t19 = "__control_0_otherwise"
+Data t20 = "__control_1_body"
+Data t21 = "__control_1_otherwise"
+Data t22 = "__control_2_body"
+Data t23 = "__control_2_otherwise"
+Data t24 = "__control_3_body"
+Data t25 = "__control_3_otherwise"
+Data t26 = "__control_4_body"
+Data t27 = "__control_4_otherwise"
+Data t28 = "__control_5_body"
+Data t29 = "__control_5_otherwise"
+Data t30 = "__control_6_body"
+Data t31 = "__control_6_otherwise"
+Data t32 = "__control_7_body"
+Data t33 = "__control_7_otherwise"
+Data t34 = "a:Int;b:Int;c:Int;d:Int"
+Data t35 = "body:Bytes"
+Data t36 = "body:Bytes;offset:Int"
+Data t37 = "body=f:data.body"
+Data t38 = "body=f:local.body;offset=i:16"
+Data t39 = "body=f:local.body;offset=i:20"
+Data t40 = "body=f:local.body;offset=i:8"
+Data t41 = "color:Int;comparison:Int;count:Int;depth:Int;expected:Bytes;height:Int;length:Int;path:Text;prefix:Bytes;recognized:Bool;result:Json;width:Int"
+Data t42 = "copy"
+Data t43 = "data.body"
+Data t44 = "data.reportText"
+Data t45 = "f:local.a i:16777216 * f:local.b i:65536 * + f:local.c i:256 * + f:local.d +"
+Data t46 = "f:local.comparison"
+Data t47 = "f:local.count"
+Data t48 = "f:local.height"
+Data t49 = "f:local.length"
+Data t50 = "f:local.offset"
+Data t51 = "f:local.offset i:1 +"
+Data t52 = "f:local.offset i:2 +"
+Data t53 = "f:local.offset i:3 +"
+Data t54 = "f:local.result"
+Data t55 = "f:local.width"
+Data t56 = "i:0"
+Data t57 = "i:1"
+Data t58 = "i:12"
+Data t59 = "i:13"
+Data t60 = "i:16"
+Data t61 = "i:2147483647"
+Data t62 = "i:24"
+Data t63 = "i:25"
+Data t64 = "i:33"
+Data t65 = "i:8"
+Data t66 = "input"
+Data t67 = "inspectHeader"
+Data t68 = "local.a"
+Data t69 = "local.b"
+Data t70 = "local.body"
+Data t71 = "local.c"
+Data t72 = "local.color"
+Data t73 = "local.comparison"
+Data t74 = "local.count"
+Data t75 = "local.d"
+Data t76 = "local.depth"
+Data t77 = "local.expected"
+Data t78 = "local.height"
+Data t79 = "local.length"
+Data t80 = "local.path"
+Data t81 = "local.prefix"
+Data t82 = "local.recognized"
+Data t83 = "local.result"
+Data t84 = "local.width"
+Data t85 = "output.report"
+Data t86 = "readU32BE"
+Data t87 = "report"
+Data t88 = "true"
+Data t89 = "{\"bytes\":0,\"headerRecognized\":false,\"width\":0,\"height\":0,\"bitDepth\":0,\"colorType\":0}"
+Procedure t13.
+Record the start of action t13.
+Read bytes from file resource t66 into field t43.
+Call value function t67 with arguments t37 into field t85.
+Write bytes from field t43 to file resource t42.
+Format t16 field t85 as JSON text into field t44.
+Write text from field t44 to file resource t87.
+Record trace event t14.
+Select output field t85.
+Return success.
+End procedure.
+Procedure t67.
+Start value function with parameters t35, locals t41, and result type t16.
+Assign literal t89 of type t16 to field t83.
+Count bytes in field t70 into field t74.
+Assign literal t2 of type t17 to field t80.
+Set t15 value t74 at JSON path t80 in field t83 into field t83.
+If integer comparison t47 t9 t64 is true, go to label t18.
+Go to label t19.
+Mark label t18.
+Return t16 value from expression t54.
+Mark label t19.
+Slice bytes in field t70 from t56 to t65 into field t81.
+Assign literal t8 of type t12 to field t77.
+Compare bytes in field t81 with field t77 into field t73.
+If integer comparison t46 t0 t56 is true, go to label t20.
+Go to label t21.
+Mark label t20.
+Return t16 value from expression t54.
+Mark label t21.
+Slice bytes in field t70 from t58 to t60 into field t81.
+Assign literal t7 of type t12 to field t77.
+Compare bytes in field t81 with field t77 into field t73.
+If integer comparison t46 t0 t56 is true, go to label t22.
+Go to label t23.
+Mark label t22.
+Return t16 value from expression t54.
+Mark label t23.
+Call value function t86 with arguments t40 into field t79.
+If integer comparison t49 t0 t59 is true, go to label t24.
+Go to label t25.
+Mark label t24.
+Return t16 value from expression t54.
+Mark label t25.
+Call value function t86 with arguments t38 into field t84.
+Call value function t86 with arguments t39 into field t78.
+If integer comparison t55 t9 t57 is true, go to label t26.
+Go to label t27.
+Mark label t26.
+Return t16 value from expression t54.
+Mark label t27.
+If integer comparison t48 t9 t57 is true, go to label t28.
+Go to label t29.
+Mark label t28.
+Return t16 value from expression t54.
+Mark label t29.
+If integer comparison t55 t10 t61 is true, go to label t30.
+Go to label t31.
+Mark label t30.
+Return t16 value from expression t54.
+Mark label t31.
+If integer comparison t48 t10 t61 is true, go to label t32.
+Go to label t33.
+Mark label t32.
+Return t16 value from expression t54.
+Mark label t33.
+Get byte at index t62 from field t70 into field t76.
+Get byte at index t63 from field t70 into field t72.
+Assign literal t88 of type t11 to field t82.
+Assign literal t4 of type t17 to field t80.
+Set t11 value t82 at JSON path t80 in field t83 into field t83.
+Assign literal t6 of type t17 to field t80.
+Set t15 value t84 at JSON path t80 in field t83 into field t83.
+Assign literal t5 of type t17 to field t80.
+Set t15 value t78 at JSON path t80 in field t83 into field t83.
+Assign literal t1 of type t17 to field t80.
+Set t15 value t76 at JSON path t80 in field t83 into field t83.
+Assign literal t3 of type t17 to field t80.
+Set t15 value t72 at JSON path t80 in field t83 into field t83.
+Return t16 value from expression t54.
+End procedure.
+Procedure t86.
+Start value function with parameters t36, locals t34, and result type t15.
+Get byte at index t50 from field t70 into field t68.
+Get byte at index t51 from field t70 into field t69.
+Get byte at index t52 from field t70 into field t71.
+Get byte at index t53 from field t70 into field t75.
+Return t15 value from expression t45.
+End procedure.

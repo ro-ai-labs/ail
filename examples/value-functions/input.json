@@ -1,0 +1,7 @@
+{
+  "records": [
+    {"name": "Ada", "private": "draft-a", "metrics": {"amount": 12, "ratio": 1.2500e-2}},
+    {"name": "Mihai", "private": "draft-b", "metrics": {"amount": -2, "ratio": -0}},
+    {"name": "Zoë 🙂", "private": "draft-c", "metrics": {"amount": 30, "id": 18446744073709551616}}
+  ]
+}

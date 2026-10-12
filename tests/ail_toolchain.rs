@@ -27,6 +27,196 @@ fn fixture(name: &str) -> String {
     format!("{}/examples/{name}", env!("CARGO_MANIFEST_DIR"))
 }
 
+/// These native language fixtures test compilation of deliberately authored
+/// requirement phrases, so the supplied Spec is also their standalone source.
+struct StandaloneSpecFixture(std::path::PathBuf);
+impl StandaloneSpecFixture {
+    fn new(package: &str, spec_path: &std::path::Path) -> Self {
+        let root = std::env::temp_dir().join(format!(
+            "ail-native-source-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        fs::create_dir_all(&root).unwrap();
+        fs::copy(
+            format!("{package}/ail-package.md"),
+            root.join("ail-package.md"),
+        )
+        .unwrap();
+        fs::copy(spec_path, root.join("spec.ail-spec.md")).unwrap();
+        Self(root)
+    }
+    fn path(&self) -> String {
+        self.0.to_str().unwrap().into()
+    }
+}
+impl Drop for StandaloneSpecFixture {
+    fn drop(&mut self) {
+        fs::remove_dir_all(&self.0).unwrap();
+    }
+}
+
+/// Authorize only the locally authored repair target, before model invocation.
+/// Rebuild changed relation groups in target order because patch edge insertion
+/// is append-only. Assert exact target matching independently of CLI success.
+struct ExpectedSpecPatch(std::path::PathBuf);
+impl ExpectedSpecPatch {
+    fn new(package_path: &str, target_spec: &str) -> Self {
+        use ail::ail::{AilCore, AilEditContext};
+        fn attrs(values: &BTreeMap<String, String>) -> String {
+            format!(
+                "{{{}}}",
+                values
+                    .iter()
+                    .map(|(k, v)| format!("{}:{}", json_string(k), json_string(v)))
+                    .collect::<Vec<_>>()
+                    .join(",")
+            )
+        }
+        fn nodes(core: &AilCore) -> BTreeMap<String, &ail::core_model::Node> {
+            core.graph
+                .nodes
+                .iter()
+                .map(|n| (format!("{}:{}", n.kind, n.name), n))
+                .collect()
+        }
+        type Relations = BTreeMap<(String, String), Vec<(String, BTreeMap<String, String>)>>;
+        fn relations(core: &AilCore) -> Relations {
+            let ids: BTreeMap<_, _> = core
+                .graph
+                .nodes
+                .iter()
+                .map(|n| (n.id.as_str(), format!("{}:{}", n.kind, n.name)))
+                .collect();
+            let mut edges = core.graph.edges.iter().collect::<Vec<_>>();
+            edges.sort_by_key(|e| e.ordinal);
+            let mut result = BTreeMap::<_, Vec<_>>::new();
+            for e in edges {
+                result
+                    .entry((e.kind.clone(), ids[e.source.as_str()].clone()))
+                    .or_default()
+                    .push((ids[e.target.as_str()].clone(), e.attributes.clone()));
+            }
+            result
+        }
+        let package = load_ail_package_dir(package_path).unwrap();
+        let base = elaborate_ail_core(&package, &parse_ail_package_document(&package).unwrap());
+        let target = elaborate_ail_core(
+            &package,
+            &parse_ail_package_spec_text(&package, target_spec).unwrap(),
+        );
+        assert!(check_ail_core(&base).is_empty());
+        assert!(check_ail_core(&target).is_empty());
+        let old_nodes = nodes(&base);
+        let new_nodes = nodes(&target);
+        let old_edges = relations(&base);
+        let new_edges = relations(&target);
+        let mut ops = Vec::new();
+        for ((kind, source), edges) in &old_edges {
+            if new_edges.get(&(kind.clone(), source.clone())) != Some(edges) {
+                for (target, _) in edges {
+                    ops.push(format!(
+                        r#"{{"op":"remove_edge","kind":{},"source":{},"target":{}}}"#,
+                        json_string(kind),
+                        json_string(source),
+                        json_string(target)
+                    ));
+                }
+            }
+        }
+        for label in old_nodes.keys() {
+            if !new_nodes.contains_key(label) {
+                ops.push(format!(
+                    r#"{{"op":"remove_node","target":{}}}"#,
+                    json_string(label)
+                ));
+            }
+        }
+        for (label, n) in &new_nodes {
+            if !old_nodes.contains_key(label) {
+                let type_field = n
+                    .type_name
+                    .as_ref()
+                    .map(|v| format!(",\"type\":{}", json_string(v)))
+                    .unwrap_or_default();
+                ops.push(format!(
+                    r#"{{"op":"add_node","kind":{},"name":{},"attributes":{}{}}}"#,
+                    json_string(&n.kind),
+                    json_string(&n.name),
+                    attrs(&n.attributes),
+                    type_field
+                ));
+            } else {
+                let old = old_nodes[label];
+                if old.attributes != n.attributes || old.type_name != n.type_name {
+                    assert!(
+                        old.attributes.keys().all(|k| n.attributes.contains_key(k)),
+                        "fixture needs unsupported attribute removal"
+                    );
+                    let type_field = n
+                        .type_name
+                        .as_ref()
+                        .map(|v| format!(",\"type\":{}", json_string(v)))
+                        .unwrap_or_default();
+                    ops.push(format!(
+                        r#"{{"op":"replace_node_attributes","target":{},"attributes":{}{}}}"#,
+                        json_string(label),
+                        attrs(&n.attributes),
+                        type_field
+                    ));
+                }
+            }
+        }
+        for ((kind, source), edges) in &new_edges {
+            if old_edges.get(&(kind.clone(), source.clone())) != Some(edges) {
+                for (target, attributes) in edges {
+                    ops.push(format!(
+                        r#"{{"op":"add_edge","kind":{},"source":{},"target":{},"attributes":{}}}"#,
+                        json_string(kind),
+                        json_string(source),
+                        json_string(target),
+                        attrs(attributes)
+                    ));
+                }
+            }
+        }
+        let patch = format!(
+            r#"{{"schema":"ail-core.patch.v0","package":{},"base_hash":{},"ops":[{}]}}"#,
+            json_string(&base.package.name),
+            json_string(&ail_core_hash(&base)),
+            ops.join(",")
+        );
+        let context = AilEditContext::expected_patch(&package, &patch).unwrap();
+        assert!(
+            context.check_candidate(&target).is_empty(),
+            "{}",
+            context.render_admission(&target)
+        );
+        assert!(!context.check_candidate(&base).is_empty());
+        let path = std::env::temp_dir().join(format!(
+            "ail-explicit-repair-target-{}-{}.json",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        fs::write(&path, patch).unwrap();
+        Self(path)
+    }
+    fn path(&self) -> &str {
+        self.0.to_str().unwrap()
+    }
+}
+impl Drop for ExpectedSpecPatch {
+    fn drop(&mut self) {
+        fs::remove_file(&self.0).unwrap();
+    }
+}
+
 fn fnv64_fingerprint(text: &str) -> String {
     fnv64_fingerprint_bytes(text.as_bytes())
 }
@@ -817,7 +1007,6 @@ fn docs_example_inventory_names_every_package_directory() {
         }
     }
     package_dirs.sort();
-    assert_eq!(package_dirs.len(), 26, "{package_dirs:?}");
 
     let root_readme =
         fs::read_to_string(format!("{}/README.md", env!("CARGO_MANIFEST_DIR"))).unwrap();
@@ -831,10 +1020,13 @@ fn docs_example_inventory_names_every_package_directory() {
         fs::read_to_string(format!("{examples_dir}/support-packages.md")).unwrap();
 
     assert!(
-        root_readme.contains("26 package directories"),
+        root_readme.contains(&format!("{} package directories", package_dirs.len())),
         "{root_readme}"
     );
-    assert!(inventory.contains("Package directories: 26"), "{inventory}");
+    assert!(
+        inventory.contains(&format!("Package directories: {}", package_dirs.len())),
+        "{inventory}"
+    );
     assert!(
         inventory.contains("Counted catalog examples: 128"),
         "{inventory}"
@@ -939,10 +1131,6 @@ fn example_package_directories_all_have_learning_guides() {
     ))
     .unwrap();
     assert!(
-        examples_readme.contains("All 26 package directories include a README.md guide"),
-        "{examples_readme}"
-    );
-    assert!(
         inventory.contains("Every package directory has a local README.md guide"),
         "{inventory}"
     );
@@ -960,6 +1148,13 @@ fn example_package_directories_all_have_learning_guides() {
     }
     package_dirs.sort();
 
+    assert!(
+        examples_readme.contains(&format!(
+            "All {} package directories include a README.md guide",
+            package_dirs.len()
+        )),
+        "{examples_readme}"
+    );
     for package in package_dirs {
         let readme_path = format!("{examples_dir}/{package}/README.md");
         let readme = fs::read_to_string(&readme_path).unwrap_or_else(|error| {
@@ -10102,12 +10297,14 @@ conformance: first-slice
         String::from_utf8_lossy(&output.stderr)
     );
     let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stdout.contains("AIL-PACKAGE-001")
-            && stdout.contains("Shared.SendPacket")
-            && stdout.contains("network")
-            && stdout.contains("capability grant"),
-        "{stdout}"
+        stderr.contains("AIL-EDIT-BASELINE")
+            && stderr.contains("AIL-PACKAGE-001")
+            && stderr.contains("Shared.SendPacket")
+            && stderr.contains("network")
+            && stderr.contains("without a capability grant"),
+        "stdout:\n{stdout}\nstderr:\n{stderr}"
     );
 
     fs::remove_dir_all(root).unwrap();
@@ -10953,7 +11150,7 @@ fn ail_flow_projection_renders_no_code_view_from_core() {
     );
     assert!(
         flow.contains(
-            r#"{"kind":"writes","source":"Action:CloseTicket","target":"Field:Ticket.status","targetName":"Ticket.status","attributes":{"provenance":"action:CloseTicket.write:the ticket status to Closed"}}"#
+            r#"{"kind":"writes","source":"Action:CloseTicket","target":"Field:Ticket.status","targetName":"Ticket.status","attributes":{"provenance":"action:CloseTicket.write:the ticket status to Closed","step_index":"0","write_index":"0"}}"#
         ),
         "{flow}"
     );
@@ -13207,7 +13404,7 @@ fn ail_spec_lowers_repeated_task_to_repeat_action_bytecode() {
     let rendered_core = render_ail_core(&core);
     assert!(
         rendered_core.contains(
-            "edge repeats Action:RunMaintenanceCycle -> Action:IncrementCounter [count=3]"
+            "edge repeats Action:RunMaintenanceCycle -> Action:IncrementCounter [count=3,operation_index=0,step_index=0]"
         ),
         "{rendered_core}"
     );
@@ -13344,10 +13541,7 @@ fn ail_native_elf_executes_repeated_action_bytecode() {
         .output()
         .unwrap();
     assert!(run.status.success(), "native repeated action failed");
-    assert_eq!(
-        String::from_utf8_lossy(&run.stdout),
-        "counter.value=1\ncounter.value=2\ncounter.value=3\n"
-    );
+    assert_eq!(String::from_utf8_lossy(&run.stdout), "counter.value=3\n");
     assert_eq!(
         String::from_utf8_lossy(&run.stderr),
         concat!(
@@ -20468,6 +20662,8 @@ fn cli_ail_compile_native_rejects_unlowered_observed_requirements() {
         );
     fs::write(&spec_path, spec_text).unwrap();
     let _ = fs::remove_file(&executable_path);
+    let source_fixture = StandaloneSpecFixture::new(&package, &spec_path);
+    let package = source_fixture.path();
 
     let output = Command::new(binary)
         .args([
@@ -20888,6 +21084,8 @@ fn cli_ail_build_native_executable_enforces_llm_style_is_field_requirement() {
             "the system requires the ticket status is Open",
         );
     fs::write(&spec_path, spec_text).unwrap();
+    let source_fixture = StandaloneSpecFixture::new(&package, &spec_path);
+    let package = source_fixture.path();
 
     let output = Command::new(binary)
         .args([
@@ -20980,6 +21178,8 @@ fn cli_ail_build_native_executable_enforces_llm_style_is_not_field_requirement()
             "- the system requires the ticket exists and its status is not Closed",
         );
     fs::write(&spec_path, spec_text).unwrap();
+    let source_fixture = StandaloneSpecFixture::new(&package, &spec_path);
+    let package = source_fixture.path();
 
     let output = Command::new(binary)
         .args([
@@ -21116,6 +21316,8 @@ fn cli_ail_build_native_executable_enforces_llm_style_has_role_requirement() {
             ),
         );
     fs::write(&spec_path, spec_text).unwrap();
+    let source_fixture = StandaloneSpecFixture::new(&package, &spec_path);
+    let package = source_fixture.path();
 
     let output = Command::new(binary)
         .args([
@@ -21219,6 +21421,8 @@ fn cli_ail_build_native_executable_enforces_llm_style_trailing_role_requirement(
             ),
         );
     fs::write(&spec_path, spec_text).unwrap();
+    let source_fixture = StandaloneSpecFixture::new(&package, &spec_path);
+    let package = source_fixture.path();
 
     let output = Command::new(binary)
         .args([
@@ -21339,6 +21543,8 @@ fn cli_ail_build_native_executable_enforces_llm_style_has_permission_requirement
             ),
         );
     fs::write(&spec_path, spec_text).unwrap();
+    let source_fixture = StandaloneSpecFixture::new(&package, &spec_path);
+    let package = source_fixture.path();
 
     let output = Command::new(binary)
         .args([
@@ -26905,6 +27111,7 @@ fn cli_ail_build_repairs_spec_that_drops_permission_requirement() {
             "- the system requires the assignee role to be SupportAgent or SupportManager"
         ),
     );
+    let expected_patch = ExpectedSpecPatch::new(&package, &repaired_spec);
     let repaired_body = format!(
         r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
         json_string(&format!(
@@ -26920,6 +27127,8 @@ fn cli_ail_build_repairs_spec_that_drops_permission_requirement() {
         .args([
             "ail-build",
             &package,
+            "--expected-patch",
+            expected_patch.path(),
             "--prompt",
             "Build an AIL support ticket bytecode artifact",
             "--llm-endpoint",
@@ -26987,6 +27196,7 @@ fn cli_ail_build_repairs_spec_that_drops_failure_requirement() {
             "- the trace records ProviderRejected\n"
         )
     );
+    let expected_patch = ExpectedSpecPatch::new(&package, &repaired_spec);
     let repaired_body = format!(
         r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
         json_string(&format!(
@@ -27002,6 +27212,8 @@ fn cli_ail_build_repairs_spec_that_drops_failure_requirement() {
         .args([
             "ail-build",
             &package,
+            "--expected-patch",
+            expected_patch.path(),
             "--prompt",
             "Build an AIL support ticket bytecode artifact",
             "--llm-endpoint",
@@ -27057,6 +27269,7 @@ fn cli_ail_build_repairs_spec_that_drops_trace_requirement() {
         "- the system records a trace event named TicketClosed",
         "- the system records a trace event named TicketClosureAudited",
     );
+    let expected_patch = ExpectedSpecPatch::new(&package, &repaired_spec);
     let repaired_body = format!(
         r#"{{"choices":[{{"message":{{"content":{}}}}}]}}"#,
         json_string(&format!(
@@ -27072,6 +27285,8 @@ fn cli_ail_build_repairs_spec_that_drops_trace_requirement() {
         .args([
             "ail-build",
             &package,
+            "--expected-patch",
+            expected_patch.path(),
             "--prompt",
             "Build an AIL support ticket bytecode artifact",
             "--llm-endpoint",
@@ -28763,7 +28978,6 @@ fn cli_ail_build_accepts_saved_core_file_artifact() {
     let output = Command::new(binary)
         .args([
             "ail-build",
-            &package,
             "--core-file",
             core_path.to_str().unwrap(),
             "--artifact-dir",
@@ -28821,7 +29035,6 @@ fn cli_ail_build_runs_toolchain_agent_bytecode() {
     let output = Command::new(binary)
         .args([
             "ail-build",
-            &package,
             "--core-file",
             core_path.to_str().unwrap(),
             "--agent",
@@ -28893,7 +29106,6 @@ fn cli_ail_build_agent_accepts_saved_core_before_compile() {
     let output = Command::new(binary)
         .args([
             "ail-build",
-            &package,
             "--core-file",
             core_path.to_str().unwrap(),
             "--agent",
@@ -28954,7 +29166,6 @@ fn cli_ail_build_agent_accepts_flow_review_before_compile() {
     let output = Command::new(binary)
         .args([
             "ail-build",
-            &package,
             "--core-file",
             core_path.to_str().unwrap(),
             "--agent",
@@ -36231,7 +36442,6 @@ fn cli_ail_build_agent_verifies_bytecode_artifact_after_compile() {
     let output = Command::new(binary)
         .args([
             "ail-build",
-            &package,
             "--core-file",
             core_path.to_str().unwrap(),
             "--agent",
@@ -36404,7 +36614,6 @@ fn cli_ail_build_agent_compile_failure_happens_before_bytecode_lowering() {
     let output = Command::new(binary)
         .args([
             "ail-build",
-            &package,
             "--core-file",
             core_path.to_str().unwrap(),
             "--agent",
@@ -37132,7 +37341,7 @@ fn cli_ail_equivalence_rejects_package_reduced_to_stub() {
         "dropped secret protection must be reported\n{stdout}"
     );
     assert!(
-        stdout.contains("guarantees Action closeticket"),
+        stdout.contains("guarantees Action CloseTicket"),
         "dropped guarantees must be reported\n{stdout}"
     );
     assert!(

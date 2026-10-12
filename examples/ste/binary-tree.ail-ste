@@ -1,0 +1,264 @@
+AIL-STE 1
+Metadata {"capability_grants":[],"external_bindings":[],"failures":[],"package":"binary-tree","profile":"Application","target_support":{},"type_schemas":{"Bst.Tree<Int>":{"Empty":{},"Node":{"left":"Bst.Tree<Int>","multiplicity":"Int","right":"Bst.Tree<Int>","value":"Int"}}},"version":"0.1.0"}
+Data t0 = ""
+Data t1 = "0"
+Data t2 = "<"
+Data t3 = "=="
+Data t4 = ">"
+Data t5 = "Analyze"
+Data t6 = "Analyzed"
+Data t7 = "Bool"
+Data t8 = "Bst.Tree<Int>"
+Data t9 = "Bst.contains"
+Data t10 = "Bst.fromList"
+Data t11 = "Bst.height"
+Data t12 = "Bst.inorder"
+Data t13 = "Bst.insert"
+Data t14 = "Bst.repeatValue"
+Data t15 = "Empty"
+Data t16 = "Int"
+Data t17 = "List<Int>"
+Data t18 = "Node"
+Data t19 = "VALUE"
+Data t20 = "[]"
+Data t21 = "__control_0_body"
+Data t22 = "__control_0_end"
+Data t23 = "__control_0_head"
+Data t24 = "__control_0_otherwise"
+Data t25 = "__control_1_body"
+Data t26 = "__control_1_end"
+Data t27 = "__control_1_head"
+Data t28 = "__control_1_otherwise"
+Data t29 = "__control_2_body"
+Data t30 = "__control_2_end"
+Data t31 = "__control_2_otherwise"
+Data t32 = "__control_3_body"
+Data t33 = "__control_3_otherwise"
+Data t34 = "bf:local.empty"
+Data t35 = "bf:local.empty not"
+Data t36 = "block:List<Int>;remaining:Int;result:List<Int>"
+Data t37 = "count:Int;current:Int;empty:Bool;left:Bst.Tree<Int>;result:Bst.Tree<Int>;right:Bst.Tree<Int>"
+Data t38 = "count:Int;empty:Bool;left:Bst.Tree<Int>;leftValues:List<Int>;middleValues:List<Int>;result:List<Int>;right:Bst.Tree<Int>;rightValues:List<Int>;value:Int"
+Data t39 = "count:Int;value:Int"
+Data t40 = "count=f:local.count;value=f:local.value"
+Data t41 = "current:Int;empty:Bool;found:Bool"
+Data t42 = "data.tree"
+Data t43 = "empty:Bool;left:Bst.Tree<Int>;leftHeight:Int;right:Bst.Tree<Int>;rightHeight:Int"
+Data t44 = "f:local.count"
+Data t45 = "f:local.count i:1 +"
+Data t46 = "f:local.current"
+Data t47 = "f:local.found"
+Data t48 = "f:local.index"
+Data t49 = "f:local.index i:1 +"
+Data t50 = "f:local.leftHeight"
+Data t51 = "f:local.leftHeight i:1 +"
+Data t52 = "f:local.length"
+Data t53 = "f:local.remaining"
+Data t54 = "f:local.remaining i:2 %"
+Data t55 = "f:local.remaining i:2 /"
+Data t56 = "f:local.result"
+Data t57 = "f:local.rightHeight"
+Data t58 = "f:local.rightHeight i:1 +"
+Data t59 = "f:local.tree"
+Data t60 = "f:local.value"
+Data t61 = "false"
+Data t62 = "i:0"
+Data t63 = "i:1"
+Data t64 = "index:Int;length:Int;tree:Bst.Tree<Int>;value:Int"
+Data t65 = "left"
+Data t66 = "left=f:local.left;multiplicity=f:local.count;right=f:local.right;value=f:local.current"
+Data t67 = "left=f:local.left;multiplicity=i:1;right=f:local.left;value=f:local.value"
+Data t68 = "local.block"
+Data t69 = "local.count"
+Data t70 = "local.current"
+Data t71 = "local.empty"
+Data t72 = "local.found"
+Data t73 = "local.index"
+Data t74 = "local.left"
+Data t75 = "local.leftHeight"
+Data t76 = "local.leftValues"
+Data t77 = "local.length"
+Data t78 = "local.middleValues"
+Data t79 = "local.remaining"
+Data t80 = "local.result"
+Data t81 = "local.right"
+Data t82 = "local.rightHeight"
+Data t83 = "local.rightValues"
+Data t84 = "local.tree"
+Data t85 = "local.value"
+Data t86 = "local.values"
+Data t87 = "multiplicity"
+Data t88 = "out.height"
+Data t89 = "out.present"
+Data t90 = "out.sorted"
+Data t91 = "right"
+Data t92 = "tree:Bst.Tree<Int>"
+Data t93 = "tree:Bst.Tree<Int>;value:Int"
+Data t94 = "tree=f:data.tree"
+Data t95 = "tree=f:data.tree;value=f:data.query"
+Data t96 = "tree=f:local.left"
+Data t97 = "tree=f:local.left;value=f:local.value"
+Data t98 = "tree=f:local.right"
+Data t99 = "tree=f:local.right;value=f:local.value"
+Data t100 = "tree=f:local.tree;value=f:local.value"
+Data t101 = "true"
+Data t102 = "value"
+Data t103 = "values:List<Int>"
+Data t104 = "values=f:data.values"
+Procedure t5.
+Record the start of action t5.
+Call value function t10 with arguments t104 into field t42.
+Call value function t12 with arguments t94 into field t90.
+Call value function t9 with arguments t95 into field t89.
+Call value function t11 with arguments t94 into field t88.
+Record trace event t6.
+Select output field t90.
+Select output field t89.
+Select output field t88.
+Return success.
+End procedure.
+Procedure t9.
+Start value function with parameters t93, locals t41, and result type t7.
+Assign literal t61 of type t7 to field t72.
+Test t8 variant t15 of field t84 into field t71.
+Mark label t23.
+If Boolean expression t35 is true, go to label t21.
+Go to label t22.
+Mark label t21.
+Get field t102 of t8 variant t18 from field t84 into field t70.
+If integer comparison t60 t3 t46 is true, go to label t25.
+Go to label t28.
+Mark label t25.
+Assign literal t101 of type t7 to field t72.
+Return t7 value from expression t47.
+Mark label t28.
+If integer comparison t60 t2 t46 is true, go to label t29.
+Go to label t31.
+Mark label t29.
+Get field t65 of t8 variant t18 from field t84 into field t84.
+Go to label t30.
+Mark label t31.
+Get field t91 of t8 variant t18 from field t84 into field t84.
+Mark label t30.
+Test t8 variant t15 of field t84 into field t71.
+Go to label t23.
+Mark label t22.
+Return t7 value from expression t47.
+End procedure.
+Procedure t10.
+Start value function with parameters t103, locals t64, and result type t8.
+Construct t8 variant t15 with arguments t0 into field t84.
+Count items in t16 list t86 into field t77.
+Assign literal t1 of type t16 to field t73.
+Mark label t23.
+If integer comparison t48 t2 t52 is true, go to label t21.
+Go to label t22.
+Mark label t21.
+Get item t48 from t16 list t86 into field t85.
+Call value function t13 with arguments t100 into field t84.
+Evaluate integer expression t49 into field t73.
+Go to label t23.
+Mark label t22.
+Return t8 value from expression t59.
+End procedure.
+Procedure t11.
+Start value function with parameters t92, locals t43, and result type t16.
+Test t8 variant t15 of field t84 into field t71.
+If Boolean expression t34 is true, go to label t21.
+Go to label t24.
+Mark label t21.
+Return t16 value from expression t62.
+Mark label t24.
+Get field t65 of t8 variant t18 from field t84 into field t74.
+Get field t91 of t8 variant t18 from field t84 into field t81.
+Call value function t11 with arguments t96 into field t75.
+Call value function t11 with arguments t98 into field t82.
+If integer comparison t50 t4 t57 is true, go to label t25.
+Go to label t28.
+Mark label t25.
+Return t16 value from expression t51.
+Mark label t28.
+Return t16 value from expression t58.
+End procedure.
+Procedure t12.
+Start value function with parameters t92, locals t38, and result type t17.
+Test t8 variant t15 of field t84 into field t71.
+If Boolean expression t34 is true, go to label t21.
+Go to label t24.
+Mark label t21.
+Assign literal t20 of type t17 to field t80.
+Return t17 value from expression t56.
+Mark label t24.
+Get field t65 of t8 variant t18 from field t84 into field t74.
+Get field t91 of t8 variant t18 from field t84 into field t81.
+Get field t87 of t8 variant t18 from field t84 into field t69.
+Get field t102 of t8 variant t18 from field t84 into field t85.
+Call value function t12 with arguments t96 into field t76.
+Call value function t14 with arguments t40 into field t78.
+Call value function t12 with arguments t98 into field t83.
+Concatenate t16 list t76 and list t78 into field t80.
+Concatenate t16 list t80 and list t83 into field t80.
+Return t17 value from expression t56.
+End procedure.
+Procedure t13.
+Start value function with parameters t93, locals t37, and result type t8.
+Test t8 variant t15 of field t84 into field t71.
+If Boolean expression t34 is true, go to label t21.
+Go to label t24.
+Mark label t21.
+Construct t8 variant t15 with arguments t0 into field t74.
+Construct t8 variant t18 with arguments t67 into field t80.
+Return t8 value from expression t56.
+Mark label t24.
+Get field t65 of t8 variant t18 from field t84 into field t74.
+Get field t91 of t8 variant t18 from field t84 into field t81.
+Get field t87 of t8 variant t18 from field t84 into field t69.
+Get field t102 of t8 variant t18 from field t84 into field t70.
+If integer comparison t60 t2 t46 is true, go to label t25.
+Go to label t28.
+Mark label t25.
+Call value function t13 with arguments t97 into field t74.
+Go to label t26.
+Mark label t28.
+If integer comparison t60 t4 t46 is true, go to label t29.
+Go to label t31.
+Mark label t29.
+Call value function t13 with arguments t99 into field t81.
+Go to label t30.
+Mark label t31.
+Evaluate integer expression t45 into field t69.
+Mark label t30.
+Mark label t26.
+Construct t8 variant t18 with arguments t66 into field t80.
+Return t8 value from expression t56.
+End procedure.
+Procedure t14.
+Start value function with parameters t39, locals t36, and result type t17.
+If integer comparison t44 t2 t63 is true, go to label t21.
+Go to label t24.
+Mark label t21.
+Raise error t19.
+Mark label t24.
+Assign literal t20 of type t17 to field t68.
+Append value t60 to t16 list t68 into field t68.
+Assign literal t20 of type t17 to field t80.
+Evaluate integer expression t44 into field t79.
+Mark label t27.
+If integer comparison t53 t4 t62 is true, go to label t25.
+Go to label t26.
+Mark label t25.
+If integer comparison t54 t3 t63 is true, go to label t29.
+Go to label t31.
+Mark label t29.
+Concatenate t16 list t80 and list t68 into field t80.
+Mark label t31.
+Evaluate integer expression t55 into field t79.
+If integer comparison t53 t4 t62 is true, go to label t32.
+Go to label t33.
+Mark label t32.
+Concatenate t16 list t68 and list t68 into field t68.
+Mark label t33.
+Go to label t27.
+Mark label t26.
+Return t17 value from expression t56.
+End procedure.

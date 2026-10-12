@@ -1,0 +1,5 @@
+{"arguments":["--stdio"],"input":"{\"value\":21,\"divisor\":3}\n","timeout":2000}
+{"arguments":["--stdio"],"input":"{\"value\":8,\"divisor\":0}\n{\"value\":-9,\"divisor\":2}\n","timeout":2000}
+{"arguments":["--stdio=invalid"],"input":"","timeout":2000}
+{"arguments":["--stdio"],"input":"","timeout":0}
+{"arguments":["--stdio"],"input":"","timeout":2000}
